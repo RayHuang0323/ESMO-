@@ -64,8 +64,9 @@ const makeEngine = (seed, { skills = true, stakes = true } = {}) => {
 // ── V ────────────────────────────────────────────────────────────────────────
 const R = rulesFor("v3");
 //  2026-10-01 moba-sim.v17（Hero Identity v1）：版本事實隨升版更新；v16 與 v15 都必須仍是已知版本（歷史憑據不刪）。
-ck("V1 目前版本 moba-sim.v17，v16／v15 仍是已知版本（歷史挑戰明確拒絕、不覆蓋）", MOBA_SIMULATION_VERSION === "moba-sim.v17"
-  && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v16") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v15"), MOBA_SIMULATION_VERSION);
+//  2026-10-06 moba-sim.v18（Map Topology Final）：同上，v17 也必須仍是已知版本。
+ck("V1 目前版本 moba-sim.v18，v17／v16／v15 仍是已知版本（歷史挑戰明確拒絕、不覆蓋）", MOBA_SIMULATION_VERSION === "moba-sim.v18"
+  && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v17") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v16") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v15"), MOBA_SIMULATION_VERSION);
 //  heroPassivesV1 在 v17 由 Owner 指派的 Hero Identity v1 開啟；Stakes／Nexus cap 的 OFF 斷言原樣保留。
 ck("V2 v3 正式規則：objectiveStakesV1＝OFF（Owner 2026-09-30）、splitProjectileSlowV16＝on；nexusSiegeCapV1＝off；heroPassivesV1＝on（v17）",
   R.objectiveStakesV1 === false && R.splitProjectileSlowV16 === true && R.nexusSiegeCapV1 === false && R.heroPassivesV1 === true);

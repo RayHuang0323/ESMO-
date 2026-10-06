@@ -38,7 +38,7 @@ import { buildTowerPlan } from "./mapTowerLayoutStyle.js";
 import { buildMonsters } from "./mapMonsterShapes.js";
 import { buildCampPlan, CAMP_SIZE } from "./mapCampLayout.js";
 import { buildBushCover, bushReach } from "./mapBushCover.js";
-import { buildJungleStructures } from "./mapJungleStructures.js";
+import { buildJungleMasses, buildBoundaryMasses, buildTrailPaths, JUNGLE_TOPOLOGY_VERSION, TOPOLOGY_CLEAR } from "./mapJungleTopology.js";
 import { translateRiftSpatial } from './riftLayoutGeometry.js';
 import { RIFT_DESIGN_SPAN } from './riftMapMetrics.js';
 import { clearRiftLaneWalls } from './riftLaneClearance.js';
@@ -131,11 +131,23 @@ export function buildTerrainShapes(L) {
   result.meta.arenaSmooth = smoothPath(result.meta.arena, 6, {closed:true});
   result.groundLayers.unshift({ id:'outer_forest', kind:'jungle', poly:result.meta.arena,
     color:PALETTE.grass_jungle, colorKey:'grass_jungle', y:LAYER_Y.arena-.08 });
-  const {centerX:cx,centerY:cy} = L.bounds;
-  const edge = result.meta.arena.map(p=>({x:cx+(p.x-cx)*.97,y:cy+(p.y-cy)*.97}));
-  const ridge = naturalWallRun(edge.slice(0,4), {seed:8801,step:5,amp:.35,
-    height:10,heightVar:2,thick:3,thickVar:.2,kind:'outer_ridge'});
-  result.wallItems.push(...ridge,...ridge.map(w=>({...w,x:2*cx-w.x,y:2*cy-w.y,angle:w.angle+Math.PI})));
+  //  Topology Final：三路外側不再是可走的空地。外環＝邊界量體（藍半邊追蹤、紅半邊 180° 鏡射），
+  //  與野區量體同一種資料：導航距離場與 Blender 都只吃這份多邊形。
+  //  ⚠ 用 arenaSmooth：導航距離場把「平滑輪廓之外」當牆，邊界量體必須貼著同一條線，
+  //    否則平滑曲線在切角外凸的那一圈會變成可走縫（實測 892 個外環可走取樣）。
+  const boundary = buildBoundaryMasses({ bounds: L.bounds, arena: result.meta.arenaSmooth,
+    lanes: L.lanes, nexus: L.bases, fountains: L.fountains,
+    baseCenters: { blue: result.meta.bases.blue.center, red: result.meta.bases.red.center } });
+  result.wallMasses.push(...boundary);
+  boundary.filter((m) => m.side === 'blue').forEach((m, i) => {
+    result.groundLayers.push({ id:`boundary_floor_${i}`, kind:'jungle', poly:m.poly,
+      color:PALETTE.grass_grove, colorKey:'grass_grove', y:LAYER_Y.grove });
+  });
+  boundary.filter((m) => m.side === 'red').forEach((m, i) => {
+    result.groundLayers.push({ id:`boundary_floor_red_${i}`, kind:'jungle', poly:m.poly,
+      color:PALETTE.grass_grove, colorKey:'grass_grove', y:LAYER_Y.grove });
+  });
+  result.groundLayers.sort((a, b) => a.y - b.y);
   result.wallItems = clearRiftLaneWalls(result.wallItems, L.lanes);
   return result;
 }
@@ -177,7 +189,8 @@ function buildDesignTerrainShapes(L) {
   //  長 / 厚 / 高一個字都不能動 ⇒ 兩方 rotation / scale 必然一致）。
   const mirrorWallItem = (w) => ({
     ...w, x: 2 * cx - w.x, y: 2 * cy - w.y, angle: w.angle + Math.PI,
-    struct: typeof w.struct === "string" ? mirrorId(w.struct) : w.struct,
+    //  struct 只在有值時帶（undefined 鍵在 JSON source 會被丟掉，逐欄比對就會不相等）
+    ...(typeof w.struct === "string" ? { struct: mirrorId(w.struct) } : {}),
   });
   const mirrorEntrance = (e) => ({
     ...e, key: mirrorId(e.key), x: 2 * cx - e.x, y: 2 * cy - e.y, angle: e.angle + Math.PI,
@@ -377,7 +390,8 @@ function buildDesignTerrainShapes(L) {
     ...exitCorridorPolys,
     ...baseKeepOut,   // G.15：基地淨空圓
   ];
-  const bushClusters = bushCoverAll.filter((c) => !bushBlock.some((poly) => pointInPoly(c.x, c.y, poly)));
+  //  有模擬實體的草叢（gameData.BUSHES）一律保留——引擎就是拿它們算埋伏；只過濾呈現用 cover。
+  const bushClusters = bushCoverAll.filter((c) => c.isPresentation === false || !bushBlock.some((poly) => pointInPoly(c.x, c.y, poly)));
 
   // ══ 7. 樹叢暗斑：打破野區大片死綠（純地面暗色塊，非 Bush/Tree Pack）═══════
   L.quadrants.forEach((q, qi) => {
@@ -488,174 +502,29 @@ function buildDesignTerrainShapes(L) {
   // ══ 14.（G.15）基地的地面層與牆體已在 §3 由 blueprint 一次發射完畢 ═══════════
   //  這裡刻意留白：**不要**在這一段再 push 任何基地物件。
 
-  // ══ 15. 量體：競技場外緣崖 ════════════════════════════════════════════════
-  const laneSurfaceBlock = LANES3.map((ln) => lane.bands[ln].surface);
-  const rimRuns = filterRuns([[...arenaSmooth, arenaSmooth[0]]], laneSurfaceBlock, 3);
-  rimRuns.forEach((run, i) => {
-    walls.push(...naturalWallRun(run, {
-      seed: 200 + i * 7, step: 3.2, amp: 1.6, height: HEIGHT.cliff_rim, heightVar: 4.5,
-      thick: 6, thickVar: 0.34, kind: "cliff",
-    }));
+  // ══ 15–18. 野區量體（Topology Final）══════════════════════════════════════
+  //  舊版的 外緣崖 rim／角落崖 massif／gameData 牆鏈岩弧／象限弧牆／野區結構節點／營地口袋牆
+  //  全部移除，改由 mapJungleTopology 的「房間＋走道」負空間量體取代：
+  //   · 牆島是完整多邊形（不是一串短膠囊），藍方生成、紅方 180° 鏡射 ⇒ 導航不再需要
+  //     用鏡像聯集去補不對稱的牆，看不見的牆歸零；
+  //   · 營地房間、三角草路口、河道入口、Gank 走道都是刻意設計的節點，牆是剩下的空間。
+  const topo = buildJungleMasses({
+    bounds: B, lanes: L.lanes, river: L.river.points, pits: L.pits,
+    nexus: L.bases, bushes: L.bushes,
   });
-
-  // ══ 16. 量體：左上／右下死角的崖體 massif（形成戰場輪廓，而非矩形草皮）══════
-  const cornerMassif = (corner) => {
-    const isTL = corner === "tl";
-    for (let ridge = 0; ridge < 7; ridge++) {
-      const off = 6 + ridge * 8;
-      const sum = isTL ? 63 - off : 377 + off;    // x+y = sum 的直線（切角線往角落推）
-      const x0 = Math.max(2, sum - (B.maxY - 2));
-      const x1 = Math.min(B.maxX - 2, sum - 2);
-      const pts = [];
-      const steps = 10;
-      for (let s = 0; s <= steps; s++) {
-        const xx = x0 + (s / steps) * (x1 - x0);
-        const yy = sum - xx;
-        if (xx < 1 || yy < 1 || xx > B.maxX - 1 || yy > B.maxY - 1) continue;
-        pts.push({ x: xx, y: yy });
-      }
-      if (pts.length < 3) continue;
-      walls.push(...naturalWallRun(pts, {
-        seed: 300 + (isTL ? 0 : 50) + ridge * 9, step: 3.4, amp: 2.0,
-        height: HEIGHT.cliff_corner - ridge * 1.9, heightVar: 3.4,
-        thick: 10 - ridge * 0.7, thickVar: 0.4, kind: "cliff_mass",
-      }));
-    }
-  };
-  cornerMassif("tl"); cornerMassif("br");
-
-  // ══ 17. 野區岩壁：短、彎、分離的低岩壁（G.11 穩定版）════════════════════════════
-  //  【G.9 病灶】長 ribbon + 同心弧 ⇒ 迷宮；【G.10 病灶】打成一顆一顆碎石 ⇒ 像碎石堆。
-  //  【G.11】參考 map1-1.jpg：野區牆是**連續但短段、有圓弧感、彼此分離**的低岩壁，圍出
-  //   camp / 路徑的地形邊界，之間留明顯開口 ⇒ 可繞行、不切斷路線、不成迷宮、不是散石。
-  //   仍以 kind "rock" 渲染成圓潤低岩（RockInstances），但這輪是「連續短弧」不是「散石」。
-  const WALL_CHAINS = [[0, 4], [4, 8], [8, 11], [11, 14], [14, 18], [18, 22], [22, 25], [25, 28]];
-  const jungleChains = WALL_CHAINS.map(([s, e]) => L.walls.slice(s, e)); // 也供 §22 裝飾岩端點
-  const rockChunks = [];   // 每段中心（供 §18b 地面投影 + porosity 統計）
-  //  放一段短弧岩壁：切禁區 + 切營地空地後，用 naturalWallRun 產生連續短段（kind rock）。
-  //  ⚠ G.15：seed 改成「呼叫端自己給的固定值 + 該次的第幾塊」，**不再用一個全域遞增
-  //    計數器**。舊寫法 `seed: rwSeed++` 會讓「某處被禁建區切掉一塊」連帶改變**之後
-  //    每一段野區岩壁的擾動**——本輪加了基地淨空圓之後，遠在地圖另一角的鳥營掩體
-  //    就是這樣被連動成「只剩 1 個可走入口」。固定 seed ⇒ 改動只影響改動的地方。
-  const placeRockWall = (pathPts, thick, hBase, seedBase, blocks = blockPolys, minPts = 3) => {
-    if (!pathPts || pathPts.length < 2) return;
-    let piece = 0;
-    filterRuns([pathPts], blocks, minPts).forEach((run) => {
-      const pieces = []; let cur = [];
-      for (const p of run) {
-        if (camps.some((c) => Math.hypot(c.x - p.x, c.y - p.y) < c.clearR + 2.5)) { if (cur.length >= minPts) pieces.push(cur); cur = []; }
-        else cur.push(p);
-      }
-      if (cur.length >= minPts) pieces.push(cur);
-      pieces.forEach((seg) => {
-        const wr = naturalWallRun(seg, {
-          seed: seedBase + piece++, step: 2.3, amp: 0.9,
-          height: hBase, heightVar: HEIGHT.jungle_wall_var * 0.7,
-          thick, thickVar: 0.4, kind: "rock",
-        });
-        wr.forEach((it) => { it.r = it.thick / 1.7; rockChunks.push({ x: it.x, y: it.y, r: it.r }); });
-        walls.push(...wr);
-      });
+  const masses = topo.masses;
+  const rockChunks = [];   // 舊版岩影來源；量體改由下方 mass shade 呈現
+  masses.forEach((m) => {
+    push(`massshade_${m.id}`, "jungle", m.poly, "rock_shade", LAYER_Y.rock_shade);
+  });
+  //  野區土徑：沿每條走道樣條的窄帶（寬度約走道的 45%）。藍方生成、紅方 180° 鏡射。
+  //  ⚠ 純地表：不進 wallItems / wallMasses，不影響導航。
+  emitBlueThenMirror(() => {
+    buildTrailPaths().forEach((tp, i) => {
+      const w = tp.pts.reduce((s, p) => s + p.w, 0) / tp.pts.length;
+      push(`trail_blue_${tp.id}`, "jungle", ribbonPolygon(tp.pts, w * 0.45, { vary: 0.22, seed: 700 + i, taper: 0.55 }),
+        "trail", LAYER_Y.trail);
     });
-  };
-  // (a) gameData 8 鏈 → 短彎岩壁：≥4 點的鏈中間斷開（前半 / 後半，中間留開口）
-  jungleChains.forEach((chain, ci) => {
-    const avgR = chain.reduce((m, w) => m + (w.r ?? 6), 0) / Math.max(1, chain.length);
-    const thick = Math.min(3.3, Math.max(2.6, avgR * 0.46));
-    const hBase = HEIGHT.jungle_wall * 0.62;
-    if (chain.length >= 4) {
-      placeRockWall(smoothPath(chain.slice(0, 2), 2.3), thick, hBase, 800 + ci * 20);
-      placeRockWall(smoothPath(chain.slice(2), 2.3), thick, hBase, 810 + ci * 20);
-    } else if (chain.length >= 2) {
-      placeRockWall(smoothPath(chain, 2.3), thick, hBase, 800 + ci * 20);
-    }
-  });
-  // (b) 每象限 2 條短弧岩壁（camp / 路徑邊界；彎、分離、各留開口）
-  L.quadrants.forEach((q, qi) => {
-    for (let s = 0; s < 2; s++) {
-      const a0 = qi * 1.9 + s * 3.1;
-      const rr = q.r * (0.72 + s * 0.44);
-      const span = 0.64 + swobble(s, 40 + qi, 0.5) * 0.18;
-      const pts = [];
-      for (let k = 0; k <= 4; k++) {
-        const a = a0 + (span * k) / 4;
-        const rad = rr * (1 + swobble(k, 50 + qi + s, 0.5) * 0.12);
-        pts.push({ x: q.x + Math.cos(a) * rad, y: q.y + Math.sin(a) * rad });
-      }
-      placeRockWall(pts, 2.8, HEIGHT.jungle_wall * 0.58, 1000 + qi * 20 + s * 10);
-    }
-  });
-  // (c) 河岸短岩壁（河 → 野區邊界；三四段一組，不是散石，也不是硬長邊）
-  ["baron", "dragon"].forEach((key, ai) => {
-    const path = river.meta.armPaths[key];
-    [1, -1].forEach((sgn, sidx) => {
-      const line = smoothPath(offsetPath(path, sgn * (WIDTH.river_wetgrass / 2 + 4)), 4.0);
-      for (let k = 4; k < line.length - 6; k += 15) {
-        placeRockWall(line.slice(k, k + 4), 2.6, 5.0, 1200 + ai * 200 + sidx * 100 + k);
-      }
-    });
-  });
-
-  // ══ 17c. Jungle Route Structures（G.6 v2）════════════════════════════════
-  //  【問題】17b 的同心弧密度是「細碎噪點」（330+ 段、段長 2.1），俯視糊成幾團，
-  //   讀不出「分隔牆 / 轉角 / 切入口」。使用者要的是**可讀的中小型結構節點**。
-  //  【做法】在細碎密度之上，補一層**刻意佈局、比弧牆長一階也高一階**的結構：
-  //   逐象限的 營地後側分隔牆 / 象限分隔牆 / 三路切入口轉角 / 河道銜接鉤。
-  //   全部錨定在象限中心與營地座標（天生落在合法乾地），再走同一份 filterRuns
-  //   ⇒ 不可能侵入路面／河／基地／出口通道／坑／營地空地。
-  const jungleStructSpecs = buildJungleStructures({ quadrants: L.quadrants, camps, cx, cy });
-  jungleStructSpecs.forEach((s, si) => {
-    filterRuns([s.points], blockPolys, 3).forEach((run, ri) => {
-      const segs = naturalWallRun(run, {
-        seed: 900 + si * 5 + ri, step: 2.2, amp: 0.55,
-        height: s.h, heightVar: 2.0, thick: s.thick, thickVar: 0.3, kind: "jungle_struct",
-      });
-      segs.forEach((it) => { it.struct = s.id; it.quadrant = s.quadrant; it.role = s.role; });
-      walls.push(...segs);
-    });
-  });
-
-  // ══ 18. 量體：營地口袋牆（U 形包覆，只留一個朝野區動線的入口）════════════
-  //  G.4：由「兩個對開的缺口」改成 **U 形**（單一入口）。兩個缺口會讓營地讀成
-  //  「一段路穿過去」，U 形才讀成「一個凹進去的口袋」，這是 LoL 野區的基本語言。
-  //  G.7：每個營地改成**兩個入口**（不再只有單一朝中心的細縫）——一個朝地圖中心、
-  //  一個朝「離該營地最近的野區象限中心」的側向。缺口半角放大到 0.86，且 entranceTaper
-  //  的 span 縮到 0.12（收口只做一點點、不再吃掉開口）⇒ mapPassability 量到營地連接道
-  //  淨寬 ≥6。營地牆厚度也 −16%（見 §四 比例校正）。
-  //  G.11：營地掩體改回**背面一小段連續短弧岩壁**（不是散石也不是圍牆）：只擋背面 ~90°，
-  //  正面 + 兩側全開 ⇒ ≥3 個方向可接近、絕不封死（sealed_camp = 0）。
-  camps.forEach((c, i) => {
-    //  ⚠ G.15：掩體弧的半徑要**保證大於營地空地禁建圓**（clearR + 2.5，再加上該圓
-    //    ±5% 的外形擾動）。舊式 `pocketR × 0.88~1.0` 再 ±10% 擾動後，藍 Buff 營地
-    //    的弧最小只有 13.2，剛好被 13.5 的禁建圓吃掉 ⇒ 那個營地整段掩體消失，
-    //    「有沒有掩體」變成靠附近野區牆碰巧經過（實測藍 Buff 0 顆 / 紅 Buff 8 顆）。
-    //  ⚠ G.15 兩處修正（都是「掩體其實不存在，靠附近野區牆碰巧經過才看起來有」）：
-    //   (1) 弧半徑要**保證大於營地空地禁建圓**（clearR + 2.5，再加該圓 ±5% 擾動）。
-    //       舊式 `pocketR × 0.88~1.0` 再 ±10% 擾動後最小只有 13.2，被 13.5 的禁建圓
-    //       吃掉，掩體整段消失。
-    //   (2) 取樣點 5 → 11、成段門檻 3 → 2 點。兩個 Buff 營地都緊貼自己那條路，背面
-    //       有一半落在路的禁建帶上；5 點取樣被切完就一段都不剩（實測藍 Buff 0 顆），
-    //       11 點取樣則兩端各還留得下 2~3 點 ⇒ 讀成「背面兩小段掩體」，也不會封死。
-    const rMin = (c.clearR + 2.5) * 1.05 + 1.2;
-    const r = Math.max(c.pocketR * (c.type === "buff" ? 1.0 : 0.88), rMin);
-    const toCenter = Math.atan2(cy - c.y, cx - c.x);
-    const back = toCenter + Math.PI;               // 背向地圖中心
-    const span = c.type === "buff" ? 1.7 : 1.45;   // 覆蓋背面 ~97°/83°
-    const pts = [];
-    for (let k = 0; k <= 10; k++) {
-      const a = back + (k / 10 - 0.5) * span;
-      const rad = Math.max(rMin, r * (0.95 + swobble(k * 0.4, 120 + i, 0.5) * 0.1));
-      pts.push({ x: c.x + Math.cos(a) * rad, y: c.y + Math.sin(a) * rad });
-    }
-    //  ⚠ 營地掩體不吃「基地淨空圓」：它是營地自己的結構（營地座標本來就鏡射對稱），
-    //    被淨空圓切掉會讓最靠基地的那兩個 Buff 營地整個沒有掩體。
-    placeRockWall(pts, c.type === "buff" ? 3.0 : 2.6, c.type === "buff" ? 7.0 : 6.0,
-      1600 + i * 10, blockPolysNoBaseKeepOut, 2);
-    // 3 個接近方向的入口節點（正面 + 兩側；供 verifier 的 ≥2 入口與扇區檢查）
-    [toCenter, toCenter + 1.5, toCenter - 1.5].forEach((a, gi) => entrances.push({
-      key: `junent_${c.id}`, kind: "jungle", entIdx: gi,
-      x: c.x + Math.cos(a) * (r + 2.0), y: c.y + Math.sin(a) * (r + 2.0), angle: a,
-    }));
   });
 
   // ══ 18b. 岩壁地面投影（G.11 精簡）════════════════════════════════════════════
@@ -683,7 +552,6 @@ function buildDesignTerrainShapes(L) {
       }));
     });
     // 坑口：岩壁往開口收窄變矮（取代 G.2 的門柱）。
-    //  G.7：span 0.22→0.10 ⇒ 收口不再把坑口 / 河口窄到英雄過不去（河口下限 7.0）。
     walls.push(...entranceTaper(P.x, P.y, P.R, P.gaps, {
       baseH: P.h, thick: P.thick, seed: 600, span: 0.10,
     }));
@@ -705,21 +573,8 @@ function buildDesignTerrainShapes(L) {
   });
 
   // ══ 22. 裝飾岩：只放在牆鏈端點與崖腳，不平均灑滿地 ═══════════════════════════
+  //  Topology Final：裝飾岩來源（gameData 牆鏈端點、角落崖腳）已隨程序化岩壁一起退役。
   const rocks = [];
-  jungleChains.forEach((chain, ci) => {
-    [chain[0], chain[chain.length - 1]].forEach((w, j) => {
-      rocks.push({ x: w.x, y: w.y, rot: (ci * 2 + j) * (Math.PI / 5), scale: Math.min(2.4, Math.max(1.5, (w.r ?? 6) * 0.32)) });
-    });
-  });
-  [["tl", 30], ["br", 190]].forEach(([c, base], k) => {
-    for (let i = 0; i < 5; i++) {
-      const t = 0.12 + i * 0.19;
-      const sum = c === "tl" ? 70 : 370;
-      const xx = c === "tl" ? 6 + t * (sum - 12) : (sum - 214) + t * (214 - (sum - 214));
-      const yy = sum - xx;
-      rocks.push({ x: xx, y: yy, rot: (i + k) * 0.9, scale: 2.0 + hash01(i, base) * 0.8 });
-    }
-  });
 
   //  裝飾岩同樣不得落在出口通道 / 路面 / 基地平台上（否則會被誤讀成「走不過去」）
   {
@@ -772,16 +627,17 @@ function buildDesignTerrainShapes(L) {
 
   //  野區路線結構節點 census（只算「過濾後仍有牆段存活」的結構）⇒ verifier 用它清點
   //  可讀結構密度、逐象限最少結構數。
-  const survivingStruct = new Set(walls.filter((w) => w.kind === "jungle_struct").map((w) => w.struct));
-  const jungleStructures = jungleStructSpecs
-    .filter((s) => survivingStruct.has(s.id))
-    .map((s) => ({ id: s.id, quadrant: s.quadrant, role: s.role, x: s.x, y: s.y }));
+  const jungleStructures = masses.map((m) => {
+    let x = 0, y = 0; for (const p of m.poly) { x += p.x; y += p.y; }
+    return { id: m.id, quadrant: m.quad, role: "mass", x: x / m.poly.length, y: y / m.poly.length };
+  });
 
   ground.sort((a, b) => a.y - b.y);
 
   return {
     groundLayers: ground,
     wallItems: walls,
+    wallMasses: masses,       // Topology Final：野區／邊界量體（多邊形；導航與 Blender 唯一來源）
     towers: towerPlan,        // 18 座兵線塔（呈現座標；模擬座標見 t.sim）
     nexusTurrets,             // 4 座門牙塔（雙方各 2，主堡最後防線）
     monsters,                 // 野怪 / 史詩野怪的低模剪影
@@ -795,6 +651,7 @@ function buildDesignTerrainShapes(L) {
       arena, arenaSmooth,
       lanePaths: lane.paths, laneSurfPoly: Object.fromEntries(LANES3.map((ln) => [ln, lane.bands[ln].surface])),
       river, bases, baseGeo: BASE_GEO, pits, exitCorridorPolys,
+      topology: { version: JUNGLE_TOPOLOGY_VERSION, clear: TOPOLOGY_CLEAR },
       bounds: B,
       nexus: ["blue", "red"].map((side) => ({
         side, x: L.bases[side].x, y: L.bases[side].y,

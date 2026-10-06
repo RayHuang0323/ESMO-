@@ -86,6 +86,22 @@ export function buildField(T, opts = {}) {
     }
   });
 
+  //  Topology Final：野區／邊界量體（多邊形）——格心落在多邊形內即為牆。
+  //  wallId 以 wallItems.length + 量體索引編號（量體不是 wallItems，呼叫端用 wallMassAt 取回）。
+  (T.wallMasses ?? []).forEach((m, mi) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of m.poly) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+    const id0 = T.wallItems.length + mi;
+    for (let iy = Math.max(0, gy(y0)); iy <= Math.min(ny - 1, gy(y1)); iy++) {
+      for (let ix = Math.max(0, gx(x0)); ix <= Math.min(nx - 1, gx(x1)); ix++) {
+        const id = idx(ix, iy);
+        if (wall[id]) continue;
+        if (!pointInPoly(B.minX + ix * CELL, B.minY + iy * CELL, m.poly)) continue;
+        wall[id] = 1; dist[id] = 0; wallId[id] = id0;
+      }
+    }
+  });
+
   //  180° 旋轉對稱化（在算距離場**之前**做，否則距離場本身不會是對稱的）
   if (opts.mirrorSymmetric) {
     for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {

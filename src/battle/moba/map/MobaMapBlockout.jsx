@@ -366,6 +366,18 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
   const rockGeo = useMemo(() => new THREE.IcosahedronGeometry(0.5, 1), []);  // G.12：再圓一階（80 面）⇒ 連續岩壁不菱角
   const rockMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), []);
 
+  // ── Topology Final：野區／邊界量體（與導航同一份多邊形）。備援地圖也必須畫出來，
+  //     否則 GLB 載入失敗時會出現「看不到但擋人」的牆。全部合併成一個 mesh。
+  const massGeo = useMemo(() => {
+    const geos = (T.wallMasses ?? []).map((m) => {
+      const boundary = m.kind === "boundary_mass";
+      const g = extrudePoly(m.poly, boundary ? 9 : 6);
+      return paintGeo(g, boundary ? 0x23382a : 0x2c4a2e);
+    });
+    return geos.length ? mergeGeometries(geos, false) : null;
+  }, [T]);
+  const massMat = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }), []);
+
   // ── 塔：每座合併塔身 + 塔冠 ──────────────────────────────────────────────────
   const towerData = useMemo(() => {
     //  G.15：blueprint 檢視只留「基地塔」（門牙塔 + 高地塔），並依 side 過濾。
@@ -451,6 +463,11 @@ export default function MobaMapBlockout({ show = {}, ring = "desktop", castTower
           </BlueprintWrap>
         );
       })}
+
+      {/* ── Topology Final：野區／邊界量體（森林牆）── */}
+      {showWalls && massGeo && !bpMode && !baseFocus && (
+        <mesh geometry={massGeo} material={massMat} rotation={[-Math.PI / 2, 0, 0]} receiveShadow />
+      )}
 
       {/* ── 野區岩體：圓潤低模巨石（分散、鈍角；跟「野區」開關）── */}
       {showWalls && showJungle && rockItems.length > 0 && (

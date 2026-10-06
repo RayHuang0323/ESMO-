@@ -1,0 +1,526 @@
+{
+  "worldSize": 330,
+  "arenaCells": 107486,
+  "regionSharePct": {
+    "base": 5.27,
+    "pit": 3.24,
+    "lane": 11.46,
+    "river": 1.21,
+    "jungle": 12.42,
+    "outer": 66.4
+  },
+  "walkableSharePct": 82.63,
+  "census": {
+    "void": {
+      "cells": 2075,
+      "wall": 2075,
+      "walkable": 0,
+      "deadSpace": 0,
+      "edgeBand": 0
+    },
+    "base": {
+      "cells": 5664,
+      "wall": 562,
+      "walkable": 4552,
+      "deadSpace": 0,
+      "edgeBand": 550
+    },
+    "pit": {
+      "cells": 3478,
+      "wall": 1048,
+      "walkable": 1848,
+      "deadSpace": 0,
+      "edgeBand": 582
+    },
+    "lane": {
+      "cells": 12319,
+      "wall": 240,
+      "walkable": 11815,
+      "deadSpace": 0,
+      "edgeBand": 264
+    },
+    "river": {
+      "cells": 1303,
+      "wall": 151,
+      "walkable": 924,
+      "deadSpace": 0,
+      "edgeBand": 228
+    },
+    "jungle": {
+      "cells": 13355,
+      "wall": 1879,
+      "walkable": 9516,
+      "deadSpace": 10,
+      "edgeBand": 1950
+    },
+    "outer": {
+      "cells": 71367,
+      "wall": 6817,
+      "walkable": 60166,
+      "deadSpace": 1030,
+      "edgeBand": 3354
+    }
+  },
+  "jungle": {
+    "areaPctOfArena": 12.42,
+    "wallPct": 14.07,
+    "deadSpacePct": 0.07,
+    "edgeBandPct": 14.6,
+    "quadrants": [
+      {
+        "name": "blue_top",
+        "areaCells": 3820,
+        "wallPct": 14.58,
+        "walkablePct": 69.4,
+        "deadPct": 0.08,
+        "wallIslands": 6,
+        "openFieldPct": 35.99,
+        "clearanceP50": 6.24,
+        "clearanceP90": 12.83,
+        "clearanceMax": 21.66,
+        "corridorWidthP10": 5.66,
+        "corridorWidthP50": 12,
+        "corridorWidthP90": 23.8,
+        "narrowRidgePct": 47.54,
+        "entrances": 4,
+        "entrancesLong": 2,
+        "openBorderCells": 132,
+        "entranceList": [
+          {
+            "x": 81.9,
+            "y": 187,
+            "length": 63,
+            "into": [
+              "lane"
+            ]
+          },
+          {
+            "x": 111,
+            "y": 202.8,
+            "length": 51,
+            "into": [
+              "base",
+              "lane"
+            ]
+          },
+          {
+            "x": 108,
+            "y": 139.89,
+            "length": 9,
+            "into": [
+              "pit"
+            ]
+          },
+          {
+            "x": 145,
+            "y": 170,
+            "length": 9,
+            "into": [
+              "lane"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "blue_bot",
+        "areaCells": 2846,
+        "wallPct": 13.56,
+        "walkablePct": 73.86,
+        "deadPct": 0.07,
+        "wallIslands": 5,
+        "openFieldPct": 48.91,
+        "clearanceP50": 7.66,
+        "clearanceP90": 19.56,
+        "clearanceMax": 26.97,
+        "corridorWidthP10": 6,
+        "corridorWidthP50": 14,
+        "corridorWidthP90": 32,
+        "narrowRidgePct": 39.7,
+        "entrances": 4,
+        "entrancesLong": 1,
+        "openBorderCells": 111,
+        "entranceList": [
+          {
+            "x": 139.48,
+            "y": 231.71,
+            "length": 86,
+            "into": [
+              "lane"
+            ]
+          },
+          {
+            "x": 152.5,
+            "y": 192.5,
+            "length": 18,
+            "into": [
+              "lane"
+            ]
+          },
+          {
+            "x": 193,
+            "y": 222.5,
+            "length": 4,
+            "into": [
+              "pit"
+            ]
+          },
+          {
+            "x": 199,
+            "y": 231.33,
+            "length": 3,
+            "into": [
+              "lane",
+              "pit"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "red_top",
+        "areaCells": 2855,
+        "wallPct": 13.17,
+        "walkablePct": 73.84,
+        "deadPct": 0.07,
+        "wallIslands": 5,
+        "openFieldPct": 48.77,
+        "clearanceP50": 7.66,
+        "clearanceP90": 19.56,
+        "clearanceMax": 26.97,
+        "corridorWidthP10": 6,
+        "corridorWidthP50": 14,
+        "corridorWidthP90": 32,
+        "narrowRidgePct": 40.03,
+        "entrances": 6,
+        "entrancesLong": 1,
+        "openBorderCells": 117,
+        "entranceList": [
+          {
+            "x": 190.52,
+            "y": 98.29,
+            "length": 86,
+            "into": [
+              "lane"
+            ]
+          },
+          {
+            "x": 177.5,
+            "y": 137.5,
+            "length": 18,
+            "into": [
+              "lane"
+            ]
+          },
+          {
+            "x": 137,
+            "y": 107.5,
+            "length": 4,
+            "into": [
+              "pit"
+            ]
+          },
+          {
+            "x": 148.5,
+            "y": 135.5,
+            "length": 4,
+            "into": [
+              "river"
+            ]
+          },
+          {
+            "x": 131,
+            "y": 98.67,
+            "length": 3,
+            "into": [
+              "lane",
+              "pit"
+            ]
+          },
+          {
+            "x": 140.5,
+            "y": 117.5,
+            "length": 2,
+            "into": [
+              "river"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "red_bot",
+        "areaCells": 3834,
+        "wallPct": 14.61,
+        "walkablePct": 69.25,
+        "deadPct": 0.08,
+        "wallIslands": 6,
+        "openFieldPct": 35.93,
+        "clearanceP50": 6.24,
+        "clearanceP90": 12.83,
+        "clearanceMax": 21.66,
+        "corridorWidthP10": 5.66,
+        "corridorWidthP50": 12,
+        "corridorWidthP90": 23.8,
+        "narrowRidgePct": 47.6,
+        "entrances": 5,
+        "entrancesLong": 2,
+        "openBorderCells": 134,
+        "entranceList": [
+          {
+            "x": 248.1,
+            "y": 143,
+            "length": 63,
+            "into": [
+              "lane"
+            ]
+          },
+          {
+            "x": 219,
+            "y": 127.2,
+            "length": 51,
+            "into": [
+              "base",
+              "lane"
+            ]
+          },
+          {
+            "x": 185,
+            "y": 160,
+            "length": 9,
+            "into": [
+              "lane"
+            ]
+          },
+          {
+            "x": 222,
+            "y": 190.11,
+            "length": 9,
+            "into": [
+              "pit"
+            ]
+          },
+          {
+            "x": 191.5,
+            "y": 187,
+            "length": 2,
+            "into": [
+              "river"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "outer": {
+    "areaPctOfArena": 66.4,
+    "walkablePctOfArena": 55.98,
+    "reachableOutsideLanesPct": 84.31
+  },
+  "river": {
+    "widthP10": 9,
+    "widthP50": 14,
+    "widthP90": 22,
+    "samples": 42
+  },
+  "pits": {
+    "dragon": {
+      "innerRadius": 12.65,
+      "floorWalkCells": 489,
+      "entrances": 2,
+      "mouthDeg": 103,
+      "mouthWidth": 22.74,
+      "surroundWalkPct": 74.3
+    },
+    "baron": {
+      "innerRadius": 12.65,
+      "floorWalkCells": 489,
+      "entrances": 2,
+      "mouthDeg": 103,
+      "mouthWidth": 22.74,
+      "surroundWalkPct": 74.3
+    }
+  },
+  "brushes": {
+    "sim": {
+      "count": 12,
+      "byRegion": {
+        "blue_top": 3,
+        "red_bot": 3,
+        "blue_bot": 2,
+        "red_top": 2,
+        "base": 2
+      }
+    },
+    "visual": {
+      "count": 24,
+      "byRegion": {
+        "blue_top": 7,
+        "red_bot": 7,
+        "blue_bot": 4,
+        "red_top": 4,
+        "pit": 2
+      }
+    }
+  },
+  "routes": {
+    "fountain->camp_blue_buff": {
+      "length": 79.33,
+      "straight": 73.25,
+      "detour": 1.08,
+      "bottleneck": 5.66,
+      "mirrorDelta": 0
+    },
+    "fountain->camp_blue_a": {
+      "length": 83.25,
+      "straight": 76.03,
+      "detour": 1.1,
+      "bottleneck": 5.66,
+      "mirrorDelta": 0
+    },
+    "fountain->camp_blue_b": {
+      "length": 91.94,
+      "straight": 85.44,
+      "detour": 1.08,
+      "bottleneck": 5.66,
+      "mirrorDelta": 0
+    },
+    "camp_blue_buff->camp_blue_a": {
+      "length": 40.6,
+      "straight": 40.31,
+      "detour": 1.01,
+      "bottleneck": 19.76,
+      "mirrorDelta": 0
+    },
+    "camp_blue_buff->camp_blue_b": {
+      "length": 26.21,
+      "straight": 25,
+      "detour": 1.05,
+      "bottleneck": 33.06,
+      "mirrorDelta": 0
+    },
+    "camp_blue_a->camp_blue_b": {
+      "length": 66.23,
+      "straight": 65.12,
+      "detour": 1.02,
+      "bottleneck": 19.76,
+      "mirrorDelta": 0
+    },
+    "camp_blue_buff->dragon": {
+      "length": 104.47,
+      "straight": 85.03,
+      "detour": 1.23,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    },
+    "camp_blue_buff->baron": {
+      "length": 127.4,
+      "straight": 110,
+      "detour": 1.16,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    },
+    "camp_blue_a->dragon": {
+      "length": 123.77,
+      "straight": 113.11,
+      "detour": 1.09,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    },
+    "camp_blue_a->baron": {
+      "length": 109.04,
+      "straight": 80.72,
+      "detour": 1.35,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    },
+    "camp_blue_b->dragon": {
+      "length": 91.63,
+      "straight": 69.93,
+      "detour": 1.31,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    },
+    "camp_blue_b->baron": {
+      "length": 145.71,
+      "straight": 128.95,
+      "detour": 1.13,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    },
+    "blue_buff->top@0.42": {
+      "length": 122.26,
+      "straight": 112.57,
+      "detour": 1.09,
+      "bottleneck": 17.97,
+      "mirrorDelta": 0
+    },
+    "fountain->top@0.5": {
+      "length": 178.51,
+      "straight": 165.1,
+      "detour": 1.08,
+      "bottleneck": 5.66,
+      "mirrorDelta": 0
+    },
+    "blue_buff->mid@0.42": {
+      "length": 54.64,
+      "straight": 50.41,
+      "detour": 1.08,
+      "bottleneck": 23.31,
+      "mirrorDelta": 0
+    },
+    "fountain->mid@0.5": {
+      "length": 143.28,
+      "straight": 138.62,
+      "detour": 1.03,
+      "bottleneck": 5.66,
+      "mirrorDelta": 0
+    },
+    "blue_buff->bot@0.42": {
+      "length": 86.15,
+      "straight": 76.09,
+      "detour": 1.13,
+      "bottleneck": 20.45,
+      "mirrorDelta": 0
+    },
+    "fountain->bot@0.5": {
+      "length": 173.68,
+      "straight": 161.98,
+      "detour": 1.07,
+      "bottleneck": 5.66,
+      "mirrorDelta": 0
+    },
+    "mid@0.5->dragon": {
+      "length": 70.06,
+      "straight": 69.19,
+      "detour": 1.01,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    },
+    "mid@0.5->baron": {
+      "length": 70.06,
+      "straight": 69.19,
+      "detour": 1.01,
+      "bottleneck": 18.94,
+      "mirrorDelta": 0
+    }
+  },
+  "mapVersion": "esmo-rift-330-corridor-v3",
+  "consistency": {
+    "invisibleWallCells": 1055,
+    "artOnlyWallCells": 378
+  },
+  "wallItems": 912,
+  "wallKinds": {
+    "base_rim": 6,
+    "base_gate": 6,
+    "base_keep": 24,
+    "fountain_rim": 46,
+    "cliff": 75,
+    "cliff_mass": 200,
+    "rock": 150,
+    "jungle_struct": 52,
+    "pit_wall": 48,
+    "entrance_taper": 48,
+    "river_stone": 17,
+    "outer_ridge": 240
+  },
+  "elapsedMs": 3591
+}

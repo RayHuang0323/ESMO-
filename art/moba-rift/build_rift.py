@@ -36,7 +36,7 @@ else:
     scene = bpy.context.scene
     for o in list(scene.objects): bpy.data.objects.remove(o, do_unlink=True)
     scene.name = 'ESMO_Rift_330_v1'
-scene['mapVersion'] = 'esmo-rift-330-corridor-v3'
+scene['mapVersion'] = 'esmo-rift-330-topology-final-v4'
 scene['worldExtentRatio'] = 1.5
 scene['coreDistanceRatio'] = 1.0
 scene['source'] = 'Original ESMO procedural Blender authoring; no official game assets'
@@ -59,6 +59,14 @@ mats = {
  'pine': material('CedarNeedles', (.055,.16,.105)),
  'leaf': material('CanopyTips', (.12,.235,.125)),
  'reed': material('TacticalGrass', (.255,.34,.115)),
+ # Topology Final quadrant themes (natural hues only; topology itself is mirrored)
+ 'pineOlive': material('ShelfPine', (.085,.17,.075)),
+ 'leafOlive': material('ShelfMoss', (.19,.25,.095)),
+ 'pineAmber': material('EmberPine', (.11,.13,.06)),
+ 'leafAmber': material('EmberLeaf', (.36,.2,.07)),
+ 'pineDusk': material('DuskPine', (.045,.11,.12)),
+ 'leafDusk': material('DuskCanopy', (.12,.15,.19)),
+ 'rockWarm': material('EmberBasalt', (.23,.19,.155)),
  'stone': material('WeatheredLimestone', (.34,.365,.32)),
  'bronze': material('AgedBronze', (.31,.235,.11), .56, .45),
  'blue': material('AzureInlay', (.07,.44,.54), .35, .2),
@@ -103,6 +111,8 @@ for g in DATA['ground']:
         color=color*.55+np.array([.025,.13,.145]); tag=2
     elif any(t in key for t in ('lane','slab','base','plaza','path','ramp','camp')):
         color=color*.58+np.array([.15,.14,.10]); tag=1
+    elif key=='trail':
+        color=color*.95+np.array([.03,.024,.012])   # worn jungle trail, warm dirt
     else: color=color*.72+np.array([.035,.075,.018])
     paint(g['poly'],color,tag)
 rgb *= grain[:,:,None]
@@ -139,7 +149,7 @@ def column(name,x,y,z,r,h,n=7,top=.75,angle=0):
         for i in range(n): faces.append((k*n+i,k*n+(i+1)%n,(k+1)*n+(i+1)%n,(k+1)*n+i))
     emit(name,verts,faces,x,y)
 
-def stone(x,y,length,width,h,angle):
+def stone(x,y,length,width,h,angle,moss=True,mat='rock'):
     # Three weathered strata, kept within the authoritative wall footprint.
     # mapPassability measures wall heading from +Y: direction=(sin(a),cos(a)).
     # The authored ellipse uses an angle from +X, so convert the basis once.
@@ -152,13 +162,186 @@ def stone(x,y,length,width,h,angle):
     faces=[tuple(range(3*n,4*n))]
     for level in range(3):
         for i in range(n): faces.append((level*n+i,level*n+(i+1)%n,(level+1)*n+(i+1)%n,(level+1)*n+i))
-    emit('rock',verts,faces,x,y)
-    if length>2 and width>2: column('moss',x,y,h-.15,min(length,width)*.24,.24,7,.94)
+    emit(mat,verts,faces,x,y)
+    if moss and length>2 and width>2: column('moss',x,y,h-.15,min(length,width)*.24,.24,7,.94)
 
 def tree(x,y,z,r,h):
     column('wood',x,y,z,r*.14,h*.7,5,.55)
     for j in range(4):
         column('pine' if j%2==0 else 'leaf',x,y,z+h*(.25+j*.16),r*(1-j*.20),h*.34,7,.015,j*.7)
+
+def cone(name,x,y,z,r,h,n=7,angle=0,jag=0):
+    # Open-bottom cone (the 52° top-down camera never sees the underside):
+    # n side triangles, rim jittered so stacked tiers read as jagged needles.
+    verts=[]
+    for i in range(n):
+        a=angle+i*math.tau/n; rr=r*(1+jag*((i*7919)%5-2)/10)
+        verts.append((x+math.cos(a)*rr,y+math.sin(a)*rr,z))
+    verts.append((x,y,z+h))
+    emit(name,verts,[(i,(i+1)%n,n) for i in range(n)],x,y)
+
+def pine(x,y,z,r,h,seed,trunk=True,mats=('pine','leaf')):
+    # Topology Final light conifer: tapered trunk + 3 jagged tiers ≈ 31 triangles
+    # (the original tree() is ~178). Dense jungle canopy needs many of these.
+    if trunk:
+        ring=[]
+        for k,(dz,rad) in enumerate(((0,r*.16),(h*.45,r*.09))):
+            for i in range(5):
+                a=i*math.tau/5; ring.append((x+math.cos(a)*rad,y+math.sin(a)*rad,z+dz))
+        emit('wood',ring,[(i,(i+1)%5,5+(i+1)%5,5+i) for i in range(5)],x,y)
+    for j in range(3):
+        cone(mats[0] if j!=1 else mats[1],x,y,z+h*(.22+j*.22),r*(1-j*.24),h*(.46-j*.06),7,seed*1.3+j*.9,.28)
+
+# ── Topology Final: wall masses (jungle islands + out-of-bounds boundary) ──────
+# Every visible rock vertex of a mass lies INSIDE its authoritative polygon
+# (the same polygon the navigation field rasterizes): rings are only ever
+# offset inward, never outward. Trees are planted with their full canopy
+# radius inside the polygon too, so nothing visible overhangs walkable ground.
+def _signed_area(poly):
+    a=0
+    for i in range(len(poly)):
+        x1,y1=poly[i]; x2,y2=poly[(i+1)%len(poly)]; a+=x1*y2-x2*y1
+    return a/2
+
+def _resample(poly,step):
+    out=[]
+    for i in range(len(poly)):
+        x1,y1=poly[i]; x2,y2=poly[(i+1)%len(poly)]
+        n=max(1,int(math.ceil(math.hypot(x2-x1,y2-y1)/step)))
+        for k in range(n): out.append((x1+(x2-x1)*k/n,y1+(y2-y1)*k/n))
+    return out
+
+def _inward(poly):
+    # unit inward normal per vertex (bisector of the two edge normals) and miter factor
+    s=1 if _signed_area(poly)>0 else -1
+    n=len(poly); out=[]
+    for i in range(n):
+        (xa,ya),(xb,yb),(xc,yc)=poly[i-1],poly[i],poly[(i+1)%n]
+        e1=(xb-xa,yb-ya); e2=(xc-xb,yc-yb)
+        l1=math.hypot(*e1) or 1; l2=math.hypot(*e2) or 1
+        n1=(-e1[1]/l1*s,e1[0]/l1*s); n2=(-e2[1]/l2*s,e2[0]/l2*s)
+        bx,by=n1[0]+n2[0],n1[1]+n2[1]; bl=math.hypot(bx,by)
+        if bl<1e-6: bx,by,bl=n1[0],n1[1],1
+        bx,by=bx/bl,by/bl
+        cosv=max(.45,bx*n1[0]+by*n1[1])
+        out.append((bx/cosv,by/cosv))
+    return out
+
+def _point_in(px,py,poly):
+    inside=False; j=len(poly)-1
+    for i in range(len(poly)):
+        xi,yi=poly[i]; xj,yj=poly[j]
+        if (yi>py)!=(yj>py) and px<(xj-xi)*(py-yi)/(yj-yi+1e-12)+xi: inside=not inside
+        j=i
+    return inside
+
+def _edge_dist(pts,poly):
+    # min distance from each point to the polygon outline (numpy, vectorised over edges)
+    P=np.array(pts,dtype=np.float64); A=np.array(poly,dtype=np.float64); B=np.roll(A,-1,axis=0)
+    D=B-A; L2=(D*D).sum(1)+1e-12
+    best=np.full(len(P),1e9)
+    for k in range(0,len(A),256):
+        a=A[k:k+256]; d=D[k:k+256]; l2=L2[k:k+256]
+        t=np.clip(((P[:,None,:]-a[None])*d[None]).sum(2)/l2[None],0,1)
+        q=a[None]+t[...,None]*d[None]
+        best=np.minimum(best,np.sqrt(((P[:,None,:]-q)**2).sum(2)).min(1))
+    return best
+
+# quad → (canopy materials, rock material, tree spacing, rim stone step, rim height range)
+THEMES={
+ 'blue_top':(('pine','leaf'),'rock',2.35,2.6,(1.2,1.55)),             # 冷杉深林 Deep Grove
+ 'red_bot':(('pineDusk','leafDusk'),'rock',2.35,2.6,(1.2,1.55)),      # 暮色深林 Dusk Grove
+ 'blue_bot':(('pineOlive','leafOlive'),'rock',3.0,1.9,(1.35,1.85)),   # 苔石岩台 Moss Shelf
+ 'red_top':(('pineAmber','leafAmber'),'rockWarm',3.0,1.9,(1.35,1.85)), # 琥珀岩台 Ember Shelf
+ 'boundary':(('pine','leaf'),'rock',3.5,0,(1,1)),
+}
+
+def mass(m,rng):
+    cmat,rmat,tstep,rstep,rh=THEMES.get(m.get('quad'),THEMES['boundary'])
+    boundary=m['kind']=='boundary_mass'
+    poly=[(p['x'],p['y']) for p in m['poly']]
+    poly=_resample(poly,1.6 if not boundary else 2.4)
+    nrm=_inward(poly)
+    H=(5.2 if boundary else 3.4)
+    # (inset, height fraction, inward jitter). The TOP ring is the authoritative
+    # outline itself (inset 0): an inward-offset top ring self-intersects on the
+    # big concave boundary shapes and breaks the cap triangulation. Strata notches
+    # only use small inward offsets on the middle rings, so every vertex stays
+    # inside the navigation polygon and the cap is always a simple polygon.
+    levels=((.02,-.12,0),(.25 if not boundary else .4,.40,.2),(.12 if not boundary else .25,.78,.18),(.0,1.0,0))
+    rings=[]
+    n=len(poly)
+    for li,(ins,hf,jit) in enumerate(levels):
+        ring=[]
+        for i,((x,y),(nx_,ny_)) in enumerate(zip(poly,nrm)):
+            j=jit*(((i*2654435761+li*97+m['_seed'])>>7)%100)/100
+            d=ins+j
+            z=H*hf if hf>0 else -.35
+            if li in (1,2): z+=H*.07*((((i//3)*40503+li*13+m['_seed'])>>5)%3-1)   # strata steps
+            if li==3: z=H*(.92+.08*(((i*7+m['_seed'])>>2)%5)/4)
+            ring.append((x+nx_*d,y+ny_*d,z))
+        rings.append(ring)
+    verts=[v for r in rings for v in r]
+    faces=[]
+    for li in range(len(rings)-1):
+        o0,o1=li*n,(li+1)*n
+        for i in range(n): faces.append((o0+i,o0+(i+1)%n,o1+(i+1)%n,o1+i))
+    cx=sum(p[0] for p in poly)/n; cy=sum(p[1] for p in poly)/n
+    emit(rmat,verts,faces,cx,cy)
+    top=rings[-1]
+    # Dark canopy floor on top: obstacles must read darker than walkable ground
+    # (ESMO Visual Bible §16 value hierarchy); trees then break the silhouette.
+    emit(cmat[0],top,[tuple(range(n))],cx,cy)
+    # Rocky rim (jungle islands): the same weathered stone columns the original
+    # Rift walls and pit walls use, standing just inside the outline so each island
+    # reads as a cliff wall with forest on top instead of an extruded slab.
+    # Every footprint sample is tested against the polygon; a column that would
+    # overhang walkable ground is skipped.
+    if not boundary:
+        acc=0.0; step_r=rstep
+        for i in range(n):
+            (x1,y1),(x2,y2)=poly[i],poly[(i+1)%n]
+            seg=math.hypot(x2-x1,y2-y1)
+            if seg<1e-6: continue
+            tx,ty=(x2-x1)/seg,(y2-y1)/seg
+            s=step_r-acc
+            while s<seg:
+                px,py=x1+tx*s,y1+ty*s
+                # inward unit normal of THIS edge (stone()'s minor axis is the edge
+                # normal; the vertex bisector is skewed near corners)
+                sgn=1 if _signed_area(poly)>0 else -1
+                ux,uy=-ty*sgn,tx*sgn
+                L=rng.uniform(2.1,2.9); Wd=rng.uniform(1.4,1.9)
+                cx_,cy_=px+ux*(Wd*.5+.15),py+uy*(Wd*.5+.15)
+                # footprint ellipse: centre + tangent·cos·L/2 + normal·sin·W/2
+                ok=all(_point_in(cx_+tx*math.cos(a)*L*.5+ux*math.sin(a)*Wd*.5,
+                                 cy_+ty*math.cos(a)*L*.5+uy*math.sin(a)*Wd*.5,poly)
+                       for a in [k*math.pi/8 for k in range(16)])   # covers all 8 octagon vertex directions
+                if ok: stone(cx_,cy_,L,Wd,H*rng.uniform(*rh),math.atan2(tx,ty),moss=False,mat=rmat)
+                s+=step_r
+            acc=(acc+seg)%step_r
+    # canopy
+    xs=[p[0] for p in poly]; ys=[p[1] for p in poly]
+    step=tstep
+    cand=[]
+    y=min(ys)+step*.5
+    row=0
+    while y<max(ys):
+        x=min(xs)+step*(.5+.5*(row%2))
+        while x<max(xs):
+            cand.append((x+rng.uniform(-.7,.7),y+rng.uniform(-.7,.7))); x+=step
+        y+=step*.87; row+=1
+    cand=[c for c in cand if _point_in(c[0],c[1],poly)]
+    if not cand: return 0
+    ed=_edge_dist(cand,poly)
+    planted=0
+    for (x,y),d in zip(cand,ed):
+        r=rng.uniform(1.35,1.95) if not boundary else rng.uniform(1.4,2.1)
+        if d<r+.35: continue               # canopy stays inside the polygon outline
+        if boundary and d>13 and rng.random()>.07: continue   # deep out-of-bounds: sparse
+        pine(x,y,H*.9,r,rng.uniform(4.6,7.4) if not boundary else rng.uniform(6,9.5),planted+m['_seed'],trunk=not boundary,mats=cmat)
+        planted+=1
+    return planted
 
 # Single UV mapped ground; all walkable areas remain at unit feet plane z=0.
 G=1; verts=[]; faces=[]
@@ -192,9 +375,17 @@ if EXPLICIT_TREES:
     #  Keep the reed stream identical to the legacy build: skip the draws the old wall pass consumed.
     for _ in range(int(DATA.get('reedRngSkip',0))): RNG.random()
 
+# Topology Final: jungle islands and the out-of-bounds boundary.
+MASS_RNG=random.Random(51023)
+mass_trees=0
+for k,m in enumerate(DATA.get('masses',[])):
+    m['_seed']=k*131+7
+    mass_trees+=mass(m,MASS_RNG)
+scene['massTrees']=mass_trees
+
 # Dense low reeds mark only real, traversable vision bushes, never fake camps.
 for b in DATA['BUSHES']:
-    for i in range(65):
+    for i in range(46):
         a=RNG.random()*math.tau; r=math.sqrt(RNG.random())*b['r']*.87
         x=b['x']+math.cos(a)*r; y=b['y']+math.sin(a)*r
         column('reed',x,y,0,RNG.uniform(.22,.43),RNG.uniform(.65,1.3),4,.02,a)

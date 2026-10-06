@@ -1,11 +1,20 @@
 // P0-C TDD invariant: a lane/structure intent must not be overwritten by a
 // formation anchor when there is no local combat target.
 //
-// This is an observational fixed-seed guard. It intentionally fails on the
-// pre-fix engine at seed 129 / t=1800, where one side has a 6-2 structure
-// lead but a targetless LANE player is anchored to a nearby cross-lane enemy
-// instead of preserving the lane push target. The post-fix trajectory may end
-// earlier or put the lead on the mirrored side, so the invariant is side-agnostic.
+// History: this started as an observational fixed-seed guard that failed on the
+// pre-fix engine at seed 129 / t=1800, where one side had a 6-2 structure lead
+// but a targetless LANE player was anchored to a nearby cross-lane enemy instead
+// of preserving the lane push target. The invariant is side-agnostic.
+//
+// 2026-10-06（moba-sim.v18 Map Topology Final，Owner 決策「不要只挑一顆剛好會過的 seed」）：
+// 單一 seed＋單一時間點的 fixture 會隨任何地圖／尋路改動重洗軌跡而漂移（v18 上 seed 129 在 1800 秒
+// 已經沒有帶 ≥4 塔差的進行中對局）——那是 fixture drift，不是 invariant 失敗，但「重新挑一顆會過的 seed」
+// 沒有說服力。改為決定性的多 seed 掃描：
+//   · 固定 seed 清單（含原本的 129 與 base-assault 的 80），每場跑到結束或 3600 秒；
+//   · 從 600 秒起每 30 秒一個檢查點；凡是「對局進行中且塔差 ≥4」的檢查點都檢查 invariant；
+//   · 前置條件要有檢定力：符合條件的檢查點 ≥ MIN_STATES、且分布在 ≥ MIN_SEEDS 場 ⇒ 否則判 fixture drift（紅）；
+//   · 任何一個檢查點出現 offender ⇒ 紅。
+// Base-assault guard（原 seed 80）同樣套到每一場的終局。
 
 import * as LE from "../src/LogicEngine.js";
 import * as heroes from "../src/data/heroDatabase.js";
@@ -21,86 +30,88 @@ import * as gameData from "../src/gameData.js";
 import { configure } from "./balance/moba_items_balance_runner.mjs";
 
 const M = { LE, heroes, profile, arche, loadout, tactic, adapter, catalog, economy, inventory, gameData };
-const SEED = 129;
-const AT_S = 1800;
-const BASE_ASSAULT_SEED = 80;
-const BASE_ASSAULT_CAP_S = 3600;
+const SEEDS = [80, ...Array.from({ length: 40 }, (_, i) => 120 + i)];   // 80 + 120..159（含原 fixture 129）
+const CAP_S = 3600;
+const FIRST_CHECK_S = 600;
+const CHECK_EVERY_S = 30;
+const MIN_LEAD = 4;
+const MIN_STATES = 20;
+const MIN_SEEDS = 8;
 
 const towersDown = (e, side) => Object.values(e.towers)
   .filter((tower) => tower.side === side && tower.lane !== "nexus" && tower.hp <= 0).length;
 
-const run = () => {
-  const { e } = configure(SEED, "off", M, 1);
-  while (e.t < AT_S && !e.over) e.tick(0.5);
-  const blueDown = towersDown(e, "blue");
-  const redDown = towersDown(e, "red");
-  // `towersDown(side)` counts towers owned by `side` that have fallen.
-  const structureLead = blueDown - redDown;
-  const structureAdvantage = Math.abs(structureLead);
-  const offenders = e.players
-    .filter((p) => {
-      const foe = e.players.find((q) => q.id === p._archFoe);
-      return !p.dead && p.fsm === "LANE" && p.decisionAction === "LANE"
-        && !p.decisionTargetId && p._archFoe && foe?.lane !== p.lane;
-    })
-    .map((p) => {
-      const foe = e.players.find((q) => q.id === p._archFoe);
-      return {
-        id: p.id,
-        foe: foe?.id ?? null,
-        lane: p.lane,
-        foeLane: foe?.lane ?? null,
-        distance: foe ? Math.hypot(p.pos.x - foe.pos.x, p.pos.y - foe.pos.y) : null,
-        pos: p.pos,
-        front: e.frontStructure(p.side, p.lane)?.lane ?? null,
-      };
-    });
-  const result = { seed: SEED, t: e.t, blueDown, redDown, structureLead, structureAdvantage, offenders };
-  console.log(JSON.stringify(result, null, 2));
-  if (structureAdvantage < 4) throw new Error("fixture drift: seed 129 no longer has the required structure lead");
-  if (offenders.length) {
-    throw new Error(`P0-C invariant failed: ${offenders.length} targetless LANE player(s) are formation-anchored during a structure push`);
-  }
-};
+const laneOffenders = (e) => e.players
+  .filter((p) => {
+    const foe = e.players.find((q) => q.id === p._archFoe);
+    return !p.dead && p.fsm === "LANE" && p.decisionAction === "LANE"
+      && !p.decisionTargetId && p._archFoe && foe?.lane !== p.lane;
+  })
+  .map((p) => {
+    const foe = e.players.find((q) => q.id === p._archFoe);
+    return {
+      id: p.id,
+      foe: foe?.id ?? null,
+      lane: p.lane,
+      foeLane: foe?.lane ?? null,
+      distance: foe ? Math.hypot(p.pos.x - foe.pos.x, p.pos.y - foe.pos.y) : null,
+      front: e.frontStructure(p.side, p.lane)?.lane ?? null,
+    };
+  });
 
-// P0-C base-assault guard. Before H13, seed 80 reaches a state where every
-// non-nexus structure is down on both sides, but the symmetric minion waves
-// remain locked at mid-lane and neither nexus receives objective progress.
-// This is structural: it does not require a particular winner or duration.
-const runBaseAssault = () => {
-  const { e } = configure(BASE_ASSAULT_SEED, "off", M, 1);
-  const initialNexusHp = {
-    blue: e.towers.blue_nexus.hp,
-    red: e.towers.red_nexus.hp,
-  };
-  while (e.t < BASE_ASSAULT_CAP_S && !e.over) e.tick(0.5);
-  const blueDown = towersDown(e, "blue");
-  const redDown = towersDown(e, "red");
+const states = [];        // 每個符合前置條件的檢查點
+const offenders = [];     // { seed, t, ...offender }
+const baseAssault = [];   // 每場終局
+for (const seed of SEEDS) {
+  const { e } = configure(seed, "off", M, 1);
+  const initialNexusHp = { blue: e.towers.blue_nexus.hp, red: e.towers.red_nexus.hp };
+  let nextCheck = FIRST_CHECK_S;
+  while (e.t < CAP_S && !e.over) {
+    e.tick(0.5);
+    if (e.over || e.t < nextCheck) continue;
+    nextCheck += CHECK_EVERY_S;
+    const lead = towersDown(e, "blue") - towersDown(e, "red");
+    if (Math.abs(lead) < MIN_LEAD) continue;
+    const off = laneOffenders(e);
+    states.push({ seed, t: e.t, lead, offenders: off.length });
+    for (const o of off) offenders.push({ seed, t: e.t, ...o });
+  }
+  const blueDown = towersDown(e, "blue"), redDown = towersDown(e, "red");
   const allNonNexusDown = blueDown >= 11 && redDown >= 11;
-  const nexusProgress = e.towers.blue_nexus.hp < initialNexusHp.blue
-    || e.towers.red_nexus.hp < initialNexusHp.red;
-  const result = {
-    seed: BASE_ASSAULT_SEED,
-    t: e.t,
-    over: e.over,
-    blueDown,
-    redDown,
-    allNonNexusDown,
-    blueNexusHp: e.towers.blue_nexus.hp,
-    redNexusHp: e.towers.red_nexus.hp,
-    nexusProgress,
-  };
-  console.log(JSON.stringify(result, null, 2));
-  if (allNonNexusDown && !e.over && !nexusProgress) {
-    throw new Error("P0-C base-assault invariant failed: both waves remain unable to progress to either nexus");
-  }
-};
+  const nexusProgress = e.towers.blue_nexus.hp < initialNexusHp.blue || e.towers.red_nexus.hp < initialNexusHp.red;
+  baseAssault.push({ seed, t: e.t, over: e.over, allNonNexusDown, nexusProgress,
+    stalled: allNonNexusDown && !e.over && !nexusProgress });
+}
 
-try {
-  run();
-  runBaseAssault();
-  console.log("P0-C invariant: PASS");
-} catch (error) {
-  console.error(error.message);
+const seedsWithStates = new Set(states.map((s) => s.seed));
+const stalled = baseAssault.filter((b) => b.stalled);
+const summary = {
+  seeds: SEEDS.length,
+  pushStates: states.length,
+  pushSeeds: seedsWithStates.size,
+  maxLead: Math.max(0, ...states.map((s) => Math.abs(s.lead))),
+  offenders: offenders.length,
+  offenderSample: offenders.slice(0, 5),
+  baseAssault: {
+    gamesOver: baseAssault.filter((b) => b.over).length,
+    reachedAllNonNexusDown: baseAssault.filter((b) => b.allNonNexusDown).length,
+    stalled: stalled.map((b) => b.seed),
+  },
+};
+console.log(JSON.stringify(summary, null, 2));
+
+const errors = [];
+if (states.length < MIN_STATES || seedsWithStates.size < MIN_SEEDS) {
+  errors.push(`fixture drift: only ${states.length} push states across ${seedsWithStates.size} seeds (need >= ${MIN_STATES} across >= ${MIN_SEEDS})`);
+}
+if (offenders.length) {
+  errors.push(`P0-C invariant failed: ${offenders.length} targetless LANE player state(s) are formation-anchored during a structure push`);
+}
+if (stalled.length) {
+  errors.push(`P0-C base-assault invariant failed: seeds ${stalled.map((b) => b.seed).join(",")} keep both waves unable to progress to either nexus`);
+}
+if (errors.length) {
+  for (const m of errors) console.error(m);
   process.exit(1);
 }
+console.log(`P0-C invariant: PASS (${states.length} push states / ${seedsWithStates.size} seeds, 0 offenders; base-assault ${SEEDS.length} games, 0 stalled)`);

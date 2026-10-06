@@ -3,7 +3,7 @@
 //  範圍 = 交戰節奏（狀態機）/ killContext / 中立目標 / 召喚師技能 / HUD 資料源
 //  ⚠ 中文 OneDrive 路徑：一律絕對 file:// URL。子行程一律驗 exit code＋輸出形狀。
 //  ⚠ 節奏門檻全部用「分布/percentile」（S29B1 任務單§一），且每組門檻都以
-//    v2（S29A 規則集，15 分 p50=44 殺的病灶節奏）跑對照——v2 必須被判失衡，
+//    v2（S29A 規則集）與 v1（S28 以前）兩個歷史病灶規則集跑對照——都必須被判失衡，
 //    否則門檻沒有檢定力。
 //  ⚠ 跳過本檔尾端 runtime29 巢狀驗證：SKIP_NESTED=1 node tools/check_moba_pacing29b1.mjs
 //    （開發迭代用；宣稱完成前必須完整跑）
@@ -99,6 +99,8 @@ const runsV3 = [
   ...SEEDS.map((s) => runFull(s, { rules: "v3", tactic: MOBA_TACTICS[0] })),
 ];
 const runsV2 = SEEDS.map((s) => runFull(s, { rules: "v2", tactic: MOBA_TACTICS[0] }));
+//  2026-10-06（moba-sim.v18 Map Topology Final）：對照組加入 v1（S28 以前的病灶規則集：塔融化、無本場 XP）。
+const runsV1 = SEEDS.map((s) => runFull(s, { rules: "v1", tactic: MOBA_TACTICS[0] }));
 
 // ── 節奏門檻（percentile；同一組門檻對 v2 跑對照 ⇒ 檢定力）────────────────────
 const pacingGates = (runs) => {
@@ -114,14 +116,24 @@ const pacingGates = (runs) => {
     g6: k15.filter((k) => k > 35).length <= runs.length * 0.05, // 15 分 >35 殺 = 極端少數
     g7: k15.every((k) => k <= 60),                           // 15 分 >60 殺 = 失衡（0 容忍）
     g8: durs.every((d) => d <= 45) && pct(durs, 50) >= 12 && pct(durs, 50) <= 28,
-    stats: { k5: pct(k5, 50), k10: pct(k10, 50), k15: pct(k15, 50), k15p90: pct(k15, 90), k20: pct(k20, 50), kEnd: pct(kEnd, 50), dur: pct(durs, 50) },
+    //  regress2 的「過早結束」下限（逐字同值：全數結束、最短 ≥ 8 分、中位 ≥ 14 分）。只取下限：v1／v2 的病灶都是對局太短；
+    //  上限（最長 ≤32）守的是長尾，v3 混合 40 場本身就有長局，拿來當對照判準會連 v3 一起紅 ⇒ 沒有鑑別力。
+    r2short: runs.every((r) => r.eng.over) && Math.min(...durs) >= 8 && pct(durs, 50) >= 14,
+    stats: { k5: pct(k5, 50), k10: pct(k10, 50), k15: pct(k15, 50), k15p90: pct(k15, 90), k20: pct(k20, 50), kEnd: pct(kEnd, 50), dur: pct(durs, 50), durMin: Math.min(...durs) },
   };
 };
-const G3 = pacingGates(runsV3), G2 = pacingGates(runsV2);
+const G3 = pacingGates(runsV3), G2 = pacingGates(runsV2), G1 = pacingGates(runsV1);
 ck(`1) 5/10/15/20 分擊殺分布落在 S29B1 規格（v3 p50：5分${G3.stats.k5}、10分${G3.stats.k10}、15分${G3.stats.k15}、20分${G3.stats.k20}、終局${G3.stats.kEnd}、時長${G3.stats.dur.toFixed(1)}分）`,
   G3.g1 && G3.g2 && G3.g3 && G3.g4 && G3.g5 && G3.g8);
-ck(`2) 失衡判定有檢定力：15分 >60 殺零容忍 + 同組門檻餵 v2（15分 p50=${G2.stats.k15}）必須被判失衡`,
-  G3.g6 && G3.g7 && !(G2.g3 && G2.g4 && G2.g5));   // v2 至少一項節奏門檻紅
+//  §2 對照組（2026-10-06 改寫，Owner 批准）：舊判準只看 v2 的擊殺曲線（g3／g4／g5）。v2 在 Rift 330 上的病灶已不是
+//  「15 分 44 殺」而是「約 13 分鐘就結束、全場擊殺少」——舊判準在 v17 main 上只因終局 p50=10（<14）剛好抓到，
+//  Map Topology Final 野區交戰變多後 p50=14 恰等於門檻 ⇒ 對照組失去檢定力（不是 v2 變好了：中位時長仍 13.3 分）。
+//  改為：歷史病灶規則集 v1、v2 **都**必須在「擊殺曲線 g3–g5 ＋ regress2 過早結束下限」中至少紅一項，
+//  且 v3 必須通過同一個過早結束下限（正對照：判準要分得開好壞，不能連 v3 一起紅）。
+//  ⚠ 這組判準對 v3 不放寬任何東西：§1 原樣。
+const unbalanced = (G) => !(G.g3 && G.g4 && G.g5 && G.r2short);
+ck(`2) 失衡判定有檢定力：15分 >60 殺零容忍 + 同組門檻餵歷史病灶規則集必須被判失衡（v2：15分 p50=${G2.stats.k15}、中位 ${G2.stats.dur.toFixed(1)} 分；v1：最短 ${G1.stats.durMin.toFixed(1)} 分）`,
+  G3.g6 && G3.g7 && G3.r2short && unbalanced(G2) && unbalanced(G1));
 
 const fks = runsV3.map((r) => r.firstKill).filter((x) => x != null);
 ck(`3) 首殺時間分布合理（p10=${pct(fks, 10).toFixed(0)}s、p50=${pct(fks, 50).toFixed(0)}s、p90=${pct(fks, 90).toFixed(0)}s；需 p10≥45、p50∈[90,420]）`,
@@ -493,8 +505,8 @@ let pass = 0;
 for (const [n, ok] of A) { console.log(`${ok ? "✅" : "❌"} ${n}`); if (ok) pass++; }
 console.log(`\n${pass}/${A.length} 通過`);
 console.log(`\n=== v2（S29A）vs v3（S29B1）· 各 20 seeds（戰術 M1）===`);
-for (const [tag, G] of [["v2", G2], ["v3(混合40)", G3]]) {
-  console.log(`${tag}: 5分p50=${G.stats.k5} 10分p50=${G.stats.k10} 15分p50=${G.stats.k15}(p90=${G.stats.k15p90}) 20分p50=${G.stats.k20} 終局p50=${G.stats.kEnd} 時長p50=${G.stats.dur.toFixed(1)}分`);
+for (const [tag, G] of [["v1", G1], ["v2", G2], ["v3(混合40)", G3]]) {
+  console.log(`${tag}: 5分p50=${G.stats.k5} 10分p50=${G.stats.k10} 15分p50=${G.stats.k15}(p90=${G.stats.k15p90}) 20分p50=${G.stats.k20} 終局p50=${G.stats.kEnd} 時長p50=${G.stats.dur.toFixed(1)}分（最短${G.stats.durMin.toFixed(1)}） 擊殺曲線g3-g5=${G.g3 && G.g4 && G.g5 ? "綠" : "紅"} 過早結束下限=${G.r2short ? "綠" : "紅"}`);
 }
 console.log(`⚠ 視覺（3D 低模外觀 / HUD 版面 / 手機實機 FPS）→ 無瀏覽器，未實測（見交付報告）`);
 process.exit(pass === A.length ? 0 : 1);

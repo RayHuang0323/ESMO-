@@ -30,6 +30,7 @@ export const PALETTE = Object.freeze({
   grass_jungle_alt: 0x2c3d1d, // 野區次色（相鄰象限交替）
   grass_grove: 0x1d2a12,     // 樹叢暗斑（只是地面暗塊，不是 Bush/Tree Pack）
   grass_clearing: 0x455628,  // 野區空地（camp / buff 所在）
+  trail: 0x5b4b31,           // Topology Final：野區土徑（沿走道樣條；只是地表，不是障礙）
 
   // ── 高地草地（基地外圍，偏冷、偏亮 ⇒ 一眼看出「這裡是高地」）──────────
   grass_highland: 0x3d4b2c,
@@ -215,6 +216,7 @@ export const LAYER_Y = Object.freeze({
   clearing: 0.24,
   grass_soft: 0.105,   // G.10：草地柔和過渡斑（貼著主草地，破硬邊）
   dirt_patch: 0.235,   // G.10：野區土斑（岩塊腳下）
+  trail: 0.237,        // Topology Final：野區土徑（營地空地與岩影之下）
   rock_shade: 0.242,   // G.10：岩塊地面投影
   bush_shade: 0.245,   // 草叢地面投影：坐在野區草／空地之上，仍在路帶之下
   lane_verge: 0.28,

@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v17";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v18";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -129,6 +129,11 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/battle/moba/map/mobaMapLayout.js",
   //  · Objective Layout 契約：LogicEngine 直接 import（STANDARD／SWAPPED 決定大型物件在哪個坑）。
   "src/platform/contracts/objectiveLayout.js",
+  //  ── 2026-10-06（moba-sim.v18 Topology Final）：同一種洞的另外兩處 ──────────
+  //  · 野區／外環牆量體由 mapJungleTopology 生成（mapTerrainShapes 只 import 它）⇒ 改走道寬或房間位置會改走位。
+  //  · 碰撞場的點陣化與淨寬距離（buildField）住在 mapPassability；mobaNavigation 直接 import 它。
+  "src/battle/moba/map/mapJungleTopology.js",
+  "src/battle/moba/map/mapPassability.js",
 
   //  ── 2026-09-09（Slice 5）：**選角成為戰鬥輸入** ────────────────────────
   //  在這一輪之前，Challenge 完全不呼叫 configureHeroes / configureArchetypes /
@@ -172,6 +177,9 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
  */
 export const KNOWN_TRANSITIVE_GAPS = Object.freeze([
   "src/battle/moba/map/mapPassability.js",
+  //  Topology Final：野區／邊界量體與河道形狀也經由 mapTerrainShapes → 導航距離場影響結果。
+  "src/battle/moba/map/mapJungleTopology.js",
+  "src/battle/moba/map/mapRiverStyle.js",
   "src/battle/moba/map/mobaMapLayout.js",
   "src/battle/moba/map/mapTerrainShapes.js",
   //  ⚠ Slice 5 新增的缺口，**刻意**不收進上面的清單：
@@ -381,6 +389,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-01（Release 前）：TD-HI5 在 MobaTacticConfig.js 新增 TEAM_STYLE_TACTIC／mobaTacticForTeamStyle（只決定紅方選哪套戰術，
   //  同一份戰術輸入的引擎結果不變）⇒ v17 未發布，同版號重新登記。
   "moba-sim.v17": "6bcd77c7ff63ee5e",
+  //  2026-10-06 moba-sim.v18（feature/moba-map-topology-v18）：**simulation semantics change**（地圖幾何；skill-on／off 與 Challenge 都受影響）。
+  //  MOBA Map Topology Final：野區改為走道優先的權威拓樸（mapJungleTopology，藍方生成＋180° 鏡射）、外環封邊、
+  //  河道貫通、營地移到 LoL 深度、草叢 30 叢、findPath 保留起點格心（正反向對稱）。坑位腳印沿用 v16 規格（R 15.5／thick 5.7），
+  //  坑周平台 pitBulge 24.5。英雄／裝備／技能／戰鬥數值不變。指紋清單補上 mapJungleTopology／mapPassability。
+  //  ⚠ 後果（已知且接受）：v17 歷史挑戰不再可重播，由 canReplay 明確拒絕；v1～v17 指紋全數保留。
+  "moba-sim.v18": "4c1cda877c698a17",
 });
 
 export const isKnownSimulationVersion = (v) =>

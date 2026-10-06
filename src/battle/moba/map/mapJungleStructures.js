@@ -1,4 +1,7 @@
 // ============================================================================
+//  ⚠ 已退役（Topology Final, 2026-10-06）：mapTerrainShapes 不再 import 本檔。
+//    野區牆改由 mapJungleTopology.js 的「走道優先」量體產生（導航與 Blender 同一份多邊形）。
+//    保留檔案只為歷史對照；不要再接回地形總裝。
 //  battle/moba/map/mapJungleStructures.js — 野區路線結構節點（Milestone G.6 v2）
 //
 //  【要解決的問題】人工比對 LoL 真圖後的回饋：野區「主要結構明顯不足」，

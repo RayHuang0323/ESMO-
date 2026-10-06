@@ -15,13 +15,18 @@
 //       而不是靠一條粗河硬串起來。
 //  河的兩端**不再碰到地圖邊界**：地圖左上／右下角回歸成野區與崖體。
 //
+//  ⚠ Topology Final（2026-10-06）取代了上面「兩條河臂只在坑與中央之間」的 G.1 規則：
+//    河道改為**貫通上下路**（上路河口 → 巴龍池 → 中央涉水點 → 小龍池 → 下路河口），
+//    只生成巴龍側半條、小龍側 180° 鏡射；坑周張成水潭，岸石移除（河岸阻擋改由
+//    mapJungleTopology 的野區量體提供）。實作見本檔下半部 buildRiverPlan。
+//
 //  【水的層次】深水 → 淺水 → 淺灘 → 沙洲 → 泥岸 → 濕草，共 6 階，全部低彩度。
 //
 //  ⚠ 純資料、無 THREE/React、不使用 Math.random()（形狀必須每次相同）。
 //  ⚠ 不改動 gameData.js：河道中心線仍取自 RIVER.points 與 PITS（經 layout 傳入）。
 // ============================================================================
 import {
-  smoothPath, wobblePath, ribbonPolygon, offsetPath, blobRing,
+  smoothPath, wobblePath, ribbonPolygon, blobRing,
   widthProfile, pathLength, hash01,
 } from "./mapShapePrimitives.js";
 import { WIDTH } from "./mapVisualStyle.js";
@@ -43,137 +48,108 @@ function trimPath(pts, fromStart = 0, fromEnd = 0) {
   return pts.slice(i0, Math.max(i0 + 2, i1 + 1));
 }
 
-// 河臂的寬度曲線（t=0 在中央端、t=1 在坑口端）。
-//  0.30 附近收到 0.5 倍 ⇒ 河臂中段是**窄河道**；兩端張開 ⇒ 河灣與河口。
+// ── Topology Final（2026-10-06）：完整河道＋180° 精確鏡像 ─────────────────
+//  舊版兩條河臂各用不同 seed 生成（11 / 17）、岸石兩側各自取樣 ⇒ 河道不是鏡像，
+//  導航距離場的鏡像聯集就在對岸生出畫面上不存在的阻擋。現在只生成**巴龍側半條河**
+//  （上路河口外側 → 上路河口 → 巴龍池 → 中央），小龍側一律 180° 旋轉。
+//  河道兩端延伸到三路外側、流進邊界崖壁底下（LoL：河道連通上下路，是轉線與 gank 的主幹）。
+
+// 河臂寬度曲線（t=0 在中央端、t=1 在外側端）。巴龍坑約在 t≈0.45 ⇒ 河在坑周張成水潭。
 const ARM_PROFILE = widthProfile([
-  [0.00, 1.25], [0.14, 1.05], [0.36, 0.62], [0.54, 0.78],
-  [0.74, 1.10], [0.90, 1.35], [1.00, 1.42],
+  [0.00, 1.05], [0.14, 0.92], [0.30, 1.30], [0.45, 1.70], [0.60, 1.30],
+  [0.74, 0.96], [0.86, 1.00], [1.00, 1.10],
 ]);
-// 涉水點：正中央最窄，往兩側張開去接河臂。
-const FORD_PROFILE = widthProfile([[0.0, 1.15], [0.5, 0.66], [1.0, 1.15]]);
-// 坑口水域：最寬處刻意落在**坑口**（t≈0.45）而不是坑心，
-// 否則整片水都被坑底色塊蓋住，看起來就變成「坑跟河沒有連在一起」。
-const MOUTH_PROFILE = widthProfile([[0.0, 0.62], [0.45, 1.30], [0.78, 0.92], [1.0, 0.55]]);
+// 中央涉水點：中路穿過的地方收成淺灘（不做深水，中路讀成「涉水而過」）。
+const FORD_PROFILE = widthProfile([[0.0, 1.0], [1.0, 0.72]]);
 
 /** 河的每一段共用的 6 層外框（由外而內）。 */
 function riverBands(path, profile, seed) {
   return {
-    wetgrass: ribbonPolygon(path, WIDTH.river_wetgrass, { vary: 0.26, seed: seed + 1, profile, taper: 0.55 }),
-    bank: ribbonPolygon(path, WIDTH.river_bank, { vary: 0.24, seed: seed + 2, profile, taper: 0.5 }),
-    shoal: ribbonPolygon(path, WIDTH.river_shoal, { vary: 0.22, seed: seed + 3, profile, taper: 0.45 }),
-    water: ribbonPolygon(path, WIDTH.river_water, { vary: 0.18, seed: seed + 4, profile, taper: 0.4 }),
-    deep: ribbonPolygon(path, WIDTH.river_deep, { vary: 0.30, seed: seed + 5, profile, taper: 0.3 }),
+    wetgrass: ribbonPolygon(path, WIDTH.river_wetgrass, { vary: 0.18, seed: seed + 1, profile, taper: 1 }),
+    bank: ribbonPolygon(path, WIDTH.river_bank, { vary: 0.16, seed: seed + 2, profile, taper: 1 }),
+    shoal: ribbonPolygon(path, WIDTH.river_shoal, { vary: 0.15, seed: seed + 3, profile, taper: 1 }),
+    water: ribbonPolygon(path, WIDTH.river_water, { vary: 0.12, seed: seed + 4, profile, taper: 1 }),
+    deep: ribbonPolygon(path, WIDTH.river_deep, { vary: 0.22, seed: seed + 5, profile, taper: 0.55 }),
   };
 }
 
 /**
- * 建立整套水系的形狀。
- * @param L buildMobaLayout() 的輸出
+ * 建立整套水系的形狀（巴龍側生成、小龍側 180° 鏡射）。
+ * @param L buildMobaLayout() 的輸出（核心座標 0..220）
  * @returns {{ parts, sandbars, stones, waterPolys, bankPolys, meta }}
- *   parts:   [{ id, kind, path, bands }]  bands = {wetgrass,bank,shoal,water,deep}
- *   sandbars:[{ id, poly }]               河中沙洲（打破大片水色）
- *   stones:  [{ x,y,angle,len,thick,h }]  岸邊/涉水點的石頭（量體）
  */
 export function buildRiverPlan(L) {
   const cx = L.bounds.centerX, cy = L.bounds.centerY;
   const R = L.river.points;
   const center = { x: cx, y: cy };
-
-  // ── 河臂中心線：中央 → 中繼點（沿用 gameData 河道折線）→ 坑心 ────────────
-  //   RIVER.points = [(42,38)…(110,110)…(178,182)]，索引 3 就是地圖中心；
-  //   只取「中心 → 坑」這兩段，地圖四角的河道整段捨棄（河不再貫穿全圖）。
-  const armCtrl = {
-    baron: [center, R[2], R[1], L.pits.baron],
-    dragon: [center, R[4], R[5], L.pits.dragon],
+  const mirPt = (p) => ({ x: 2 * cx - p.x, y: 2 * cy - p.y });
+  const mirPoly = (poly) => poly && poly.map(mirPt);
+  const mirBands = (b) => Object.fromEntries(Object.entries(b).map(([k, v]) => [k, mirPoly(v)]));
+  //  RIVER.points：0..3 = 巴龍側（外 → 中央前），4 = 中央。
+  const ci = R.findIndex((p) => Math.hypot(p.x - cx, p.y - cy) < 1e-6);
+  const ctrl = [center, ...R.slice(0, ci).reverse()];        // 中央 → 外側
+  const GAP = 9;                                               // 中央讓給涉水點
+  const dense = wobblePath(smoothPath(ctrl, 2.0), 1.1, 23);
+  const path = trimPath(dense, GAP, 0);
+  const parts = [];
+  const armPaths = { baron: path, dragon: path.map(mirPt) };
+  const armBands = riverBands(path, ARM_PROFILE, 20);
+  parts.push({ id: "arm_baron", kind: "arm", path, bands: armBands });
+  parts.push({ id: "arm_dragon", kind: "arm", path: armPaths.dragon, bands: mirBands(armBands) });
+  const armEnds = {
+    baron: { start: path[0], end: path[path.length - 1] },
+    dragon: { start: mirPt(path[0]), end: mirPt(path[path.length - 1]) },
   };
 
-  const GAP = 11;   // 河臂距地圖中心的起點距離 ⇒ 中央讓出一段給涉水點與中路兩塔
-  const PIT_BACK = 9; // 河臂在坑外就停住，剩下的交給「坑口水域」
-
-  const parts = [];
-  const armEnds = {};
-  const armPaths = {};
-  ["baron", "dragon"].forEach((key, i) => {
-    const dense = wobblePath(smoothPath(armCtrl[key], 2.2), 1.9, 11 + i * 6);
-    const path = trimPath(dense, GAP, PIT_BACK);
-    armPaths[key] = path;
-    armEnds[key] = { start: path[0], end: path[path.length - 1] };
-    parts.push({ id: `arm_${key}`, kind: "arm", path, bands: riverBands(path, ARM_PROFILE, 20 + i * 10) });
-  });
-
-  // ── 中央涉水點：接起兩條河臂的起點，正中央最窄 ─────────────────────────
-  //   刻意**不做深水**：中央是淺灘，中路才能讀成「涉水而過」而不是「被河切斷」。
-  const fordPath = wobblePath(
-    smoothPath([armEnds.baron.start, center, armEnds.dragon.start], 1.8), 0.8, 41);
+  // ── 中央涉水點：兩半各一條短帶（中央 → 河臂起點），鏡射成對 ──────────────
+  const fordHalf = smoothPath([center, path[0], path[Math.min(path.length - 1, 3)]], 1.6);
   const fordBands = {
-    wetgrass: ribbonPolygon(fordPath, WIDTH.ford * 1.45, { vary: 0.2, seed: 42, profile: FORD_PROFILE }),
-    bank: ribbonPolygon(fordPath, WIDTH.ford * 1.2, { vary: 0.2, seed: 43, profile: FORD_PROFILE }),
-    shoal: ribbonPolygon(fordPath, WIDTH.ford, { vary: 0.18, seed: 44, profile: FORD_PROFILE }),
-    water: ribbonPolygon(fordPath, WIDTH.ford * 0.52, { vary: 0.16, seed: 45, profile: FORD_PROFILE }),
+    wetgrass: ribbonPolygon(fordHalf, WIDTH.ford * 1.45, { vary: 0, profile: FORD_PROFILE }),
+    bank: ribbonPolygon(fordHalf, WIDTH.ford * 1.2, { vary: 0, profile: FORD_PROFILE }),
+    shoal: ribbonPolygon(fordHalf, WIDTH.ford, { vary: 0, profile: FORD_PROFILE }),
+    water: ribbonPolygon(fordHalf, WIDTH.ford * 0.52, { vary: 0, profile: FORD_PROFILE }),
     deep: null,
   };
-  parts.push({ id: "ford", kind: "ford", path: fordPath, bands: fordBands });
+  parts.push({ id: "ford_baron", kind: "ford", path: fordHalf, bands: fordBands });
+  parts.push({ id: "ford_dragon", kind: "ford", path: fordHalf.map(mirPt), bands: mirBands(fordBands) });
+  const fordPath = [...fordHalf.slice().reverse(), ...fordHalf.slice(1).map(mirPt)];
 
-  // ── 坑口水域：河臂末端 → 坑心 → 越過坑心一小段（確保整個坑口併進河系）────
+  // ── 坑周水潭：河在坑周張成一圈淺水（坑本身是池中的石砌台）──────────────
   const mouths = {};
-  ["baron", "dragon"].forEach((key, i) => {
-    const p = L.pits[key];
-    // 起點取「河臂上距坑心約 22 單位」的那一點，而不是河臂端點：
-    // 河臂端點離坑可能只剩 6 單位，坑口水域會短到讀不出來（實測 Dragon 只有 8.8 長）。
-    const arm = armPaths[key];
-    const from = [...arm].reverse().find((q) => Math.hypot(q.x - p.x, q.y - p.y) >= 22) ?? arm[0];
-    let dx = p.x - from.x, dy = p.y - from.y;
-    const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
-    const beyond = { x: p.x + dx * 13, y: p.y + dy * 13 };
-    const path = smoothPath([from, p, beyond], 2.0);
-    const bands = {
-      wetgrass: ribbonPolygon(path, WIDTH.pit_mouth * 1.55, { vary: 0.2, seed: 60 + i, profile: MOUTH_PROFILE }),
-      bank: ribbonPolygon(path, WIDTH.pit_mouth * 1.2, { vary: 0.2, seed: 62 + i, profile: MOUTH_PROFILE }),
-      shoal: ribbonPolygon(path, WIDTH.pit_mouth, { vary: 0.18, seed: 64 + i, profile: MOUTH_PROFILE }),
-      water: ribbonPolygon(path, WIDTH.pit_mouth * 0.78, { vary: 0.16, seed: 66 + i, profile: MOUTH_PROFILE }),
-      deep: ribbonPolygon(path, WIDTH.pit_mouth * 0.4, { vary: 0.24, seed: 68 + i, profile: MOUTH_PROFILE }),
+  {
+    const p = L.pits.baron;
+    const near = nearestIndex(path, p);
+    const seg = path.slice(Math.max(0, near - 9), Math.min(path.length, near + 10));
+    const pool = {
+      wetgrass: blobRing(p.x, p.y, 27.5, { n: 40, amp: 0.05, seed: 61 }),
+      bank: blobRing(p.x, p.y, 24.5, { n: 40, amp: 0.05, seed: 62 }),
+      shoal: blobRing(p.x, p.y, 22, { n: 40, amp: 0.045, seed: 63 }),
+      water: blobRing(p.x, p.y, 19.5, { n: 40, amp: 0.04, seed: 64 }),
+      deep: null,
     };
-    mouths[key] = { path, bands };
-    parts.push({ id: `mouth_${key}`, kind: "mouth", path, bands });
-  });
+    mouths.baron = { path: seg, bands: pool };
+    mouths.dragon = { path: seg.map(mirPt), bands: mirBands(pool) };
+    parts.push({ id: "mouth_baron", kind: "mouth", path: seg, bands: pool });
+    parts.push({ id: "mouth_dragon", kind: "mouth", path: mouths.dragon.path, bands: mouths.dragon.bands });
+  }
 
-  // ── 沙洲：河臂寬處露出的地，打破大片同色水面 ────────────────────────────
+  // ── 沙洲：巴龍側取樣，小龍側鏡射 ───────────────────────────────────────
   const sandbars = [];
-  ["baron", "dragon"].forEach((key, i) => {
-    const path = armPaths[key];
-    [0.14, 0.78].forEach((t, j) => {
-      const idx = Math.round(t * (path.length - 1));
-      const p = path[idx];
-      const off = (j % 2 ? 1 : -1) * (2.2 + hash01(j, 7 + i) * 2.4);
-      const nb = path[Math.min(path.length - 1, idx + 1)];
-      let dx = nb.x - p.x, dy = nb.y - p.y;
-      const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
-      sandbars.push({
-        id: `sandbar_${key}_${j}`,
-        poly: blobRing(p.x - dy * off, p.y + dx * off, 4.6 + hash01(j, 13 + i) * 2.2,
-          { n: 16, amp: 0.3, seed: 70 + i * 3 + j, squashX: 1.5, squashY: 0.7, rot: Math.atan2(dy, dx) }),
-      });
-    });
+  [0.2, 0.78].forEach((t, j) => {
+    const idx = Math.round(t * (path.length - 1));
+    const p = path[idx], nb = path[Math.min(path.length - 1, idx + 1)];
+    let dx = nb.x - p.x, dy = nb.y - p.y;
+    const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const off = (j % 2 ? 1 : -1) * (2.0 + hash01(j, 7) * 1.6);
+    const poly = blobRing(p.x - dy * off, p.y + dx * off, 3.6 + hash01(j, 13) * 1.8,
+      { n: 16, amp: 0.3, seed: 70 + j, squashX: 1.5, squashY: 0.7, rot: Math.atan2(dy, dx) });
+    sandbars.push({ id: `sandbar_baron_${j}`, poly });
+    sandbars.push({ id: `sandbar_dragon_${j}`, poly: mirPoly(poly) });
   });
 
-  // ── 岸石：只沿河臂兩岸放，數量少、貼著水邊 ─────────────────────────────
+  //  岸石移除：河道步道（中心線 ±10）一律可走，河岸的阻擋改由野區量體（mapJungleTopology）
+  //  提供，這樣畫面上的岸與導航的岸是同一份多邊形。
   const stones = [];
-  ["baron", "dragon"].forEach((key, i) => {
-    const path = armPaths[key];
-    [1, -1].forEach((sgn, si) => {
-      const line = smoothPath(offsetPath(path, sgn * (WIDTH.river_shoal / 2 + 1.6)), 4.2);
-      for (let k = 2; k < line.length - 2; k += 4) {
-        const p = line[k], q = line[k + 1];
-        stones.push({
-          kind: "river_stone", x: p.x, y: p.y,
-          angle: Math.atan2(q.x - p.x, q.y - p.y),
-          len: 3.0 + hash01(k, 9 + si + i * 4) * 2.4,
-          thick: 2.6 + hash01(k, 21 + si + i * 4) * 2.0,
-          h: 1.6 + hash01(k, 33 + si + i * 4) * 2.2,
-        });
-      }
-    });
-  });
 
   return {
     parts, sandbars, stones,
@@ -181,4 +157,10 @@ export function buildRiverPlan(L) {
     bankPolys: parts.map((p) => p.bands.bank).filter(Boolean),
     meta: { armPaths, armEnds, fordPath, mouths, center, gap: GAP },
   };
+}
+
+function nearestIndex(pts, p) {
+  let best = 0, bd = Infinity;
+  pts.forEach((q, i) => { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; best = i; } });
+  return best;
 }

@@ -746,7 +746,14 @@ function findPathCanonical(from, to, radius, alive) {
     x: F.B.minX + (id % F.nx) * F.cellToSim,
     y: F.B.minY + (((id / F.nx) | 0)) * F.cellToSim,
   }));
-  return [start, ...pts.slice(1), goal];
+  //  Topology Final（moba-sim.v9）：起點格心與終點格心**都保留**。
+  //  舊版回傳 [start, c2..cn, goal]：略過起點格、保留終點格 ⇒ 同一條路正向與反向的
+  //  首尾兩段不對稱，歐氏長度差最多約一格（P0-B 記錄的 same-lane 方向性殘差：
+  //  舊圖 ±0.407、新圖 ±0.583，而兩個方向的格點成本其實完全相同）。
+  //  兩端都保留 ⇒ 長度 = |起點→起點格心| + 最佳格點成本 + |終點格心→終點|，
+  //  與 A* 在等價路徑間怎麼取捨無關，正反向**恆等**。引擎跟隨路徑時距離 < 1.2 即視為
+  //  到達，所以起點格心（≤ 0.71）只是每次重新尋路時的一個微步。
+  return [start, ...pts, goal];
 }
 
 /** a→b 這條直線整段都站得下英雄嗎（等距取樣）。 */

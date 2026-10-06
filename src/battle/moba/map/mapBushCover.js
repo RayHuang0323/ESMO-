@@ -39,15 +39,10 @@ export const BUSH_SIZE = Object.freeze({ minBlobs: 4, blobHK: 1.15 });
  * 讓草叢不是隨機撒點，而是「Buff 旁 / 小野旁 / 河道 / 河口·坑口 / 三角」都各有一叢。
  * 紅方鏡射後，巴龍側（藍）↔ 小龍側（紅）自然對稱，兩坑入口都有埋伏草。
  */
-const BLUE_COVER = Object.freeze([
-  { key: "tri_top", cat: "tri", x: 46, y: 108, r: 5.0, label: "上路口三角草" }, // 上路 ↔ 野區入口
-  { key: "river", cat: "river", x: 62, y: 96, r: 5.0, label: "河道草" },         // 巴龍河臂邊埋伏草
-  { key: "pit_mouth", cat: "pit_mouth", x: 50, y: 76, r: 4.8, label: "巴龍口草" }, // 巴龍坑口埋伏草
-  { key: "buff", cat: "buff", x: 88, y: 158, r: 5.0, label: "藍 Buff 草" },       // 藍 Buff 營地旁
-  { key: "small_camp", cat: "small_camp", x: 58, y: 128, r: 4.6, label: "小野營草" }, // 藍側小野營旁
-  { key: "back", cat: "back", x: 36, y: 150, r: 4.4, label: "後野草" },           // G.8：後野（基地側）繞行草
-  { key: "raptor_side", cat: "raptor", x: 96, y: 64, r: 4.6, label: "上野伏擊草" }, // G.8：藍上野營地旁伏擊草
-]);
+//  Topology Final（2026-10-06）：呈現用 cover 全部移除。gameData.BUSHES 已改為 30 叢有模擬實體、
+//  放在戰術節點上的草叢；舊 cover 沒有模擬實體（英雄不會把它們當草叢），座標也是舊野區的，
+//  會落在新野區牆裡。畫面上的草叢從此＝引擎的草叢。
+const BLUE_COVER = Object.freeze([]);
 
 
 /**

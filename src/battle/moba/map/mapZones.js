@@ -21,9 +21,10 @@ export const ZONE = Object.freeze({
 
 // 四個野區象限（Blue/Red × Top/Bot），中心與半徑為「示意 overlay」用途，
 // 依既有 camps 與河道/兵線幾何取點；不是模擬座標，只供分區標示。
+//  Topology Final：象限中心改為新野區（mapJungleTopology 房間群）的重心；紅方＝藍方 180° 鏡射。
 export const JUNGLE_QUADRANTS = Object.freeze([
-  { id: "blue_top", side: "blue", label: "藍上野", x: 58, y: 78, r: 26 },
-  { id: "blue_bot", side: "blue", label: "藍下野", x: 73, y: 155, r: 28 },
-  { id: "red_top", side: "red", label: "紅上野", x: 147, y: 65, r: 28 },
-  { id: "red_bot", side: "red", label: "紅下野", x: 162, y: 142, r: 26 },
+  { id: "blue_top", side: "blue", label: "藍上野", x: 56, y: 108, r: 27 },
+  { id: "blue_bot", side: "blue", label: "藍下野", x: 108, y: 160, r: 25 },
+  { id: "red_top", side: "red", label: "紅上野", x: 112, y: 60, r: 25 },
+  { id: "red_bot", side: "red", label: "紅下野", x: 164, y: 112, r: 27 },
 ]);

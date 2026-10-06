@@ -65,10 +65,10 @@ const ARCHETYPE_BY_ID = Object.freeze({
  * 距三路 ≥19、距河 ≥19、距 gameData 牆 ≥13、距坑 ≥26、距既有營地 ≥26、距塔 ≥17。
  * ⚠ 沒有模擬實體，見檔頭說明。
  */
-const BLUE_PRESENTATION = Object.freeze([
-  { key: "raptor", x: 92, y: 52, archetype: "raptors", label: "鳥營" },
-  { key: "gromp", x: 44, y: 92, archetype: "gromp", label: "蟾蜍" },
-]);
+//  Topology Final（2026-10-06）：呈現用營地（鳥營／蟾蜍）移除。它們沒有模擬實體、
+//  在正式 Rift 畫面也不會被畫出，只會在野區留下一塊「看起來有營地、實際什麼都沒有」的空地。
+//  野區的戰術空間改由 mapJungleTopology 的路口房間（三角草、河道入口、樞紐）提供。
+const BLUE_PRESENTATION = Object.freeze([]);
 
 
 /**

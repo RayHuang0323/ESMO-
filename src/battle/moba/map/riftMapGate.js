@@ -26,7 +26,8 @@ export const RIFT_HARD_TIMEOUT_MS = 60_000;
 
 /** GLB 未壓縮大小（位元組）。GitHub Pages 以 gzip 傳輸，進度只能用這個當分母。 */
 //  v16 Objective Pit art fix（2026-09-30）：兩坑依對稱 gameplay 腳印重建、中性坑色 ⇒ 13,425,188 → 13,370,736。
-export const RIFT_GLB_BYTES = 13_370_736;
+//  moba-sim.v18 Topology Final（2026-10-06）：野區／外環量體、四象限主題、v16 中性坑 ⇒ 13,370,736 → 14,504,340。
+export const RIFT_GLB_BYTES = 14_504_340;
 
 /** Loading 還在等地圖時，進度條最多走到這裡。 */
 export const LOADING_BAR_WAIT_CAP = 95;
