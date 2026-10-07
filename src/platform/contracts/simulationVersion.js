@@ -400,10 +400,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //    對線站位點死區、對線期等兵線合法化、發呆再任務承諾（推進除外）。
   //  P0-2 HeroSkillLevel.v2：Lv1／2／3 依序解鎖基本技能、R 於 Lv6 解鎖並在 Lv11／16 升級（上限 3）；AI 大招保留。
   //  P0-3 勝利條件優先：敵方高地已破、人數不劣且推得動（人數優勢或目標旁有己方兵線）⇒ 收尾推進優先於龍／巴龍；
-  //    圍攻窗的塔區推進目標改用窗的目標塔。
+  //    圍攻窗的塔區判斷與實際建築攻擊共用同一座 canonical siege target（_siegeTargetV19）。
   //  選手差異只來自既有作用點的風險傾向（英雄定位／選手素質 retreatAdj／戰術身分），決定性、不擲骰。
   //  ⚠ 後果（已知且接受）：v18 歷史挑戰由 canReplay 明確拒絕；v1～v18 指紋全數保留。
-  "moba-sim.v19": "8ec077195322613b",
+  "moba-sim.v19": "dc005e5f57977e3d",
 });
 
 export const isKnownSimulationVersion = (v) =>

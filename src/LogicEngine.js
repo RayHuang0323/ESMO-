@@ -2796,6 +2796,18 @@ export class LogicEngine {
     return true;
   }
   /**
+   * Tactical AI Phase 1（v19）：攻城窗的 canonical siege target——**唯一**來源。
+   * 英雄這一 tick 的行動是「圍攻」（主動權攻城窗，含勝利條件收尾窗）且窗目標塔還在 ⇒ 回傳那座塔；否則 null
+   * （呼叫端退回自己這一路的前線建築）。塔區進塔判斷（M1.7 ②）與實際建築攻擊（_combatStep）都只讀這裡。
+   */
+  _siegeTargetV19(p, st) {
+    if (!this.rules.winConditionV19 || st !== "圍攻") return null;
+    const T = this.fsm3?.[p.side];
+    if (!T || T.initKind !== "siege") return null;
+    const tw = this.towers[T.initTarget];
+    return tw && tw.hp > 0 ? tw : null;
+  }
+  /**
    * Tactical AI Phase 1（v19）P0-3：勝利條件是否成立。
    * 敵方任一路高地已破（`_laneBreached`，超級兵已在路上）、我方存活 ≥ winCondMinAlive 且不少於對方
    * ⇒ 回傳 { lane, targetKey }（收尾的前線建築）。決定性、不擲骰；路線順序固定 mid → top → bot。
@@ -4526,7 +4538,9 @@ export class LogicEngine {
     }
     //  Combat Quality v1：沒有英雄目標、沒被控制 ⇒ 處理兵線（補刀優先）。
     if (R.cqHeroFarmV1 && !foe && !heroControlled) this._heroFarmStep(p, alive, dt, lateFactor);
-    let tw = this.frontStructure(p.side, effLane, p.pos);
+    //  Tactical AI Phase 1（v19）：攻城窗中（st「圍攻」）實際攻擊的建築＝塔區判斷用的同一座 canonical siege target
+    //  （_siegeTargetV19）。舊式只打自己這一路的前線建築 ⇒ 走進窗目標塔射程卻打不到（白挨塔 Audit：約 8% 的塔傷）。
+    let tw = this._siegeTargetV19(p, p.state) ?? this.frontStructure(p.side, effLane, p.pos);
     // 可攻塔判定：v1/v2 = 塔邊有任何敵人就完全打不了塔（Legacy 簡化）。
     // S29B1（v3）：塔邊**人數優勢**即可強攻——否則只要守方站一個人在主堡旁，
     //   圍攻永遠零進度，比賽收不掉（實測主堡 7200 HP 要磨 18 分鐘）。
@@ -6649,9 +6663,7 @@ export class LogicEngine {
         //  Tactical AI Phase 1（v19）P0-3：正在執行攻城／收尾主動權窗（st「圍攻」）時，推進目標＝窗的目標塔，
         //  不是「自己這一路」的前線建築。舊式兩者對不上 ⇒ 圍攻門牙塔／別路塔一律被判「無兵線也無擊殺機會」擋在射程外
         //  （實測 seed 89：收尾窗開了 12 分鐘，藍方在門牙塔外「避塔」到 34 分）。守軍、撤離、連續吃塔等安全規則照舊。
-        const initTw = R.winConditionV19 && st === "圍攻" && this.fsm3?.[p.side]?.initKind === "siege"
-          ? this.towers[this.fsm3[p.side].initTarget] : null;
-        const zoneObjective = initTw && initTw.hp > 0 ? initTw : this.frontStructure(p.side, effLane, p.pos);
+        const zoneObjective = this._siegeTargetV19(p, st) ?? this.frontStructure(p.side, effLane, p.pos);
         let tz = this._towerZoneV17(p, alive, zoneObjective);
         //  M4b.5：移動目標落在「不准停留」的敵塔射程內 ⇒ 同樣改成退到射程外
         //  （站位層會把目標點推向塔下的敵人；只看目前位置會在射程邊緣來回擺動）。

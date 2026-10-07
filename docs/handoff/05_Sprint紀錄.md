@@ -24338,3 +24338,35 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - **v19 新增一類「圍攻中卻沒扣到建築」約 24 發／場（8%）**，消融：關掉勝利條件旗標即消失（每場開火 305 → 219、白挨 41.2% → 33.0%）。
 - **根因（Phase 1 自身修正不完整）**：P0-3 讓攻城窗的塔區檢查改用「窗的目標塔」（英雄因此走得進別路目標塔射程），但實際扣塔血的 `_combatStep`（LogicEngine `frontStructure(p.side, effLane)`）**仍只打自己這一路的前線建築** ⇒ 站在目標塔下挨打卻打不到。196 發樣本中絕大多數是一般主動推進窗（Milestone F）、目標塔無守軍、`canSiege=true`、已在攻擊距離內。v18 這些人被塔區擋在射程外，所以不存在這類白挨。
 - **建議（待 Owner 核准，本輪未改）**：`_combatStep` 在攻城窗（st「圍攻」）時改用同一個窗目標塔（與塔區檢查一致）；屬 v19 語意，須重登指紋並重跑 n=1000。未修前不建議發布 v19。
+
+### 2026-10-07 Tactical AI Phase 1 Release blocker 修正：canonical siege target（moba-sim.v19 指紋更新，local）
+
+- **修正（Owner 核准，最小範圍）**：新增唯一 helper `_siegeTargetV19(p, st)`——攻城窗（st「圍攻」、主動權攻城窗含勝利條件收尾窗）且窗目標塔還在 ⇒ 回傳該塔。
+  塔區進塔判斷（M1.7 ②）與 `_combatStep` 實際建築攻擊**都只讀它**（無窗 ⇒ 退回自己這一路的前線建築）。未改地圖、塔數值、傷害或任何 Battle Balance。
+- `moba-sim.v19` 維持（未發布），指紋更新為 `dc005e5f57977e3d`；v1～v18 指紋未動。
+
+**v18 ／ 修正前 v19 ／ 修正後 v19**
+
+| 指標 | v18 | v19 修正前 | v19 修正後 |
+|---|---|---|---|
+| 塔→英雄開火（每場，8 場） | 322 | 305 | **239** |
+| 真正白挨塔 | 39.4% | 41.2% | **34.9%** |
+| 推塔中（有扣建築血） | 35.6% | 30.6% | 37.2% |
+| 「圍攻中挨塔」（8 場） | — | 196 發（多數打不到） | 107 發，白挨 19（走向攻擊距離途中、主堡兵線閘門＝v18 既有規則）⇒ 目標錯位造成的打不到＝0 |
+| 決策目標 A→B→A（次／英雄分鐘） | 3.95 | 1.58 | 1.45 |
+| 敵塔附近乒乓 | 0.536 | 0.194 | 0.213 |
+| 敵塔射程邊緣乒乓 | 0.236 | 0.188 | 0.226 |
+| seed 777 | 32.5 分 | 23.5 | 23.1 |
+| regress2 | 7/8（最長 32.5） | 8/8（30.0） | **8/8（27.0）** |
+| pacing29b1 | 22/25（§1／§3／§15） | 22/25 | 22/25（同三項既有紅；§25 位移 8pp） |
+| n=1000 藍勝 | 51.7% | 50.1% | 48.9% |
+| STANDARD／SWAPPED 藍勝 | 55.5／48.2 | 53.0／47.4 | 53.9／44.3 |
+| 巨龍側／純藍方 | +3.7／+1.9 | +2.8／+0.2 | +4.8／−0.9（±1.6；v17 為 +5.4） |
+| 時長中位／P90／P95／最長 | 17.0／23.5／25.5／31.8 | 18.5／24.0／25.5／34.8 | 18.4／23.5／25.0／36.3 |
+| 20–40 分占比／<15 分／>40 分 | 35.0%／217／0 | 42.1%／135／0 | 39.2%／132／**0** |
+| 技能關 200 seeds 平均／P95／最長／>40 | 20.5／27.4／36.3／0 | 21.5／27.3／37.3／0 | 21.5／27.3／37.3／0 |
+
+- 配對翻轉：v18 → 修正後 243：271（z −1.24）；修正前 → 修正後 95：107（z −0.84，約 20% 場次受影響）⇒ 不顯著，未產生新的公平性或節奏問題。
+- verify：regress 15/15、regress2 8/8、runtime29、P0-A／B／C／D、map_topology_final、tactical_ai_p1、simulation_version：PASS；hero_skills_phase1／round2 形狀＝既有紅。
+- MOBA gate 批次 31 綠：combat_polish_r2 31/31（12 seeds）、combat_quality 28/28、combat_state 16/16、mobile_hud 60/60、skill_levels v2／skill_detail 500/500、Hero Identity 23／17／22、Objective 17／11／7／4、Battle Talents、BattleResult v3、rift_loading 41/41、nav_h2 14/14。紅：items_m2 G1（基準前移到本 commit，下一個 commit）、items_m3 G6（未 commit 差異）、J1（Owner 已接受前期清野變慢）、combat_feedback X3／X4／X5（Sprint 範圍守衛）、check_moba_map／hero_skills_phase1／runtime_map_h1（v18 既有）。
+- Production build PASS（33.9s）；真實 Chrome h2close 13/15（618 筆、比賽結束；紅兩項 GameView 標記／閃爍與 v17／v18 相同）。
