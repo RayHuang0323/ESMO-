@@ -39,18 +39,19 @@ console.log("\n── A 戰報：技能升級降噪（純呈現）──");
   const tracker = new BattleEventTracker();
   tracker.update(eng.snapshot());
   const p = eng.players.find((x) => x.id === "b1");
-  for (const lv of [3, 5, 7, 9, 11, 13, 15]) { p.mlv = lv; eng._updateHeroSkillLevels(p); }
+  //  moba-sim.v19 HeroSkillLevel.v2：Lv2–Lv18 逐級升級 ⇒ 基本技能 8 次（解鎖／升級）＋ R 3 次（Lv6／11／16）＝ 11 筆；R 上限 3。
+  for (let lv = 2; lv <= 18; lv++) { p.mlv = lv; eng._updateHeroSkillLevels(p); }
   const snap = eng.snapshot();
   const events = tracker.update(snap);
   const skillEv = events.filter((e) => e.type === "SKILL_LEVEL_UP");
   const frozen = JSON.stringify(events);
-  ck("A1 引擎仍產生 7 筆 SKILL_LEVEL_UP（事件層不動）", skillEv.length === 7, String(skillEv.length));
+  ck("A1 引擎產生 11 筆 SKILL_LEVEL_UP（HeroSkillLevel.v2；事件層不動）", skillEv.length === 11, String(skillEv.length));
   const main = SR.filterMainReport(events, snap);
   const kinds = main.filter((e) => e.type === "SKILL_LEVEL_UP").map((e) => `${e.data.slot}${e.data.level}:${e.reportKind}`);
   const talentSlot = SR.talentSlotOf(snap.players.find((x) => x.id === "b1"));
   ck("A2 已選天賦的技能欄位讀得到（snapshot.heroBattleTalent → 天賦定義 slot）", !!talentSlot && talentSlot === pickedTalent.effects[0].slot, `${talentSlot} / ${pickedTalent.effects[0].slot}`);
-  ck("A3 主要戰報只留重要升級：R 升級、天賦技能滿級、全技能滿級（7 → ≤3）",
-    kinds.length >= 2 && kinds.length <= 3 && kinds.some((k) => k.endsWith(":ultimate")) && kinds.some((k) => k.endsWith(":allMax"))
+  ck("A3 主要戰報只留重要升級：R 升級、天賦技能滿級、全技能滿級（11 → ≤4）",
+    kinds.length >= 2 && kinds.length <= 4 && kinds.some((k) => k.endsWith(":ultimate")) && kinds.some((k) => k.endsWith(":allMax"))
     && kinds.every((k) => !k.endsWith(":minor")), kinds.join(" "));
   const talentMaxOk = talentSlot === "R" || kinds.some((k) => k === `${talentSlot}${SKILL_LEVEL_CAPS[talentSlot]}:talentMax`)
     || kinds.some((k) => k.startsWith(talentSlot) && k.endsWith(":allMax"));
@@ -59,14 +60,14 @@ console.log("\n── A 戰報：技能升級降噪（純呈現）──");
   ck("A6 過濾不改輸入事件、非技能事件原樣保留", JSON.stringify(events) === frozen
     && main.filter((e) => e.type !== "SKILL_LEVEL_UP").length === events.filter((e) => e.type !== "SKILL_LEVEL_UP").length);
   const result = snapshotToBattleResult({ ...snap, over: true, winner: "blue" }, events);
-  ck("A7 BattleResult.timeline 仍含全部 7 筆升級（Result／Replay 契約不變）", result.timeline.filter((e) => e.type === "SKILL_LEVEL_UP").length === 7);
+  ck("A7 BattleResult.timeline 仍含全部 11 筆升級（Result／Replay 契約不變）", result.timeline.filter((e) => e.type === "SKILL_LEVEL_UP").length === 11);
   const growth = SR.skillGrowthSummary(result);
   const b1 = growth?.find((g) => g.id === "b1");
-  ck("A8 賽後技能成長摘要讀 BattleResult 最終等級：b1 Q3 W3 E3 R2、7 次升級、四招全滿",
-    b1 && JSON.stringify(b1.levels) === JSON.stringify({ Q: 3, W: 3, E: 3, R: 2 }) && b1.upgrades === 7 && b1.maxed.length === 4, JSON.stringify(b1));
-  //  同一 tick 連跳兩級：兩筆 matchLevel 都是 15，只能有一筆 allMax
+  ck("A8 賽後技能成長摘要讀 BattleResult 最終等級：b1 Q3 W3 E3 R3、11 次升級、四招全滿",
+    b1 && JSON.stringify(b1.levels) === JSON.stringify({ Q: 3, W: 3, E: 3, R: 3 }) && b1.upgrades === 11 && b1.maxed.length === 4, JSON.stringify(b1));
+  //  同一 tick 連跳兩級：兩筆 matchLevel 都是最後升級等級（v2 為 16），只能有一筆 allMax
   const mk = (slot, level, ml) => ({ type: "SKILL_LEVEL_UP", data: { playerId: "r1", slot, level, matchLevel: ml } });
-  const jump = SR.filterMainReport([mk("E", 2, 15), mk("W", 3, 15)], null).filter((e) => e.reportKind === "allMax");
+  const jump = SR.filterMainReport([mk("E", 2, 16), mk("W", 3, 16)], null).filter((e) => e.reportKind === "allMax");
   ck("A9 同 tick 連升兩級只報一次「全數滿級」", jump.length === 1 && jump[0].data.slot === "W");
   ck("A10 沒有天賦資料時不猜 talentMax", SR.skillLevelReportKind(mk("Q", 3, 5), { talentSlot: null }) === "minor");
   const tl = read("src/battle/ui/BattleTimeline.jsx"), rp = read("src/screens/moba/MobaReplayScreen.jsx");

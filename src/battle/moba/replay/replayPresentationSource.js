@@ -213,8 +213,9 @@ export function createReplaySource(replay) {
             const base = savedRules[slot];
             if (!base || !Array.isArray(row) || row.length !== 4) return null;
             const rank = row[0];
-            const rule = applySkillLevelToRule(base, rank);
-            return [slot, { ready: row[2] === 1, cd: row[1], cdMax: rule.cooldown, rule,
+            //  HeroSkillLevel.v2（moba-sim.v19）：rank 0 ＝ 未解鎖 ⇒ 顯示基礎規則並標 locked（v18 以前的 replay rank 恆 ≥ 1）。
+            const rule = rank >= 1 ? applySkillLevelToRule(base, rank) : base;
+            return [slot, { ready: row[2] === 1 && rank >= 1, ...(rank < 1 ? { locked: true } : {}), cd: row[1], cdMax: rule.cooldown, rule,
               level: { current: rank, cap: SKILL_LEVEL_CAPS[slot],
                 next: rank < SKILL_LEVEL_CAPS[slot] ? rank + 1 : null,
                 nextAt: row[3] || null,

@@ -1,8 +1,21 @@
-// HeroSkillLevel.v1: deterministic rank growth from the existing match level.
+// HeroSkillLevel.v2 (moba-sim.v19, Tactical AI Phase 1): deterministic unlock + rank growth from the match level.
 // No XP source, random draw, player-stat formula or second hero database lives here.
-export const HERO_SKILL_LEVEL_CONTRACT = 'HeroSkillLevel.v1';
-export const SKILL_LEVEL_CAPS = Object.freeze({ Q: 3, W: 3, E: 3, R: 2 });
-export const SKILL_UPGRADE_MATCH_LEVELS = Object.freeze([3, 5, 7, 9, 11, 13, 15]);
+//   · Lv1 / Lv2 / Lv3 unlock the three basic skills one by one (upgrade-priority order).
+//   · Basic skills rank up at Lv4 / 5 / 7 / 8 / 9 / 10 (each basic reaches rank 3 by Lv10).
+//   · R unlocks at Lv6 and ranks up at Lv11 / Lv16 (cap 3).
+//   · Rank 0 = locked: the engine must not cast it; presentation shows it as locked.
+//   · Special heroes: an authored `rules.R.unlockLevels` (e.g. [1, 6, 11]) overrides the R schedule (metadata hook).
+// v1 (all four skills rank 1 at match start, R rank 2 at Lv9) was the moba-sim.v13–v18 schedule.
+export const HERO_SKILL_LEVEL_CONTRACT = 'HeroSkillLevel.v2';
+export const SKILL_LEVEL_CAPS = Object.freeze({ Q: 3, W: 3, E: 3, R: 3 });
+export const ULTIMATE_LEVELS = Object.freeze([6, 11, 16]);
+/** [matchLevel, priorityIndex] — basic skill unlocks (rank 1) and rank-ups, in level order. */
+export const BASIC_SKILL_SCHEDULE = Object.freeze([
+  [1, 0], [2, 1], [3, 2], [4, 0], [5, 1], [7, 0], [8, 1], [9, 2], [10, 2],
+].map((row) => Object.freeze(row)));
+/** Every match level at which some skill unlocks or ranks up (presentation / report helpers). */
+export const SKILL_UPGRADE_MATCH_LEVELS = Object.freeze([...new Set([...BASIC_SKILL_SCHEDULE.map(([lv]) => lv), ...ULTIMATE_LEVELS])]
+  .sort((a, b) => a - b));
 
 const FIELD_CAP = Object.freeze({
   halfAngle: Math.PI / 2, shieldPctMaxHp: 1, reduction: 1, speedFactor: 1.6,
@@ -75,21 +88,28 @@ export function skillUpgradePriority(rules, talentSlot = null) {
   }));
 }
 
-/** Rank 1 of all four skills is available at match start, preserving v13 casts. */
+/** R schedule: authored metadata override (special heroes) or the standard Lv6 / 11 / 16. */
+export function ultimateLevelsOf(rules) {
+  const own = rules?.R?.unlockLevels;
+  return Array.isArray(own) && own.length && own.every((lv) => Number.isInteger(lv) && lv >= 1 && lv <= 18)
+    ? own.slice(0, SKILL_LEVEL_CAPS.R) : ULTIMATE_LEVELS;
+}
+
+/** HeroSkillLevel.v2 ranks at a match level (0 = locked). */
 export function skillLevelsAtMatchLevel(matchLevel, rules, talentSlot = null) {
   const level = Math.max(1, Math.min(18, Math.floor(Number(matchLevel) || 1)));
   const priority = skillUpgradePriority(rules, talentSlot);
-  const slots = [priority[0], priority[1], priority[2], 'R', priority[0], priority[1], priority[2]];
-  const ranks = { Q: 1, W: 1, E: 1, R: 1 };
-  SKILL_UPGRADE_MATCH_LEVELS.forEach((unlock, index) => {
-    if (level >= unlock) ranks[slots[index]]++;
-  });
+  const ranks = { Q: 0, W: 0, E: 0, R: 0 };
+  for (const [unlock, index] of BASIC_SKILL_SCHEDULE) if (level >= unlock) ranks[priority[index]]++;
+  for (const unlock of ultimateLevelsOf(rules)) if (level >= unlock) ranks.R++;
   return ranks;
 }
 
 export function nextSkillUnlock(matchLevel, rules, talentSlot, slot) {
   const current = skillLevelsAtMatchLevel(matchLevel, rules, talentSlot)[slot];
-  if (!current || current >= SKILL_LEVEL_CAPS[slot]) return null;
-  return SKILL_UPGRADE_MATCH_LEVELS.find((unlock) => unlock > matchLevel
-    && skillLevelsAtMatchLevel(unlock, rules, talentSlot)[slot] > current) ?? null;
+  if (current == null || current >= SKILL_LEVEL_CAPS[slot]) return null;
+  for (let lv = Math.floor(Number(matchLevel) || 1) + 1; lv <= 18; lv++) {
+    if (skillLevelsAtMatchLevel(lv, rules, talentSlot)[slot] > current) return lv;
+  }
+  return null;
 }

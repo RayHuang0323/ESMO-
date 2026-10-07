@@ -156,6 +156,7 @@ const SEGMENTS = [
   { id: "fairness_p0b", script: "tools/check_moba_navigation_mirror_p0b.mjs", shape: /14 PASS \/ 0 FAIL/, note: "P0-B invariant" },
   { id: "fairness_p0c", script: "tools/check_moba_tail_p0c_invariant.mjs", shape: /PASS/, note: "P0-C invariant" },
   { id: "map_topology_final", script: "tools/check_moba_map_topology_final.mjs", shape: /: \d+ PASS \/ 0 FAIL ===/, note: "MOBA Map Topology Final（一份真相／野區密度／路線／目標）" },
+  { id: "tactical_ai_p1", script: "tools/check_moba_tactical_ai_p1.mjs", shape: /MOBA Tactical AI Phase 1：\d+\/\d+ PASS/, note: "Tactical AI Phase 1（moba-sim.v19）：塔邊遲滯／技能等級 v2／大招保留／勝利條件" },
   { id: "fairness_p0d", script: "tools/check_moba_nexus_wave_p0d.mjs", args: ["--out=tmp/hero-skills/seed608.json"], shape: /"pass": true/, note: "P0-D seed608" },
   { id: "simulation_version", script: "tools/check_simulation_version_gate.mjs", shape: /PASS|通過/, note: "Simulation fingerprint" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },

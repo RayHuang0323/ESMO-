@@ -40,6 +40,11 @@ function runSkill(heroId, slot) {
   const e = new LogicEngine(7, null);
   e.configureHeroSkills(toEngineHeroSkills(roster, null));
   const P = Object.fromEntries(e.players.map((p) => [p.id, p]));
+  //  moba-sim.v19：本矩陣驗「每個技能宣告的持續狀態是否完整生效」，不是 AI 何時放、也不是等級表。
+  //  HeroSkillLevel.v2 在 Lv1 鎖住大多數技能、v19 大招保留會延後 R ⇒ 被測的那一格視為已解鎖
+  //  （rank 0 時規則保留基礎值 ＝ rank 1，不改英雄等級）、本情境關掉大招保留。等級表與保留另有 gate。
+  e.rules = { ...e.rules, ultHoldV19: false };
+  if (P.b1.heroSkillLevels && P.b1.heroSkillLevels[slot] < 1) P.b1.heroSkillLevels[slot] = 1;
   const nav = e._navMove.bind(e);
   e._navMove = (q, t, sp) => ((q.id === "r1" || q.id === "b2") ? undefined : nav(q, t, sp));
   const pin = (p, x, y) => { p.pos = { x, y }; p.hp = p.maxHp; };

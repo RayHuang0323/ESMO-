@@ -61,6 +61,8 @@ export const CS_PERMANENT = 99999;
 const NAV_REPATH_CD = 8;
 const clampMapX = (x) => clamp(x, WORLD_BOUNDS.minX + MAP_EDGE_PAD, WORLD_BOUNDS.maxX - MAP_EDGE_PAD);
 const clampMapY = (y) => clamp(y, WORLD_BOUNDS.minY + MAP_EDGE_PAD, WORLD_BOUNDS.maxY - MAP_EDGE_PAD);
+//  Tactical AI Phase 1（v19）：塔邊遲滯狀態用的穩定鍵（塔物件沒有 id；陣營＋座標唯一且可序列化）。
+const towerKeyV19 = (tw) => `${tw.side}:${tw.pos.x}:${tw.pos.y}`;
 //  Milestone J：召喚師技能的特效顏色。舊碼是「flash 黃、其餘綠」的三元式，
 //  第二格能放八種技能之後，畫面上會分不出剛剛放的是治療還是點燃。
 const SPELL_FX_COLOR = {
@@ -464,6 +466,17 @@ export class LogicEngine {
   }
   /** 該英雄的定位 mods；未啟用 / 無資料 ⇒ null（＝走原始路徑）。 */
   _heroMod(p) { return this.heroesOn ? (this.hmod[p.id] ?? null) : null; }
+  /**
+   * Tactical AI Phase 1（moba-sim.v19）：風險傾向（正 ＝ 謹慎、負 ＝ 積極）。
+   * 唯一來源＝三個既有作用點相加：英雄定位 retreatAdj（坦克 −0.05 … 射手 +0.06）、
+   * 選手素質 retreatAdj（positioning／decision／focus ＋，courage／clutch／resilience −；±0.10）、
+   * 戰術身分 retreatFloorShift（riskTolerance）。決定性、不擲骰；未配置 ⇒ 0（＝基準行為）。
+   * 同一個情境下，不同英雄／選手因此有不同但可解釋的門檻。
+   */
+  _riskV19(p) {
+    const I = this._tidOf(p.side);
+    return (this._heroMod(p)?.retreatAdj ?? 0) + (this._mod(p)?.retreatAdj ?? 0) + (I ? I.retreatFloorShift : 0);
+  }
 
   /** Receives only validated, authored mechanics from heroSkillGameplay adapter. */
   configureHeroSkills(config) {
@@ -1036,11 +1049,52 @@ export class LogicEngine {
       const previous = p.heroSkillLevels[slot];
       if (ranks[slot] === previous) continue;
       p.heroSkillLevels[slot] = ranks[slot];
-      this.heroSkills[p.id][slot] = applySkillLevelToRule(base[slot], ranks[slot]);
+      //  HeroSkillLevel.v2（v19）：rank 0 ＝ 未解鎖 ⇒ 保留基礎規則（施放閘門另外擋），不呼叫 applySkillLevelToRule。
+      this.heroSkills[p.id][slot] = ranks[slot] >= 1 ? applySkillLevelToRule(base[slot], ranks[slot]) : base[slot];
       p.heroSkillLevelHistory.push({ t: this.t, slot, level: ranks[slot], matchLevel: p.mlv });
     }
   }
 
+  /**
+   * Tactical AI Phase 1（v19）P0-2：這一次 R 要不要「留著」？回傳 true ＝ 先不放。
+   * 放的理由（擇一）——全部決定性、不擲骰：
+   *   · 增益／護盾類：身邊（ultBuffContact）有敵方英雄，或自己殘血。
+   *   · 對隊友：那位隊友 < 50% 血且身邊有敵人（復活一律照放）。
+   *   · 對敵：收頭（目標血量 ≤ ultExecuteHp，積極的人門檻高 ⇒ 更早出手）、多目標（目標身邊敵方英雄 ≥ ultMultiTargets）、
+   *     團戰（ultTeamfightR 內有團戰熱點、身邊有隊友、對面 ≥ 2 人）、或保命／搏命（自己 < ultSelfHp 且敵人在射程）。
+   *   · 野怪、龍、巴龍、小兵：一律不放 R。
+   * 個人差異來源：風險傾向（_riskV19）平移收頭與保命門檻。
+   */
+  _ultHoldV19(c) {
+    const R = this.rules;
+    const { p, foe, rule } = c;
+    const m = rule.mechanic ?? '';
+    const risk = this._riskV19(p);
+    const hpR = p.hp / p.maxHp;
+    const selfLow = hpR < (R.ultSelfHp ?? 0.35) - risk * 0.3;
+    const foesNear = (pos, r) => this.players.filter((q) => !q.dead && q.side !== p.side && !this._heroSkillStealthed(q) && dist(q.pos, pos) <= r).length;
+    if (m === 'revive-target') return false;
+    if (c.objective) return true;
+    const SELF = ['team-shield', 'self-shield', 'empowered-strike', 'team-haste', 'team-buff', 'team-guard', 'self-guard', 'self-buff', 'stealth', 'cleanse-guard'];
+    if (SELF.includes(m) && (!foe || foe === p || foe.side === p.side && m === 'cleanse-guard')) {
+      return !(selfLow || foesNear(p.pos, R.ultBuffContact ?? 10) > 0);
+    }
+    if (foe && foe.side === p.side) {
+      return !(foe.hp / foe.maxHp < 0.5 && foesNear(foe.pos, 12) > 0);
+    }
+    if (!foe) return true;
+    const execHp = (R.ultExecuteHp ?? 0.4) - risk * (R.ultExecuteRiskK ?? 0.6);
+    if (foe.hp / foe.maxHp <= execHp) return false;
+    const reach = (rule.radius ?? rule.width ?? 4) + 2;
+    if (foesNear(foe.pos, reach) >= (R.ultMultiTargets ?? 2)) return false;
+    const hot = this.hot3?.pos;
+    if (hot && dist(p.pos, hot) <= (R.ultTeamfightR ?? 14)) {
+      const allies = this.players.filter((q) => !q.dead && q !== p && q.side === p.side && dist(q.pos, p.pos) <= 12).length;
+      if (allies >= 1 && foesNear(p.pos, 12) >= 2) return false;
+    }
+    if (selfLow) return false;
+    return true;
+  }
   _heroTaunter(p) {
     if (!this.heroSkillsOn || this.t >= (p.heroSkillTauntUntil ?? 0)) return null;
     const source = this.players.find((q) => q.id === p.heroSkillTauntSourceId);
@@ -1528,6 +1582,8 @@ export class LogicEngine {
           .some((rule) => rule.mechanic === 'cleanse-guard')) || this._heroTaunter(p)) continue;
       for (const [slot, rule] of Object.entries(this.heroSkills[p.id] ?? {})) {
         if (this.t < (p.heroSkillReadyAt[slot] ?? 0)) continue;
+        //  HeroSkillLevel.v2（v19）：未解鎖（rank 0）的技能不能放——Lv1 只有一招、R 要 Lv6。
+        if (this.heroSkillLevelSystem && (p.heroSkillLevels?.[slot] ?? 1) < 1) continue;
         if (['dash-strike', 'dash-control-strike', 'dash-knockup-strike', 'dash-blast', 'dash-wall', 'blink-strike']
           .includes(rule.mechanic) && this.t < (p.heroSkillRootUntil ?? 0)) continue;
         if (rule.mechanic === 'team-shield') {
@@ -1708,6 +1764,8 @@ export class LogicEngine {
     for (const c of casts) {
       const { p, foe, rule, slot, from, target, ux, uy, nearest } = c;
       if (p.dead || castThisTick.has(p.id)) continue;
+      //  Tactical AI Phase 1（v19）P0-2：大招保留——R 不再「冷卻好就放」。
+      if (slot === 'R' && this.rules.ultHoldV19 && this._ultHoldV19(c)) continue;
       castThisTick.add(p.id);
       p.heroSkillReadyAt[slot] = this.t + rule.cooldown * this._heroSkillCooldownFactor(p);
       if (this.heroPassivesOn) {
@@ -2731,8 +2789,36 @@ export class LogicEngine {
     if (!tw || tw.hp <= 0) { T.initKind = null; T.initTarget = null; return false; }
     if (p.dead || p.retreating || p.recallT > 0) return false;
     if (p.fsm === "RETURN" || p.fsm === "RESPAWN") return false;
-    if (p.hp / p.maxHp < this.rules.initiativeHpMin) return false;
+    //  v19 P0-3：收尾窗裡誰跟進，看各自的風險傾向（謹慎的人血量要更健康才上；積極的人殘一點也上）。
+    const hpMin = this.rules.initiativeHpMin +
+      (this.rules.winConditionV19 && T.winCond ? this._riskV19(p) * (this.rules.winCondHpRiskK ?? 0.6) : 0);
+    if (p.hp / p.maxHp < hpMin) return false;
     return true;
+  }
+  /**
+   * Tactical AI Phase 1（v19）P0-3：勝利條件是否成立。
+   * 敵方任一路高地已破（`_laneBreached`，超級兵已在路上）、我方存活 ≥ winCondMinAlive 且不少於對方
+   * ⇒ 回傳 { lane, targetKey }（收尾的前線建築）。決定性、不擲骰；路線順序固定 mid → top → bot。
+   */
+  _winConditionV19(side) {
+    const R = this.rules;
+    const lanes = ["mid", "top", "bot"].filter((ln) => this._laneBreached(side, ln));
+    if (!lanes.length) return null;
+    let us = 0, them = 0;
+    for (const q of this.players) if (!q.dead) { if (q.side === side) us++; else them++; }
+    if (us < (R.winCondMinAlive ?? 3) || us < them) return null;
+    //  只有「推得動」才壓過物件：人數優勢 ≥ winCondLeadMin，或目標建築旁已有己方兵線（超級兵到了）。
+    //  人數相等又沒兵線 ⇒ 門牙塔有守軍時英雄扣不到血（兵線閘門＋守軍人數規則）⇒ 照常走物件決策
+    //  （實測 n=1000：沒有這一條時雙方高地都破的局面會在門牙塔前空耗，最長 39.3 分）。
+    const lead = us - them >= (R.winCondLeadMin ?? 1);
+    for (const lane of lanes) {
+      const tw = this.frontStructure(side, lane);
+      if (!tw || tw.hp <= 0) continue;
+      if (!lead && !this._hasWaveAtStructure(side, tw)) continue;
+      const targetKey = Object.keys(this.towers).find((k) => this.towers[k] === tw);
+      if (targetKey) return { lane, targetKey };
+    }
+    return null;
   }
   /** 追擊維持判定：對象死亡/超時/拉開距離/離錨點太遠/血量回升 ⇒ 放棄。 */
   _chaseAliveV3(p, alive = null) {
@@ -2860,13 +2946,22 @@ export class LogicEngine {
       (hpRatio < 0.44 + retreatShift + riskShift && foesN > alliesN);
     // 無守軍時沿用既有 0.30× 單人拆塔效率，讓比賽仍能收尾；真正危險的
     // 「無兵線闖入有人守的塔」或殘血進塔才撤，不把所有推線都改成來回走。
+    //  Tactical AI Phase 1（v19）P0-1：殘血門檻與塔區層同一套遲滯（不再是獨立的 0.45）——
+    //  已在塔下且被允許的人用 exit 門檻、其餘用 enter 門檻，兩者都隨風險傾向平移。
+    const hystTower = !!R.towerHysteresisV19;
+    const fallbackHp = hystTower
+      ? (enemyTower && p._towerIn === towerKeyV19(enemyTower) ? R.towerHpExit : R.towerHpEnter) + this._riskV19(p) * (R.towerHpRiskK ?? 0.5)
+      : 0.45;
     const towerFallback = inTowerRisk &&
       ((!hasWave && towerDefenders > 0 && alliesN === 1) ||
-       (!hasWave && towerDefenders > alliesN) || hpRatio < 0.45);
+       (!hasWave && towerDefenders > alliesN) || hpRatio < fallbackHp);
     const cachedTargetAlive = !p.decisionTargetId ||
       alive.some((q) => q.id === p.decisionTargetId && !q.dead);
     const immediateContact = target && (!p.decisionTargetId || p.decisionAction === "LANE");
-    if (!emergencyRetreat && !towerFallback && !immediateContact &&
+    //  v19：towerFallback 只在「進入」避塔時跳過決策鎖；已經在避塔（上一個決定就是 FALLBACK）
+    //  ⇒ 照一般決策鎖承諾 decisionEvalPeriod，不再每 0.5 秒重判（舊式 LANE→SETUP→LANE 翻轉來源）。
+    const fallbackBypass = towerFallback && !(hystTower && p.decisionAction === "FALLBACK");
+    if (!emergencyRetreat && !fallbackBypass && !immediateContact &&
         this.t < p.decisionAt && cachedTargetAlive) {
       return {
         action: p.decisionAction, targetId: p.decisionTargetId,
@@ -3028,6 +3123,14 @@ export class LogicEngine {
     //  集合：隊友正在往我這裡靠（附近已有隊友且會戰熱點存在）
     const allies = alive.filter((q) => q.side === p.side && q !== p && dist(q.pos, p.pos) < 14).length;
     if (allies >= 2 && this._hotNow) return "集合";
+    //  Tactical AI Phase 1（v19）P0-1：對線期站在自家兵線後面等是正常對線，不是發呆。
+    //  舊式只准等 8 秒（waitWaveMaxSec）且計時不重置 ⇒ 之後每次抵達站位點就被派「推進」往前、
+    //  下一 tick 又被對線站位拉回（實測決策目標乒乓最大宗「推進｜壓向前線建築」）。
+    if (R.laneWaitV19 && this.t < (R.laneWaveHoldUntil ?? Infinity) && p.role !== "jungle" && p.role !== "sup"
+      && st === "對線" && this.lanes[effLane]) {
+      const own = this.lanes[effLane][p.side === "blue" ? "bm" : "rm"];
+      if (own.some((m) => m.hp > 0)) return "等兵線";
+    }
     //  等兵線：己方兵線還沒推到我這裡，但**正在來**（同一路、還在我後方）
     if (this.lanes[effLane]) {
       const key = p.side === "blue" ? "bm" : "rm";
@@ -3102,6 +3205,7 @@ export class LogicEngine {
     }
     if (!tw) {
       if (at) return { inZone: false, allow: true, tower: null };
+      if (R.towerHysteresisV19) p._towerIn = null;   // v19：離開塔區 ⇒ 不再算「已在塔下」
       //  M4b.5：離開塔區要滿 `towerHitsResetSec` 才歸零連續吃塔計數。
       //  立刻歸零 ⇒ 英雄在射程邊緣出去一步再進來，3 發額度一直重新發。
       if (!R.towerSafetyV1) p.towerHits = 0;
@@ -3113,7 +3217,16 @@ export class LogicEngine {
     }
     if (R.towerSafetyV1 && !at) p.towerZoneLeftAt = null;
     const hasWave = this._hasWaveAtStructure(p.side, tw);
-    const hpOk = p.hp >= p.maxHp * (R.diveMinHp ?? 0.55);
+    //  Tactical AI Phase 1（v19）P0-1：血量門檻改成遲滯區間。
+    //  舊式：進塔要 ≥ 55%（這裡），決策層卻在 < 45% 才叫退 ⇒ 45–55% 之間「不准進、也不叫退」，
+    //  加上每 tick 重算，英雄在射程邊緣出去一步、進來一步（實測塔旁 A→B→A 折返占 54.5%）。
+    //  新式：還沒在塔下 ⇒ 要 ≥ towerHpEnter 才進；已在塔下且被允許 ⇒ 掉到 < towerHpExit 才被逼出。
+    //  兩個門檻都隨風險傾向平移（謹慎的人更早退、更晚進）。
+    const hyst = !!R.towerHysteresisV19;
+    const hpShift = hyst ? this._riskV19(p) * (R.towerHpRiskK ?? 0.5) : 0;
+    const hpOk = hyst
+      ? p.hp >= p.maxHp * ((p._towerIn === towerKeyV19(tw) ? R.towerHpExit : R.towerHpEnter) + hpShift)
+      : p.hp >= p.maxHp * (R.diveMinHp ?? 0.55);
     const shotsOk = (p.towerHits ?? 0) < (R.diveMaxShots ?? 3);
     let kill = false;
     let killWhy = null;
@@ -3175,7 +3288,21 @@ export class LogicEngine {
     let hpGate = hpOk;
     if (R.towerSafetyV1 && R.towerSiegeLowHp === "undefended" && sieging && escapeOk
       && this._towerDefendersNear(p, tw, alive) === 0) hpGate = true;
-    const allow = hpGate && shotsGate && escapeOk && (siegeReason || hasWave || kill);
+    let allow = hpGate && shotsGate && escapeOk && (siegeReason || hasWave || kill);
+    //  Tactical AI Phase 1（v19）P0-1：最短承諾。一旦決定退出這座塔，就承諾 towerCommitSec 秒
+    //  （依風險傾向 1.5–3.5 秒）才重新評估——兵線剛死光／剛到、撤離估算在邊界時，
+    //  allow 會一 tick 一變，這正是「出去一步、進來一步」的另一半成因。
+    //  例外：經 `_diveAssessV18` 驗證過的強殺（kill）仍可覆蓋（有計畫的越塔不被承諾綁住）。
+    if (hyst) {
+      const denied = p._towerDeny === towerKeyV19(tw) && this.t < (p._towerDenyUntil ?? 0);
+      if (denied && !kill) allow = false;
+      if (!allow && !denied) {
+        p._towerDeny = towerKeyV19(tw);
+        p._towerDenyUntil = this.t + clamp((R.towerCommitSec ?? 2.5) + this._riskV19(p) * (R.towerCommitRiskK ?? 6),
+          R.towerCommitMin ?? 1.5, R.towerCommitMax ?? 3.5);
+      }
+      if (!at) p._towerIn = allow ? towerKeyV19(tw) : null;
+    }
     return { inZone: true, allow, tower: tw, hasWave, hpOk: hpGate, shotsOk, escapeOk, kill, sieging, killWhy };
   }
 
@@ -5891,6 +6018,25 @@ export class LogicEngine {
       if (this.neutrals) {
         for (const side of ["blue", "red"]) {
           const T = this.fsm3[side];
+          //  ── Tactical AI Phase 1（v19）P0-3：勝利條件優先 ───────────────────────────
+          //  敵方高地已打開（_laneBreached）且我方存活人數夠、不少於對方 ⇒ 收尾推進優先於龍／巴龍：
+          //  還沒開打的物件窗關掉、不擲新的物件骰，改開（或續開）攻城主動權窗指向該路前線建築。
+          //  根因（seed 777 v18 32.5 分）：物件窗在優先序上高於攻城，基地打開後 10 人仍反覆回河道團戰。
+          //  已開打（物件 HP 真的在掉）的窗不砍——打到一半放棄比較不合理。
+          if (R.winConditionV19) {
+            const wc = this._winConditionV19(side);
+            T.winCond = wc ? wc.lane : null;
+            if (wc) {
+              const started = T.objGo && this.neutrals[T.objKey]?.alive && this.neutrals[T.objKey].hp < this.neutrals[T.objKey].maxHp;
+              if (!started) {
+                if (T.objGo) { T.objGo = false; T.objKey = null; }
+                if (!(T.initKind === "siege" && this.t < T.initUntil && (this.towers[T.initTarget]?.hp ?? 0) > 0)) {
+                  T.initKind = "siege"; T.initTarget = wc.targetKey; T.initUntil = this.t + (R.winCondWindow ?? 18);
+                }
+                continue;
+              }
+            }
+          }
           const key = this.neutrals.baron.alive ? "baron" : this.neutrals.dragon.alive ? "dragon" : null;
           if (!key) { T.objGo = false; T.objKey = null; continue; }
           // Milestone F：主動權窗指向龍／巴龍時，直接把目標窗打開。
@@ -6447,6 +6593,15 @@ export class LogicEngine {
               //    改成 stance 之後，保守站在射程後緣、進攻站進敵兵堆前緣，兩者都還打得到兵。
               const stance = clamp(depth / (R.laneStanceDepthRef ?? 0.06), -1, 1);
               waveT = this._laneWaveHoldT(p, effLane, stance);
+              //  Tactical AI Phase 1（v19）P0-1：站位點死區。小兵每死一隻，前緣就跳幾個單位 ⇒ 舊式每 tick
+              //  直接跟著跳，英雄在自家塔前前後挪（實測塔旁「對線→對線」反轉為最大宗）。
+              //  新式：與上一個站位點相差不到 laneAnchorDeadband（依風險傾向 ±）就沿用舊點；換路即重設。
+              if (waveT != null && R.laneAnchorDeadbandV19) {
+                const prev = p._laneAnchorV19;
+                const band = Math.max(0.5, (R.laneAnchorDeadband ?? 3) + this._riskV19(p) * (R.laneAnchorRiskK ?? 0)) / laneLength(effLane);
+                if (prev && prev.lane === effLane && Math.abs(prev.t - waveT) < band) waveT = prev.t;
+                else p._laneAnchorV19 = { lane: effLane, t: waveT };
+              }
               if (waveT != null) { base = waveT; p._waveAnchorT = this.t; }
             }
             if (waveT == null) base += (p.side === "blue" ? 1 : -1) * depth;
@@ -6474,10 +6629,29 @@ export class LogicEngine {
         && !p.decisionTargetId && !p.retreating && p.role !== "jungle" && p.role !== "sup";
       if (waveAnchor) { if (R.stableFormation) { p._archFoe = null; p._hold = false; } }
       else tgt = this._archPosition(p, tgt, alive);
+      //  ── Tactical AI Phase 1（v19）P0-1：再任務承諾 ─────────────────────────────
+      //  M1.7 的發呆再任務（`_nextTaskV17`）只在「抵達」那一 tick 改寫目標；下一 tick 對線分支又把目標
+      //  拉回兵線站位點 ⇒ 往前一步、往後一步（實測 v18 決策目標乒乓 3.95 次／英雄分鐘，七成是「推進」）。
+      //  新式：派出的任務承諾到抵達、逾時（依風險傾向：積極的人承諾久一點）或情境改變為止；
+      //  只覆蓋**最低優先**的對線／游走預設目標，而且在塔區檢查之前套用 ⇒ 塔區安全規則照樣把目標改到射程外。
+      if (R.taskCommitV19 && p._taskV19) {
+        const T = p._taskV19;
+        const laneDefault = st === "對線" || st === "游走";
+        const engaged = p.retreating || p.decisionTargetId ||
+          this._foeMinionWithin(p, this._engageRange(p) + 1) ||
+          alive.some((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) <= this._engageRange(p));
+        if (!laneDefault || engaged || T.lane !== effLane || this.t >= T.until || dist(p.pos, T.pos) <= 1.5) p._taskV19 = null;
+        else { tgt = T.pos; st = T.st; p.fsm = T.fsm; p.intent = T.intent; }
+      }
       //  ── M1.7 ②：塔區退出。允許有計畫的越塔，禁止「站到殘血為止」──────────
       if (R.decisionV17 && !p.retreating) {
         //  這一路的前線建築＝我的推進目標；它若正好是把我罩住的那座塔，就是圍攻。
-        const zoneObjective = this.frontStructure(p.side, effLane, p.pos);
+        //  Tactical AI Phase 1（v19）P0-3：正在執行攻城／收尾主動權窗（st「圍攻」）時，推進目標＝窗的目標塔，
+        //  不是「自己這一路」的前線建築。舊式兩者對不上 ⇒ 圍攻門牙塔／別路塔一律被判「無兵線也無擊殺機會」擋在射程外
+        //  （實測 seed 89：收尾窗開了 12 分鐘，藍方在門牙塔外「避塔」到 34 分）。守軍、撤離、連續吃塔等安全規則照舊。
+        const initTw = R.winConditionV19 && st === "圍攻" && this.fsm3?.[p.side]?.initKind === "siege"
+          ? this.towers[this.fsm3[p.side].initTarget] : null;
+        const zoneObjective = initTw && initTw.hp > 0 ? initTw : this.frontStructure(p.side, effLane, p.pos);
         let tz = this._towerZoneV17(p, alive, zoneObjective);
         //  M4b.5：移動目標落在「不准停留」的敵塔射程內 ⇒ 同樣改成退到射程外
         //  （站位層會把目標點推向塔下的敵人；只看目前位置會在射程邊緣來回擺動）。
@@ -6527,7 +6701,14 @@ export class LogicEngine {
           p.idleReason = this._idleReasonV17(p, st, effLane, alive);
           if (!p.idleReason) {
             const next = this._nextTaskV17(p, effLane, alive);
-            if (next) { tgt = next.pos; st = next.st; p.fsm = next.fsm; p.intent = next.intent; }
+            if (next) {
+              tgt = next.pos; st = next.st; p.fsm = next.fsm; p.intent = next.intent;
+              //  v19：承諾這個任務（見上方「再任務承諾」）。
+              if (R.taskCommitV19 && (next.st !== "推進" || R.taskCommitPush !== false)) p._taskV19 = { pos: { x: next.pos.x, y: next.pos.y }, st: next.st, fsm: next.fsm,
+                intent: next.intent, lane: effLane,
+                until: this.t + clamp((R.taskCommitSec ?? 4) + this._riskV19(p) * (R.taskCommitRiskK ?? -6),
+                  R.taskCommitMin ?? 2, R.taskCommitMax ?? 6) };
+            }
           }
         } else p.idleReason = null;
       }
@@ -6752,7 +6933,9 @@ export class LogicEngine {
         statusEffects: this._statusEffectsOf(p),
       } : {}), ...(this.heroSkillsOn && this.heroSkills[p.id] ? {
         heroSkills: Object.fromEntries(Object.entries(this.heroSkills[p.id]).map(([slot, rule]) => [slot, {
-          ready: this.t >= (p.heroSkillReadyAt[slot] ?? 0),
+          //  v19：未解鎖 ⇒ ready=false、locked=true（HUD 顯示「未解鎖」與解鎖等級 nextAt）。
+          ready: this.t >= (p.heroSkillReadyAt[slot] ?? 0) && !(this.heroSkillLevelSystem && (p.heroSkillLevels?.[slot] ?? 1) < 1),
+          ...(this.heroSkillLevelSystem && (p.heroSkillLevels?.[slot] ?? 1) < 1 ? { locked: true } : {}),
           cd: Math.max(0, Math.round(((p.heroSkillReadyAt[slot] ?? 0) - this.t) * 10) / 10),
           cdMax: rule.cooldown,
           rule,

@@ -824,6 +824,51 @@ SIM_RULES.v3 = {
   tacticIdentityV1: true,
   //  ── TD-CS1（moba-sim.v16 起開啟）：split-projectile 命中套用規則宣告的減速（liuxing:Q、miwu:E）──
   splitProjectileSlowV16: true,
+
+  //  ── Tactical AI Phase 1（moba-sim.v19）──────────────────────────────────────
+  //  共同原則：選手差異只來自「風險傾向」（英雄定位 retreatAdj ＋ 選手素質 retreatAdj ＋ 戰術身分
+  //  retreatFloorShift；正 ＝ 謹慎），全部決定性、不擲骰 ⇒ seed 決定、Replay／Challenge 可重現。
+  //  P0-1 塔邊遲滯：進塔要 ≥ towerHpEnter、已在塔下被允許的人掉到 < towerHpExit 才被逼出（取代 45%／55% 死區）；
+  //    被逼退後承諾 towerCommitSec（依風險傾向 ±towerCommitRiskK × risk，夾在 [min,max]）才重評。
+  towerHysteresisV19: true,
+  towerHpEnter: 0.55,
+  towerHpExit: 0.45,
+  towerHpRiskK: 0.5,        // 風險傾向 × 0.5 ⇒ 門檻平移約 ±0.05（謹慎的人更早退、更晚進）
+  towerCommitSec: 2.5,
+  towerCommitRiskK: 6,      // risk ±0.15 ⇒ ±0.9 秒
+  towerCommitMin: 1.5,
+  towerCommitMax: 3.5,
+  //  P0-1（實測主因）：對線站位點死區。站位點移動 < laneAnchorDeadband（單位）就不更新，
+  //    積極的人死區較小（貼得更緊）、謹慎的人較大。
+  laneAnchorDeadbandV19: true,
+  laneAnchorDeadband: 3,
+  laneAnchorRiskK: 8,       // risk ±0.15 ⇒ ±1.2 單位
+  //  P0-1：對線期站在自家兵線後面等＝合法停留（取代只准等 8 秒）。
+  laneWaitV19: true,
+  //  P0-1：發呆再任務的承諾（抵達／逾時／情境改變才解除）。積極的人承諾久一點（risk 負 ⇒ 秒數增加）。
+  taskCommitV19: true,
+  taskCommitSec: 4,
+  taskCommitRiskK: -6,
+  taskCommitMin: 2,
+  taskCommitMax: 6,
+  //  「推進：壓向前線建築」不承諾：實測承諾它會讓英雄在無兵線的敵塔邊空等（regress2 最長 25.3 → 34.8 分）。
+  taskCommitPush: false,
+  //  P0-2 大招保留：R 不再「冷卻好就放」——要有收頭、多目標、團戰或保命的理由；不對野怪／小兵放。
+  //    技能等級表本身（R 於 Lv6／11／16）住在 heroSkillLevels.js（HeroSkillLevel.v2）。
+  ultHoldV19: true,
+  ultExecuteHp: 0.40,       // 目標血量 ≤ 此值 ⇒ 收頭可放（積極的人門檻較高 ⇒ 更早放）
+  ultExecuteRiskK: 0.6,
+  ultMultiTargets: 2,       // 目標身邊（含目標）敵方英雄數 ≥ 此值 ⇒ 多目標可放
+  ultTeamfightR: 14,        // 自己 14 內有團戰熱點，且身邊有隊友、對面 ≥ 2 人 ⇒ 團戰可放
+  ultSelfHp: 0.35,          // 自己血量 < 此值且有敵人在射程 ⇒ 保命／搏命可放
+  ultBuffContact: 10,       // 增益／護盾類大招：此範圍內有敵方英雄才放
+  //  P0-3 勝利條件優先：已打開敵方高地（_laneBreached）且存活人數 ≥ 敵方、≥ winCondMinAlive ⇒
+  //    不開新的龍／巴龍窗、已開但還沒開打的窗關掉，改開「收尾推進」主動權窗（沿用 Milestone F 攻城路徑）。
+  winConditionV19: true,
+  winCondMinAlive: 3,
+  winCondLeadMin: 1,        // 人數優勢 ≥ 1，或目標建築旁已有己方兵線，才算「推得動」
+  winCondWindow: 18,
+  winCondHpRiskK: 0.6,      // 跟進收尾的血量門檻 initiativeHpMin ＋ risk × 0.6
 };
 
 /** 取規則集；未知/未指定 ⇒ v3（S29B1 預設）。 */

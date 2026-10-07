@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v18";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v19";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -395,6 +395,15 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  坑周平台 pitBulge 24.5。英雄／裝備／技能／戰鬥數值不變。指紋清單補上 mapJungleTopology／mapPassability。
   //  ⚠ 後果（已知且接受）：v17 歷史挑戰不再可重播，由 canReplay 明確拒絕；v1～v17 指紋全數保留。
   "moba-sim.v18": "4c1cda877c698a17",
+  //  2026-10-07 moba-sim.v19（feature/moba-tactical-ai-p1）：**simulation semantics change**（Tactical AI Phase 1；skill-off／on 與 Challenge 都受影響）。
+  //  P0-1 塔邊決策震盪：塔區血量遲滯（enter 0.55／exit 0.45，取代 45%／55% 死區）、退塔最短承諾、FALLBACK 吃決策鎖、
+  //    對線站位點死區、對線期等兵線合法化、發呆再任務承諾（推進除外）。
+  //  P0-2 HeroSkillLevel.v2：Lv1／2／3 依序解鎖基本技能、R 於 Lv6 解鎖並在 Lv11／16 升級（上限 3）；AI 大招保留。
+  //  P0-3 勝利條件優先：敵方高地已破、人數不劣且推得動（人數優勢或目標旁有己方兵線）⇒ 收尾推進優先於龍／巴龍；
+  //    圍攻窗的塔區推進目標改用窗的目標塔。
+  //  選手差異只來自既有作用點的風險傾向（英雄定位／選手素質 retreatAdj／戰術身分），決定性、不擲骰。
+  //  ⚠ 後果（已知且接受）：v18 歷史挑戰由 canReplay 明確拒絕；v1～v18 指紋全數保留。
+  "moba-sim.v19": "8ec077195322613b",
 });
 
 export const isKnownSimulationVersion = (v) =>

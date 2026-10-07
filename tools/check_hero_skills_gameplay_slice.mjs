@@ -9,6 +9,22 @@ import { createReplaySource } from '../src/battle/moba/replay/replayPresentation
 import { mitigate } from '../src/battle/moba/items/itemEffects.js';
 import { WORLD_BOUNDS } from '../src/gameData.js';
 
+//  moba-sim.v19（Tactical AI Phase 1）：本 gate 驗的是**技能原語**（傷害、位移、護盾、控制的數學與事件），
+//  每個情境都是「一名英雄、把 R 直接擺在敵人／隊友旁邊」。v19 的 AI 大招保留（ultHoldV19：要收頭／多目標／團戰／保命
+//  才放）是另一層決策，會讓這些原語情境永遠不放 R ⇒ 在本 gate 內關掉保留。AI 何時放 R 由 check_moba_tactical_ai_p1 驗。
+//  同理，HeroSkillLevel.v2 讓 Lv1 只有一招基本技能；用正式設定（toEngineHeroSkills，帶 skillLevels）的原語情境
+//  把三招基本技能視為已解鎖（rank 0 時規則本來就保留基礎值 ＝ rank 1），**不改英雄等級** ⇒ 傷害數值不受影響。
+//  等級表本身由 check_moba_skill_levels_v1（HeroSkillLevel.v2）驗。
+const configureHeroSkillsV18 = LogicEngine.prototype.configureHeroSkills;
+LogicEngine.prototype.configureHeroSkills = function (config) {
+  this.rules = { ...this.rules, ultHoldV19: false };
+  const out = configureHeroSkillsV18.call(this, config);
+  if (this.heroSkillLevelSystem) for (const p of this.players) if (p.heroSkillLevels) {
+    for (const slot of ['Q', 'W', 'E']) if (p.heroSkillLevels[slot] < 1) p.heroSkillLevels[slot] = 1;
+  }
+  return out;
+};
+
 let pass = 0;
 const ck = (name, fn) => { fn(); console.log(`✅ ${name}`); pass++; };
 const roster = { b1: { heroId: 'ironclad' }, r1: { heroId: 'ironclad' } };

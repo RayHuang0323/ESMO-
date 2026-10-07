@@ -237,7 +237,7 @@ export default function BattleHeroSheet({ heroId, heroName, playerName, playerId
               //  Mobile UI P1：等級讀 snapshot 的 heroSkills[k].level（與 HUD 技能格同一來源），
               //  不再一律寫「未分級」；被動 P 沿用 PASSIVE_STATUS（未實裝、本場不生效）。
               const passiveInfo = k === 'P' && !passiveLive && passiveTierOf(heroId) === 'info';
-              const status = k === 'P' ? (passiveLive ? PASSIVE_STATUS.live : passiveInfo ? PASSIVE_STATUS.info : PASSIVE_STATUS.short) : !live ? '未提供' : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
+              const status = k === 'P' ? (passiveLive ? PASSIVE_STATUS.live : passiveInfo ? PASSIVE_STATUS.info : PASSIVE_STATUS.short) : !live ? '未提供' : live.locked ? `未解鎖${live.level?.nextAt ? `（Lv${live.level.nextAt}）` : ''}` : live.ready ? '可用' : `${Math.ceil(live.cd)}秒`;
               const levelText = k === 'P' ? (passiveLive ? (live.trigger === 'always' ? `加成 ${live.boosted ?? 0} 次` : `觸發 ${live.procs ?? 0} 次`) : passiveInfo ? '不影響戰鬥' : '本場不生效') : live?.level ? `Lv${live.level.current}/${live.level.cap}` : '等級未保存';
               return <button key={k} type="button" data-skill-slot={k} onClick={() => setSelectedSkill(k)}
                 aria-label={`${k} ${v}，${k === 'P' ? (passiveLive ? `被動生效中，${live.trigger === 'always' ? `已加成 ${live.boosted ?? 0} 次` : `已觸發 ${live.procs ?? 0} 次`}` : passiveInfo ? PASSIVE_STATUS.infoAria : PASSIVE_STATUS.aria) : `${status}，${levelText}`}；點開詳情`}

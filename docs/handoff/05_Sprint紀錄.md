@@ -24278,3 +24278,37 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - Smoke gate 期待值更新（只改版本／幾何期待值，不放寬判準）：objective_layout 版本 v17 → v18、GLB bytes、坑位世界／小地圖座標改由 `gameData.PITS` 推導（同一換算式在 v17 原始碼上逐位重現舊寫死值）；hero_identity 與 gameplay_presentation 的目前版本改為 `moba-sim.v18`（原 `includes('moba-sim.v17'／'v15')` 在 v18 bundle 仍為真，等於沒驗版本）。
 - 維持不變：Competitive disabled（`COMPETITIVE_ENABLED=false` 未動）；CS／FPS、Online／DB／migration 完全未碰；Objective Stakes OFF、Nexus cap OFF。
 - 下一個 Sprint 尚未開始（建議 Tactical AI；Owner 指示本輪不開始）。
+
+## 2026-10-07 MOBA Tactical AI Phase 1（moba-sim.v19；owner: Claude，local commit，未 push／deploy）
+
+分支 `feature/moba-tactical-ai-p1`（基於 main `cd91256`＝v18 RELEASED、Map Topology FROZEN）。設計：`docs/design/MOBA_Tactical_AI_Phase1.md`。
+只處理 Audit 三個 P0；Poke／Trade／All-in、Team Call、兵線／Roam／Gank、偷塔／分推／Ambush 未做（Phase 2／3）。
+
+**完成**
+- P0-1 塔旁反覆：塔區血量遲滯（enter 0.55／exit 0.45 取代 45%／55% 死區）、退塔最短承諾 1.5–3.5 秒、FALLBACK 吃決策鎖、對線站位點死區、對線期等兵線合法化、發呆再任務承諾（「推進」除外——承諾它讓 regress2 最長 25.3 → 34.8 分，消融測試否決）。
+- P0-2 HeroSkillLevel.v2：Lv1／2／3 逐一解鎖基本技能、R Lv6 解鎖、Lv11／16 升級（上限 3）、`rules.R.unlockLevels` metadata 覆寫；rank 0 鎖定（引擎不放、snapshot／HUD／Replay 顯示「未解鎖·LvN」）；AI 大招保留（收頭／多目標／團戰／保命才放，野怪小兵不放）。
+- P0-3 勝利條件：敵方高地已破、存活 ≥ 3 且不少於對方、**推得動**（人數優勢 ≥ 1 或目標旁有己方兵線）⇒ 不開新物件窗、開收尾攻城窗；圍攻窗的塔區推進目標改用窗的目標塔（舊式對不上 ⇒ 門牙塔前一律「避塔」）。
+- 選手差異唯一來源＝風險傾向（英雄定位／選手素質 retreatAdj／戰術身分），決定性、不擲骰、不新增素質鍵。
+- `moba-sim.v19`（指紋 8ec077195322613b；v1～v18 保留）；新 gate `check_moba_tactical_ai_p1`（verify 區段 `tactical_ai_p1`）。
+
+**v18 → v19 前後數據**
+- 塔旁決策震盪（5 場、正式設定）：決策目標 A→B→A 乒乓 3.95 → 1.58 次／英雄分鐘（−60%）、敵塔附近 0.536 → 0.194（−64%）、敵塔射程邊緣乒乓 −20%、白挨塔比例 60.6% → 58.4%。gate 對照（同樹關掉 v19 開關）2.61 → 1.31。
+- 技能：Lv1–5 R 施放 v18 36.2%（40 場 1,448／3,996）→ v19 **0**；R 首次解鎖恆為 Lv6、升級 Lv11／16；R 施放量約 100 → 64 次／場（保留生效）。
+- seed 777（v18 regress2 32.5 分）：v19 23.5 分；regress2 7/8 → **8/8**（最長 32.5 → 30.0）。
+- n=1000（skills＋talents、Items、鏡像、seed 1–1000，STANDARD／SWAPPED 分開）：藍 51.7 → 50.1%；巨龍側 +3.7 → **+2.8pp**；純藍方地利 +1.9 → **+0.2pp**；配對翻轉 248：264（z −0.71）；時長平均／中位／P90 18.3／17.0／23.5 → 19.1／18.5／24.0；>32 分 0 → 3、>35 分 0 → 0、>40 分 0 → 0、最長 31.8 → 34.8；未結束 0。
+- 技能關（Challenge 模式）200 seeds：平均 20.5 → 21.5、>32 分 3 → 1、最長 36.3 → 37.3、>40 分 0。
+- **Owner 決策（2026-10-07）**：依戰鬥過程演算，對局 20–40 分皆屬合理（LoL 參考 30–45 分）。v19 全部樣本 ≤ 40 分。⚠ 現行 regress2 門檻（最長 ≤ 32）未改，若要以 20–40 為正式標準需另行指示。
+- 選手差異（3 場、藍方謹慎型 vs 大膽型 persona）：風險傾向 10 種值、同英雄兩隊不同；退塔承諾 1.6–3.4 秒（謹慎 3.1／大膽 2.1）；R 施放時目標血量平均 0.27–0.90 因英雄而異 ⇒ 差異來源已建立、行為未趨同。
+
+**驗證（v19；v18 對照為 main cd91256 同機重跑）**
+- verify：regress 15/15、regress2 8/8（v18 7/8）、runtime29 flat、P0-A／B／C／D、map_topology_final、tactical_ai_p1 20/20、simulation_version 63/63：PASS；hero_skills_phase1、hero_skills_round2 形狀正則＝既有紅（v18 同）。
+- Hero Skills：release gate PASS（v18 已驗；v19 gameplay slice 68/68、base-assault PASS、round2 410/410）；skill_levels（HeroSkillLevel.v2）400/400＋400 組升級表；skill_detail 500/500；Battle Talents runtime／contract、BattleResult v3 PASS。
+- v17 Hero Identity：passive 23/23、power curve 17/17、tactical identity 22/22。
+- v16 Objective：stakes 17/17、layout contract 11/11、pit symmetry 7/7、pit art 4/4。地圖：rift_loading 41/41、nav_h2 14/14、camp_routes／camp_placement 43/43、map_decor PASS。
+- Combat：combat_quality_v1 28/28、combat_state_v1 16/16、items_m1 69/69、mobile_hud_polish 60/60、spectacle_vision 21/21、milestone_d／d_fix2 PASS；combat_feedback 47/50（X3／X4／X5 Sprint 範圍守衛，預期紅）。
+- ⚠ combat_polish_r2 W2 30/31：3 seeds 的坑邊大轉向 21.3 → 11（需 ≤ 10.65）；擴大到 12 seeds v18／v19 皆為 23 → 10.3（完全相同）⇒ 取樣雜訊，非回歸；gate 未改。
+- ⚠ lane_jungle_balance J1 19/20（見 08）：HeroSkillLevel.v2 使前期清野變慢（J1 情境 7.5 → 3.75；正式設定 20 場前 5 分鐘每隊 16.6 → 14.4、10 分鐘 33.3 → 29.8、首殺中位 256 → 291 秒）。需 Owner 決策，未調野怪數值、未改 gate。
+- items_m2 G1 基準前移到 v19 commit（同 v5／v7／v9／v16／v18 先例；本 commit 後的第二個 commit）；items_m3 61/67（G6 為未 commit 差異，commit 後與 v18 同 62/67）。
+- Build PASS（26.7s）。真實 Chrome（production build、整場 713 筆）：h2close 13/15，紅兩項 GameView 標記／閃爍與 v17／v18 相同（既有）；HUD Lv1 顯示 Q 可用、W／E／R 虛線框標 Lv2／Lv3／Lv6。
+
+**未完成／風險**：見 08 同名節。
