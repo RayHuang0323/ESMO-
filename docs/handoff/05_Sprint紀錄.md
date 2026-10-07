@@ -24384,3 +24384,45 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - 正式站 smoke gate 版本期待值 v18 → v19（只改版本事實）。
 - 維持不變：Map Topology FROZEN；CS／FPS、Online／DB 未碰；Competitive disabled。
 - Phase 2 尚未開始（Owner 指示）。
+
+## 2026-10-08 MOBA Tactical AI Phase 2（moba-sim.v20；owner: Claude，local commit，未 push／deploy）
+
+分支 `feature/moba-tactical-ai-p2`（基於 main `fde17c7`＝v19 RELEASED、Map Topology FROZEN）。設計：`docs/design/MOBA_Tactical_AI_Phase2.md`。
+未碰 CS／FPS／Online／DB、地圖拓樸。偷塔／完整分推／後期換線／Ambush 未做（Phase 3）。
+
+**完成**
+- ① Combat Intent：ALLIN／TRADE／POKE／KITE（`_combatIntentV20`）；輸入＝既有接戰分數＋等級／經濟、雙方 R 與閃現、基本技能就緒、援軍、退路（身後自家塔／敵塔無兵線）、殘血劣勢上限；門檻吃風險傾向。走位分支（強開／換血／消耗）與 `_combatStep`（Trade 退開段只在貼身時還手）讀同一個 `p.intentV20`。
+- ② 兵線優先：`_waveBusyV20`（攻擊距離＋5 內有敵兵）⇒ 對線者不接一般接觸、輔助不出發遊走；救人／夾擊／物件／呼叫可打斷（`_highValueV20`）。
+- ③ 引擎 Team Call：focus／lowhp／gank／retreat／objective，在全員決策凍結後發出與回應；只用看得見的資訊、只有距離內的隊友收得到；回應吃距離、血量、定位、兵線、風險傾向、comms／synergy／呼叫者 leadership。
+- ④ Gank 評分選路（取代計時器＋亂數；分數 < 0.8 不出發）、追擊先估擊殺（逃得回塔下才比傷害）。
+- ⑤ 物件雙評估（龍／巴龍取高者，≥ 0.75 開窗，取代擲骰與巴龍固定優先）、懲戒在物件不迫近時清野。
+- 七個旗標全關 ⇒ 與 v19（`fde17c7`）逐位元相同（4/4 seeds 全程雜湊）。決定性、不新增亂數。
+- `moba-sim.v20`（指紋 a12938920a92dee6；v1～v19 保留）；新 gate `check_moba_tactical_ai_p2`（30/30，verify 區段 `tactical_ai_p2`）。
+- `check_moba_objective_stakes_v16`：V1 版本事實 v19 → v20；G1 改為在發基本獎勵當下記錄真實落後額並驗前提（± 50）——v20 下 seed 13 那一 tick 紅方多拿 20 金，舊斷言的前提不成立（賞金規則本身不變）。17/17。
+
+**v19 vs v20（seed 1–200，正式設定 skills＋talents、Items；v19＝同樹七旗標全關，已證逐位元等於 v19）**
+- 看到敵人立即 All-in：61.9% → **43.6%**；意圖分布 v19 ALLIN 60.2／KITE 39.8 → v20 ALLIN 42.6／KITE 32.5／TRADE 18.3／POKE 6.7。
+- 低血量不合理開戰（< 40% 血、人數不佔優仍 All-in／Trade）：6.26 → **1.75** 次／場。
+- 清兵後才遊走：91.6% → **100%**；兵線未清而暫緩 9.7 次／場。
+- Gank：41.3 → 9.3 次／場；成功率（20 秒內該路被打野擊殺／助攻）2.5% → **8.4%**；成功 Gank 數 1.0 → 0.8／場。
+- Team Call（每場）：focus 88.4、lowhp 65.5、retreat 34.1、objective 24.2、gank 9.3；回應 156.9、拒絕 109.7（回應率 58.8%）。追擊因估不出擊殺而放棄 1.65 次／場。
+- 懲戒（每場）：清野 12.75 → 13.43、龍 1.71 → 2.02、巴龍 1.17 → 1.14；物件開窗 龍 11.7 → 13.1、巴龍 11.1 → 11.2。前期清野（40 場）5 分鐘每隊 10.6 → 11.4 隻、打野 5 分等級 2.99 → 3.21、首殺中位 286 → 294 秒。
+- 時長 median／P90／P95／>40 分：v19 17.9／23.3／24.4／0% → v20 **18.5／23.5／25.0／0%**。
+- 素質與個性（藍方套素質、紅方中性，seed 1–40，最終程式）：
+  - All-in 比例：積極組（courage／clutch／resilience 95、positioning／decision／focus 50）50.5%、中性 41.1%、謹慎組（反過來）34.6%（v19：56.8%／60.5%／63.4%——沒有個性差異）；Kite 24.5%／33.1%／40.5%；低血量開戰 1.30／0.80／0.70 次。
+  - 呼叫回應率：團隊組（comms／synergy／leadership 95）79.6%、全 90 80.5%、積極 68.5%、中性 57.4%、謹慎 50.5%、孤僻組（三項 45）21.9%。
+  - 勝率（n=40，SE ≈ 8pp，僅方向參考）：積極 v19 60 → v20 72.5、謹慎 40 → 40、全 90 65 → 62.5、中性 45 → 55、團隊 42.5、孤僻 47.5。⇒ 沒有出現「素質高＝勝率加成」；個性組差距 20 → 32.5pp（積極打法在現行數值下較強，屬決策結果，非加成）。
+
+**全套驗收**
+- `npm run build` ✓ built in 42.54s；regress 15/15 ✓；regress2 8/8 ✓（中位 20.6、最長 30.3）；tactical_ai_p1 20/20；tactical_ai_p2 30/30；simulation_version 63/63。
+- pacing29b1 22/25（§1／§3／§15 既有紅，v19 同樣 22/25；首殺 p50 v19 657 → v20 566 秒）。中途曾多紅 §6：追擊擊殺估算在「離塔很遠的 10% 血逃兵」也拒追——已修（追擊窗內逃不回塔下 ⇒ 追）。
+- 38 支 MOBA gate：30 綠；紅＝既有 `check_moba_map`（缺 baseSymmetryRaster.mjs）、`hero_skills_phase1`、`runtime_map_h1` 61/5、items_m3 G8／G10／G12、J1（Owner 已接受）；範圍守衛 combat_feedback X3／X4、items_m3 G6；items_m2 G1 待 re-pin 到本次 commit（照 v5／v7／v9／v16／v18／v19 慣例）。
+- ⚠ **新紅 combat_feedback F11**：同一 sim 秒產生的浮字峰值 30 > 物件池 28（v19 13）。集火呼叫讓團戰更集中；renderer 本來就「超過丟最舊小字」，不會壞畫面，但 gate 紅。未放寬門檻，交 Owner 判斷（調 maxActive 或接受）。
+- 本地瀏覽器 smoke：browser_check_moba_gameplay_presentation 10/10 PASS；browser_check_moba_combat_feedback 18/18 PASS（桌機＋390px，第 3 次——第 1 次 CDP WebSocket 斷線 HARNESS_FAIL、第 2 次 7 分鐘實際時間內沒拍到團戰截圖；同設定模擬 v19／v20 首次 5 人群聚中位 261／262 秒、12 分內皆 100%，非行為回歸）。未經瀏覽器實測：手機實機、正式站。
+- n=1000 公平性：見下節風險。
+
+**⚠ 未解決：藍方／迭代順序偏差（READY 阻擋）**
+- n=1000（seed 1–1000，STANDARD 479／SWAPPED 521）：藍 48.9 → **53.1%**；巨龍側 +4.8 → +3.9pp；**純藍方 −0.9 → +3.3pp（SE 1.6，≈ 2.1σ）**；與 v19 配對翻轉 270:228（z 1.88）；時長中位／P90／最長 18.4／23.5／36.3 → 17.6／23.3／34.0；未結束 0、>45 分 0。
+- 反轉 `players` 迭代順序（紅方先）：seed 1–300 v20 53.3 → 44.0%（配對 z 2.32；v19 49.7 → 53.3，z −0.91）；seed 301–900 重做 51.8 → 49.5%（z 0.81）；合併 1–900 **52.3 → 47.7%（z 1.99）**。⇒ 先被迭代的一方約 +2pp，邊緣顯著。
+- 單旗標（只開一個 v20 旗標）× 反轉，各 300 場：waveFirstV20 z 1.81，其餘 |z| ≤ 1——未定位到機制（移動迴圈內位置已由 movementPlans 凍結；呼叫在決策凍結後發出）。
+- 下一步建議：以 n ≥ 2000 的反轉對照逐旗標定位，或在呼叫／兵線判斷加上順序無關的雙相收集，再跑 n=1000。

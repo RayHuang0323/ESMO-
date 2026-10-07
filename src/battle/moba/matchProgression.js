@@ -869,6 +869,37 @@ SIM_RULES.v3 = {
   winCondLeadMin: 1,        // 人數優勢 ≥ 1，或目標建築旁已有己方兵線，才算「推得動」
   winCondWindow: 18,
   winCondHpRiskK: 0.6,      // 跟進收尾的血量門檻 initiativeHpMin ＋ risk × 0.6
+
+  //  ── Tactical AI Phase 2（moba-sim.v20）──────────────────────────────────────
+  //  全部決定性、不擲骰。選手差異來源：風險傾向（_riskV19）＋ 既有素質作用點（joinAdj／roamInfoAdj／
+  //  roamFollowAdj／roamGateAdj／commitAdj）＋ 英雄定位。
+  //  ① Combat Intent：ENGAGE／KITE／PURSUE 之上再分 ALLIN／TRADE／POKE／KITE；走位與攻擊都讀同一個 intent。
+  combatIntentV20: true,
+  intentAllInAt: 0.62,       // 意圖分數 ≥ 此值 ⇒ All-in（積極的人門檻低）
+  intentTradeAt: 0.30,       // ≥ 此值 ⇒ Trade（短換血後退開）
+  intentPokeBand: 0.25,      // 遠程：Trade 門檻下 0.25 以內 ⇒ Poke，其下 ⇒ Kite
+  intentAggrK: 1.8,          // 門檻 ＋ risk × 此值（risk 約 −0.15…＋0.20）
+  intentRangedMin: 6,        // 攻擊距離 ≥ 此值視為遠程
+  tradeSec: 2.5,             // Trade：交手幾秒
+  tradeOutSec: 2.0,          // Trade：退開幾秒（期間只在貼身時還手）
+  //  ② 兵線優先：對線英雄身邊還有敵兵 ⇒ 不接非高價值的團戰／遊走（救人、物件、呼叫例外）。
+  waveFirstV20: true,
+  waveBusyR: 5,              // 攻擊距離 ＋ 此值內有敵方小兵 ⇒ 兵線未處理
+  //  ③ Team Call：引擎內的集火／殘血／Gank／撤退呼叫；只有距離內的隊友收得到（不是全圖透視）。
+  teamCallV20: true,
+  callRange: { focus: 26, lowhp: 30, gank: 70, retreat: 22, objective: 60 },
+  callDur: { focus: 5, lowhp: 6, gank: 9, retreat: 4, objective: 12 },
+  callDedupSec: 6,
+  //  ④ Gank 評分選路（取代計時器＋亂數）、追擊先估擊殺機率。
+  gankScoreV20: true,
+  gankMinScore: 0.8,
+  gankRecheckSec: 4,
+  chaseKillableV20: true,
+  //  ⑤ 物件評估（取代擲骰與固定巴龍優先）＋ 懲戒在物件不需要時可用於清野。
+  objectiveEvalV20: true,
+  objEvalOpenAt: 0.75,
+  smiteCampV20: true,
+  smiteObjectiveNearR: 35,   // 打野離活著的龍／巴龍 35 內、或本隊物件窗開著 ⇒ 才保留懲戒
 };
 
 /** 取規則集；未知/未指定 ⇒ v3（S29B1 預設）。 */

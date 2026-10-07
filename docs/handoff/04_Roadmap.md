@@ -2861,3 +2861,9 @@ NEXT_SPRINT = NOT_STARTED
 - 正式站 smoke gate 版本期待值 v18 → v19（只改版本事實）。
 - 維持不變：Map Topology FROZEN；CS／FPS、Online／DB 未碰；Competitive disabled。
 - Phase 2 尚未開始（Owner 指示）。
+
+## 2026-10-08 MOBA Tactical AI Phase 2（moba-sim.v20）— local commit，待 Owner Review（未 push／deploy）
+
+- 分支 `feature/moba-tactical-ai-p2`（基於 main `fde17c7`）。設計 `docs/design/MOBA_Tactical_AI_Phase2.md`；數據 `05_Sprint紀錄.md` 同名節。
+- 內容：Combat Intent（ALLIN／TRADE／POKE／KITE，走位與出手同源）、兵線優先、引擎 Team Call、Gank 評分＋追擊擊殺估算、物件雙評估＋懲戒清野。決定性、無新亂數；七旗標全關＝v19 逐位元。
+- 狀態：**NOT READY**——n=1000 純藍方 +3.3pp（≈ 2.1σ）且順序反轉測試邊緣顯著（z 1.99），機制未定位；另 combat_feedback F11 新紅待 Owner 判斷。詳見 08。

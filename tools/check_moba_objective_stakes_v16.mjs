@@ -66,8 +66,9 @@ const R = rulesFor("v3");
 //  2026-10-01 moba-sim.v17（Hero Identity v1）：版本事實隨升版更新；v16 與 v15 都必須仍是已知版本（歷史憑據不刪）。
 //  2026-10-06 moba-sim.v18（Map Topology Final）：同上，v17 也必須仍是已知版本。
 //  2026-10-07 moba-sim.v19（Tactical AI Phase 1）：同上，v18 也必須仍是已知版本。
-ck("V1 目前版本 moba-sim.v19，v18／v17／v16／v15 仍是已知版本（歷史挑戰明確拒絕、不覆蓋）", MOBA_SIMULATION_VERSION === "moba-sim.v19"
-  && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v18") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v17") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v16") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v15"), MOBA_SIMULATION_VERSION);
+//  2026-10-08 moba-sim.v20（Tactical AI Phase 2）：同上，v19 也必須仍是已知版本。
+ck("V1 目前版本 moba-sim.v20，v19／v18／v17／v16／v15 仍是已知版本（歷史挑戰明確拒絕、不覆蓋）", MOBA_SIMULATION_VERSION === "moba-sim.v20"
+  && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v19") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v18") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v17") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v16") && KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v15"), MOBA_SIMULATION_VERSION);
 //  heroPassivesV1 在 v17 由 Owner 指派的 Hero Identity v1 開啟；Stakes／Nexus cap 的 OFF 斷言原樣保留。
 ck("V2 v3 正式規則：objectiveStakesV1＝OFF（Owner 2026-09-30）、splitProjectileSlowV16＝on；nexusSiegeCapV1＝off；heroPassivesV1＝on（v17）",
   R.objectiveStakesV1 === false && R.splitProjectileSlowV16 === true && R.nexusSiegeCapV1 === false && R.heroPassivesV1 === true);
@@ -136,15 +137,19 @@ const killDragon = (gap) => {
   o.dmgBy = { blue: 999, red: 0 }; o.hp = 0.001;
   //  藍方全員站進坑（擊殺判定要有人在場），紅方回泉水
   for (const p of e.players) p.pos = p.side === "blue" ? { x: o.pos.x + 1, y: o.pos.y } : { x: 206, y: 10 };
+  //  2026-10-08 v20：在發基本獎勵的那一刻記下真實落後額（同一 tick 內其他金錢事件會讓它偏離 gap−200 幾十塊，
+  //  v20 的 AI 改動讓 seed 13 這一 tick 紅方多拿 20 金）。前提另外驗：落後額必須仍在 gap−200 ± 50。
+  let gapAtKill = null; const dg = e._dmgGold.bind(e);
+  e._dmgGold = (side, amt) => { if (gapAtKill === null && (amt === 200 || amt === 400)) { dg(side, amt); gapAtKill = side === "blue" ? e.rGold - e.bGold : e.bGold - e.rGold; return; } dg(side, amt); };
   const before = e.bGold, seq0 = e.objectiveLog.length ? e.objectiveLog[e.objectiveLog.length - 1].seq : 0;
   for (let i = 0; i < 4 && o.alive; i++) e.tick(0.5);
   const log = e.objectiveLog.filter((x) => x.seq > seq0 && x.key === "dragon");
-  return { alive: o.alive, killer: o.killerTeam, bounty: log[0]?.bounty ?? null, gain: e.bGold - before };
+  return { alive: o.alive, killer: o.killerTeam, bounty: log[0]?.bounty ?? null, gain: e.bGold - before, gapAtKill };
 };
 {
   const g2000 = killDragon(2000), g4000 = killDragon(4000), g1000 = killDragon(1000);
   //  引擎順序：先發基本獎勵（巨龍 200）再算落後額 ⇒ 落後 2000 → 1800 × 20% ＝ 360
-  ck("G1 落後 2000 拿巨龍 ⇒ 領完基本 200 後落後 1800 ⇒ 逆轉賞金 360（20%）寫入 objectiveLog", g2000.killer === "blue" && g2000.bounty === 360, JSON.stringify(g2000));
+  ck("G1 落後 2000 拿巨龍 ⇒ 領完基本 200 後落後 1800 ⇒ 逆轉賞金 360（20%）寫入 objectiveLog", g2000.killer === "blue" && Math.abs(g2000.gapAtKill - 1800) <= 50 && g2000.bounty === Math.round(g2000.gapAtKill * 0.2), JSON.stringify(g2000));
   ck("G2 落後 4000 ⇒ 賞金封頂 500；落後 1000 ⇒ 0（門檻 1500）", g4000.bounty === 500 && g1000.bounty === 0, `${g4000.bounty}/${g1000.bounty}`);
 }
 

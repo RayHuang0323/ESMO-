@@ -97,6 +97,7 @@ export class LogicEngine {
   constructor(seed = 1, loadout = null, opts = {}) {
     let x = seed | 0; this.rng = () => ((x = (x * 1664525 + 1013904223) & 0xffffffff) >>> 0) / 0xffffffff;
     this.seed = seed | 0;          // S24：保留 seed 供戰術層 rng2 派生
+    this._initTacV20();
     //  v16 Objective Layout：預設 STANDARD；_objPits=null ⇒ _pitOf 回傳原本的 PITS（逐位元不變）
     this.objectiveLayout = OBJECTIVE_LAYOUT.STANDARD; this._objPits = null; this._layoutConfigured = false;
     this.tacticOn = false;         // S24：未 configureMatch ⇒ 全部戰術程式碼不生效
@@ -330,6 +331,16 @@ export class LogicEngine {
   }
 
   /** Combat Decision B：投入決策觀測欄位（constructor 與 configureMatch 共用）。 */
+  /** Tactical AI Phase 2（v20）觀測計數與呼叫清單（不影響模擬；量測與 gate 用）。 */
+  _initTacV20() {
+    //  Tactical AI Phase 2（v20）觀測計數（不影響模擬；量測與 gate 用）。
+    const TS = () => ({ intent: {}, firstSight: 0, firstSightAllIn: 0, lowHpEngage: 0,
+      waveHeld: 0, roamAfterClear: 0, roamStart: 0, gankStart: 0, gankKill: 0, gankFail: 0, gankStartT: [],
+      callIssued: {}, callAnswered: 0, callDeclined: 0, chaseDeclined: 0,
+      smiteCamp: 0, smiteDragon: 0, smiteBaron: 0, objOpen: { dragon: 0, baron: 0 } });
+    this.tacStatsV20 = { blue: TS(), red: TS() };
+    this.callsV20 = { blue: [], red: [] };
+  }
   _newTfObs() {
     return { soloEntry: 0, held: 0, releasedSync: 0, releasedTimeout: 0,
       entries: 0, readyAtEngage: 0, spreadSum: 0, spreadN: 0,
@@ -357,6 +368,7 @@ export class LogicEngine {
     //  規則集 tacticIdentityV1 關閉或沒有傳 ⇒ null ⇒ 下面每個讀取點都走原式（逐位元不變）。
     this.tid = identity && this.rules.tacticIdentityV1 ? { blue: identity.blue ?? null, red: identity.red ?? null } : null;
     if (this.tid) this.tidObs = { blue: { protectCarry: 0, siegePreferred: 0 }, red: { protectCarry: 0, siegePreferred: 0 } };
+    this._initTacV20();
     let y = (this.seed ^ 0x9e3779b9) | 0;
     this.rng2 = () => ((y = (y * 1103515245 + 12345) & 0x7fffffff) >>> 0) / 0x7fffffff;
     const E = () => ({ invadeAttempts: 0, invadeKills: 0, topGanks: 0, midGanks: 0, botGanks: 0, gankKills: 0,
@@ -1235,6 +1247,18 @@ export class LogicEngine {
     if (contested) return true;
     if (casts.some((p) => p.hp / p.maxHp < (R.smiteLowHpFrac ?? 0.45))) return true;
     const N = this.neutrals;
+    //  v20 ⑤：「物件還活著」不再等於「整場都留懲戒」——只有物件迫近（打野就在坑邊、本隊物件窗開著、
+    //  或即將在 20 秒內重生）才保留；否則懲戒拿去清野，冷卻（75 秒）內回來得及搶下一次物件。
+    if (R.smiteCampV20) {
+      const nearR = R.smiteObjectiveNearR ?? 35;
+      const imminent = ["dragon", "baron"].some((k) => {
+        const n = N?.[k];
+        if (!n) return false;
+        if (n.alive) return casts.some((p) => dist(p.pos, n.pos) <= nearR || (this.fsm3?.[p.side]?.objGo && this.fsm3[p.side].objKey === k));
+        return Number.isFinite(n.respawnAt) && n.respawnAt - this.t < 20;
+      });
+      return !imminent;
+    }
     const objectiveSoon = ["dragon", "baron"].some((k) => {
       const n = N?.[k];
       return !!n && (n.alive || (Number.isFinite(n.respawnAt) && n.respawnAt - this.t < (R.smiteCd ?? 75)));
@@ -2576,6 +2600,12 @@ export class LogicEngine {
     const foesAtHot = alive.filter((q) => q.side !== p.side && dist(q.pos, hot) < 20).length;
     const alliesAtHot = alive.filter((q) => q.side === p.side && dist(q.pos, hot) < 20).length;
     if (alliesAtHot < foesAtHot - 1) return false;              // 明顯人數劣勢 ⇒ 不接
+    //  v20 ②：對線英雄兵線還沒處理 ⇒ 不為一般小規模接觸離線（救人／夾擊／物件／呼叫例外）。
+    if (R.waveFirstV20 && p.role !== "jungle" && dist(p.pos, hot) >= (R.syncEngageR ?? 10) &&
+        this._waveBusyV20(p) && !this._highValueV20(p, hot, alive)) {
+      if (this.t >= (p._waveHeldT ?? 0)) { p._waveHeldT = this.t + 4; this.tacStatsV20[p.side].waveHeld++; }
+      return false;
+    }
     if (this.t >= p.joinEvalT) {                                // 黏性：每 joinEvalPeriod 秒重評
       p.joinEvalT = this.t + R.joinEvalPeriod;
       let c = this._joinChance(K, hot, M);                      // 戰術 joinFight + 能力 joinAdj
@@ -2775,7 +2805,37 @@ export class LogicEngine {
       const c = hObj ? clamp(base + hObj, 0.02, 0.98) : base;
       p.objGo = (K ? this.rng2() : this.rng()) < c;
     }
+    //  v20 ③：回應了物件呼叫 ⇒ 去（兵線還在身邊的對線者例外：先清線）。
+    if (!p.objGo && R.teamCallV20 && p.callV20?.type === "objective" && this.t < p.callV20.until &&
+        !(R.waveFirstV20 && this._waveBusyV20(p))) return true;
     return p.objGo;
+  }
+  /** v20 ⑤：本隊對龍／巴龍的評估分數（只用看得見的資訊）。回傳最高者 { key, v } 或 null。 */
+  _objectiveEvalV20(side) {
+    const K = this.tacticOn ? this.tk[side] : null;
+    const mine = this.players.filter((q) => !q.dead && q.side === side);
+    const theirs = this.players.filter((q) => !q.dead && q.side !== side);
+    const alive = this.players.filter((q) => !q.dead);
+    const avgHp = (a) => (a.length ? a.reduce((s, q) => s + q.hp / q.maxHp, 0) / a.length : 0);
+    const jg = this.players.find((q) => q.side === side && q.role === "jungle");
+    let best = null;
+    for (const k of ["dragon", "baron"]) {
+      const n = this.neutrals[k];
+      if (!n?.alive) continue;
+      const ch0 = K ? (k === "baron" ? K.baronJoin : K.dragonJoin) : 0.6;
+      let v = ch0 + (this._objStakesOn() ? this._objectiveUrgency(side, k) : 0);
+      v += (mine.length - theirs.length) * 0.15 + (avgHp(mine) - avgHp(theirs)) * 0.4;
+      const nearMine = mine.filter((q) => dist(q.pos, n.pos) <= 45).length;
+      const nearSeen = theirs.filter((q) => dist(q.pos, n.pos) <= 45 && this._seenV20(side, q, alive)).length;
+      v += (nearMine - nearSeen) * 0.05;
+      if (!jg || jg.dead) v -= 0.2;
+      else if (this.spellsOn && jg.sp?.d?.id === "smite" && this.t >= jg.sp.d.readyAt) v += 0.08;
+      if (this.heroSkillsOn) v += mine.filter((q) => (q.heroSkillLevels?.R ?? 1) >= 1 && this.t >= (q.heroSkillReadyAt?.R ?? 0)).length * 0.02;
+      if (k === "baron" && mine.length < 4 && mine.length <= theirs.length) v -= 0.4;
+      if (n.hp < n.maxHp) v += 0.2;   // 已經有人在打：保護／搶
+      if (!best || v > best.v) best = { key: k, v };
+    }
+    return best;
   }
   /**
    * Milestone F：主動權窗的「攻城」分支是否適用於這名英雄。
@@ -2858,6 +2918,12 @@ export class LogicEngine {
       if (q.hp > q.maxHp * R.chaseHpMax) continue;
       const dd = dist(p.pos, q.pos);
       if (dd < bd) { bd = dd; best = q; }
+    }
+    //  v20 ④：看到殘血不一定追——估不出擊殺就放（被呼叫集火同一個目標的人照追）。
+    if (best && R.chaseKillableV20 && !(p.callV20?.targetId === best.id && this.t < p.callV20.until) &&
+        !this._chaseKillableV20(p, best, alive)) {
+      this.tacStatsV20[p.side].chaseDeclined++;
+      return null;
     }
     if (best) { p.chaseId = best.id; p.chaseUntil = this.t + R.chaseMaxT; p.chaseFrom = { ...p.pos }; }
     return best;
@@ -3006,6 +3072,11 @@ export class LogicEngine {
     } else if (target) {
       action = "KITE";
     }
+    //  Tactical AI Phase 2（v20）① Combat Intent：同一個決策同時決定走位（movement 分支）與出手（_combatStep）。
+    let intent = null;
+    if (R.combatIntentV20 && target && (action === "ENGAGE" || action === "KITE" || action === "PURSUE")) {
+      intent = this._combatIntentV20(p, target, { score, alliesN, foesN, enemyAwareness, allies, inTowerRisk, hasWave, towerDefenders, enemyTower, action });
+    }
 
     const reasons = [
       `hp:${Math.round(hpRatio * 100)}`,
@@ -3026,10 +3097,234 @@ export class LogicEngine {
     p.decisionTargetId = decisionTarget?.id ?? null;
     p.decisionScore = Math.round(score * 100) / 100;
     p.decisionReasons = reasons;
+    if (R.combatIntentV20) {
+      const prev = p.intentV20;
+      p.intentV20 = intent;
+      if (intent) {
+        reasons.push(`intent:${intent}`);
+        if (intent !== prev) { p.intentSince = this.t; p.intentTradeT0 = this.t; }
+      }
+    }
+    //  觀測（旗標關閉時以舊動作對應：ENGAGE／PURSUE＝All-in、KITE＝Kite）⇒ v19 對照可用同一支探針。
+    const obsI = intent ?? (action === "ENGAGE" || action === "PURSUE" ? "ALLIN" : action === "KITE" ? "KITE" : null);
+    const st = obsI ? this.tacStatsV20?.[p.side] : null;
+    if (st) {
+      st.intent[obsI] = (st.intent[obsI] ?? 0) + 1;
+      if (immediateContact) { st.firstSight++; if (obsI === "ALLIN") st.firstSightAllIn++; }
+      if (hpRatio < 0.4 && foesN >= alliesN && (obsI === "ALLIN" || obsI === "TRADE")) st.lowHpEngage++;
+      const ps = (this.tacPersonaV20 ??= {})[p.id] ??= { n: 0, allin: 0, trade: 0, poke: 0, kite: 0 };
+      ps.n++; ps[obsI.toLowerCase()]++;
+    }
     return {
       action, targetId: p.decisionTargetId,
-      score: p.decisionScore, reasons: [...reasons], fresh: true,
+      score: p.decisionScore, reasons: [...reasons], fresh: true, intent,
     };
+  }
+  /**
+   * Tactical AI Phase 2（v20）① Combat Intent。回傳 ALLIN／TRADE／POKE／KITE（皆決定性）。
+   *   分數＝既有接戰分數 ＋ 等級／經濟差 ＋ R 與閃現是否在手（雙方）＋ 援軍（14 內但不在交戰圈的隊友 − 敵人）
+   *        ＋ 退路（身後自家塔近 ⇒ 敢打；人在敵塔下沒兵線 ⇒ 扣）。
+   *   門檻吃風險傾向：積極（risk < 0）門檻低 ⇒ 更早 All-in；謹慎的人多用 Trade／Poke。
+   */
+  _combatIntentV20(p, target, c) {
+    const R = this.rules;
+    const ready = (q, slot) => (q.heroSkillLevels?.[slot] ?? 1) >= 1 && this.t >= (q.heroSkillReadyAt?.[slot] ?? 0);
+    const flashUp = (q) => !!(this.spellsOn && q.sp?.f && this.t >= q.sp.f.readyAt);
+    let s = c.score;
+    s += clamp((p.mlv ?? p.lv ?? 1) - (target.mlv ?? target.lv ?? 1), -3, 3) * 0.06;
+    s += clamp(((p.gold ?? 0) - (target.gold ?? 0)) / 1500, -1, 1) * 0.08;
+    if (this.heroSkillsOn) {
+      s += (ready(p, "R") ? 0.14 : 0) - (ready(target, "R") ? 0.10 : 0);
+      const basics = ["Q", "W", "E"].filter((k) => ready(p, k)).length;
+      s += (basics - 1.5) * 0.05;
+    }
+    s += (flashUp(p) ? 0.05 : 0) - (flashUp(target) ? 0.07 : 0);
+    const cr = R.decisionContact + 2;
+    const reinf = c.allies.filter((q) => dist(q.pos, p.pos) > cr).length -
+      c.enemyAwareness.filter(({ d }) => d > cr).length;
+    s += clamp(reinf, -2, 2) * 0.10;
+    let ownTower = Infinity;
+    for (const tw of Object.values(this.towers)) if (tw.side === p.side && tw.hp > 0) ownTower = Math.min(ownTower, dist(p.pos, tw.pos));
+    if (ownTower <= 14) s += 0.08;
+    if (c.inTowerRisk && !c.hasWave) s -= 0.15;
+    if (R.teamCallV20) {
+      const call = p.callV20 && this.t < p.callV20.until ? p.callV20 : null;
+      if (call && (call.targetId === target.id || (call.type === "gank" && call.lane === target.lane))) s += 0.2;
+      if (this.t < (p.callRetreatUntil ?? 0)) s -= 0.35;
+    }
+    const risk = this._riskV19(p);
+    const shift = risk * (R.intentAggrK ?? 1);
+    const tHp = target.hp / target.maxHp;
+    const myHp = p.hp / p.maxHp;
+    //  殘血、人數不佔優、對方血比我多 ⇒ 不開（最多 Poke／Kite）——低血量不合理開戰的主要來源。
+    const badSpot = myHp < 0.4 && c.foesN >= c.alliesN && tHp >= myHp - 0.05;
+    if (c.action === "PURSUE" && tHp <= 0.3 && !badSpot) return "ALLIN";
+    if (badSpot) s = Math.min(s, R.intentTradeAt + shift - 0.01);
+    if (s >= R.intentAllInAt + shift && c.foesN <= c.alliesN + 1) return "ALLIN";
+    if (s >= R.intentTradeAt + shift) return "TRADE";
+    const ranged = this._engageRange(p) >=(R.intentRangedMin ?? 6);
+    if (ranged && s >= R.intentTradeAt + shift - R.intentPokeBand) return "POKE";
+    return "KITE";
+  }
+  /** v20：Trade 的換血節奏——交手 tradeSec 後退開 tradeOutSec，循環。 */
+  _tradeOutV20(p) {
+    if (p.intentV20 !== "TRADE") return false;
+    const R = this.rules, cyc = R.tradeSec + R.tradeOutSec;
+    return ((this.t - (p.intentTradeT0 ?? this.t)) % cyc) >= R.tradeSec;
+  }
+  /** v20 ②：這名對線英雄身邊（攻擊距離 ＋ waveBusyR）還有敵方小兵 ⇒ 兵線還沒處理。打野一律 false。 */
+  _waveBusyV20(p) {
+    if (p.role === "jungle" || !this.lanes?.[p.lane]) return false;
+    const key = p.side === "blue" ? "rm" : "bm";
+    const r = this._engageRange(p) + (this.rules.waveBusyR ?? 5);
+    return this.lanes[p.lane][key].some((m) => m.hp > 0 && dist(this._minionPos(p.lane, m), p.pos) <= r);
+  }
+  /** v20：敵方英雄是否被我方看見（任一隊友 16 內）——Team Call／Gank 評估只用看得見的資訊。 */
+  _seenV20(side, q, alive) {
+    return !this._heroSkillStealthed(q) && alive.some((a) => a.side === side && !a.dead && dist(a.pos, q.pos) <= 16);
+  }
+  /** v20 ②：可以打斷「先處理兵線」的高價值情境：救人、夾擊、物件、有人呼叫。 */
+  _highValueV20(p, hot, alive) {
+    const T = this.fsm3?.[p.side];
+    if (T?.objGo && this.neutrals?.[T.objKey]?.alive && dist(this.neutrals[T.objKey].pos, hot) < 20) return "objective";
+    if (alive.some((q) => q.side === p.side && q !== p && dist(q.pos, hot) < 14 && q.hp / q.maxHp < 0.4)) return "rescue";
+    const foes = alive.filter((q) => q.side !== p.side && dist(q.pos, hot) < 14);
+    if (foes.length && alive.filter((q) => q.side === p.side && q !== p && dist(q.pos, hot) < 14).length >= 2 &&
+        foes.length <= 2) return "pincer";
+    if (this.rules.teamCallV20 && this._callForV20(p, alive)) return "call";
+    return null;
+  }
+  /**
+   * v20 ③ Team Call：發出。只用看得見的資訊；同隊同類同目標 callDedupSec 內不重發。
+   *   focus  ＝ 有人 All-in 某個目標；lowhp ＝ 看得到的敵人 ≤ 30% 血；retreat ＝ 有人在人數劣勢撤退。
+   *   gank   ＝ 由打野出發時呼叫（_gankPickV20）。
+   */
+  _issueCallV20(side, type, from, pos, targetId = null, lane = null) {
+    const R = this.rules, L = this.callsV20[side];
+    if (L.some((c) => c.type === type && c.targetId === targetId && c.lane === lane && this.t - c.t < R.callDedupSec)) return null;
+    const c = { type, from: from.id, pos: { x: pos.x, y: pos.y }, targetId, lane, t: this.t, until: this.t + (R.callDur?.[type] ?? 5), answered: [], declined: [] };
+    L.push(c);
+    if (L.length > 12) L.shift();
+    const st = this.tacStatsV20[side];
+    st.callIssued[type] = (st.callIssued[type] ?? 0) + 1;
+    return c;
+  }
+  _teamCallsV20(alive, decisionPlans) {
+    for (const side of ["blue", "red"]) {
+      const mine = alive.filter((q) => q.side === side);
+      for (const p of mine) {
+        const d = decisionPlans.get(p.id);
+        if (!d) continue;
+        if (d.intent === "ALLIN" && d.targetId) {
+          const tq = alive.find((q) => q.id === d.targetId);
+          if (tq) this._issueCallV20(side, "focus", p, tq.pos, tq.id);
+        }
+        if (d.action === "RETREAT" && d.fresh) {
+          const foes = alive.filter((q) => q.side !== side && dist(q.pos, p.pos) < 14).length;
+          if (foes >= 2) this._issueCallV20(side, "retreat", p, p.pos);
+        }
+      }
+      for (const q of alive) {
+        if (q.side === side || q.hp > q.maxHp * 0.3 || !this._seenV20(side, q, alive)) continue;
+        let caller = null, bd = Infinity;
+        for (const a of mine) { const dd = dist(a.pos, q.pos); if (dd < bd) { bd = dd; caller = a; } }
+        if (caller) this._issueCallV20(side, "lowhp", caller, q.pos, q.id);
+      }
+      this.callsV20[side] = this.callsV20[side].filter((c) => this.t < c.until);
+      //  回應：每個收得到（callRange 內）的隊友對每個新呼叫只決定一次（決定性）。
+      for (const c of this.callsV20[side]) {
+        for (const p of mine) {
+          if (p.id === c.from || c.answered.includes(p.id) || c.declined.includes(p.id)) continue;
+          if (dist(p.pos, c.pos) > (this.rules.callRange?.[c.type] ?? 25)) continue;
+          if (c.type === "gank" && p.lane !== c.lane) continue;
+          const ok = this._answerCallV20(p, c, alive);
+          (ok ? c.answered : c.declined).push(p.id);
+          const st = this.tacStatsV20[side];
+          if (ok) { st.callAnswered++; if (c.type !== "retreat") p.callV20 = c; else p.callRetreatUntil = c.until; }
+          else st.callDeclined++;
+        }
+      }
+    }
+  }
+  /** 回應分數：距離、定位、兵線、血量 ＋ 溝通（roamInfoAdj）、配合（commitAdj）、叫的人的領導（roamFollowAdj）、
+   *  決策（roamGateAdj）、個性（風險傾向）。全部決定性。 */
+  _answerCallV20(p, c, alive) {
+    const M = this._mod(p), caller = this.players.find((q) => q.id === c.from);
+    const Mc = caller ? this._mod(caller) : null;
+    const range = this.rules.callRange?.[c.type] ?? 25;
+    const hp = p.hp / p.maxHp;
+    if (p.retreating || p.dead) return false;
+    let s = 0.55 - dist(p.pos, c.pos) / range * 0.35;
+    s += (M?.roamInfoAdj ?? 0) * 0.4 + (M?.commitAdj ?? 0) * 0.4 + (Mc?.roamFollowAdj ?? 0) * 0.6;
+    const risk = this._riskV19(p);
+    if (c.type === "retreat") return s + risk * 1.0 + (hp < 0.6 ? 0.2 : 0) + (M?.roamGateAdj ?? 0) >= 0.4;
+    s += (hp - 0.55) * 0.6 - risk * 0.8;
+    if (c.type === "lowhp" || c.type === "focus") {
+      const tq = alive.find((q) => q.id === c.targetId);
+      if (!tq) return false;
+      if (p.role === "jungle" || p.role === "sup" || p.role === "top") s += 0.08;
+      const foes = alive.filter((q) => q.side !== p.side && dist(q.pos, c.pos) < 14).length;
+      const allies = alive.filter((q) => q.side === p.side && dist(q.pos, c.pos) < 14).length + 1;
+      s += (allies - foes) * 0.12;
+      if (this._waveBusyV20(p) && dist(p.pos, c.pos) > 14) s -= 0.15;
+    }
+    if (c.type === "gank") s += this._waveBusyV20(p) ? 0.1 : 0.2;   // 被抓的那一路：守住兵線、等打野
+    return s >= 0.5;
+  }
+  /** 這名英雄身上仍有效的呼叫（回應過的）。 */
+  _callForV20(p, alive) {
+    const c = p.callV20;
+    if (!c || this.t >= c.until) return null;
+    if (c.targetId && !alive.some((q) => q.id === c.targetId && !q.dead)) return null;
+    return c;
+  }
+  /**
+   * v20 ④ Gank 選路：以看得見的資訊評分，分數不夠就不出發（gankRecheckSec 後再看）。
+   *   ＋ 敵方對線英雄殘血、壓線（離自家塔遠）、我方對線者在場且健康、Gank 偏好權重；
+   *   － 敵方多人／敵方打野在附近、距離遠。積極的打野門檻低。
+   */
+  _gankPickV20(p, alive, w) {
+    const R = this.rules;
+    const wmax = Math.max(w.top, w.mid, w.bot) || 1;
+    let best = null;
+    for (const lane of ["top", "mid", "bot"]) {
+      const laners = alive.filter((q) => q.side !== p.side && q.lane === lane && q.role !== "jungle" && this._seenV20(p.side, q, alive));
+      if (!laners.length) continue;
+      const mine = alive.filter((q) => q.side === p.side && q.lane === lane && q.role !== "jungle");
+      const center = laners[0].pos;
+      let s = (w[lane] / wmax) * 0.2;
+      s += Math.max(...laners.map((q) => 1 - q.hp / q.maxHp)) * 0.6;
+      const ownTw = this.frontTower(p.side, lane);   // 敵方在這路的前線塔
+      if (ownTw && Math.min(...laners.map((q) => dist(q.pos, ownTw.pos))) > 22) s += 0.3;
+      const mineNear = mine.filter((q) => dist(q.pos, center) < 18 && q.hp / q.maxHp >= 0.45).length;
+      s += mineNear ? 0.25 : -0.3;
+      s -= Math.max(0, laners.length - mine.length) * 0.3;
+      if (alive.some((q) => q.side !== p.side && q.role === "jungle" && dist(q.pos, center) < 25 && this._seenV20(p.side, q, alive))) s -= 0.3;
+      s -= dist(p.pos, center) / 250;
+      s += -this._riskV19(p) * 0.6 + (this._mod(p)?.roamGateAdj ?? 0);
+      if (!best || s > best.s) best = { lane, s, pos: center };
+    }
+    return best && best.s >= R.gankMinScore ? best : null;
+  }
+  /** v20：記錄一次 Gank 出發（觀測），評分出發時對該路發 gank 呼叫。 */
+  _gankStartV20(p, lane, pick, alive) {
+    const ts = this.tacStatsV20[p.side];
+    ts.gankStart++; ts.gankStartT.push(Math.round(this.t));
+    p._gankV20 = { lane, until: this.t + 20, done: false };
+    if (pick && this.rules.teamCallV20) this._issueCallV20(p.side, "gank", p, pick.pos, null, lane);
+  }
+  /** v20 ④ 追擊前估擊殺機率：附近隊友 DPS × 對方逃回塔下的時間 ≥ 剩餘血量（對方閃現在手 ⇒ 要多 25%）。 */
+  _chaseKillableV20(p, q, alive) {
+    let tw = null, td = Infinity;
+    for (const t of Object.values(this.towers)) if (t.side === q.side && t.hp > 0) { const d = dist(q.pos, t.pos); if (d < td) { td = d; tw = t; } }
+    const escT = tw ? Math.max(0, td - this.towerRange(tw)) / 5 : 8;
+    let dps = 0;
+    for (const a of alive) if (a.side === p.side && dist(a.pos, q.pos) <= this._engageRange(a) + 6) dps += this._heroDpsEst(a);
+    const need = q.hp * (1 + Math.max(0, this._riskV19(p)) * 0.8) * (this.spellsOn && q.sp?.f && this.t >= q.sp.f.readyAt ? 1.25 : 1);
+    //  追擊窗內根本逃不回塔下 ⇒ 追（既有的超時／拉開距離／錨點 leash 仍會收手）；只有逃得掉時才比傷害。
+    const maxT = this.rules.chaseMaxT ?? 6;
+    if (escT >= maxT) return true;
+    return dps * (escT + 0.8) >= need;
   }
   /** 打野的下一個農怪目標：自家野區最近的存活營地。 */
   _nextCampV3(p) {
@@ -4095,6 +4390,8 @@ export class LogicEngine {
       }
       for (const p of casts) {
         this._spellEventV3(p, "smite", o.id, p.pos, victim.pos ?? o.pos);
+        const ts = this.tacStatsV20?.[p.side];
+        if (ts) { if (o.members) ts.smiteCamp++; else if (o === this.neutrals?.baron) ts.smiteBaron++; else ts.smiteDragon++; }
       }
     };
     //  feature/moba-spectacle-vision（objSkillV1）：本 tick 到期的「技能打中立目標」傷害。
@@ -4408,6 +4705,8 @@ export class LogicEngine {
           // 自己在撤退/脫戰/回線：不主動出手；貼身（≤contactKeep）被纏住仍會還手。
           if ((p.retreating || p.fsm === "DISENGAGE" || p.fsm === "RETURN") && dd > R.contactKeep) continue;
         }
+        //  v20 Combat Intent：Trade 的退開段只在貼身時還手（走位分支同時在拉開距離）。
+        if (R.combatIntentV20 && dd > R.contactKeep && this._tradeOutV20(p)) continue;
         if (cands) cands.push(q);
         bd = dd; foe = q;
       }
@@ -4419,6 +4718,11 @@ export class LogicEngine {
         for (const q of cands) if (q.hp < best.hp) best = q;
         p.focusPick = (p.focusPick ?? 0) + 1;
         if (best !== foe) { p.focusSwap = (p.focusSwap ?? 0) + 1; foe = best; }
+      }
+      //  v20 ③：回應了集火／殘血呼叫 ⇒ 呼叫的目標在射程內就打它（走位分支已往它靠）。
+      if (foe && R.teamCallV20 && p.callV20 && this.t < p.callV20.until && p.callV20.targetId) {
+        const cq = alive.find((q) => q.id === p.callV20.targetId && !q.dead && !this._heroSkillStealthed(q));
+        if (cq && dist(p.pos, cq.pos) < this._engageRange(p)) foe = cq;
       }
     } else {
       const legacyRange = this._engageRange(p);
@@ -4675,6 +4979,12 @@ export class LogicEngine {
     this.feed.unshift({ id: this._mid++, killer: p.id, victim: foe.id, side: p.side, assists, vpos: { x: foe.pos.x, y: foe.pos.y }, ...(ctx ? { ctx } : {}) });
     this.feed = this.feed.slice(0, 5);
     this.pushFx({ type: "ult", pos: { ...foe.pos }, color: 0xfbbf24, exp: 0.6 });
+    //  v20 觀測：Gank 成功＝出發後 20 秒內、該路的敵方英雄被打野本人或其助攻擊殺。
+    for (const jg of this.players) {
+      const g = jg._gankV20;
+      if (jg.side !== p.side || jg.role !== "jungle" || !g || g.done || this.t > g.until) continue;
+      if (foe.lane === g.lane && (p === jg || assists.includes(jg.id))) { g.done = true; this.tacStatsV20[p.side].gankKill++; }
+    }
     // S24：擊殺歸因（真實計數，非編造）——Gank 窗內打野擊殺 / 入侵窗內中野擊殺
     if (this.tacticOn) {
       const S2 = this._tac[p.side];
@@ -6051,8 +6361,15 @@ export class LogicEngine {
               }
             }
           }
-          const key = this.neutrals.baron.alive ? "baron" : this.neutrals.dragon.alive ? "dragon" : null;
+          let key = this.neutrals.baron.alive ? "baron" : this.neutrals.dragon.alive ? "dragon" : null;
           if (!key) { T.objGo = false; T.objKey = null; continue; }
+          //  v20 ⑤：龍與巴龍都評估（人數、血量、離坑距離、看得見的敵人、懲戒與打野是否在、大招），取較高者；
+          //  不擲骰、不再「巴龍活著就只看巴龍」。分數夠才開窗；窗長仍沿用 objChance 的公式。
+          let evalV20 = null;
+          if (R.objectiveEvalV20 && !(T.initKind && this.t < T.initUntil && (T.initKind === "baron" || T.initKind === "dragon"))) {
+            evalV20 = this._objectiveEvalV20(side);
+            if (evalV20) key = evalV20.key;
+          }
           // Milestone F：主動權窗指向龍／巴龍時，直接把目標窗打開。
           //   這是刻意「接既有路徑」而不是另寫一套集結：目標窗的距離、承諾上限、
           //   打野/輔助必去、knob 單調性（tactic24 C4c）全部沿用，不重複實作。
@@ -6065,7 +6382,17 @@ export class LogicEngine {
             T.objUntil = Math.max(T.objUntil, T.initUntil);
             continue;
           }
-          if (this.t >= T.objEvalT) {
+          if (R.objectiveEvalV20 && this.t >= T.objEvalT) {
+            T.objEvalT = this.t + 4;
+            if (!T.objGo && evalV20 && evalV20.v >= R.objEvalOpenAt) {
+              const chance = clamp(evalV20.v - 0.25, 0.3, 0.95);
+              T.objGo = true; T.objKey = evalV20.key; T.objChance = chance;
+              T.objStart = this.t; T.objUntil = this.t + 8 + 14 * chance;
+              this.tacStatsV20[side].objOpen[evalV20.key]++;
+              const caller = this.players.find((q) => q.side === side && !q.dead && q.role === "jungle") ?? this.players.find((q) => q.side === side && !q.dead);
+              if (caller && R.teamCallV20) this._issueCallV20(side, "objective", caller, this.neutrals[evalV20.key].pos, null, null);
+            }
+          } else if (this.t >= T.objEvalT) {
             T.objEvalT = this.t + 12;
             const K = this.tacticOn ? this.tk[side] : null;
             const chance0 = K ? (key === "baron" ? K.baronJoin : K.dragonJoin) : 0.6;
@@ -6077,6 +6404,7 @@ export class LogicEngine {
             // 窗長由 knob 決定：高目標投入的戰術蹲得久、低投入的淺嘗即走
             //  ⇒ dragonJoin/baronJoin → 行為的單調性放在機制本身（tactic24 C4c）
             if (!T.objGo && roll < chance) {
+              this.tacStatsV20[side].objOpen[key]++;
               T.objGo = true; T.objKey = key; T.objChance = chance;
               T.objStart = this.t; T.objUntil = this.t + 8 + 14 * chance;
             }
@@ -6134,6 +6462,8 @@ export class LogicEngine {
     const decisionPlans = new Map();
     if (R.explainableCombatDecisions) {
       for (const p of alive) decisionPlans.set(p.id, this._combatDecisionV3(p, alive));
+      //  v20 ③：呼叫在全員決策凍結後才發出與回應（與陣列順序無關）。
+      if (R.teamCallV20) this._teamCallsV20(alive, decisionPlans);
     }
     for (const p of this.players) {
       if (p.dead) {
@@ -6287,10 +6617,20 @@ export class LogicEngine {
       }
       // S24：打野 Gank 節奏機（依 tempo 週期、依權重挑路；到點後 9 秒壓該路前線）
       if (K && !tacTgt && p.role === "jungle" && !p.retreating) {
+        //  v20 ④：Gank 改評分選路——沒有值得抓的路就不出發，gankRecheckSec 後再看（不抽 rng）。
+        let gpick = null;
+        if (R.gankScoreV20 && this.t >= S.gankNext && !hot) {
+          gpick = this._gankPickV20(p, alive, K.gankWeights);
+          if (!gpick) S.gankNext = this.t + (R.gankRecheckSec ?? 4);
+        }
         if (this.t >= S.gankNext && !hot) {
           const w = K.gankWeights, tot = w.top + w.mid + w.bot;
-          const r = this.rng2() * tot;
-          S.gankLane = r < w.top ? "top" : r < w.top + w.mid ? "mid" : "bot";
+          if (gpick) S.gankLane = gpick.lane;
+          else {
+            const r = this.rng2() * tot;
+            S.gankLane = r < w.top ? "top" : r < w.top + w.mid ? "mid" : "bot";
+          }
+          this._gankStartV20(p, S.gankLane, gpick, alive);
           // S28：Gank 節奏吃打野能力——視野/手速/決策 → 週期變短（更常抓）、停留窗變長
           S.gankUntil = this.t + 9 * (M ? M.gankWindowScale : 1);
           //  Tactical Identity：lanePlan.jungle＝farm ⇒ 抓人週期 ×1.35（原本 ×0.4 全路權重正規化後等於沒改）。
@@ -6305,7 +6645,10 @@ export class LogicEngine {
         // S28：遊走率 += roamAdj（視野/溝通/手速/領導）——輔助的主要作用點
         //  ⚠ rng 消耗必須與舊版**逐次相同**：無論後面是否 decline，這兩次 rng2 都照抽。
         //     decline 只影響「要不要出發」，不影響隨機序列 ⇒ 差異可歸因於決策本身。
-        if (this.t >= S.roamNext) {
+        //  v20 ②：兵線還在身邊 ⇒ 先清線，4 秒後再看（不抽 rng，清完才走正常遊走流程）。
+        const waveHold = R.waveFirstV20 && this.t >= S.roamNext && this._waveBusyV20(p);
+        if (waveHold && this.t >= (p._waveHeldT ?? 0)) { p._waveHeldT = this.t + 4; this.tacStatsV20[p.side].waveHeld++; }
+        if (this.t >= S.roamNext && !waveHold) {
           S.roamNext = this.t + 40 + this.rng2() * 15;
           //  Tactical Identity：lanePlan.support＝roam／protect ⇒ 遊走率 ×1.5／×0.5（原本完全沒讀）。
           const Ir = this._tidOf(p.side);
@@ -6316,6 +6659,8 @@ export class LogicEngine {
             if (R.roamQualityV1) {
               const pick = this._roamPickV1(p, M ?? NEUTRAL_ROAM, alive);
               if (pick) {
+                const ts = this.tacStatsV20[p.side];
+                ts.roamStart++; if (!this._waveBusyV20(p)) ts.roamAfterClear++;
                 S.roamLane = pick.lane;
                 S.roamUntil = this.t + pick.dur;
                 S.roamEvalT = this.t + (R.roamEvalPeriod ?? 6);
@@ -6457,6 +6802,17 @@ export class LogicEngine {
         const tw = this.towers[this.fsm3[p.side].initTarget];
         tgt = tw.pos; st = "圍攻"; p.fsm = "OBJECTIVE";
       }
+      //  v20 ③：回應了隊友的集火／殘血呼叫 ⇒ 前往目標（只追看得見的目標；目標死亡或呼叫過期即結束）。
+      else if (R.teamCallV20 && !skipFight && this.t >= p.reengageAt && (() => {
+        const c = this._callForV20(p, alive);
+        if (!c || (c.type !== "focus" && c.type !== "lowhp")) return false;
+        const tq = alive.find((q) => q.id === c.targetId);
+        return !!tq && this._seenV20(p.side, tq, alive) && dist(p.pos, tq.pos) <= (R.callRange?.[c.type] ?? 25) + 6;
+      })()) {
+        const tq = alive.find((q) => q.id === p.callV20.targetId);
+        tgt = { x: tq.pos.x, y: tq.pos.y }; st = "支援"; p.fsm = "SETUP";
+        p.intent = p.callV20.type === "lowhp" ? "回應殘血呼叫" : "回應集火呼叫";
+      }
       // S28：團戰/目標集結門檻 += joinAdj（勇氣/戰術/配合/溝通/反應＋隊伍領導平均）
       //   或 objAdj（龍/巴龍坑：視野/戰術/專注/溝通＋隊伍領導平均）。
       //   ⚠ 抽樣次數與來源流不變（K ⇒ rng2、無 K ⇒ rng）；只平移門檻。
@@ -6519,9 +6875,25 @@ export class LogicEngine {
         const dd = dist(p.pos, localTarget.pos) || 1;
         const ux = (p.pos.x - localTarget.pos.x) / dd;
         const uy = (p.pos.y - localTarget.pos.y) / dd;
+        //  v20 Combat Intent：走位讀同一個 intent（_combatStep 的出手也讀它）。
+        const iv = R.combatIntentV20 && localDecision.action !== "PURSUE" ? p.intentV20 : null;
+        const er = this._engageRange(p);
         if (localDecision.action === "PURSUE") {
           tgt = { x: localTarget.pos.x, y: localTarget.pos.y };
           st = "追擊"; p.fsm = "CHASE";
+        } else if (iv === "ALLIN") {
+          const stick = Math.min(desired, er * 0.6);
+          tgt = { x: localTarget.pos.x + ux * stick, y: localTarget.pos.y + uy * stick };
+          st = "強開"; p.fsm = "ENGAGE";
+        } else if (iv === "TRADE") {
+          const out = this._tradeOutV20(p);
+          const want = out ? er + 3 : Math.min(desired, er * 0.85);
+          tgt = { x: localTarget.pos.x + ux * want, y: localTarget.pos.y + uy * want };
+          st = "換血"; p.fsm = out ? "SETUP" : "ENGAGE";
+        } else if (iv === "POKE") {
+          const want = Math.max(desired, er - 0.4);
+          tgt = { x: localTarget.pos.x + ux * want, y: localTarget.pos.y + uy * want };
+          st = "消耗"; p.fsm = "SETUP";
         } else if (localDecision.action === "KITE" && dd < desired - 0.5) {
           tgt = { x: p.pos.x + ux * 3.5, y: p.pos.y + uy * 3.5 };
           st = "拉扯"; p.fsm = "SETUP";
@@ -6563,11 +6935,21 @@ export class LogicEngine {
         //   其餘時間農自家野區營地（不再吃中路兵線——S29A 已知技術債）
         if (R.engagementFsm && !tgt && p.role === "jungle") {
           const T = this.fsm3[p.side];
-          if (!K && this.t >= T.gankNext && !hot) {
+          if (!K && this.t >= T.gankNext && !hot && R.gankScoreV20) {
+            //  v20 ④：評分選路、不抽 rng；不值得抓 ⇒ 繼續刷野，gankRecheckSec 後再看。
+            const g = this._gankPickV20(p, alive, { top: 1, mid: 1, bot: 1 });
+            if (g) {
+              T.gankLane = g.lane;
+              T.gankUntil = this.t + R.defaultGankWindow;
+              T.gankNext = this.t + R.defaultGankInterval;
+              this._gankStartV20(p, g.lane, g, alive);
+            } else T.gankNext = this.t + (R.gankRecheckSec ?? 4);
+          } else if (!K && this.t >= T.gankNext && !hot) {
             const r3 = this.rng();
             T.gankLane = r3 < 1 / 3 ? "top" : r3 < 2 / 3 ? "mid" : "bot";
             T.gankUntil = this.t + R.defaultGankWindow;
             T.gankNext = this.t + R.defaultGankInterval + this.rng() * 12;   // 窗關即進冷卻
+            this._gankStartV20(p, T.gankLane, null, alive);
           }
           if (!K && this.t < T.gankUntil) { effLane = T.gankLane; stOv = "抓人"; p.fsm = "ROAM"; }
           if (stOv !== "抓人") {

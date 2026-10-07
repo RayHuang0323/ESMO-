@@ -36,11 +36,11 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v19";
+export const MOBA_SIMULATION_VERSION = "moba-sim.v20";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -404,6 +404,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  選手差異只來自既有作用點的風險傾向（英雄定位／選手素質 retreatAdj／戰術身分），決定性、不擲骰。
   //  ⚠ 後果（已知且接受）：v18 歷史挑戰由 canReplay 明確拒絕；v1～v18 指紋全數保留。
   "moba-sim.v19": "dc005e5f57977e3d",
+  //  2026-10-08 moba-sim.v20（feature/moba-tactical-ai-p2）：**simulation semantics change**（Tactical AI Phase 2；skill-off／on 與 Challenge 都受影響）。
+  //  ① Combat Intent：ALLIN／TRADE／POKE／KITE，走位與出手讀同一個 intent（等級／經濟、R 與閃現、援軍、退路、風險傾向）。
+  //  ② 兵線優先：對線者身邊有敵兵 ⇒ 不為一般接觸離線（救人／夾擊／物件／呼叫例外）。③ 引擎內 Team Call（集火／殘血／Gank／撤退／物件），
+  //    回應吃距離、定位、溝通／配合／領導、風險傾向。④ Gank 評分選路、追擊先估擊殺。⑤ 龍／巴龍雙評估取代擲骰、懲戒在物件不迫近時清野。
+  //  全部決定性（不新增亂數；Gank／物件改評分後少抽 rng）。⚠ 後果（已知且接受）：v19 歷史挑戰由 canReplay 明確拒絕；v1～v19 指紋全數保留。
+  "moba-sim.v20": "a12938920a92dee6",
 });
 
 export const isKnownSimulationVersion = (v) =>
