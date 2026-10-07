@@ -45,8 +45,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   2026-10-07 moba-sim.v19 Tactical AI Phase 1：塔邊遲滯、站位點死區、再任務承諾、勝利條件都改變 skill-off 的走位
  *   ⇒ 基準前移到該次 commit `d690fad`；同日 canonical siege target 修正（攻城窗實際攻擊的建築）再改變走位與推塔
  *   ⇒ 前移到 `274bcae`。
+ *   2026-10-08 moba-sim.v20 Tactical AI Phase 2：Combat Intent、兵線優先、Team Call、Gank／物件評分都改變 skill-off 的決策
+ *   ⇒ 基準前移到該次 commit `7f93c12`。
  */
-const BASE_COMMIT = "274bcae";
+const BASE_COMMIT = "7f93c12";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
