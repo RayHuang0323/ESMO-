@@ -1,5 +1,7 @@
 # MOBA Tactical AI Phase 1（moba-sim.v19）
 
+> **狀態：RELEASED（2026-10-08，main `d146e02`，Pages run `37648955259`）。** Phase 2 未開始。
+
 - 分支：`feature/moba-tactical-ai-p1`（基於 main `cd91256`＝moba-sim.v18 RELEASED、Map Topology FROZEN）
 - 範圍：只處理 2026-10-07 Audit 確認的三個 P0。Poke／Trade／All-in、Team Call、兵線／Roam／Gank 重構、偷塔／分推／Ambush 留 Phase 2／3。
 - 規則旗標全部在 v3 正式規則集（`matchProgression.js` 末段「Tactical AI Phase 1」區塊），可個別關閉做對照。

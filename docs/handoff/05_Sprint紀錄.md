@@ -24370,3 +24370,17 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - verify：regress 15/15、regress2 8/8、runtime29、P0-A／B／C／D、map_topology_final、tactical_ai_p1、simulation_version：PASS；hero_skills_phase1／round2 形狀＝既有紅。
 - MOBA gate 批次 31 綠：combat_polish_r2 31/31（12 seeds）、combat_quality 28/28、combat_state 16/16、mobile_hud 60/60、skill_levels v2／skill_detail 500/500、Hero Identity 23／17／22、Objective 17／11／7／4、Battle Talents、BattleResult v3、rift_loading 41/41、nav_h2 14/14。紅：items_m2 G1（基準前移到本 commit，下一個 commit）、items_m3 G6（未 commit 差異）、J1（Owner 已接受前期清野變慢）、combat_feedback X3／X4／X5（Sprint 範圍守衛）、check_moba_map／hero_skills_phase1／runtime_map_h1（v18 既有）。
 - Production build PASS（33.9s）；真實 Chrome h2close 13/15（618 筆、比賽結束；紅兩項 GameView 標記／閃爍與 v17／v18 相同）。
+
+## 2026-10-08 moba-sim.v19 RELEASED（MOBA Tactical AI Phase 1）
+
+- main `d146e02`（從 `cd91256` fast-forward，無 force）；Pages run `37648955259` success。本節紀錄 commit 另行 normal push。
+- 內容：塔邊決策遲滯（塔旁 A→B→A 3.95 → 1.45／英雄分鐘）、HeroSkillLevel.v2（Lv1／2／3 逐一解鎖、R Lv6／11／16）、AI 大招保留、勝利條件優先、攻城窗 canonical siege target（`_siegeTargetV19`）。
+- **Owner 接受**：前期清野變慢（Phase 2 用 Smite／Jungle decision 再校準）；20～40 分為長期主要 pacing 目標、非每場 hard gate（v19 中位 18.4、20～40 分占 39%，先記錄）；巨龍側 +4.8pp 無新增重大 side bias；剩餘塔傷行為 Phase 2 持續觀察。
+- 正式站 smoke（production bundle `moba-sim.v19`）：
+  - `browser_check_prod_hero_identity_v17` 15/15、`browser_check_moba_gameplay_presentation --prod` 11/11（含 390 mobile）、`browser_check_prod_moba_combat_feedback` 16/16、`browser_check_prod_moba_result_replay_release`（Battle → Result → Replay）25/25；page／console／shader error 0。
+  - `browser_check_prod_objective_layout_v16 --prod` 12/13：bundle＝v19、Rift GLB 14,504,340 bytes（地圖未變、Topology FROZEN）、STANDARD／SWAPPED、Replay SWAPPED、390 手機全綠；D 導播 objectiveFocus 0 次／朝錯坑 0 次（480 s 前未發生搶龍＝前置條件未出現，與 v18 發布時相同）。
+  - 技能等級探針（正式站 HUD，整場 129 取樣，console error 0）：Lv1 僅 Q 可用、W／E／R 鎖定；R 在 Lv6（約 557 s）解鎖、之前 0 次非鎖定；該場 13.3 分結束，未達 Lv11／16（由引擎 gate `check_moba_skill_levels_v1` 逐級驗到 Lv18）。
+  - `check_moba_nav_chrome_h2close`（正式站整場 725 筆）13/15：不穿牆／坑壁／塔、不卡死、10/10 到三路、進野區；紅兩項 GameView 標記／閃爍為既有。
+- 正式站 smoke gate 版本期待值 v18 → v19（只改版本事實）。
+- 維持不變：Map Topology FROZEN；CS／FPS、Online／DB 未碰；Competitive disabled。
+- Phase 2 尚未開始（Owner 指示）。
