@@ -42,7 +42,9 @@ const mkEngine = (seed, { skills, fix }) => {
 // ── W：搖晃 A/B ──────────────────────────────────────────────────────────────
 function wobble(fix) {
   let samples = 0, still = 0, bigTurn = 0; const steps = [];
-  for (const seed of [1, 42, 99]) {
+  //  2026-10-07（Owner 核准）：3 → 12 seeds，只增加樣本、門檻不變。3 seeds 時 v19 落在邊緣（21.3 → 11，需 ≤ 10.65），
+  //  12 seeds 下 v18／v19 皆為 23 → 10.3（完全相同）⇒ 原本的紅燈是取樣雜訊。
+  for (const seed of [1, 42, 99, 7, 11, 23, 31, 55, 77, 123, 314, 777]) {
     const e = mkEngine(seed, { skills: true, fix });
     // Isolate the historical objIdleFix A/B from v13 late boss HP scaling.
     // Scaling changes dwell samples near objectives, not the movement fix itself.
