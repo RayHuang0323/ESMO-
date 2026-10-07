@@ -43,9 +43,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   2026-10-06 moba-sim.v18 Map Topology Final：野區／外環量體、河道、營地、草叢與 findPath 起點格心
  *   都是刻意的幾何語意變更（所有模式含 skill-off）⇒ 基準前移到該次幾何 commit `23782c0`。
  *   2026-10-07 moba-sim.v19 Tactical AI Phase 1：塔邊遲滯、站位點死區、再任務承諾、勝利條件都改變 skill-off 的走位
- *   ⇒ 基準前移到該次 commit `d690fad`。
+ *   ⇒ 基準前移到該次 commit `d690fad`；同日 canonical siege target 修正（攻城窗實際攻擊的建築）再改變走位與推塔
+ *   ⇒ 前移到 `274bcae`。
  */
-const BASE_COMMIT = "d690fad";
+const BASE_COMMIT = "274bcae";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
