@@ -1,3 +1,25 @@
+## 2026-10-08 每週額度0%：依Owner規則保存暫停（UTC03:25:53）
+
+**任務未完成；A■／B7▣／C□／D□／E□／Owner Review□。不啟動新工序。**
+
+- 官方 `account/rateLimits/read` UTC `2026-10-08T03:25:53.812Z`：codex used100%、remaining0%、pauseRequired=true；重置UTC `2026-10-14T06:31:42.000Z`。另一limitId不相加。已通知唯讀reviewer立即停工，未開始手機審查或其他新驗證。
+- 桌機與390兩個session42935／38010均已收到原生exit0，**各35/35 PASS、各28PNG，共56PNG**。phase分別 `phase-b7-pinned-recovered-desktop-20261008`／`phase-b7-pinned-recovered-mobile-20261008`。完整stdout／stderr、exit、isolation、gate、metrics、gallery與production archive已保存。未啟用weaponPoseLayers／povWeapon的2項額外斷言，不宣稱37/37。
+- 同源source233b2f8100e2e363dcde4f52ac8c08c45659140e2cf41da1c9b94f1f1fad1dfb／59檔，bundle08f08d5b6cdda166a56ac83c5e526e238252c966268e99362a7a350b0c7ef6d6；M逐byte核對source/public後重用D建置。D約59.004FPS／p9516.8ms／calls444／tri218616；M約60.0／16.8／450／214276。同桌機AMD GPU，不是真手機，不當長窗效能放行。
+- 衣料36/36沿用既有PASS、不重跑。**本輪pixels audit NOT RUN**。Fresh-Eyes `b7_pinned_fresh` 已逐張original看桌機28/28與anchors3/3，尚未讀M28。初步布袖口獨立翻邊厚度證據不足，CT暗部／護具遮肘；未完成全部評分、不能放行B。已停止審查，不宣稱背景持續執行。
+- 最新正式npm build／Worker／三圖lifecycle仍NOT RUN；23.41秒僅production probe build。先前中斷與OOM exit134均保留。
+- 下次先查quota、Git與程序；**不重跑36/36、D/M35/35或已完成建置**。接續兩尺寸pixel audit、僅補未看的M28原圖及完整視覺結論，再依實際缺口完成B→C→D→E。保留目前未提交產品／工具及1,841檔快照，禁止push／deploy，不動MOBA。
+- get_goal先前回null，本次沒有建立goal；無既有goal可設paused，不假稱已呼叫成功。停工理由為Owner明訂每週0%門檻。真手機視覺／FPS／觸控／safe area／音訊仍未實測。
+
+## 2026-10-08 Owner釋放記憶體後續跑（UTC 03:21 起）
+
+- HEAD `c07f814` 已提交前次 checkpoint 與既有肘切面視覺報告；其他產品／工具改動與本機快照完整保留。
+- 可用實體7,075,348 KiB、虛擬6,348,376 KiB；未找到殘留 Node gate。舊134 OOM保留。新 `phase-b7-pinned-recovered-desktop-20261008` production probe build **23.41秒成功**；不是正式 npm build／Worker／三圖lifecycle已完成。
+- 59檔source SHA `233b2f8100e2e363dcde4f52ac8c08c45659140e2cf41da1c9b94f1f1fad1dfb`；bundle SHA `08f08d5b6cdda166a56ac83c5e526e238252c966268e99362a7a350b0c7ef6d6`。斜肘固定摺線／袖口最新衣料 **36/36 PASS** 沿用既有完整證據，不重跑。
+- 桌機D1366已 **35/35 RESULT=PASS、native0**，完整28PNG、metrics、gate、log、exit與isolation保存。約59.004FPS、p95 16.8ms、calls444、tri218616；只屬短窗，不宣稱長窗／真手機已達標。此輪options為production、Mirage combat、details、weaponSockets、operatorGallery、operatorThreeQuarter，未啟用weaponPoseLayers／povWeapon，不能冒充舊37項全部重驗。
+- 同一archive的M390 `phase-b7-pinned-recovered-mobile-20261008` session38010仍執行，未收exit不報PASS；沒有修改產品source。唯讀 `b7_pinned_fresh` 按skill規範開始完整桌機28圖＋anchors獨立審查，待手機證據，不借歷史分數。
+- 官方quota UTC03:21 codex剩7%；UTC03:24:25.742剩4%、pauseRequired=false。0%立即停止新工序、保存／收尾；不同limitId不相加。未新建goal。
+- 下一步收M390、兩尺寸pixels、完整56圖Fresh-Eyes；依可見缺口接續B。C／D／E仍未開始。未push／deploy、不動MOBA；真手機仍未測。
+
 ## 2026-10-08 斷線恢復盤查（UTC 03:11 起）
 
 - 安全保存已完成：`evidence/resume-save-20261008-0315/manifest.json` 記錄 1,841 檔、56,206,915 bytes 與各檔 SHA256，包含全部當時 Git modified／untracked 檔；另有 staged／unstaged binary patch、status、log5。snapshot 不入版控。
