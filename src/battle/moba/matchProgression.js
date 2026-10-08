@@ -890,6 +890,7 @@ SIM_RULES.v3 = {
   callRange: { focus: 26, lowhp: 30, gank: 70, retreat: 22, objective: 60 },
   callDur: { focus: 5, lowhp: 6, gank: 9, retreat: 4, objective: 12 },
   callDedupSec: 6,
+  callTypeCdSec: { focus: 25, lowhp: 20, retreat: 25, gank: 0, objective: 45 },   // 同隊同類呼叫冷卻（不分目標）：每隊約 3.3 次／分（原 6.0）
   //  ④ Gank 評分選路（取代計時器＋亂數）、追擊先估擊殺機率。
   gankScoreV20: true,
   gankMinScore: 0.8,

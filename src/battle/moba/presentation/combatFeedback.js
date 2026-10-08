@@ -34,7 +34,8 @@ export const FEEDBACK_POLICY = Object.freeze({
   /** 單筆 ≥ 目標最大血量這個比例 ⇒ 強調（字大、顏色亮）。 */
   majorRatio: 0.12,
   majorAbs: 300,
-  /** 同時存在的浮字上限（超過丟最舊的小字）。 */
+  /** 同時存在的浮字上限（物件池大小）；合併器另以它當「每 sim 秒最多吐出幾個」的顯示預算，
+   *  超出的依重要性延後、併進同一目標的下一筆（v20：集火讓團戰更集中，峰值曾到 30）。 */
   maxActive: 28,
 });
 
@@ -154,6 +155,12 @@ export function createFeedbackAggregator(policy = FEEDBACK_POLICY) {
     goldCarry.set(cur.targetId, total - shown * 1000);
     return shown >= 1 ? { kind: "gold", targetKind: cur.targetKind, targetId: cur.targetId, amount: shown, maxHp: null, team: cur.team, major: false, source: "ledger" } : null;
   };
+  const emitted = [];   // 最近 1 sim 秒內吐出的時間戳（顯示預算）
+  let deferred = 0;
+  //  重要性：重要傷害 → 英雄傷害 → 塔 → 英雄補血／護盾 → 野怪 → 金錢
+  const rankOf = (c) => (c.kind === "damage"
+    ? (isMajor({ ...c, amount: Math.round(c.amount) }) ? 0 : c.targetKind === "hero" ? 1 : c.targetKind === "tower" ? 2 : 4)
+    : c.kind === "gold" ? 5 : 3);
   return {
     /** 餵入一格的原始事件；回傳這一格**應該顯示**的數字。 */
     push(events, ts) {
@@ -164,15 +171,27 @@ export function createFeedbackAggregator(policy = FEEDBACK_POLICY) {
         if (cur) { cur.amount += e.amount; if (fin(e.amountMilli)) cur.amountMilli = (cur.amountMilli ?? 0) + e.amountMilli; cur.maxHp = e.maxHp ?? cur.maxHp; }
         else open.set(key, { ...e, since: ts });
       }
-      for (const [key, cur] of open) {
-        if (ts - cur.since < windowOf(cur.kind)) continue;
-        open.delete(key);
-        if (cur.kind === "gold" && fin(cur.amountMilli)) { const g = emitGold(cur); if (g) ready.push(g); continue; }
+      //  顯示預算（maxActive／每 sim 秒）：到期的數字先排優先序，超出預算的**不丟**——放回合併視窗，
+      //  跟同一目標接下來的數字合成一筆再出（集火時同一目標本來就會連續挨打）。總量守恆、不改傷害。
+      const due = [];
+      for (const [key, cur] of open) if (ts - cur.since >= windowOf(cur.kind)) due.push([key, cur]);
+      while (emitted.length && ts - emitted[0] >= 1) emitted.shift();
+      let room = policy.maxActive - emitted.length;
+      due.sort((a, b) => rankOf(a[1]) - rankOf(b[1]) || b[1].amount - a[1].amount || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+      for (const [key, cur] of due) {
         const amount = Math.round(cur.amount);
-        if (amount >= MIN[cur.kind]) ready.push({ kind: cur.kind, targetKind: cur.targetKind, targetId: cur.targetId, amount, maxHp: cur.maxHp, team: cur.team, major: isMajor({ ...cur, amount }) });
+        const shows = cur.kind === "gold" && fin(cur.amountMilli)
+          ? Math.floor(((goldCarry.get(cur.targetId) ?? 0) + cur.amountMilli) / 1000) >= 1
+          : amount >= MIN[cur.kind];
+        if (shows && room <= 0) { cur.since = ts; deferred++; continue; }   // 延後合併，不丟
+        open.delete(key);
+        if (cur.kind === "gold" && fin(cur.amountMilli)) { const g = emitGold(cur); if (g) { ready.push(g); emitted.push(ts); room--; } continue; }
+        if (shows) { ready.push({ kind: cur.kind, targetKind: cur.targetKind, targetId: cur.targetId, amount, maxHp: cur.maxHp, team: cur.team, major: isMajor({ ...cur, amount }) }); emitted.push(ts); room--; }
       }
       return ready;
     },
+    /** 因顯示預算而延後合併的次數（驗收用）。 */
+    get deferred() { return deferred; },
     /** 目標死亡／換場時把它累積的部分立即結算（最後一擊不被吞掉）。 */
     flush(ts = Infinity) {
       const ready = [];

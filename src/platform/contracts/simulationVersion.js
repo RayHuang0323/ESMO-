@@ -409,7 +409,7 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ② 兵線優先：對線者身邊有敵兵 ⇒ 不為一般接觸離線（救人／夾擊／物件／呼叫例外）。③ 引擎內 Team Call（集火／殘血／Gank／撤退／物件），
   //    回應吃距離、定位、溝通／配合／領導、風險傾向。④ Gank 評分選路、追擊先估擊殺。⑤ 龍／巴龍雙評估取代擲骰、懲戒在物件不迫近時清野。
   //  全部決定性（不新增亂數；Gank／物件改評分後少抽 rng）。⚠ 後果（已知且接受）：v19 歷史挑戰由 canReplay 明確拒絕；v1～v19 指紋全數保留。
-  "moba-sim.v20": "a12938920a92dee6",
+  "moba-sim.v20": "050b3f66620f0f57",
 });
 
 export const isKnownSimulationVersion = (v) =>

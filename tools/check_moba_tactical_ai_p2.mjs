@@ -190,6 +190,23 @@ ck(`S7 Gank 成功率不低於計時器版（v20 ${(gsOn * 100).toFixed(1)}% vs 
 const lab = new Set(on.flatMap((r) => [...r.labels]));
 ck(`S8 走位分支讀 intent（出現 強開／換血／消耗 狀態）`, ["強開", "換血", "消耗"].every((k) => lab.has(k)), [...lab].join(","));
 ck(`S9 對局全部正常結束（v20：${on.map((r) => r.min.toFixed(1)).join("／")} 分）`, on.every((r) => r.over && r.min <= 45));
+//  Owner 2026-10-08：Team Call 不得過度頻繁；兵線優先不得擋掉合理的緊急支援。
+const teamMin = on.reduce((x, r) => x + r.min * 2, 0);
+const perMin = callsOn / teamMin;
+ck(`S10 Team Call 不過度頻繁：每隊每分鐘 ${perMin.toFixed(2)} 次（需 ≤ 4；同類呼叫有隊伍冷卻）`, perMin <= 4);
+const held = sum(on, (s) => s.waveHeld), heldDied = sum(on, (s) => s.heldThenAllyDied);
+ck(`S11 兵線優先不擋緊急支援：擋下參戰後 8 秒內該處有隊友陣亡 ${heldDied}/${held}（需 ≤ 3%）`, held > 0 && heldDied / held <= 0.03);
+{
+  //  同類呼叫冷卻：同一隊 25 秒內第二次集火（不同目標）不發出；冷卻過後可再發。
+  const e = new LogicEngine(12);
+  const [b1, r1, r2] = ["b1", "r1", "r2"].map((id) => e.players.find((q) => q.id === id));
+  const c1 = e._issueCallV20("blue", "focus", b1, r1.pos, r1.id);
+  const c2 = e._issueCallV20("blue", "focus", b1, r2.pos, r2.id);
+  const cRed = e._issueCallV20("red", "focus", r1, b1.pos, b1.id);
+  e.t += (e.rules.callTypeCdSec?.focus ?? 0) + 0.5;
+  const c3 = e._issueCallV20("blue", "focus", b1, r2.pos, r2.id);
+  ck("S12 同隊同類呼叫有冷卻（不分目標）、兩隊各自計算、冷卻過後可再發", !!c1 && c2 === null && !!cRed && !!c3);
+}
 
 let pass = 0;
 for (const [n, ok, d] of A) { console.log(`${ok ? "✅" : "❌"} ${n}${ok || !d ? "" : `　${d}`}`); if (ok) pass++; }

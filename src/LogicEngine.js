@@ -335,11 +335,13 @@ export class LogicEngine {
   _initTacV20() {
     //  Tactical AI Phase 2（v20）觀測計數（不影響模擬；量測與 gate 用）。
     const TS = () => ({ intent: {}, firstSight: 0, firstSightAllIn: 0, lowHpEngage: 0,
-      waveHeld: 0, roamAfterClear: 0, roamStart: 0, gankStart: 0, gankKill: 0, gankFail: 0, gankStartT: [],
+      waveHeld: 0, heldThenAllyDied: 0, roamAfterClear: 0, roamStart: 0, gankStart: 0, gankKill: 0, gankFail: 0, gankStartT: [],
       callIssued: {}, callAnswered: 0, callDeclined: 0, chaseDeclined: 0,
       smiteCamp: 0, smiteDragon: 0, smiteBaron: 0, objOpen: { dragon: 0, baron: 0 } });
     this.tacStatsV20 = { blue: TS(), red: TS() };
     this.callsV20 = { blue: [], red: [] };
+    this._callLastV20 = { blue: {}, red: {} };
+    this._waveHoldLogV20 = [];
   }
   _newTfObs() {
     return { soloEntry: 0, held: 0, releasedSync: 0, releasedTimeout: 0,
@@ -2603,7 +2605,11 @@ export class LogicEngine {
     //  v20 ②：對線英雄兵線還沒處理 ⇒ 不為一般小規模接觸離線（救人／夾擊／物件／呼叫例外）。
     if (R.waveFirstV20 && p.role !== "jungle" && dist(p.pos, hot) >= (R.syncEngageR ?? 10) &&
         this._waveBusyV20(p) && !this._highValueV20(p, hot, alive)) {
-      if (this.t >= (p._waveHeldT ?? 0)) { p._waveHeldT = this.t + 4; this.tacStatsV20[p.side].waveHeld++; }
+      if (this.t >= (p._waveHeldT ?? 0)) {
+        p._waveHeldT = this.t + 4; this.tacStatsV20[p.side].waveHeld++;
+        this._waveHoldLogV20.push({ t: this.t, side: p.side, pos: { x: hot.x, y: hot.y }, hit: false });   // 觀測：之後有沒有隊友在那裡陣亡
+        if (this._waveHoldLogV20.length > 40) this._waveHoldLogV20.shift();
+      }
       return false;
     }
     if (this.t >= p.joinEvalT) {                                // 黏性：每 joinEvalPeriod 秒重評
@@ -3202,6 +3208,10 @@ export class LogicEngine {
   _issueCallV20(side, type, from, pos, targetId = null, lane = null) {
     const R = this.rules, L = this.callsV20[side];
     if (L.some((c) => c.type === type && c.targetId === targetId && c.lane === lane && this.t - c.t < R.callDedupSec)) return null;
+    //  同隊同類呼叫冷卻（不分目標）：避免每次有人強開就喊一次——人類隊伍不會每幾秒就喊集火。
+    const last = this._callLastV20[side];
+    if (this.t - (last[type] ?? -Infinity) < (R.callTypeCdSec?.[type] ?? 0)) return null;
+    last[type] = this.t;
     const c = { type, from: from.id, pos: { x: pos.x, y: pos.y }, targetId, lane, t: this.t, until: this.t + (R.callDur?.[type] ?? 5), answered: [], declined: [] };
     L.push(c);
     if (L.length > 12) L.shift();
@@ -4979,6 +4989,11 @@ export class LogicEngine {
     this.feed.unshift({ id: this._mid++, killer: p.id, victim: foe.id, side: p.side, assists, vpos: { x: foe.pos.x, y: foe.pos.y }, ...(ctx ? { ctx } : {}) });
     this.feed = this.feed.slice(0, 5);
     this.pushFx({ type: "ult", pos: { ...foe.pos }, color: 0xfbbf24, exp: 0.6 });
+    //  v20 觀測：兵線優先擋下參戰後 8 秒內，那場接觸裡有隊友陣亡 ⇒ 可能擋掉了該去的支援。
+    for (const h of this._waveHoldLogV20) {
+      if (h.hit || h.side !== foe.side || this.t - h.t > 8 || dist(h.pos, foe.pos) > 15) continue;
+      h.hit = true; this.tacStatsV20[foe.side].heldThenAllyDied++;
+    }
     //  v20 觀測：Gank 成功＝出發後 20 秒內、該路的敵方英雄被打野本人或其助攻擊殺。
     for (const jg of this.players) {
       const g = jg._gankV20;

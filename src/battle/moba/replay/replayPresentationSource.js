@@ -285,7 +285,7 @@ export function createReplaySource(replay) {
     const { byPlayer, active } = csIndex.at(t);
     //  不看 frame 的 dead 位元（那是最近一格、最多差 2.5 秒）：引擎在死亡當下就結束狀態（reason=death），區間表本身就是權威。
     //  v16：團隊物件狀態（龍層／龍魂／巴龍剩餘）與物件事件也從權威紀錄還原，不用 2.5 秒一格的 tb 近似。
-    const teamBuffs = teamBuffsFromCombatStates(active, t, snap.teamBuffs);
+    const teamBuffs = teamBuffsFromCombatStates(active, t, snap.teamBuffs, hasTeamStates);
     const objectiveLog = objectiveLogAt(replay?.objectiveEvents, t);
     return { ...snap, players: snap.players.map((p, i) => ({ ...p, statusEffects: byPlayer[i] })),
       combatStates: { version: "CombatState.v1", replay: true, active },

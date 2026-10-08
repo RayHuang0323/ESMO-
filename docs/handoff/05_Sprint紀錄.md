@@ -24426,3 +24426,38 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 - 反轉 `players` 迭代順序（紅方先）：seed 1–300 v20 53.3 → 44.0%（配對 z 2.32；v19 49.7 → 53.3，z −0.91）；seed 301–900 重做 51.8 → 49.5%（z 0.81）；合併 1–900 **52.3 → 47.7%（z 1.99）**。⇒ 先被迭代的一方約 +2pp，邊緣顯著。
 - 單旗標（只開一個 v20 旗標）× 反轉，各 300 場：waveFirstV20 z 1.81，其餘 |z| ≤ 1——未定位到機制（移動迴圈內位置已由 movementPlans 凍結；呼叫在決策凍結後發出）。
 - 下一步建議：以 n ≥ 2000 的反轉對照逐旗標定位，或在呼叫／兵線判斷加上順序無關的雙相收集，再跑 n=1000。
+
+## 2026-10-09 MOBA Tactical AI Phase 2 收尾（moba-sim.v20；owner: Claude，local commit，未 push／deploy）
+
+接續 10-08 被記憶體不足中斷的 session（未提交修改原樣保留、逐項驗證後才 commit）。分支 `feature/moba-tactical-ai-p2`。
+
+**完成**
+- Team Call 同隊同類冷卻（不分目標）`callTypeCdSec`：focus 25／lowhp 20／retreat 25／objective 45 秒、gank 0。每隊每分鐘 ≈ 6.0 → **3.31** 次（seed 1–200）。指紋重釘 `050b3f66620f0f57`。
+- 兵線優先觀測 `heldThenAllyDied`（純計數、不影響模擬）：擋下參戰後 8 秒內、15 內有隊友陣亡 **0.9%**（每場 0.1 次）⇒ 兵線優先沒有擋掉緊急支援。
+- Combat Feedback F11：合併器以 `maxActive` 當「每 sim 秒最多吐出幾個」的顯示預算；超出的依重要性（重要傷害→英雄→塔→補血／護盾→野怪→金錢）**延後、併進同一目標的下一筆，不丟**。傷害數值與 Gate 門檻都沒動。峰值 30 → **28/28**、F13 總量守恆仍過。
+- **Replay bug 修正（v16 起既有）**：`teamBuffsFromCombatStates` 在「此刻沒有任何 CombatState 作用」時回 null，呼叫端就退回 2.5 秒一格、可能是**下一格**的 `tb` ⇒ seek 到拿龍前一刻會提早顯示龍層（seed 7：live t=278 拿龍，replay seek(277)=1、seek(277.5)=0，非單調）。改為「這場有團隊狀態紀錄就一律用區間表」（新增 `hasTeamStates` 參數；只動 Replay 還原端，不影響模擬）。v20 只是讓戰況剛好撞上邊界才暴露。
+
+**藍方／迭代順序偏差：已解除（10-08 的 READY 阻擋）**
+- 根因：Team Call 過量（集火 88／殘血 65 次每場）。冷卻後兩個現象一起消失；沒有調勝率、沒有交換或隨機化迭代順序。
+- n=1000（seed 1–1000，與 v19／舊 v20 逐場同 seed）：純藍方 v19 −0.9 ／舊 v20 **+3.3** ／**現版 +0.3pp**（SE 1.6）；巨龍側 +4.8／+3.9／+1.0；與 v19 配對翻轉 257:243（**z 0.63**，舊 v20 z 1.88）；時長中位／P90／最長 18.4／23.1／42.3；未結束 0、>40 分 1 場（42.3）。
+- 反轉 `players` 迭代順序，n=1000 同 seed：**v20 50.3 → 50.3%（翻轉 241:241，z 0.00）**；v19 48.9 → 50.8%（z −0.87）。⇒ v20 的順序依賴不大於 v19（TD-21 的「當場扣血」既有機制仍在，非本輪範圍）。
+
+**Phase 2 決策特性保留（seed 1–200，現版 vs 冷卻前）**
+- 意圖 ALLIN／KITE／TRADE／POKE 41.7／32.5／18.8／7.0（前 42.6／32.5／18.3／6.7）；見敵立即 All-in 42.8%；低血量開戰 1.76 次／場。
+- 個性差異：謹慎組 POKE 11.8%、積極組 0%；All-in 積極 43.1／謹慎 44.3／中性 39.4。呼叫回應率 59.6%。
+- Gank 9.2 次／場、成功率 8.7%；清兵後才遊走 100%；時長中位／P90 18.5／23.1（20–40 分主區間本輪依指示不調）。
+
+**驗證（全部實跑）**
+- `check_moba_tactical_ai_p2` **33/33**（新增 S10 呼叫頻率、S11 兵線不擋支援、S12 冷卻單元）；`tactical_ai_p1` 20/20；`simulation_version_gate` 63/63；七旗標全關 ⇒ 與 v19 `fde17c7` 逐位元相同 12/12。
+- 40 支 MOBA gate＋19 支讀 Replay 的 gate 依序重跑：通過者含 combat_polish_r2 31、combat_quality 28、combat_state 16、items_m1 69、mobile_hud 60、spectacle 21、hero_passive 23、power_curve 17、battle_talents、battle_result_v3_replay、skill_levels（含 Replay）、objective_layout 11、pit 對稱／美術對齊、camp、nav_h2、rift、**objective_stakes_v16 17/17（R2 修正後）**。
+- 紅燈分類：
+  - 既有紅（與 10-08 commit 時相同，或已在 v19 `fde17c7` 實跑同樣紅）：`check_moba_map`、`hero_skills_phase1`、`runtime_map_h1` 61/5、items_m3 G8／G10／G12、lane_jungle J1（Owner 已接受）、`milestone_b2`／`b4`／`d_fix3`／`milestone_e`（40／41／43）／`minions_h3`（8／17）。
+  - 範圍守衛（Phase 2 必然觸發）：combat_feedback X3／X4／X5（X5 因本輪修 Replay 還原端）、items_m3 G6。
+  - items_m2 G1：照 v5／v7／v9／v16／v18／v19 慣例，本 commit 後 re-pin 到新 commit。
+  - `check_moba_camera_replay29b6`：舊 fan-out verifier，25 分逾時；10／15 項依賴的檔案本分支未動 ⇒ 推定既有，**未在 v19 實跑對照**。
+  - ⚠ **`check_tactical_identity_v17` C2a 21/22（新紅、待 Owner）**：gate 只用 6 個固定 seed，m3「遊走」接線 26 vs 不接線 26 打平。40 seed 實測：接線 184 vs 134（+37%，配對 z 3.23）；m8「保護」43 vs 82。冷卻前同量測 209 vs 126（+66%）。⇒ 身分差異仍顯著，冷卻稀釋了增幅。**未修改 gate**；是否把 C2 的樣本擴大由 Owner 決定。
+- `npm run build` ✓ built in 20.20s；regress 結束率 15/15（平均 20.8 分）；regress2 節奏門檻 8/8（20 場藍 10／紅 10、中位 20.6、範圍 15.3～30.3）。
+
+**未經瀏覽器實測**：F11 顯示預算的實際畫面（延後合併的浮字體感）、Replay 拿龍前後 seek 的 HUD 龍層顯示、手機實機、正式站。本輪因記憶體狀況未跑 browser gate。
+
+**中斷紀錄**：10-09 02:58 起 Codex 的 CS 瀏覽器 gate 與本輪探測並行，Claude Code 記憶體保護停掉兩個背景 shell（底下 node 行程仍跑完，結果完整）。之後一律依序、最多 4 個運算行程。

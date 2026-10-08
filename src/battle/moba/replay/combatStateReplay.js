@@ -149,9 +149,11 @@ export function objectiveLogAt(events, t) {
  * 播放端：由團隊 CombatState（team-dragon／team-soul／team-baron）還原 teamBuffs 的物件欄位。
  * 沒有團隊狀態（舊 Replay）⇒ 回 null，呼叫端保留 frame.tb 的舊值。
  */
-export function teamBuffsFromCombatStates(active, t, base = {}) {
+export function teamBuffsFromCombatStates(active, t, base = {}, hasTeamStates = false) {
   const team = (active ?? []).filter((r) => String(r.kind).startsWith("team-") && r.side);
-  if (!team.length && !(active ?? []).length) return null;
+  //  hasTeamStates：這場 Replay 有團隊狀態紀錄 ⇒ 此刻沒有任何狀態在作用也要回傳（＝0 層），
+  //  不能回 null 讓呼叫端退回 2.5 秒一格、可能是「下一格」的 tb（seek 到拿龍前一刻會提早顯示龍層）。
+  if (!hasTeamStates && !team.length && !(active ?? []).length) return null;
   const out = {};
   for (const side of ["blue", "red"]) {
     const dragon = team.find((r) => r.kind === "team-dragon" && r.side === side);
