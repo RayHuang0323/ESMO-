@@ -47,8 +47,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *   ⇒ 前移到 `274bcae`。
  *   2026-10-08 moba-sim.v20 Tactical AI Phase 2：Combat Intent、兵線優先、Team Call、Gank／物件評分都改變 skill-off 的決策
  *   ⇒ 基準前移到該次 commit `7f93c12`。
+ *   2026-10-09 同版收尾：Team Call 同隊同類冷卻改變 skill-off 的呼叫與回應 ⇒ 前移到 `09f4cf7`。
  */
-const BASE_COMMIT = "7f93c12";
+const BASE_COMMIT = "09f4cf7";
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
