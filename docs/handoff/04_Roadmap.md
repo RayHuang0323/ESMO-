@@ -2885,3 +2885,20 @@ NEXT_SPRINT = NOT_STARTED
 - 正式站 smoke gate 版本期待值 v19 → v20（只改版本事實，commit `92245f4`）。
 - 維持不變：Map Topology FROZEN；CS／FPS、Online／DB 未碰；既有紅燈與技術債照舊。
 - Phase 3 尚未開始（Owner 指示）。
+
+## 2026-10-09 MOBA Tactical AI Phase 3：教練戰術系統（架構已核准，3a 待開工）
+
+- 正式架構：`docs/design/MOBA_Tactical_AI_Phase3_正式架構.md`（Owner 核准 Q1～Q12 與三點補充）；決策過程：`docs/design/MOBA_Tactical_AI_Phase3_教練戰術系統提案.md`。
+- 3a 實作計畫：`docs/superpowers/plans/2026-10-09-moba-phase3a-foundation.md`（17 個任務；預估約 15 個工作階段＋23～28 小時驗證計算，±30%）。
+- 目標：專業、可長期擴充的電競經理人戰術系統——單機賽季、快速模擬、觀戰、同步／非同步線上共用同一套輸入（`MatchSetup.v1`）、同一支組裝器、同一套戰術規則；戰術計畫只含選擇（`TacticPlan.v2`），數值只在版本化的模板／覆蓋層／Resolver。
+
+| 階段 | 內容 | 模擬版本 |
+|---|---|---|
+| **3a-A 地基（對等）** | 明確 ruleset、MatchSetup、唯一組裝器（Live／Challenge／balance runner）、TacticPlan.v2、經典＋v2 模板、Resolver（與 v20 投影等價）、Capability Registry＋真實性 gate、戰術書 UI（快速／標準）、指標、存檔 | v21 未發布候選（Live 與 v20 逐位元對等；不獨立發布，v20 指紋不動） |
+| **3a-B 新行為** | AI 教練 v1、`challenge.v21`（技能 ON、佈局依 seed、裝備維持 OFF） | v21 |
+| **3b 深度** | Tactical Director、席位任務、主 Call、團戰指揮、包夾、資源交換、兵線、條件應變、配合度負擔、紅方素質注入、單機教練介入＋CommandLog、賽後計畫執行報告、專業模式 | v22 |
+| **3c 跨模式** | 非同步預約介入、Challenge 自訂計畫、同步線上協議規格（固定延遲＋公平操作時窗）、**賽季 AI 對 AI 戰術校準（必要交付）**、多路帶線 | v23＋SIMULATOR_VERSION 升版 |
+
+- 依賴：3a-A → 3a-B → 3b → 3c；Phase 3 完成條件含 3c 的 T2 校準 gate（G-C3），不得延後結案。
+- 保護：v1～v20 指紋、舊 Replay、Challenge（v20 以前由 `canReplay` 明確拒絕）、存檔鍵名與 B1 系列 gate、CS／FPS、正式站行為（3a-A 發布後逐位元不變）；Map Topology FROZEN；Online／DB 不實作。
+- 狀態：**等待 Owner 核准開工**；本節只記錄規劃，尚未修改任何遊戲程式。
