@@ -12,7 +12,7 @@
 //   D 決定性：同 seed 兩次逐位元相同
 //   E 同一個 builder：useLocalServer（Live）與 challengeRunner（Challenge）都用 toEngineTacticIdentity 傳 identity
 //
-//  跑法：node tools/check_tactical_identity_v17.mjs（約 3–6 分鐘）
+//  跑法：node tools/check_tactical_identity_v17.mjs（約 10–15 分鐘；C2 用 40 個固定 seed）
 // ============================================================================
 import fs from 'node:fs';
 import path from 'node:path';
@@ -79,9 +79,12 @@ function play(seed, tactic, { identity = true, rules = null, maxT = 1200 } = {})
     protectCarry: e.tidObs?.blue?.protectCarry ?? 0, e };
 }
 const SEEDS = [3, 7, 11, 19, 23, 29];
-const pair = (tacticId, opts = {}) => {
+//  C2 遊走／保護：每場只有個位數次遊走，6 場合計會被雜訊蓋過（v20 Team Call 冷卻後 6 場打平 26:26）。
+//  Owner 2026-10-09：C2 改用 40 個固定 seed，判準不變（接線 > 不接線／接線 < 不接線）。
+const ROAM_SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
+const pair = (tacticId, opts = {}, seeds = SEEDS) => {
   const t = TC.mobaTacticById(tacticId);
-  const on = SEEDS.map((s) => play(s, t, opts)), off = SEEDS.map((s) => play(s, t, { ...opts, identity: false }));
+  const on = seeds.map((s) => play(s, t, opts)), off = seeds.map((s) => play(s, t, { ...opts, identity: false }));
   const sum = (arr, k) => arr.reduce((a, r) => a + r[k], 0);
   return { on, off, sum };
 };
@@ -101,11 +104,11 @@ const pair = (tacticId, opts = {}) => {
   const farm = pair('m8');
   ck('C1 jungle＝farm（m8）⇒ 抓人次數下降', farm.sum(farm.on, 'ganks') < farm.sum(farm.off, 'ganks'),
     `接線 ${farm.sum(farm.on, 'ganks')} vs 不接線 ${farm.sum(farm.off, 'ganks')}（${SEEDS.length} 場合計）`);
-  const roam = pair('m3');
+  const roam = pair('m3', {}, ROAM_SEEDS), protect = pair('m8', {}, ROAM_SEEDS);
   ck('C2a support＝roam（m3）⇒ 遊走次數上升', roam.sum(roam.on, 'roams') > roam.sum(roam.off, 'roams'),
-    `接線 ${roam.sum(roam.on, 'roams')} vs 不接線 ${roam.sum(roam.off, 'roams')}`);
-  ck('C2b support＝protect（m8）⇒ 遊走次數下降', farm.sum(farm.on, 'roams') < farm.sum(farm.off, 'roams'),
-    `接線 ${farm.sum(farm.on, 'roams')} vs 不接線 ${farm.sum(farm.off, 'roams')}`);
+    `接線 ${roam.sum(roam.on, 'roams')} vs 不接線 ${roam.sum(roam.off, 'roams')}（${ROAM_SEEDS.length} 場合計）`);
+  ck('C2b support＝protect（m8）⇒ 遊走次數下降', protect.sum(protect.on, 'roams') < protect.sum(protect.off, 'roams'),
+    `接線 ${protect.sum(protect.on, 'roams')} vs 不接線 ${protect.sum(protect.off, 'roams')}（${ROAM_SEEDS.length} 場合計）`);
   const agg = pair('m7');
   const avg = (arr, k) => arr.reduce((a, r) => a + r[k], 0) / arr.length;
   ck('C3a 高 aggression（m7）⇒ ENGAGE 比例上升', avg(agg.on, 'engage') > avg(agg.off, 'engage'),

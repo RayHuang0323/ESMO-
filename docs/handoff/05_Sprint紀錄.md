@@ -24461,3 +24461,40 @@ candidate `feature/moba-objective-stakes-v16` @ `36251d0`（origin/main＝`35663
 **未經瀏覽器實測**：F11 顯示預算的實際畫面（延後合併的浮字體感）、Replay 拿龍前後 seek 的 HUD 龍層顯示、手機實機、正式站。本輪因記憶體狀況未跑 browser gate。
 
 **中斷紀錄**：10-09 02:58 起 Codex 的 CS 瀏覽器 gate 與本輪探測並行，Claude Code 記憶體保護停掉兩個背景 shell（底下 node 行程仍跑完，結果完整）。之後一律依序、最多 4 個運算行程。
+
+## 2026-10-09（下午）MOBA Tactical AI Phase 2 最後驗收（moba-sim.v20；owner: Claude，local commit，未 push／deploy）— NOT READY
+
+Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新回歸（挑戰模式的巨龍側優勢），**判定 NOT READY**，先存檔再逐旗標查成因。
+
+**1. C2a 擴大到 40 個固定 seed（判準不變）**
+- `check_tactical_identity_v17`：C2a／C2b 改用 seed 1–40（其餘 C 項維持原 6 seed）。**22/22 PASS**（818s）。
+- C2a 遊走（m3）接線 184 vs 不接線 134；C2b 保護（m8）接線 43 vs 不接線 82。
+
+**2. 瀏覽器驗證（桌機＋390px，本地 dev server，未與 CS 測試並行）**
+- `browser_check_moba_combat_feedback` **18/18 PASS**：浮字峰值桌機 25／390px 21（≤ 28）；page／console／shader error 0。
+  第一次 17/18：desktop O1 在實際時間內沒取樣到 5 人團戰截圖（390px 有拍到；與 10-08 第 2 次相同情況），原樣重跑通過，未改門檻。
+- `browser_check_moba_gameplay_presentation` **10/10 PASS**。
+- 截圖人工檢視：桌機團戰浮字清楚、不疊團；390px 拿龍橫幅與頂部「紅方擊殺巨龍（1 層）」一致。
+
+**3. Replay 拿龍前後拖曳時間軸**
+- 新增常駐 gate **`check_replay_team_buff_scrub`**（3/3，111s）：每個團隊增益變化時刻 ±3 秒、0.25 秒步距前後拖曳，比對現場＋單調性。
+- 擴大版（40 場、383 個變化時刻、19,150 次 seek）：**不一致 0、非單調 0**。
+  對照 v19 `fde17c7`（未修正）：344 個時刻中 **56 次不一致、6 次先出現再消失** ⇒ bug 在已上線 v19 即存在，現版已修。
+- Replay 畫面頂列 `龍×N` 讀 `frameAt().a.tb`（≤ t 的最後一格）：19,150 次 **提前 0 次**；落後一格（≤ 2.5 秒）1,486 次——Milestone E 起的既有取樣行為，未改。
+- 瀏覽器內實際拖曳 Replay：只有正式站 gate（`browser_check_prod_*`）能開 Replay 畫面，本地未跑。
+
+**4. `check_moba_camera_replay29b6` 逾時**
+- v19 `fde17c7` 同條件（timeout 1500）也 **1501s 逾時**（exit 124）⇒ 既有問題。84 個狀態行中 83 行與 v20 相同。
+- 唯一差異：巢狀 29B1 pacing §25「陣列順序」40 seed v19 8pp 過／v20 18pp 紅。同設定擴大到 400 seed：
+  v19 正序 51.2／反序 50.5%（z 0.22）、**v20 58.5／61.0%（位移 −2.5pp、z −0.73）** ⇒ 順序依賴不存在，40 seed 為雜訊。
+
+**⚠ 疑似新回歸：無技能／裝備設定下的巨龍側優勢（READY 阻擋）**
+- §25 的 v20 藍勝約 60% 追查：陽春引擎固定 STANDARD 佈局（藍＝巨龍側）。n=400：
+  v19 STANDARD 51.2／SWAPPED 45.8%（巨龍側 +2.7pp）；**v20 58.5／43.8%（+7.4pp）**；v20 冷卻歸零 STANDARD 54.8%（⇒ 非本輪冷卻造成）。
+- **Player Challenge**（`challengeRunner`：英雄／原型／召喚師技能／戰術＋身分，**無英雄技能、無裝備、固定 STANDARD**），n=300：
+  v19 巨龍側 +1.3pp（±2.0）→ **v20 +6.3pp（±2.0）**；實際設定（STANDARD）挑戰方勝率 46.3 → 53.7%，與 v19 逐場翻轉 82:60（z 1.85）。
+- 對照正式對戰（技能＋天賦＋裝備、依 seed 交換佈局，n=1000）：巨龍側 v19 +4.8 → v20 +1.0pp，無問題。
+- ⇒ v20 決策在「沒有英雄技能／裝備」時放大巨龍側優勢；挑戰模式固定佈局，等於挑戰方優勢 +5～7pp。兩組各自邊緣顯著、方向一致。
+- 下一步：挑戰模式設定逐旗標（leave-one-out）定位。修法（挑戰模式依 seed 換佈局／調整 v20 物件評估）須 Owner 決定。
+
+**本節 commit 內容**：`check_tactical_identity_v17`（C2 40 seed）、新 gate `check_replay_team_buff_scrub`、本紀錄與 08。無產品程式碼變更。
