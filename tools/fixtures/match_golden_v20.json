@@ -1,0 +1,4119 @@
+{
+  "schema": "match_golden_v20.v1",
+  "simVersion": "moba-sim.v20",
+  "fingerprint": "050b3f66620f0f57",
+  "gitHead": "32b17424cbacab4b2d2806b4f151349d5d32f54b",
+  "node": "v24.18.0",
+  "featureFlags": {
+    "devFastForward": true,
+    "devQuickRecovery": true,
+    "asiaCircuit": true,
+    "heroProxyChichuan": true,
+    "heroProxyVariant": "cli-v003",
+    "itemsV1": true,
+    "heroSkillsV1": true,
+    "heroBattleTalentsV1": true
+  },
+  "dt": 0.5,
+  "maxT": {
+    "live": 3600,
+    "runner": 3600,
+    "challenge": 1800
+  },
+  "streamEvery": 20,
+  "verification": {
+    "instrumentationNonInvasive": true,
+    "compared": 30,
+    "note": "live/runner: digest+streamHash equal; challenge: full ChallengeResult hash equal and probe-observed engine agrees with result"
+  },
+  "counts": {
+    "total": 30,
+    "live": 6,
+    "challenge": 12,
+    "runner": 12
+  },
+  "inputs": {
+    "note": "Rebuild every case from these. liveRoster(seed): LCG(seed^0x5eed), per role pick archetype then hero from CHAMPIONS_100, blue then red, distinct. Challenge snapshots = fixtureSnapshot(keyA/keyB) with standingOrders.tacticId overridden (+ rehash); no-draft cases drop draftPolicy from capturedInputs (+ rehash).",
+    "statKeys": [
+      "reflex",
+      "accuracy",
+      "apm",
+      "positioning",
+      "mapAware",
+      "tacticalIQ",
+      "decision",
+      "adaptability",
+      "courage",
+      "clutch",
+      "focus",
+      "resilience",
+      "comms",
+      "leadership",
+      "synergy",
+      "learning"
+    ],
+    "players": [
+      {
+        "id": "golden_p1",
+        "name": "G1",
+        "role": "top",
+        "status": "主力",
+        "rosterTier": "active",
+        "energy": 100,
+        "stats": {
+          "reflex": 40,
+          "accuracy": 45,
+          "apm": 50,
+          "positioning": 55,
+          "mapAware": 60,
+          "tacticalIQ": 65,
+          "decision": 70,
+          "adaptability": 75,
+          "courage": 80,
+          "clutch": 40,
+          "focus": 45,
+          "resilience": 50,
+          "comms": 55,
+          "leadership": 60,
+          "synergy": 65,
+          "learning": 70
+        }
+      },
+      {
+        "id": "golden_p2",
+        "name": "G2",
+        "role": "jungle",
+        "status": "主力",
+        "rosterTier": "active",
+        "energy": 100,
+        "stats": {
+          "reflex": 47,
+          "accuracy": 52,
+          "apm": 57,
+          "positioning": 62,
+          "mapAware": 67,
+          "tacticalIQ": 72,
+          "decision": 77,
+          "adaptability": 82,
+          "courage": 42,
+          "clutch": 47,
+          "focus": 52,
+          "resilience": 57,
+          "comms": 62,
+          "leadership": 67,
+          "synergy": 72,
+          "learning": 77
+        }
+      },
+      {
+        "id": "golden_p3",
+        "name": "G3",
+        "role": "mid",
+        "status": "主力",
+        "rosterTier": "active",
+        "energy": 55,
+        "stats": {
+          "reflex": 54,
+          "accuracy": 59,
+          "apm": 64,
+          "positioning": 69,
+          "mapAware": 74,
+          "tacticalIQ": 79,
+          "decision": 84,
+          "adaptability": 44,
+          "courage": 49,
+          "clutch": 54,
+          "focus": 59,
+          "resilience": 64,
+          "comms": 69,
+          "leadership": 74,
+          "synergy": 79,
+          "learning": 84
+        }
+      },
+      {
+        "id": "golden_p4",
+        "name": "G4",
+        "role": "adc",
+        "status": "主力",
+        "rosterTier": "active",
+        "energy": 100,
+        "stats": {
+          "reflex": 61,
+          "accuracy": 66,
+          "apm": 71,
+          "positioning": 76,
+          "mapAware": 81,
+          "tacticalIQ": 41,
+          "decision": 46,
+          "adaptability": 51,
+          "courage": 56,
+          "clutch": 61,
+          "focus": 66,
+          "resilience": 71,
+          "comms": 76,
+          "leadership": 81,
+          "synergy": 41,
+          "learning": 46
+        }
+      },
+      {
+        "id": "golden_p5",
+        "name": "G5",
+        "role": "sup",
+        "status": "主力",
+        "rosterTier": "active",
+        "energy": 100,
+        "stats": {
+          "reflex": 68,
+          "accuracy": 73,
+          "apm": 78,
+          "positioning": 83,
+          "mapAware": 43,
+          "tacticalIQ": 48,
+          "decision": 53,
+          "adaptability": 58,
+          "courage": 63,
+          "clutch": 68,
+          "focus": 73,
+          "resilience": 78,
+          "comms": 83,
+          "leadership": 43,
+          "synergy": 48,
+          "learning": 53
+        }
+      }
+    ],
+    "lineup": {
+      "b1": "golden_p1",
+      "b2": "golden_p2",
+      "b3": "golden_p3",
+      "b4": "golden_p4",
+      "b5": "golden_p5"
+    },
+    "loadoutRule": "buildLoadout(createInitialProgress(ALL_HERO_IDS), HERO_ASSIGN) — fresh-install default, every seat level 1; then applyFatigueToLoadout(.., players, lineup)",
+    "defaultLoadout": {
+      "b1": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "b2": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "b3": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "b4": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "b5": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "r1": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "r2": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "r3": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "r4": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      },
+      "r5": {
+        "level": 1,
+        "toughMult": 1,
+        "powerMult": 1
+      }
+    },
+    "liveRosters": {
+      "3": {
+        "b1": {
+          "heroId": "tieshixin",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "tielian",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "haixiao",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "dawnstrike",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "fuwenbianzhi",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r1": {
+          "heroId": "xukong",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "xueyue",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "gambler",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "hanbing",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "longji",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "7": {
+        "b1": {
+          "heroId": "dadi",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "ravager",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "gambler",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "shengyan",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "shiqiang",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r1": {
+          "heroId": "ronggang",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "miwu",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "mingyun2",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "xingchen",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "longji",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "11": {
+        "b1": {
+          "heroId": "tiebi",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "fengbao",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "gambler",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "shensheng",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "tiankong",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r1": {
+          "heroId": "leimingcf",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "chichuan",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "xingjie",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "mori",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "tianshi",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      },
+      "19": {
+        "b1": {
+          "heroId": "dushe",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "langwang",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "xingjie",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "maestro",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "longji",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r1": {
+          "heroId": "greymantle",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "dianguang",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "lieyan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "yanfeng",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "shengming",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      },
+      "23": {
+        "b1": {
+          "heroId": "jufeng",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "leisuhunter",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "lieyan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "tianfa",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "xukong",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r1": {
+          "heroId": "kuangfeng",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "langwang",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "ronghuo",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "mirrorshot",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "tiebi",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "29": {
+        "b1": {
+          "heroId": "tiankong",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "miwu",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "haixiao",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "siwang",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "shengdun",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r1": {
+          "heroId": "tiemu",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "xueyue",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "ronghuo",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "dujian",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "mantra",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      }
+    },
+    "runnerRosters": {
+      "3": {
+        "b1": {
+          "heroId": "leimingcf",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "leimingcf",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "jufeng",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "jufeng",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "gambler",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "gambler",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "liangzi",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "liangzi",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "shiguang",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r5": {
+          "heroId": "shiguang",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      },
+      "7": {
+        "b1": {
+          "heroId": "longyi",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "longyi",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "jingxiang",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "jingxiang",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "haixiao",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "haixiao",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "xuanfeng",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "xuanfeng",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "longji",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r5": {
+          "heroId": "longji",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "11": {
+        "b1": {
+          "heroId": "rongyan",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "rongyan",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "yueying",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "yueying",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "haixiao",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "haixiao",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "maestro",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "maestro",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "suishan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r5": {
+          "heroId": "suishan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "19": {
+        "b1": {
+          "heroId": "tiemu",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "tiemu",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "chichuan",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "chichuan",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "lieyan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "lieyan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "hanbing",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "hanbing",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "xuemai",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r5": {
+          "heroId": "xuemai",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      },
+      "23": {
+        "b1": {
+          "heroId": "thornwall",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "thornwall",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "embercoil",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "embercoil",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "lieyan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "lieyan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "siwang",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "siwang",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "mingyun",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r5": {
+          "heroId": "mingyun",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      },
+      "29": {
+        "b1": {
+          "heroId": "shiqiang",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "shiqiang",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "leisuhunter",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "leisuhunter",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "xingjie",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "xingjie",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "liangzi",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "liangzi",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "huanjing",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r5": {
+          "heroId": "huanjing",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      }
+    },
+    "aiTeams": [
+      {
+        "id": "team:1d48796f",
+        "style": "aggressive"
+      },
+      {
+        "id": "team:9c2b7210",
+        "style": "aggressive"
+      },
+      {
+        "id": "team:743cf0ba",
+        "style": "defensive"
+      },
+      {
+        "id": "team:6a644e34",
+        "style": "balanced"
+      },
+      {
+        "id": "team:306d3d98",
+        "style": "objective"
+      },
+      {
+        "id": "team:39be6cbf",
+        "style": "skirmish"
+      },
+      {
+        "id": "team:3fc06d78",
+        "style": "defensive"
+      }
+    ],
+    "fixtureOpponentKeys": [
+      "drill_mirror",
+      "drill_balanced",
+      "drill_topheavy",
+      "drill_veteran",
+      "drill_rotation"
+    ]
+  },
+  "cases": [
+    {
+      "id": "live-m4-3",
+      "path": "live",
+      "seed": 3,
+      "params": {
+        "id": "live-m4-3",
+        "path": "live",
+        "seed": 3,
+        "tacticId": "m4",
+        "talents": true,
+        "buildStrategy": "early",
+        "opponent": null,
+        "index": 0
+      },
+      "digest": "1498.5:blue:25:18:43965:39296",
+      "streamHash": "c70edf50",
+      "ctor": {
+        "seed": 3,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 3,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "SWAPPED",
+        "buildStrategy": "early",
+        "redTacticId": "std",
+        "talentSources": {
+          "b1": "player",
+          "b2": "player",
+          "b3": "player",
+          "b4": "player",
+          "b5": "player",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": null,
+        "talentSelections": {
+          "b1": "tieshixin:counter-form",
+          "b2": "tielian:counter-form",
+          "b3": "haixiao:counter-form",
+          "b4": "dawnstrike:counter-form",
+          "b5": "fuwenbianzhi:counter-form"
+        }
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "player",
+            "b2": "player",
+            "b3": "player",
+            "b4": "player",
+            "b5": "player",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "early"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "e7714c36"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "583c84fd"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "0dda27f0"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "e3181f0f"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "6c029174"
+        },
+        {
+          "m": "configureSpells",
+          "h": "0e8935b6"
+        },
+        {
+          "m": "configureMatch",
+          "h": "bd50702d"
+        },
+        {
+          "m": "configureItems",
+          "h": "19010797"
+        }
+      ]
+    },
+    {
+      "id": "challenge-draft-3",
+      "path": "challenge",
+      "seed": 3,
+      "params": {
+        "id": "challenge-draft-3",
+        "path": "challenge",
+        "seed": 3,
+        "draft": true,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 0
+      },
+      "digest": "1308.5:blue:12:7:37313:33967",
+      "streamHash": "3c599cc8",
+      "resultHash": "f11c2357",
+      "result": {
+        "outcome": "challengerWin",
+        "durationSec": 1309,
+        "score": {
+          "challenger": 12,
+          "defender": 7
+        },
+        "matchSeed": 3,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic",
+          "draftPolicy"
+        ],
+        "draftHash": "fe09d459"
+      },
+      "ctor": {
+        "seed": 3,
+        "challengerHash": "cc7c3b77",
+        "defenderHash": "09618dbb",
+        "draftHash": "fe09d459",
+        "challengerKey": "drill_mirror",
+        "defenderKey": "drill_topheavy",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "7598191e"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "1c187be2"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "8624b1c9"
+        },
+        {
+          "m": "configureSpells",
+          "h": "a8132c44"
+        }
+      ]
+    },
+    {
+      "id": "challenge-nodraft-3",
+      "path": "challenge",
+      "seed": 3,
+      "params": {
+        "id": "challenge-nodraft-3",
+        "path": "challenge",
+        "seed": 3,
+        "draft": false,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 0
+      },
+      "digest": "1219.5:blue:7:4:33984:30873",
+      "streamHash": "d107072f",
+      "resultHash": "2d8352c8",
+      "result": {
+        "outcome": "challengerWin",
+        "durationSec": 1220,
+        "score": {
+          "challenger": 7,
+          "defender": 4
+        },
+        "matchSeed": 3,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic"
+        ],
+        "draftHash": null
+      },
+      "ctor": {
+        "seed": 3,
+        "challengerHash": "3c1cd5fa",
+        "defenderHash": "f5a62fb0",
+        "draftHash": null,
+        "challengerKey": "drill_mirror",
+        "defenderKey": "drill_topheavy",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": false,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": false,
+        "spells": false,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "7598191e"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        }
+      ]
+    },
+    {
+      "id": "runner-standard-3",
+      "path": "runner",
+      "seed": 3,
+      "params": {
+        "id": "runner-standard-3",
+        "path": "runner",
+        "seed": 3,
+        "config": "standard",
+        "skills": true,
+        "talents": true,
+        "index": 0
+      },
+      "digest": "1046.5:blue:18:2:33324:25517",
+      "streamHash": "15709282",
+      "ctor": {
+        "seed": 3,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "8d99cc8e"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "edee0cfd"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "4d4eacbd"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "3c9872c8"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "830b1558"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "2c9e18ca"
+        }
+      ]
+    },
+    {
+      "id": "runner-off-3",
+      "path": "runner",
+      "seed": 3,
+      "params": {
+        "id": "runner-off-3",
+        "path": "runner",
+        "seed": 3,
+        "config": "off",
+        "skills": false,
+        "talents": false,
+        "index": 0
+      },
+      "digest": "1341.0:blue:10:6:37696:34204",
+      "streamHash": "89018614",
+      "ctor": {
+        "seed": 3,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "8d99cc8e"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "830b1558"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        }
+      ]
+    },
+    {
+      "id": "live-m8-7",
+      "path": "live",
+      "seed": 7,
+      "params": {
+        "id": "live-m8-7",
+        "path": "live",
+        "seed": 7,
+        "tacticId": "m8",
+        "talents": false,
+        "buildStrategy": "standard",
+        "opponent": "ai",
+        "index": 1
+      },
+      "digest": "1979.0:blue:60:38:64244:55166",
+      "streamHash": "7eb01497",
+      "ctor": {
+        "seed": 7,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 7,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "STANDARD",
+        "buildStrategy": "standard",
+        "redTacticId": "m7",
+        "talentSources": {
+          "b1": "ai",
+          "b2": "ai",
+          "b3": "ai",
+          "b4": "ai",
+          "b5": "ai",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": "team:9c2b7210",
+        "talentSelections": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "ai",
+            "b2": "ai",
+            "b3": "ai",
+            "b4": "ai",
+            "b5": "ai",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": {
+          "blue": "m8",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "7a73c029"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "f99bb118"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "b69fb8d7"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "cd5f4f9f"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "6a908872"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "26067222"
+        },
+        {
+          "m": "configureItems",
+          "h": "baf736c3"
+        }
+      ]
+    },
+    {
+      "id": "challenge-draft-7",
+      "path": "challenge",
+      "seed": 7,
+      "params": {
+        "id": "challenge-draft-7",
+        "path": "challenge",
+        "seed": 7,
+        "draft": true,
+        "tacticIds": [
+          "m8",
+          "m3"
+        ],
+        "index": 1
+      },
+      "digest": "1060.5:red:1:7:25633:29817",
+      "streamHash": "458a844f",
+      "resultHash": "41e21028",
+      "result": {
+        "outcome": "defenderWin",
+        "durationSec": 1061,
+        "score": {
+          "challenger": 1,
+          "defender": 7
+        },
+        "matchSeed": 7,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic",
+          "draftPolicy"
+        ],
+        "draftHash": "74766e1f"
+      },
+      "ctor": {
+        "seed": 7,
+        "challengerHash": "e01b36d0",
+        "defenderHash": "bd602368",
+        "draftHash": "74766e1f",
+        "challengerKey": "drill_balanced",
+        "defenderKey": "drill_veteran",
+        "challengerTactic": "m8",
+        "defenderTactic": "m3"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m8",
+          "red": "m3",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "2f63b25a"
+        },
+        {
+          "m": "configureMatch",
+          "h": "a6f3c48b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "797ad9cd"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "b35c08e3"
+        },
+        {
+          "m": "configureSpells",
+          "h": "76acb4a0"
+        }
+      ]
+    },
+    {
+      "id": "challenge-nodraft-7",
+      "path": "challenge",
+      "seed": 7,
+      "params": {
+        "id": "challenge-nodraft-7",
+        "path": "challenge",
+        "seed": 7,
+        "draft": false,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 1
+      },
+      "digest": "879.5:red:1:6:20698:25476",
+      "streamHash": "7db33c5b",
+      "resultHash": "033a52fd",
+      "result": {
+        "outcome": "defenderWin",
+        "durationSec": 880,
+        "score": {
+          "challenger": 1,
+          "defender": 6
+        },
+        "matchSeed": 7,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic"
+        ],
+        "draftHash": null
+      },
+      "ctor": {
+        "seed": 7,
+        "challengerHash": "1d9bf1f1",
+        "defenderHash": "29fe4817",
+        "draftHash": null,
+        "challengerKey": "drill_balanced",
+        "defenderKey": "drill_veteran",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": false,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": false,
+        "spells": false,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "2f63b25a"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        }
+      ]
+    },
+    {
+      "id": "runner-standard-7",
+      "path": "runner",
+      "seed": 7,
+      "params": {
+        "id": "runner-standard-7",
+        "path": "runner",
+        "seed": 7,
+        "config": "standard",
+        "skills": true,
+        "talents": true,
+        "index": 1
+      },
+      "digest": "971.5:blue:7:3:27176:23018",
+      "streamHash": "51ef8b15",
+      "ctor": {
+        "seed": 7,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "87ce2922"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "2d89b395"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "41889c13"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "a12845e2"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "a9751b7c"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "23eda754"
+        }
+      ]
+    },
+    {
+      "id": "runner-off-7",
+      "path": "runner",
+      "seed": 7,
+      "params": {
+        "id": "runner-off-7",
+        "path": "runner",
+        "seed": 7,
+        "config": "off",
+        "skills": false,
+        "talents": false,
+        "index": 1
+      },
+      "digest": "1398.5:blue:14:11:39544:37080",
+      "streamHash": "98156ad7",
+      "ctor": {
+        "seed": 7,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "87ce2922"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "a9751b7c"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        }
+      ]
+    },
+    {
+      "id": "live-m4-11",
+      "path": "live",
+      "seed": 11,
+      "params": {
+        "id": "live-m4-11",
+        "path": "live",
+        "seed": 11,
+        "tacticId": "m4",
+        "talents": true,
+        "buildStrategy": "survival",
+        "opponent": "ai",
+        "index": 2
+      },
+      "digest": "1164.0:red:9:16:30134:34681",
+      "streamHash": "910cd2ae",
+      "ctor": {
+        "seed": 11,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 11,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "STANDARD",
+        "buildStrategy": "survival",
+        "redTacticId": "m8",
+        "talentSources": {
+          "b1": "player",
+          "b2": "player",
+          "b3": "player",
+          "b4": "player",
+          "b5": "player",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": "team:743cf0ba",
+        "talentSelections": {
+          "b1": "tiebi:counter-form",
+          "b2": "fengbao:counter-form",
+          "b3": "gambler:fate-step",
+          "b4": "shensheng:counter-form",
+          "b5": "tiankong:counter-form"
+        }
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "player",
+            "b2": "player",
+            "b3": "player",
+            "b4": "player",
+            "b5": "player",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m8",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "survival"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "69ef5eb0"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "33cfeb86"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "7a77510d"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "7662404c"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "e11475c1"
+        },
+        {
+          "m": "configureSpells",
+          "h": "76acb4a0"
+        },
+        {
+          "m": "configureMatch",
+          "h": "ae122b61"
+        },
+        {
+          "m": "configureItems",
+          "h": "61f0dd98"
+        }
+      ]
+    },
+    {
+      "id": "challenge-draft-11",
+      "path": "challenge",
+      "seed": 11,
+      "params": {
+        "id": "challenge-draft-11",
+        "path": "challenge",
+        "seed": 11,
+        "draft": true,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 2
+      },
+      "digest": "1350.5:red:6:11:34809:37862",
+      "streamHash": "9aa11d41",
+      "resultHash": "35719bf2",
+      "result": {
+        "outcome": "defenderWin",
+        "durationSec": 1351,
+        "score": {
+          "challenger": 6,
+          "defender": 11
+        },
+        "matchSeed": 11,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic",
+          "draftPolicy"
+        ],
+        "draftHash": "33c584b4"
+      },
+      "ctor": {
+        "seed": 11,
+        "challengerHash": "06507554",
+        "defenderHash": "516c0544",
+        "draftHash": "33c584b4",
+        "challengerKey": "drill_topheavy",
+        "defenderKey": "drill_rotation",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "d79ae128"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "9e983bff"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "34a3991d"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        }
+      ]
+    },
+    {
+      "id": "challenge-nodraft-11",
+      "path": "challenge",
+      "seed": 11,
+      "params": {
+        "id": "challenge-nodraft-11",
+        "path": "challenge",
+        "seed": 11,
+        "draft": false,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 2
+      },
+      "digest": "1026.5:red:5:4:26274:27929",
+      "streamHash": "f0793649",
+      "resultHash": "f8465e81",
+      "result": {
+        "outcome": "defenderWin",
+        "durationSec": 1027,
+        "score": {
+          "challenger": 5,
+          "defender": 4
+        },
+        "matchSeed": 11,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic"
+        ],
+        "draftHash": null
+      },
+      "ctor": {
+        "seed": 11,
+        "challengerHash": "6bc3f207",
+        "defenderHash": "5e5df94f",
+        "draftHash": null,
+        "challengerKey": "drill_topheavy",
+        "defenderKey": "drill_rotation",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": false,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": false,
+        "spells": false,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "d79ae128"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        }
+      ]
+    },
+    {
+      "id": "runner-standard-11",
+      "path": "runner",
+      "seed": 11,
+      "params": {
+        "id": "runner-standard-11",
+        "path": "runner",
+        "seed": 11,
+        "config": "standard",
+        "skills": true,
+        "talents": true,
+        "index": 2
+      },
+      "digest": "904.5:blue:12:10:27278:24475",
+      "streamHash": "f0e3f06a",
+      "ctor": {
+        "seed": 11,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "87ce2922"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "a173c60d"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "5dd91d4b"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "19fdd07c"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "8ea1d764"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "5cd35d98"
+        }
+      ]
+    },
+    {
+      "id": "runner-off-11",
+      "path": "runner",
+      "seed": 11,
+      "params": {
+        "id": "runner-off-11",
+        "path": "runner",
+        "seed": 11,
+        "config": "off",
+        "skills": false,
+        "talents": false,
+        "index": 2
+      },
+      "digest": "1411.5:blue:10:9:38176:37241",
+      "streamHash": "33e4b05b",
+      "ctor": {
+        "seed": 11,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "87ce2922"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "8ea1d764"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        }
+      ]
+    },
+    {
+      "id": "live-m4-19",
+      "path": "live",
+      "seed": 19,
+      "params": {
+        "id": "live-m4-19",
+        "path": "live",
+        "seed": 19,
+        "tacticId": "m4",
+        "talents": false,
+        "buildStrategy": "early",
+        "opponent": null,
+        "index": 3
+      },
+      "digest": "1130.0:blue:22:7:35587:27460",
+      "streamHash": "5289d3c3",
+      "ctor": {
+        "seed": 19,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 19,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "STANDARD",
+        "buildStrategy": "early",
+        "redTacticId": "std",
+        "talentSources": {
+          "b1": "ai",
+          "b2": "ai",
+          "b3": "ai",
+          "b4": "ai",
+          "b5": "ai",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": null,
+        "talentSelections": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "ai",
+            "b2": "ai",
+            "b3": "ai",
+            "b4": "ai",
+            "b5": "ai",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "early"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "61e90d5b"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "302da23c"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "259e27f1"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "3e54ba9d"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "42b31c62"
+        },
+        {
+          "m": "configureSpells",
+          "h": "76acb4a0"
+        },
+        {
+          "m": "configureMatch",
+          "h": "bd50702d"
+        },
+        {
+          "m": "configureItems",
+          "h": "d5f59f0f"
+        }
+      ]
+    },
+    {
+      "id": "challenge-draft-19",
+      "path": "challenge",
+      "seed": 19,
+      "params": {
+        "id": "challenge-draft-19",
+        "path": "challenge",
+        "seed": 19,
+        "draft": true,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 3
+      },
+      "digest": "1054.0:red:9:0:30705:25741",
+      "streamHash": "5aa988dd",
+      "resultHash": "0afa936f",
+      "result": {
+        "outcome": "defenderWin",
+        "durationSec": 1054,
+        "score": {
+          "challenger": 9,
+          "defender": 0
+        },
+        "matchSeed": 19,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic",
+          "draftPolicy"
+        ],
+        "draftHash": "065e73bb"
+      },
+      "ctor": {
+        "seed": 19,
+        "challengerHash": "13610295",
+        "defenderHash": "11d94fc6",
+        "draftHash": "065e73bb",
+        "challengerKey": "drill_veteran",
+        "defenderKey": "drill_mirror",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "213350f3"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "acb0b109"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "3f7e53db"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        }
+      ]
+    },
+    {
+      "id": "challenge-nodraft-19",
+      "path": "challenge",
+      "seed": 19,
+      "params": {
+        "id": "challenge-nodraft-19",
+        "path": "challenge",
+        "seed": 19,
+        "draft": false,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 3
+      },
+      "digest": "1101.0:blue:9:1:33023:26769",
+      "streamHash": "e16508a9",
+      "resultHash": "f594be09",
+      "result": {
+        "outcome": "challengerWin",
+        "durationSec": 1101,
+        "score": {
+          "challenger": 9,
+          "defender": 1
+        },
+        "matchSeed": 19,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic"
+        ],
+        "draftHash": null
+      },
+      "ctor": {
+        "seed": 19,
+        "challengerHash": "8a679e62",
+        "defenderHash": "b77e4dab",
+        "draftHash": null,
+        "challengerKey": "drill_veteran",
+        "defenderKey": "drill_mirror",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": false,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": false,
+        "spells": false,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "213350f3"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        }
+      ]
+    },
+    {
+      "id": "runner-standard-19",
+      "path": "runner",
+      "seed": 19,
+      "params": {
+        "id": "runner-standard-19",
+        "path": "runner",
+        "seed": 19,
+        "config": "standard",
+        "skills": true,
+        "talents": true,
+        "index": 3
+      },
+      "digest": "1354.0:red:16:15:38189:38264",
+      "streamHash": "a9b97b57",
+      "ctor": {
+        "seed": 19,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "b4120606"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "93f16385"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "387307fb"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "80d65f3e"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "3bb7cc3a"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "3d20fff8"
+        }
+      ]
+    },
+    {
+      "id": "runner-off-19",
+      "path": "runner",
+      "seed": 19,
+      "params": {
+        "id": "runner-off-19",
+        "path": "runner",
+        "seed": 19,
+        "config": "off",
+        "skills": false,
+        "talents": false,
+        "index": 3
+      },
+      "digest": "1286.0:red:3:2:31517:34307",
+      "streamHash": "6bf99629",
+      "ctor": {
+        "seed": 19,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "b4120606"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "3bb7cc3a"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        }
+      ]
+    },
+    {
+      "id": "live-m8-23",
+      "path": "live",
+      "seed": 23,
+      "params": {
+        "id": "live-m8-23",
+        "path": "live",
+        "seed": 23,
+        "tacticId": "m8",
+        "talents": true,
+        "buildStrategy": "standard",
+        "opponent": "ai",
+        "index": 4
+      },
+      "digest": "1015.5:red:2:12:23297:30380",
+      "streamHash": "5a44b903",
+      "ctor": {
+        "seed": 23,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 23,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "STANDARD",
+        "buildStrategy": "standard",
+        "redTacticId": "m4",
+        "talentSources": {
+          "b1": "player",
+          "b2": "player",
+          "b3": "player",
+          "b4": "player",
+          "b5": "player",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": "team:306d3d98",
+        "talentSelections": {
+          "b1": "jufeng:counter-form",
+          "b2": "leisuhunter:counter-form",
+          "b3": "lieyan:counter-form",
+          "b4": "tianfa:counter-form",
+          "b5": "xukong:counter-form"
+        }
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "player",
+            "b2": "player",
+            "b3": "player",
+            "b4": "player",
+            "b5": "player",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": {
+          "blue": "m8",
+          "red": "m4",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "c549694b"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "0967fae6"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "5ded1ce2"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "cd74e92a"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "417be8e8"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "47cdc079"
+        },
+        {
+          "m": "configureItems",
+          "h": "60cf50be"
+        }
+      ]
+    },
+    {
+      "id": "challenge-draft-23",
+      "path": "challenge",
+      "seed": 23,
+      "params": {
+        "id": "challenge-draft-23",
+        "path": "challenge",
+        "seed": 23,
+        "draft": true,
+        "tacticIds": [
+          "m8",
+          "m3"
+        ],
+        "index": 4
+      },
+      "digest": "1321.5:blue:7:8:35215:35366",
+      "streamHash": "c9976185",
+      "resultHash": "05456bde",
+      "result": {
+        "outcome": "challengerWin",
+        "durationSec": 1322,
+        "score": {
+          "challenger": 7,
+          "defender": 8
+        },
+        "matchSeed": 23,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic",
+          "draftPolicy"
+        ],
+        "draftHash": "e1ccef71"
+      },
+      "ctor": {
+        "seed": 23,
+        "challengerHash": "a2913471",
+        "defenderHash": "c5840d91",
+        "draftHash": "e1ccef71",
+        "challengerKey": "drill_rotation",
+        "defenderKey": "drill_balanced",
+        "challengerTactic": "m8",
+        "defenderTactic": "m3"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m8",
+          "red": "m3",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "19fd37f7"
+        },
+        {
+          "m": "configureMatch",
+          "h": "a6f3c48b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "1e6615f3"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "fab17e2f"
+        },
+        {
+          "m": "configureSpells",
+          "h": "76acb4a0"
+        }
+      ]
+    },
+    {
+      "id": "challenge-nodraft-23",
+      "path": "challenge",
+      "seed": 23,
+      "params": {
+        "id": "challenge-nodraft-23",
+        "path": "challenge",
+        "seed": 23,
+        "draft": false,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 4
+      },
+      "digest": "1131.0:blue:10:4:32932:28805",
+      "streamHash": "c29296a2",
+      "resultHash": "e7ce1554",
+      "result": {
+        "outcome": "challengerWin",
+        "durationSec": 1131,
+        "score": {
+          "challenger": 10,
+          "defender": 4
+        },
+        "matchSeed": 23,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic"
+        ],
+        "draftHash": null
+      },
+      "ctor": {
+        "seed": 23,
+        "challengerHash": "54fcaab2",
+        "defenderHash": "f688c668",
+        "draftHash": null,
+        "challengerKey": "drill_rotation",
+        "defenderKey": "drill_balanced",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": false,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": false,
+        "spells": false,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "19fd37f7"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        }
+      ]
+    },
+    {
+      "id": "runner-standard-23",
+      "path": "runner",
+      "seed": 23,
+      "params": {
+        "id": "runner-standard-23",
+        "path": "runner",
+        "seed": 23,
+        "config": "standard",
+        "skills": true,
+        "talents": true,
+        "index": 4
+      },
+      "digest": "1249.0:red:13:17:32302:36973",
+      "streamHash": "6480d4fb",
+      "ctor": {
+        "seed": 23,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "b4120606"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "20ca4253"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "ddeb02db"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "9dd138e8"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "47c21120"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "4a40ac2e"
+        }
+      ]
+    },
+    {
+      "id": "runner-off-23",
+      "path": "runner",
+      "seed": 23,
+      "params": {
+        "id": "runner-off-23",
+        "path": "runner",
+        "seed": 23,
+        "config": "off",
+        "skills": false,
+        "talents": false,
+        "index": 4
+      },
+      "digest": "1202.5:blue:11:3:34354:29395",
+      "streamHash": "83c4d234",
+      "ctor": {
+        "seed": 23,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "b4120606"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "47c21120"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        }
+      ]
+    },
+    {
+      "id": "live-m6-29",
+      "path": "live",
+      "seed": 29,
+      "params": {
+        "id": "live-m6-29",
+        "path": "live",
+        "seed": 29,
+        "tacticId": "m6",
+        "talents": false,
+        "buildStrategy": "survival",
+        "opponent": "ai",
+        "index": 5
+      },
+      "digest": "763.0:red:4:9:19595:24602",
+      "streamHash": "d938ee79",
+      "ctor": {
+        "seed": 29,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 29,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "SWAPPED",
+        "buildStrategy": "survival",
+        "redTacticId": "m3",
+        "talentSources": {
+          "b1": "ai",
+          "b2": "ai",
+          "b3": "ai",
+          "b4": "ai",
+          "b5": "ai",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": "team:39be6cbf",
+        "talentSelections": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "ai",
+            "b2": "ai",
+            "b3": "ai",
+            "b4": "ai",
+            "b5": "ai",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": {
+          "blue": "m6",
+          "red": "m3",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "survival"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "057fb703"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "7f02717f"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "58d27fc6"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "0f7d84f4"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "e054a660"
+        },
+        {
+          "m": "configureSpells",
+          "h": "76acb4a0"
+        },
+        {
+          "m": "configureMatch",
+          "h": "6e828eb8"
+        },
+        {
+          "m": "configureItems",
+          "h": "641d64af"
+        }
+      ]
+    },
+    {
+      "id": "challenge-draft-29",
+      "path": "challenge",
+      "seed": 29,
+      "params": {
+        "id": "challenge-draft-29",
+        "path": "challenge",
+        "seed": 29,
+        "draft": true,
+        "tacticIds": [
+          "m6",
+          "m1"
+        ],
+        "index": 5
+      },
+      "digest": "1220.5:blue:14:5:36098:30632",
+      "streamHash": "990770e8",
+      "resultHash": "83d91f9d",
+      "result": {
+        "outcome": "challengerWin",
+        "durationSec": 1221,
+        "score": {
+          "challenger": 14,
+          "defender": 5
+        },
+        "matchSeed": 29,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic",
+          "draftPolicy"
+        ],
+        "draftHash": "58657294"
+      },
+      "ctor": {
+        "seed": 29,
+        "challengerHash": "250f31e9",
+        "defenderHash": "94b440a5",
+        "draftHash": "58657294",
+        "challengerKey": "drill_mirror",
+        "defenderKey": "drill_topheavy",
+        "challengerTactic": "m6",
+        "defenderTactic": "m1"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m6",
+          "red": "m1",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "7598191e"
+        },
+        {
+          "m": "configureMatch",
+          "h": "07c6bab0"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "1c187be2"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "8624b1c9"
+        },
+        {
+          "m": "configureSpells",
+          "h": "a8132c44"
+        }
+      ]
+    },
+    {
+      "id": "challenge-nodraft-29",
+      "path": "challenge",
+      "seed": 29,
+      "params": {
+        "id": "challenge-nodraft-29",
+        "path": "challenge",
+        "seed": 29,
+        "draft": false,
+        "tacticIds": [
+          "m4",
+          "m7"
+        ],
+        "index": 5
+      },
+      "digest": "1354.5:blue:8:10:38146:35979",
+      "streamHash": "c138af07",
+      "resultHash": "03fe5045",
+      "result": {
+        "outcome": "challengerWin",
+        "durationSec": 1355,
+        "score": {
+          "challenger": 8,
+          "defender": 10
+        },
+        "matchSeed": 29,
+        "usedInputs": [
+          "playerStats",
+          "heroLoadout",
+          "tactic"
+        ],
+        "draftHash": null
+      },
+      "ctor": {
+        "seed": 29,
+        "challengerHash": "3c1cd5fa",
+        "defenderHash": "f5a62fb0",
+        "draftHash": null,
+        "challengerKey": "drill_mirror",
+        "defenderKey": "drill_topheavy",
+        "challengerTactic": "m4",
+        "defenderTactic": "m7"
+      },
+      "features": {
+        "objectiveLayout": null,
+        "playerStatSides": [
+          "blue",
+          "red"
+        ],
+        "heroMods": false,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": false,
+        "spells": false,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m4",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configurePlayers",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configurePlayers",
+          "h": "7598191e"
+        },
+        {
+          "m": "configureMatch",
+          "h": "5ea0f7e0"
+        }
+      ]
+    },
+    {
+      "id": "runner-standard-29",
+      "path": "runner",
+      "seed": 29,
+      "params": {
+        "id": "runner-standard-29",
+        "path": "runner",
+        "seed": 29,
+        "config": "standard",
+        "skills": true,
+        "talents": true,
+        "index": 5
+      },
+      "digest": "859.5:red:3:7:21031:25955",
+      "streamHash": "38249013",
+      "ctor": {
+        "seed": 29,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "b3084d5e"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "26fab501"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "1e7b4257"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "6a6d1c90"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "d9bed1ce"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "1996a33a"
+        }
+      ]
+    },
+    {
+      "id": "runner-off-29",
+      "path": "runner",
+      "seed": 29,
+      "params": {
+        "id": "runner-off-29",
+        "path": "runner",
+        "seed": 29,
+        "config": "off",
+        "skills": false,
+        "talents": false,
+        "index": 5
+      },
+      "digest": "1318.0:red:3:7:31947:36599",
+      "streamHash": "7227a503",
+      "ctor": {
+        "seed": 29,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "b3084d5e"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "d9bed1ce"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        }
+      ]
+    }
+  ]
+}
