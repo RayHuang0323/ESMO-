@@ -36,11 +36,16 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v20";
+//  2026-10-09 moba-sim.v21 = **UNRELEASED CANDIDATE**（feature/moba-phase3a，Phase 3a Task 3）。
+//   ⚠ 正式站仍是 moba-sim.v20（指紋 050b3f66620f0f57 永不變更；正式站 smoke gate 仍期待 v20）。
+//   v21 只因語意檔案清單多收了 matchRuleset.js／matchAssembler.js 而換指紋：
+//   Live／Challenge／平衡工具經 assembleMatch 的結果與 v20 golden（tools/fixtures/match_golden_v20.json，
+//   39 案）逐位元相同（check_match_assembler_3a）。發布前須由 Owner 決定是否以此版號上線。
+export const MOBA_SIMULATION_VERSION = "moba-sim.v21";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -159,6 +164,12 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   //  · `SEAT_LANE_ZH` —— Draft 的 byRole 補位讀它。
   //    ⚠ 這張表看起來只是 UI 詞彙，但它現在決定「b4 該補哪一路的英雄」。
   "src/platform/contracts/matchLineup.js",
+
+  //  ── 2026-10-09（Phase 3a T3，moba-sim.v21 候選）：唯一組裝器 ───────────────────
+  //  · ruleset 的層與組裝順序（assemblyOrder）決定 configure* 呼不呼叫、以什麼順序呼叫。
+  "src/platform/contracts/matchRuleset.js",
+  //  · MatchSetup → LogicEngine 的唯一組裝點（Live／Challenge／平衡工具共用）：順序、短路、tool 覆寫。
+  "src/battle/moba/matchAssembler.js",
 ]);
 
 /**
@@ -410,6 +421,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //    回應吃距離、定位、溝通／配合／領導、風險傾向。④ Gank 評分選路、追擊先估擊殺。⑤ 龍／巴龍雙評估取代擲骰、懲戒在物件不迫近時清野。
   //  全部決定性（不新增亂數；Gank／物件改評分後少抽 rng）。⚠ 後果（已知且接受）：v19 歷史挑戰由 canReplay 明確拒絕；v1～v19 指紋全數保留。
   "moba-sim.v20": "050b3f66620f0f57",
+  //  2026-10-09 moba-sim.v21（feature/moba-phase3a，**UNRELEASED CANDIDATE**）：語意清單新增 matchRuleset.js 與
+  //  matchAssembler.js（Phase 3a T3 唯一組裝器）。LogicEngine 與所有 adapter 未改；Live／Challenge／runner 經組裝器
+  //  的結果與 v20 golden 39 案逐位元相同（configure 序列、引數雜湊、digest、streamHash）。
+  //  ⚠ v20 指紋不變、v1～v20 全數保留；正式站仍為 v20，發布前須 Owner 決定。
+  "moba-sim.v21": "6b706cbfd4419710",
 });
 
 export const isKnownSimulationVersion = (v) =>
