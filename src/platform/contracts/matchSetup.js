@@ -19,18 +19,22 @@
 //   錯誤碼 `tool_field_in_production`（每個違規鍵一筆）。
 //
 //  【雜湊涵蓋範圍】matchSetupHash = stableStringify（鍵排序）後的 FNV-1a。
-//   涵蓋：schema、**解析後的 ruleset 全文（含 layers）**、seed、seedSource、
-//         objectiveLayout、loadout、playerSlots、roster、talentSelections、
+//   涵蓋：schema、**解析後的 ruleset 全文（含 layers）**、seed、
+//         objectiveLayout（有效值，含 standard 規則集固定的 "STANDARD"）、loadout、playerSlots、roster、talentSelections、
 //         buildStrategy、tactic、tool。
-//   不涵蓋：`meta`（sessionId / mode / opponentId，僅用於 UI 與追蹤）。
+//   不涵蓋：`meta`（sessionId / mode / opponentId / seedSource：UI 與追蹤用的來源標記，
+//         不是模擬輸入；兩份只差 seedSource 的 setup 雜湊相同）。
 //         呈現層欄位（playbackRate、quality、debug / diag 旗標）不是 setup 欄位——
 //         出現在頂層會被 `unknown_field` 拒絕，出現在 meta 會被丟棄。
 //   ⚠ 同為 rulesetId "career.v20"，旗標不同 ⇒ layers 不同 ⇒ 雜湊不同（刻意）。
-//   ⚠ seedSource 屬於 setup 欄位（不在 meta），所以涵蓋；它是來源標記，不影響模擬，
-//     若 parity gate 要跨來源比對請先自行正規化該欄。
+//
+//  【雜湊演算法】標準 FNV-1a 64 位元（BigInt），輸入為 stableStringify(被雜湊部分) 的
+//   UTF-8 位元組；offset basis 0xcbf29ce484222325、prime 0x100000001b3、遮罩 64 位；
+//   輸出 16 位小寫十六進位。同步、Node 與瀏覽器輸出一致（TextEncoder 皆有）。
+//   ⚠ 這是 parity / 冪等用的「身分雜湊」，不是安全原語；線上權威將對 canonical bytes 簽章。
 // ============================================================================
 import { rulesetById, validateRuleset, PRODUCTION_FORBIDDEN_KEYS } from "./matchRuleset.js";
-import { stableStringify, stableHash } from "./squadSnapshot.js";
+import { stableStringify } from "./squadSnapshot.js";
 import { resolveObjectiveLayout, OBJECTIVE_LAYOUTS } from "./objectiveLayout.js";
 import { MOBA_TACTIC_VERSION } from "./MobaTacticConfig.js";
 
@@ -39,7 +43,7 @@ export const SEED_SOURCES = Object.freeze(["session", "local", "challenge", "too
 export const TACTIC_KINDS = Object.freeze(["legacy", "std", "binding"]);
 
 const SEATS = Object.freeze(["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"]);
-const TOP_KEYS = new Set(["ruleset", "rulesetId", "seed", "seedSource", "objectiveLayout", "loadout",
+const TOP_KEYS = new Set(["ruleset", "rulesetId", "seed", "objectiveLayout", "loadout",
   "playerSlots", "roster", "talentSelections", "buildStrategy", "tactic", "tool", "meta"]);
 const TOOL_KEYS = PRODUCTION_FORBIDDEN_KEYS;
 
@@ -161,7 +165,7 @@ export function createMatchSetup(input) {
 
   // ---- seed ---------------------------------------------------------------
   if (!Number.isInteger(input.seed)) err("seed_invalid", "seed", "seed must be an integer");
-  if (!SEED_SOURCES.includes(input.seedSource)) err("seed_source_invalid", "seedSource", `seedSource must be one of ${SEED_SOURCES.join("|")}`);
+  if (!SEED_SOURCES.includes(input.meta?.seedSource)) err("seed_source_invalid", "meta.seedSource", `meta.seedSource must be one of ${SEED_SOURCES.join("|")}`);
 
   // ---- objective layout ---------------------------------------------------
   let objectiveLayout = null;
@@ -263,6 +267,7 @@ export function createMatchSetup(input) {
     sessionId: typeof m.sessionId === "string" ? m.sessionId : null,
     mode: typeof m.mode === "string" ? m.mode : null,
     opponentId: typeof m.opponentId === "string" ? m.opponentId : null,
+    seedSource: m.seedSource,
   };
 
   if (errors.length) return fail();
@@ -272,7 +277,6 @@ export function createMatchSetup(input) {
     rulesetId: ruleset.rulesetId,
     ruleset: clonePlain(ruleset),
     seed: input.seed,
-    seedSource: input.seedSource,
     objectiveLayout,
     loadout,
     playerSlots,
@@ -286,9 +290,16 @@ export function createMatchSetup(input) {
   return { ok: true, setup: deepFreeze(setup), errors: [] };
 }
 
-/** 雜湊（見檔頭「雜湊涵蓋範圍」）：meta 不參與。16 位十六進位 = 兩個加鹽的 FNV-1a 32。 */
+const FNV64_OFFSET = 0xcbf29ce484222325n, FNV64_PRIME = 0x100000001b3n, MASK64 = 0xffffffffffffffffn;
+/** 標準 FNV-1a 64（UTF-8 位元組）→ 16 位小寫十六進位。 */
+export function fnv1a64Hex(str) {
+  let h = FNV64_OFFSET;
+  for (const b of new TextEncoder().encode(str)) h = ((h ^ BigInt(b)) * FNV64_PRIME) & MASK64;
+  return h.toString(16).padStart(16, "0");
+}
+
+/** 雜湊（見檔頭「雜湊涵蓋範圍」）：meta（含 seedSource）不參與。 */
 export function matchSetupHash(setup) {
   const { meta: _meta, ...hashed } = setup ?? {};
-  const s = stableStringify(hashed);
-  return stableHash(s) + stableHash(`\u0001${s}`);
+  return fnv1a64Hex(stableStringify(hashed));
 }
