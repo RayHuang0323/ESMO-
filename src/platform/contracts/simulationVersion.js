@@ -425,7 +425,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  matchAssembler.js（Phase 3a T3 唯一組裝器）。LogicEngine 與所有 adapter 未改；Live／Challenge／runner 經組裝器
   //  的結果與 v20 golden 39 案逐位元相同（configure 序列、引數雜湊、digest、streamHash）。
   //  ⚠ v20 指紋不變、v1～v20 全數保留；正式站仍為 v20，發布前須 Owner 決定。
-  "moba-sim.v21": "6b706cbfd4419710",
+  //  T3 fix round 1：組裝器改以正規席位順序（b1…b5, r1…r5）重建交給 adapter 的 roster／天賦選擇（同雜湊 ⇒ 同模擬由構造保證）；
+  //  golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 6b706cbfd4419710 未曾發布）。
+  "moba-sim.v21": "d5af0958688d277a",
 });
 
 export const isKnownSimulationVersion = (v) =>

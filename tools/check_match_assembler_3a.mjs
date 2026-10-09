@@ -287,5 +287,35 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
   ck("A8d 無藍方戰術 ⇒ tacticMeta null、replayConfig 無 tacticId", nt.ok && nt.applied.tacticMeta === null && !("tacticId" in nt.applied.replayConfig));
 }
 
+// ── A9 席位順序正規化：roster／talentSelections 鍵順序打亂 ⇒ setup 雜湊、呼叫、引數雜湊、結果全部相同 ────
+//  setup 雜湊對鍵排序 ⇒ 若組裝器依插入順序走訪，「同雜湊 ⇒ 同模擬」只是經驗成立。組裝器依 CANONICAL_SEATS 重建。
+{
+  const SHUFFLE_IDS = ["live-m4-3", "live-m8-23", "runner-standard-3", "runner-early-10", "runner-counter-15", "challenge-draft-7"];
+  //  決定性的打亂：反轉後再旋轉 3 格（對 10 個席位一定與原順序、正規順序都不同）
+  const shuffleKeys = (o) => { if (!o) return o; const k = Object.keys(o).reverse(); const r = [...k.slice(3), ...k.slice(0, 3)]; return Object.fromEntries(r.map((x) => [x, o[x]])); };
+  for (const id of SHUFFLE_IDS) {
+    const c = golden.cases.find((x) => x.id === id);
+    if (!c || (ONLY && !ONLY.has(id))) { if (!c) ck(`A9 ${id} 存在於 golden`, false); continue; }
+    const base = encodeCase(c);
+    const shuffled = { ...base, roster: shuffleKeys(base.roster), talentSelections: shuffleKeys(base.talentSelections ?? null) };
+    const a = createMatchSetup(base), b = createMatchSetup(shuffled);
+    const orderChanged = JSON.stringify(Object.keys(b.setup.roster)) !== JSON.stringify(Object.keys(a.setup.roster))
+      && (!a.setup.talentSelections || Object.keys(a.setup.talentSelections).length < 2 || JSON.stringify(Object.keys(b.setup.talentSelections)) !== JSON.stringify(Object.keys(a.setup.talentSelections)));
+    ck(`A9 ${id} 前提：打亂後 setup 內的鍵順序確實不同，但雜湊相同`, a.ok && b.ok && orderChanged && matchSetupHash(a.setup) === matchSetupHash(b.setup),
+      a.ok && b.ok ? `roster ${Object.keys(b.setup.roster).join(",")}` : "setup failed");
+    const { r, calls } = probedAssemble(b.setup);
+    const diff = r.ok ? firstDiff(calls, c.calls) : "assemble failed";
+    const res = r.ok ? runAndHash(r.engine, { dt: golden.dt, maxT: golden.maxT[c.path], every: golden.streamEvery }) : {};
+    ck(`A9 ${id} 打亂鍵順序 ⇒ 呼叫序列＋引數雜湊＋digest＋streamHash 仍＝golden`, diff === "" && res.digest === c.digest && res.streamHash === c.streamHash,
+      diff || `${res.digest}/${res.streamHash} vs ${c.digest}/${c.streamHash}`);
+    ck(`A9 ${id} 交給 adapter 的天賦選擇依正規席位順序（applied.talentSelection.players 的鍵序；無天賦的案為空真）`, r.ok && (!r.applied.talentSelection
+      || JSON.stringify(Object.keys(r.applied.talentSelection.players)) === JSON.stringify(["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"].filter((x) => x in r.applied.talentSelection.players))));
+  }
+  //  未知席位（setup 契約本身就擋；這裡用偽造的未凍結 setup 驗組裝器自己也擋）
+  const forged = JSON.parse(JSON.stringify(createMatchSetup(encodeCase(golden.cases.find((x) => x.id === "runner-off-3"))).setup));
+  forged.roster.b6 = { ...forged.roster.b1 };
+  ck("A9b 未知席位 id ⇒ seat_unknown（不默默略過）", rejects(forged, "seat_unknown", "roster.b6"));
+}
+
 console.log(`\nMatch Assembler 3a：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
 process.exit(fail ? 1 : 0);

@@ -63,6 +63,11 @@ export const ASSEMBLY_STEPS = Object.freeze({
 });
 
 const SIDES = Object.freeze(["blue", "red"]);
+//  正規席位順序。setup 雜湊對鍵排序（stableStringify），所以交給 adapter 的 roster／天賦選擇
+//  一律依這個順序重建 ⇒ 「同雜湊 ⇒ 同模擬」由構造保證，不依賴呼叫端的插入順序。
+export const CANONICAL_SEATS = Object.freeze(["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"]);
+/** 依 CANONICAL_SEATS 排列一個以席位為鍵的物件（缺席位略過；未知鍵由驗證階段拒絕）。 */
+const bySeat = (obj) => Object.fromEntries(CANONICAL_SEATS.filter((seat) => seat in obj).map((seat) => [seat, obj[seat]]));
 const SEAT_RX = Object.freeze({ blue: /^b[1-5]$/, red: /^r[1-5]$/ });
 const sideOfSeat = (seat) => (String(seat)[0] === "r" ? "red" : "blue");
 const clone = (v) => (v === null || v === undefined ? v : structuredClone(v));
@@ -118,8 +123,12 @@ export function assembleMatch(setup, deps = {}) {
     if (!isTool) need(typeof H.COMBAT_ARCHETYPE_CONTRACT_VERSION === "string", "deps.heroAdapters.COMBAT_ARCHETYPE_CONTRACT_VERSION", "archetype meta");
   }
 
+  for (const [field, obj] of [["roster", setup.roster], ["talentSelections", setup.talentSelections]]) {
+    for (const seat of Object.keys(obj ?? {})) if (!CANONICAL_SEATS.includes(seat))
+      err("seat_unknown", `${field}.${seat}`, `unknown seat id "${seat}" (seats are ${CANONICAL_SEATS.join(",")})`);
+  }
   if (hasRoster && typeof heroLookup === "function") {
-    for (const [seat, row] of Object.entries(setup.roster)) if (!heroLookup(row.heroId)) err("hero_unknown", `roster.${seat}.heroId`, `heroLookup has no hero "${row.heroId}"`);
+    for (const [seat, row] of Object.entries(bySeat(setup.roster))) if (!heroLookup(row.heroId)) err("hero_unknown", `roster.${seat}.heroId`, `heroLookup has no hero "${row.heroId}"`);
   }
 
   for (const side of SIDES) {
@@ -150,7 +159,7 @@ export function assembleMatch(setup, deps = {}) {
   if (setup.talentSelections) {
     if (!hasRoster) err("talent_without_roster", "talentSelections", "talent selections need a roster (talents belong to the seat's hero)");
     else if (typeof H.battleTalentOptions === "function") {
-      for (const [seat, id] of Object.entries(setup.talentSelections)) {
+      for (const [seat, id] of Object.entries(bySeat(setup.talentSelections))) {
         if (id === null) continue; // null = let the AI choose for this seat
         const heroId = setup.roster[seat]?.heroId ?? null;
         const options = heroId ? H.battleTalentOptions(heroId) : [];
@@ -168,14 +177,15 @@ export function assembleMatch(setup, deps = {}) {
   const call = (method, arg) => { engine[method](arg); configured.push(method); };
 
   //  英雄物件由 deps.heroLookup 補上（useLocalServer 的 opts.roster、challengeRunner:173-174 的 withHero）。
-  const roster = hasRoster ? Object.fromEntries(Object.entries(setup.roster).map(([seat, row]) => [seat, {
+  //  ⚠ 依 CANONICAL_SEATS 重建（不是 setup 的插入順序）：每個 adapter 都以這份物件的走訪順序產出設定。
+  const roster = hasRoster ? Object.fromEntries(Object.entries(bySeat(setup.roster)).map(([seat, row]) => [seat, {
     heroId: row.heroId, ...(Array.isArray(row.spells) ? { spells: [...row.spells] } : {}), hero: heroLookup(row.heroId),
   }])) : null;
 
   //  天賦選擇：useLocalServer:174-176（空集合 ⇒ null）；runner:130 不帶玩家選擇（setup.talentSelections 為 null）。
   let talentSelection = null;
   if (E.battleTalents) {
-    const selected = H.selectBattleTalents(roster, setup.talentSelections ? clone(setup.talentSelections) : undefined);
+    const selected = H.selectBattleTalents(roster, setup.talentSelections ? clone(bySeat(setup.talentSelections)) : undefined);
     talentSelection = selected && Object.keys(selected.players).length ? selected : null;
   }
 
@@ -209,6 +219,9 @@ export function assembleMatch(setup, deps = {}) {
       if (curves) call("configureHeroPowerCurve", curves);
     },
     //  useLocalServer:237-247；challengeRunner:180-186；runner:138-140（meta: null）。
+    //  ⚠ runner:138-141 對 archetypes／spells 無條件呼叫；這裡的「adapter 回空／null ⇒ 不呼叫」與之等價：
+    //    roster 存在時 setup 契約要求 10 席位齊全 ⇒ toEngineArchetypes 必非空、每席 spells 由 builder 給齊
+    //    ⇒ 兩者必呼叫（golden 18 個 runner 案逐筆證實）。空 roster 的 runner 路徑本來就會在 configureSpells(null) 拋錯。
     archetypes() {
       if (!E.archetypes) return;
       const archMods = H.toEngineArchetypes(roster);
@@ -233,6 +246,7 @@ export function assembleMatch(setup, deps = {}) {
       call("configureMatch", {
         blue: toEngineTactic(blueCfg),
         red: toEngineTactic(redCfg),
+        //  tacticIdentity 是規則集層（整份 ruleset 已進 setup 雜湊），不依賴 setup 資料 ⇒ 不需要也不放進 effectiveLayers。
         identity: L.tacticIdentity ? { blue: toEngineTacticIdentity(blueCfg), red: toEngineTacticIdentity(redCfg) } : null,
         meta: tacticMeta,
       });
