@@ -47,8 +47,8 @@ const result = await runGate({
     const home = await ev("return fetch(location.href,{cache:'no-store'}).then(r=>JSON.stringify(r.status));");
     ck("H 首頁 HTTP 200", home === 200, String(home));
     if (PROD) {
-      const b = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>x.includes('/assets/index-')); return fetch(s).then(r=>r.text()).then(t=>{const g=(t.match(/esmo-rift-[A-Za-z0-9_-]+\\.glb/)||[])[0]; return (g?fetch(new URL('assets/'+g, location.href)).then(r=>r.arrayBuffer().then(a=>({st:r.status,n:a.byteLength}))):Promise.resolve(null)).then(glb=>JSON.stringify({src:s, v16:t.includes('moba-sim.v19'), v15only:!t.includes('moba-sim.v16'), markers:t.includes('objective-pit-markers'), layout:t.includes('SWAPPED')&&t.includes('objectiveLayout'), tdcs1:t.includes('splitProjectileSlowV16'), glb:g, glbStatus:glb&&glb.st, glbBytes:glb&&glb.n}));});");
-      ck("P0 線上 bundle 含目前 moba-sim 版本（v19）、坑位標記、objectiveLayout、TD-CS1；Rift GLB HTTP 200 且為新版（14,504,340 bytes）",
+      const b = await ev("const s=[...document.scripts].map(x=>x.src).find(x=>x.includes('/assets/index-')); return fetch(s).then(r=>r.text()).then(t=>{const g=(t.match(/esmo-rift-[A-Za-z0-9_-]+\\.glb/)||[])[0]; return (g?fetch(new URL('assets/'+g, location.href)).then(r=>r.arrayBuffer().then(a=>({st:r.status,n:a.byteLength}))):Promise.resolve(null)).then(glb=>JSON.stringify({src:s, v16:t.includes('moba-sim.v20'), v15only:!t.includes('moba-sim.v16'), markers:t.includes('objective-pit-markers'), layout:t.includes('SWAPPED')&&t.includes('objectiveLayout'), tdcs1:t.includes('splitProjectileSlowV16'), glb:g, glbStatus:glb&&glb.st, glbBytes:glb&&glb.n}));});");
+      ck("P0 線上 bundle 含目前 moba-sim 版本（v20）、坑位標記、objectiveLayout、TD-CS1；Rift GLB HTTP 200 且為新版（14,504,340 bytes）",
         b?.v16 && b?.markers && b?.layout && b?.tdcs1 && b?.glbStatus === 200 && b?.glbBytes === GLB_BYTES, JSON.stringify(b));
     }
 
