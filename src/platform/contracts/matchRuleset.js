@@ -1,5 +1,11 @@
 export const MATCH_RULESET_VERSION = "MatchRuleset.v1";
 export const PRODUCTION_FORBIDDEN_KEYS = Object.freeze(["ruleOverrides", "incomeK", "itemsStrategies", "forcedLayout"]);
+//  組裝順序（Phase 3a T3）：非布林層，由 assembleMatch 讀取。v20 有兩種實際順序（golden calls 為證）：
+//   · "live"         Layout → Players → Heroes → Skills → Passives → Curve → Archetypes → Spells → Match → Items
+//                    （useLocalServer.start、balance runner configure）
+//   · "challengeV20" Players → Match → Heroes → Archetypes → Spells（challengeRunner.runChallenge；無 layout／技能／裝備）
+//  production 規則集的非布林層被 matchSetup 鎖定 ⇒ challenge.v20 不能改走 live 順序（要統一須開 challenge.v21）。
+export const ASSEMBLY_ORDERS = Object.freeze(["live", "challengeV20"]);
 export const LAYER_RELEASE_FLAG = Object.freeze({
   heroSkills: "heroSkillsV1",
   heroPassives: "heroSkillsV1",
@@ -10,13 +16,13 @@ export const LAYER_RELEASE_FLAG = Object.freeze({
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 export const MATCH_RULESETS = Object.freeze({
   "career.v20": R({ rulesetId: "career.v20", kind: "production", simVersion: "moba-sim.v20",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate", assemblyOrder: "live" },
     releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1"] }),
   "challenge.v20": R({ rulesetId: "challenge.v20", kind: "production", simVersion: "moba-sim.v20",
-    layers: { heroSkills: false, heroPassives: false, heroPowerCurve: false, battleTalents: false, items: false, tacticIdentity: true, playerStatSides: "both", objectiveLayout: "standard", redTactic: "snapshot" },
+    layers: { heroSkills: false, heroPassives: false, heroPowerCurve: false, battleTalents: false, items: false, tacticIdentity: true, playerStatSides: "both", objectiveLayout: "standard", redTactic: "snapshot", assemblyOrder: "challengeV20" },
     releaseRequirements: [] }),
   "balanceTool.v20": R({ rulesetId: "balanceTool.v20", kind: "tool", simVersion: "moba-sim.v20",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live" },
     releaseRequirements: [] }),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
@@ -43,6 +49,7 @@ export function validateRuleset(r) {
   if (!["production", "tool"].includes(r?.kind)) errors.push("kind");
   if (!["blue", "both", "none"].includes(r?.layers?.playerStatSides)) errors.push("playerStatSides");
   if (!["bySeed", "standard", "explicit"].includes(r?.layers?.objectiveLayout)) errors.push("objectiveLayout");
+  if (!ASSEMBLY_ORDERS.includes(r?.layers?.assemblyOrder)) errors.push("assemblyOrder");
 
   // RS-1: For production rulesets, every enabled layer must have its flag in releaseRequirements
   if (r?.kind === "production") {
