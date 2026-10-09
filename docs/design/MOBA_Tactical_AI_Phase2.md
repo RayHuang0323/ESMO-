@@ -1,6 +1,7 @@
 # MOBA Tactical AI Phase 2（moba-sim.v20）
 
-> **狀態：本地 commit，NOT READY（未 push、未 deploy）。** 阻擋項：n=1000 純藍方 +3.3pp（≈ 2.1σ）、迭代順序反轉測試邊緣顯著，機制未定位——見 `docs/handoff/08_目前待辦與風險.md`。
+> **狀態：RELEASED（2026-10-09，main `92245f4`，Pages run `37915626577`）。** Phase 3 未開始。
+> （10-08 的 NOT READY 阻擋項——藍方／迭代順序偏差——已由 Team Call 同類冷卻解除：n=1000 純藍方 +0.3pp、反轉順序 z 0.00；見 `docs/handoff/05_Sprint紀錄.md`。）
 
 - 分支：`feature/moba-tactical-ai-p2`（基於 main `fde17c7`＝moba-sim.v19 RELEASED、Map Topology FROZEN）
 - 範圍：Combat Intent、兵線優先、引擎內 Team Call、Gank／殘血追擊、Objective／Smite。偷塔、完整分推、後期換線、Ambush 留 Phase 3。

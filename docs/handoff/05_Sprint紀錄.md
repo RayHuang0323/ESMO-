@@ -24523,3 +24523,21 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 既有技術債：`challengeRunner` 從未呼叫 `configureObjectiveLayout`，挑戰方永遠在巨龍側（v20 前即如此）。若要根治需改挑戰契約＋指紋，交 Owner 排程。
 
 **v20 驗收總結：READY**（未 push／deploy；Phase 3 未開始）。
+
+## 2026-10-09 moba-sim.v20 RELEASED（MOBA Tactical AI Phase 2）
+
+- main `92245f4`（從 `fde17c7` fast-forward，無 force；push 前 `ls-remote` 確認遠端未變）；Pages run `37915626577` build／deploy success。本節紀錄 commit 另行 normal push。
+- 內容：Combat Intent（ALLIN／TRADE／POKE／KITE）、兵線優先、引擎 Team Call（含同隊同類冷卻 `callTypeCdSec`）、Gank 評分選路、追擊估殺、龍／巴龍雙評估、懲戒清野；Combat Feedback 顯示預算（延後合併、不丟、不改傷害）；Replay 團隊增益 seek 修正（拿龍前一刻提早顯示龍層，v16 起既有）。
+- Simulation history：`KNOWN_SIMULATION_VERSIONS` v1～v20 完整、v1～v19 指紋與 `fde17c7` 逐字相同；正式版本 `moba-sim.v20`（指紋 `050b3f66620f0f57`）。
+- **Owner 接受**：Challenge 巨龍側優勢 +1.6 → +4.4pp（新 seeds n=1000，挑戰方勝率 50.0 → 51.7%、z 0.74，不構成阻擋）；`challengeRunner` 固定 STANDARD 為既有技術債；20～40 分仍為長期 pacing 目標（v20 中位約 18.5）。
+- 正式站 smoke（production bundle `index-B_UJb7Df.js`＝`moba-sim.v20`）：
+  - `browser_check_prod_hero_identity_v17` 15/15、`browser_check_moba_gameplay_presentation --prod` 11/11（含 390 mobile）、`browser_check_prod_moba_combat_feedback` 16/16（浮字峰值桌機 21／390 24 ≤ 28）、`browser_check_prod_moba_result_replay_release`（Battle → Result → Replay，390＋1366）25/25；page／console／shader error 0。
+  - `browser_check_prod_objective_layout_v16 --prod` 12/13：bundle＝v20、Rift GLB 14,504,340 bytes（地圖未變、Topology FROZEN）、STANDARD／SWAPPED、Replay SWAPPED、390 全綠；D 導播 objectiveFocus 0 次／朝錯坑 0 次（前置條件未出現，與 v18／v19 發布時相同）。
+  - **Replay 實際拖曳**（正式站 `input[aria-label="重播時間軸"]`，桌機 1366＋390）：桌機一場 7 次拿龍、678 次拖曳；390 一場 5 次拿龍、485 次拖曳；每次拿龍前後 ±3 秒、0.25 秒步距往前／往後 ⇒ **龍層數 0 次提前**（15/15）。截圖：390 拿龍前 4:42 無龍層、4:46 顯示 龍×1。
+  - v20 行為（正式站 DOM，桌機一場 1400 取樣）：bundle 含七個 v20 規則鍵＋`callTypeCdSec`；觀戰狀態 強開 311／換血 216／消耗 4／拉扯 56 次（Combat Intent 三種都出現）；戰報懲戒 11 次（含「使用懲戒（巨龍）」）；隊伍溝通台詞出現（4/4）。
+    探測自身的兩項紅：溝通台詞選擇器漏抓（CommsRow 無 testid，改讀 timeline-body 後 PASS）；「4× 自然結束」在軟體繪圖（Basic Render Driver ~8 fps）下 17 分鐘只到 9:26——測試環境限制，戰鬥→結算由 Result/Replay gate 驗證。
+  - Wave／Gank／Team Call 是引擎內部決策、不進 snapshot，正式站只能驗 bundle 規則鍵；行為計數由本地 `check_moba_tactical_ai_p2` 33/33 驗證（TD-31）。
+  - Competitive 維持 disabled：`check_competitive_enablement_v1` 130/130（A2 `COMPETITIVE_ENABLED = false`）；正式站首頁無可按的排位入口。
+- 正式站 smoke gate 版本期待值 v19 → v20（只改版本事實，commit `92245f4`）。
+- 維持不變：Map Topology FROZEN；CS／FPS、Online／DB 未碰；既有紅燈與技術債照舊。
+- Phase 3 尚未開始（Owner 指示）。
