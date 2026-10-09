@@ -18,10 +18,39 @@
 //   （ruleOverrides / incomeK / itemsStrategies / forcedLayout）一律拒絕，
 //   錯誤碼 `tool_field_in_production`（每個違規鍵一筆）。
 //
-//  【雜湊涵蓋範圍】matchSetupHash = stableStringify（鍵排序）後的 FNV-1a。
+//  【Production ruleset 鎖定】kind="production" 的 ruleset 只能是登錄值或其「旗標關閉」版本：
+//   · layers 的鍵集合必須與登錄值相同（未知／缺鍵 ⇒ production_layer_mismatch）。
+//   · 非布林層（objectiveLayout / playerStatSides / redTactic）必須與登錄值完全相等。
+//   · 布林層可等於登錄值或被關閉，**永遠不能被打開**。
+//   · bySeed 規則集下，明確給的 objectiveLayout 必須等於 objectiveLayoutForSeed(seed)
+//     （恢復進行中場次的路徑）；不同 ⇒ objective_layout_conflict。
+//   工具（kind="tool"）規則集的字串層可由工具自選（仍受 validateRuleset 列舉檢查），
+//   布林層同樣不能超出登錄值。
+//
+//  【effectiveLayers（由 setup 自身資料推導，納入雜湊）】
+//   組裝階段「實際會呼叫哪些 configure*」的資料面答案；golden 的 features 以它驗證：
+//   · layoutConfigured：ruleset 的 objectiveLayout 層 !== "standard"
+//   · players.{blue,red}：該側有玩家素質槽（受 playerStatSides 限制）
+//   · heroMods / archetypes / spells：roster 存在
+//   · heroSkills / heroPassives / heroPowerCurve / battleTalents：該層開 且 roster 存在
+//     ⚠ battleTalents 只代表「天賦選擇器會被呼叫」；選擇器是否真的回傳任何選擇由組裝階段決定，
+//       setup 不預測（golden applied ⊆ effective）。
+//   · items：該層開 且 roster 存在 且（production：buildStrategy 存在／tool：tool.itemsStrategies 存在）
+//     對應 Live（useLocalServer.js 的 itemsOn && opts.roster && buildStrategy）與
+//     runner（config !== "off"）。
+//   · match：藍方戰術存在（Live 只在 opts.tactic?.tacticId 時呼叫 configureMatch）
+//   Assembly 的呼叫「順序」不是本檔的事（Task 3）。
+//
+//  【正規形（雜湊穩定）】空物件代表「未提供」：loadout / talentSelections / roster /
+//   tool.ruleOverrides 的 {} ⇒ null；playerSlots 兩側皆空 ⇒ null；tool.itemsStrategies 兩側皆
+//   null／{} ⇒ null（= 裝備關）。itemsStrategies 的正規形是 { blue: string, red: string }：
+//   只給一側時另一側補 "standard"（adapter 的 defaultStrategy）；「全標準」必須明寫成
+//   { blue: "standard", red: "standard" }，與 null（不掛裝備）不同。
+//
+//  【雜湊涵蓋範圍】matchSetupHash = stableStringify（鍵排序）後的 FNV-1a 64。
 //   涵蓋：schema、**解析後的 ruleset 全文（含 layers）**、seed、
-//         objectiveLayout（有效值，含 standard 規則集固定的 "STANDARD"）、loadout、playerSlots、roster、talentSelections、
-//         buildStrategy、tactic、tool。
+//         objectiveLayout（有效值，含 standard 規則集固定的 "STANDARD"）、loadout、playerSlots、
+//         roster、talentSelections、buildStrategy、tactic、tool、effectiveLayers。
 //   不涵蓋：`meta`（sessionId / mode / opponentId / seedSource：UI 與追蹤用的來源標記，
 //         不是模擬輸入；兩份只差 seedSource 的 setup 雜湊相同）。
 //         呈現層欄位（playbackRate、quality、debug / diag 旗標）不是 setup 欄位——
@@ -35,7 +64,7 @@
 // ============================================================================
 import { rulesetById, validateRuleset, PRODUCTION_FORBIDDEN_KEYS } from "./matchRuleset.js";
 import { stableStringify } from "./squadSnapshot.js";
-import { resolveObjectiveLayout, OBJECTIVE_LAYOUTS } from "./objectiveLayout.js";
+import { resolveObjectiveLayout, objectiveLayoutForSeed, OBJECTIVE_LAYOUTS } from "./objectiveLayout.js";
 import { MOBA_TACTIC_VERSION } from "./MobaTacticConfig.js";
 
 export const MATCH_SETUP_VERSION = "MatchSetup.v1";
@@ -118,10 +147,20 @@ export function createMatchSetup(input) {
       else if (candidate.kind !== base.kind || candidate.simVersion !== base.simVersion)
         err("ruleset_invalid", "ruleset", "kind / simVersion must match the registered ruleset");
       else {
-        // flags may only switch registered layers OFF — never force one on.
-        for (const [layer, on] of Object.entries(candidate.layers))
-          if (on === true && base.layers[layer] !== true) err("ruleset_invalid", `ruleset.layers.${layer}`, "layer enabled beyond the registered ruleset");
-        if (!errors.some((e) => e.code === "ruleset_invalid")) ruleset = candidate;
+        // flags may only switch registered boolean layers OFF — never force one on.
+        // production additionally pins the key set and every non-boolean layer to the registered value.
+        const code = base.kind === "production" ? "production_layer_mismatch" : "ruleset_invalid";
+        const before = errors.length;
+        for (const k of Object.keys(candidate.layers)) if (!(k in base.layers)) err(code, `ruleset.layers.${k}`, "unknown layer key");
+        for (const [k, b] of Object.entries(base.layers)) {
+          const g = candidate.layers[k], f = `ruleset.layers.${k}`;
+          if (!(k in candidate.layers)) err(code, f, "missing layer key");
+          else if (typeof b === "boolean") {
+            if (typeof g !== "boolean") err(code, f, "layer must be boolean");
+            else if (g && !b) err(code, f, "layer enabled beyond the registered ruleset");
+          } else if (base.kind === "production" && g !== b) err(code, f, `production layer is pinned to "${b}"`);
+        }
+        if (errors.length === before) ruleset = candidate;
       }
     }
   }
@@ -144,7 +183,7 @@ export function createMatchSetup(input) {
     tool = { ruleOverrides: null, incomeK: null, itemsStrategies: null, forcedLayout: null };
     if (t.ruleOverrides != null) {
       if (!isPlainObject(t.ruleOverrides)) err("tool_invalid", "tool.ruleOverrides", "ruleOverrides must be a plain object");
-      else tool.ruleOverrides = clonePlain(t.ruleOverrides);
+      else tool.ruleOverrides = Object.keys(t.ruleOverrides).length ? clonePlain(t.ruleOverrides) : null;
     }
     if (t.incomeK != null) {
       if (typeof t.incomeK !== "number" || !Number.isFinite(t.incomeK) || t.incomeK <= 0) err("tool_invalid", "tool.incomeK", "incomeK must be a positive finite number");
@@ -154,8 +193,9 @@ export function createMatchSetup(input) {
       const s = t.itemsStrategies;
       if (!isPlainObject(s) || Object.keys(s).some((k) => k !== "blue" && k !== "red") ||
           [s.blue, s.red].some((x) => x != null && !isStr(x))) err("tool_invalid", "tool.itemsStrategies", "itemsStrategies must be { blue, red } of non-empty strings or null");
+      else if (s.blue == null && s.red == null) tool.itemsStrategies = null;
       else if (ruleset && ruleset.layers.items !== true) err("layer_off_input_present", "tool.itemsStrategies", "items layer is off in this ruleset");
-      else tool.itemsStrategies = { blue: s.blue ?? null, red: s.red ?? null };
+      else tool.itemsStrategies = { blue: s.blue ?? "standard", red: s.red ?? "standard" };
     }
     if (t.forcedLayout != null) {
       if (!OBJECTIVE_LAYOUTS.includes(t.forcedLayout)) err("tool_invalid", "tool.forcedLayout", "forcedLayout must be STANDARD or SWAPPED");
@@ -182,6 +222,8 @@ export function createMatchSetup(input) {
     } else if (mode === "explicit") {
       objectiveLayout = explicit ?? forced;
       if (objectiveLayout === null) err("objective_layout_required", "objectiveLayout", "this ruleset requires an explicit objectiveLayout");
+    } else if (mode === "bySeed" && ruleset.kind === "production" && explicit !== null && explicit !== objectiveLayoutForSeed(input.seed)) {
+      err("objective_layout_conflict", "objectiveLayout", "a bySeed production ruleset only accepts the layout derived from the seed");
     } else { // bySeed
       objectiveLayout = resolveObjectiveLayout({ explicit: explicit ?? forced, seed: input.seed });
     }
@@ -194,13 +236,15 @@ export function createMatchSetup(input) {
     if (!isPlainObject(l) || Object.keys(l).some((k) => !isSeat(k)) ||
         Object.values(l).some((r) => !isPlainObject(r) || Object.values(r).some((x) => typeof x !== "number" || !Number.isFinite(x))))
       err("loadout_invalid", "loadout", "loadout must be { seat: { numeric fields } } with seats b1-b5/r1-r5");
-    else loadout = clonePlain(l);
+    else loadout = Object.keys(l).length ? clonePlain(l) : null;
   }
 
   // ---- player stat slots --------------------------------------------------
   let playerSlots = null;
   const sides = ruleset?.layers.playerStatSides;
-  if (input.playerSlots != null) {
+  const emptySlots = isPlainObject(input.playerSlots) && !input.playerSlots.blue?.length && !input.playerSlots.red?.length
+    && Object.keys(input.playerSlots).every((k) => k === "blue" || k === "red");
+  if (input.playerSlots != null && !emptySlots) {
     const p = input.playerSlots;
     if (!isPlainObject(p) || Object.keys(p).some((k) => k !== "blue" && k !== "red") ||
         [p.blue, p.red].some((a) => a != null && (!Array.isArray(a) || a.some((s) => !isPlainObject(s)))))
@@ -216,7 +260,7 @@ export function createMatchSetup(input) {
 
   // ---- roster (plain data only) -----------------------------------------
   let roster = null;
-  if (input.roster != null) {
+  if (input.roster != null && !(isPlainObject(input.roster) && Object.keys(input.roster).length === 0)) {
     const r = input.roster;
     const ok = isPlainObject(r) && SEATS.every((s) => isPlainObject(r[s])) && Object.keys(r).length === SEATS.length &&
       Object.values(r).every((row) => isStr(row.heroId) &&
@@ -228,7 +272,7 @@ export function createMatchSetup(input) {
 
   // ---- talent selections / build strategy -------------------------------
   let talentSelections = null;
-  if (input.talentSelections != null) {
+  if (input.talentSelections != null && !(isPlainObject(input.talentSelections) && Object.keys(input.talentSelections).length === 0)) {
     const t = input.talentSelections;
     if (!isPlainObject(t) || Object.entries(t).some(([k, v]) => !isSeat(k) || !(v === null || isStr(v))))
       err("talent_selections_invalid", "talentSelections", "talentSelections must be { seat: string|null }");
@@ -272,6 +316,18 @@ export function createMatchSetup(input) {
 
   if (errors.length) return fail();
 
+  const L = ruleset.layers, hasRoster = roster !== null;
+  const effectiveLayers = {
+    layoutConfigured: L.objectiveLayout !== "standard",
+    players: { blue: (playerSlots?.blue.length ?? 0) > 0, red: (playerSlots?.red.length ?? 0) > 0 },
+    heroMods: hasRoster, archetypes: hasRoster, spells: hasRoster,
+    heroSkills: L.heroSkills === true && hasRoster,
+    heroPassives: L.heroPassives === true && hasRoster,
+    heroPowerCurve: L.heroPowerCurve === true && hasRoster,
+    battleTalents: L.battleTalents === true && hasRoster,
+    items: L.items === true && hasRoster && (ruleset.kind === "tool" ? tool?.itemsStrategies != null : buildStrategy !== null),
+    match: tactic.blue !== null,
+  };
   const setup = {
     schema: MATCH_SETUP_VERSION,
     rulesetId: ruleset.rulesetId,
@@ -285,6 +341,7 @@ export function createMatchSetup(input) {
     buildStrategy,
     tactic,
     ...(tool ? { tool } : {}),
+    effectiveLayers,
     meta,
   };
   return { ok: true, setup: deepFreeze(setup), errors: [] };

@@ -4,6 +4,7 @@ import { stableStringify } from "../src/platform/contracts/squadSnapshot.js";
 import { resolveRulesetForMode, rulesetById, PRODUCTION_FORBIDDEN_KEYS } from "../src/platform/contracts/matchRuleset.js";
 import { resolveObjectiveLayout, objectiveLayoutForSeed } from "../src/platform/contracts/objectiveLayout.js";
 import { mobaTacticById } from "../src/platform/contracts/MobaTacticConfig.js";
+import { SIMULATION_SEMANTICS_FILES } from "../src/platform/contracts/simulationVersion.js";
 import { FEATURE_FLAGS } from "../src/featureFlags.js";
 
 let pass = 0, fail = 0;
@@ -61,7 +62,6 @@ const variants = {
   playerSlots: { playerSlots: { blue: blueSlots.slice(1), red: [] } }, roster: { roster: G.liveRosters["7"] },
   talentSelections: { talentSelections: { b1: "tieshixin:counter-form" } }, buildStrategy: { buildStrategy: "standard" },
   tacticBlue: { tactic: { blue: legacy("m8"), red: { kind: "std" } } }, tacticRed: { tactic: { blue: legacy("m4"), red: legacy("m7") } },
-  objectiveLayout: { objectiveLayout: objectiveLayoutForSeed(3) === "SWAPPED" ? "STANDARD" : "SWAPPED" },
 };
 for (const [name, v] of Object.entries(variants)) {
   const r = createMatchSetup(careerInput(v));
@@ -79,12 +79,12 @@ const noItems = createMatchSetup(careerInput({ ruleset: careerNoItems, buildStra
 const withItemsNullBuild = createMatchSetup(careerInput({ buildStrategy: null }));
 ck("S3e 旗標不同的兩份 career.v20 ⇒ rulesetId 相同但雜湊不同", noItems.ok && withItemsNullBuild.ok && noItems.setup.rulesetId === withItemsNullBuild.setup.rulesetId && matchSetupHash(noItems.setup) !== matchSetupHash(withItemsNullBuild.setup), codes(noItems).join(","));
 ck("S3f 層關閉時帶該層輸入 ⇒ layer_off_input_present", codes(createMatchSetup(careerInput({ ruleset: careerNoItems }))).includes("layer_off_input_present"));
-ck("S3g 旗標不能強制開層（ruleset 超出登錄值）", (() => { const forged = { ...challengeRs, layers: { ...challengeRs.layers, items: true }, releaseRequirements: ["itemsV1"] }; return codes(createMatchSetup(chIn({ ruleset: forged }))).includes("ruleset_invalid"); })());
+ck("S3g 旗標不能強制開層（ruleset 超出登錄值）", (() => { const forged = { ...challengeRs, layers: { ...challengeRs.layers, items: true }, releaseRequirements: ["itemsV1"] }; return codes(createMatchSetup(chIn({ ruleset: forged }))).includes("production_layer_mismatch"); })());
 
 // S4 objectiveLayout
 const sw = createMatchSetup(careerInput({ seed: 3 }));
 ck("S4 bySeed 且未給 ⇒ 由 seed 推導（同 resolveObjectiveLayout）", [3, 5, 7, 11, 21, 99].every((seed) => createMatchSetup(careerInput({ seed })).setup.objectiveLayout === resolveObjectiveLayout({ explicit: null, seed })) && sw.setup.objectiveLayout === "SWAPPED");
-ck("S4b bySeed 明確指定優先於 seed", createMatchSetup(careerInput({ seed: 3, objectiveLayout: "STANDARD" })).setup.objectiveLayout === "STANDARD");
+ck("S4b bySeed 明確指定等於推導值時接受（衝突值見 L7）", createMatchSetup(careerInput({ seed: 3, objectiveLayout: objectiveLayoutForSeed(3) })).setup.objectiveLayout === objectiveLayoutForSeed(3));
 ck("S4c standard ruleset ⇒ 固定 STANDARD（不管 seed）", [3, 7, 11, 13].every((seed) => createMatchSetup(chIn({ seed })).setup.objectiveLayout === "STANDARD"));
 ck("S4d standard ruleset 要求 SWAPPED ⇒ conflict", codes(createMatchSetup(chIn({ objectiveLayout: "SWAPPED" }))).includes("objective_layout_conflict"));
 ck("S4e tool.forcedLayout 覆蓋 seed 推導", (() => { const seed = [3, 5, 7, 11, 13, 17].find((x) => objectiveLayoutForSeed(x) === "STANDARD"); return createMatchSetup(toolIn({ seed, tool: { forcedLayout: "SWAPPED" } })).setup.objectiveLayout === "SWAPPED"; })());
@@ -116,40 +116,109 @@ ck("H2 UTF-8 位元組（非 UTF-16 碼元）：中文字串向量由獨立實�
 ck("H3 setup 雜湊為 stableStringify（去 meta）的 FNV-1a 64", (() => { const { meta, ...rest } = s1.setup; return h1 === fnv1a64Hex(stableStringify(rest)); })());
 ck("D4 matchSetup.js 不 import heroDatabase", !/heroDatabase|heroImages/.test(fs.readFileSync(new URL("../src/platform/contracts/matchSetup.js", import.meta.url), "utf8").replace(/\/\/.*$/gm, "")));
 ck("D5 matchSetup.js 無 React/zustand/localStorage/Date/Math.random", !/\b(react|zustand|localStorage|Date\.now|Math\.random|performance\.now)\b/.test(fs.readFileSync(new URL("../src/platform/contracts/matchSetup.js", import.meta.url), "utf8").replace(/\/\/.*$/gm, "")));
-ck("D6 不在 SIMULATION_SEMANTICS_FILES", (() => { const hits = fs.readdirSync(new URL("../tools/", import.meta.url)).filter((f) => f.endsWith(".mjs")).filter((f) => /SIMULATION_SEMANTICS_FILES/.test(fs.readFileSync(new URL(`../tools/${f}`, import.meta.url), "utf8"))); return !hits.some((f) => /matchSetup/.test(fs.readFileSync(new URL(`../tools/${f}`, import.meta.url), "utf8").split("SIMULATION_SEMANTICS_FILES")[1]?.slice(0, 2000) ?? "")); })());
+ck("D6 matchSetup.js 不在 SIMULATION_SEMANTICS_FILES（清單非空且不含它）", Array.isArray(SIMULATION_SEMANTICS_FILES) && SIMULATION_SEMANTICS_FILES.length > 5 && !SIMULATION_SEMANTICS_FILES.includes("src/platform/contracts/matchSetup.js") && !SIMULATION_SEMANTICS_FILES.some((f) => /matchSetup/.test(f)));
 
 // 玩家素質邊與 ruleset 一致
-ck("P1 career 可無 playerSlots（golden live-noplayers）；blue 給空陣列 ⇒ mismatch", createMatchSetup(careerInput({ playerSlots: null })).ok && codes(createMatchSetup(careerInput({ playerSlots: { blue: [], red: [] } }))).includes("player_slots_mismatch"));
+ck("P1 career 可無 playerSlots（golden live-noplayers）；空 slots 正規化為 null", createMatchSetup(careerInput({ playerSlots: null })).ok && createMatchSetup(careerInput({ playerSlots: { blue: [], red: [] } })).setup.playerSlots === null);
 ck("P2 career 給 red slots ⇒ mismatch", codes(createMatchSetup(careerInput({ playerSlots: { blue: blueSlots, red: redSlots } }))).includes("player_slots_mismatch"));
 ck("P3 challenge 需雙方 slots", codes(createMatchSetup(chIn({ playerSlots: { blue: blueSlots, red: [] } }))).includes("player_slots_mismatch"));
 ck("P3b challenge 缺 playerSlots ⇒ mismatch", codes(createMatchSetup(chIn({ playerSlots: null }))).includes("player_slots_mismatch"));
 ck("P4 tool ruleset（none）給 slots ⇒ mismatch", codes(createMatchSetup(toolIn({ playerSlots: { blue: blueSlots, red: [] } }))).includes("player_slots_mismatch"));
 
-// 覆蓋 golden 的三條路徑：以 fixture 的實際輸入重建，全部要能成 setup
-const liveCases = golden.cases.filter((c) => c.path === "live");
-ck(`G1 golden live ${liveCases.length} 案全部可成 setup，且 layout 與 golden 一致`, liveCases.every((c) => {
-  const r = createMatchSetup({ ruleset: career, seed: c.seed, loadout: G.defaultLoadout, playerSlots: c.params.noPlayers ? null : { blue: blueSlots, red: [] },
-    roster: c.params.noRoster ? null : G.liveRosters[String(c.seed)],
-    talentSelections: c.liveOpts.talentSelections, buildStrategy: c.live.buildStrategy,
-    tactic: { blue: (c.params.tacticId ? legacy(c.params.tacticId) : null), red: c.live.redTacticId === "std" ? { kind: "std" } : legacy(c.live.redTacticId) },
-    meta: { sessionId: null, mode: "career", opponentId: c.liveOpts.opponentId, seedSource: "session" } });
-  return r.ok && r.setup.objectiveLayout === c.live.objectiveLayout;
-}));
-const chCases = golden.cases.filter((c) => c.path === "challenge");
-ck(`G2 golden challenge ${chCases.length} 案全部可成 setup（STANDARD、雙方 slots、draft 有無 roster）`, chCases.every((c) => {
-  const r = createMatchSetup(chIn({ seed: c.seed, roster: c.params.draft ? G.liveRosters[String(c.seed)] ?? G.runnerRosters[String(c.seed)] ?? G.liveRosters["3"] : null,
-    tactic: { blue: legacy(c.params.tacticIds[0]), red: legacy(c.params.tacticIds[1]) } }));
-  return r.ok && r.setup.objectiveLayout === "STANDARD";
-}));
-const runCases = golden.cases.filter((c) => c.path === "runner");
-ck(`G3 golden runner ${runCases.length} 案全部可成 setup（工具規則集、每方 items 策略）`, runCases.every((c) => {
-  const items = c.features.items;
-  const skillsOn = c.params.skills !== false;
-  const r = createMatchSetup(toolIn({ seed: c.seed, roster: G.runnerRosters[String(c.seed)] ?? null,
-    tool: skillsOn && items.applied ? { itemsStrategies: { blue: items.blueStrategies[0], red: items.redStrategies[0] } } : undefined }));
-  return r.ok && r.setup.objectiveLayout === c.features.objectiveLayout;
-}));
-ck("G4 golden live 每案雜湊皆不同（輸入有差異就有不同雜湊）", (() => { const hs = liveCases.map((c) => matchSetupHash(createMatchSetup({ ruleset: career, seed: c.seed, meta: { seedSource: "session" }, loadout: G.defaultLoadout, playerSlots: c.params.noPlayers ? null : { blue: blueSlots, red: [] }, roster: c.params.noRoster ? null : G.liveRosters[String(c.seed)], talentSelections: c.liveOpts.talentSelections, buildStrategy: c.live.buildStrategy, tactic: { blue: (c.params.tacticId ? legacy(c.params.tacticId) : null), red: c.live.redTacticId === "std" ? { kind: "std" } : legacy(c.live.redTacticId) } }).setup)); return new Set(hs).size === hs.length; })());
+// 覆蓋 golden 的三條路徑：39 案「全部」以正確的 ruleset 重建成 setup，並以 effectiveLayers 對照 golden features
+const OFF_SKILLS = { heroSkills: false, heroPassives: false, heroPowerCurve: false, battleTalents: false, items: false };
+const toolRulesetFor = (c) => (c.params.skills === false
+  ? Object.freeze({ ...toolRs, layers: Object.freeze({ ...toolRs.layers, ...OFF_SKILLS }) })
+  : toolRs);
+const encodeCase = (c) => {
+  if (c.path === "live") {
+    return { ruleset: career, seed: c.seed, loadout: G.defaultLoadout,
+      playerSlots: c.params.noPlayers ? null : { blue: blueSlots, red: [] },
+      roster: c.params.noRoster ? null : G.liveRosters[String(c.seed)],
+      talentSelections: c.liveOpts.talentSelections, buildStrategy: c.live.buildStrategy,
+      tactic: { blue: c.params.tacticId ? legacy(c.params.tacticId) : null, red: c.live.redTacticId === "std" ? { kind: "std" } : legacy(c.live.redTacticId) },
+      meta: { sessionId: null, mode: "career", opponentId: c.liveOpts.opponentId, seedSource: "session" } };
+  }
+  if (c.path === "challenge") {
+    return chIn({ seed: c.seed, roster: c.params.draft ? (G.liveRosters[String(c.seed)] ?? G.liveRosters["3"]) : null,
+      tactic: { blue: legacy(c.params.tacticIds[0]), red: legacy(c.params.tacticIds[1]) } });
+  }
+  const it = c.features.items;
+  return toolIn({ ruleset: toolRulesetFor(c), seed: c.seed, roster: G.runnerRosters[String(c.seed)],
+    tool: it.applied ? { itemsStrategies: { blue: it.blueStrategies[0], red: it.redStrategies[0] } } : undefined });
+};
+const featureMismatches = (c, setup) => {
+  const e = setup.effectiveLayers, f = c.features, bad = [];
+  const want = (name, a, b) => { if (a !== b) bad.push(`${name}: setup=${a} golden=${b}`); };
+  want("layout", e.layoutConfigured ? setup.objectiveLayout : null, f.objectiveLayout);
+  want("players.blue", e.players.blue, f.playerStatSides.includes("blue"));
+  want("players.red", e.players.red, f.playerStatSides.includes("red"));
+  for (const k of ["heroMods", "heroSkills", "heroPassives", "heroPowerCurve", "archetypes", "spells"]) want(k, e[k], f[k]);
+  want("items", e.items, f.items.applied);
+  want("match", e.match, f.tactic !== null);
+  if (f.battleTalents.applied && !e.battleTalents) bad.push("battleTalents: golden applied but setup not effective");
+  return bad;
+};
+const allCases = golden.cases;
+const built = allCases.map((c) => ({ c, r: createMatchSetup(encodeCase(c)) }));
+ck(`G1 golden ${allCases.length} 案全部可成 setup（live ${allCases.filter((c) => c.path === "live").length} / challenge ${allCases.filter((c) => c.path === "challenge").length} / runner ${allCases.filter((c) => c.path === "runner").length}）`, allCases.length === 39 && built.every((b) => b.r.ok), built.filter((b) => !b.r.ok).map((b) => `${b.c.id}:${codes(b.r)}`).join(" "));
+const mism = built.filter((b) => b.r.ok).map((b) => [b.c.id, featureMismatches(b.c, b.r.setup)]).filter(([, m]) => m.length);
+ck("G2 effectiveLayers 與 39 案 golden features 逐項一致（layout / players / heroMods / skills / passives / curve / archetypes / spells / items / match；talents applied ⊆ effective）", mism.length === 0, mism.slice(0, 3).map(([id, m]) => `${id}{${m.join(";")}}`).join(" "));
+ck("G2b battleTalents effective 與 golden applied 在 39 案中完全相等（目前無「選擇器空手」案）", built.every((b) => b.r.setup.effectiveLayers.battleTalents === b.c.features.battleTalents.applied));
+ck("G2c 設定層鏡像：live-noroster 只有 layout+players+match；runner-off 有 heroMods/archetypes/spells 但無技能／天賦／裝備；challenge-nodraft 只有 players+match", (() => {
+  const E = (id) => built.find((b) => b.c.id === id).r.setup.effectiveLayers;
+  const nr = E("live-noroster-21"), ro = E("runner-off-3"), nd = E("challenge-nodraft-3"), dr = E("challenge-draft-3");
+  return nr.layoutConfigured && nr.players.blue && nr.match && !nr.heroMods && !nr.archetypes && !nr.spells && !nr.heroSkills && !nr.items
+    && ro.heroMods && ro.archetypes && ro.spells && !ro.heroSkills && !ro.battleTalents && !ro.items && !ro.players.blue && ro.match
+    && !nd.layoutConfigured && nd.players.blue && nd.players.red && nd.match && !nd.heroMods && !nd.spells
+    && dr.heroMods && dr.archetypes && dr.spells && !dr.heroSkills && !dr.layoutConfigured;
+})());
+ck("G2d live-notactic 無 match；live-noplayers 無 players；effectiveLayers 為凍結物件", (() => {
+  const E = (id) => built.find((b) => b.c.id === id).r.setup.effectiveLayers;
+  return E("live-notactic-13").match === false && E("live-noplayers-17").players.blue === false && Object.isFrozen(E("live-m4-3")) && Object.isFrozen(E("live-m4-3").players);
+})());
+const hsh = (x) => matchSetupHash(x.r.setup);
+ck("G3 39 案雜湊兩兩相異（同 seed 的 live/challenge/runner 也不同）", new Set(built.map(hsh)).size === built.length);
+ck("G3b effectiveLayers 納入雜湊：只差 buildStrategy（items 有無）⇒ 雜湊不同且 items 旗標翻轉", (() => {
+  const c = allCases.find((x) => x.id === "live-m4-3");
+  const a = createMatchSetup(encodeCase(c)), b = createMatchSetup({ ...encodeCase(c), buildStrategy: null });
+  return a.ok && b.ok && a.setup.effectiveLayers.items && !b.setup.effectiveLayers.items && matchSetupHash(a.setup) !== matchSetupHash(b.setup);
+})());
+ck("G3c tool items：{blue:early} 補 red=standard；全空 ⇒ null（裝備關）", (() => {
+  const a = createMatchSetup(toolIn({ tool: { itemsStrategies: { blue: "early" } } })), b = createMatchSetup(toolIn({ tool: { itemsStrategies: {} } })), c = createMatchSetup(toolIn({ tool: { itemsStrategies: { blue: "standard", red: "standard" } } }));
+  return a.setup.tool.itemsStrategies.red === "standard" && b.setup.tool.itemsStrategies === null && !b.setup.effectiveLayers.items && c.setup.effectiveLayers.items && matchSetupHash(b.setup) !== matchSetupHash(c.setup);
+})());
+
+// production ruleset 鎖定（review probes）
+const withLayers = (rs, patch) => Object.freeze({ ...rs, layers: Object.freeze({ ...rs.layers, ...patch }) });
+const hasCode = (r, code) => !r.ok && r.errors.some((e) => e.code === code);
+ck("L1 challenge.v20 + objectiveLayout:'bySeed' ⇒ production_layer_mismatch", hasCode(createMatchSetup(chIn({ ruleset: withLayers(challengeRs, { objectiveLayout: "bySeed" }) })), "production_layer_mismatch"));
+ck("L2 career.v20 + objectiveLayout:'explicit' ⇒ production_layer_mismatch", hasCode(createMatchSetup(careerInput({ ruleset: withLayers(career, { objectiveLayout: "explicit" }), objectiveLayout: "SWAPPED" })), "production_layer_mismatch"));
+ck("L3 production playerStatSides / redTactic 改值 ⇒ mismatch", hasCode(createMatchSetup(chIn({ ruleset: withLayers(challengeRs, { playerStatSides: "blue" }) })), "production_layer_mismatch") && hasCode(createMatchSetup(careerInput({ ruleset: withLayers(career, { redTactic: "std" }) })), "production_layer_mismatch"));
+ck("L4 production 未知／缺少 layer 鍵、非布林值 ⇒ mismatch", hasCode(createMatchSetup(careerInput({ ruleset: withLayers(career, { sneaky: true }) })), "production_layer_mismatch")
+  && hasCode(createMatchSetup(careerInput({ ruleset: Object.freeze({ ...career, layers: Object.freeze(Object.fromEntries(Object.entries(career.layers).filter(([k]) => k !== "redTactic"))) }) })), "production_layer_mismatch")
+  && hasCode(createMatchSetup(careerInput({ ruleset: withLayers(career, { items: "yes" }) })), "production_layer_mismatch"));
+ck("L5 production 布林層不能打開（challenge items:true）", !createMatchSetup(chIn({ ruleset: withLayers(challengeRs, { items: true }) })).ok);
+ck("L6 production 布林層可關閉（career items:false 仍成立）", createMatchSetup(careerInput({ ruleset: withLayers(career, { items: false }), buildStrategy: null })).ok);
+const derived3 = objectiveLayoutForSeed(3), other3 = derived3 === "SWAPPED" ? "STANDARD" : "SWAPPED";
+ck("L7 career bySeed：與 seed 推導衝突的 explicit ⇒ objective_layout_conflict", hasCode(createMatchSetup(careerInput({ seed: 3, objectiveLayout: other3 })), "objective_layout_conflict"));
+ck("L8 career bySeed：與推導一致的 explicit 仍接受（恢復路徑），結果相同雜湊", (() => { const a = createMatchSetup(careerInput({ seed: 3, objectiveLayout: derived3 })), b = createMatchSetup(careerInput({ seed: 3 })); return a.ok && matchSetupHash(a.setup) === matchSetupHash(b.setup); })());
+ck("L9 tool 規則集：explicit 與 forcedLayout 不同 ⇒ conflict；forcedLayout 不同 ⇒ 雜湊不同", (() => {
+  const c = createMatchSetup(toolIn({ objectiveLayout: "STANDARD", tool: { forcedLayout: "SWAPPED" } }));
+  const a = createMatchSetup(toolIn({ tool: { forcedLayout: "STANDARD" } })), b = createMatchSetup(toolIn({ tool: { forcedLayout: "SWAPPED" } }));
+  return hasCode(c, "objective_layout_conflict") && matchSetupHash(a.setup) !== matchSetupHash(b.setup);
+})());
+ck("L10 tool 規則集的布林層也不能超出登錄值", !createMatchSetup(toolIn({ ruleset: withLayers(toolRs, { heroSkills: 1 }) })).ok);
+
+// 正規形
+ck("N1 空物件 ⇒ null：loadout / talentSelections / roster / tool.ruleOverrides / 空 playerSlots，雜湊與省略相同", (() => {
+  const a = createMatchSetup(careerInput({ loadout: {}, talentSelections: {}, roster: {}, playerSlots: { blue: [], red: [] }, buildStrategy: null }));
+  const b = createMatchSetup(careerInput({ loadout: null, talentSelections: null, roster: null, playerSlots: null, buildStrategy: null }));
+  const t1 = createMatchSetup(toolIn({ tool: { ruleOverrides: {} } })), t2 = createMatchSetup(toolIn());
+  return a.ok && b.ok && a.setup.loadout === null && a.setup.talentSelections === null && a.setup.roster === null && a.setup.playerSlots === null
+    && matchSetupHash(a.setup) === matchSetupHash(b.setup) && t1.setup.tool.ruleOverrides === null && matchSetupHash(t1.setup) === matchSetupHash(t2.setup);
+})());
+ck("N2 challenge 的空 playerSlots 仍是 mismatch（both 必須有素質槽）", hasCode(createMatchSetup(chIn({ playerSlots: { blue: [], red: [] } })), "player_slots_mismatch"));
 
 // 錯誤形狀
 ck("E1 失敗回傳 { ok:false, setup:null, errors[{code,field,message}] }", (() => { const r = createMatchSetup(careerInput({ seed: "x", meta: { seedSource: "?" } })); return !r.ok && r.setup === null && r.errors.length >= 2 && r.errors.every((e) => e.code && e.field && e.message); })());
