@@ -2,7 +2,7 @@
   "schema": "match_golden_v20.v1",
   "simVersion": "moba-sim.v20",
   "fingerprint": "050b3f66620f0f57",
-  "gitHead": "32b17424cbacab4b2d2806b4f151349d5d32f54b",
+  "gitHead": "aeb72e59f6b29f626d128df0c40f063977716593",
   "node": "v24.18.0",
   "featureFlags": {
     "devFastForward": true,
@@ -23,14 +23,14 @@
   "streamEvery": 20,
   "verification": {
     "instrumentationNonInvasive": true,
-    "compared": 30,
+    "compared": 39,
     "note": "live/runner: digest+streamHash equal; challenge: full ChallengeResult hash equal and probe-observed engine agrees with result"
   },
   "counts": {
-    "total": 30,
-    "live": 6,
+    "total": 39,
+    "live": 9,
     "challenge": 12,
-    "runner": 12
+    "runner": 18
   },
   "inputs": {
     "note": "Rebuild every case from these. liveRoster(seed): LCG(seed^0x5eed), per role pick archetype then hero from CHAMPIONS_100, blue then red, distinct. Challenge snapshots = fixtureSnapshot(keyA/keyB) with standingOrders.tacticId overridden (+ rehash); no-draft cases drop draftPolicy from capturedInputs (+ rehash).",
@@ -461,6 +461,150 @@
           ]
         }
       },
+      "13": {
+        "b1": {
+          "heroId": "rongyan",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "jueying",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "shikong",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "xuanfeng",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "xukong",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r1": {
+          "heroId": "greymantle",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "jingxiang",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "mingyun2",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "liangzi",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "shengdun",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "17": {
+        "b1": {
+          "heroId": "tielian",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "dushe",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "lieyan",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "yanfeng",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "mantra",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r1": {
+          "heroId": "stoneguard",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r2": {
+          "heroId": "rongyan",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r3": {
+          "heroId": "auralith",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r4": {
+          "heroId": "leiting",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r5": {
+          "heroId": "tianshi",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      },
       "19": {
         "b1": {
           "heroId": "dushe",
@@ -751,6 +895,78 @@
           ]
         }
       },
+      "6": {
+        "b1": {
+          "heroId": "jingci",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "jingci",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "greymantle",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "greymantle",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "ronghuo",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "ronghuo",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "hanbing",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "hanbing",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "xuemai",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r5": {
+          "heroId": "xuemai",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        }
+      },
       "7": {
         "b1": {
           "heroId": "longyi",
@@ -817,6 +1033,78 @@
         },
         "r5": {
           "heroId": "longji",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "10": {
+        "b1": {
+          "heroId": "langwang",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "langwang",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "youming",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "youming",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "leiming",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "leiming",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "siwang",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "siwang",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "tiemu",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r5": {
+          "heroId": "tiemu",
           "spells": [
             "flash",
             "ignite"
@@ -892,6 +1180,150 @@
           "spells": [
             "flash",
             "ignite"
+          ]
+        }
+      },
+      "14": {
+        "b1": {
+          "heroId": "tieshixin",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "tieshixin",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "binghe",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "binghe",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "bingshuang",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "bingshuang",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "mori",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "mori",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "tixue",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r5": {
+          "heroId": "tixue",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        }
+      },
+      "15": {
+        "b1": {
+          "heroId": "bingshouweis",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "r1": {
+          "heroId": "bingshouweis",
+          "spells": [
+            "flash",
+            "teleport"
+          ]
+        },
+        "b2": {
+          "heroId": "shanying",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "r2": {
+          "heroId": "shanying",
+          "spells": [
+            "flash",
+            "smite"
+          ]
+        },
+        "b3": {
+          "heroId": "mingyun2",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "r3": {
+          "heroId": "mingyun2",
+          "spells": [
+            "flash",
+            "ignite"
+          ]
+        },
+        "b4": {
+          "heroId": "leiting",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "r4": {
+          "heroId": "leiting",
+          "spells": [
+            "flash",
+            "heal"
+          ]
+        },
+        "b5": {
+          "heroId": "linghun",
+          "spells": [
+            "flash",
+            "cleanse"
+          ]
+        },
+        "r5": {
+          "heroId": "linghun",
+          "spells": [
+            "flash",
+            "cleanse"
           ]
         }
       },
@@ -4112,6 +4544,948 @@
         {
           "m": "configureMatch",
           "h": "38132093"
+        }
+      ]
+    },
+    {
+      "id": "runner-early-3",
+      "path": "runner",
+      "seed": 3,
+      "params": {
+        "id": "runner-early-3",
+        "path": "runner",
+        "seed": 3,
+        "config": "early",
+        "skills": true,
+        "talents": true,
+        "index": 0
+      },
+      "digest": "1073.5:blue:16:6:32726:27174",
+      "streamHash": "57ab26f5",
+      "ctor": {
+        "seed": 3,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "early"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "8d99cc8e"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "edee0cfd"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "4d4eacbd"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "3c9872c8"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "830b1558"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "e21bb9d6"
+        }
+      ]
+    },
+    {
+      "id": "runner-early-7",
+      "path": "runner",
+      "seed": 7,
+      "params": {
+        "id": "runner-early-7",
+        "path": "runner",
+        "seed": 7,
+        "config": "early",
+        "skills": true,
+        "talents": true,
+        "index": 1
+      },
+      "digest": "847.0:blue:5:2:24798:19805",
+      "streamHash": "82546321",
+      "ctor": {
+        "seed": 7,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "early"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "87ce2922"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "2d89b395"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "41889c13"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "a12845e2"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "a9751b7c"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "0354e146"
+        }
+      ]
+    },
+    {
+      "id": "runner-early-10",
+      "path": "runner",
+      "seed": 10,
+      "params": {
+        "id": "runner-early-10",
+        "path": "runner",
+        "seed": 10,
+        "config": "early",
+        "skills": true,
+        "talents": true,
+        "index": 2
+      },
+      "digest": "808.0:blue:4:2:23383:21092",
+      "streamHash": "3bb44887",
+      "ctor": {
+        "seed": 10,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "early"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "87ce2922"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "94443f0f"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "50e6bad7"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "42a08f40"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "ea4dfce8"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "01f210b6"
+        }
+      ]
+    },
+    {
+      "id": "runner-early-14",
+      "path": "runner",
+      "seed": 14,
+      "params": {
+        "id": "runner-early-14",
+        "path": "runner",
+        "seed": 14,
+        "config": "early",
+        "skills": true,
+        "talents": true,
+        "index": 3
+      },
+      "digest": "851.5:red:11:6:25919:24353",
+      "streamHash": "64c443e2",
+      "ctor": {
+        "seed": 14,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "early"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "f398f1d2"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "b3b988f9"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "30c5de9b"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "8756c842"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "0b8b9d28"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "3976a042"
+        }
+      ]
+    },
+    {
+      "id": "runner-counter-6",
+      "path": "runner",
+      "seed": 6,
+      "params": {
+        "id": "runner-counter-6",
+        "path": "runner",
+        "seed": 6,
+        "config": "counter",
+        "skills": true,
+        "talents": true,
+        "index": 0
+      },
+      "digest": "1440.0:blue:20:23:41016:41444",
+      "streamHash": "35e671b7",
+      "ctor": {
+        "seed": 6,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "counter"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "8d99cc8e"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "77a70975"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "d777ca5b"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "026bc1b6"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "0b27c0fc"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "73e85225"
+        }
+      ]
+    },
+    {
+      "id": "runner-counter-15",
+      "path": "runner",
+      "seed": 15,
+      "params": {
+        "id": "runner-counter-15",
+        "path": "runner",
+        "seed": 15,
+        "config": "counter",
+        "skills": true,
+        "talents": true,
+        "index": 1
+      },
+      "digest": "1221.0:blue:14:11:34368:33436",
+      "streamHash": "1853a47b",
+      "ctor": {
+        "seed": 15,
+        "loadoutHash": null
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": "runner: selectBattleTalents(roster) without picks (all AI)"
+        },
+        "tactic": {
+          "blue": "std",
+          "red": "std",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "standard"
+          ],
+          "redStrategies": [
+            "counter"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "b3084d5e"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "1e27b14f"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "4963f737"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "2d4bfd02"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "271d71c0"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "38132093"
+        },
+        {
+          "m": "configureItems",
+          "h": "b744f047"
+        }
+      ]
+    },
+    {
+      "id": "live-notactic-13",
+      "path": "live",
+      "seed": 13,
+      "params": {
+        "id": "live-notactic-13",
+        "path": "live",
+        "seed": 13,
+        "tacticId": null,
+        "talents": true,
+        "buildStrategy": "survival",
+        "opponent": "ai",
+        "index": 6
+      },
+      "digest": "851.5:blue:4:3:23544:22448",
+      "streamHash": "169de47d",
+      "ctor": {
+        "seed": 13,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 13,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "STANDARD",
+        "buildStrategy": "survival",
+        "redTacticId": "m8",
+        "talentSources": {
+          "b1": "player",
+          "b2": "player",
+          "b3": "player",
+          "b4": "player",
+          "b5": "player",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": "team:3fc06d78",
+        "talentSelections": {
+          "b1": "rongyan:counter-form",
+          "b2": "jueying:counter-form",
+          "b3": "shikong:counter-form",
+          "b4": "xuanfeng:counter-form",
+          "b5": "xukong:counter-form"
+        }
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "player",
+            "b2": "player",
+            "b3": "player",
+            "b4": "player",
+            "b5": "player",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": null,
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "survival"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "87ce2922"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "6b9c77c6"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "f1557678"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "4e44e974"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "9f09a7ae"
+        },
+        {
+          "m": "configureSpells",
+          "h": "5c394e9f"
+        },
+        {
+          "m": "configureItems",
+          "h": "043be914"
+        }
+      ]
+    },
+    {
+      "id": "live-noplayers-17",
+      "path": "live",
+      "seed": 17,
+      "params": {
+        "id": "live-noplayers-17",
+        "path": "live",
+        "seed": 17,
+        "tacticId": "m5",
+        "talents": true,
+        "buildStrategy": "early",
+        "opponent": "ai",
+        "noPlayers": true,
+        "index": 7
+      },
+      "digest": "961.0:blue:7:6:27650:23830",
+      "streamHash": "115353e0",
+      "ctor": {
+        "seed": 17,
+        "loadoutHash": "17d8d5fd"
+      },
+      "live": {
+        "seed": 17,
+        "loadoutHash": "17d8d5fd",
+        "objectiveLayout": "STANDARD",
+        "buildStrategy": "early",
+        "redTacticId": "m7",
+        "talentSources": {
+          "b1": "player",
+          "b2": "player",
+          "b3": "player",
+          "b4": "player",
+          "b5": "player",
+          "r1": "ai",
+          "r2": "ai",
+          "r3": "ai",
+          "r4": "ai",
+          "r5": "ai"
+        }
+      },
+      "liveOpts": {
+        "opponentId": "team:1d48796f",
+        "talentSelections": {
+          "b1": "tielian:counter-form",
+          "b2": "dushe:counter-form",
+          "b3": "lieyan:counter-form",
+          "b4": "yanfeng:counter-form",
+          "b5": "mantra:counter-form"
+        }
+      },
+      "features": {
+        "objectiveLayout": "STANDARD",
+        "playerStatSides": [],
+        "heroMods": true,
+        "heroSkills": true,
+        "heroPassives": true,
+        "heroPowerCurve": true,
+        "archetypes": true,
+        "spells": true,
+        "battleTalents": {
+          "applied": true,
+          "sources": {
+            "b1": "player",
+            "b2": "player",
+            "b3": "player",
+            "b4": "player",
+            "b5": "player",
+            "r1": "ai",
+            "r2": "ai",
+            "r3": "ai",
+            "r4": "ai",
+            "r5": "ai"
+          }
+        },
+        "tactic": {
+          "blue": "m5",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": true,
+          "players": 10,
+          "blueStrategies": [
+            "early"
+          ],
+          "redStrategies": [
+            "standard"
+          ]
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configureHeroes",
+          "configureHeroSkills",
+          "configureHeroPassives",
+          "configureHeroPowerCurve",
+          "configureArchetypes",
+          "configureSpells",
+          "configureMatch",
+          "configureItems"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "e1f643fe"
+        },
+        {
+          "m": "configureHeroes",
+          "h": "8cab454c"
+        },
+        {
+          "m": "configureHeroSkills",
+          "h": "a8b17bd2"
+        },
+        {
+          "m": "configureHeroPassives",
+          "h": "7a885e4c"
+        },
+        {
+          "m": "configureHeroPowerCurve",
+          "h": "a176f1c7"
+        },
+        {
+          "m": "configureArchetypes",
+          "h": "c561daaf"
+        },
+        {
+          "m": "configureSpells",
+          "h": "33d9a88f"
+        },
+        {
+          "m": "configureMatch",
+          "h": "b1e1d2ec"
+        },
+        {
+          "m": "configureItems",
+          "h": "7c5aeb94"
+        }
+      ]
+    },
+    {
+      "id": "live-noroster-21",
+      "path": "live",
+      "seed": 21,
+      "params": {
+        "id": "live-noroster-21",
+        "path": "live",
+        "seed": 21,
+        "tacticId": "m2",
+        "talents": false,
+        "buildStrategy": "standard",
+        "opponent": "ai",
+        "noRoster": true,
+        "index": 8
+      },
+      "digest": "1132.0:red:6:6:29441:31423",
+      "streamHash": "700a968b",
+      "ctor": {
+        "seed": 21,
+        "loadoutHash": "c796276d"
+      },
+      "live": {
+        "seed": 21,
+        "loadoutHash": "c796276d",
+        "objectiveLayout": "SWAPPED",
+        "buildStrategy": null,
+        "redTacticId": "m7",
+        "talentSources": null
+      },
+      "liveOpts": {
+        "opponentId": "team:9c2b7210",
+        "talentSelections": null
+      },
+      "features": {
+        "objectiveLayout": "SWAPPED",
+        "playerStatSides": [
+          "blue"
+        ],
+        "heroMods": false,
+        "heroSkills": false,
+        "heroPassives": false,
+        "heroPowerCurve": false,
+        "archetypes": false,
+        "spells": false,
+        "battleTalents": {
+          "applied": false,
+          "sources": null
+        },
+        "tactic": {
+          "blue": "m2",
+          "red": "m7",
+          "identity": true
+        },
+        "items": {
+          "applied": false
+        },
+        "order": [
+          "configureObjectiveLayout",
+          "configurePlayers",
+          "configureMatch"
+        ]
+      },
+      "calls": [
+        {
+          "m": "configureObjectiveLayout",
+          "h": "199e706b"
+        },
+        {
+          "m": "configurePlayers",
+          "h": "f2ea7165"
+        },
+        {
+          "m": "configureMatch",
+          "h": "40d29d59"
         }
       ]
     }

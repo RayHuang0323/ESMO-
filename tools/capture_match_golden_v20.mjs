@@ -128,7 +128,11 @@ function installProbe() {
         if (ctx) {
           const arg = args.length <= 1 ? args[0] : args;
           ctx.engine ??= this;
-          ctx.calls.push({ m: name, h: stableHash(stableStringify(arg)), _arg: arg });
+          //  Fix round 1: freeze the argument AT CALL TIME as plain JSON (the stableStringify'd form that is also
+          //  hashed).  `features` is derived from this copy, never from the live reference, so the engine mutating
+          //  its config objects during the match cannot leak post-run values into the fixture.
+          const str = stableStringify(arg);
+          ctx.calls.push({ m: name, h: stableHash(str), _arg: JSON.parse(str) });
         }
         return orig.apply(this, args);
       };
@@ -193,14 +197,17 @@ const talentPicksFor = (roster) => Object.fromEntries(["b1", "b2", "b3", "b4", "
 
 // ── Path 1: Live replica of useLocalServer.start() ──────────────────────────
 function assembleLive(c) {
+  //  Short-circuit variants (Fix round 1): noRoster → opts.roster undefined; noPlayers → empty store players/lineup;
+  //  tacticId null → opts.tactic undefined.  Each mirrors a real `if` in the hook (see comments there).
   const opts = {
-    seed: c.seed, roster: liveRoster(c.seed), tactic: mobaTacticById(c.tacticId), buildStrategy: c.buildStrategy,
+    seed: c.seed, roster: c.noRoster ? undefined : liveRoster(c.seed), tactic: c.tacticId ? mobaTacticById(c.tacticId) : undefined, buildStrategy: c.buildStrategy,
     opponentId: c.opponent === "ai" ? AI_TEAMS[c.index % AI_TEAMS.length].id : null,
   };
-  opts.talentSelections = c.talents ? talentPicksFor(opts.roster) : undefined;
+  opts.talentSelections = c.talents && opts.roster ? talentPicksFor(opts.roster) : undefined;
+  const players = c.noPlayers ? [] : PLAYERS, lineup = c.noPlayers ? null : LINEUP;
   if (PROBE.ctx) PROBE.ctx.meta = { liveOpts: { opponentId: opts.opponentId, talentSelections: opts.talentSelections ?? null } };
 
-  const loadout = applyFatigueToLoadout(DEFAULT_LOADOUT, PLAYERS, LINEUP);          // :153-156
+  const loadout = applyFatigueToLoadout(DEFAULT_LOADOUT, players, lineup);          // :153-156
   const seed = ((opts.seed >>> 0) | 1);                                                // :165-166 (authoritative)
   const eng = new LogicEngine(seed, loadout);                                          // :167
   const objectiveLayout = resolveObjectiveLayout({ explicit: null, seed });            // :170
@@ -210,7 +217,7 @@ function assembleLive(c) {
     ? selectBattleTalents(opts.roster, opts.talentSelections) : null;                  // :174-175
   const talentSelection = selectedTalents && Object.keys(selectedTalents.players).length ? selectedTalents : null;  // :176
   //  (beginReplayCapture :184-193 is replay bookkeeping, not engine configuration — omitted)
-  const playerMods = toEnginePlayerMods({ blue: buildPlayerStatSlots(PLAYERS, "blue", LINEUP), red: [] });  // :204-206
+  const playerMods = toEnginePlayerMods({ blue: buildPlayerStatSlots(players, "blue", lineup), red: [] });  // :204-206
   if (playerMods) eng.configurePlayers(playerMods);                                    // :207
   const heroMods = opts.roster ? toEngineHeroMods(opts.roster, heroById) : null;       // :215
   if (heroMods) eng.configureHeroes(heroMods);                                         // :216
@@ -429,7 +436,7 @@ const fixture = {
     lineup: LINEUP,
     loadoutRule: "buildLoadout(createInitialProgress(ALL_HERO_IDS), HERO_ASSIGN) — fresh-install default, every seat level 1; then applyFatigueToLoadout(.., players, lineup)",
     defaultLoadout: DEFAULT_LOADOUT,
-    liveRosters: Object.fromEntries([...new Set(records.filter(([c]) => c.path === "live").map(([c]) => c.seed))].map((s) => [s, rosterRecord(liveRoster(s))])),
+    liveRosters: Object.fromEntries([...new Set(records.filter(([c]) => c.path === "live" && !c.noRoster).map(([c]) => c.seed))].map((s) => [s, rosterRecord(liveRoster(s))])),
     runnerRosters: Object.fromEntries([...new Set(records.filter(([c]) => c.path === "runner").map(([c]) => c.seed))].map((s) => [s, rosterRecord(runnerMod.mirroredRoster(s, M_ON))])),
     aiTeams: AI_TEAMS.map((t) => ({ id: t.id, style: t.style })),
     fixtureOpponentKeys: FIXTURE_KEYS,
