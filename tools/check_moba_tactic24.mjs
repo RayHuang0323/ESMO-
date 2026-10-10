@@ -2,6 +2,7 @@
 // （任務單建議 scripts/，依本專案 tools/ 慣例放置）
 // A) 契約 B) 接線（結構）C) 引擎行為（同seed異戰術/重現性/不寫死勝負）D) CS 隔離
 import fs from "fs";
+import { stripComments } from "./lib/stripComments.mjs";
 const A = []; const ck = (n, c) => A.push([n, c]);
 
 const { MOBA_TACTICS, MOBA_TACTIC_VERSION, STANDARD_OPP_TACTIC, validateMobaTacticConfig, toEngineTactic, mobaTacticById } =
@@ -39,33 +40,7 @@ ck("GameView start({tactic}) 傳入引擎驅動層",
   /start\(\{\s*tactic\b/.test(gv) && (gv.match(/\bbegin\b/g) || []).length >= 3);
 //  Phase 3a T4：Live 的引擎組裝搬到唯一組裝器。意圖不變（戰術契約的 knobs 真的進 engine.configureMatch、
 //  查不到對手設定時用 standard 對手），改指向事實現在所在的檔案；先剝註解再比對（原本的 includes 連註解都算）。
-/**
- * 剝註解（逐字元掃描）。認得字串與樣板字串，所以字串裡的雙斜線不算註解；行註解先整行略過，
- * 所以行註解裡出現的區塊註解開頭（例如路徑萬用字元）不會吃掉後面的程式碼——正則版就是這樣把整段程式碼刪掉的。
- */
-function strip24(src) {
-  const DQ = 34, SQ = 39, BT = 96, BS = 92, SL = 47, ST = 42, NL = 10;   // 雙引號、單引號、反引號、反斜線、斜線、星號、換行
-  const out = [];
-  let i = 0, quote = 0;
-  while (i < src.length) {
-    const c = src.charCodeAt(i), d = src.charCodeAt(i + 1);
-    if (quote) {
-      out.push(src[i]);
-      if (c === BS && i + 1 < src.length) { out.push(src[i + 1]); i += 2; continue; }
-      if (c === quote) quote = 0;
-      i++; continue;
-    }
-    if (c === DQ || c === SQ || c === BT) { quote = c; out.push(src[i]); i++; continue; }
-    if (c === SL && d === SL) { while (i < src.length && src.charCodeAt(i) !== NL) i++; continue; }
-    if (c === SL && d === ST) {
-      let j = i + 2;
-      while (j < src.length && !(src.charCodeAt(j) === ST && src.charCodeAt(j + 1) === SL)) j++;
-      i = Math.min(src.length, j + 2); continue;
-    }
-    out.push(src[i]); i++;
-  }
-  return out.join(String());
-}
+const strip24 = stripComments;   // tools/lib/stripComments.mjs（唯一實作）
 const uls = strip24(fs.readFileSync("src/useLocalServer.js", "utf8"));
 const asm24 = strip24(fs.readFileSync("src/battle/moba/matchAssembler.js", "utf8"));
 const lms24 = strip24(fs.readFileSync("src/battle/moba/liveMatchSetup.js", "utf8"));

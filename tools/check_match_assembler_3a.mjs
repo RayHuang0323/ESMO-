@@ -46,6 +46,7 @@ import { heroTags } from "../src/data/heroClassification.js";
 import { createChallengeInstance } from "../src/platform/contracts/challengeInstance.js";
 import { SNAPSHOT_AUTHORITY } from "../src/platform/challenge/snapshotAuthority.js";
 import { runAndHash } from "./lib/matchGolden.mjs";
+import { stripComments } from "./lib/stripComments.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const argOf = (name) => { const hit = process.argv.find((a) => a.startsWith(`--${name}=`)); return hit ? hit.slice(name.length + 3) : null; };
@@ -203,7 +204,8 @@ for (const [n, c] of cases.entries()) {
 console.log(`  逐位元重現：live ${summary.live[0]}/${summary.live[0] + summary.live[1]}、challenge ${summary.challenge[0]}/${summary.challenge[0] + summary.challenge[1]}、runner ${summary.runner[0]}/${summary.runner[0] + summary.runner[1]}`);
 
 // ── A1 import graph：heroDatabase.js 不得出現在組裝器的靜態 import 圖 ─────────────────
-const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+//  剝註解用 tools/lib/stripComments.mjs（唯一實作）。原本這裡的正則會把行註解裡的「斜線＋兩個星號」
+//  當成區塊註解開頭，把後面的程式碼（包括 import）一起刪掉 ⇒ import 圖可能少走幾條邊、「不得 import X」假綠。
 function importGraph(entry) {
   const seen = new Map(), stack = [[path.resolve(ROOT, entry), null]];
   while (stack.length) {

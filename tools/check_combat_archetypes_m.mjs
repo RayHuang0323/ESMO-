@@ -14,6 +14,7 @@
 //     這裡驗的是**同一份程式碼內**可驗證的等價性質。
 // ============================================================================
 import { LogicEngine } from "../src/LogicEngine.js";
+import { stripComments } from "./lib/stripComments.mjs";
 import { CHAMPIONS_100, heroById } from "../src/data/heroDatabase.js";
 import { COMBAT_CLASSES } from "../src/data/heroCombatPresentation.js";
 import {
@@ -214,33 +215,7 @@ console.log("\n── §2 第五個 opt-in 行為層 ──");
     //  「唯一計算點」現在是結構性事實：hook 只呼叫 assembleMatch，自己不再碰 toEngineArchetypes／configureArchetypes；
     //  組裝器用共用 deps 注入的 Adapter 呼叫 configureArchetypes。一律先剝註解再比對。
     const fsT4 = await import("node:fs");
-    /**
-     * 剝註解（逐字元掃描）。認得字串與樣板字串，所以字串裡的雙斜線不算註解；行註解先整行略過，
-     * 所以行註解裡出現的區塊註解開頭（例如路徑萬用字元）不會吃掉後面的程式碼——正則版就是這樣把整段程式碼刪掉的。
-     */
-    function stripT4(src) {
-      const DQ = 34, SQ = 39, BT = 96, BS = 92, SL = 47, ST = 42, NL = 10;   // 雙引號、單引號、反引號、反斜線、斜線、星號、換行
-      const out = [];
-      let i = 0, quote = 0;
-      while (i < src.length) {
-        const c = src.charCodeAt(i), d = src.charCodeAt(i + 1);
-        if (quote) {
-          out.push(src[i]);
-          if (c === BS && i + 1 < src.length) { out.push(src[i + 1]); i += 2; continue; }
-          if (c === quote) quote = 0;
-          i++; continue;
-        }
-        if (c === DQ || c === SQ || c === BT) { quote = c; out.push(src[i]); i++; continue; }
-        if (c === SL && d === SL) { while (i < src.length && src.charCodeAt(i) !== NL) i++; continue; }
-        if (c === SL && d === ST) {
-          let j = i + 2;
-          while (j < src.length && !(src.charCodeAt(j) === ST && src.charCodeAt(j + 1) === SL)) j++;
-          i = Math.min(src.length, j + 2); continue;
-        }
-        out.push(src[i]); i++;
-      }
-      return out.join(String());
-    }
+    const stripT4 = stripComments;   // tools/lib/stripComments.mjs（唯一實作）
     const codeOf = (p) => stripT4(fsT4.readFileSync(p, "utf8"));
     const uls = codeOf("src/useLocalServer.js");
     const asm = codeOf("src/battle/moba/matchAssembler.js");

@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { stripComments } from './lib/stripComments.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (p) => import(pathToFileURL(path.join(ROOT, p)).href);
@@ -136,33 +137,7 @@ const pair = (tacticId, opts = {}, seeds = SEEDS) => {
   //  Phase 3a T4：Live 的引擎組裝搬到唯一組裝器（battle/moba/matchAssembler.js），輸入由 liveMatchSetup.js 建成 MatchSetup。
   //  ⇒ 這一節的原始碼斷言改指向事實現在所在的檔案（意圖不變）；一律先剝註解再比對。
   //  Challenge 要到 Task 5 才改走組裝器 ⇒ challengeRunner 目前仍自己傳 identity；改走組裝器後同一條斷言照樣成立。
-  /**
-   * 剝註解（逐字元掃描）。認得字串與樣板字串，所以字串裡的雙斜線不算註解；行註解先整行略過，
-   * 所以行註解裡出現的區塊註解開頭（例如路徑萬用字元）不會吃掉後面的程式碼——正則版就是這樣把整段程式碼刪掉的。
-   */
-  function strip(src) {
-    const DQ = 34, SQ = 39, BT = 96, BS = 92, SL = 47, ST = 42, NL = 10;   // 雙引號、單引號、反引號、反斜線、斜線、星號、換行
-    const out = [];
-    let i = 0, quote = 0;
-    while (i < src.length) {
-      const c = src.charCodeAt(i), d = src.charCodeAt(i + 1);
-      if (quote) {
-        out.push(src[i]);
-        if (c === BS && i + 1 < src.length) { out.push(src[i + 1]); i += 2; continue; }
-        if (c === quote) quote = 0;
-        i++; continue;
-      }
-      if (c === DQ || c === SQ || c === BT) { quote = c; out.push(src[i]); i++; continue; }
-      if (c === SL && d === SL) { while (i < src.length && src.charCodeAt(i) !== NL) i++; continue; }
-      if (c === SL && d === ST) {
-        let j = i + 2;
-        while (j < src.length && !(src.charCodeAt(j) === ST && src.charCodeAt(j + 1) === SL)) j++;
-        i = Math.min(src.length, j + 2); continue;
-      }
-      out.push(src[i]); i++;
-    }
-    return out.join(String());
-  }
+  const strip = stripComments;   // tools/lib/stripComments.mjs（唯一實作）
   const readCode = (p) => strip(fs.readFileSync(path.join(ROOT, p), 'utf8'));
   const uls = readCode('src/useLocalServer.js');
   const chr = readCode('src/platform/challenge/challengeRunner.js');
