@@ -261,9 +261,9 @@ export function createMatchSetup(input) {
     else if (sides === "both" && !(p.red?.length > 0)) err("player_slots_mismatch", "playerSlots.red", "this ruleset applies player stats to both sides");
     else if ((sides === "blue" || sides === "both") && !(p.blue?.length > 0)) err("player_slots_mismatch", "playerSlots.blue", "blue player slots required");
     else playerSlots = { blue: clonePlain(p.blue ?? []), red: clonePlain(p.red ?? []) };
-  } else if (sides === "both") {
-    err("player_slots_mismatch", "playerSlots", "playerSlots required (playerStatSides=both)");
-  } // sides === "blue" with null slots = a live match that applies no player stats (golden live-noplayers)
+  } // no slots at all (null / empty pair) = a match that applies no player stats, under "blue" (golden live-noplayers) and
+  //   under "both" (v20 Challenge: both snapshots must declare playerStats, otherwise configurePlayers is skipped entirely).
+  //   "both" still requires slots on BOTH sides whenever any are given (checked above).
 
   // ---- roster (plain data only) -----------------------------------------
   let roster = null;

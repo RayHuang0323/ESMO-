@@ -28,7 +28,8 @@ import { SNAPSHOT_AUTHORITY } from "../src/platform/challenge/snapshotAuthority.
 import { matchSetupHash } from "../src/platform/contracts/matchSetup.js";
 import { createStreamHasher, finalDigest } from "./lib/matchGolden.mjs";
 import { challengeGoldenInputs } from "./lib/challengeGolden.mjs";
-import { mobaTacticById } from "../src/platform/contracts/MobaTacticConfig.js";
+import { mobaTacticById, toEngineTactic, toEngineTacticIdentity, MOBA_TACTIC_VERSION } from "../src/platform/contracts/MobaTacticConfig.js";
+import { sideInputs } from "../src/platform/challenge/challengeMatchSetup.js";
 import { stripComments } from "./lib/stripComments.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -193,18 +194,43 @@ function builderArgs(v, withDraft) {
   const rBoom = v && runProbed(v, { heroOf: () => { throw new Error("boom"); } });
   ck("R2 查表丟例外 ⇒ 也轉成錯誤結果（assembly_exception），不外洩例外",
     !!rBoom && rBoom.thrown === null && shape(rBoom.out) && rBoom.out.errors[0].code === "assembly_exception" && /boom/.test(rBoom.out.errors[0].message), JSON.stringify(rBoom?.out?.errors ?? String(rBoom?.thrown)));
-  //  快照沒宣告 playerStats：challenge.v20 的規則集要求雙方素質（playerStatSides=both），不讓規則集替它「補」或「略過」
-  //  ⇒ 明確拒絕。⚠ 這是 v20 runner（靜默略過 configurePlayers）唯一的行為差異；正式快照一律宣告 playerStats（見 report）。
+  //  快照沒宣告 playerStats（v20：兩份快照都宣告才 configurePlayers，否則整個略過，照跑）。
+  //  規則集不替快照決定要不要素質 ⇒ 兩邊 slots 一起為 null，effectiveLayers.players 兩邊 false，組裝器略過 configurePlayers。
+  //  對照組：把 v20 runChallenge 的引擎組裝段（8a543dd :125-163，無 draft 分支）原樣內嵌在這裡，同輸入各跑一次，逐位元比對。
   const nd = cases.find((x) => !x.params.draft);
   const vn = nd && INPUTS.get(nd.id);
   const drop = (s) => { const t = { ...s, capturedInputs: s.capturedInputs.filter((x) => x !== SNAPSHOT_INPUTS.playerStats) }; t.hash = snapshotHashOf(t); return t; };
-  const a2 = vn && drop(vn.challenger), d2 = vn && drop(vn.defender);
-  const inst = vn && createChallengeInstance({ challenger: a2, defender: d2, challengerTacticId: nd.params.tacticIds[0], seedSource: nd.params.seed, createdAt: 1757000000000,
-    issuedBy: SNAPSHOT_AUTHORITY.id, nonce: "t5-nostats", opponentKey: vn.keyB });
-  const rNoStats = inst?.ok ? runProbed({ ...vn, challenger: a2, defender: d2, challenge: inst.challenge }) : null;
-  ck("R3 快照沒宣告 playerStats ⇒ 錯誤結果（setup_player_slots_mismatch），不丟例外、零 configure 呼叫",
-    !!rNoStats && rNoStats.thrown === null && shape(rNoStats.out) && rNoStats.ctx.calls.length === 0 && rNoStats.out.errors.some((e) => e.code === "setup_player_slots_mismatch"),
-    JSON.stringify(rNoStats?.out?.errors ?? (inst ? "instance failed" : "no case")));
+  const v20Reference = (v) => {   // v20 challengeRunner 無 draft 時的組裝（useStats=false）：只有 loadout＋configureMatch
+    const blue = sideInputs(v.challenger, "blue"), red = sideInputs(v.defender, "red");
+    const bt = mobaTacticById(v.challenge.challengerTacticId), rt = mobaTacticById(v.challenge.defenderTacticId);
+    const ctx = { calls: [], engine: null, hasher: createStreamHasher(golden.streamEvery) };
+    PROBE.ctx = ctx;
+    try {
+      const eng = new LogicEngine(v.challenge.matchSeed, { ...blue.loadout, ...red.loadout });
+      eng.configureMatch({ blue: toEngineTactic(bt), red: toEngineTactic(rt), identity: { blue: toEngineTacticIdentity(bt), red: toEngineTacticIdentity(rt) },
+        meta: { tacticId: bt.tacticId, tacticName: bt.name, version: MOBA_TACTIC_VERSION, opponentTacticId: rt.tacticId } });
+      for (let t = CHALLENGE_DT; t <= CHALLENGE_MAX_T && !eng.over; t += CHALLENGE_DT) eng.tick(CHALLENGE_DT);
+    } finally { PROBE.ctx = null; }
+    return ctx;
+  };
+  const mkNoStats = (dropA, dropD, nonce) => {
+    const a2 = dropA ? drop(vn.challenger) : vn.challenger, d2 = dropD ? drop(vn.defender) : vn.defender;
+    const inst = createChallengeInstance({ challenger: a2, defender: d2, challengerTacticId: nd.params.tacticIds[0], seedSource: nd.params.seed, createdAt: 1757000000000,
+      issuedBy: SNAPSHOT_AUTHORITY.id, nonce, opponentKey: vn.keyB });
+    return inst.ok ? { ...vn, challenger: a2, defender: d2, challenge: inst.challenge } : null;
+  };
+  for (const [label, dA, dD] of [["雙方都沒宣告", true, true], ["只有挑戰方沒宣告（v20：兩份都要宣告，否則整個略過）", true, false]]) {
+    const vv = nd && mkNoStats(dA, dD, `t5-nostats-${dA}${dD}`);
+    const rr = vv && runProbed(vv), ref = vv && v20Reference(vv);
+    const same = !!rr && !!ref && rr.thrown === null && rr.out?.ok === true && finalDigest(rr.ctx.engine) === finalDigest(ref.engine) && rr.ctx.hasher.hex === ref.hasher.hex
+      && firstDiff(rr.ctx.calls, ref.calls) === "";
+    ck(`R3 ${label}playerStats ⇒ 照跑出結果，呼叫序列沒有 configurePlayers，且與 v20 組裝段逐位元相同（呼叫序列＋引數雜湊、digest、streamHash）`,
+      same && !rr.ctx.calls.some((x) => x.m === "configurePlayers") && !rr.out.result.usedInputs.includes(SNAPSHOT_INPUTS.playerStats),
+      rr?.out?.errors ? JSON.stringify(rr.out.errors) : rr ? rr.ctx.calls.map((x) => x.m).join(">") : "no instance");
+  }
+  ck("R3b builder 層：use.stats 為否 ⇒ setup.playerSlots＝null、effectiveLayers.players 兩邊 false、仍有 match",
+    (() => { if (!BUILDER?.buildChallengeMatchSetup || !vn) return false; const r = BUILDER.buildChallengeMatchSetup({ ...builderArgs(vn, false), use: { loadout: true, stats: false, tactic: true } });
+      return r.ok && r.setup.playerSlots === null && !r.setup.effectiveLayers.players.blue && !r.setup.effectiveLayers.players.red && r.setup.effectiveLayers.match; })());
   //  既有護欄原樣保留（錯誤碼與先後順序）：查不到戰術 ⇒ code "tactic"（在 setup 之前判定）
   const badTac = vn && runProbed({ ...vn, challenge: { ...vn.challenge, challengerTacticId: "no_such_tactic" } });
   ck("R4 既有護欄不變：戰術查不到 ⇒ 仍是舊的 replay／tactic 錯誤碼（不被 setup 錯誤蓋掉）",

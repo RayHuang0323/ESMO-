@@ -132,7 +132,7 @@ ck("D6 matchSetup.js 不在 SIMULATION_SEMANTICS_FILES（清單非空且不含�
 ck("P1 career 可無 playerSlots（golden live-noplayers）；空 slots 正規化為 null", createMatchSetup(careerInput({ playerSlots: null })).ok && createMatchSetup(careerInput({ playerSlots: { blue: [], red: [] } })).setup.playerSlots === null);
 ck("P2 career 給 red slots ⇒ mismatch", codes(createMatchSetup(careerInput({ playerSlots: { blue: blueSlots, red: redSlots } }))).includes("player_slots_mismatch"));
 ck("P3 challenge 需雙方 slots", codes(createMatchSetup(chIn({ playerSlots: { blue: blueSlots, red: [] } }))).includes("player_slots_mismatch"));
-ck("P3b challenge 缺 playerSlots ⇒ mismatch", codes(createMatchSetup(chIn({ playerSlots: null }))).includes("player_slots_mismatch"));
+ck("P3b challenge 可整組沒有 playerSlots（v20：任一方快照沒宣告 playerStats ⇒ 整個略過 configurePlayers）；effectiveLayers.players 兩邊都 false；只給一邊仍 mismatch", (() => { const r = createMatchSetup(chIn({ playerSlots: null })); return r.ok && r.setup.playerSlots === null && r.setup.effectiveLayers.players.blue === false && r.setup.effectiveLayers.players.red === false && codes(createMatchSetup(chIn({ playerSlots: { blue: [], red: redSlots } }))).includes("player_slots_mismatch"); })());
 ck("P4 tool ruleset（none）給 slots ⇒ mismatch", codes(createMatchSetup(toolIn({ playerSlots: { blue: blueSlots, red: [] } }))).includes("player_slots_mismatch"));
 
 // 覆蓋 golden 的三條路徑：39 案「全部」以正確的 ruleset 重建成 setup，並以 effectiveLayers 對照 golden features
@@ -230,7 +230,7 @@ ck("N1 空物件 ⇒ null：loadout / talentSelections / roster / tool.ruleOverr
   return a.ok && b.ok && a.setup.loadout === null && a.setup.talentSelections === null && a.setup.roster === null && a.setup.playerSlots === null
     && matchSetupHash(a.setup) === matchSetupHash(b.setup) && t1.setup.tool.ruleOverrides === null && matchSetupHash(t1.setup) === matchSetupHash(t2.setup);
 })());
-ck("N2 challenge 的空 playerSlots 仍是 mismatch（both 必須有素質槽）", hasCode(createMatchSetup(chIn({ playerSlots: { blue: [], red: [] } })), "player_slots_mismatch"));
+ck("N2 challenge 的空 playerSlots 對（blue／red 皆空）＝沒有素質：ok、正規化為 null，雜湊與省略相同", (() => { const a = createMatchSetup(chIn({ playerSlots: { blue: [], red: [] } })), b = createMatchSetup(chIn({ playerSlots: null })); return a.ok && b.ok && a.setup.playerSlots === null && matchSetupHash(a.setup) === matchSetupHash(b.setup); })());
 
 // 錯誤形狀
 ck("E1 失敗回傳 { ok:false, setup:null, errors[{code,field,message}] }", (() => { const r = createMatchSetup(careerInput({ seed: "x", meta: { seedSource: "?" } })); return !r.ok && r.setup === null && r.errors.length >= 2 && r.errors.every((e) => e.code && e.field && e.message); })());

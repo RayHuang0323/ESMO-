@@ -13,9 +13,8 @@
 //   · use.stats   否 ⇒ setup.playerSlots＝null
 //   · use.tactic  否 ⇒ setup.tactic＝null（effectiveLayers.match 為 false ⇒ 不呼叫 configureMatch）
 //   · 沒有 draftResult ⇒ setup.roster＝null ⇒ effectiveLayers 的 heroMods／archetypes／spells 全 false
-//  ⚠ 規則集 challenge.v20 的 playerStatSides 是 "both"：use.stats 為否時 createMatchSetup 會拒絕
-//    （player_slots_mismatch）——v20 runner 在這個（正式快照從不出現的）情形會靜默略過 configurePlayers。
-//    規則集不替快照決定要不要素質，所以這裡不繞過；runner 會回傳錯誤結果（見 challengeRunner 的 setup_* 錯誤）。
+//  ⚠ use.stats 由 runner 依「兩份快照都宣告 playerStats」決定（v20 同）；否則 blue／red 的 slots 一起為 null（只給一邊在 "both" 下會被拒絕），
+//    effectiveLayers.players 兩邊 false，組裝器略過 configurePlayers——與 v20 的 `if (useStats)` 相同。
 //
 //  【與 v20 challengeRunner（8a543dd :125-192）的逐條對應】
 //   · sideInputs        ＝ 快照攤成引擎席位 slots / loadout（b→r 席位映射；快照一律以藍方語彙記錄）  :125-126
