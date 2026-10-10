@@ -171,14 +171,21 @@ ck("②D ⋯⋯runner 拒跑", runTampered.ok === false && runTampered.errors[0]
 {
   const src = code("src/platform/challenge/challengeRunner.js");
   const fns = ["configureHeroes", "configureArchetypes", "configureSpells"];
-  ck("②E runner 真的呼叫三支 configure（選角進引擎的唯一路徑）",
-    fns.every((fn) => src.includes(`eng.${fn}(`)));
-  const i = src.indexOf("if (draftDeclared) {", src.indexOf("const blue = sideInputs"));
-  const end = src.indexOf("for (let t = CHALLENGE_DT");
-  const block = i >= 0 && end > i ? src.slice(i, end) : "";
+  //  Phase 3a T5：runner 改走唯一組裝器，不再自己呼叫 eng.configure*。意圖不變，改釘事實現在所在處
+  //  （原始碼證據單一實作：tools/lib/challengeAssemblySource.mjs），並加行為驗證（真的跑，看探針）。
+  const { LogicEngine: LE } = await import("../src/LogicEngine.js");
+  const { challengeDraftSourceFacts, recordConfigureCalls } = await import("./lib/challengeAssemblySource.mjs");
+  const facts = challengeDraftSourceFacts();
+  const withDraft = recordConfigureCalls(LE, () => run(iA.challenge, dA.draft));
+  const at = (m) => withDraft.calls.indexOf(m);
+  ck("②E runner（經唯一組裝器）真的呼叫三支 configure（選角進引擎的唯一路徑），順序 Heroes→Archetypes→Spells",
+    facts.assemblerRunsDraftSteps && withDraft.result.ok && fns.every((m) => at(m) >= 0) && at(fns[0]) < at(fns[1]) && at(fns[1]) < at(fns[2]), withDraft.calls.join(","));
+  const meNo = { ...me, capturedInputs: me.capturedInputs.filter((x) => x !== SNAPSHOT_INPUTS.draftPolicy) }; meNo.hash = snapshotHashOf(meNo);
+  const oppNo = { ...opp, capturedInputs: opp.capturedInputs.filter((x) => x !== SNAPSHOT_INPUTS.draftPolicy) }; oppNo.hash = snapshotHashOf(oppNo);
+  const instNo = createChallengeInstance({ challenger: meNo, defender: oppNo, challengerTacticId: TACTIC, seedSource: 20260909, createdAt: 1757000000000, issuedBy: SNAPSHOT_AUTHORITY.id, nonce: "slice5-nodraft" });
+  const noDraftRun = recordConfigureCalls(LE, () => runChallenge({ challenge: instNo.challenge, challengerSnapshot: meNo, defenderSnapshot: oppNo, heroOf }));
   ck("②E 三支都關在 draftDeclared 裡（未宣告的舊快照不得被注入）",
-    fns.every((fn) => block.includes(`eng.${fn}(`)
-      && src.split(`eng.${fn}(`).length === block.split(`eng.${fn}(`).length));
+    facts.draftStepsGated && instNo.ok && noDraftRun.result.ok && fns.every((m) => !noDraftRun.calls.includes(m)), noDraftRun.calls.join(","));
   ck("②E runner 不 import 英雄資料庫（查表一律注入）",
     !/data\/heroDatabase/.test(src));
 }
@@ -195,8 +202,10 @@ ck("③ runner **不呼叫**任何解算函式（只讀凍結結果）",
     const src = code("src/platform/challenge/challengeRunner.js");
     return !/resolveAsyncDraft|createDraftResult|nextDefenderAction|assignDraft/.test(src);
   })());
-ck("③ runner 只用 draftResultToRoster 做形狀轉換",
-  /draftResultToRoster/.test(code("src/platform/challenge/challengeRunner.js")));
+//  Phase 3a T5：形狀轉換搬到 Challenge 的 setup builder（challengeMatchSetup.js）；runner 與 builder 都不碰解算函式。
+ck("③ Challenge 只用 draftResultToRoster 做形狀轉換（builder 用、runner 不含任何解算函式）",
+  /draftResultToRoster/.test(code("src/platform/challenge/challengeMatchSetup.js"))
+  && !/resolveAsyncDraft|createDraftResult|nextDefenderAction|assignDraft/.test(code("src/platform/challenge/challengeMatchSetup.js")));
 ck("③ roster 轉換不做任何決策（只是 assignment 的形狀改寫）",
   (() => {
     const r = draftResultToRoster(dA.draft);

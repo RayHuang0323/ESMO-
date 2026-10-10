@@ -170,6 +170,11 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/platform/contracts/matchRuleset.js",
   //  · MatchSetup → LogicEngine 的唯一組裝點（Live／Challenge／平衡工具共用）：順序、短路、tool 覆寫。
   "src/battle/moba/matchAssembler.js",
+  //  ── 2026-10-09（Phase 3a T5，moba-sim.v21 候選）：Challenge 改走組裝器 ─────────────
+  //  · 快照／DraftResult → MatchSetup 的轉換（取代 challengeRunner 內的 sideInputs 與 Heroes/Archetypes/Spells 組裝）。
+  "src/platform/challenge/challengeMatchSetup.js",
+  //  · 組裝器 deps 的 adapter 清單（唯一一份；Live 的 matchAssemblerDeps.js 只是其上補預設查表的薄層）。
+  "src/battle/moba/matchAssemblerDepsCore.js",
 ]);
 
 /**
@@ -429,7 +434,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 6b706cbfd4419710 未曾發布）。
   //  T4（Live 改走組裝器）：matchAssembler.js 只多回傳 applied.depsFingerprint（deps 身分描述，不進引擎、不進 setup 雜湊）
   //  ⇒ 不是語意變化；golden 39 案＋Live 9 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 d5af0958688d277a 未曾發布）。
-  "moba-sim.v21": "e94f45f2c87e9573",
+  //  T5（Challenge 改走組裝器）：runChallenge 經 challenge.v20 組裝，golden 12 個 Challenge 案經真實 runChallenge 逐位元相同；
+  //  語意清單新增 challengeMatchSetup.js、matchAssemblerDepsCore.js。v21 未發布 ⇒ 同版號重新登記（舊值 e94f45f2c87e9573 未曾發布）。
+  "moba-sim.v21": "d8935d1e9c0f2f8f",
 });
 
 export const isKnownSimulationVersion = (v) =>

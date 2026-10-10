@@ -18,6 +18,7 @@
 //    Pricing Authority / CS —— 那些在這一輪根本不存在，驗它們只會產生假的安全感。
 // ============================================================================
 import { readFileSync } from "node:fs";
+import { challengeDraftSourceFacts, recordConfigureCalls } from "./lib/challengeAssemblySource.mjs";
 import {
   SQUAD_SNAPSHOT_VERSION, SNAPSHOT_SEATS, SNAPSHOT_INPUTS, SLICE1_CAPTURED_INPUTS,
   FORBIDDEN_CLIENT_KEYS, createSquadSnapshot, validateSquadSnapshot,
@@ -419,26 +420,23 @@ ck("⑦ ⋯⋯而且結果因此不同（證明它真的被用了，不是裝飾
 //    不存在的鍵仍然要回 false（否則 `snapshotCovers` 等於永遠說 yes）。
 ck("⑦ 不存在的輸入鍵一律回 false（snapshotCovers 不是永遠說 yes）",
   !snapshotCovers(snapA, "heroPick") && !snapshotCovers(snapA, "archetypes") && !snapshotCovers(snapA, "spells"));
-ck("⑦ Slice 5：runner 真的呼叫 configureHeroes / Archetypes / Spells",
-  /eng\.configureHeroes/.test(code(runnerSrc))
-  && /eng\.configureArchetypes/.test(code(runnerSrc))
-  && /eng\.configureSpells/.test(code(runnerSrc)));
+//  Phase 3a T5：runner 不再自己呼叫 eng.configure*，改走唯一組裝器（challenge.v20 順序 Players→Match→Heroes→Archetypes→Spells）。
+//  這兩條的意圖不變，改指向事實現在所在的檔案（證據單一實作：tools/lib/challengeAssemblySource.mjs，先剝註解再比對）。
+const draftFacts = challengeDraftSourceFacts();
+ck("⑦ Slice 5：runner（經唯一組裝器）真的呼叫 configureHeroes / Archetypes / Spells",
+  draftFacts.assemblerRunsDraftSteps, JSON.stringify(draftFacts.details));
 //  ⚠ 這一條才是重點：三支 configure 都必須關在 `draftDeclared` 裡面。
 //    放到外面 ⇒ 沒宣告選角的舊快照也會被注入 ⇒ 它們的重播全部對不上，
 //    而且沒有任何錯誤訊息。
-ck("⑦ 三支 configure 都關在 draftDeclared 條件裡（未宣告 ⇒ 不注入）",
-  (() => {
-    const src = code(runnerSrc);
-    const i = src.indexOf("if (draftDeclared) {", src.indexOf("const blue = sideInputs"));
-    if (i < 0) return false;
-    const tail = src.slice(i);
-    const end = tail.indexOf("for (let t = CHALLENGE_DT");
-    if (end < 0) return false;
-    const block = tail.slice(0, end);
-    return ["configureHeroes", "configureArchetypes", "configureSpells"]
-      .every((fn) => block.includes(`eng.${fn}(`)
-        && src.split(`eng.${fn}(`).length - 1 === block.split(`eng.${fn}(`).length - 1);
-  })());
+{
+  //  原始碼：roster（三步驟唯一輸入）只在 draftDeclared 時進 builder；契約與組裝器各自短路。
+  //  行為：未宣告 draftPolicy 的那一場（runNoLo 同款輸入）實際跑一次，三支 configure 都沒被呼叫。
+  const { LogicEngine: LE } = await import("../src/LogicEngine.js");
+  const probed = recordConfigureCalls(LE, () => runChallenge({ challenge: chNoLo.challenge, challengerSnapshot: noLoadoutA, defenderSnapshot: noLoadoutD }));
+  const heroLayerCalls = probed.calls.filter((m) => ["configureHeroes", "configureArchetypes", "configureSpells"].includes(m));
+  ck("⑦ 三支 configure 都關在 draftDeclared 條件裡（未宣告 ⇒ 不注入）",
+    draftFacts.draftStepsGated && probed.result.ok && heroLayerCalls.length === 0, `calls=${probed.calls.join(",")}`);
+}
 //  紅方對映
 ck("⑦ 防守方做 b→r 席位對映（快照本身不綁陣營）", toRedSeat("b3") === "r3");
 

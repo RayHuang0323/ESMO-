@@ -436,12 +436,14 @@ for (const v of V_CASES) {
 }
 
 // ════ S：原始碼 ═══════════════════════════════════════════════════════════════
-const BUILDERS = /^(sharedMatchAssemblerDeps|buildMatchAssemblerDeps)$/;
+//  Task 5：Challenge 的 heroLookup 是注入的 ⇒ 它從 core（matchAssemblerDepsCore.js，沒有預設查表）取 deps；
+//  adapter 清單與 manifest 仍只有 core 一份（Live 的 matchAssemblerDeps.js 是 core 之上的薄層）。
+const BUILDERS = /^(sharedMatchAssemblerDeps|buildMatchAssemblerDeps|buildMatchAssemblerDepsFrom)$/;
 /** 回傳違規的呼叫（檔名＋第二引數）。定義本身（export function assembleMatch）不算呼叫。 */
 function assembleCallViolations(file, rawSrc) {
   const src = stripComments(rawSrc);
   const out = [];
-  const importsBuilder = /import\s*\{[^}]*\b(sharedMatchAssemblerDeps|buildMatchAssemblerDeps)\b[^}]*\}\s*from\s*["'][^"']*matchAssemblerDeps\.js["']/.test(src);
+  const importsBuilder = /import\s*\{[^}]*\b(sharedMatchAssemblerDeps|buildMatchAssemblerDeps|buildMatchAssemblerDepsFrom)\b[^}]*\}\s*from\s*["'][^"']*matchAssemblerDeps(?:Core)?\.js["']/.test(src);
   for (const m of src.matchAll(/(?<![\w$.])assembleMatch\s*\(/g)) {
     if (/function\s+$/.test(src.slice(Math.max(0, m.index - 20), m.index))) continue;
     //  取第二個引數（頂層逗號之後到對應右括號）
@@ -455,7 +457,7 @@ function assembleCallViolations(file, rawSrc) {
     const arg = start < 0 ? "" : src.slice(start, end).trim();
     const callee = arg.match(/^([\w$]+)\s*\(\s*\)$/)?.[1];
     const ident = arg.match(/^([\w$]+)$/)?.[1];
-    const assigned = ident && new RegExp(`\\b(?:const|let|var)\\s+${ident}\\s*=\\s*(sharedMatchAssemblerDeps|buildMatchAssemblerDeps)\\s*\\(`).test(src);
+    const assigned = ident && new RegExp(`\\b(?:const|let|var)\\s+${ident}\\s*=\\s*(sharedMatchAssemblerDeps|buildMatchAssemblerDeps|buildMatchAssemblerDepsFrom)\\s*\\(`).test(src);
     const ok = importsBuilder && ((callee && BUILDERS.test(callee)) || assigned);
     if (!ok) out.push(`${file}: assembleMatch(…, ${arg || "∅"})`);
   }
@@ -468,9 +470,12 @@ function assembleCallViolations(file, rawSrc) {
     ["bad-omitted.js", "import { sharedMatchAssemblerDeps } from './matchAssemblerDeps.js';\nassembleMatch(setup);", 1],
     ["ok-call.js", "import { sharedMatchAssemblerDeps } from './matchAssemblerDeps.js';\nassembleMatch(setup, sharedMatchAssemblerDeps());", 0],
     ["ok-ident.js", "import { buildMatchAssemblerDeps } from \"../x/matchAssemblerDeps.js\";\nconst d = buildMatchAssemblerDeps();\nassembleMatch(s, d);", 0],
+    ["ok-core.js", "import { buildMatchAssemblerDepsFrom } from '../../battle/moba/matchAssemblerDepsCore.js';\nconst deps = buildMatchAssemblerDepsFrom({ heroLookup: heroOf });\nassembleMatch(built.setup, deps);", 0],
+    ["bad-core-inline.js", "import { buildMatchAssemblerDepsFrom } from '../x/matchAssemblerDepsCore.js';\nassembleMatch(setup, { LogicEngine, heroLookup, heroAdapters });", 1],
+    ["bad-core-noimport.js", "const deps = buildMatchAssemblerDepsFrom({ heroLookup });\nassembleMatch(setup, deps);", 1],
     ["ok-comment.js", "// assembleMatch(setup, { bad })\n/* assembleMatch(x, y) */\nconst z = 1;", 0],
   ];
-  ck("S0 呼叫點掃描器有檢定力（3 個違規樣本抓到、3 個合法樣本放行；註解不算）", ctrl.every(([f, s, n]) => assembleCallViolations(f, s).length === n),
+  ck("S0 呼叫點掃描器有檢定力（5 個違規樣本抓到、4 個合法樣本放行，含 core builder 的兩種形狀；註解不算）", ctrl.every(([f, s, n]) => assembleCallViolations(f, s).length === n),
     JSON.stringify(ctrl.map(([f, s]) => [f, assembleCallViolations(f, s).length])));
   const files = [];
   const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) { if (path.relative(ROOT, p).replace(/\\/g, "/") !== "src/debug") walk(p); } else if (/\.(m?js|jsx)$/.test(e.name)) files.push(p); } };
@@ -484,7 +489,8 @@ function assembleCallViolations(file, rawSrc) {
     callers.push(rel);
     violations.push(...assembleCallViolations(rel, raw));
   }
-  ck(`S1 src/（排除 src/debug/**）每個 assembleMatch( 呼叫都從共用 deps builder 取 deps（${callers.length} 個檔）`, callers.includes("src/useLocalServer.js") && violations.length === 0, violations.join(" | ") || callers.join(","));
+  ck(`S1 src/（排除 src/debug/**）每個 assembleMatch( 呼叫都從共用 deps builder（Live＝matchAssemblerDeps.js、Challenge＝matchAssemblerDepsCore.js）取 deps；Live hook 與 Challenge runner 都在其中（${callers.length} 個檔）`,
+    callers.includes("src/useLocalServer.js") && callers.includes("src/platform/challenge/challengeRunner.js") && violations.length === 0, violations.join(" | ") || callers.join(","));
   const builder = stripComments(fs.readFileSync(path.join(ROOT, "src/battle/moba/liveMatchSetup.js"), "utf8"));
   ck("S2 liveMatchSetup.js 是純函式：不讀 store／window／location／時鐘／亂數／import.meta", !/\b(useProfileStore|useHeroProgressStore|getState|window|location|localStorage|Date\.now|Math\.random|import\.meta|URLSearchParams)\b/.test(builder));
   const uls = stripComments(fs.readFileSync(path.join(ROOT, "src/useLocalServer.js"), "utf8"));
