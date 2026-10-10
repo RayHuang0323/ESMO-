@@ -219,13 +219,16 @@ console.log("\n── §2 第五個 opt-in 行為層 ──");
     const codeOf = (p) => stripT4(fsT4.readFileSync(p, "utf8"));
     const uls = codeOf("src/useLocalServer.js");
     const asm = codeOf("src/battle/moba/matchAssembler.js");
-    const depsSrc = codeOf("src/battle/moba/matchAssemblerDeps.js");
+    //  Phase 3a T5：adapter 清單搬到 core（matchAssemblerDepsCore.js）；Live 的 matchAssemblerDeps.js 是 core 之上的薄層。
+    const depsSrc = codeOf("src/battle/moba/matchAssemblerDepsCore.js");
+    const depsWrapperSrc = codeOf("src/battle/moba/matchAssemblerDeps.js");
     const lms = codeOf("src/battle/moba/liveMatchSetup.js");
     const setupSrc = codeOf("src/platform/contracts/matchSetup.js");
     ck("28) 原型層已接進正式流程的唯一計算點（useLocalServer → 唯一組裝器 assembleMatch）",
       /assembleMatch\(/.test(uls) && !/configureArchetypes|toEngineArchetypes/.test(uls)
       && /H\.toEngineArchetypes\(roster\)/.test(asm) && /call\("configureArchetypes",/.test(asm)
-      && /import\s*\{[^}]*\btoEngineArchetypes\b[^}]*\}\s*from\s*"\.\.\/\.\.\/data\/heroCombatArchetypes\.js"/.test(depsSrc));
+      && /import\s*\{[^}]*\btoEngineArchetypes\b[^}]*\}\s*from\s*"\.\.\/\.\.\/data\/heroCombatArchetypes\.js"/.test(depsSrc)
+      && /buildMatchAssemblerDepsFrom/.test(depsWrapperSrc));
     //  29：原本釘 hook 裡的三元式；現在由三處共同保證（builder：沒有 opts.roster ⇒ roster null；
     //  setup：effectiveLayers.archetypes＝有 roster；組裝器：層沒生效就不呼叫），再加實際組裝的行為驗證。
     const { buildLiveMatchSetup } = await import("../src/battle/moba/liveMatchSetup.js");
