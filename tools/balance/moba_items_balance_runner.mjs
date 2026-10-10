@@ -25,6 +25,12 @@ import os from "node:os";
 import path from "node:path";
 import { fork } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+//  Phase 3a T6：對局組裝只走唯一的組裝器（runner 自己不再呼叫任何 e.configure*）。
+//  這些是 runner 所在樹的契約／組裝器；被量測的引擎與 adapter 仍由 M（ESMO_BALANCE_ROOT 指的樹）提供。
+import { createMatchSetup } from "../../src/platform/contracts/matchSetup.js";
+import { rulesetById } from "../../src/platform/contracts/matchRuleset.js";
+import { assembleMatch } from "../../src/battle/moba/matchAssembler.js";
+import { buildMatchAssemblerDepsFrom } from "../../src/battle/moba/matchAssemblerDepsCore.js";
 
 //  Objective Stakes v16 A/B：`ESMO_BALANCE_ROOT` ⇒ 從另一棵原始碼樹載入引擎（例如乾淨的 v15 基準），
 //  runner 本身（名單、設定、量測）不變 ⇒ 兩邊同一個 runner。未設定 ⇒ 與舊行為相同。
@@ -112,50 +118,66 @@ export function mirroredRoster(seed, M) {
   return roster;
 }
 
-//  rosterOverride：gate 指定陣容（例如保證 100 名英雄都上場）；不傳 ⇒ 與原本相同由 seed 挑鏡像陣容。
-export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
-  const roster = rosterOverride ?? mirroredRoster(seed, M);
-  const e = new M.LE.LogicEngine(seed);
-  if (RULE_OVERRIDES) e.rules = { ...e.rules, ...RULE_OVERRIDES };
-  //  v16 Objective Layout：與 useLocalServer.start 同序（建構後、任何 configure 之前）。
-  //  `ESMO_BALANCE_LAYOUT=STANDARD|SWAPPED` 只供診斷強制指定；預設由 seed 推導（與正式流程相同的契約函式）。
-  if (M.objectiveLayout && typeof e.configureObjectiveLayout === "function") {
+/**
+ * Phase 3a T6：把 (seed, config, M, incomeK, roster) 轉成一份 `balanceTool.v20` MatchSetup（純函式；只讀 M 的「有沒有」，
+ * 不呼叫任何 adapter）。M 缺哪個模組 ⇒ 對應的層在 ruleset 裡關掉（規則集只能關、不能開）：
+ *   · M.skills 缺 ⇒ heroSkills／heroPassives／heroPowerCurve／battleTalents 全關（passives／curve 只疊在 skills 之上）
+ *   · M.talents／M.passives／M.curves 缺 ⇒ 各自的層關
+ *   · M.objectiveLayout 缺 ⇒ objectiveLayout 層 "standard"（不呼叫 configureObjectiveLayout；舊樹沒有這個契約）
+ *   · 引擎類別沒有 configureObjectiveLayout／configureHeroPassives／configureHeroPowerCurve ⇒ 同樣關（舊樹的 typeof 護欄）
+ *   · M.tactic 沒有 toEngineTacticIdentity ⇒ tacticIdentity 關（identity: null）
+ * `ESMO_BALANCE_LAYOUT` 在呼叫當下讀取（不是載入時）；`RULE_OVERRIDES` 仍是載入時讀的模組常數。
+ */
+export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
+  const proto = M.LE.LogicEngine.prototype;
+  const has = (name) => typeof proto[name] === "function";
+  const base = rulesetById("balanceTool.v20");
+  const skills = !!M.skills;
+  const layoutOn = !!M.objectiveLayout && has("configureObjectiveLayout");
+  const ruleset = { ...base, layers: { ...base.layers,
+    heroSkills: skills,
+    heroPassives: skills && !!M.passives && has("configureHeroPassives"),
+    heroPowerCurve: skills && !!M.curves && has("configureHeroPowerCurve"),
+    battleTalents: skills && !!M.talents,
+    tacticIdentity: !!M.tactic.toEngineTacticIdentity,
+    objectiveLayout: layoutOn ? base.layers.objectiveLayout : "standard" } };
+  const tool = {};
+  if (RULE_OVERRIDES) tool.ruleOverrides = RULE_OVERRIDES;
+  if (layoutOn) {
     const forced = process.env.ESMO_BALANCE_LAYOUT;
-    e.configureObjectiveLayout(forced === "STANDARD" || forced === "SWAPPED" ? forced : M.objectiveLayout.objectiveLayoutForSeed(seed));
+    if (forced === "STANDARD" || forced === "SWAPPED") tool.forcedLayout = forced;
   }
-  const heroMods = M.profile.toEngineHeroMods(roster, M.heroes.heroById);
-  if (heroMods) e.configureHeroes(heroMods);
-  //  與 useLocalServer.start() 同序：configureHeroes 之後掛 Hero Skills。
-  if (M.skills) {
-    const selected = M.talents?.selectBattleTalents(roster) ?? null;
-    const sk = M.skills.toEngineHeroSkills(roster, selected);
-    if (sk) e.configureHeroSkills(sk);
-    const pv = sk && M.passives ? M.passives.toEngineHeroPassives(roster) : null;
-    if (pv && typeof e.configureHeroPassives === "function") e.configureHeroPassives(pv);
-    const pc = sk && M.curves ? M.curves.toEngineHeroPowerCurve(roster) : null;
-    if (pc && typeof e.configureHeroPowerCurve === "function") e.configureHeroPowerCurve(pc);
-  }
-  const blue = {}, red = {};
-  for (const [pid, m] of Object.entries(M.arche.toEngineArchetypes(roster))) (pid[0] === "r" ? red : blue)[pid] = m;
-  e.configureArchetypes({ blue, red, meta: null });
-  e.configureSpells(M.loadout.toEngineSpells(roster));
-  //  Tactical Identity：與 useLocalServer 相同地傳入（std 對 std ⇒ 全中性，結果逐位元不變）。
-  const ident = M.tactic.toEngineTacticIdentity ? { blue: M.tactic.toEngineTacticIdentity(M.tactic.STANDARD_OPP_TACTIC), red: M.tactic.toEngineTacticIdentity(M.tactic.STANDARD_OPP_TACTIC) } : null;
-  e.configureMatch({ blue: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), red: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), meta: null, identity: ident });
   let strategySide = null;
   if (config !== "off") {
-    const strategies = {};
-    if (config !== "standard") {
+    if (config === "standard") tool.itemsStrategies = { blue: "standard", red: "standard" };
+    else {
       strategySide = seed % 2 === 0 ? "blue" : "red";
-      for (const pid of Object.keys(roster)) strategies[pid] = (pid[0] === "b") === (strategySide === "blue") ? config : "standard";
+      tool.itemsStrategies = { blue: strategySide === "blue" ? config : "standard", red: strategySide === "red" ? config : "standard" };
     }
-    const itemsCfg = M.adapter.toEngineItems({ roster, heroLookup: M.heroes.heroById, strategies, defaultStrategy: "standard" });
-    e.configureItems(itemsCfg);
-    //  M4b 量測：倍率直接寫進裝備 runtime（不動 LogicEngine ⇒ moba-sim 指紋不變）。
-    //  configureItems 當下只有出生購買（花開局金錢，不入帳）⇒ 第一個 tick 前設定等同從頭生效。
-    if (incomeK !== 1) e.items.incomeK = incomeK;
+    if (incomeK !== 1) tool.incomeK = incomeK;
   }
-  return { e, roster, strategySide };
+  const plainRoster = Object.fromEntries(Object.entries(roster).map(([seat, row]) =>
+    [seat, { heroId: row.heroId, ...(Array.isArray(row.spells) ? { spells: row.spells } : {}) }]));
+  const built = createMatchSetup({ ruleset, seed, roster: plainRoster, tactic: { blue: { kind: "std" }, red: { kind: "std" } }, tool,
+    meta: { sessionId: null, mode: "balance", opponentId: null, seedSource: "tool" } });
+  if (!built.ok) throw new Error(`balance MatchSetup rejected: ${built.errors.map((x) => `${x.code}@${x.field}`).join(",")}`);
+  return { setup: built.setup, strategySide };
+}
+
+//  rosterOverride：gate 指定陣容（例如保證 100 名英雄都上場）；不傳 ⇒ 與原本相同由 seed 挑鏡像陣容。
+//  組裝順序（layout → heroes → skills → archetypes → spells → match → items）與短路條件全在 matchAssembler；
+//  這裡只決定「哪些層開」與「用哪個引擎／adapter」。deps 走共用核心（唯一一份 adapter 清單），M 提供的模組以覆寫注入。
+export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
+  const roster = rosterOverride ?? mirroredRoster(seed, M);
+  const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster);
+  const adapters = {};
+  if (M.skills) adapters.toEngineHeroSkills = M.skills.toEngineHeroSkills;
+  if (M.talents) { adapters.selectBattleTalents = M.talents.selectBattleTalents; adapters.battleTalentOptions = M.talents.battleTalentOptions; }
+  if (M.arche.toEngineArchetypes) adapters.toEngineArchetypes = M.arche.toEngineArchetypes;
+  const deps = buildMatchAssemblerDepsFrom({ LogicEngine: M.LE.LogicEngine, heroLookup: M.heroes.heroById, heroAdapters: adapters });
+  const r = assembleMatch(setup, deps);
+  if (!r.ok) throw new Error(`balance assembleMatch failed: ${r.errors.map((x) => `${x.code}@${x.field}`).join(",")}`);
+  return { e: r.engine, roster, strategySide };
 }
 
 /** 各側塔況：路線塔（上中下 9 座）倒幾座、其餘非主堡塔（門牙塔）倒幾座、主堡血量。 */
