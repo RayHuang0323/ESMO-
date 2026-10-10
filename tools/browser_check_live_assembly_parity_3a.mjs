@@ -14,6 +14,8 @@
 //      （瀏覽器與 Node 的 builder 逐位元相同）
 //   P3 Node 以共用 deps 組裝同一份 setup、tick 到頁面取樣的同一個 tick 數 ⇒ 逐 tick 串流雜湊（golden 的
 //      createStreamHasher，每 20 tick 取樣）與當下狀態雜湊都相同；depsFingerprint 相同
+//   P3e 正常路徑不顯示「這場比賽無法開始」（battle-assembly-error；fix round 1）
+//   N  沒有 ?shot= 的正式路徑：比賽照常開始、沒有錯誤畫面、四個對等鉤子都不存在、串流雜湊模組沒有被載入
 //   E  page error 0、console error 0
 //  ⚠ 只讀 ?shot= 才存在的驗收鉤子；不 tick、不改模擬狀態。chrome.evaluate 字串裡不能有反引號。
 // ============================================================================
@@ -49,6 +51,7 @@ const result = await runGate({
     await chrome.send("Page.addScriptToEvaluateOnNewDocument", { source: FREEZE });
     const clickText = (t) => ev("const b=[...document.querySelectorAll('button')].find(x=>(x.textContent||'').trim()===" + JSON.stringify(t) + "); if(!b) return JSON.stringify(false); b.click(); return JSON.stringify(true);");
     const hashes = {};
+    const noAssemblyError = async () => (await ev("return JSON.stringify(document.querySelector('[data-testid=\"battle-assembly-error\"]') === null);")) === true;
 
     async function runViewport(tag, setupViewport) {
       await setupViewport();
@@ -58,6 +61,8 @@ const result = await runGate({
       await ev("window.__ESMO_FREEZE_NOW=false; return JSON.stringify(1);");
       ck(`${tag} P0a 對等鉤子存在（?shot= 才掛）`, have);
       if (!have) return;
+      const dynLoaded = await ev("return JSON.stringify(performance.getEntriesByType('resource').map(function(e){return e.name;}).filter(function(n){return /engineStreamHash/.test(n);}).length);");
+      ck(`${tag} P0c ?shot=：串流雜湊模組是另外載入的資源（N3 的正對照）`, dynLoaded >= 1, `entries=${dynLoaded}`);
       const page = await ev("return JSON.stringify({ hash: window.__ESMO_MATCH_SETUP_HASH, setup: window.__ESMO_MATCH_SETUP, inputs: window.__ESMO_LIVE_SETUP_INPUTS, probe: typeof window.__ESMO_ENGINE_STREAM_HASH === 'function' });");
       ck(`${tag} P0b seed 固定：頁面 setup.seed＝(凍結的 Date.now & 0xffff) | 1、seedSource＝local`, page?.setup?.seed === EXPECTED_SEED && page?.setup?.meta?.seedSource === "local",
         `seed=${page?.setup?.seed} expected=${EXPECTED_SEED} source=${page?.setup?.meta?.seedSource}`);
@@ -74,6 +79,7 @@ const result = await runGate({
       let ready = false;
       for (let i = 0; i < 400 && !ready; i++) { await sleep(1000); ready = String(await chrome.evaluate("return JSON.stringify(window.__BATTLE_SHOT_READY || null);")).includes(`parity${tag}`); }
       ck(`${tag} P3a 戰鬥推進到 waitTs=120`, ready);
+      ck(`${tag} P3e 正常路徑：畫面沒有「這場比賽無法開始」（battle-assembly-error 不存在）`, await noAssemblyError());
       if (!ready) return;
       //  同一個同步 evaluate 內讀 tick 數與雜湊 ⇒ 不會被中途的 tick 拆開
       const live = await ev("return JSON.stringify(window.__ESMO_ENGINE_STREAM_HASH());");
@@ -97,6 +103,18 @@ const result = await runGate({
     };
     await runViewport("desktop", desktop);
     await runViewport("m390", mobile);
+
+    //  N：沒有 ?shot= 的正式路徑（同步開局，不載入串流雜湊模組）——比賽照常開始、沒有錯誤畫面、四個對等鉤子一個都不存在
+    await desktop();
+    await chrome.navigate(`${url}?debug=moba-runtime-battle&quality=low`);
+    let started = false;
+    for (let i = 0; i < 120 && !started; i++) { await sleep(500); started = (await ev("return JSON.stringify(document.querySelector('[data-testid=\"leave-active-match\"]') !== null);")) === true; }
+    await ev("window.__ESMO_FREEZE_NOW=false; return JSON.stringify(1);");
+    ck("N1 沒有 ?shot=：比賽照常開始（leave-active-match 出現）、沒有 battle-assembly-error", started && await noAssemblyError());
+    const leaked = await ev("return JSON.stringify(['__ESMO_MATCH_SETUP_HASH','__ESMO_MATCH_SETUP','__ESMO_LIVE_SETUP_INPUTS','__ESMO_ENGINE_STREAM_HASH'].filter(function(k){return typeof window[k] !== 'undefined';}));");
+    ck("N2 沒有 ?shot=：四個對等鉤子都不存在", Array.isArray(leaked) && leaked.length === 0, JSON.stringify(leaked));
+    const loaded = await ev("return JSON.stringify(performance.getEntriesByType('resource').map(function(e){return e.name;}).filter(function(n){return /engineStreamHash/.test(n);}));");
+    ck("N3 沒有 ?shot=：頁面沒有載入串流雜湊模組（engineStreamHash）", Array.isArray(loaded) && loaded.length === 0, JSON.stringify(loaded));
     console.log(`   桌機與 390 的 setup 雜湊：${hashes.desktop} / ${hashes.m390}（${hashes.desktop === hashes.m390 ? "相同" : "不同（各自的店內狀態不同時屬正常；對等以各自頁面為準）"}）`);
 
     const errs = chrome.pageErrors ?? [];

@@ -9,6 +9,7 @@
 //  Phase 3a T4：引擎的建構與 configure* 全部交給 `assembleMatch`（battle/moba/matchAssembler.js），
 //  輸入由純函式 `buildLiveMatchSetup`（battle/moba/liveMatchSetup.js）從 opts＋store 快照建成 MatchSetup。
 //  本檔只留：讀快照、決定 seed（時鐘 fallback）、規則集壽命、Replay 擷取、呈現層 debug、節拍／追趕／存檔。
+//  開局被拒 ⇒ start() 回 { ok:false, errors }、assemblyError 有值、引擎不啟動（不丟例外、不換規則重試）。
 //  v20 golden 的 9 個 live 案經這條路逐位元重現（tools/check_live_setup_3a.mjs）。
 // ============================================================================
 
@@ -26,15 +27,31 @@ import { matchSetupHash } from "./platform/contracts/matchSetup.js";
 import { FEATURE_FLAGS } from "./featureFlags.js";
 //  DEV 才讀 ?itemsDev=1（見 start() 內；正式 build 由 import.meta.env.DEV 折疊掉）
 import { itemsDevRequested } from "./ui/itemsDevFlag.js";
-//  ?shot= 對等鉤子：與 golden 相同的逐 tick 取樣（tools/browser_check_live_assembly_parity_3a.mjs）
-import { createStreamHasher, engineStreamHash } from "../tools/lib/matchGolden.mjs";
 
-/** 開局失敗一律大聲失敗：setup／組裝被拒代表 app 自己的狀態有問題，不得默默換一套規則開打。 */
-const liveStartError = (stage, errors) => {
-  const detail = (errors ?? []).map((e) => `${e.code}@${e.field}`).join(", ");
-  console.error(`[useLocalServer] ${stage} rejected the live match`, errors);
-  return new Error(`Live match could not start (${stage}: ${detail})`);
-};
+/**
+ * opts＋store 快照 → MatchSetup → 已配置好、尚未 tick 的引擎。**永不丟例外**。
+ *
+ * 被拒（輸入不合契約、查不到英雄…）⇒ `{ ok: false, stage, errors }`、`engine: null`：
+ * 呼叫端不得開打，也不得改用另一套規則重試——那會是另一場模擬（Phase 3a T4 ruling 3b）。
+ * 建 setup／組裝過程中任何例外同樣轉成 `stage: "exception"`，不外洩。
+ *
+ * @param {object} liveInputs buildLiveMatchSetup 的參數（opts／ruleset／seed／seedSource／profile／heroProgress／opponentTeam）
+ * @returns {{ ok: boolean, stage: "MatchSetup"|"assembleMatch"|"exception"|null, errors: object[], setup: object|null,
+ *             setupHash: string|null, engine: object|null, applied: object|null, buildStrategy: string|null, notes: string[] }}
+ */
+export function prepareLiveMatch(liveInputs) {
+  const rejected = (stage, errors, notes = []) => ({ ok: false, stage, errors, setup: null, setupHash: null, engine: null, applied: null, buildStrategy: null, notes });
+  try {
+    const built = buildLiveMatchSetup(liveInputs);
+    if (!built.ok) return rejected("MatchSetup", built.errors, built.notes);
+    const assembled = assembleMatch(built.setup, sharedMatchAssemblerDeps());
+    if (!assembled.ok) return rejected("assembleMatch", assembled.errors, built.notes);
+    return { ok: true, stage: null, errors: [], setup: built.setup, setupHash: matchSetupHash(built.setup),
+      engine: assembled.engine, applied: assembled.applied, buildStrategy: built.buildStrategy, notes: built.notes };
+  } catch (error) {
+    return rejected("exception", [{ code: "assembly_exception", field: "$", message: String(error?.message ?? error) }]);
+  }
+}
 
 // ============================================================================
 //  S29：simTime / presentationTime / playbackRate 明確分離
@@ -72,6 +89,10 @@ export function useLocalServer() {
   const [fastForwarding, setFastForwarding] = useState(false);
   //  恢復進度（null = 沒有在追趕）{ doneSec, totalSec }。只給畫面顯示，不進引擎、不進存檔。
   const [resumeProgress, setResumeProgress] = useState(null);
+  //  開局被拒（null = 沒有錯誤）{ stage, errors }。畫面據此顯示訊息；引擎沒有啟動。
+  const [assemblyError, setAssemblyError] = useState(null);
+  //  每次 start()／stop() 遞增：?shot= 模式下開局要等動態 import，回來時若已不是同一次啟動就不得再開節拍。
+  const startTokenRef = useRef(0);
 
   const persistActiveSnapshot = useCallback(({ status = "active", force = false } = {}) => {
     const eng = engineRef.current;
@@ -98,6 +119,7 @@ export function useLocalServer() {
     clearInterval(intervalRef.current); cancelAnimationFrame(rafRef.current);
     clearTimeout(ffRef.current); clearTimeout(catchUpRef.current);
     intervalRef.current = null; rafRef.current = null; ffRef.current = null; catchUpRef.current = null;
+    startTokenRef.current += 1;
     setPlaying(false); setResumeProgress(null);
   }, []);
 
@@ -191,14 +213,20 @@ export function useLocalServer() {
       heroProgress: { loadout: useHeroProgressStore.getState().getLoadout() },
       opponentTeam: opts.opponentId ? aiTeamById(opts.opponentId) : null,
     };
-    const built = buildLiveMatchSetup(liveInputs);
-    if (!built.ok) throw liveStartError("MatchSetup", built.errors);
-    for (const note of built.notes) console.warn(`[useLocalServer] ${note}`);
-    const assembled = assembleMatch(built.setup, sharedMatchAssemblerDeps());
-    if (!assembled.ok) throw liveStartError("assembleMatch", assembled.errors);
-    const eng = assembled.engine;
-    const { objectiveLayout, talentSelection, replayConfig } = assembled.applied;
-    const setupHash = matchSetupHash(built.setup);
+    const prepared = prepareLiveMatch(liveInputs);
+    if (!prepared.ok) {
+      //  不開打、不重試、不換規則：把原因交給畫面（GameView 的 battle-assembly-error），錯誤碼記一次。
+      console.error(`[useLocalServer] live match not started (${prepared.stage}): ${prepared.errors.map((e) => `${e.code}@${e.field}`).join(", ")}`, prepared.errors);
+      engineRef.current = null;
+      activeMatchRef.current = null;
+      setAssemblyError({ stage: prepared.stage, errors: prepared.errors });
+      return { ok: false, errors: prepared.errors };
+    }
+    setAssemblyError(null);
+    for (const note of prepared.notes) console.warn(`[useLocalServer] ${note}`);
+    const eng = prepared.engine;
+    const { objectiveLayout, talentSelection, replayConfig } = prepared.applied;
+    const { setup, setupHash, buildStrategy } = prepared;
 
     const replayRoster = talentSelection ? Object.fromEntries(Object.entries(opts.roster).map(([seat, row]) => [seat, {
       ...row, ...(talentSelection.players[seat] ? { battleTalentId: talentSelection.players[seat].id } : {}),
@@ -212,7 +240,7 @@ export function useLocalServer() {
       seed,
       //  O7：這一場是不是權威場次（由 MatchSession 指定 seed）
       sessionId: opts.sessionId ?? null,
-      seedSource: built.setup.meta.seedSource,
+      seedSource: setup.meta.seedSource,
       objectiveLayout,
       config: replayConfig,
       roster: replayRoster ?? null,
@@ -222,24 +250,8 @@ export function useLocalServer() {
     //  只有 `?diag=1` / `?shot=` 時開啟。不開 ⇒ 引擎不輸出 `debug` 區塊
     //  ⇒ snapshot 形狀與既有契約逐位元相同（Replay / BattleResult 不受影響）。
     //  debugOn 只是觀測旗標（不改模擬）⇒ 在組裝之後才開與 v20 的位置等價。
-    if (typeof window !== "undefined") {
-      const qs = new URLSearchParams(window.location.search);
-      if (qs.get("diag") === "1" || qs.has("shot")) eng.enableCombatDebug(true);
-      //  Phase 3a T4 瀏覽器對等鉤子（只有 ?shot= 才掛，同 __ESMO_COMBAT_FEEDBACK 模式）：
-      //  頁面 setup 雜湊、builder 輸入、與 golden 相同的逐 tick 串流雜湊 ⇒ Node 可在同一個 tick 重算比對。
-      if (qs.has("shot")) {
-        const stream = engineStreamHash(eng, 20);
-        const { draft: _draft, ...setupOpts } = opts;
-        window.__ESMO_MATCH_SETUP_HASH = setupHash;
-        window.__ESMO_MATCH_SETUP = JSON.parse(JSON.stringify(built.setup));
-        window.__ESMO_LIVE_SETUP_INPUTS = JSON.parse(JSON.stringify({ ...liveInputs, opts: setupOpts,
-          opponentTeam: liveInputs.opponentTeam ? { id: liveInputs.opponentTeam.id, style: liveInputs.opponentTeam.style } : null }));
-        window.__ESMO_ENGINE_STREAM_HASH = () => {
-          const now = createStreamHasher(1); now.sample(eng);
-          return { setupHash, ticks: stream.ticks, t: eng.t, streamHash: stream.hex, stateHash: now.hex, depsFingerprint: assembled.applied.depsFingerprint };
-        };
-      }
-    }
+    const qs = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    if (qs && (qs.get("diag") === "1" || qs.has("shot"))) eng.enableCombatDebug(true);
 
     const activeConfig = {
       phase: "battle",
@@ -247,11 +259,11 @@ export function useLocalServer() {
       tactic: opts.tactic ?? null,
       ...(talentSelection && opts.talentSelections ? { talentSelections: opts.talentSelections } : {}),
       //  M3d：裝備系統真的開著才寫進本場設定（OFF 時存檔形狀與 M3d 之前相同）
-      ...(built.buildStrategy ? { buildStrategy: built.buildStrategy } : {}),
+      ...(buildStrategy ? { buildStrategy } : {}),
       //  v16：本場 Objective Layout（恢復時由 GameView 帶回 opts.objectiveLayout，整場不換）
       objectiveLayout,
       //  Phase 3a T4：本場規則集（恢復時沿用）與 setup 身分雜湊（追蹤／對等用）
-      ruleset: built.setup.ruleset,
+      ruleset: setup.ruleset,
       matchSetupHash: setupHash,
     };
     activeMatchRef.current = {
@@ -296,16 +308,47 @@ export function useLocalServer() {
     engineRef.current = null;   // 上一場／上一次的引擎不得在追趕期間被存檔或快轉碰到
     let replayGuard = 0;
     const needsCatchUp = () => !eng.over && eng.t < resumeTimeSec && replayGuard < 12000;
-    if (!needsCatchUp()) { beginLive(); return; }
-    setResumeProgress({ doneSec: 0, totalSec: resumeTimeSec });
-    const catchUp = () => {
-      const until = performance.now() + CATCH_UP_BUDGET_MS;
-      while (needsCatchUp() && performance.now() < until) { eng.tick(DT_SIM); replayGuard += 1; }
+    const launch = () => {
       if (!needsCatchUp()) { beginLive(); return; }
-      setResumeProgress({ doneSec: eng.t, totalSec: resumeTimeSec });
+      setResumeProgress({ doneSec: 0, totalSec: resumeTimeSec });
+      const catchUp = () => {
+        const until = performance.now() + CATCH_UP_BUDGET_MS;
+        while (needsCatchUp() && performance.now() < until) { eng.tick(DT_SIM); replayGuard += 1; }
+        if (!needsCatchUp()) { beginLive(); return; }
+        setResumeProgress({ doneSec: eng.t, totalSec: resumeTimeSec });
+        catchUpRef.current = setTimeout(catchUp, 0);
+      };
       catchUpRef.current = setTimeout(catchUp, 0);
     };
-    catchUpRef.current = setTimeout(catchUp, 0);
+    //  ── Phase 3a T4 瀏覽器對等鉤子（只有 ?shot= 才掛，同 __ESMO_COMBAT_FEEDBACK 模式）──────────
+    //  頁面 setup 雜湊、builder 輸入、與 golden 相同的逐 tick 串流雜湊 ⇒ Node 可在同一個 tick 重算比對
+    //  （tools/browser_check_live_assembly_parity_3a.mjs）。串流雜湊模組只在這裡動態載入（不進主 bundle）；
+    //  它必須在第一個 tick 之前包住 eng.tick ⇒ ?shot= 模式的第一個 tick 等 import 回來才開始
+    //  （只延後節拍的起點，tick 序列與 dt 不變；期間 engineRef 為 null，與追趕期間相同）。
+    //  startToken：等待期間被 stop()／再次 start() 取代 ⇒ 這一次不得再開節拍。
+    if (qs && qs.has("shot")) {
+      const token = startTokenRef.current;
+      const { draft: _draft, ...setupOpts } = opts;
+      import("./battle/moba/debug/engineStreamHash.js").then((m) => {
+        if (startTokenRef.current !== token) return;
+        const stream = m.engineStreamHash(eng, 20);
+        window.__ESMO_MATCH_SETUP_HASH = setupHash;
+        window.__ESMO_MATCH_SETUP = JSON.parse(JSON.stringify(setup));
+        window.__ESMO_LIVE_SETUP_INPUTS = JSON.parse(JSON.stringify({ ...liveInputs, opts: setupOpts,
+          opponentTeam: liveInputs.opponentTeam ? { id: liveInputs.opponentTeam.id, style: liveInputs.opponentTeam.style } : null }));
+        window.__ESMO_ENGINE_STREAM_HASH = () => ({
+          setupHash, ticks: stream.ticks, t: eng.t, streamHash: stream.hex, stateHash: m.engineStateHash(eng),
+          depsFingerprint: prepared.applied.depsFingerprint,
+        });
+        launch();
+      }, (error) => {
+        console.warn("[useLocalServer] parity hooks unavailable (stream hash module failed to load)", error);
+        if (startTokenRef.current === token) launch();
+      });
+    } else {
+      launch();
+    }
+    return { ok: true, errors: [], matchSetupHash: setupHash };
   }, [persistActiveSnapshot, stop]);
 
   const pause = useCallback(() => {
@@ -319,7 +362,7 @@ export function useLocalServer() {
     persistActiveSnapshot({ status: "paused", force: true });
     stop();
   }, [persistActiveSnapshot, stop]);
-  return { playing, start, stop, pause, fastForward, fastForwarding, engineRef, rate, setRate, rates: PLAYBACK_RATES, resumeProgress };
+  return { playing, start, stop, pause, fastForward, fastForwarding, engineRef, rate, setRate, rates: PLAYBACK_RATES, resumeProgress, assemblyError };
 }
 
 // ── 多人版（示意）──────────────────────────────────────────────────────────

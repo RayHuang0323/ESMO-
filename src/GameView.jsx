@@ -183,7 +183,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
   // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
   //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
-  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates, resumeProgress } = useLocalServer();
+  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates, resumeProgress, assemblyError } = useLocalServer();
   //  ── Milestone O7：權威場次 ─────────────────────────────────────────────
   //  seed / sessionId 一律**從 Store 讀**（由 O6 的一次性令牌寫入），
   //  刻意**不接受 props 傳入** ⇒ 前端無法覆寫 seed、對手或場次資料。
@@ -286,7 +286,26 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           </div>
         </div>
       )}
-      {!playing && !resumeProgress && !hud.over && (
+      {/* Phase 3a T4：對戰資料被組裝器拒絕 ⇒ 不開打（也不換一套規則硬打），明講原因並提供返回。樣式沿用上面的恢復進度卡。 */}
+      {assemblyError && (
+        <div data-testid="battle-assembly-error" role="alert"
+          style={{ position: "absolute", inset: 0, zIndex: Z.controls, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,10,18,0.82)", padding: 16 }}>
+          <div style={{ width: "min(380px, 100%)", background: "rgba(10,16,28,0.96)", border: "1px solid rgba(248,113,113,0.6)", borderRadius: 12, padding: "16px 18px", color: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 6 }}>⚠ 這場比賽無法開始</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#cbd5e1", marginBottom: 10 }}>
+              對戰資料沒有通過開局檢查。為了避免打出與紀錄不一致的結果，系統沒有開打。請返回後重新進入；若一再發生，請回報下方代碼。
+            </div>
+            <div data-testid="battle-assembly-error-codes" style={{ fontSize: 11, fontFamily: "ui-monospace,monospace", color: "#fca5a5", wordBreak: "break-all", marginBottom: 12 }}>
+              {(assemblyError.errors ?? []).slice(0, 4).map((e) => `${e.code}@${e.field}`).join("、") || assemblyError.stage}
+            </div>
+            <button data-testid="battle-assembly-error-back" onClick={() => onContinue?.()} disabled={!onContinue}
+              style={{ minHeight: 40, width: "100%", background: "rgba(8,14,24,0.9)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 800, cursor: onContinue ? "pointer" : "default", opacity: onContinue ? 1 : 0.5 }}>
+              ← 返回
+            </button>
+          </div>
+        </div>
+      )}
+      {!playing && !resumeProgress && !hud.over && !assemblyError && (
         <button onClick={begin} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: Z.controls, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 14, padding: "16px 40px", color: "#fff", fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", cursor: "pointer", boxShadow: "0 8px 40px rgba(59,130,246,0.6)" }}>
           ▶ 開始遊戲 / START
         </button>

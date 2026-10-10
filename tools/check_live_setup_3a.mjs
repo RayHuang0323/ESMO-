@@ -16,7 +16,10 @@
 //   D  DEV 網址開關不得進正式規則集；只在 allowTool（＝import.meta.env.DEV）時變成 kind:"tool"。
 //   F  depsFingerprint：共用 deps 穩定；換掉任何一個 adapter／契約常數／引擎 ⇒ 指紋改變。
 //   S  原始碼：src/（排除 src/debug/**）每一個 assembleMatch( 呼叫都從共用 deps builder 取 deps；
-//      builder 純函式（不讀 store／window／時鐘）；DEV 開關只在 import.meta.env.DEV 之內讀。
+//      builder 純函式（不讀 store／window／時鐘）；DEV 開關只在 import.meta.env.DEV 之內讀；
+//      對等鉤子全部在 ?shot= 之內；src/ 不 import tools/；串流雜湊單一實作、只在 ?shot= 動態載入。
+//   E  開局被拒（fix round 1）：prepareLiveMatch 永不丟例外，回 { ok:false, stage, errors }、不建引擎；
+//      缺 version 的舊存檔 legacy 戰術照 v20 接受並逐位元恢復。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
@@ -45,7 +48,9 @@ import { selectBattleTalents, battleTalentOptions } from "../src/battle/moba/tal
 import { toEnginePlayerMods } from "../src/battle/moba/mobaPlayerStats.js";
 import { matchItemsConfig, normalizeBuildStrategy } from "../src/battle/moba/items/buildStrategyPrep.js";
 import { stableStringify, stableHash } from "../src/platform/contracts/squadSnapshot.js";
-import { runAndHash, engineStreamHash, finalDigest } from "./lib/matchGolden.mjs";
+import { runAndHash, engineStreamHash, finalDigest, fnv, createStreamHasher } from "./lib/matchGolden.mjs";
+import * as StreamSrc from "../src/battle/moba/debug/engineStreamHash.js";
+import { prepareLiveMatch } from "../src/useLocalServer.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0, fail = 0;
@@ -294,6 +299,23 @@ for (const v of V_CASES) {
     loc.ok && loc.setup.objectiveLayout === "STANDARD" && loc.notes.some((n) => /objectiveLayout/.test(n)), JSON.stringify(loc.notes ?? codes(loc)));
   const conflict = liveBuild({ ...resume, objectiveLayout: "STANDARD" }, { players: G.players, lineup: G.lineup, ruleset: rl.ruleset });
   ck("R7b session seed＋與 seed 不符的 layout（竄改的存檔）⇒ objective_layout_conflict（不默默改）", !conflict.ok && conflict.errors.some((e) => e.code === "objective_layout_conflict"));
+  //  R8（ruling 3a）：舊存檔的戰術沒有 version（或是舊版號）＋變體改過的數值 ⇒ v20 照跑（投影不讀 version）；新路徑必須接受並逐位元恢復
+  for (const [tag, saved] of [["缺 version", (() => { const { version: _v, ...rest } = variantTactic; return rest; })()], ["舊 version", { ...variantTactic, version: "MobaTacticConfig.v0" }]]) {
+    const opts = { ...resume, tactic: JSON.parse(JSON.stringify(saved)) };
+    const N = liveBuild(opts, { players: G.players, lineup: G.lineup, ruleset: rl.ruleset });
+    if (!N.ok) { ck(`R8 legacy 戰術${tag}：setup 建立`, false, codes(N)); continue; }
+    const old = probed(() => v20LiveStart(opts, { players: G.players, lineup: G.lineup }));
+    const oldRes = runAndHash(old.r.eng, RUN);
+    const nw = probed(() => assembleMatch(N.setup, DEPS));
+    const hb2 = engineStreamHash(nw.r.engine, RUN.every);
+    let g2 = 0;
+    while (!nw.r.engine.over && nw.r.engine.t < 300 && g2 < 12000) { nw.r.engine.tick(RUN.dt); g2++; }
+    while (!nw.r.engine.over && nw.r.engine.t < RUN.maxT) nw.r.engine.tick(RUN.dt);
+    ck(`R8 legacy 戰術${tag}＋變體數值：接受、config 原樣保存、恢復（追趕 300 s）＝v20 hook 複本逐位元（呼叫＋digest＋streamHash）`,
+      stableStringify(N.setup.tactic.blue.config) === stableStringify(saved) && firstDiff(nw.calls, old.calls) === ""
+      && finalDigest(nw.r.engine) === oldRes.digest && hb2.hex === oldRes.streamHash && oldRes.digest === ra.digest,
+      firstDiff(nw.calls, old.calls) || `${finalDigest(nw.r.engine)}/${hb2.hex} vs ${oldRes.digest}/${oldRes.streamHash}`);
+  }
   progress("R done");
 }
 
@@ -348,6 +370,32 @@ for (const v of V_CASES) {
   }
 }
 
+// ════ E：開局被拒的路徑（ruling 3b：不丟例外、不默默換一套模擬）═══════════════════
+{
+  const okOpts = { seed: 67, roster: baseRows, tactic: mobaTacticById("m4"), buildStrategy: "early", sessionId: "s-e", mode: "moba" };
+  const inputsOf = (opts, over = {}) => ({ opts, ...hookSeed(opts), ruleset: resolveLiveRuleset({ flags: FLAGS }).ruleset,
+    profile: { players: G.players, lineup: G.lineup }, heroProgress: { loadout: G.defaultLoadout }, opponentTeam: null, ...over });
+  const run = (inputs) => { let thrown = null, out = null; const pr = probed(() => { try { out = prepareLiveMatch(inputs); } catch (e) { thrown = e; } }); return { out, thrown, calls: pr.calls }; };
+  const rejected = (x, stage, code) => x.thrown === null && x.out?.ok === false && x.out.stage === stage && x.out.engine === null && x.calls.length === 0
+    && Array.isArray(x.out.errors) && x.out.errors.some((e) => e.code === code && typeof e.message === "string");
+  const good = run(inputsOf(okOpts));
+  ck("E1 正常輸入 ⇒ { ok:true, engine, applied, setup, setupHash }", good.thrown === null && good.out?.ok === true && !!good.out.engine && /^[0-9a-f]{16}$/.test(good.out.setupHash)
+    && good.out.setupHash === matchSetupHash(good.out.setup) && good.out.errors.length === 0 && good.calls.length > 0);
+  const badHero = run(inputsOf({ ...okOpts, roster: { ...baseRows, r5: { ...baseRows.r5, heroId: "no_such_hero" } } }));
+  ck("E2 查不到的英雄 ⇒ { ok:false, stage:assembleMatch, hero_unknown }，不建引擎、零 configure、不丟例外", rejected(badHero, "assembleMatch", "hero_unknown"), JSON.stringify(badHero.out?.errors ?? String(badHero.thrown)));
+  const badLoadout = { ...G.defaultLoadout, b1: { ...G.defaultLoadout.b1, powerMult: Infinity } };
+  const badStat = run(inputsOf(okOpts, { heroProgress: { loadout: badLoadout } }));
+  ck("E3 非有限數值（loadout 倍率 Infinity）⇒ { ok:false, stage:MatchSetup }，不建引擎、不丟例外", badStat.thrown === null && badStat.out?.ok === false && badStat.out.stage === "MatchSetup" && badStat.out.engine === null && badStat.calls.length === 0 && badStat.out.errors.length > 0,
+    JSON.stringify(badStat.out?.errors ?? String(badStat.thrown)));
+  const { macro: _m, ...noMacro } = mobaTacticById("m4");
+  const badTactic = run(inputsOf({ ...okOpts, tactic: noMacro }));
+  ck("E4 legacy 戰術缺 macro 群組（v20 會在投影丟 TypeError）⇒ { ok:false, tactic_invalid }", rejected(badTactic, "MatchSetup", "tactic_invalid"), JSON.stringify(badTactic.out?.errors ?? String(badTactic.thrown)));
+  const boom = run(inputsOf({ ...okOpts, get roster() { throw new Error("boom"); } }));
+  ck("E5 builder／組裝過程丟出的例外也轉成 { ok:false, stage:exception }（不外洩例外）", rejected(boom, "exception", "assembly_exception") && /boom/.test(boom.out.errors[0].message), JSON.stringify(boom.out?.errors ?? String(boom.thrown)));
+  const normalized = run(inputsOf({ ...okOpts, buildStrategy: "aggressive", talentSelections: { b1: "nope:x" } }));
+  ck("E6 未知出裝策略／天賦 id 在 Live 不是錯誤：照 v20 正規化（standard／交給 AI），仍 ok（§V 已證與 v20 逐位元相同）", normalized.out?.ok === true && normalized.out.setup.buildStrategy === "standard" && normalized.out.setup.talentSelections.b1 === null);
+}
+
 // ════ F：depsFingerprint ═══════════════════════════════════════════════════════
 {
   const setup = liveBuild({ seed: 65, roster: baseRows, tactic: mobaTacticById("m4"), buildStrategy: "early", sessionId: "s-f", mode: "moba" }, { players: G.players, lineup: G.lineup }).setup;
@@ -374,7 +422,33 @@ for (const v of V_CASES) {
 }
 
 // ════ S：原始碼 ═══════════════════════════════════════════════════════════════
-const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/.*$/gm, "$1");
+/**
+ * 剝註解（逐字元掃描）。認得字串與樣板字串，所以字串裡的雙斜線不算註解；行註解先整行略過，
+ * 所以行註解裡出現的區塊註解開頭（例如路徑萬用字元）不會吃掉後面的程式碼——正則版就是這樣把整段程式碼刪掉的。
+ */
+function stripComments(src) {
+  const DQ = 34, SQ = 39, BT = 96, BS = 92, SL = 47, ST = 42, NL = 10;   // 雙引號、單引號、反引號、反斜線、斜線、星號、換行
+  const out = [];
+  let i = 0, quote = 0;
+  while (i < src.length) {
+    const c = src.charCodeAt(i), d = src.charCodeAt(i + 1);
+    if (quote) {
+      out.push(src[i]);
+      if (c === BS && i + 1 < src.length) { out.push(src[i + 1]); i += 2; continue; }
+      if (c === quote) quote = 0;
+      i++; continue;
+    }
+    if (c === DQ || c === SQ || c === BT) { quote = c; out.push(src[i]); i++; continue; }
+    if (c === SL && d === SL) { while (i < src.length && src.charCodeAt(i) !== NL) i++; continue; }
+    if (c === SL && d === ST) {
+      let j = i + 2;
+      while (j < src.length && !(src.charCodeAt(j) === ST && src.charCodeAt(j + 1) === SL)) j++;
+      i = Math.min(src.length, j + 2); continue;
+    }
+    out.push(src[i]); i++;
+  }
+  return out.join(String());
+}
 const BUILDERS = /^(sharedMatchAssemblerDeps|buildMatchAssemblerDeps)$/;
 /** 回傳違規的呼叫（檔名＋第二引數）。定義本身（export function assembleMatch）不算呼叫。 */
 function assembleCallViolations(file, rawSrc) {
@@ -436,6 +510,48 @@ function assembleCallViolations(file, rawSrc) {
     /ruleset\s*[:,]/.test(uls) && /matchSetupHash\s*[:,]/.test(uls) && /activeConfig/.test(uls));
   ck("S6 useLocalServer：對等掛點只在 ?shot= 時掛（同 __ESMO_COMBAT_FEEDBACK 模式）",
     /__ESMO_MATCH_SETUP_HASH/.test(uls) && /__ESMO_ENGINE_STREAM_HASH/.test(uls) && /has\(\s*["']shot["']\s*\)/.test(uls));
+  //  S7：每一個 window.__ESMO_MATCH_*／__ESMO_LIVE_*／__ESMO_ENGINE_* 指派都必須落在 `if (qs.has("shot")) { … }` 區塊內（以大括號配對求區塊範圍）
+  const shotBlocks = [...uls.matchAll(/if\s*\(\s*(?:qs\s*&&\s*)?qs\.has\(\s*["']shot["']\s*\)\s*\)\s*\{/g)].map((m) => {
+    let depth = 0, i = m.index + m[0].length - 1;
+    for (; i < uls.length; i++) { if (uls[i] === "{") depth++; else if (uls[i] === "}") { depth--; if (depth === 0) break; } }
+    return [m.index, i];
+  });
+  const hookAssigns = [...uls.matchAll(/window\.__ESMO_(?:MATCH|LIVE|ENGINE)_\w+\s*=(?!=)/g)];
+  const outside = hookAssigns.filter((m) => !shotBlocks.some(([a, b]) => m.index > a && m.index < b));
+  const ctrlSrc = 'if (qs.has("shot")) { window.__ESMO_MATCH_A = 1; } window.__ESMO_LIVE_B = 2;';
+  const ctrlBlocks = [[ctrlSrc.indexOf("if"), ctrlSrc.indexOf("}")]];
+  const ctrlOutside = [...ctrlSrc.matchAll(/window\.__ESMO_(?:MATCH|LIVE|ENGINE)_\w+\s*=(?!=)/g)].filter((m) => !ctrlBlocks.some(([a, b]) => m.index > a && m.index < b));
+  ck("S7 四個對等鉤子（MATCH_SETUP_HASH／MATCH_SETUP／LIVE_SETUP_INPUTS／ENGINE_STREAM_HASH）的指派全部在 ?shot= 區塊內（對照樣本抓得到區塊外的指派）",
+    shotBlocks.length >= 1 && hookAssigns.length === 4 && outside.length === 0 && ctrlOutside.length === 1, `assigns=${hookAssigns.length} outside=${outside.length}`);
+  //  S8：正式程式碼不得 import tools/；串流雜湊在 hook 只以動態 import 載入，而且在 ?shot= 區塊內
+  const toolImporters = [];
+  const walkAll = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const q = path.join(d, e.name); if (e.isDirectory()) walkAll(q); else if (/\.(m?js|jsx)$/.test(e.name) && /(?:from\s*|import\s*\(\s*)["'][^"']*\/tools\//.test(stripComments(fs.readFileSync(q, "utf8")))) toolImporters.push(path.relative(ROOT, q).replace(/\\/g, "/")); } };
+  walkAll(path.join(ROOT, "src"));
+  const dyn = [...uls.matchAll(/import\(\s*["']\.\/battle\/moba\/debug\/engineStreamHash\.js["']\s*\)/g)];
+  ck("S8 src/ 沒有任何檔案 import tools/；hook 不靜態 import 串流雜湊，只在 ?shot= 區塊內動態 import", toolImporters.length === 0
+    && !/^\s*import\s[^;]*engineStreamHash/m.test(uls) && dyn.length === 1 && shotBlocks.some(([a, b]) => dyn[0].index > a && dyn[0].index < b), toolImporters.join(",") || `dynamic=${dyn.length}`);
+  //  S9：串流雜湊單一實作——tools/lib/matchGolden.mjs 只是轉出 src 的同一組函式
+  const goldenSrc = stripComments(fs.readFileSync(path.join(ROOT, "tools/lib/matchGolden.mjs"), "utf8"));
+  ck("S9 串流雜湊單一實作：matchGolden.mjs 轉出 src/battle/moba/debug/engineStreamHash.js 的同一組函式（自己沒有第二份）",
+    fnv === StreamSrc.fnv && createStreamHasher === StreamSrc.createStreamHasher && engineStreamHash === StreamSrc.engineStreamHash && !/charCodeAt|0x811c9dc5/.test(goldenSrc));
+  //  S10：開局被拒不丟例外——hook 沒有 throw；失敗寫進 assemblyError、回 { ok:false }；GameView 顯示訊息
+  const gv = stripComments(fs.readFileSync(path.join(ROOT, "src/GameView.jsx"), "utf8"));
+  ck("S10 hook 沒有 throw；失敗 ⇒ setAssemblyError＋回傳 { ok:false, errors }；GameView 以 battle-assembly-error 顯示並提供返回",
+    !/\bthrow\b/.test(uls) && /setAssemblyError\(/.test(uls) && /return\s*\{\s*ok:\s*false/.test(uls) && /assemblyError/.test(gv) && /data-testid="battle-assembly-error"/.test(gv) && /data-testid="battle-assembly-error-back"/.test(gv));
+  //  S11：正式 build 的主 bundle 不含串流雜湊（只在 dist 比 hook 新時判定；否則略過並明講）
+  const assets = path.join(ROOT, "dist/assets");
+  const chunks = fs.existsSync(assets) ? fs.readdirSync(assets).filter((f) => f.endsWith(".js")) : [];
+  //  index.html 直接載入的進入點 chunk＋所有 index-*.js（Vite 可能把主程式拆成不只一個 index chunk）
+  const html = fs.existsSync(path.join(ROOT, "dist/index.html")) ? fs.readFileSync(path.join(ROOT, "dist/index.html"), "utf8") : "";
+  const mainChunks = chunks.filter((f) => /^index-/.test(f) || html.includes(f));
+  const fresh = mainChunks.length > 0 && Math.min(...mainChunks.map((f) => fs.statSync(path.join(assets, f)).mtimeMs))
+    >= Math.max(...["src/useLocalServer.js", "src/battle/moba/debug/engineStreamHash.js"].map((f) => fs.statSync(path.join(ROOT, f)).mtimeMs));
+  if (fresh) {
+    const has = (f) => fs.readFileSync(path.join(assets, f), "utf8").includes(StreamSrc.ENGINE_STREAM_HASH_VERSION);
+    const holders = chunks.filter(has);
+    ck(`S11 正式 build：主 bundle（index.html 的進入點＋index-*.js，共 ${mainChunks.length} 個）不含串流雜湊模組，它在獨立的動態 chunk`,
+      mainChunks.every((f) => !has(f)) && holders.length === 1 && !mainChunks.includes(holders[0]), `main=${mainChunks.join(",")} holders=${holders.join(",")}`);
+  } else console.log("   S11 SKIP：dist/ 不存在或比原始碼舊（先 npm run build 再跑才會判定主 bundle）");
 }
 
 console.log(`\nLive Setup 3a：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
