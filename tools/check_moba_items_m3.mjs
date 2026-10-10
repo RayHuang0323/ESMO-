@@ -41,15 +41,39 @@ const SEATS = ["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"];
   ck("G1", "itemsDevRequested 只認 ?itemsDev=1", !dev.__error && dev.ITEMS_DEV_QUERY === "itemsDev"
     && dev.itemsDevRequested("?itemsDev=1") === true && dev.itemsDevRequested("?itemsDev=0") === false
     && dev.itemsDevRequested("") === false && dev.itemsDevRequested("?items=1") === false && dev.itemsDevRequested("?debug=1") === false, dev.__error ?? "");
-  const uls = read("src/useLocalServer.js");
-  const calls = (stripComments(uls).match(/configureItems\(/g) ?? []).length;
-  ck("G1", "useLocalServer 只有一個 configureItems 呼叫，且受 featureEnabled(\"itemsV1\") || (import.meta.env.DEV && itemsDevRequested()) 保護",
-    calls === 1 && /featureEnabled\("itemsV1"\)\s*\|\|\s*\(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(uls), `calls=${calls}`);
+  //  Phase 3a T4：Live 的引擎組裝搬到唯一組裝器（battle/moba/matchAssembler.js），輸入由 liveMatchSetup.js 建成 MatchSetup。
+  //  這兩條 G1 的意圖不變（裝備是 opt-in、正式流程只有一個受 itemsV1 保護的 configureItems、DEV 開關不進正式站；
+  //  出裝策略經 normalize 與 matchItemsConfig），改指向事實現在所在的檔案，並補上行為驗證。
+  const uls = stripComments(read("src/useLocalServer.js"));
+  const asmG1 = stripComments(read("src/battle/moba/matchAssembler.js"));
+  const lmsG1 = stripComments(read("src/battle/moba/liveMatchSetup.js"));
+  const setupG1 = stripComments(read("src/platform/contracts/matchSetup.js"));
+  const rulesetG1 = stripComments(read("src/platform/contracts/matchRuleset.js"));
+  const depsG1 = stripComments(read("src/battle/moba/matchAssemblerDeps.js"));
+  const itemCalls = (t) => (t.match(/configureItems\(|["']configureItems["']/g) ?? []).length;
+  const calls = itemCalls(uls) + itemCalls(lmsG1) + itemCalls(asmG1);
+  const live = await tryLoad("src/battle/moba/liveMatchSetup.js");
+  const itemsLayer = (f, devSwitch, allowTool) => live.resolveLiveRuleset?.({ flags: f, dev: devSwitch, allowTool }).ruleset.layers.items;
+  ck("G1", "正式流程（hook → Live builder → 唯一組裝器）只有一個 configureItems 呼叫，且受 itemsV1 層保護；DEV 開關只在 import.meta.env.DEV 內讀、只在 DEV 生效",
+    calls === 1 && itemCalls(asmG1) === 1
+    && /items\(\)\s*\{\s*if \(!E\.items\) return;/.test(asmG1)                 // 組裝器：層沒生效就不呼叫
+    && /items:\s*L\.items === true && hasRoster/.test(setupG1)                    // effectiveLayers.items 由規則集層推導
+    && /items:\s*on\("itemsV1"\)/.test(rulesetG1)                                 // 規則集層＝FEATURE_FLAGS.itemsV1
+    && /flags:\s*FEATURE_FLAGS/.test(uls)
+    && /import\.meta\.env\.DEV\s*\?\s*\{[^}]*items:\s*itemsDevRequested\(\)[^}]*\}\s*:\s*null/.test(uls)
+    && /allowTool:\s*import\.meta\.env\.DEV === true/.test(uls)
+    && !live.__error
+    && itemsLayer({ itemsV1: false }, null, false) === false && itemsLayer({ itemsV1: true }, null, false) === true
+    && itemsLayer({ itemsV1: false }, { items: true }, false) === false && itemsLayer({ itemsV1: false }, { items: true }, true) === true,
+    `calls=${calls} ${live.__error ?? ""}`);
   //  M3d：出裝策略經 buildStrategyPrep.matchItemsConfig（我方＝所選、對手＝標準；沒選／非法 ⇒ 標準），且在開關內才計算
   ck("G1", "出裝策略由 opts.buildStrategy 傳入（normalize ⇒ 預設 standard），經 matchItemsConfig 進 configureItems",
-    /const buildStrategy = itemsOn && opts\.roster \? normalizeBuildStrategy\(opts\.buildStrategy\) : null;/.test(uls)
-    && /matchItemsConfig\(\{ roster: opts\.roster, heroLookup: heroById, buildStrategy \}\)/.test(uls)
-    && !/toEngineItems\(/.test(stripComments(uls)));
+    /const buildStrategy = L\.items === true && roster \? normalizeBuildStrategy\(opts\.buildStrategy\) : null;/.test(lmsG1)
+    && /:\s*matchItemsConfig\(\{ roster, heroLookup, buildStrategy: setup\.buildStrategy \}\)/.test(asmG1)
+    && /heroLookup = heroById/.test(depsG1)
+    //  toEngineItems 只留在組裝器的工具分支（isTool ? toEngineItems(…) : matchItemsConfig(…)）；hook／Live builder 不得直接用
+    && /isTool\s*\?\s*toEngineItems\(/.test(asmG1) && (asmG1.match(/toEngineItems\(/g) ?? []).length === 1
+    && !/toEngineItems\(/.test(uls) && !/toEngineItems\(/.test(lmsG1));
 
   //  實際 build 一次，確認 DEV 開啟路徑與樣張頁不在正式產物裡
   const out = fs.mkdtempSync(path.join(os.tmpdir(), "esmo-m3-dist-"));

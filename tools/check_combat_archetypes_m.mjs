@@ -210,11 +210,66 @@ console.log("\n── §2 第五個 opt-in 行為層 ──");
       !/heroCombatArchetypes|heroDatabase|heroCombatPresentation/.test(imports), imports.slice(0, 200));
     //  M 基礎層時這條驗的是「尚未接線」；**M1 已接線**，所以反轉成
     //  「有接、而且只經 Adapter 接」——UI 不得自己拼形狀。
-    const uls = (await import("node:fs")).readFileSync("src/useLocalServer.js", "utf8");
-    ck("28) 原型層已接進正式流程的唯一計算點（useLocalServer）",
-      uls.includes("configureArchetypes") && uls.includes("toEngineArchetypes"));
+    //  Phase 3a T4：正式流程的引擎組裝搬到唯一組裝器（battle/moba/matchAssembler.js）。
+    //  「唯一計算點」現在是結構性事實：hook 只呼叫 assembleMatch，自己不再碰 toEngineArchetypes／configureArchetypes；
+    //  組裝器用共用 deps 注入的 Adapter 呼叫 configureArchetypes。一律先剝註解再比對。
+    const fsT4 = await import("node:fs");
+    /**
+     * 剝註解（逐字元掃描）。認得字串與樣板字串，所以字串裡的雙斜線不算註解；行註解先整行略過，
+     * 所以行註解裡出現的區塊註解開頭（例如路徑萬用字元）不會吃掉後面的程式碼——正則版就是這樣把整段程式碼刪掉的。
+     */
+    function stripT4(src) {
+      const DQ = 34, SQ = 39, BT = 96, BS = 92, SL = 47, ST = 42, NL = 10;   // 雙引號、單引號、反引號、反斜線、斜線、星號、換行
+      const out = [];
+      let i = 0, quote = 0;
+      while (i < src.length) {
+        const c = src.charCodeAt(i), d = src.charCodeAt(i + 1);
+        if (quote) {
+          out.push(src[i]);
+          if (c === BS && i + 1 < src.length) { out.push(src[i + 1]); i += 2; continue; }
+          if (c === quote) quote = 0;
+          i++; continue;
+        }
+        if (c === DQ || c === SQ || c === BT) { quote = c; out.push(src[i]); i++; continue; }
+        if (c === SL && d === SL) { while (i < src.length && src.charCodeAt(i) !== NL) i++; continue; }
+        if (c === SL && d === ST) {
+          let j = i + 2;
+          while (j < src.length && !(src.charCodeAt(j) === ST && src.charCodeAt(j + 1) === SL)) j++;
+          i = Math.min(src.length, j + 2); continue;
+        }
+        out.push(src[i]); i++;
+      }
+      return out.join(String());
+    }
+    const codeOf = (p) => stripT4(fsT4.readFileSync(p, "utf8"));
+    const uls = codeOf("src/useLocalServer.js");
+    const asm = codeOf("src/battle/moba/matchAssembler.js");
+    const depsSrc = codeOf("src/battle/moba/matchAssemblerDeps.js");
+    const lms = codeOf("src/battle/moba/liveMatchSetup.js");
+    const setupSrc = codeOf("src/platform/contracts/matchSetup.js");
+    ck("28) 原型層已接進正式流程的唯一計算點（useLocalServer → 唯一組裝器 assembleMatch）",
+      /assembleMatch\(/.test(uls) && !/configureArchetypes|toEngineArchetypes/.test(uls)
+      && /H\.toEngineArchetypes\(roster\)/.test(asm) && /call\("configureArchetypes",/.test(asm)
+      && /import\s*\{[^}]*\btoEngineArchetypes\b[^}]*\}\s*from\s*"\.\.\/\.\.\/data\/heroCombatArchetypes\.js"/.test(depsSrc));
+    //  29：原本釘 hook 裡的三元式；現在由三處共同保證（builder：沒有 opts.roster ⇒ roster null；
+    //  setup：effectiveLayers.archetypes＝有 roster；組裝器：層沒生效就不呼叫），再加實際組裝的行為驗證。
+    const { buildLiveMatchSetup } = await import("../src/battle/moba/liveMatchSetup.js");
+    const { assembleMatch } = await import("../src/battle/moba/matchAssembler.js");
+    const { sharedMatchAssemblerDeps } = await import("../src/battle/moba/matchAssemblerDeps.js");
+    const { FEATURE_FLAGS } = await import("../src/featureFlags.js");
+    const seats = ["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"];
+    const rosterT4 = Object.fromEntries(seats.map((s, i) => [s, { heroId: CHAMPIONS_100[i].id }]));
+    const configuredWith = (roster) => {
+      const b = buildLiveMatchSetup({ opts: { seed: 9, ...(roster ? { roster } : {}) }, flags: FEATURE_FLAGS, seed: 9, seedSource: "session" });
+      const a = b.ok ? assembleMatch(b.setup, sharedMatchAssemblerDeps()) : null;
+      return a?.ok ? a.applied.configured : null;
+    };
+    const withRoster = configuredWith(rosterT4), withoutRoster = configuredWith(null);
     ck("29) 只有 opts.roster 有值才呼叫（無名單 ⇒ 逐位元回到舊行為）",
-      /opts\.roster \? toEngineArchetypes\(opts\.roster\) : null/.test(uls));
+      /const roster = opts\.roster\s*\?/.test(lms) && /archetypes:\s*hasRoster/.test(setupSrc) && /if \(!E\.archetypes\) return;/.test(asm)
+      && Array.isArray(withRoster) && withRoster.includes("configureArchetypes")
+      && Array.isArray(withoutRoster) && !withoutRoster.includes("configureArchetypes"),
+      `有名單：${JSON.stringify(withRoster)}；無名單：${JSON.stringify(withoutRoster)}`);
     {
       //  UI 不得直接拼原型資料：只有 Adapter 與引擎接線點可以碰
       const fs = await import("node:fs");

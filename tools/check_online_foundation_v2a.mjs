@@ -160,9 +160,16 @@ const other1 = TB.createBattleTalentBinding({ roster, requested: { ...picks, b1:
   }
   ck("K18 100 隻英雄 × 全部天賦選項皆可綁定、驗證、重算一致", total === 200 && okCount === 200, `${okCount}/${total}`);
   ck("K19 200 個選擇的 bindingHash 互不相同", hashes.size === 200, `${hashes.size}`);
+  //  Phase 3a T4：Live 的引擎組裝搬到唯一組裝器 ⇒ 「唯一解析點」現在是 matchAssembler.js 的
+  //  H.selectBattleTalents(roster, setup.talentSelections…)；hook 與 Live builder 都不得再自己解析（意圖不變：整條 Live 路徑只有一個）。
   const uls = code(read("src/useLocalServer.js"));
-  ck("K20 引擎端仍只有 selectBattleTalents(opts.roster, opts.talentSelections) 一個解析點", /selectBattleTalents\(opts\.roster, opts\.talentSelections\)/.test(uls)
-    && (uls.match(/selectBattleTalents\(/g) ?? []).length === 1);
+  const lmsK20 = code(read("src/battle/moba/liveMatchSetup.js"));
+  const asmK20 = code(read("src/battle/moba/matchAssembler.js"));
+  const selCalls = (t) => (t.match(/selectBattleTalents\(/g) ?? []).length;
+  ck("K20 引擎端仍只有一個天賦解析點：唯一組裝器的 H.selectBattleTalents(roster, setup.talentSelections…)（hook／Live builder 不再自己解析）",
+    /H\.selectBattleTalents\(roster,\s*setup\.talentSelections\s*\?/.test(asmK20) && selCalls(asmK20) === 1
+    && selCalls(uls) === 0 && selCalls(lmsK20) === 0 && /assembleMatch\(/.test(uls),
+    `assembler=${selCalls(asmK20)} hook=${selCalls(uls)} builder=${selCalls(lmsK20)}`);
   ck("K21 綁定模組沒有自己的天賦表（只讀 heroBattleTalents）", !/talent\(\s*['"]/.test(code(read("src/platform/online/battleTalentBinding.js"))));
 }
 

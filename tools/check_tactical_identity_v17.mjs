@@ -133,10 +133,49 @@ const pair = (tacticId, opts = {}, seeds = SEEDS) => {
 
 // ── E 同一個 builder ─────────────────────────────────────────────────────
 {
-  const uls = fs.readFileSync(path.join(ROOT, 'src/useLocalServer.js'), 'utf8');
-  const chr = fs.readFileSync(path.join(ROOT, 'src/platform/challenge/challengeRunner.js'), 'utf8');
-  ck('E1 Live（useLocalServer）與 Challenge（challengeRunner）都以 toEngineTacticIdentity 傳 identity',
-    /identity:\s*\{\s*blue:\s*toEngineTacticIdentity\(/.test(uls) && /identity:\s*\{\s*blue:\s*toEngineTacticIdentity\(/.test(chr));
+  //  Phase 3a T4：Live 的引擎組裝搬到唯一組裝器（battle/moba/matchAssembler.js），輸入由 liveMatchSetup.js 建成 MatchSetup。
+  //  ⇒ 這一節的原始碼斷言改指向事實現在所在的檔案（意圖不變）；一律先剝註解再比對。
+  //  Challenge 要到 Task 5 才改走組裝器 ⇒ challengeRunner 目前仍自己傳 identity；改走組裝器後同一條斷言照樣成立。
+  /**
+   * 剝註解（逐字元掃描）。認得字串與樣板字串，所以字串裡的雙斜線不算註解；行註解先整行略過，
+   * 所以行註解裡出現的區塊註解開頭（例如路徑萬用字元）不會吃掉後面的程式碼——正則版就是這樣把整段程式碼刪掉的。
+   */
+  function strip(src) {
+    const DQ = 34, SQ = 39, BT = 96, BS = 92, SL = 47, ST = 42, NL = 10;   // 雙引號、單引號、反引號、反斜線、斜線、星號、換行
+    const out = [];
+    let i = 0, quote = 0;
+    while (i < src.length) {
+      const c = src.charCodeAt(i), d = src.charCodeAt(i + 1);
+      if (quote) {
+        out.push(src[i]);
+        if (c === BS && i + 1 < src.length) { out.push(src[i + 1]); i += 2; continue; }
+        if (c === quote) quote = 0;
+        i++; continue;
+      }
+      if (c === DQ || c === SQ || c === BT) { quote = c; out.push(src[i]); i++; continue; }
+      if (c === SL && d === SL) { while (i < src.length && src.charCodeAt(i) !== NL) i++; continue; }
+      if (c === SL && d === ST) {
+        let j = i + 2;
+        while (j < src.length && !(src.charCodeAt(j) === ST && src.charCodeAt(j + 1) === SL)) j++;
+        i = Math.min(src.length, j + 2); continue;
+      }
+      out.push(src[i]); i++;
+    }
+    return out.join(String());
+  }
+  const readCode = (p) => strip(fs.readFileSync(path.join(ROOT, p), 'utf8'));
+  const uls = readCode('src/useLocalServer.js');
+  const chr = readCode('src/platform/challenge/challengeRunner.js');
+  const asm = readCode('src/battle/moba/matchAssembler.js');
+  const lms = readCode('src/battle/moba/liveMatchSetup.js');
+  const { MATCH_RULESETS } = await imp('src/platform/contracts/matchRuleset.js');
+  //  「經組裝器」＝呼叫 assembleMatch 而且自己不再呼叫 configureMatch（單一組裝點）。
+  const viaAssembler = (src) => /assembleMatch\(/.test(src) && !/\.configureMatch\(/.test(src);
+  const passesIdentityItself = (src) => /identity:\s*\{\s*blue:\s*toEngineTacticIdentity\(/.test(src);
+  ck('E1 Live（useLocalServer → 唯一組裝器）與 Challenge（challengeRunner）都以 toEngineTacticIdentity 傳 identity',
+    /identity:\s*L\.tacticIdentity\s*\?\s*\{\s*blue:\s*toEngineTacticIdentity\(blueCfg\),\s*red:\s*toEngineTacticIdentity\(redCfg\)\s*\}\s*:\s*null/.test(asm)
+      && MATCH_RULESETS['career.v20'].layers.tacticIdentity === true && MATCH_RULESETS['challenge.v20'].layers.tacticIdentity === true
+      && viaAssembler(uls) && (passesIdentityItself(chr) || viaAssembler(chr)));
   //  TD-HI5：紅方戰術來自對手隊伍自己的設定（AI 聯賽隊伍 style），查不到 ⇒ std。
   const { TEAM_STYLES, AI_TEAMS } = await imp('src/platform/competition/aiTeams.js');
   const styleIds = TEAM_STYLES.map((st) => TC.mobaTacticForTeamStyle(st).tacticId);
@@ -146,10 +185,25 @@ const pair = (tacticId, opts = {}, seeds = SEEDS) => {
     TEAM_STYLES.map((st, i) => `${st}→${styleIds[i]}`).join('、'));
   ck('E4 7 支 AI 聯賽隊伍都有 style ⇒ 都取得自己的戰術', AI_TEAMS.every((t) => TEAM_STYLES.includes(t.style)),
     AI_TEAMS.map((t) => `${t.name}:${TC.mobaTacticForTeamStyle(t.style).tacticId}`).join('、'));
+  //  E5（Phase 3a T4 改指向）：opponentId → aiTeamById 在 hook；style → 戰術（查不到 ⇒ STANDARD）在 Live builder；
+  //  雙方同一個 builder 與 opponentTacticId 在組裝器。再加一條行為驗證：7 支 AI 隊伍與「查不到」實際組出來的對手戰術。
+  const LMS = await imp('src/battle/moba/liveMatchSetup.js');
+  const ASM = await imp('src/battle/moba/matchAssembler.js');
+  const DEPS = (await imp('src/battle/moba/matchAssemblerDeps.js')).sharedMatchAssemblerDeps();
+  const { FEATURE_FLAGS } = await imp('src/featureFlags.js');
+  const liveOpponentTactic = (team) => {
+    const b = LMS.buildLiveMatchSetup({ opts: { seed: 7, tactic: TC.mobaTacticById('m4'), opponentId: team?.id ?? null }, flags: FEATURE_FLAGS, seed: 7, seedSource: 'session', opponentTeam: team });
+    const a = b.ok ? ASM.assembleMatch(b.setup, DEPS) : null;
+    return a?.ok ? a.applied.tacticMeta?.opponentTacticId ?? null : null;
+  };
   ck('E5 一般對戰紅方：useLocalServer 由 opponentId → aiTeamById → style 取戰術，雙方同一個 builder；查不到 ⇒ STANDARD',
-    /aiTeamById\(opts\.opponentId\)/.test(uls) && /mobaTacticForTeamStyle\(oppTeam\.style\)\s*:\s*STANDARD_OPP_TACTIC/.test(uls)
-      && /red:\s*toEngineTactic\(redTactic\)/.test(uls) && /red:\s*toEngineTacticIdentity\(redTactic\)/.test(uls)
-      && /opponentTacticId:\s*redTactic\.tacticId/.test(uls));
+    /opponentTeam:\s*opts\.opponentId\s*\?\s*aiTeamById\(opts\.opponentId\)\s*:\s*null/.test(uls)
+      && /opponentTeam\s*\?\s*mobaTacticForTeamStyle\(opponentTeam\.style\)\s*:\s*STANDARD_OPP_TACTIC/.test(lms)
+      && /red:\s*\{\s*kind:\s*"legacy",\s*config:\s*toPlainData\(redTactic\)\s*\}/.test(lms)
+      && /red:\s*toEngineTactic\(redCfg\)/.test(asm) && /red:\s*toEngineTacticIdentity\(redCfg\)/.test(asm)
+      && /opponentTacticId:\s*redCfg\.tacticId/.test(asm)
+      && AI_TEAMS.every((t) => liveOpponentTactic(t) === TC.mobaTacticForTeamStyle(t.style).tacticId) && liveOpponentTactic(null) === 'std',
+    AI_TEAMS.map((t) => `${t.name}:${liveOpponentTactic(t)}`).join('、'));
   const le = fs.readFileSync(path.join(ROOT, 'src/LogicEngine.js'), 'utf8');
   ck('E2 引擎不認得任何戰術 id（沒有第二套 AI／沒有依 tacticId 分支）', !/tacticId\s*===\s*['"]m\d/.test(le));
 }
