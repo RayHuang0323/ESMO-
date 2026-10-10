@@ -1,35 +1,40 @@
 // ============================================================================
 //  useLocalServer.js  —  驅動水管（Local Server Pattern 的「伺服器」端）
-//  - start()：建立 LogicEngine，每 TICK_MS tick 一次並把 snapshot 推進 store
+//  - start()：建 MatchSetup → 唯一組裝器組出 LogicEngine，每 TICK_MS tick 一次並把 snapshot 推進 store
 //  - 另一條 rAF 依「距上次 tick 的時間」更新 subTRef（0→1）→ 渲染端平滑內插
 //  - stop()：停止
 //  多人版：把 setInterval 那段換成 socket.on("snapshot", f => pushFrame(f))，
 //          其餘（subTRef 內插、view）完全不動。見檔尾。
+//
+//  Phase 3a T4：引擎的建構與 configure* 全部交給 `assembleMatch`（battle/moba/matchAssembler.js），
+//  輸入由純函式 `buildLiveMatchSetup`（battle/moba/liveMatchSetup.js）從 opts＋store 快照建成 MatchSetup。
+//  本檔只留：讀快照、決定 seed（時鐘 fallback）、規則集壽命、Replay 擷取、呈現層 debug、節拍／追趕／存檔。
+//  v20 golden 的 9 個 live 案經這條路逐位元重現（tools/check_live_setup_3a.mjs）。
 // ============================================================================
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { LogicEngine } from "./LogicEngine.js";
 import { useGameStore } from "./useGameStore.js";
 import { useHeroProgressStore } from "./hero/heroProgressStore.js";
 import { useProfileStore } from "./platform/profileStore.js";
-import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION, mobaTacticForTeamStyle } from "./platform/contracts/MobaTacticConfig.js";
 import { aiTeamById } from "./platform/competition/aiTeams.js";
 import { beginReplayCapture } from "./battle/moba/replay/replayBuffer.js";
-import { buildPlayerStatSlots, applyFatigueToLoadout } from "./battle/moba/mobaRosterAdapter.js";
-import { toEngineHeroMods } from "./battle/moba/mobaHeroProfile.js";
-import { toEngineSpells } from "./battle/moba/mobaHeroLoadout.js";
-import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "./data/heroCombatArchetypes.js";
-import { toEngineHeroSkills } from "./battle/moba/skills/heroSkillGameplay.js";
-import { toEngineHeroPassives } from "./battle/moba/skills/heroPassiveGameplay.js";
-import { toEngineHeroPowerCurve } from "./battle/moba/heroPowerCurve.js";
-import { selectBattleTalents } from './battle/moba/talents/heroBattleTalents.js';
-import { heroById } from "./data/heroDatabase.js";
-import { toEnginePlayerMods } from "./battle/moba/mobaPlayerStats.js";
-//  Item System M3a：裝備層開關（正式站預設 OFF；DEV 才讀 ?itemsDev=1，見 start() 內）
-import { featureEnabled } from "./featureFlags.js";
-import { resolveObjectiveLayout } from "./platform/contracts/objectiveLayout.js";
+import { assembleMatch } from "./battle/moba/matchAssembler.js";
+import { sharedMatchAssemblerDeps } from "./battle/moba/matchAssemblerDeps.js";
+import { buildLiveMatchSetup, resolveLiveRuleset, persistedLiveConfigOf } from "./battle/moba/liveMatchSetup.js";
+import { matchSetupHash } from "./platform/contracts/matchSetup.js";
+//  旗標只在開局時讀一次（resolveLiveRuleset → resolveRulesetForMode），結果隨本場設定落盤。
+import { FEATURE_FLAGS } from "./featureFlags.js";
+//  DEV 才讀 ?itemsDev=1（見 start() 內；正式 build 由 import.meta.env.DEV 折疊掉）
 import { itemsDevRequested } from "./ui/itemsDevFlag.js";
-import { matchItemsConfig, normalizeBuildStrategy } from "./battle/moba/items/buildStrategyPrep.js";
+//  ?shot= 對等鉤子：與 golden 相同的逐 tick 取樣（tools/browser_check_live_assembly_parity_3a.mjs）
+import { createStreamHasher, engineStreamHash } from "../tools/lib/matchGolden.mjs";
+
+/** 開局失敗一律大聲失敗：setup／組裝被拒代表 app 自己的狀態有問題，不得默默換一套規則開打。 */
+const liveStartError = (stage, errors) => {
+  const detail = (errors ?? []).map((e) => `${e.code}@${e.field}`).join(", ");
+  console.error(`[useLocalServer] ${stage} rejected the live match`, errors);
+  return new Error(`Live match could not start (${stage}: ${detail})`);
+};
 
 // ============================================================================
 //  S29：simTime / presentationTime / playbackRate 明確分離
@@ -148,12 +153,6 @@ export function useLocalServer() {
     stop();
     setFastForwarding(false);
     const { pushFrame, subTRef } = useGameStore.getState();
-    //  Sprint08：下場沿用英雄熟練；Battle Condition UX：再套上**體力疲勞倍率**
-    //  （低體力 ⇒ power/tough 下降；體力 ≥ 70 ⇒ 逐鍵不變）。曲線只有 playerCondition 一份。
-    const { players: fatiguePlayers, lineup: fatigueLineup } = useProfileStore.getState();
-    const loadout = applyFatigueToLoadout(
-      useHeroProgressStore.getState().getLoadout(), fatiguePlayers ?? [], fatigueLineup,
-    );
     //  ── Milestone O7：權威 seed ─────────────────────────────────────────
     //  seed 一律優先取自 **MatchSession**（gateway 在配對時決定、經一次性令牌
     //  啟動後存進 `matchmaking.launch`）。同一個 session 恢復或重播 ⇒ 同一個
@@ -162,18 +161,45 @@ export function useLocalServer() {
     //    同一個 session seed 永遠映射到同一個引擎 seed。
     //  沒有 session 時（debug harness / 舊路徑）才退回舊行為，並標記來源，
     //  讓驗證器與追蹤鏈看得出這一場不是權威場次。
+    //  ⚠ 時鐘 fallback 只在這裡讀；builder 是純函式，seed 由這裡傳進去。
     const authoritative = Number.isFinite(opts.seed);
     const seed = authoritative ? ((opts.seed >>> 0) | 1) : ((Date.now() & 0xffff) | 1);
-    const eng = new LogicEngine(seed, loadout);
-    //  v16 Objective Layout：**唯一推導點**。恢復進行中的場次時沿用存檔裡的值（opts.objectiveLayout），
-    //  否則由本場 seed 決定一次；之後寫進引擎、Replay 與進行中場次設定，下游一律讀欄位、不再各自推導。
-    const objectiveLayout = resolveObjectiveLayout({ explicit: opts.objectiveLayout ?? null, seed });
-    eng.configureObjectiveLayout(objectiveLayout);
-    const heroSkillsOn = featureEnabled("heroSkillsV1") ||
-      (import.meta.env.DEV && new URLSearchParams(window.location.search).get("heroSkillsDev") === "1");
-    const selectedTalents = heroSkillsOn && featureEnabled('heroBattleTalentsV1') && opts.roster
-      ? selectBattleTalents(opts.roster, opts.talentSelections) : null;
-    const talentSelection = selectedTalents && Object.keys(selectedTalents.players).length ? selectedTalents : null;
+
+    //  ── Phase 3a T4：規則集壽命 ─────────────────────────────────────────
+    //  開局時解析一次（旗標 → resolveRulesetForMode），寫進本場設定（activeMatch.config.ruleset）；
+    //  恢復同一個 session 時沿用落盤值、不重讀旗標（正式站中途換 bundle 也不會改變同一場的規則）。
+    //  舊存檔沒有 ruleset ⇒ 依目前旗標（＝v20 每次開局讀旗標的行為）。
+    //  DEV 網址開關（?heroSkillsDev=1／?itemsDev=1）只在 DEV build 讀，且只會變成 kind:"tool" 規則集；
+    //  正式 build 的 import.meta.env.DEV 是常數 false ⇒ 整段與 itemsDevRequested 一起被移除。
+    const profileState = useProfileStore.getState();
+    const persisted = persistedLiveConfigOf(profileState.matchmaking?.session ?? null, opts.sessionId ?? null);
+    const devSwitches = import.meta.env.DEV
+      ? { heroSkills: new URLSearchParams(window.location.search).get("heroSkillsDev") === "1", items: itemsDevRequested() }
+      : null;
+    const { ruleset } = resolveLiveRuleset({
+      flags: FEATURE_FLAGS, persisted: persisted?.ruleset ?? null, dev: devSwitches, allowTool: import.meta.env.DEV === true,
+    });
+
+    //  ── MatchSetup（純函式 builder）→ 唯一組裝器 ─────────────────────────
+    //  疲勞 loadout（Battle Condition UX）、選手素質 slots（Sprint28／Milestone E）、名單（Milestone H／J／M1）、
+    //  天賦（heroBattleTalentsV1）、出裝（Item System M3d；沒選 ⇒ standard）、紅方戰術（TD-HI5：對手隊伍 style）、
+    //  Objective Layout（v16：恢復時沿用存檔值）全部在 liveMatchSetup.js 推導；呼叫順序與短路在 matchAssembler.js。
+    //  heroDatabase 只經共用 deps 注入，不進組裝器。
+    const liveInputs = {
+      opts, ruleset, seed, seedSource: authoritative ? "session" : "local",
+      profile: { players: profileState.players ?? [], lineup: profileState.lineup ?? null },
+      heroProgress: { loadout: useHeroProgressStore.getState().getLoadout() },
+      opponentTeam: opts.opponentId ? aiTeamById(opts.opponentId) : null,
+    };
+    const built = buildLiveMatchSetup(liveInputs);
+    if (!built.ok) throw liveStartError("MatchSetup", built.errors);
+    for (const note of built.notes) console.warn(`[useLocalServer] ${note}`);
+    const assembled = assembleMatch(built.setup, sharedMatchAssemblerDeps());
+    if (!assembled.ok) throw liveStartError("assembleMatch", assembled.errors);
+    const eng = assembled.engine;
+    const { objectiveLayout, talentSelection, replayConfig } = assembled.applied;
+    const setupHash = matchSetupHash(built.setup);
+
     const replayRoster = talentSelection ? Object.fromEntries(Object.entries(opts.roster).map(([seat, row]) => [seat, {
       ...row, ...(talentSelection.players[seat] ? { battleTalentId: talentSelection.players[seat].id } : {}),
     }])) : opts.roster;
@@ -181,127 +207,52 @@ export function useLocalServer() {
     // Milestone I-close：連同**本場生效名單**一起交出去。舊 replay 只有 {id,side,role}，
     //   重播時完全不知道誰用哪隻英雄、帶什麼召喚師技能 ⇒ 同一場比賽「現場」與「重播」
     //   是兩份不同的資訊。roster 只有十筆，容量影響可忽略（frames 才是大宗）。
+    //   config（tacticId／tacticName／battleTalentIds）由組裝器回傳，形狀與 v20 相同。
     beginReplayCapture({
       seed,
       //  O7：這一場是不是權威場次（由 MatchSession 指定 seed）
       sessionId: opts.sessionId ?? null,
-      seedSource: authoritative ? "session" : "local",
+      seedSource: built.setup.meta.seedSource,
       objectiveLayout,
-      config: { ...(opts.tactic?.tacticId ? { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name ?? null } : {}),
-        ...(talentSelection ? { battleTalentIds: Object.fromEntries(Object.entries(talentSelection.players).map(([seat, row]) => [seat, row.id])) } : {}) },
+      config: replayConfig,
       roster: replayRoster ?? null,
     });
 
-    // ── Sprint28：選手能力進引擎（唯一計算點）────────────────────────────
-    //   profileStore.players（最新，含天賦）→ getPlayerDerivedStats → 能力 slots
-    //   → toEnginePlayerMods → engine.configurePlayers。
-    //   對位靠**席位**（b1–b5）＋ Milestone E 的先發指派表，不靠名字、不靠索引；
-    //   TacticScreen / Battle 不各算一份。無 lineup ⇒ identity ⇒ 與 S28 逐鍵相同。
-    //   ⚠ 必須在 configureMatch **之前**：開局野區入侵在 configureMatch 當下擲骰，
-    //     需要打野的 invadeAdj。
-    //   紅方＝ AI 對手，無 profileStore 選手 ⇒ 不注入 ⇒ 全隊中性（baseline 行為，
-    //     天然對照組）。無先發選手 / 空名單 ⇒ mods 為 null ⇒ 完全不呼叫 ⇒ S27 baseline。
-    const { players: profilePlayers, lineup } = useProfileStore.getState();
-    const players = profilePlayers ?? [];
-    const playerMods = toEnginePlayerMods({ blue: buildPlayerStatSlots(players, "blue", lineup), red: [] });
-    if (playerMods) eng.configurePlayers(playerMods);
-
-    // ── Milestone H：英雄定位進引擎（Ban/Pick 第一次真的影響對戰）────────
-    //   opts.roster = GameView 的生效名單（draft × 先發指派 × profileStore），
-    //   兩側都從**自己的**選角取得定位 ⇒ 對稱、無陣營特例。
-    //   只影響行為（站位／目標選擇／進退／參團／技能就緒權重），
-    //   不乘進傷害（S28 §2 紅線，見 mobaHeroProfile.js 檔頭）。
-    //   無 roster / 全中性 ⇒ toEngineHeroMods 回 null ⇒ 完全不呼叫 ⇒ 逐位元回到 G。
-    const heroMods = opts.roster ? toEngineHeroMods(opts.roster, heroById) : null;
-    if (heroMods) eng.configureHeroes(heroMods);
-
-    // Canonical roster -> authored mechanics. The formal flag is the single production
-    // switch; the DEV query remains useful for isolated browser diagnostics.
-    if (heroSkillsOn && opts.roster) {
-      const skills = toEngineHeroSkills(opts.roster, talentSelection);
-      if (skills) eng.configureHeroSkills(skills);
-      //  Hero Passive P v1：規則集 heroPassivesV1 關閉時引擎直接拒絕（零影響）。
-      const passives = skills ? toEngineHeroPassives(opts.roster) : null;
-      if (passives) eng.configureHeroPassives(passives);
-      //  Hero Power Curve v1：規則集 heroPowerCurveV1 關閉時引擎直接拒絕（零影響）。
-      const curves = skills ? toEngineHeroPowerCurve(opts.roster) : null;
-      if (curves) eng.configureHeroPowerCurve(curves);
-    }
-
-    // ── Milestone M1：戰鬥原型進引擎（近戰／遠程與職業站位的唯一計算點）──
-    //   opts.roster = GameView 的生效名單（draft × 先發指派 × profileStore），
-    //   兩側都從**自己的**選角推導 ⇒ 對稱、無陣營特例。
-    //   `toEngineArchetypes` 是唯一的形狀轉換點：UI 不拼資料、引擎不認得 heroId。
-    //   資料缺漏 ⇒ 契約層回**決定性 fallback**（不使用亂數）。
-    //   無 roster ⇒ 完全不呼叫 ⇒ 交戰距離逐位元回到硬編碼 8（M 基礎層的保證）。
-    const archMods = opts.roster ? toEngineArchetypes(opts.roster) : null;
-    if (archMods && Object.keys(archMods).length) {
-      const blue = {}, red = {};
-      for (const [pid, mod] of Object.entries(archMods)) {
-        (String(pid)[0] === "r" ? red : blue)[pid] = mod;
-      }
-      eng.configureArchetypes({
-        blue, red,
-        meta: { version: COMBAT_ARCHETYPE_CONTRACT_VERSION, seats: Object.keys(archMods).length },
-      });
-    }
-
-    //  ── Milestone M1.6：戰鬥判定 Debug ────────────────────────────────────
+    //  ── Milestone M1.6：戰鬥判定 Debug（呈現層，留在 hook）────────────────
     //  只有 `?diag=1` / `?shot=` 時開啟。不開 ⇒ 引擎不輸出 `debug` 區塊
     //  ⇒ snapshot 形狀與既有契約逐位元相同（Replay / BattleResult 不受影響）。
+    //  debugOn 只是觀測旗標（不改模擬）⇒ 在組裝之後才開與 v20 的位置等價。
     if (typeof window !== "undefined") {
       const qs = new URLSearchParams(window.location.search);
       if (qs.get("diag") === "1" || qs.has("shot")) eng.enableCombatDebug(true);
+      //  Phase 3a T4 瀏覽器對等鉤子（只有 ?shot= 才掛，同 __ESMO_COMBAT_FEEDBACK 模式）：
+      //  頁面 setup 雜湊、builder 輸入、與 golden 相同的逐 tick 串流雜湊 ⇒ Node 可在同一個 tick 重算比對。
+      if (qs.has("shot")) {
+        const stream = engineStreamHash(eng, 20);
+        const { draft: _draft, ...setupOpts } = opts;
+        window.__ESMO_MATCH_SETUP_HASH = setupHash;
+        window.__ESMO_MATCH_SETUP = JSON.parse(JSON.stringify(built.setup));
+        window.__ESMO_LIVE_SETUP_INPUTS = JSON.parse(JSON.stringify({ ...liveInputs, opts: setupOpts,
+          opponentTeam: liveInputs.opponentTeam ? { id: liveInputs.opponentTeam.id, style: liveInputs.opponentTeam.style } : null }));
+        window.__ESMO_ENGINE_STREAM_HASH = () => {
+          const now = createStreamHasher(1); now.sample(eng);
+          return { setupHash, ticks: stream.ticks, t: eng.t, streamHash: stream.hex, stateHash: now.hex, depsFingerprint: assembled.applied.depsFingerprint };
+        };
+      }
     }
 
-    // ── Milestone J：賽前配置的召喚師技能進引擎 ──────────────────────────
-    //   在此之前，引擎自己決定第二格（打野懲戒、其餘 reserved）⇒ 賽前選的
-    //   傳送／治療／點燃在對戰中根本不存在，畫面有圖示、引擎不認得。
-    //   現在同一份 roster.spells 直接成為引擎真的會放的技能。
-    //   兩側都從自己的名單取得 ⇒ 對稱；無名單 ⇒ 不呼叫 ⇒ 逐位元回到 I。
-    const spellMods = opts.roster ? toEngineSpells(opts.roster) : null;
-    if (spellMods) eng.configureSpells(spellMods);
-
-    // Sprint24：戰術進引擎（TacticScreen 的 MobaTacticConfig → 行為權重 knobs）。
-    //   TD-HI5（v17）：紅方戰術來自**對手隊伍自己的設定**——AI 聯賽隊伍的 style（aiTeams.js）
-    //   經 mobaTacticForTeamStyle 對應到 8 套戰術之一；查不到隊伍設定（排隊 mock、快速練習）
-    //   ⇒ STANDARD_OPP_TACTIC。雙方都經同一個 toEngineTactic／toEngineTacticIdentity。
-    //   無 opts.tactic ⇒ 不呼叫 configureMatch，引擎行為與舊版位元一致。
-    if (opts.tactic?.tacticId) {
-      const oppTeam = opts.opponentId ? aiTeamById(opts.opponentId) : null;
-      const redTactic = oppTeam ? mobaTacticForTeamStyle(oppTeam.style) : STANDARD_OPP_TACTIC;
-      eng.configureMatch({
-        blue: toEngineTactic(opts.tactic),
-        red: toEngineTactic(redTactic),
-        //  Tactical Identity v1：同一份契約、同一個 builder（規則集 tacticIdentityV1 關閉時引擎忽略）。
-        identity: { blue: toEngineTacticIdentity(opts.tactic), red: toEngineTacticIdentity(redTactic) },
-        meta: { tacticId: opts.tactic.tacticId, tacticName: opts.tactic.name, version: MOBA_TACTIC_VERSION, opponentTacticId: redTactic.tacticId },
-      });
-    }
-
-    // ── Item System M3a：裝備層（itemsV1，第六個 opt-in 配置層）──────────────
-    //   正式站預設 OFF（FEATURE_FLAGS.itemsV1 = false）。DEV 驗證才用 `?itemsDev=1`：
-    //   `import.meta.env.DEV` 在正式 build 是常數 false ⇒ 後半段連同 itemsDevRequested 被移除，
-    //   正式站沒有任何 query／UI 操作能打開（check_moba_items_m3 G1 實際 build 掃描）。
-    //   未開啟 ⇒ 不呼叫 ⇒ 引擎逐位元回到 M2 之前（check_moba_items_m2 G1）。
-    //   出裝策略（M3d）：戰術頁 → 本場設定 → GameView → opts.buildStrategy；沒選／非法值 ⇒ 標準。
-    //   我方五人同一策略、對手固定標準（Owner D4）——規則在 buildStrategyPrep.matchItemsConfig（純函式，
-    //   M3 驗證器 G11 驗 match input、同 seed 同策略逐位元相同、預覽＝開局計畫）。
-    const itemsOn = featureEnabled("itemsV1") || (import.meta.env.DEV && itemsDevRequested());
-    const buildStrategy = itemsOn && opts.roster ? normalizeBuildStrategy(opts.buildStrategy) : null;
-    if (buildStrategy) {
-      const itemsCfg = matchItemsConfig({ roster: opts.roster, heroLookup: heroById, buildStrategy });
-      if (itemsCfg) eng.configureItems(itemsCfg);
-    }
     const activeConfig = {
       phase: "battle",
       draft: opts.draft ?? null,
       tactic: opts.tactic ?? null,
       ...(talentSelection && opts.talentSelections ? { talentSelections: opts.talentSelections } : {}),
       //  M3d：裝備系統真的開著才寫進本場設定（OFF 時存檔形狀與 M3d 之前相同）
-      ...(buildStrategy ? { buildStrategy } : {}),
+      ...(built.buildStrategy ? { buildStrategy: built.buildStrategy } : {}),
       //  v16：本場 Objective Layout（恢復時由 GameView 帶回 opts.objectiveLayout，整場不換）
       objectiveLayout,
+      //  Phase 3a T4：本場規則集（恢復時沿用）與 setup 身分雜湊（追蹤／對等用）
+      ruleset: built.setup.ruleset,
+      matchSetupHash: setupHash,
     };
     activeMatchRef.current = {
       sessionId: opts.sessionId ?? null,

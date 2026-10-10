@@ -160,6 +160,7 @@ const SEGMENTS = [
   { id: "tactical_ai_p2", script: "tools/check_moba_tactical_ai_p2.mjs", shape: /MOBA Tactical AI Phase 2：\d+\/\d+ PASS/, note: "Tactical AI Phase 2（moba-sim.v20）：Combat Intent／兵線優先／Team Call／Gank 評分／物件與懲戒" },
   { id: "fairness_p0d", script: "tools/check_moba_nexus_wave_p0d.mjs", args: ["--out=tmp/hero-skills/seed608.json"], shape: /"pass": true/, note: "P0-D seed608" },
   { id: "simulation_version", script: "tools/check_simulation_version_gate.mjs", shape: /PASS|通過/, note: "Simulation fingerprint" },
+  { id: "live_setup_3a", script: "tools/check_live_setup_3a.mjs", shape: /Live Setup 3a：\d+\/\d+ PASS/, note: "Phase 3a T4：Live hook → MatchSetup → 唯一組裝器（golden live 9 案逐位元、舊存檔恢復、規則集壽命、共用 deps）" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 
