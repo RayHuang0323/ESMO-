@@ -65,7 +65,6 @@
 import { rulesetById, validateRuleset, PRODUCTION_FORBIDDEN_KEYS } from "./matchRuleset.js";
 import { stableStringify } from "./squadSnapshot.js";
 import { resolveObjectiveLayout, objectiveLayoutForSeed, OBJECTIVE_LAYOUTS } from "./objectiveLayout.js";
-import { MOBA_TACTIC_VERSION } from "./MobaTacticConfig.js";
 
 export const MATCH_SETUP_VERSION = "MatchSetup.v1";
 export const SEED_SOURCES = Object.freeze(["session", "local", "challenge", "tool"]);
@@ -113,6 +112,14 @@ function deepFreeze(v) {
 
 const isSeat = (s) => SEATS.includes(s);
 const isStr = (v) => typeof v === "string" && v.length > 0;
+
+//  legacy 戰術輸入的接受條件＝v20 實際接受的形狀，不多不少（Phase 3a T4 ruling 3a）：
+//   · v20 Live 的入口是 `opts.tactic?.tacticId`；兩個投影（toEngineTactic／toEngineTacticIdentity）只解參考
+//     macro／objectives／lanePlan／economy 四個群組——缺任何一個，v20 會在投影裡丟 TypeError。
+//   · 兩個投影都**不讀** `version` ⇒ 這裡也不檢查（舊存檔的戰術可能沒有或是舊版號，仍須原樣重播）。
+//   · 群組內個別欄位缺漏 v20 照跑（得到 NaN／預設 knob）⇒ 這裡不擋，結果由同一個投影決定。
+export const LEGACY_TACTIC_GROUPS = Object.freeze(["macro", "objectives", "lanePlan", "economy"]);
+const isLegacyTacticConfig = (c) => isPlainObject(c) && isStr(c.tacticId) && LEGACY_TACTIC_GROUPS.every((g) => isPlainObject(c[g]));
 
 export function createMatchSetup(input) {
   const errors = [];
@@ -298,7 +305,7 @@ export function createMatchSetup(input) {
     if (extra.length) { err("tactic_invalid", f, `unexpected field(s): ${extra.join(",")}`); continue; }
     if (t.kind === "std") tactic[side] = { kind: "std" };
     else if (t.kind === "legacy") {
-      if (!isPlainObject(t.config) || t.config.version !== MOBA_TACTIC_VERSION || !isStr(t.config.tacticId)) err("tactic_invalid", f, `legacy tactic needs a ${MOBA_TACTIC_VERSION} config object`);
+      if (!isLegacyTacticConfig(t.config)) err("tactic_invalid", f, `legacy tactic needs a config object with a tacticId and ${LEGACY_TACTIC_GROUPS.join("/")} groups`);
       else tactic[side] = { kind: "legacy", config: clonePlain(t.config) };
     } else if (!isPlainObject(t.binding)) err("tactic_invalid", f, "binding tactic needs a plain-object binding");
     else tactic[side] = { kind: "binding", binding: clonePlain(t.binding) };

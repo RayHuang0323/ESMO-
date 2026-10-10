@@ -97,7 +97,17 @@ ck("S5 legacy 變體數值原樣保存", v5.ok && v5.setup.tactic.blue.config.ma
 ck("S5b 雜湊涵蓋 legacy 變體數值", matchSetupHash(v5.setup) !== h1);
 ck("S5c binding 形狀可接受；std 可接受", createMatchSetup(careerInput({ tactic: { blue: { kind: "binding", binding: { id: "b1", slots: [1, 2] } }, red: { kind: "std" } } })).ok);
 ck("S5d 未知 kind ⇒ tactic_kind_unknown", codes(createMatchSetup(careerInput({ tactic: { blue: { kind: "magic" }, red: null } }))).includes("tactic_kind_unknown"));
-ck("S5e legacy 缺 config / 版本錯 ⇒ tactic_invalid", codes(createMatchSetup(careerInput({ tactic: { blue: { kind: "legacy" }, red: null } }))).includes("tactic_invalid") && codes(createMatchSetup(careerInput({ tactic: { blue: { kind: "legacy", config: { ...variantCfg, version: "x" } }, red: null } }))).includes("tactic_invalid"));
+//  T4 ruling 3a：legacy 的接受條件＝v20 兩個投影實際解參考的形狀（tacticId＋macro／objectives／lanePlan／economy）；
+//  投影不讀 version ⇒ 缺 version／舊 version 的存檔戰術必須接受（原本這條把 version 不符也當成 tactic_invalid）。
+const legacyCodes = (config) => codes(createMatchSetup(careerInput({ tactic: { blue: { kind: "legacy", ...(config === undefined ? {} : { config }) }, red: null } })));
+const without = (k) => { const { [k]: _drop, ...rest } = variantCfg; return rest; };
+ck("S5e legacy 缺 config／缺 tacticId／缺任一投影群組（macro／objectives／lanePlan／economy）⇒ tactic_invalid", legacyCodes(undefined).includes("tactic_invalid")
+  && ["tacticId", "macro", "objectives", "lanePlan", "economy"].every((k) => legacyCodes(without(k)).includes("tactic_invalid")) && legacyCodes({ ...variantCfg, macro: null }).includes("tactic_invalid"));
+ck("S5e2 legacy 缺 version／舊 version ⇒ 接受（v20 投影不讀 version），config 原樣保存", (() => {
+  const noV = createMatchSetup(careerInput({ tactic: { blue: { kind: "legacy", config: without("version") }, red: null } }));
+  const oldV = createMatchSetup(careerInput({ tactic: { blue: { kind: "legacy", config: { ...variantCfg, version: "x" } }, red: null } }));
+  return noV.ok && !("version" in noV.setup.tactic.blue.config) && noV.setup.tactic.blue.config.macro.aggression === 0.91 && oldV.ok && oldV.setup.tactic.blue.config.version === "x";
+})());
 ck("S5f std 帶多餘欄位 ⇒ tactic_invalid", codes(createMatchSetup(careerInput({ tactic: { blue: { kind: "std", config: {} }, red: null } }))).includes("tactic_invalid"));
 ck("S5g 呼叫端事後改 variantCfg 不影響已建立的 setup（複製）", (() => { const cfg = JSON.parse(JSON.stringify(variantCfg)); const r = createMatchSetup(careerInput({ tactic: { blue: { kind: "legacy", config: cfg }, red: null } })); cfg.macro.aggression = 0; return r.setup.tactic.blue.config.macro.aggression === 0.91; })());
 
