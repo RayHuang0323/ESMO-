@@ -28,7 +28,10 @@ import { engineStreamHash, createStreamHasher } from "./lib/matchGolden.mjs";
 
 const FIXED_NOW = 1757000004242;                      // 凍結的 Date.now（只在開局前）
 const EXPECTED_SEED = (FIXED_NOW & 0xffff) | 1;
-const FREEZE = "(function(){var real=Date.now.bind(Date);window.__ESMO_FREEZE_NOW=true;"
+//  ⚠ resource timing 預設只留 250 筆，dev server 一頁就載入上千個模組 ⇒ 不放大緩衝區的話，後來才載入的
+//    動態模組根本不會被記錄（P0c／N3 會變成永遠查不到的假綠／假紅；第一次跑就是這樣被 P0c 抓到的）。
+const FREEZE = "try{performance.setResourceTimingBufferSize(20000);}catch(e){}"
+  + "(function(){var real=Date.now.bind(Date);window.__ESMO_FREEZE_NOW=true;"
   + "Date.now=function(){return window.__ESMO_FREEZE_NOW?" + FIXED_NOW + ":real();};})();";
 
 /** Node 端：同一份 setup 組裝並 tick 到同一個 tick 數。 */
