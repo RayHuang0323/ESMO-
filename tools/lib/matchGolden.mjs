@@ -5,40 +5,13 @@
 //    · tools/capture_match_golden_v20.mjs  (runs ONCE on v20 code, writes the fixture)
 //    · later parity gates T3-T7            (rebuild the same cases, compare to the fixture)
 //
-//  Nothing here imports from src/ — pure helpers, so a gate can import it before
-//  deciding which engine tree to load.
+//  Hashing lives in src/battle/moba/debug/engineStreamHash.js (single implementation: the Live hook loads the same
+//  functions under ?shot= for the browser parity gate, and production code must not import from tools/).
+//  That module imports nothing, so a gate can still import this file before deciding which engine tree to load.
 // ============================================================================
+import { fnv, createStreamHasher, engineStreamHash, engineStateHash } from "../../src/battle/moba/debug/engineStreamHash.js";
 
-export const fnv = (s, h = 0x811c9dc5) => {
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
-  return h;
-};
-
-/** Stream-hash sample: positions (mm), hp, kills, deaths of every player. */
-const sampleOf = (engine) => JSON.stringify(
-  engine.players.map((p) => [Math.round(p.pos.x * 1000), Math.round(p.pos.y * 1000), Math.round(p.hp), p.k, p.d]),
-);
-
-/** Incremental stream hasher: call `sample(engine)` once per tick, hashes every `every`-th tick. */
-export function createStreamHasher(every = 20) {
-  let h = 0x811c9dc5, n = 0;
-  return {
-    sample(engine) { n++; if (n % every === 0) h = fnv(sampleOf(engine), h); },
-    get ticks() { return n; },
-    get hex() { return h.toString(16); },
-  };
-}
-
-/**
- * Attach a stream hasher to ONE engine instance (wraps that instance's own `tick`).
- * Returns the hasher; read `.hex` after the run. Does not touch the prototype.
- */
-export function engineStreamHash(engine, everyTicks = 20) {
-  const hasher = createStreamHasher(everyTicks);
-  const orig = engine.tick.bind(engine);
-  engine.tick = (...args) => { const r = orig(...args); hasher.sample(engine); return r; };
-  return hasher;
-}
+export { fnv, createStreamHasher, engineStreamHash, engineStateHash };
 
 /** Tick until the match is over or `maxT` simulated seconds elapsed. */
 export function runToEnd(engine, { dt = 0.5, maxT = 3600 } = {}) {
