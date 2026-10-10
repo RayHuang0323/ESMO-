@@ -25,6 +25,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { stripComments } from "./lib/stripComments.mjs";
 import {
   ITEM_CATALOG, ITEM_CATALOG_VERSION, ITEM_IDS, ITEM_BATCHES, ITEM_TIERS, ITEM_FAMILIES, STAT_KEYS, LAUNCH_BATCH,
   batchAllows, itemsForBatch, getItem,
@@ -443,31 +444,50 @@ const COMPS = {
   //  M3c：戰鬥英雄面板 BattleHeroSheet 只讀 itemsViewModel／itemsUiSelectors（OFF 時回 null）。
   //  M3d：戰術頁 TacticScreen 只讀 buildStrategyPrep 的預覽 selector（itemsV1 閘門內才呼叫）。
   //  M3e：Replay 擷取（replayBuffer 用 itemReplay 編碼）與播放（MobaReplayScreen 用 itemReplay 解碼／還原）。
-  const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/useLocalServer.js" || f === "src/battle/ui/BattleObserverHUD.jsx" || f === "src/battle/ui/BattleHeroSheet.jsx"
+  //  Phase 3a T3／T4：正式流程的引擎組裝搬到唯一組裝器，輸入由 Live builder 建成 MatchSetup ⇒ 原本「useLocalServer（開關保護）」
+  //  這個名額改成這兩支（hook 自己不再 import items 模組，所以從名單拿掉）：
+  //    · battle/moba/matchAssembler.js：唯一呼叫 configureItems 的地方（下一條斷言驗它受 itemsV1 層保護）
+  //    · battle/moba/liveMatchSetup.js：只用 buildStrategyPrep.normalizeBuildStrategy 正規化出裝策略（下方另外釘死它只 import 這一個）
+  const lmsItemImports = [...stripComments(read("src/battle/moba/liveMatchSetup.js")).matchAll(/import\s*\{([^}]*)\}\s*from\s*["'][^"']*\/items\/([^"']+)["']/g)].map((m) => `${m[2]}:${m[1].trim()}`);
+  const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/battle/moba/matchAssembler.js"
+    || (f === "src/battle/moba/liveMatchSetup.js" && lmsItemImports.length === 1 && lmsItemImports[0] === "buildStrategyPrep.js:normalizeBuildStrategy")
+    || f === "src/battle/ui/BattleObserverHUD.jsx" || f === "src/battle/ui/BattleHeroSheet.jsx"
     || f === "src/screens/moba/TacticScreen.jsx" || f === "src/battle/moba/replay/replayBuffer.js" || f === "src/screens/moba/MobaReplayScreen.jsx"
     //  ⚠ 2026-09-22（Battle UX hotfix）：`src/battle/moba/itemInfo.js` 是裝備資訊卡的**唯讀 selector**
     //    （只 import itemCatalog＋EFFECT_LABELS，僅被 ui/items 使用）。它不放進 moba/items/，因為那個目錄
     //    被 Hero Skills phase1 gate 相對 dc520f1 凍結；UI 元件本身仍不直接 import 目錄（M3 G3 不變）。
     || f === "src/battle/moba/itemInfo.js"
     || f.startsWith("src/debug/") || f.startsWith("src/battle/ui/items/");
-  ck("G13", "只有 LogicEngine（opt-in）、useLocalServer（開關保護）、DEV 工具與裝備 UI import items 模組", importers.every(allowedImporter) && importers.includes("src/LogicEngine.js"), importers.join(","));
+  ck("G13", "只有 LogicEngine（opt-in）、正式組裝路徑（唯一組裝器＋Live builder，受 itemsV1 層保護）、DEV 工具與裝備 UI import items 模組",
+    importers.every(allowedImporter) && importers.includes("src/LogicEngine.js") && importers.includes("src/battle/moba/matchAssembler.js") && !importers.includes("src/useLocalServer.js"),
+    importers.filter((f) => !allowedImporter(f)).join(",") || importers.join(","));
   const callers = [];
   const walkCalls = (d) => {
     for (const e of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
       const rel = `${d}/${e.name}`;
       if (e.isDirectory()) { if (!["src/battle/moba/items", "src/debug"].includes(rel)) walkCalls(rel); }
-      //  註解行不算呼叫（例如 simulationVersion.js 的版本判定說明）
+      //  註解不算呼叫（例如 simulationVersion.js 的版本判定說明）。組裝器以 call("configureItems", cfg) 呼叫 ⇒ 方法名字串的寫法也算。
       else if (/\.(jsx?|mjs)$/.test(e.name) && rel !== "src/LogicEngine.js"
-        && /configureItems\s*\(|toEngineItems\s*\(/.test(read(rel).split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n"))) callers.push(rel);
+        && /configureItems\s*\(|["']configureItems["']|toEngineItems\s*\(/.test(stripComments(read(rel)))) callers.push(rel);
     }
   };
   walkCalls("src");
-  //  M3a（Owner D1）：只允許 useLocalServer 在 itemsV1 開關保護下呼叫（正式 PvE 預設 true）。
-  const ulsCode = read("src/useLocalServer.js");
-  const ulsGuarded = /itemsV1: true/.test(read("src/featureFlags.js"))
-    && /featureEnabled\("itemsV1"\)\s*\|\|\s*\(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(ulsCode);
-  const unguardedCallers = callers.filter((f) => !(f === "src/useLocalServer.js" && ulsGuarded));
-  ck("G13", "正式流程只有 useLocalServer 在 itemsV1 開關保護下呼叫 configureItems（正式 PvE 預設 ON）", unguardedCallers.length === 0, unguardedCallers.join(","));
+  //  M3a（Owner D1）：正式流程只允許在 itemsV1 開關保護下呼叫（正式 PvE 預設 true）。
+  //  Phase 3a T3／T4：唯一允許的呼叫者從 useLocalServer 改成唯一組裝器；保護鏈＝組裝器 `if (!E.items) return;`
+  //  ← effectiveLayers.items（matchSetup）← 規則集層 items＝FEATURE_FLAGS.itemsV1（matchRuleset）；
+  //  DEV 網址開關只在 hook 的 import.meta.env.DEV 條件式裡讀，而且只在 allowTool（＝DEV）時生效。
+  const ulsCode = stripComments(read("src/useLocalServer.js"));
+  const asmCode = stripComments(read("src/battle/moba/matchAssembler.js"));
+  const asmGuarded = /itemsV1: true/.test(read("src/featureFlags.js"))
+    && /items\(\)\s*\{\s*if \(!E\.items\) return;/.test(asmCode)
+    && /items:\s*L\.items === true && hasRoster/.test(stripComments(read("src/platform/contracts/matchSetup.js")))
+    && /items:\s*on\("itemsV1"\)/.test(stripComments(read("src/platform/contracts/matchRuleset.js")))
+    && /flags:\s*FEATURE_FLAGS/.test(ulsCode)
+    && /import\.meta\.env\.DEV\s*\?\s*\{[^}]*items:\s*itemsDevRequested\(\)[^}]*\}\s*:\s*null/.test(ulsCode)
+    && /allowTool:\s*import\.meta\.env\.DEV === true/.test(ulsCode);
+  const unguardedCallers = callers.filter((f) => !(f === "src/battle/moba/matchAssembler.js" && asmGuarded));
+  ck("G13", "正式流程只有唯一組裝器（useLocalServer → assembleMatch）在 itemsV1 層保護下呼叫 configureItems（正式 PvE 預設 ON）",
+    unguardedCallers.length === 0 && callers.includes("src/battle/moba/matchAssembler.js") && /assembleMatch\(/.test(ulsCode), unguardedCallers.join(",") || `callers=${callers.join(",")} guarded=${asmGuarded}`);
   const simVer = read("src/platform/contracts/simulationVersion.js");
   const semanticsList = simVer.slice(simVer.indexOf("export const SIMULATION_SEMANTICS_FILES"), simVer.indexOf("]);", simVer.indexOf("export const SIMULATION_SEMANTICS_FILES")));
   const currentSimVersion = simVer.match(/MOBA_SIMULATION_VERSION = "([^"]+)"/)?.[1] ?? "";

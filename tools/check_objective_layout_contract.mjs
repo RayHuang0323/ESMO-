@@ -18,6 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { stripComments } from "./lib/stripComments.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const load = (p) => import(pathToFileURL(path.join(ROOT, p)).href);
@@ -122,7 +123,9 @@ for (let i = 0; i < 700 && !spawnEv && !e9.over; i++) {
 ck("L9b 戰報：SWAPPED 時巨龍刷新事件位置在上方坑", !!spawnEv && same(spawnEv.pos, P), JSON.stringify(spawnEv?.pos ?? null));
 
 // L10
-const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+//  剝註解用 tools/lib/stripComments.mjs：原本的正則會把行註解裡的「斜線＋兩個星號」當成區塊註解開頭而刪掉後面的程式碼，
+//  「全專案沒有第二個推導點」這種掃描會因此漏看（假綠）。
+const strip = stripComments;
 const PRESENTATION = ["src/GameView.jsx", "src/battle/battleFocus.js", "src/battle/battleEvents.js", "src/battle/moba/tacticalComms.js",
   "src/battle/moba/replay/replayPresentationSource.js", "src/battle/moba/map/mobaRuntimeMapAdapter.js"];
 const direct = PRESENTATION.filter((f) => /\bPITS\s*(\.|\[)\s*("?)(dragon|baron|key|k)\b/.test(strip(fs.readFileSync(path.join(ROOT, f), "utf8"))));
@@ -130,8 +133,17 @@ const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((x) => x.
 const derive = walk(path.join(ROOT, "src")).filter((f) => /\.(js|jsx)$/.test(f) && !f.endsWith("objectiveLayout.js"))
   .filter((f) => /\b(objectiveLayoutForSeed|resolveObjectiveLayout)\s*\(/.test(strip(fs.readFileSync(f, "utf8"))))
   .map((f) => path.relative(ROOT, f).replace(/\\/g, "/"));
-ck("L10 正式呈現檔不直接讀 PITS 坑位；推導只在 useLocalServer 一處",
-  direct.length === 0 && derive.length === 1 && derive[0] === "src/useLocalServer.js", `直接讀 PITS：${JSON.stringify(direct)}；推導點：${JSON.stringify(derive)}`);
+//  Phase 3a T2–T4：「Match config 的唯一推導點」從 useLocalServer.start 搬到 MatchSetup 契約
+//  （platform/contracts/matchSetup.js 的 createMatchSetup：由 seed 推導一次、存成 setup.objectiveLayout）。
+//  Live hook → Live builder → 組裝器都只讀那個欄位：組裝器把 setup.objectiveLayout 寫進引擎，hook 把 applied.objectiveLayout
+//  交給 Replay 與本場設定。意圖不變（全專案只有一處推導、下游一律讀欄位），所以仍要求「恰好一處」，只是那一處換了檔案。
+const codeOf = (rel) => stripComments(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+const flowReadsField = /call\("configureObjectiveLayout",\s*setup\.objectiveLayout\)/.test(codeOf("src/battle/moba/matchAssembler.js"))
+  && /objectiveLayout:\s*setup\.objectiveLayout/.test(codeOf("src/battle/moba/matchAssembler.js"))
+  && /const \{ objectiveLayout, talentSelection, replayConfig \} = prepared\.applied;/.test(codeOf("src/useLocalServer.js"));
+ck("L10 正式呈現檔不直接讀 PITS 坑位；推導只在 MatchSetup 契約一處（hook／Live builder／組裝器只讀欄位）",
+  direct.length === 0 && derive.length === 1 && derive[0] === "src/platform/contracts/matchSetup.js" && flowReadsField,
+  `直接讀 PITS：${JSON.stringify(direct)}；推導點：${JSON.stringify(derive)}；下游讀欄位：${flowReadsField}`);
 
 console.log(`\nObjective Layout 契約：${pass}/${pass + fail}　RESULT=${fail ? "FAIL" : "PASS"}`);
 process.exit(fail ? 1 : 0);
