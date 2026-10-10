@@ -49,6 +49,7 @@ import { toEnginePlayerMods } from "../src/battle/moba/mobaPlayerStats.js";
 import { matchItemsConfig, normalizeBuildStrategy } from "../src/battle/moba/items/buildStrategyPrep.js";
 import { stableStringify, stableHash } from "../src/platform/contracts/squadSnapshot.js";
 import { runAndHash, engineStreamHash, finalDigest, fnv, createStreamHasher } from "./lib/matchGolden.mjs";
+import { stripComments } from "./lib/stripComments.mjs";
 import * as StreamSrc from "../src/battle/moba/debug/engineStreamHash.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
 
@@ -82,10 +83,12 @@ const firstDiff = (got, want) => {
   return "";
 };
 
-// ── 「hook 會怎麼呼叫」：與 useLocalServer.start 相同的種子正規化與快照 ───────────────────
+// ── 「hook 會怎麼呼叫」：hook 只決定 seed 的來源並交出**原始值**（session seed 或時鐘值）；
+//    正規化在 builder（normalizeLiveSeed）。這裡不帶任何一份正規化算式——預期值由 golden ctor.seed 與
+//    下方的 v20 hook 複本（獨立的對照組）提供。fallback＝hook 讀到的時鐘值。
 const hookSeed = (opts, fallback = 0x1234) => {
   const authoritative = Number.isFinite(opts.seed);
-  return { seed: authoritative ? ((opts.seed >>> 0) | 1) : ((fallback & 0xffff) | 1), seedSource: authoritative ? "session" : "local" };
+  return { seed: authoritative ? opts.seed : fallback, seedSource: authoritative ? "session" : "local" };
 };
 function liveBuild(opts, { players, lineup, loadout = G.defaultLoadout, flags = FLAGS, ruleset = null, dev = null, allowTool = false, fallbackSeed } = {}) {
   const { seed, seedSource } = hookSeed(opts, fallbackSeed);
@@ -254,6 +257,17 @@ for (const v of V_CASES) {
     fb.ok && fb.setup.talentSelections === null && fb.setup.buildStrategy === null && fb.setup.effectiveLayers.items === false && fb.setup.effectiveLayers.heroSkills === false);
   const ls = liveBuild(V_CASES.find((x) => x.id === "local-seed").opts, { players: G.players, lineup: G.lineup, fallbackSeed: 0x9a3b });
   ck("V5 沒有 session seed ⇒ seedSource local、seed＝(fallback & 0xffff) | 1（時鐘只在 hook 讀）", ls.ok && ls.setup.meta.seedSource === "local" && ls.setup.seed === ((0x9a3b & 0xffff) | 1));
+  //  V6（fix round 2）：seed 正規化在 builder。hook 只交原始值 ⇒ 偶數／超過 32 位／負數／小數的 session seed，
+  //  與毫秒等級的時鐘值，builder 算出的引擎 seed 必須等於 v20 hook 複本（獨立對照組）算的。golden 的 seed 全是奇數，驗不到這條。
+  const ctxSeed = { players: G.players, lineup: G.lineup };
+  const sessionRaws = [0, 2, 46, 4294967296 * 3 + 46, -8, 2147483648, 13579.7, 4294967295];
+  const localRaws = [0, 0x9a3b, 65536, 1757000004242, 1757000069777];
+  const sessionBad = sessionRaws.filter((raw) => { const b = liveBuild({ seed: raw, roster: baseRows }, ctxSeed); return !(b.ok && b.setup.seed === v20LiveStart({ seed: raw, roster: baseRows }, ctxSeed).seed && b.setup.meta.seedSource === "session"); });
+  const localBad = localRaws.filter((raw) => { const b = liveBuild({ roster: baseRows }, { ...ctxSeed, fallbackSeed: raw }); return !(b.ok && b.setup.seed === v20LiveStart({ roster: baseRows }, { ...ctxSeed, fallbackSeed: raw }).seed && b.setup.meta.seedSource === "local"); });
+  ck(`V6 builder 的 seed 正規化＝v20 hook 複本：${sessionRaws.length} 個 session 原始值（偶數／>32 位／負數／小數）＋${localRaws.length} 個時鐘原始值；結果一律是奇數整數`,
+    sessionBad.length === 0 && localBad.length === 0
+    && [...sessionRaws.map((raw) => liveBuild({ seed: raw, roster: baseRows }, ctxSeed).setup.seed), ...localRaws.map((raw) => liveBuild({ roster: baseRows }, { ...ctxSeed, fallbackSeed: raw }).setup.seed)].every((x) => Number.isInteger(x) && (x & 1) === 1),
+    JSON.stringify({ sessionBad, localBad }));
 }
 
 // ════ R：舊存檔恢復 ═══════════════════════════════════════════════════════════
@@ -422,33 +436,6 @@ for (const v of V_CASES) {
 }
 
 // ════ S：原始碼 ═══════════════════════════════════════════════════════════════
-/**
- * 剝註解（逐字元掃描）。認得字串與樣板字串，所以字串裡的雙斜線不算註解；行註解先整行略過，
- * 所以行註解裡出現的區塊註解開頭（例如路徑萬用字元）不會吃掉後面的程式碼——正則版就是這樣把整段程式碼刪掉的。
- */
-function stripComments(src) {
-  const DQ = 34, SQ = 39, BT = 96, BS = 92, SL = 47, ST = 42, NL = 10;   // 雙引號、單引號、反引號、反斜線、斜線、星號、換行
-  const out = [];
-  let i = 0, quote = 0;
-  while (i < src.length) {
-    const c = src.charCodeAt(i), d = src.charCodeAt(i + 1);
-    if (quote) {
-      out.push(src[i]);
-      if (c === BS && i + 1 < src.length) { out.push(src[i + 1]); i += 2; continue; }
-      if (c === quote) quote = 0;
-      i++; continue;
-    }
-    if (c === DQ || c === SQ || c === BT) { quote = c; out.push(src[i]); i++; continue; }
-    if (c === SL && d === SL) { while (i < src.length && src.charCodeAt(i) !== NL) i++; continue; }
-    if (c === SL && d === ST) {
-      let j = i + 2;
-      while (j < src.length && !(src.charCodeAt(j) === ST && src.charCodeAt(j + 1) === SL)) j++;
-      i = Math.min(src.length, j + 2); continue;
-    }
-    out.push(src[i]); i++;
-  }
-  return out.join(String());
-}
 const BUILDERS = /^(sharedMatchAssemblerDeps|buildMatchAssemblerDeps)$/;
 /** 回傳違規的呼叫（檔名＋第二引數）。定義本身（export function assembleMatch）不算呼叫。 */
 function assembleCallViolations(file, rawSrc) {
@@ -510,6 +497,14 @@ function assembleCallViolations(file, rawSrc) {
     /ruleset\s*[:,]/.test(uls) && /matchSetupHash\s*[:,]/.test(uls) && /activeConfig/.test(uls));
   ck("S6 useLocalServer：對等掛點只在 ?shot= 時掛（同 __ESMO_COMBAT_FEEDBACK 模式）",
     /__ESMO_MATCH_SETUP_HASH/.test(uls) && /__ESMO_ENGINE_STREAM_HASH/.test(uls) && /has\(\s*["']shot["']\s*\)/.test(uls));
+  //  S12（fix round 2）：hook 只決定 seed 來源並交原始值；正規化算式只在 builder（hook 裡不得再有 >>> 0／& 0xffff）
+  ck("S12 seed：hook 交原始值（session seed 或 Date.now()），正規化只在 liveMatchSetup.normalizeLiveSeed",
+    /const rawSeed = authoritative \? opts\.seed : Date\.now\(\);/.test(uls) && /seed:\s*rawSeed,\s*seedSource:\s*authoritative \? "session" : "local"/.test(uls)
+    && !/>>>\s*0/.test(uls) && !/&\s*0xffff/.test(uls)
+    && /seedSource === "session" \? \(\(rawSeed >>> 0\) \| 1\) : \(\(rawSeed & 0xffff\) \| 1\)/.test(builder) && /const seed = normalizeLiveSeed\(rawSeed, seedSource\);/.test(builder));
+  //  S13（fix round 2）：?shot= 的非同步開局——掛鉤子的整段在 try/catch 裡，之後一定呼叫 launch()（鉤子出錯不得讓比賽開不了）
+  ck("S13 ?shot= 開局：掛對等鉤子的程式在 try/catch 內，catch 之後無條件 launch()；import 失敗的分支也 launch()",
+    /\.then\(\(m\) => \{\s*if \(startTokenRef\.current !== token\) return;\s*try \{[\s\S]*?m\.engineStreamHash\([\s\S]*?\} catch \(error\) \{[\s\S]*?\}\s*launch\(\);\s*\}, \(error\) => \{[\s\S]*?if \(startTokenRef\.current === token\) launch\(\);/.test(uls));
   //  S7：每一個 window.__ESMO_MATCH_*／__ESMO_LIVE_*／__ESMO_ENGINE_* 指派都必須落在 `if (qs.has("shot")) { … }` 區塊內（以大括號配對求區塊範圍）
   const shotBlocks = [...uls.matchAll(/if\s*\(\s*(?:qs\s*&&\s*)?qs\.has\(\s*["']shot["']\s*\)\s*\)\s*\{/g)].map((m) => {
     let depth = 0, i = m.index + m[0].length - 1;
@@ -538,6 +533,15 @@ function assembleCallViolations(file, rawSrc) {
   const gv = stripComments(fs.readFileSync(path.join(ROOT, "src/GameView.jsx"), "utf8"));
   ck("S10 hook 沒有 throw；失敗 ⇒ setAssemblyError＋回傳 { ok:false, errors }；GameView 以 battle-assembly-error 顯示並提供返回",
     !/\bthrow\b/.test(uls) && /setAssemblyError\(/.test(uls) && /return\s*\{\s*ok:\s*false/.test(uls) && /assemblyError/.test(gv) && /data-testid="battle-assembly-error"/.test(gv) && /data-testid="battle-assembly-error-back"/.test(gv));
+  //  S14（fix round 2）：錯誤卡的出口。同一份輸入重進會再被拒 ⇒ 文案不得叫玩家「返回後重新進入」；
+  //  有場次時提供「放棄本場」（既有的 abandonMatchSession()），並寫出賽程比賽的收尾方式（重新出賽或棄權）。
+  const cardStart = gv.indexOf('data-testid="battle-assembly-error"');
+  const card = cardStart < 0 ? "" : gv.slice(cardStart, gv.indexOf("開始遊戲", cardStart));
+  ck("S14 錯誤卡：不叫玩家返回重進；有場次時有「放棄本場」（abandonMatchSession），並寫明賽程比賽要重新出賽或棄權",
+    card.length > 0 && !/返回後重新進入|重新進入即可|請重新進入/.test(card)
+    && /launch\?\.sessionId && \(\s*<button data-testid="battle-assembly-error-abandon" onClick=\{abandonRejectedMatch\}/.test(card)
+    && /const abandonRejectedMatch = \(\) => \{[\s\S]*?useProfileStore\.getState\(\)\.abandonMatchSession\(\)[\s\S]*?onContinue\?\.\(\);/.test(gv)
+    && /放棄本場/.test(card) && /棄權/.test(card) && /重新出賽/.test(card));
   //  S11：正式 build 的主 bundle 不含串流雜湊（只在 dist 比 hook 新時判定；否則略過並明講）
   const assets = path.join(ROOT, "dist/assets");
   const chunks = fs.existsSync(assets) ? fs.readdirSync(assets).filter((f) => f.endsWith(".js")) : [];

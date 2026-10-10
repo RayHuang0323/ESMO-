@@ -183,9 +183,11 @@ export function useLocalServer() {
     //    同一個 session seed 永遠映射到同一個引擎 seed。
     //  沒有 session 時（debug harness / 舊路徑）才退回舊行為，並標記來源，
     //  讓驗證器與追蹤鏈看得出這一場不是權威場次。
-    //  ⚠ 時鐘 fallback 只在這裡讀；builder 是純函式，seed 由這裡傳進去。
+    //  ⚠ 這裡只決定**來源**並交出原始值：有 session seed 就用它，否則讀時鐘（時鐘只在這裡讀）。
+    //    正規化（session：`(seed >>> 0) | 1`；local：`(seed & 0xffff) | 1`）在純函式 builder 的 normalizeLiveSeed，
+    //    引擎實際用的 seed 是 setup.seed。
     const authoritative = Number.isFinite(opts.seed);
-    const seed = authoritative ? ((opts.seed >>> 0) | 1) : ((Date.now() & 0xffff) | 1);
+    const rawSeed = authoritative ? opts.seed : Date.now();
 
     //  ── Phase 3a T4：規則集壽命 ─────────────────────────────────────────
     //  開局時解析一次（旗標 → resolveRulesetForMode），寫進本場設定（activeMatch.config.ruleset）；
@@ -208,7 +210,7 @@ export function useLocalServer() {
     //  Objective Layout（v16：恢復時沿用存檔值）全部在 liveMatchSetup.js 推導；呼叫順序與短路在 matchAssembler.js。
     //  heroDatabase 只經共用 deps 注入，不進組裝器。
     const liveInputs = {
-      opts, ruleset, seed, seedSource: authoritative ? "session" : "local",
+      opts, ruleset, seed: rawSeed, seedSource: authoritative ? "session" : "local",
       profile: { players: profileState.players ?? [], lineup: profileState.lineup ?? null },
       heroProgress: { loadout: useHeroProgressStore.getState().getLoadout() },
       opponentTeam: opts.opponentId ? aiTeamById(opts.opponentId) : null,
@@ -237,7 +239,7 @@ export function useLocalServer() {
     //   是兩份不同的資訊。roster 只有十筆，容量影響可忽略（frames 才是大宗）。
     //   config（tacticId／tacticName／battleTalentIds）由組裝器回傳，形狀與 v20 相同。
     beginReplayCapture({
-      seed,
+      seed: setup.seed,
       //  O7：這一場是不是權威場次（由 MatchSession 指定 seed）
       sessionId: opts.sessionId ?? null,
       seedSource: setup.meta.seedSource,
@@ -331,15 +333,20 @@ export function useLocalServer() {
       const { draft: _draft, ...setupOpts } = opts;
       import("./battle/moba/debug/engineStreamHash.js").then((m) => {
         if (startTokenRef.current !== token) return;
-        const stream = m.engineStreamHash(eng, 20);
-        window.__ESMO_MATCH_SETUP_HASH = setupHash;
-        window.__ESMO_MATCH_SETUP = JSON.parse(JSON.stringify(setup));
-        window.__ESMO_LIVE_SETUP_INPUTS = JSON.parse(JSON.stringify({ ...liveInputs, opts: setupOpts,
-          opponentTeam: liveInputs.opponentTeam ? { id: liveInputs.opponentTeam.id, style: liveInputs.opponentTeam.style } : null }));
-        window.__ESMO_ENGINE_STREAM_HASH = () => ({
-          setupHash, ticks: stream.ticks, t: eng.t, streamHash: stream.hex, stateHash: m.engineStateHash(eng),
-          depsFingerprint: prepared.applied.depsFingerprint,
-        });
+        //  鉤子只是驗收用的觀測：掛的過程丟任何例外（序列化、雜湊…）都不得讓比賽開不了 ⇒ 記一筆、照常開打。
+        try {
+          const stream = m.engineStreamHash(eng, 20);
+          window.__ESMO_MATCH_SETUP_HASH = setupHash;
+          window.__ESMO_MATCH_SETUP = JSON.parse(JSON.stringify(setup));
+          window.__ESMO_LIVE_SETUP_INPUTS = JSON.parse(JSON.stringify({ ...liveInputs, opts: setupOpts,
+            opponentTeam: liveInputs.opponentTeam ? { id: liveInputs.opponentTeam.id, style: liveInputs.opponentTeam.style } : null }));
+          window.__ESMO_ENGINE_STREAM_HASH = () => ({
+            setupHash, ticks: stream.ticks, t: eng.t, streamHash: stream.hex, stateHash: m.engineStateHash(eng),
+            depsFingerprint: prepared.applied.depsFingerprint,
+          });
+        } catch (error) {
+          console.warn("[useLocalServer] parity hooks could not be attached; the match starts without them", error);
+        }
         launch();
       }, (error) => {
         console.warn("[useLocalServer] parity hooks unavailable (stream hash module failed to load)", error);

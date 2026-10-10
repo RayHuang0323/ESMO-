@@ -9,7 +9,8 @@
 //
 //  【與 v20 useLocalServer.start（c4b72a5 :147-295）的逐條對應】
 //   · loadout   ＝ applyFatigueToLoadout(heroProgress.loadout, players, lineup)        （:153-156）
-//   · seed      ＝ hook 傳入（`(opts.seed >>> 0) | 1` 或本機 fallback；本檔不碰時鐘）（:165-166）
+//   · seed      ＝ normalizeLiveSeed(原始值, seedSource)：session ⇒ `(seed >>> 0) | 1`；local ⇒ `(seed & 0xffff) | 1`
+//                  hook 只決定來源並交原始值（session seed 或 Date.now()）；本檔不碰時鐘             （:165-166）
 //   · 玩家素質  ＝ buildPlayerStatSlots(players, "blue", lineup)；紅方 []               （:204-206）
 //   · roster    ＝ opts.roster 每列只留 { heroId, spells }（v20 adapter 全以 heroId 為準；
 //                  列上的 player／hero 中文名／lane 是呈現欄位）                           （:215-263）
@@ -51,6 +52,16 @@ function toPlainData(v) {
     return out;
   }
   return v;
+}
+
+/**
+ * 引擎 seed 正規化（v20 useLocalServer:165-166 的兩個分支，逐字相同）。
+ *  · session：權威 seed `(raw >>> 0) | 1`——同一個 session seed 永遠映射到同一個引擎 seed（引擎要求奇數）。
+ *  · local  ：沒有 session 時 hook 交來的時鐘值，取低 16 位 `(raw & 0xffff) | 1`。
+ * 純函式：時鐘只在 hook 讀，這裡只做算術。
+ */
+export function normalizeLiveSeed(rawSeed, seedSource) {
+  return seedSource === "session" ? ((rawSeed >>> 0) | 1) : ((rawSeed & 0xffff) | 1);
 }
 
 /** 本場進行中的設定（activeMatch.config）；只認同一個 sessionId。純讀取，不改傳入物件。 */
@@ -119,11 +130,13 @@ function normalizeTalentSelections(selections, roster) {
  * @param {object} [a.ruleset]     resolveLiveRuleset 的結果（開局解析一次／恢復沿用）；未給 ⇒ 依 flags 解析
  * @param {object} [a.flags]       未給 ruleset 時用
  * @param {object} [a.opponentTeam] aiTeamById(opts.opponentId) 的結果（只讀 style）
- * @param {number} a.seed          hook 正規化後的引擎 seed（奇數）
+ * @param {number} a.seed          **原始** seed：session ⇒ MatchSession 的權威 seed；local ⇒ hook 讀到的時鐘值。
+ *                                 正規化（奇數化）在這裡做，見 normalizeLiveSeed；setup.seed 才是引擎 seed。
  * @param {"session"|"local"} a.seedSource
  * @returns {{ ok: boolean, setup: object|null, errors: object[], buildStrategy: string|null, notes: string[] }}
  */
-export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}, ruleset = null, flags = null, opponentTeam = null, seed, seedSource } = {}) {
+export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}, ruleset = null, flags = null, opponentTeam = null, seed: rawSeed, seedSource } = {}) {
+  const seed = normalizeLiveSeed(rawSeed, seedSource);
   const rs = ruleset ?? resolveLiveRuleset({ flags }).ruleset;
   const L = rs.layers ?? {};
   const isTool = rs.kind === "tool";

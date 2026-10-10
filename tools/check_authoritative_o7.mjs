@@ -12,6 +12,7 @@
 //    ⑤ 追蹤鏈：ticket → assignment → room → session → match → result → settlement
 // ============================================================================
 import fs from "fs";
+import { stripComments } from "./lib/stripComments.mjs";
 import { LogicEngine } from "../src/LogicEngine.js";
 import {
   SESSION_STATES, CONNECTION_STATES, createSession, consumeLaunchToken, resumeSession,
@@ -90,8 +91,21 @@ console.log("══ Milestone O7：權威場次、恢復與單次結算 ══\n
   const src = fs.readFileSync("src/useLocalServer.js", "utf8");
   ck("1) useLocalServer 不再無條件用時鐘產生 seed",
     /opts\.seed/.test(src) && /authoritative/.test(src));
+  //  Phase 3a T4（fix round 2）：seed 的正規化搬進純函式 builder（battle/moba/liveMatchSetup.normalizeLiveSeed）。
+  //  hook 只決定來源、交出原始值——有 session seed 就不讀時鐘（同一個三元式）；builder 不碰時鐘，
+  //  session 分支＝(seed >>> 0) | 1、local 分支＝(seed & 0xffff) | 1（與原本 hook 那一行的兩個分支逐字相同）。
+  const hookCode = stripComments(src);
+  const builderCode = stripComments(fs.readFileSync("src/battle/moba/liveMatchSetup.js", "utf8"));
+  const { normalizeLiveSeed, buildLiveMatchSetup } = await import("../src/battle/moba/liveMatchSetup.js");
+  const { FEATURE_FLAGS } = await import("../src/featureFlags.js");
+  const builtSeed = (raw, seedSource) => buildLiveMatchSetup({ opts: {}, flags: FEATURE_FLAGS, seed: raw, seedSource }).setup?.seed;
   ck("1b) 有 session seed 時**不會**走到時鐘分支",
-    /const seed = authoritative \? \(\(opts\.seed >>> 0\) \| 1\) : \(\(Date\.now\(\) & 0xffff\) \| 1\)/.test(src));
+    /const rawSeed = authoritative \? opts\.seed : Date\.now\(\);/.test(hookCode)
+    && /seed:\s*rawSeed,\s*seedSource:\s*authoritative \? "session" : "local"/.test(hookCode)
+    && /seedSource === "session" \? \(\(rawSeed >>> 0\) \| 1\) : \(\(rawSeed & 0xffff\) \| 1\)/.test(builderCode)
+    && !/Date\.now|performance\.now|Math\.random/.test(builderCode)
+    && [13579, 13578, 0, 4294967296 + 20, -8].every((s) => normalizeLiveSeed(s, "session") === ((s >>> 0) | 1) && builtSeed(s, "session") === ((s >>> 0) | 1))
+    && [1757000004242, 0x9a3b, 65536].every((t) => normalizeLiveSeed(t, "local") === ((t & 0xffff) | 1) && builtSeed(t, "local") === ((t & 0xffff) | 1)));
   const gv = fs.readFileSync("src/GameView.jsx", "utf8");
   ck("1c) GameView 從 Store 讀權威啟動參數（不接受 props 覆寫）",
     /matchmaking\?\.launch/.test(gv) && /seed: launch\?\.seed/.test(gv) &&

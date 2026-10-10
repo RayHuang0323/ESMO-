@@ -192,6 +192,16 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const activeTimeSec = useProfileStore((st) => Number(st.matchmaking?.session?.activeMatch?.simulation?.timeSec) || 0);
   //  v16 Objective Layout：恢復進行中的場次時沿用存檔裡的配置（整場不換）；新場次為 null ⇒ start() 由 seed 推導一次
   const activeObjectiveLayout = useProfileStore((st) => st.matchmaking?.session?.activeMatch?.config?.objectiveLayout ?? null);
+  //  Phase 3a T4：開局被拒（assemblyError）時的出口。同一份輸入再進來一次會被拒絕第二次，所以不叫玩家「返回重進」，
+  //  而是直接提供放棄本場——既有的 abandonMatchSession()，與首頁「進行中的對戰」卡的「放棄本場」同一支、同一句確認。
+  const [abandonError, setAbandonError] = useState(null);
+  const abandonRejectedMatch = () => {
+    if (!window.confirm("放棄後將無法恢復本場比賽。確定要放棄嗎？")) return;
+    const r = useProfileStore.getState().abandonMatchSession();
+    if (!r.ok) { setAbandonError(r.errors?.[0]?.message ?? "無法放棄本場比賽"); return; }
+    setAbandonError(null);
+    onContinue?.();
+  };
   //  Q3.5-fix：對戰畫面的隊名。對手名來自本場的正式指派單（賽事＝賽程對手，
   //  排隊＝配對到的對手），**不是** data/roster.js 的 AI 預設「赤焰軍團」。
   //  訂閱的是字串原始值 ⇒ 名字一到就重繪（理由見 matchTeamNames.js 檔頭）。
@@ -292,15 +302,30 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           style={{ position: "absolute", inset: 0, zIndex: Z.controls, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,10,18,0.82)", padding: 16 }}>
           <div style={{ width: "min(380px, 100%)", background: "rgba(10,16,28,0.96)", border: "1px solid rgba(248,113,113,0.6)", borderRadius: 12, padding: "16px 18px", color: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
             <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 6 }}>⚠ 這場比賽無法開始</div>
-            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#cbd5e1", marginBottom: 10 }}>
-              對戰資料沒有通過開局檢查。為了避免打出與紀錄不一致的結果，系統沒有開打。請返回後重新進入；若一再發生，請回報下方代碼。
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#cbd5e1", marginBottom: 8 }}>
+              對戰資料沒有通過開局檢查。為了避免打出與紀錄不一致的結果，系統沒有開打；用同一份設定再進來一次，結果會一樣。
             </div>
+            {/*  有場次才有東西可以放棄（debug 入口沒有場次）。賽程比賽：放棄後賽程仍是「已出賽、未完成」，
+                 世界時間照舊擋住，玩家要到賽事頁重新出賽或按「棄權」才會收尾——所以這裡把兩條路都寫出來。 */}
+            {launch?.sessionId && (
+              <div data-testid="battle-assembly-error-exit-hint" style={{ fontSize: 12, lineHeight: 1.6, color: "#e2e8f0", marginBottom: 8 }}>
+                請放棄本場，之後可以重新配對。如果這是賽程比賽，放棄後請到賽事頁重新出賽，或按「棄權」結束這一場，日程才能繼續推進。
+              </div>
+            )}
+            <div style={{ fontSize: 11, lineHeight: 1.5, color: "#94a3b8", marginBottom: 6 }}>若一再發生，請回報下方代碼。</div>
             <div data-testid="battle-assembly-error-codes" style={{ fontSize: 11, fontFamily: "ui-monospace,monospace", color: "#fca5a5", wordBreak: "break-all", marginBottom: 12 }}>
               {(assemblyError.errors ?? []).slice(0, 4).map((e) => `${e.code}@${e.field}`).join("、") || assemblyError.stage}
             </div>
+            {launch?.sessionId && (
+              <button data-testid="battle-assembly-error-abandon" onClick={abandonRejectedMatch}
+                style={{ minHeight: 42, width: "100%", marginBottom: 8, background: "linear-gradient(135deg,#ef4444,#b91c1c)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer" }}>
+                放棄本場
+              </button>
+            )}
+            {abandonError && <div data-testid="battle-assembly-error-abandon-failed" style={{ color: "#fca5a5", fontSize: 11, marginBottom: 8 }}>⚠ {abandonError}</div>}
             <button data-testid="battle-assembly-error-back" onClick={() => onContinue?.()} disabled={!onContinue}
               style={{ minHeight: 40, width: "100%", background: "rgba(8,14,24,0.9)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 800, cursor: onContinue ? "pointer" : "default", opacity: onContinue ? 1 : 0.5 }}>
-              ← 返回
+              ← 先離開這個畫面
             </button>
           </div>
         </div>
