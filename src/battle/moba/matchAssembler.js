@@ -51,10 +51,31 @@ import { matchItemsConfig } from "./items/buildStrategyPrep.js";
 import { toEngineItems } from "./items/itemsEngineAdapter.js";
 import { BUILD_STRATEGIES } from "./items/buildPolicy.js";
 import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "../../platform/contracts/MobaTacticConfig.js";
-import { MATCH_SETUP_VERSION } from "../../platform/contracts/matchSetup.js";
+import { MATCH_SETUP_VERSION, fnv1a64Hex } from "../../platform/contracts/matchSetup.js";
 import { ASSEMBLY_ORDERS } from "../../platform/contracts/matchRuleset.js";
+import { stableStringify } from "../../platform/contracts/squadSnapshot.js";
 
 export const MATCH_ASSEMBLER_VERSION = "MatchAssembler.v1";
+
+/**
+ * deps 的身分描述（Phase 3a T4）→ `applied.depsFingerprint`。
+ *  · 共用 builder（battle/moba/matchAssemblerDeps.js）產出的 deps 帶凍結的 `manifest`
+ *    （引擎標記＋各 adapter 模組的契約常數，覆寫則標 override）⇒ 直接採用。
+ *  · 手拼的 deps（沒有 manifest）仍給指紋，但標成 unmanaged ⇒ 與共用 deps 必不相同。
+ *  只描述、不判定：要不要接受某份 deps 由呼叫端與 gate（check_live_setup_3a §S）決定。
+ */
+export function describeAssemblerDeps(deps) {
+  const m = deps?.manifest;
+  if (isPlainObject(m) && m.schema === "MatchAssemblerDeps.v1") return m;
+  const H = deps?.heroAdapters ?? {};
+  return {
+    schema: "unmanaged",
+    engine: typeof deps?.LogicEngine === "function" ? (deps.LogicEngine.name || "anonymous") : null,
+    heroLookup: typeof deps?.heroLookup === "function" ? (deps.heroLookup.name || "anonymous") : null,
+    adapters: Object.keys(H).sort().map((k) => (typeof H[k] === "function" ? `${k}:${H[k].name || "anonymous"}` : `${k}=${String(H[k])}`)),
+  };
+}
+export const depsFingerprintOf = (deps) => fnv1a64Hex(stableStringify(describeAssemblerDeps(deps)));
 
 /** 每種順序依序執行的步驟。challengeV20 沒有的步驟（layout／skills／items）在驗證階段就被拒絕。 */
 export const ASSEMBLY_STEPS = Object.freeze({
@@ -78,7 +99,8 @@ const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArr
  * @param {object} deps   { LogicEngine, heroLookup, heroAdapters: { toEngineHeroSkills, selectBattleTalents,
  *                          battleTalentOptions, toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } }
  * @returns {{ ok: boolean, engine: object|null,
- *             applied: { objectiveLayout, talentSelection, buildStrategy, tacticMeta, replayConfig, configured: string[] }|null,
+ *             applied: { objectiveLayout, talentSelection, buildStrategy, tacticMeta, replayConfig, configured: string[],
+ *                        depsFingerprint: string }|null,
  *             errors: Array<{ code, field, message }> }}
  */
 export function assembleMatch(setup, deps = {}) {
@@ -279,6 +301,8 @@ export function assembleMatch(setup, deps = {}) {
         ...(talentSelection ? { battleTalentIds: Object.fromEntries(Object.entries(talentSelection.players).map(([seat, row]) => [seat, row.id])) } : {}),
       },
       configured,
+      //  T4：這一場是用哪一份 deps 組的（見 describeAssemblerDeps）。不進 setup 雜湊——deps 不是輸入資料。
+      depsFingerprint: depsFingerprintOf(deps),
     },
   };
 }

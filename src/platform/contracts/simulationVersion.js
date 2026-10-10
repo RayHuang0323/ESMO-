@@ -427,7 +427,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⚠ v20 指紋不變、v1～v20 全數保留；正式站仍為 v20，發布前須 Owner 決定。
   //  T3 fix round 1：組裝器改以正規席位順序（b1…b5, r1…r5）重建交給 adapter 的 roster／天賦選擇（同雜湊 ⇒ 同模擬由構造保證）；
   //  golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 6b706cbfd4419710 未曾發布）。
-  "moba-sim.v21": "d5af0958688d277a",
+  //  T4（Live 改走組裝器）：matchAssembler.js 只多回傳 applied.depsFingerprint（deps 身分描述，不進引擎、不進 setup 雜湊）
+  //  ⇒ 不是語意變化；golden 39 案＋Live 9 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 d5af0958688d277a 未曾發布）。
+  "moba-sim.v21": "e94f45f2c87e9573",
 });
 
 export const isKnownSimulationVersion = (v) =>
