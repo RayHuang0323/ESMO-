@@ -165,7 +165,9 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
         if (wantIdentity) identity = A.toEngineTacticIdentity(source);
       } catch { return fail(err(E.PROJECTION_FAILED, "config", "戰術設定無法投影成引擎旋鈕")); }
       //  config 給呼叫端看（tacticMeta／replayConfig 讀 tacticId 與 name）；std 的 config 是副本，不會凍住注入的物件。
-      return deepFreeze({ ok: true, errors: [], knobs, identity, config: input.kind === "std" ? structuredClone(source) : source, meta });
+      //  ⚠ 只凍結 resolver 自己擁有的東西：投影函式（可能來自舊樹）回傳的物件不是我們的——它可能是共用常數，凍住它會影響同一個行程
+      //    裡的其他比賽。所以先複製再凍結；v20 把投影的回傳值直接交給引擎，內容相同（組裝器之後再複製一次交給引擎）。
+      return deepFreeze({ ok: true, errors: [], knobs: structuredClone(knobs), identity: identity === null ? null : structuredClone(identity), config: input.kind === "std" ? structuredClone(source) : source, meta });
     } catch (e) {
       return internal(e);
     }
@@ -186,6 +188,7 @@ export const offeredChoices = DEFAULT.offeredChoices;
 export const offeredChoiceDetail = DEFAULT.offeredDetail;
 /** 組裝器經 deps.engineAdapters.resolveTactic 呼叫的入口（legacy／std／binding 三種都走這裡）。 */
 export const resolveTactic = DEFAULT.resolveTactic;
+/** binding → 凍結的 MobaTacticConfig（還沒投影）；組裝器不用它（走 resolveTactic），gate 與 UI 預覽用。 */
 export const resolveTacticBinding = DEFAULT.resolveBindingConfig;
 export const bindTacticPlanToCurrentVersions = DEFAULT.bindPlan;
 /** 登錄表 live 列的維度清單（對照表必須逐列涵蓋；gate 用）。 */

@@ -13,6 +13,10 @@
 //    1. overlayIds：去重、依字串排序。覆蓋層是集合——互相**欄位重疊**的組合直接拒絕（overlay_conflict），
 //       所以套用順序不可能影響結果，排序才是正確的標準化而不是丟掉資訊。
 //       省略 overlayIds ＝ null ＝ []。
+//       ⚠ 現況（Phase 3a T9 fix 2）：三個覆蓋層分屬三個不同的 base 經典模板、且一份 plan 的覆蓋層必須屬於它的模板
+//         （overlay_base_mismatch），所以**合法的 plan 最多只有一個覆蓋層**——排序對成功的 plan 是空操作（保留它，是因為哪天
+//         同一個 base 有第二個覆蓋層時它就是正確的標準化）。此模組直接 import 覆蓋層資料、沒有注入點，不新增測試專用的覆蓋層；
+//         排序只經「錯誤路徑」被驗證（tools/check_tactic_plan_3a.mjs P0f：多個覆蓋層順序顛倒 ⇒ 完全相同的錯誤）。
 //    2. choices：省略 ＝ null ＝ {}；葉值為 undefined／null 的鍵視為「沒有選擇」直接移除
 //       （JSON 往返會讓 undefined 消失，所以這兩種寫法必須等價）；空的中間節點移除；鍵依字串排序。
 //       ⚠ 「null＝沒有選擇」只對 live 鍵成立：**先驗鍵**——未知鍵不論值是什麼都 unknown_choice_key，

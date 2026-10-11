@@ -199,8 +199,13 @@ export function assembleMatch(setup, deps = {}) {
   //  resolver 拒絕（版本不符、被竄改、design 選擇、未知覆蓋層……）或輸入讀不出來（Proxy、丟例外的 getter、循環）＝開局前的錯誤結果，
   //  形狀與其他 setup 錯誤相同：binding ⇒ tactic_binding_rejected；其他種類 ⇒ tactic_rejected；讀不出來 ⇒ tactic_unreadable。
   const resolved = { blue: null, red: null };
+  //  每個戰術 adapter 只在「真的用到」時才必要（上面的 need 已逐項回報 deps_missing，這裡不會默默略過）：
+  //  resolveTactic／toEngineTactic 在有 match 層時必要；toEngineTacticIdentity 只在 tacticIdentity 層開啟時必要（舊樹的 tool 規則集可以沒有）；
+  //  STANDARD_OPP_TACTIC 只在有一方是 std 時必要（兩方都是 legacy／binding 的輸入與 v20 一樣不需要它）。
   const tacticDepsOk = typeof A.resolveTactic === "function" && typeof A.toEngineTactic === "function"
-    && (!L.tacticIdentity || typeof A.toEngineTacticIdentity === "function") && isPlainObject(A.STANDARD_OPP_TACTIC);
+    && (!L.tacticIdentity || typeof A.toEngineTacticIdentity === "function")
+    && SIDES.every((side) => tacticIn[side]?.kind !== "std" || isPlainObject(A.STANDARD_OPP_TACTIC));
+  if (E.match && !tacticIn.blue && !tacticUnreadable.blue) err("tactic_blue_missing", "tactic.blue", "the match layer is in effect but the setup carries no blue tactic");
   if (E.match && tacticDepsOk) {
     for (const side of SIDES) {
       const t = tacticIn[side];
@@ -214,6 +219,9 @@ export function assembleMatch(setup, deps = {}) {
           const sub = String(e.field ?? "").replace(/^(binding|config)\.?/, "");
           err(t.kind === "binding" ? "tactic_binding_rejected" : "tactic_rejected", sub ? `tactic.${side}.${sub}` : `tactic.${side}`, `[${e.code}] ${e.message}`);
         }
+      } else if (!isPlainObject(r.config) || !isPlainObject(r.knobs) || (L.tacticIdentity && !isPlainObject(r.identity))) {
+        //  注入的 resolver 說 ok 卻沒給齊 config／knobs（／identity）：開局前就拒絕，不讓 match() 在 8 次 configure 之後才丟 TypeError。
+        err("tactic_rejected", `tactic.${side}`, `[resolver_bad_shape] the injected resolveTactic returned ok without ${!isPlainObject(r.config) ? "config" : !isPlainObject(r.knobs) ? "knobs" : "identity"}`);
       } else resolved[side] = r;
     }
   }

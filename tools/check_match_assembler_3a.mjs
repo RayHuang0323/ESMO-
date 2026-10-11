@@ -31,7 +31,7 @@ import { assembleMatch } from "../src/battle/moba/matchAssembler.js";
 import { buildMatchAssemblerDepsFrom } from "../src/battle/moba/matchAssemblerDepsCore.js";
 import { createMatchSetup, matchSetupHash } from "../src/platform/contracts/matchSetup.js";
 import { MATCH_RULESETS } from "../src/platform/contracts/matchRuleset.js";
-import { mobaTacticById } from "../src/platform/contracts/MobaTacticConfig.js";
+import { mobaTacticById, toEngineTactic, toEngineTacticIdentity } from "../src/platform/contracts/MobaTacticConfig.js";
 import { stableStringify, stableHash } from "../src/platform/contracts/squadSnapshot.js";
 import { LogicEngine } from "../src/LogicEngine.js";
 import { heroById } from "../src/data/heroDatabase.js";
@@ -208,6 +208,44 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
   ck("A9d 注入的每個引擎側 adapter 都被呼叫到（career＋tool 兩條路徑合計）",
     rl.ok && rt.ok && ["toEnginePlayerMods", "toEngineHeroMods", "toEngineHeroPassives", "toEngineHeroPowerCurve", "toEngineSpells", "toEngineTactic", "toEngineTacticIdentity", "resolveTactic", "matchItemsConfig", "toEngineItems"].every((k) => hits[k] > 0),
     JSON.stringify(hits));
+}
+
+// ── A9e 戰術 adapter 只在「真的用到」時必要；resolver 的輸出先驗形狀；不凍結不屬於自己的物件（Phase 3a T9 fix 2）────────────
+{
+  const bothLegacy = mk(liveIn({ tactic: { blue: legacy("m4"), red: legacy("m7") } }));
+  const oneStd = mk(liveIn({ tactic: { blue: legacy("m4"), red: { kind: "std" } } }));
+  const withEng = (over) => ({ ...DEPS, engineAdapters: { ...DEPS.engineAdapters, ...over } });
+  const noStd = withEng({ STANDARD_OPP_TACTIC: undefined });
+  const base = probedAssemble(bothLegacy), noStdRun = probedAssemble(bothLegacy, noStd);
+  const runShort = (r) => runAndHash(r.engine, { dt: golden.dt, maxT: 240, every: golden.streamEvery });
+  const ra = base.r.ok ? runShort(base.r) : null, rb = noStdRun.r.ok ? runShort(noStdRun.r) : null;
+  ck("A9e-a STANDARD_OPP_TACTIC 未注入 ＋ 兩方都是 legacy ⇒ 照 v20 組裝成功，configure 序列＋引數雜湊＋短跑 digest／streamHash 與有 STD 時逐位元相同（v20 只在有一方是 std 時才需要 STD）",
+    base.r.ok && noStdRun.r.ok && firstDiff(noStdRun.calls, base.calls) === "" && ra.digest === rb.digest && ra.streamHash === rb.streamHash, noStdRun.r.ok ? "" : JSON.stringify(noStdRun.r.errors));
+  ck("A9e-b STD 未注入 ＋ 一方是 std ⇒ 錯誤結果（deps_missing 點名 deps.engineAdapters.STANDARD_OPP_TACTIC）、零 configure、沒有引擎、沒有例外",
+    rejects(oneStd, "deps_missing", "deps.engineAdapters.STANDARD_OPP_TACTIC", noStd));
+  const noThrow = (setup, deps) => { try { const x = probedAssemble(setup, deps); return x; } catch { return null; } };
+  const need = [["resolveTactic", bothLegacy], ["toEngineTactic", bothLegacy], ["toEngineTacticIdentity", bothLegacy], ["MOBA_TACTIC_VERSION", bothLegacy]];
+  const needBad = need.filter(([name, s]) => { const x = noThrow(s, withEng({ [name]: undefined })); return !(x && !x.r.ok && x.r.engine === null && x.calls.length === 0 && x.r.errors.some((e) => e.code === "deps_missing" && e.field === `deps.engineAdapters.${name}`)); }).map(([n]) => n);
+  ck("A9e-c 其餘每個必要的戰術 adapter 缺席（resolveTactic／toEngineTactic／toEngineTacticIdentity（identity 層開）／MOBA_TACTIC_VERSION）⇒ deps_missing 錯誤結果、零 configure、不丟例外——從不默默略過", needBad.length === 0, needBad.join(","));
+  ck("A9e-d tool 規則集在舊樹沒有 toEngineTacticIdentity（identity 層關閉）⇒ 照舊執行、identity 為 null：由 check_balance_runner_setup_3a V9／V9b 覆蓋（那裡走真實的 runner 與 M 包裝）", true);
+  //  resolver 回 ok 卻缺欄位
+  const stubs = {
+    "{ ok:true }": () => ({ ok: true }), "缺 knobs": (i, a, o) => { const r = DEPS.engineAdapters.resolveTactic(i, a, o); const { knobs: _k, ...rest } = r; return rest; },
+    "缺 config": (i, a, o) => { const r = DEPS.engineAdapters.resolveTactic(i, a, o); const { config: _c, ...rest } = r; return rest; },
+    "identity 層開卻缺 identity": (i, a, o) => { const r = DEPS.engineAdapters.resolveTactic(i, a, o); return { ...r, identity: null }; },
+  };
+  const stubBad = Object.entries(stubs).filter(([, fn]) => { const x = noThrow(bothLegacy, withEng({ resolveTactic: fn })); return !(x && !x.r.ok && x.r.engine === null && x.calls.length === 0 && x.r.errors.some((e) => e.code === "tactic_rejected" && /resolver_bad_shape/.test(e.message))); }).map(([k]) => k);
+  ck("A9e-e 注入的 resolveTactic 回 ok 卻缺 config／knobs／identity ⇒ tactic_rejected（resolver_bad_shape）錯誤結果、零 configure，不是 8 次 configure 後的 TypeError", stubBad.length === 0, stubBad.join(","));
+  //  投影回傳共用常數：不被凍住，兩次組裝結果相同且＝基準
+  const sharedK = toEngineTactic(mobaTacticById("m4")), sharedI = toEngineTacticIdentity(mobaTacticById("m4"));
+  const sharedDeps = withEng({ toEngineTactic: (c) => (c.tacticId === "m4" ? sharedK : toEngineTactic(c)), toEngineTacticIdentity: (c) => (c.tacticId === "m4" ? sharedI : toEngineTacticIdentity(c)) });
+  const s1 = probedAssemble(bothLegacy, sharedDeps), s2 = probedAssemble(bothLegacy, sharedDeps);
+  ck("A9e-f 投影回傳的共用物件不被凍結（resolver 只凍結自己擁有的副本）；兩次連續組裝的 configure 序列與引數雜湊相同且＝基準",
+    s1.r.ok && s2.r.ok && !Object.isFrozen(sharedK) && !Object.isFrozen(sharedI) && !Object.isFrozen(sharedK.laneOffset) && firstDiff(s1.calls, s2.calls) === "" && firstDiff(s1.calls, base.calls) === "");
+  //  v20 的 STD 是「同一個物件」交給投影（不複製）——resolver 的 std 分支維持這一點
+  let stdArg = null;
+  probedAssemble(mk(liveIn({ tactic: { blue: legacy("m4"), red: { kind: "std" } } })), withEng({ toEngineTactic: (c) => { if (c.tacticId === "std") stdArg = c; return toEngineTactic(c); } }));
+  ck("A9e-g std 分支把注入的 STANDARD_OPP_TACTIC 物件本身（不是副本）交給投影，與 v20 相同", stdArg === DEPS.engineAdapters.STANDARD_OPP_TACTIC);
 }
 
 // ── A10 舊樹引擎缺方法：tool 略過、production 照原樣失敗 ─────────────────────────────────────────

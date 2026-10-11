@@ -491,14 +491,17 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  fixture 擷取自 a7adeb9）；LogicEngine、組裝器與所有 adapter 未改 ⇒ 不是語意變化，v20 golden 39 案維持逐位元相同。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 b6264e0fa16c3b2d 未曾發布）。
   //  2026-10-11（Phase 3a T9）：語意清單新增 tacticResolver.js、tacticTemplates.js、tacticPlan.js、capabilityRegistry.js；組裝器多一條
-  //  binding 分支（經 deps.engineAdapters.resolveTacticBinding）、matchSetup/matchRuleset 多「ruleset 接受的戰術種類」檢查。
+  //  binding 分支（經 deps.engineAdapters.resolveTactic；fix 1 起 legacy／std 也走它）、matchSetup/matchRuleset 多「ruleset 接受的戰術種類」檢查。
   //  行為不變：legacy／std 路徑一個位元都沒動，golden 39 案＋Live 9 案以 binding 輸入皆逐位元相同（check_tactic_resolver_3a）。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 e695aa910251481a 未曾發布）。
   //  2026-10-12（Phase 3a T9 fix 1）：選擇對照表搬到 tacticChoiceMapping.js（新增進清單）；`split` 選擇連帶把 macro.splitPush 提到
   //  classic.m2 的值（離開 split 降回 std 的值）；組裝器對 legacy／std／binding 一律經 resolveTactic。
   //  legacy／std 路徑的旋鈕一個位元都沒動，golden 39 案＋Live 9 案（binding 輸入）仍逐位元相同。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 048375d5ab576f18 未曾發布）。
-  "moba-sim.v21": "88f4175a94025c1a",
+  //  2026-10-12（Phase 3a T9 fix 2）：戰術 adapter 只在用到時才必要（STANDARD_OPP_TACTIC 只在有一方是 std 時）；resolver 輸出先驗形狀；
+  //  resolver 不再凍結投影回傳的物件（先複製）。合法輸入的旋鈕一個位元都沒動，golden 39 案仍逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 88f4175a94025c1a 未曾發布）。
+  "moba-sim.v21": "b1271c151bed7955",
 });
 
 export const isKnownSimulationVersion = (v) =>
