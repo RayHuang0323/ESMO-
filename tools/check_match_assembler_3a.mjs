@@ -313,6 +313,31 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
   ck("A10b production 規則集：同樣缺方法 ⇒ 照原樣失敗（丟 TypeError，不被容忍）", threw instanceof TypeError, threw ? String(threw.message).slice(0, 80) : "no throw");
 }
 
+{
+  //  只有 v20 有護欄的三個方法可缺；其餘六個缺席 ⇒ tool 規則集也要丟 TypeError（每個方法一條）
+  const { TOOL_TOLERATED_ENGINE_METHODS } = await import("../src/battle/moba/matchAssembler.js");
+  ck("A10c 容忍清單恰為 v20 runner 的三個護欄（configureObjectiveLayout／HeroPassives／HeroPowerCurve）",
+    JSON.stringify([...TOOL_TOLERATED_ENGINE_METHODS].sort()) === JSON.stringify(["configureHeroPassives", "configureHeroPowerCurve", "configureObjectiveLayout"]));
+  const toolS = mk(toolIn());
+  for (const m of ["configureHeroes", "configureHeroSkills", "configureArchetypes", "configureSpells", "configureMatch", "configureItems"]) {
+    class Lacking extends LogicEngine {}
+    Lacking.prototype[m] = undefined;
+    let t = null;
+    try { assembleMatch(toolS, { ...DEPS, LogicEngine: Lacking }); } catch (e) { t = e; }
+    ck(`A10d tool 規則集：引擎缺 ${m} ⇒ 丟 TypeError（不默默組出半套引擎）`, t instanceof TypeError, t ? String(t.message).slice(0, 60) : "no throw");
+  }
+  //  C：天賦選擇交給 toEngineHeroSkills 的第二個引數——production 空選擇 ⇒ null（useLocalServer:176）；tool 原樣（v20 runner）
+  const emptySel = Object.freeze({ version: "x", players: Object.freeze({}) });
+  const seen = [];
+  const depsWith = (sel) => ({ ...DEPS, heroAdapters: { ...DEPS.heroAdapters, selectBattleTalents: () => sel, toEngineHeroSkills: (r, t) => { seen.push(t); return DEPS.heroAdapters.toEngineHeroSkills(r, t); } } });
+  assembleMatch(toolS, depsWith(emptySel));
+  ck("A12 tool：空 players 的選擇物件原樣交給 toEngineHeroSkills（v20 runner 不收斂成 null）", seen[0] === emptySel);
+  assembleMatch(mk(liveIn()), depsWith(emptySel));
+  ck("A12b production：空 players 的選擇 ⇒ null（useLocalServer:176）", seen[1] === null);
+  assembleMatch(toolS, depsWith(null));
+  ck("A12c tool：selectBattleTalents 回 null ⇒ 交 null", seen[2] === null);
+}
+
 // ── A11 原始碼：組裝器不 import 任何它所呼叫的 adapter 模組（只經 deps）──────────────────────────────
 {
   const ADAPTER_NAMES = ["toEnginePlayerMods", "toEngineHeroMods", "toEngineHeroPassives", "toEngineHeroPowerCurve", "toEngineSpells", "matchItemsConfig", "toEngineItems",

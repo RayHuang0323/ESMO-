@@ -143,7 +143,9 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
   if (RULE_OVERRIDES) tool.ruleOverrides = RULE_OVERRIDES;
   if (layoutOn) {
     const forced = process.env.ESMO_BALANCE_LAYOUT;
-    if (forced === "STANDARD" || forced === "SWAPPED") tool.forcedLayout = forced;
+    //  v20：環境變數優先，否則 `M.objectiveLayout.objectiveLayoutForSeed(seed)`——值一律來自被量測的那棵樹（M），
+    //  不讓 setup 契約用 runner 所在樹的推導函式默默頂替。
+    tool.forcedLayout = forced === "STANDARD" || forced === "SWAPPED" ? forced : M.objectiveLayout.objectiveLayoutForSeed(seed);
   }
   let strategySide = null;
   if (config !== "off") {
@@ -165,6 +167,9 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
 //  rosterOverride：gate 指定陣容（例如保證 100 名英雄都上場）；不傳 ⇒ 與原本相同由 seed 挑鏡像陣容。
 //  組裝順序（layout → heroes → skills → archetypes → spells → match → items）與短路條件全在 matchAssembler；
 //  這裡只決定「哪些層開」與「用哪個引擎／adapter」。deps 走共用核心（唯一一份 adapter 清單），M 提供的模組以覆寫注入。
+//  ⚠ 與 v20 的兩個差異（沒有任何呼叫端會觸發；契約刻意不放寬）：rosterOverride 必須恰好是 b1–b5／r1–r5 十個席位
+//    （每席 { heroId, spells? }），否則丟 `MatchSetup rejected: roster_invalid…`（v20 會照跑）；config 若不是已知出裝策略
+//    （off／standard／early／scaling／counter／survival）丟 `build_strategy_unknown`（v20 會把未知名稱直接當策略送進 adapter）。
 export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
   const roster = rosterOverride ?? mirroredRoster(seed, M);
   const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster);

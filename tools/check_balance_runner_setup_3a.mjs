@@ -263,6 +263,23 @@ const layoutArg = (calls) => calls.find((c) => c.m === "configureObjectiveLayout
   const M3 = { ...M_ON, loadout: { ...M_ON.loadout, toEngineSpells: (r) => { const m = M_ON.loadout.toEngineSpells(r); return m && JSON.parse(JSON.stringify(m).replace(/"flash"/g, '"heal"')); } } };
   ck("P4 M.loadout.toEngineSpells 的輸出真的進了引擎（換掉輸出 ⇒ configureSpells 引數雜湊改變）",
     firstDiff(probe(() => runner.configure(c.seed, c.params.config, M3)).calls, c.calls) !== "");
+  //  版面值來自 M 的 objectiveLayoutForSeed（環境變數仍優先）
+  {
+    let layoutCalls = 0;
+    const real = M_ON.objectiveLayout.objectiveLayoutForSeed;
+    const flip = (s) => (real(s) === "STANDARD" ? "SWAPPED" : "STANDARD");
+    const withFn = (fn) => ({ ...M_ON, objectiveLayout: { ...M_ON.objectiveLayout, objectiveLayoutForSeed: fn } });
+    const argOf = (calls) => calls.find((x) => x.m === "configureObjectiveLayout")?.h;
+    const baseArg = argOf(probe(() => runner.configure(c.seed, c.params.config, M_ON)).calls);
+    const same = argOf(probe(() => runner.configure(c.seed, c.params.config, withFn((s) => { layoutCalls++; return real(s); }))).calls);
+    ck("P6 M.objectiveLayout.objectiveLayoutForSeed 被呼叫到，且回傳原值時結果不變", layoutCalls > 0 && same === baseArg);
+    const flipped = argOf(probe(() => runner.configure(c.seed, c.params.config, withFn(flip))).calls);
+    ck("P6b M 的函式回傳相反版面 ⇒ configureObjectiveLayout 的引數改變（證明用的是 M 的值）", flipped !== undefined && flipped !== baseArg);
+    process.env.ESMO_BALANCE_LAYOUT = real(c.seed);
+    let envWins;
+    try { envWins = argOf(probe(() => runner.configure(c.seed, c.params.config, withFn(flip))).calls); } finally { delete process.env.ESMO_BALANCE_LAYOUT; }
+    ck("P6c 環境變數 ESMO_BALANCE_LAYOUT 仍優先於 M 的函式", envWins === baseArg);
+  }
   //  deps 指紋反映注入集：同樹 M ⇒ 全部 canonical；換任一函式 ⇒ manifest 標 override
   const core = await import("../src/battle/moba/matchAssemblerDepsCore.js");
   const manifestOf = (engineAdapters) => core.buildMatchAssemblerDepsFrom({ engineAdapters }).manifest.engineAdapters;
@@ -281,6 +298,16 @@ const layoutArg = (calls) => calls.find((c) => c.m === "configureObjectiveLayout
   const want = c.calls.filter((x) => !MISSING.includes(x.m));
   const d = calls ? firstDiff(calls, want) : "no calls";
   ck(`O2 呼叫序列＝golden 去掉那三個呼叫（${want.length} 呼叫），其餘引數雜湊不變`, d === "" && (calls ?? []).every((x) => !MISSING.includes(x.m)) && c.calls.some((x) => MISSING.includes(x.m)), d);
+  //  只有 v20 有 typeof 護欄的那三個可以缺；其餘缺席時 v20 丟 TypeError ⇒ 新碼也必須丟（不默默量半套引擎）
+  for (const m of ["configureHeroes", "configureHeroSkills", "configureArchetypes", "configureSpells", "configureMatch", "configureItems"]) {
+    class Lacking extends M_ON.LE.LogicEngine {}
+    Lacking.prototype[m] = undefined;
+    let t = null;
+    try { runner.configure(c.seed, c.params.config, { ...M_ON, LE: { LogicEngine: Lacking } }); } catch (e) { t = e; }
+    let ctl = null;
+    try { runner.configure(c.seed, c.params.config, { ...M_ON, LE: { LogicEngine: class Intact extends M_ON.LE.LogicEngine {} } }); } catch (e) { ctl = e; }
+    ck(`O4 引擎缺 ${m}（tool 規則集）⇒ configure() 丟 TypeError；完整引擎不丟（對照）`, t instanceof TypeError && !ctl, t ? String(t.message).slice(0, 60) : "no throw");
+  }
   ck("O3 舊引擎照常跑完 300 秒（不是半套）", !!out && (() => { const r = shortRun(out.e); return typeof r.digest === "string" && out.e.t >= 300; })());
 }
 

@@ -82,6 +82,12 @@ export const ASSEMBLY_STEPS = Object.freeze({
   challengeV20: Object.freeze(["players", "match", "heroes", "archetypes", "spells"]),
 });
 
+/**
+ * 舊樹的引擎可能沒有的方法——**逐字對應 v20 平衡工具 runner 的 typeof 護欄**（configure() 內只有這三個有護欄；
+ * 其餘 configure* 缺席時 v20 會丟 TypeError）。新增項目前先確認 v20 runner 真的有對應護欄。
+ */
+export const TOOL_TOLERATED_ENGINE_METHODS = Object.freeze(["configureObjectiveLayout", "configureHeroPassives", "configureHeroPowerCurve"]);
+
 const SIDES = Object.freeze(["blue", "red"]);
 //  正規席位順序。setup 雜湊對鍵排序（stableStringify），所以交給 adapter 的 roster／天賦選擇
 //  一律依這個順序重建 ⇒ 「同雜湊 ⇒ 同模擬」由構造保證，不依賴呼叫端的插入順序。
@@ -214,10 +220,10 @@ export function assembleMatch(setup, deps = {}) {
   const engine = new LogicEngine(setup.seed, clone(setup.loadout ?? null));
   if (isTool && tool.ruleOverrides) engine.rules = { ...engine.rules, ...clone(tool.ruleOverrides) }; // runner:119
   const configured = [];
-  //  v20 平衡工具對舊樹的引擎有 typeof 護欄（configureObjectiveLayout／HeroPassives／HeroPowerCurve）⇒ 只有 tool 規則集
-  //  容忍引擎缺方法（略過、不記入 configured）；production 缺方法仍是錯誤（照原樣丟 TypeError）。
+  //  只有 tool 規則集、且只有 TOOL_TOLERATED_ENGINE_METHODS 這三個方法容忍引擎缺席（略過、不記入 configured）；
+  //  其餘方法（以及 production 的任何方法）缺席仍是錯誤（照原樣丟 TypeError）——不可默默量一個半套的引擎。
   const call = (method, arg) => {
-    if (isTool && typeof engine[method] !== "function") return;
+    if (isTool && TOOL_TOLERATED_ENGINE_METHODS.includes(method) && typeof engine[method] !== "function") return;
     engine[method](arg); configured.push(method);
   };
 
@@ -228,9 +234,10 @@ export function assembleMatch(setup, deps = {}) {
   }])) : null;
 
   //  天賦選擇：useLocalServer:174-176（空集合 ⇒ null）；runner:130 不帶玩家選擇（setup.talentSelections 為 null）。
-  let talentSelection = null;
+  let talentSelection = null, talentRaw = null;
   if (E.battleTalents) {
     const selected = H.selectBattleTalents(roster, setup.talentSelections ? clone(bySeat(setup.talentSelections)) : undefined);
+    talentRaw = selected ?? null;
     talentSelection = selected && Object.keys(selected.players).length ? selected : null;
   }
 
@@ -256,7 +263,9 @@ export function assembleMatch(setup, deps = {}) {
     //  useLocalServer:220-229；runner:129-137。passives / curve 只疊在 skills 之上。
     skills() {
       if (!E.heroSkills) return;
-      const skills = H.toEngineHeroSkills(roster, talentSelection);
+      //  production（Live）：空選擇 ⇒ null（useLocalServer:176）。tool：v20 runner 把 selectBattleTalents 的結果原樣交出
+      //  （空 players 時技能設定會多一個 `talents: {}`）⇒ 不收斂成 null。
+      const skills = H.toEngineHeroSkills(roster, isTool ? talentRaw : talentSelection);
       if (skills) call("configureHeroSkills", skills);
       const passives = skills && E.heroPassives ? A.toEngineHeroPassives(roster) : null;
       if (passives) call("configureHeroPassives", passives);

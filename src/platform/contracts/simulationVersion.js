@@ -440,7 +440,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  （PlayerMods／HeroMods／Passives／PowerCurve／Spells／matchItemsConfig／toEngineItems／Tactic／Identity／STANDARD_OPP_TACTIC）
   //  改經 deps.engineAdapters，預設接線只在 matchAssemblerDepsCore.js；tool 規則集容忍舊樹引擎缺 configure 方法。
   //  結果與 v20 golden 39 案逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 d8935d1e9c0f2f8f 未曾發布）。
-  "moba-sim.v21": "fe407dd69bda620b",
+  //  T6 fix 1：tool 規則集只容忍引擎缺 v20 runner 有護欄的三個方法（TOOL_TOLERATED_ENGINE_METHODS）；tool 的技能層把
+  //  selectBattleTalents 的結果原樣交給 toEngineHeroSkills（production 空選擇仍 ⇒ null）。結果與 v20 golden 逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 fe407dd69bda620b 未曾發布）。
+  "moba-sim.v21": "5caac9332cdf1e21",
 });
 
 export const isKnownSimulationVersion = (v) =>
