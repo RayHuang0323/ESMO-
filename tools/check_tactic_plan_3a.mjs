@@ -14,6 +14,7 @@ import fs from "node:fs";
 import { toEngineTactic, toEngineTacticIdentity, validateMobaTacticConfig, MOBA_TACTICS, STANDARD_OPP_TACTIC, mobaTacticById } from "../src/platform/contracts/MobaTacticConfig.js";
 import { stripComments } from "./lib/stripComments.mjs";
 import { effectSheet, copyViolationsOf, IMPOSSIBLE, mentionable, THRESHOLDS } from "./lib/tacticEffectSheet.mjs";
+import * as SheetLib from "./lib/tacticEffectSheet.mjs";
 import { SIMULATION_SEMANTICS_FILES } from "../src/platform/contracts/simulationVersion.js";
 import { DOCTRINE } from "../src/platform/mastery/doctrine.js";
 import * as Variant from "../src/platform/mastery/tacticVariant.js";
@@ -263,8 +264,10 @@ if (Templates) {
   const by = (slug) => v2.find((t) => t.templateId === `v2.${slug}`);
   ck("V2d 每個 v2 的 desc＋cons，每一句都對應效果表的一列、方向相符、沒有引擎沒有的機制", v2.every((t) => copyViolationsOf(`${t.desc}${t.cons}`, SHEET[t.templateId]).length === 0),
     v2.flatMap((t) => copyViolationsOf(`${t.desc}${t.cons}`, SHEET[t.templateId]).map((m) => `${t.templateId}:${m}`)).slice(0, 3).join("; "));
-  ck("V2d2 效果表本身：std 對 std 全是 same；12 個 v2 各自至少有 3 列非 same（有可描述的差異）；門檻表都是正數",
-    Object.values(NEUTRAL_SHEET).every((r) => r.dir === "same") && v2.every((t) => mentionable(SHEET[t.templateId]).length >= 3) && Object.values(THRESHOLDS).every((x) => x > 0));
+  //  fix 4：參與度拆成逐階段之後列數變多，改用「效果家族」數（去掉階段字尾）——比數列更嚴。
+  ck("V2d2 效果表本身：std 對 std 全是 same；12 個 v2 各自至少有 3 個非 same 的效果家族（有可描述的差異）；門檻表都是正數",
+    Object.values(NEUTRAL_SHEET).every((r) => r.dir === "same") && v2.every((t) => SheetLib.mentionableFamilies(SHEET[t.templateId]).length >= 3 && mentionable(SHEET[t.templateId]).length >= 3) && Object.values(THRESHOLDS).every((x) => x > 0),
+    v2.map((t) => `${t.templateId.slice(3)}:${SheetLib.mentionableFamilies(SHEET[t.templateId]).length}`).join(" "));
   ck("V2d3 效果表方向的對照組：重新解析的 jungle_invasion 開局入侵為 higher、defensive_hold 後期淨接戰為 same（淨值＝engageBias＋phaseEngage）",
     SHEET["v2.jungle_invasion"]["invade.chance"].dir === "higher" && SHEET["v2.defensive_hold"]["engage.late"].dir === "same" && SHEET["v2.defensive_hold"]["engage.early"].dir === "lower");
   //  不在詞彙內的旋鈕（siegeBias）不出現在效果表，文案也不得提推塔（IMPOSSIBLE 第一條）
@@ -299,21 +302,36 @@ if (Templates) {
     ck(`V2e 舊句子被抓到：${slug}「${s.slice(0, 22)}${s.length > 22 ? "…" : ""}」`, violationsFor(slug, s).length > 0);
   }
   //  對照組二：每個主張家族各一句**真**的句子必須通過；同一句放到中性模板（std，全是 same）必須失敗——規則不空洞也不過寬。
+  //  fix 4：門檻重訂、參與度逐階段、幅度帶、帶線要帶「多半」之後，下列句子換成在新效果表上為真的寫法（每一句都比舊句更嚴）。
+  //  舊句在新 gate 下的下場另由 V2e2b 逐句斷言（它們現在必須被抓到，不是被默默拿掉）。
   const TRUE_CASES = [
     ["three_lane_pressure", "上、中、下三路的站位都推得比平常更前面。"], ["defensive_hold", "上、中、下三路的站位全部往後退。"],
-    ["three_lane_pressure", "打野也比平常更勤快地出來抓人。"], ["defensive_hold", "打野抓人的次數明顯比平常少。"],
-    ["jungle_invasion", "之後打野抓人較偏向中路。"], ["jungle_invasion", "打野抓人較少偏向上路和下路。"],
-    ["jungle_invasion", "開局很可能先往對方的野區入侵，中單也會跟著上去。"], ["defensive_hold", "開局也更不會去入侵。"],
-    ["bot_duo_pressure", "隊友一起有危險時優先救射手。"], ["mid_solo_split", "隊友一起有危險時，輔助優先救中單。"],
+    ["three_lane_pressure", "打野也比平常更勤快地出來抓人。"], ["defensive_hold", "打野抓人的次數明顯比平常少。"], ["protect_core_scaling", "打野抓人的次數比平常少一些。"],
+    ["jungle_invasion", "之後打野抓人較偏向中路。"], ["jungle_invasion", "打野抓人稍微較少偏向上路和下路。"], ["jungle_invasion", "打野稍微比較少去上路和下路抓人。"],
+    ["jungle_invasion", "開局很可能先往對方的野區入侵，中單也會跟著上去，只維持開局那一小段時間。"], ["defensive_hold", "開局也稍微更不會去入侵。"],
+    ["bot_duo_pressure", "隊友有危險時優先救射手。"], ["mid_solo_split", "隊友有危險時，輔助優先救中單。"],
     ["dragon_pit_macro", "隊友有危險時出手救人的時機也比較早。"], ["support_roamer", "輔助離開下路去遊走的次數比平常多很多。"], ["dragon_pit_macro", "輔助待在下路的時間比平常久。"],
-    ["hard_engage_stack", "隊伍加入團戰的程度比平常高很多。"], ["dragon_pit_macro", "隊伍對龍的爭奪遠比平常更願意參與。"], ["hard_engage_stack", "對巴龍的爭奪也比平常更願意參與。"],
-    ["defensive_hold", "對龍的爭奪則比較少參與。"], ["hard_engage_stack", "撤退的時機比平常晚。"], ["protect_core_scaling", "撤退的時機比平常早。"],
-    ["hard_engage_stack", "投入團戰的門檻也比較低。"], ["defensive_hold", "投入團戰的門檻也比較高。"],
-    ["three_lane_pressure", "整場比賽隊伍都比較敢主動接戰，前期尤其明顯。"], ["mid_jungle_sync", "進入中期之後，隊伍更敢主動接戰。"],
-    ["protect_core_scaling", "前期不太主動接戰。"], ["protect_core_scaling", "到了後期，隊伍更敢主動接戰。"], ["hard_engage_stack", "整場比賽都比較敢主動接戰，中期最明顯。"],
-    ["top_solo_split", "上路單獨留在自己的線上推進，團戰爆發時多半也不離開。"], ["mid_solo_split", "中單在線上的時候不參加團戰，隊伍就少一個人。"],
+    ["hard_engage_stack", "隊伍加入團戰的程度比平常高很多。"], ["dragon_pit_macro", "隊伍對龍的爭奪遠比平常更願意參與。"], ["hard_engage_stack", "中期對巴龍的爭奪也比平常更願意參與。"],
+    ["defensive_hold", "前期和中期對龍的爭奪比較少參與。"], ["hard_engage_stack", "撤退的時機比平常稍微晚一點。"], ["protect_core_scaling", "撤退的時機比平常稍微早一點。"],
+    ["hard_engage_stack", "投入團戰的門檻也稍微比較低。"], ["defensive_hold", "投入團戰的門檻也比較高。"],
+    ["three_lane_pressure", "前期隊伍比較敢主動接戰。"], ["mid_jungle_sync", "中期隊伍更敢主動接戰。"],
+    ["protect_core_scaling", "前期不太主動接戰。"], ["protect_core_scaling", "到了後期，隊伍稍微更敢主動接戰。"], ["hard_engage_stack", "中期比較敢主動接戰。"],
+    ["top_solo_split", "上路多半留在自己的線上，通常不參加團戰。"], ["mid_solo_split", "中單多半不參加團戰，打團時隊伍通常少一個人。"],
     ["standard_macro", "只在少數地方和標準打法不同。"],
   ];
+  //  被上面取代的舊「真句子」：在新效果表上它們不再為真（或不再是詞彙內的說法），必須被抓到。
+  const RETIRED_TRUE = [
+    ["jungle_invasion", "打野抓人較少偏向上路和下路。", "幅度在輕微帶，沒帶輕微詞"], ["defensive_hold", "開局也更不會去入侵。", "幅度在輕微帶，沒帶輕微詞"],
+    ["bot_duo_pressure", "隊友一起有危險時優先救射手。", "「一起」不是詞彙內的說法"], ["mid_solo_split", "隊友一起有危險時，輔助優先救中單。", "同上"],
+    ["hard_engage_stack", "對巴龍的爭奪也比平常更願意參與。", "後期只在輕微帶，沒指明階段的寫法要每個階段都成立"],
+    ["defensive_hold", "對龍的爭奪則比較少參與。", "後期是 same"], ["hard_engage_stack", "撤退的時機比平常晚。", "輕微帶"], ["protect_core_scaling", "撤退的時機比平常早。", "輕微帶"],
+    ["hard_engage_stack", "投入團戰的門檻也比較低。", "輕微帶"], ["three_lane_pressure", "整場比賽隊伍都比較敢主動接戰，前期尤其明顯。", "中後期是 same"],
+    ["mid_jungle_sync", "進入中期之後，隊伍更敢主動接戰。", "後期是 same"], ["protect_core_scaling", "到了後期，隊伍更敢主動接戰。", "輕微帶"],
+    ["hard_engage_stack", "整場比賽都比較敢主動接戰，中期最明顯。", "前後期是 same"],
+    ["top_solo_split", "上路單獨留在自己的線上推進，團戰爆發時多半也不離開。", "「不離開」不是詞彙內的說法"], ["mid_solo_split", "中單在線上的時候不參加團戰，隊伍就少一個人。", "帶線是機率，不得寫成絕對"],
+  ];
+  ck(`V2e2b 被取代的舊真句子（${RETIRED_TRUE.length} 句）在新效果表上全部被抓到`, RETIRED_TRUE.every(([slug, s]) => violationsFor(slug, s).length > 0),
+    RETIRED_TRUE.filter(([slug, s]) => violationsFor(slug, s).length === 0).map(([slug, s]) => `${slug}:${s}`).join(" | "));
   const ADVICE = ["適合有坦克的陣容。", "適合射手後期輸出強的時候。"];   // 使用情境建議：「坦克」不是機制，不得被誤殺
   ck(`V2e2 每個家族的真句子都通過（${TRUE_CASES.length} 句，各自用有該方向的模板）`, TRUE_CASES.every(([slug, s]) => violationsFor(slug, s).length === 0),
     TRUE_CASES.filter(([slug, s]) => violationsFor(slug, s).length > 0).map(([slug, s]) => `${slug}:${s}`).join(" | "));
@@ -329,11 +347,120 @@ if (Templates) {
   ck("V2e7 「回到平常」規則不需要「之後／後期」前綴：「打完就回到正常的打法」「回到一般的接戰傾向」在整場偏積極的模板上被抓；defensive_hold 的「後期接戰傾向大致回到平常」為真且通過",
     violationsFor("jungle_invasion", "打完就回到正常的打法。").length > 0 && violationsFor("three_lane_pressure", "接戰的傾向回到一般的水準。").length > 0
     && violationsFor("defensive_hold", "到了後期，接戰的傾向大致回到平常的水準。").length === 0 && violationsFor("defensive_hold", "到了前期，接戰的傾向大致回到平常的水準。").length > 0);
-  ck("V2e8 「後期才恢復積極」用淨值判斷：defensive_hold 的後期淨接戰接近中性（same），所以說「恢復積極」為假；protect_core_scaling 後期淨值偏高，說「更敢主動接戰」為真",
-    violationsFor("defensive_hold", "到了後期，隊伍更敢主動接戰。").length > 0 && violationsFor("protect_core_scaling", "到了後期，隊伍更敢主動接戰。").length === 0);
+  ck("V2e8 「後期才恢復積極」用淨值判斷：defensive_hold 的後期淨接戰接近中性（same），所以說「恢復積極」為假；protect_core_scaling 後期淨值偏高但只在輕微帶，說「稍微更敢主動接戰」為真、不帶輕微詞為假",
+    violationsFor("defensive_hold", "到了後期，隊伍更敢主動接戰。").length > 0 && violationsFor("defensive_hold", "到了後期，隊伍稍微更敢主動接戰。").length > 0
+    && violationsFor("protect_core_scaling", "到了後期，隊伍稍微更敢主動接戰。").length === 0 && violationsFor("protect_core_scaling", "到了後期，隊伍更敢主動接戰。").length > 0);
   ck("V2e9 強度詞要幅度：dragon 只高一階的模板說「遠比平常更願意參與」被抓；standard_macro 說「高很多」被抓",
     violationsFor("standard_macro", "隊伍對龍的爭奪遠比平常更願意參與。").length > 0 && violationsFor("standard_macro", "隊伍加入團戰的程度比平常高很多。").length > 0);
   ck("V2e10 認不得的句子判違規（不是放行）", violationsFor("three_lane_pressure", "這套打法非常優雅。").length > 0);
+
+  //  ── fix round 4：逐「子句」審查。以下每個繞過各一組對照：審查給的原句必須被抓到；配對的真句子必須通過 ──
+  const caught = (slug, s) => violationsFor(slug, s).length > 0;
+  const passes = (slug, s) => violationsFor(slug, s).length === 0;
+  const why = (slug, s) => violationsFor(slug, s).join(" ｜ ");
+  //  (a)「適合…」不再整句跳過：逗號後面夾帶的主張、以及結果／手段的說法都要被抓
+  ck("V2f-a1 繞過 a：「適合陣容強，而且撤退的時機比平常早。」放在撤退比較晚的 hard_engage_stack 被抓", caught("hard_engage_stack", "適合陣容強，而且撤退的時機比平常早。"));
+  ck("V2f-a2 繞過 a 的真句子：「適合陣容強的時候。」通過", passes("hard_engage_stack", "適合陣容強的時候。"), why("hard_engage_stack", "適合陣容強的時候。"));
+  ck("V2f-a3 「適合想靠一波團戰直接結束比賽的時候。」被抓（適合句只能講陣容／選手／默契／局面，不得講結果）", caught("hard_engage_stack", "適合想靠一波團戰直接結束比賽的時候。"));
+  ck("V2f-a4 適合句的其他夾帶方式也被抓：用頓號／半形逗號接主張、和平常比較的說法；出貨的 12 句適合句與「適合有坦克的陣容。」不被誤殺",
+    caught("hard_engage_stack", "適合陣容強、撤退的時機比平常早的時候。") && caught("three_lane_pressure", "適合陣容強,打野比平常更勤快的時候。") && caught("three_lane_pressure", "適合打野比平常更勤快的時候。")
+    && v2.every((t) => { const s = t.desc.split(/(?<=。)/).filter((x) => /^適合/.test(x)); return s.length === 1 && SheetLib.suitsViolationsOf?.(s[0]).length === 0; }) && passes("std", "適合有坦克的陣容。"));
+  //  (b) 一句裡每個子句都要查，不是「有一個子句成立就整句放行」
+  ck("V2f-b1 繞過 b：「…站位都推得比平常更前面，之後隊伍會自動輪流換人帶線。」被抓", caught("three_lane_pressure", "上、中、下三路的站位都推得比平常更前面，之後隊伍會自動輪流換人帶線。"));
+  ck("V2f-b2 繞過 b 的真句子：兩個子句都對應效果列 ⇒ 通過", passes("three_lane_pressure", "上、中、下三路的站位都推得比平常更前面，打野抓人的次數也比平常多。"), why("three_lane_pressure", "上、中、下三路的站位都推得比平常更前面，打野抓人的次數也比平常多。"));
+  //  (c) 否定：否定一個主張 ≠ 相反方向，一律不收；詞彙內的否定說法（不太主動接戰／比較少…）照方向查，兩個極性都測
+  ck("V2f-c1 繞過 c：「隊伍加入團戰的程度不高。」在參團最高的 hard_engage_stack 被抓", caught("hard_engage_stack", "隊伍加入團戰的程度不高。"));
+  ck("V2f-c2 繞過 c 的真句子：「隊伍加入團戰的程度比平常高很多。」通過", passes("hard_engage_stack", "隊伍加入團戰的程度比平常高很多。"), why("hard_engage_stack", "隊伍加入團戰的程度比平常高很多。"));
+  ck("V2f-c3 否定的兩個極性：「打野抓人的次數沒有比平常少。」在真的比較少的 defensive_hold 被抓；「隊伍比較少加入團戰。」在 hard_engage_stack 被抓；「前期不太主動接戰。」在 protect_core_scaling 通過、在 three_lane_pressure 被抓；「前期比較敢主動接戰。」反之",
+    caught("defensive_hold", "打野抓人的次數沒有比平常少。") && caught("hard_engage_stack", "隊伍比較少加入團戰。")
+    && passes("protect_core_scaling", "前期不太主動接戰。") && caught("three_lane_pressure", "前期不太主動接戰。")
+    && passes("three_lane_pressure", "前期比較敢主動接戰。") && caught("protect_core_scaling", "前期比較敢主動接戰。"));
+  //  (d) 路線清單：點到的每一路都要查
+  ck("V2f-d1 繞過 d：「上、下路的站位推得比平常更前面。」在上路退後的 bot_duo_pressure 被抓，而且抓到的是上路那一列",
+    caught("bot_duo_pressure", "上、下路的站位推得比平常更前面。") && /lane\.top/.test(why("bot_duo_pressure", "上、下路的站位推得比平常更前面。")), why("bot_duo_pressure", "上、下路的站位推得比平常更前面。"));
+  ck("V2f-d2 繞過 d 的真句子：同一句在三路都靠前的 three_lane_pressure 通過；「上路和中路的站位退後。」在 protect_core_scaling 通過、在中路沒動的 bot_duo_pressure 被抓",
+    passes("three_lane_pressure", "上、下路的站位推得比平常更前面。") && passes("protect_core_scaling", "上路和中路的站位退後。") && caught("bot_duo_pressure", "上路和中路的站位退後。"),
+    `${why("three_lane_pressure", "上、下路的站位推得比平常更前面。")} ${why("protect_core_scaling", "上路和中路的站位退後。")}`);
+  //  (e) 絕對語氣
+  ck("V2f-e1 繞過 e：絕對語氣規則抓得到「一定能」（以及「一定會」）", IMPOSSIBLE.some(([re]) => re.test("一定能")) && IMPOSSIBLE.some(([re]) => re.test("一定會"))
+    && caught("hard_engage_stack", "隊伍加入團戰的程度比平常高很多，一定能打贏。"));
+  ck("V2f-e2 繞過 e 的真句子：拿掉絕對語氣就通過；「不確定」不被誤殺", passes("hard_engage_stack", "隊伍加入團戰的程度比平常高很多。") && passes("standard_macro", "適合還不確定對手風格的時候。"), why("standard_macro", "適合還不確定對手風格的時候。"));
+
+  //  ── fix round 4：參與度是分階段的（引擎：clamp(joinFight｜dragonJoin｜baronJoin ＋ phaseJoin[階段])）──
+  const ENGINE_SRC = read("src/LogicEngine.js");
+  ck("V2p1 引擎的參與率公式就是「knob ＋ phaseJoin[階段]」，而且團戰／龍／巴龍三個擲骰共用同一支（_joinChance）",
+    /let base = K \? \(pit \? K\[pit\] : K\.joinFight\) : 0\.6;/.test(ENGINE_SRC) && /base = clamp\(base \+ I\.phaseJoin\[this\._tidPhase\(\)\], 0\.05, 0\.98\)/.test(ENGINE_SRC));
+  ck("V2p2 效果表的參與度逐階段：每個 v2 的 join.fight／join.dragon 各有前中後三列、join.baron 只有中後兩列（巴龍 480 秒才出現＝前期結束），值 ＝ knob ＋ phaseJoin[階段]",
+    v2.every((t) => { const k = toEngineTactic(t.config), i = toEngineTacticIdentity(t.config), s = SHEET[t.templateId];
+      return ["early", "mid", "late"].every((p, n) => Math.abs((s[`join.fight.${p}`]?.value ?? NaN) - (k.joinFight + i.phaseJoin[n])) < 1e-9 && Math.abs((s[`join.dragon.${p}`]?.value ?? NaN) - (k.dragonJoin + i.phaseJoin[n])) < 1e-9)
+        && ["mid", "late"].every((p) => Math.abs((s[`join.baron.${p}`]?.value ?? NaN) - (k.baronJoin + i.phaseJoin[p === "mid" ? 1 : 2])) < 1e-9)
+        && !("join.baron.early" in s) && !("join.fight" in s) && !("join.dragon" in s); }));
+  ck("V2p3 defensive_hold 的團戰參與：前期、中期是 same，只有後期 higher；protect_core_scaling 前期是 same",
+    SHEET["v2.defensive_hold"]["join.fight.early"]?.dir === "same" && SHEET["v2.defensive_hold"]["join.fight.mid"]?.dir === "same" && SHEET["v2.defensive_hold"]["join.fight.late"]?.dir === "higher"
+    && SHEET["v2.protect_core_scaling"]["join.fight.early"]?.dir === "same");
+  ck("V2p4 沒有指明階段的參與度主張要三個階段都成立：「隊伍加入團戰的程度略高。」在 defensive_hold 被抓；「後期隊伍更願意加入團戰。」通過；「前期隊伍更願意加入團戰。」被抓",
+    caught("defensive_hold", "隊伍加入團戰的程度略高。") && passes("defensive_hold", "後期隊伍更願意加入團戰。") && caught("defensive_hold", "前期隊伍更願意加入團戰。"), why("defensive_hold", "後期隊伍更願意加入團戰。"));
+  ck("V2p5 巴龍沒有前期：「前期對巴龍的爭奪更願意參與。」被抓；「中期對巴龍的爭奪也比平常更願意參與。」在 hard_engage_stack 通過",
+    caught("hard_engage_stack", "前期對巴龍的爭奪更願意參與。") && passes("hard_engage_stack", "中期對巴龍的爭奪也比平常更願意參與。"), why("hard_engage_stack", "中期對巴龍的爭奪也比平常更願意參與。"));
+  ck("V2p6 階段範圍詞自己也要對得上：「進入中期之後」＝中期和後期，mid_jungle_sync 後期是 same ⇒「進入中期之後，隊伍更敢主動接戰。」被抓；「中期隊伍更敢主動接戰。」通過；「整場比賽都比較敢主動接戰。」在只有前期偏高的 jungle_invasion 被抓；孤立的範圍子句（「整場比賽都在」「不只前期」）被抓",
+    caught("mid_jungle_sync", "進入中期之後，隊伍更敢主動接戰。") && passes("mid_jungle_sync", "中期隊伍更敢主動接戰。") && caught("jungle_invasion", "整場比賽都比較敢主動接戰。")
+    && caught("three_lane_pressure", "前期比較敢主動接戰，整場比賽都在。") && caught("three_lane_pressure", "前期比較敢主動接戰，不只前期。"), why("mid_jungle_sync", "中期隊伍更敢主動接戰。"));
+  ck("V2p7 沒有階段之分的效果不得掛階段詞（假精確）：「前期打野抓人的次數比平常多。」被抓", caught("three_lane_pressure", "前期打野抓人的次數比平常多。"));
+
+  ck("V2p8 同一段前面已經有階段詞，後面的分階段主張要自己帶階段詞（否則兩種讀法不一定都成立）：defensive_hold「前期和中期不太主動接戰，對龍的爭奪也比較少參與。」被抓（後期的龍是 same）；各自帶階段詞通過；範圍子句後面接沒有階段之分的效果被抓",
+    caught("defensive_hold", "前期和中期不太主動接戰，對龍的爭奪也比較少參與。") && passes("defensive_hold", "前期和中期不太主動接戰，前期和中期對龍的爭奪也比較少參與。")
+    && caught("defensive_hold", "到了後期，輔助比較少離開下路。") && passes("defensive_hold", "輔助比較少離開下路。"), why("defensive_hold", "前期和中期不太主動接戰，前期和中期對龍的爭奪也比較少參與。"));
+
+  //  ── fix round 4：薄效果。門檻重訂（撤退 0.04、接戰 0.05、參與度 0.05）＋ 幅度不到強度門檻的一律要帶「稍微／略／一些」──
+  ck("V2t1 審查量到的薄效果現在是 same：three_lane_pressure 的撤退、jungle_invasion／bot_duo_pressure 的中後期淨接戰",
+    SHEET["v2.three_lane_pressure"].retreat.dir === "same" && ["mid", "late"].every((p) => SHEET["v2.jungle_invasion"][`engage.${p}`].dir === "same" && SHEET["v2.bot_duo_pressure"][`engage.${p}`].dir === "same")
+    && caught("three_lane_pressure", "撤退的時機又比平常晚。") && caught("bot_duo_pressure", "隊伍整場都比較敢主動接戰。"));
+  ck("V2t2 幅度在「門檻～強度門檻」之間必須帶輕微詞：hard_engage_stack「撤退的時機比平常晚。」被抓、「撤退的時機比平常稍微晚一點。」通過；standard_macro「對龍的爭奪更願意參與。」被抓、「對龍的爭奪稍微更願意參與。」通過",
+    caught("hard_engage_stack", "撤退的時機比平常晚。") && passes("hard_engage_stack", "撤退的時機比平常稍微晚一點。")
+    && caught("standard_macro", "對龍的爭奪更願意參與。") && passes("standard_macro", "對龍的爭奪稍微更願意參與。"), `${why("hard_engage_stack", "撤退的時機比平常稍微晚一點。")} ${why("standard_macro", "對龍的爭奪稍微更願意參與。")}`);
+  ck("V2t3 輕微詞有上限：幅度達強度門檻就不能說「稍微／略／一些」——dragon_pit_macro「對龍的爭奪稍微更願意參與。」被抓；three_lane_pressure「上、中、下三路的站位都稍微靠前。」被抓；又輕微又強烈（「稍微…很多」）被抓",
+    caught("dragon_pit_macro", "對龍的爭奪稍微更願意參與。") && passes("dragon_pit_macro", "對龍的爭奪明顯更願意參與。") && caught("three_lane_pressure", "上、中、下三路的站位都稍微靠前。")
+    && caught("hard_engage_stack", "隊伍加入團戰的程度略高很多。"), why("dragon_pit_macro", "對龍的爭奪明顯更願意參與。"));
+  ck("V2t4 兩段式旋鈕（輔助多早出手）沒有幅度可言：不得加輕微詞或強度詞",
+    passes("dragon_pit_macro", "輔助出手救人的時機也比較早。") && SHEET["v2.dragon_pit_macro"]["support.protectHp"].band === "binary", why("dragon_pit_macro", "輔助出手救人的時機也比較早。"));
+
+  //  ── fix round 4：個別文案規則 ─────────────────────────────────────────────────────────
+  ck("V2r1 修辭開頭不對應任何效果列：「整套計畫圍著龍轉：對龍的爭奪明顯更願意參與。」被抓", caught("dragon_pit_macro", "整套計畫圍著龍轉：對龍的爭奪明顯更願意參與。"));
+  ck("V2r2 推論不是直接效果：「撤退的時機比平常稍微晚一點，所以不利的團戰也更容易繼續打下去。」被抓", caught("hard_engage_stack", "撤退的時機比平常稍微晚一點，所以不利的團戰也更容易繼續打下去。"));
+  ck("V2r3 「隊友一起有危險時」不是詞彙內的說法；「隊友有危險時優先救射手。」通過", caught("bot_duo_pressure", "隊友一起有危險時優先救射手。") && passes("bot_duo_pressure", "隊友有危險時優先救射手。"), why("bot_duo_pressure", "隊友有危險時優先救射手。"));
+  ck("V2r4 帶線是每 6 秒擲一次骰（splitPush 小於 1），不是絕對：「帶線的人不參加團戰。」被抓；「帶線的人多半不參加團戰。」通過；沒有帶線的模板說這句被抓",
+    /S\.splitGo = this\.rng2\(\) < \(M \? clamp\(K\.splitPush \+ M\.splitAdj, 0, 1\) : K\.splitPush\)/.test(ENGINE_SRC)
+    && caught("top_solo_split", "帶線的人不參加團戰。") && passes("top_solo_split", "帶線的人多半不參加團戰。") && caught("hard_engage_stack", "帶線的人多半不參加團戰。"), why("top_solo_split", "帶線的人多半不參加團戰。"));
+  ck("V2r5 「same 的階段列」只在同一個效果的其他階段不是 same 時才可以提（用來說偏向到哪裡為止）：defensive_hold 通過；三個階段都是 same 的 standard_macro 被抓；沒指明階段被抓",
+    passes("defensive_hold", "到了後期，接戰的傾向大致回到平常的水準。") && caught("standard_macro", "到了後期，接戰的傾向大致回到平常的水準。") && caught("defensive_hold", "接戰的傾向大致回到平常的水準。"));
+
+  //  ── fix round 4：cons 必須是代價；適合句的位置 ─────────────────────────────────────────
+  const tplV = (slug, desc, cons) => (SheetLib.templateCopyViolations ? SheetLib.templateCopyViolations({ desc, cons }, SHEET[`v2.${slug}`]) : null);
+  const NO_CONS = SheetLib.NO_CONS_SENTENCE ?? null;
+  const eligible = (slug) => (SheetLib.consEligibleRows ? SheetLib.consEligibleRows(SHEET[`v2.${slug}`] ?? NEUTRAL_SHEET).map(([id]) => id) : null);
+  const OK_DESC = "輔助出手救人的時機也比較早。";
+  ck("V2k1 cons 資格表：std 沒有任何代價列；撤退比較晚、站位靠前、抓人變少、抓人較少去某一路、輔助更常離開下路、投入門檻變低、前期不太主動接戰、較少參與龍、帶線都算；站位靠後、輔助少離開下路、更早出手救人、撤退比較早都不算",
+    J(eligible("std")) === "[]" && eligible("hard_engage_stack")?.includes("retreat") && eligible("hard_engage_stack")?.includes("commit") && eligible("three_lane_pressure")?.includes("lane.top")
+    && eligible("defensive_hold")?.includes("gank.freq") && eligible("jungle_invasion")?.includes("gank.lean.top") && eligible("support_roamer")?.includes("support.roam") && eligible("protect_core_scaling")?.includes("engage.early")
+    && eligible("defensive_hold")?.includes("join.dragon.early") && eligible("top_solo_split")?.includes("split")
+    && !eligible("bot_duo_pressure")?.includes("lane.top") && !eligible("dragon_pit_macro")?.includes("support.roam") && !eligible("dragon_pit_macro")?.includes("support.protectHp") && !eligible("defensive_hold")?.includes("retreat"));
+  ck("V2k2 cons 裡的中性事實被抓：dragon_pit_macro「輔助待在下路的時間比平常久。」、three_lane_pressure「輔助出手救人的時機比較早。」、protect_core_scaling「隊友有危險時輔助優先救射手。」",
+    tplV("dragon_pit_macro", OK_DESC, "輔助待在下路的時間比平常久。")?.length > 0 && tplV("three_lane_pressure", OK_DESC, "輔助出手救人的時機比較早。")?.length > 0 && tplV("protect_core_scaling", OK_DESC, "隊友有危險時輔助優先救射手。")?.length > 0);
+  ck("V2k3 cons 的真句子通過：hard_engage_stack「撤退的時機比平常稍微晚一點。」；同一句放在 desc 也合法（desc 不限代價）",
+    tplV("hard_engage_stack", OK_DESC, "撤退的時機比平常稍微晚一點。")?.length === 0 && tplV("hard_engage_stack", "撤退的時機比平常稍微晚一點。", "投入團戰的門檻也稍微比較低。")?.length === 0,
+    (tplV("hard_engage_stack", OK_DESC, "撤退的時機比平常稍微晚一點。") ?? ["（尚未實作）"]).join(" ｜ "));
+  ck("V2k4 「沒有明顯短處」那一句只在模板真的沒有任何代價列時才允許，而且那時 cons 只能是這一句：dragon_pit_macro／standard_macro 通過；hard_engage_stack 被抓；沒有代價列的模板寫別的 cons 被抓",
+    typeof NO_CONS === "string" && J(eligible("dragon_pit_macro")) === "[]" && J(eligible("standard_macro")) === "[]"
+    && tplV("dragon_pit_macro", OK_DESC, NO_CONS)?.length === 0 && tplV("standard_macro", OK_DESC, NO_CONS)?.length === 0
+    && tplV("hard_engage_stack", OK_DESC, NO_CONS)?.length > 0 && tplV("dragon_pit_macro", OK_DESC, "對龍的爭奪明顯更願意參與。")?.length > 0,
+    (tplV("dragon_pit_macro", OK_DESC, NO_CONS ?? "") ?? ["（尚未實作）"]).join(" ｜ "));
+  ck("V2k5 「適合…」只能是 desc 的最後一句、最多一句、不得出現在 cons",
+    tplV("hard_engage_stack", `${OK_DESC}適合陣容強的時候。`, "撤退的時機比平常稍微晚一點。")?.length === 0
+    && tplV("hard_engage_stack", `適合陣容強的時候。${OK_DESC}`, "撤退的時機比平常稍微晚一點。")?.length > 0
+    && tplV("hard_engage_stack", `${OK_DESC}適合陣容強的時候。適合隊員默契好的時候。`, "撤退的時機比平常稍微晚一點。")?.length > 0
+    && tplV("hard_engage_stack", OK_DESC, "撤退的時機比平常稍微晚一點。適合陣容強的時候。")?.length > 0);
+  ck("V2k6 出貨文案：12 個 v2 的 desc＋cons 通過整套模板層審查（子句、階段、幅度、cons 資格、適合句位置）", v2.every((t) => tplV(t.templateId.slice(3), t.desc, t.cons)?.length === 0),
+    v2.flatMap((t) => (tplV(t.templateId.slice(3), t.desc, t.cons) ?? ["（尚未實作）"]).map((m) => `${t.templateId}:${m}`)).slice(0, 4).join("; "));
 
   //  語氣：玩家文案不得有數字、百分比或旋鈕行話
   const JARGON = /[0-9０-９％%]|接戰意願|參龍意願|參團意願|推塔意願|抓人週期|機率|joinFight|Priority|knob|旋鈕|週期/;

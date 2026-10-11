@@ -80,8 +80,8 @@ const V2_TEMPLATES = [
   //  ── 前期節奏 ─────────────────────────────────────────────────────────────
   v2Template({
     slug: "three_lane_pressure", legacyTacticId: "m7", category: V2_CATEGORY.EARLY, name: "三路壓制", risk: "高",
-    desc: "上、中、下三路的站位都推得比平常更前面，打野也比平常更勤快地出來抓人。整場比賽隊伍都比較敢主動接戰，前期尤其明顯。適合前期陣容就比對手強的時候。",
-    cons: "站位全部往前推，撤退的時機又比平常晚，風險不只在前期，整場比賽都在。輔助比較少離開下路，但出手救人的時機比較早。",
+    desc: "上、中、下三路的站位都推得比平常更前面，打野出來抓人的次數也比平常多。前期隊伍更敢主動接戰。輔助比較少離開下路，出手救人的時機也比較早。適合前期陣容就比對手強的時候。",
+    cons: "三路的站位都比平常更靠前。",
     patch: {
       lanePlan: { top: "aggressive", mid: "aggressive", adc: "aggressive", support: "protect" },
       macro: { earlyGame: "aggressive", tempo: "fast", aggression: 0.7, riskTolerance: 0.6, splitPush: 0.05 },
@@ -90,8 +90,8 @@ const V2_TEMPLATES = [
   }),
   v2Template({
     slug: "jungle_invasion", legacyTacticId: "m7", category: V2_CATEGORY.EARLY, name: "野區入侵", risk: "高",
-    desc: "開局很可能先往對方的野區入侵，中單也會跟著上去，只維持開局那一小段時間。之後打野抓人比平常更勤快，也較偏向中路；中路的站位推得比平常更前面，輔助比較常離開下路。整場比賽都比較敢主動接戰，前期最明顯。適合打野和中單都很能打的時候。",
-    cons: "撤退的時機比平常晚，投入團戰的門檻也比較低，這些傾向整場比賽都在，不只開局。打野抓人較少偏向上路和下路。",
+    desc: "開局很可能先往對方的野區入侵，中單也會跟著上去，只維持開局那一小段時間。之後打野抓人比平常更勤快，抓人也較偏向中路；中路的站位推得比平常更前面，輔助比較常離開下路。前期隊伍比較敢主動接戰。適合打野和中單都很能打的時候。",
+    cons: "撤退的時機比平常稍微晚一點，投入團戰的門檻也稍微比較低。打野稍微比較少去上路和下路抓人，輔助也比較常離開下路。",
     patch: {
       lanePlan: { mid: "aggressive", jungle: "invade", support: "roam" },
       macro: { earlyGame: "aggressive", tempo: "fast", aggression: 0.65, riskTolerance: 0.7, grouping: 0.6, splitPush: 0.05 },
@@ -101,8 +101,8 @@ const V2_TEMPLATES = [
   }),
   v2Template({
     slug: "bot_duo_pressure", legacyTacticId: "m5", category: V2_CATEGORY.EARLY, name: "下路雙人壓制", risk: "中",
-    desc: "下路的站位推得比平常更前面，上路則退後一些。打野抓人比平常更勤快，也較偏向下路。輔助比較少離開下路，隊友一起有危險時優先救射手，出手救人的時機也比較早；對龍的爭奪比平常更願意參與。隊伍整場都比較敢主動接戰，尤其是前期。適合射手和輔助配合得好的時候。",
-    cons: "上路站位退後，打野抓人也較少偏向上路和中路。隊伍整場都偏好主動接戰，這份傾向不會隨著前期結束而消失。",
+    desc: "下路的站位推得比平常更前面，上路的站位則稍微靠後。打野抓人的次數比平常多，抓人也較偏向下路。輔助比較少離開下路，隊友有危險時優先救射手，出手救人的時機也比較早。前期隊伍比較敢主動接戰，前期對龍的爭奪也更願意參與；中期和後期對龍的爭奪稍微更願意參與。適合射手和輔助配合得好的時候。",
+    cons: "下路的站位比平常靠前，打野稍微比較少去上路和中路抓人。",
     patch: {
       lanePlan: { top: "defensive", adc: "aggressive", support: "protect" },
       macro: { earlyGame: "aggressive", tempo: "fast", aggression: 0.65, riskTolerance: 0.55, grouping: 0.55 },
@@ -113,8 +113,8 @@ const V2_TEMPLATES = [
   //  ── 中期控圖 ─────────────────────────────────────────────────────────────
   v2Template({
     slug: "mid_jungle_sync", legacyTacticId: "m6", category: V2_CATEGORY.MID, name: "中野聯動", risk: "中",
-    desc: "中路的站位推得比平常更前面，打野抓人較偏向中路。輔助比較常離開下路，隊友一起有危險時優先救中單。進入中期之後，隊伍更敢主動接戰；對龍的爭奪比平常更願意參與。適合中單和打野反應快的組合。",
-    cons: "打野抓人較少偏向上路和下路。輔助離開下路的次數比平常多，留在下路的時間就比較短。",
+    desc: "中路的站位推得比平常更前面，打野抓人較偏向中路。輔助比較常離開下路，隊友有危險時優先救中單。中期隊伍更敢主動接戰。中期對龍的爭奪更願意參與，前期和後期對龍的爭奪也稍微更願意參與。適合中單和打野反應快的組合。",
+    cons: "打野稍微比較少去上路和下路抓人。輔助離開下路的次數比平常多，中路的站位也比平常靠前。",
     patch: {
       lanePlan: { mid: "aggressive", support: "roam" },
       macro: { midGame: "aggressive", aggression: 0.6, grouping: 0.6 },
@@ -124,8 +124,8 @@ const V2_TEMPLATES = [
   }),
   v2Template({
     slug: "support_roamer", legacyTacticId: "m6", category: V2_CATEGORY.MID, name: "輔助遊走流", risk: "中",
-    desc: "輔助離開下路去遊走的次數比平常多很多，下路射手的站位則退後一些。隊伍加入團戰的程度略高，對龍的爭奪也比平常更願意參與。適合想讓輔助多參與其他路的時候。",
-    cons: "輔助比較常不在下路，射手的站位又比平常退後。",
+    desc: "輔助離開下路去遊走的次數比平常多很多，下路射手的站位則比平常靠後。對龍的爭奪也稍微更願意參與。適合輔助個人能力強的時候。",
+    cons: "輔助比較常離開下路。",
     patch: {
       lanePlan: { adc: "defensive", support: "roam" },
       macro: { aggression: 0.45, grouping: 0.65 },
@@ -135,8 +135,8 @@ const V2_TEMPLATES = [
   }),
   v2Template({
     slug: "dragon_pit_macro", legacyTacticId: "m4", category: V2_CATEGORY.MID, name: "龍坑運營", risk: "低",
-    desc: "整套計畫圍著龍轉：隊伍對龍的爭奪遠比平常更願意參與，一般團戰也比較願意加入。輔助比較少離開下路，隊友有危險時出手救人的時機也比較早。適合陣容打團穩、想把重心放在龍上的時候。",
-    cons: "輔助待在下路的時間比平常久。",
+    desc: "隊伍對龍的爭奪遠比平常更願意參與，也稍微更願意加入團戰。輔助比較少離開下路，隊友有危險時出手救人的時機也比較早。適合陣容本身就很穩的時候。",
+    cons: "這套打法沒有特別明顯的短處，但也不代表比較強。",
     patch: {
       lanePlan: { support: "protect" },
       macro: { aggression: 0.45, riskTolerance: 0.45, grouping: 0.7 },
@@ -146,8 +146,8 @@ const V2_TEMPLATES = [
   //  ── 分推牽制 ─────────────────────────────────────────────────────────────
   v2Template({
     slug: "top_solo_split", legacyTacticId: "m2", category: V2_CATEGORY.SPLIT, name: "上路單帶（四一分推）", risk: "中",
-    desc: "上路單獨留在自己的線上推進，團戰爆發時多半也不離開。上路的站位推得比平常更前面，中路則退後一些。隊伍加入團戰的程度略高，輔助出手救人的時機比較早。適合上單單打能力強的時候。",
-    cons: "帶線的人不參加團戰，打起來隊伍就少一個人。輔助也比較少離開下路。",
+    desc: "上路多半留在自己的線上，通常不參加團戰。上路的站位推得比平常更前面，中路的站位則比平常靠後。隊伍稍微更願意加入團戰，輔助出手救人的時機也比較早。適合上單單打能力強的時候。",
+    cons: "帶線的人多半不參加團戰，打團時隊伍常常少一個人。上路的站位也比平常靠前。",
     patch: {
       lanePlan: { top: "split", mid: "defensive", support: "protect" },
       macro: { aggression: 0.4, riskTolerance: 0.45, grouping: 0.7, splitPush: 0.85 },
@@ -157,8 +157,8 @@ const V2_TEMPLATES = [
   }),
   v2Template({
     slug: "mid_solo_split", legacyTacticId: "m2", category: V2_CATEGORY.SPLIT, name: "中路單帶", risk: "中",
-    desc: "中單單獨留在中路線上推進，團戰爆發時多半也不離開。隊友一起有危險時，輔助優先救中單；下路射手的站位退後一些。隊伍對龍的爭奪也比平常更願意參與。適合中單單打能力強的時候。",
-    cons: "中單在線上的時候不參加團戰，隊伍就少一個人；輔助也比較少離開下路。",
+    desc: "隊友有危險時輔助優先救中單，出手救人的時機也比較早。中單多半會留在中路線上，打團時通常不參加團戰；中路的站位比平常更靠前，下路射手的站位則靠後。對龍的爭奪也稍微更願意參與。適合中單個人實力突出的時候。",
+    cons: "中單多半不參加團戰，打團時隊伍通常少一個人。中路的站位也比平常靠前。",
     patch: {
       lanePlan: { mid: "split", adc: "defensive", support: "protect" },
       macro: { aggression: 0.45, grouping: 0.65, splitPush: 0.85 },
@@ -169,8 +169,8 @@ const V2_TEMPLATES = [
   //  ── 團戰決勝 ─────────────────────────────────────────────────────────────
   v2Template({
     slug: "hard_engage_stack", legacyTacticId: "m3", category: V2_CATEGORY.FIGHT, name: "抱團強開", risk: "高",
-    desc: "隊伍加入團戰的程度比平常高很多，投入團戰的門檻也比較低。整場比賽都比較敢主動接戰，中期最明顯。對巴龍的爭奪也比平常更願意參與。適合陣容有強力控制和後排輸出、隊員默契好的時候。",
-    cons: "撤退的時機比平常晚，所以不利的團戰也更容易繼續打下去。",
+    desc: "隊伍加入團戰的程度比平常高很多，投入團戰的門檻也稍微比較低。中期隊伍更敢主動接戰。中期對巴龍的爭奪更願意參與，後期對巴龍的爭奪也稍微更願意參與。輔助出手救人的時機也比較早。適合陣容有強力控制和後排輸出、隊員默契好的時候。",
+    cons: "隊伍撤退的時機比平常稍微晚一點，投入團戰的門檻也比平常稍微低一些。",
     patch: {
       lanePlan: { support: "protect" },
       macro: { midGame: "aggressive", aggression: 0.7, riskTolerance: 0.7, grouping: 0.9, splitPush: 0.05 },
@@ -180,8 +180,8 @@ const V2_TEMPLATES = [
   }),
   v2Template({
     slug: "protect_core_scaling", legacyTacticId: "m8", category: V2_CATEGORY.FIGHT, name: "保核心拖後期", risk: "低",
-    desc: "上路和中路的站位退後，前期不太主動接戰，打野抓人的次數比平常少；射手有危險時，輔助優先救射手，出手救人的時機也比較早。到了後期，隊伍更敢主動接戰。隊伍加入團戰的程度略高，對龍和巴龍的爭奪也比平常更願意參與，撤退的時機比平常早。適合射手後期輸出強的時候。",
-    cons: "輔助救人時優先照顧射手，其他隊友的順位相對靠後。前期不太主動接戰，打野抓人的次數也比較少。",
+    desc: "上路和中路的站位比平常靠後，打野抓人的次數比平常少一些，前期不太主動接戰。隊友有危險時輔助優先救射手，出手救人的時機也比較早；撤退的時機也比平常稍微早一點。中期隊伍稍微更願意加入團戰，後期更願意加入團戰。中期對龍和巴龍的爭奪稍微更願意參與，後期對龍和巴龍的爭奪更願意參與。後期隊伍也稍微更敢主動接戰。適合射手後期輸出強的時候。",
+    cons: "前期不太主動接戰，打野抓人的次數也比平常少一些。",
     patch: {
       lanePlan: { top: "defensive", mid: "defensive", support: "protect" },
       macro: { earlyGame: "defensive", lateGame: "scaling", tempo: "slow", aggression: 0.4, riskTolerance: 0.3, grouping: 0.75, splitPush: 0.05 },
@@ -192,8 +192,8 @@ const V2_TEMPLATES = [
   //  ── 穩健運營 ─────────────────────────────────────────────────────────────
   v2Template({
     slug: "standard_macro", legacyTacticId: "std", category: V2_CATEGORY.STEADY, name: "均衡運營", risk: "中",
-    desc: "只在少數地方和標準打法不同：輔助出手救人的時機比較早，對龍的爭奪也比平常稍微更願意參與。適合還不確定對手風格、想先看一輪再決定打法的時候。",
-    cons: "輔助留在下路的時間比平常長；其餘方面和標準打法沒有明顯差別。",
+    desc: "只在少數地方和標準打法不同：輔助比較少離開下路，出手救人的時機也比較早，對龍的爭奪也稍微更願意參與。適合還不確定對手風格的時候。",
+    cons: "這套打法沒有特別明顯的短處，但也不代表比較強。",
     patch: {
       lanePlan: { support: "protect" },
       macro: { grouping: 0.6 },
@@ -202,8 +202,8 @@ const V2_TEMPLATES = [
   }),
   v2Template({
     slug: "defensive_hold", legacyTacticId: "m8", category: V2_CATEGORY.STEADY, name: "劣勢穩守", risk: "低",
-    desc: "上、中、下三路的站位全部往後退，打野抓人的次數明顯比平常少，開局也更不會去入侵。前期和中期不太主動接戰，撤退的時機比平常早，投入團戰的門檻也比較高；到了後期，接戰的傾向大致回到平常的水準。隊伍加入團戰的程度略高，對龍的爭奪則比較少參與。適合已經落後、想先穩住局面的時候。",
-    cons: "對龍的爭奪比較少參與，輔助也比較少離開下路。",
+    desc: "上、中、下三路的站位全部往後退，打野抓人的次數明顯比平常少。前期和中期不太主動接戰，後期接戰的傾向和平常差不多。前期和中期對龍的爭奪也比較少參與。撤退的時機比平常稍微早一點，投入團戰的門檻也比較高。輔助比較少離開下路，出手救人的時機也比較早。適合陣容比對手弱的時候。",
+    cons: "前期和中期不太主動接戰。前期和中期對龍的爭奪比較少參與，打野抓人的次數也明顯比平常少。",
     patch: {
       lanePlan: { top: "defensive", mid: "defensive", adc: "defensive", jungle: "farm", support: "protect" },
       macro: { earlyGame: "defensive", midGame: "defensive", lateGame: "scaling", tempo: "slow", aggression: 0.25, riskTolerance: 0.2, grouping: 0.75, splitPush: 0.05 },
