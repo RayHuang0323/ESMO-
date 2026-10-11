@@ -21,7 +21,8 @@
 //   · roster：`{ seat: { heroId, spells? } }`；英雄物件在這裡用 deps.heroLookup 補上
 //     （與 v20 Live／Challenge 的 `{ ...row, hero }` 相同；runner 原本沒有 hero 欄位，
 //      但所有 adapter 都以 heroId 為準，結果相同——golden 逐筆驗證）。
-//   · tactic：legacy ⇒ 該份 MobaTacticConfig；std ⇒ STANDARD_OPP_TACTIC；binding ⇒ 拒絕（Task 9）。
+//   · tactic：legacy ⇒ 該份 MobaTacticConfig；std ⇒ STANDARD_OPP_TACTIC；
+//     binding ⇒ deps.engineAdapters.resolveTacticBinding 解析成 MobaTacticConfig（Task 9；resolver 拒絕 ⇒ tactic_binding_rejected），之後同一對投影。
 //
 //  【production / tool 的差異（只有這三處，都是 v20 runner 的既有行為）】
 //   · tool.ruleOverrides：建構後立刻覆寫這一個實例的 rules（runner:119）。
@@ -37,7 +38,7 @@
 //
 //  【只做編排（Phase 3a T6 fix）】本檔不 import 任何 adapter 模組：引擎類別、英雄側 adapter（deps.heroAdapters）與引擎側 adapter
 //   （deps.engineAdapters：PlayerMods／HeroMods／Passives／PowerCurve／Spells／matchItemsConfig／toEngineItems／Tactic／Identity／
-//   STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION）全部經 deps，預設接線只在 matchAssemblerDepsCore.js 一處。
+//   STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION／resolveTacticBinding）全部經 deps，預設接線只在 matchAssemblerDepsCore.js 一處。
 //   理由：平衡工具 ESMO_BALANCE_ROOT 做跨版本 A/B，必須量到「同一棵樹」，不能引擎與一半 adapter 來自 M、另一半來自 runner 所在的樹。
 //   tool 規則集容忍舊樹引擎缺 configureObjectiveLayout／HeroPassives／HeroPowerCurve（略過，同 v20 runner 的 typeof 護欄）；production 不容忍。
 //
@@ -184,9 +185,21 @@ export function assembleMatch(setup, deps = {}) {
     });
   }
 
+  //  plan binding（Phase 3a T9）：經 deps.engineAdapters.resolveTacticBinding 解析成 MobaTacticConfig，之後與 legacy 走同一對投影。
+  //  resolver 拒絕（版本不符、被竄改、design 選擇、未知覆蓋層……）＝開局前的錯誤結果，形狀與其他 setup 錯誤相同：
+  //  code 固定 tactic_binding_rejected、field 指到哪一方，message 帶 resolver 的原因碼。
+  const bindingCfg = { blue: null, red: null };
   for (const side of SIDES) {
-    if (setup.tactic?.[side]?.kind === "binding")
-      err("tactic_binding_unsupported", `tactic.${side}`, "binding tactics are not yet supported by the assembler (Phase 3a Task 9 wires the Resolver)");
+    if (setup.tactic?.[side]?.kind !== "binding") continue;
+    if (typeof A.resolveTacticBinding !== "function") { need(false, "deps.engineAdapters.resolveTacticBinding", "binding tactic"); continue; }
+    const r = A.resolveTacticBinding(clone(setup.tactic[side].binding));
+    if (!r?.ok) {
+      const list = Array.isArray(r?.errors) && r.errors.length ? r.errors : [{ code: "unknown", field: "", message: "resolver rejected the binding" }];
+      for (const e of list) {
+        const sub = String(e.field ?? "").replace(/^binding\.?/, "");
+        err("tactic_binding_rejected", sub ? `tactic.${side}.${sub}` : `tactic.${side}`, `[${e.code}] ${e.message}`);
+      }
+    } else bindingCfg[side] = r.config;
   }
   if (E.match && !setup.tactic?.red) err("tactic_red_missing", "tactic.red", "a match with a blue tactic needs an explicit red tactic (use { kind: \"std\" } for the neutral default)");
 
@@ -241,8 +254,8 @@ export function assembleMatch(setup, deps = {}) {
     talentSelection = selected && Object.keys(selected.players).length ? selected : null;
   }
 
-  const tacticCfg = (t) => (t.kind === "std" ? A.STANDARD_OPP_TACTIC : clone(t.config));
-  const blueCfg = setup.tactic?.blue ? tacticCfg(setup.tactic.blue) : null;
+  const tacticCfg = (t, side) => (t.kind === "std" ? A.STANDARD_OPP_TACTIC : t.kind === "binding" ? clone(bindingCfg[side]) : clone(t.config));
+  const blueCfg = setup.tactic?.blue ? tacticCfg(setup.tactic.blue, "blue") : null;
   let tacticMeta = null, itemsApplied = false;
 
   const STEPS = {
@@ -294,7 +307,7 @@ export function assembleMatch(setup, deps = {}) {
     //  useLocalServer:270-280；challengeRunner:144-163；runner:143-144（std 對 std、meta: null）。
     match() {
       if (!E.match) return;
-      const redCfg = tacticCfg(setup.tactic.red);
+      const redCfg = tacticCfg(setup.tactic.red, "red");
       tacticMeta = isTool ? null
         : { tacticId: blueCfg.tacticId, tacticName: blueCfg.name, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
       call("configureMatch", {

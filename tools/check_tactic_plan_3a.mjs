@@ -28,6 +28,7 @@ const fixture = JSON.parse(read("tools/fixtures/tactic_variant_outputs_a7adeb9.j
 
 //  這支 gate 要測的新模組。載入失敗（尚未實作）＝整支紅，而不是靜默跳過。
 let Plan, Templates, Registry, Overlays;
+const Resolver = await import("../src/battle/moba/tactics/tacticResolver.js");   // Task 9：選擇 → 欄位的唯一對照表
 try {
   Registry = await import("../src/platform/tactics/capabilityRegistry.js");
   Overlays = await import("../src/platform/tactics/tacticOverlays.js");
@@ -82,17 +83,12 @@ console.log("\n§R Capability Registry 資料列");
   ck("R2b 沒有任何列含有 number（遞迴，minSimVersion 是字串）", !rows.some(hasNumber));
 
   //  live 的「旋鈕依據」：每個 live 列都有一個現行引擎設定的欄位，改它真的會改變投影出的旋鈕。
-  const seatLane = { b1: "top", b3: "mid", b4: "adc" };
-  const probe = (cfg, dim, choice) => {   // 本 gate 自己的最小映射（只為證明旋鈕存在；權威映射是 Task 9 的 Resolver）
-    let m;
-    if ((m = dim.match(/^phases\.(early|mid|late)\.stance$/))) cfg.macro[{ early: "earlyGame", mid: "midGame", late: "lateGame" }[m[1]]] = choice;
-    else if (dim === "jungle.tempo") cfg.macro.tempo = choice;
-    else if (dim === "jungle.focus") cfg.lanePlan.jungle = choice;
-    else if ((m = dim.match(/^lanes\.(top|mid|bot)\.stance$/))) cfg.lanePlan[{ top: "top", mid: "mid", bot: "adc" }[m[1]]] = choice;
-    else if (dim === "seats.b5.mission") cfg.lanePlan.support = choice;
-    else if ((m = dim.match(/^seats\.(b\d)\.priority$/))) cfg.economy.carryPriority = choice === "core" ? seatLane[m[1]] : "balanced";
-    else if (dim === "risk.tolerance") cfg.macro.riskTolerance = { cautious: 0.3, balanced: 0.5, bold: 0.8 }[choice];
-    else return false;
+  //  Task 9：權威映射住在 resolver（applyChoice／CHOICE_MAPPING），本 gate 不再帶私有對照；就地改 cfg 以維持原呼叫形狀。
+  const probe = (cfg, dim, choice) => {
+    const next = Resolver.applyChoice(cfg, dim, choice);
+    if (!next) return false;
+    for (const k of Object.keys(cfg)) delete cfg[k];
+    Object.assign(cfg, next);
     return true;
   };
   const baseCfg = () => clone(STANDARD_OPP_TACTIC);
@@ -113,7 +109,7 @@ console.log("\n§R Capability Registry 資料列");
   ck("R3c 同一個 live 維度的每個選項，解析出的引擎旋鈕組都不同（沒有假選擇）", dupSig.length === 0, dupSig.join(","));
   ck("R3d basis 欄位路徑存在於現行設定", live.every((r) => get(mobaTacticById("m1"), r.basis.replace(/\(.*\)$/, "")) !== undefined));
   ck("R3e 對照組：兩個選項解析成相同旋鈕組時 R3c 會抓到（planted: late.aggressive ≡ late.scaling）", (() => {
-    const a = baseCfg(), b = baseCfg(); probe(a, "phases.late.stance", "aggressive"); probe(b, "phases.late.stance", "scaling");
+    const a = baseCfg(), b = baseCfg(); a.macro.lateGame = "aggressive"; b.macro.lateGame = "scaling";   // 直接設欄位（resolver 不提供 aggressive）
     return sigOf(a) === sigOf(b);
   })());
   ck("R3f 後期維度因此不提供 aggressive", !Registry.isLiveChoice("phases.late.stance", "aggressive") && Registry.isLiveChoice("phases.late.stance", "scaling"));

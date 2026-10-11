@@ -198,8 +198,17 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   //    ⚠ 改任何一個 changedFields 數值＝改比賽結果，所以資料檔本身必須在清單內，而不只是 MobaTacticConfig.js。
   "src/platform/tactics/tacticOverlays.js",
   //  · `applyVariant`／`TACTIC_VARIANTS`：決定哪些欄位准被覆蓋（allowed／forbidden）與如何套用。以前不在清單內（既有缺口），此處補上。
-  //  （tacticTemplates.js／tacticPlan.js／capabilityRegistry.js 目前不是引擎輸入——Task 9 的 Resolver 接線時再加。）
   "src/platform/mastery/tacticVariant.js",
+  //  ── 2026-10-11（Phase 3a T9，moba-sim.v21 候選）：Tactic Resolver 與它決定的輸入 ─────────────────────
+  //  組裝器現在能接受 plan binding：binding → MobaTacticConfig → toEngineTactic／toEngineTacticIdentity。
+  //  · Resolver 與它的選擇對照表（CHOICE_MAPPING）：改任何一格＝同一份 binding 解析出不同旋鈕。
+  "src/battle/moba/tactics/tacticResolver.js",
+  //  · 模板資料：binding 的起點設定（經典模板由 MobaTacticConfig 派生，v2 模板是新輸入）。
+  "src/platform/tactics/tacticTemplates.js",
+  //  · plan 驗證器（createTacticPlan）：決定哪些輸入被接受、標準形長什麼樣（resolver 每次都重新驗證）。
+  "src/platform/tactics/tacticPlan.js",
+  //  · 能力登錄表：哪些維度是 live、每個維度允許哪些選擇（plan 與 resolver 的接受範圍）。
+  "src/platform/tactics/capabilityRegistry.js",
 ]);
 
 /**
@@ -479,7 +488,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  行為不變：applyVariant 對 9 個戰術 × 9 種變體輸入（81 組）的輸出與遷移前逐位元相同（tools/check_tactic_plan_3a.mjs §O，
   //  fixture 擷取自 a7adeb9）；LogicEngine、組裝器與所有 adapter 未改 ⇒ 不是語意變化，v20 golden 39 案維持逐位元相同。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 b6264e0fa16c3b2d 未曾發布）。
-  "moba-sim.v21": "e695aa910251481a",
+  //  2026-10-11（Phase 3a T9）：語意清單新增 tacticResolver.js、tacticTemplates.js、tacticPlan.js、capabilityRegistry.js；組裝器多一條
+  //  binding 分支（經 deps.engineAdapters.resolveTacticBinding）、matchSetup/matchRuleset 多「ruleset 接受的戰術種類」檢查。
+  //  行為不變：legacy／std 路徑一個位元都沒動，golden 39 案＋Live 9 案以 binding 輸入皆逐位元相同（check_tactic_resolver_3a）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 e695aa910251481a 未曾發布）。
+  "moba-sim.v21": "048375d5ab576f18",
 });
 
 export const isKnownSimulationVersion = (v) =>

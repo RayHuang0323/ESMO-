@@ -26,6 +26,16 @@ export const MATCH_RULESETS = Object.freeze({
     releaseRequirements: [] }),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
+//  戰術輸入的種類（Phase 3a T9）：每個 ruleset 接受哪幾種 `setup.tactic.<side>.kind`。
+//   · challenge.v20 重現歷史挑戰：只收 v20 就有的種類（legacy／std）；規格 §4.4 的「Challenge 歷史 → binding」遷移屬 challenge.v21。
+//   · career.v20 多收 binding（Live 之後送 plan binding；Task 12 才接線，這裡只是讓組裝器「能」接受）。
+//   · balanceTool.v20 是工具（不重現歷史），同樣接受 binding，讓戰術書選項能在 runner 上量測。
+//  種類集合不在 ruleset 物件內（ruleset 整份進 setup 雜湊，加欄位會改變每一份 setup 的身分）；由 createMatchSetup 強制。
+export const TACTIC_KINDS_BY_RULESET = Object.freeze({
+  "career.v20": Object.freeze(["legacy", "std", "binding"]),
+  "challenge.v20": Object.freeze(["legacy", "std"]),
+  "balanceTool.v20": Object.freeze(["legacy", "std", "binding"]),
+});
 //  旗標關閉 ⇒ 對應層關閉（永不強制開啟）。
 export function resolveRulesetForMode({ mode, flags }) {
   const base = mode === "challenge" ? MATCH_RULESETS["challenge.v20"] : MATCH_RULESETS["career.v20"];

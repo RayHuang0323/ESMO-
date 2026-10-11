@@ -62,7 +62,7 @@
 //   輸出 16 位小寫十六進位。同步、Node 與瀏覽器輸出一致（TextEncoder 皆有）。
 //   ⚠ 這是 parity / 冪等用的「身分雜湊」，不是安全原語；線上權威將對 canonical bytes 簽章。
 // ============================================================================
-import { rulesetById, validateRuleset, PRODUCTION_FORBIDDEN_KEYS } from "./matchRuleset.js";
+import { rulesetById, validateRuleset, PRODUCTION_FORBIDDEN_KEYS, TACTIC_KINDS_BY_RULESET } from "./matchRuleset.js";
 import { stableStringify } from "./squadSnapshot.js";
 import { resolveObjectiveLayout, objectiveLayoutForSeed, OBJECTIVE_LAYOUTS } from "./objectiveLayout.js";
 
@@ -301,6 +301,9 @@ export function createMatchSetup(input) {
     if (t === null) continue;
     const f = `tactic.${side}`;
     if (!isPlainObject(t) || !TACTIC_KINDS.includes(t.kind)) { err("tactic_kind_unknown", f, `tactic kind must be one of ${TACTIC_KINDS.join("|")}`); continue; }
+    if (ruleset && !(TACTIC_KINDS_BY_RULESET[ruleset.rulesetId] ?? TACTIC_KINDS).includes(t.kind)) {
+      err("tactic_kind_not_allowed", f, `ruleset ${ruleset.rulesetId} does not accept a "${t.kind}" tactic (accepts ${(TACTIC_KINDS_BY_RULESET[ruleset.rulesetId] ?? TACTIC_KINDS).join("|")})`); continue;
+    }
     const extra = Object.keys(t).filter((k) => k !== "kind" && k !== (t.kind === "legacy" ? "config" : t.kind === "binding" ? "binding" : ""));
     if (extra.length) { err("tactic_invalid", f, `unexpected field(s): ${extra.join(",")}`); continue; }
     if (t.kind === "std") tactic[side] = { kind: "std" };

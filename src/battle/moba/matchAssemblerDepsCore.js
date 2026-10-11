@@ -31,6 +31,7 @@ import { matchItemsConfig } from "./items/buildStrategyPrep.js";
 import { toEngineItems } from "./items/itemsEngineAdapter.js";
 import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "../../platform/contracts/MobaTacticConfig.js";
 import { MOBA_SIMULATION_VERSION } from "../../platform/contracts/simulationVersion.js";
+import { resolveTacticBinding, TACTIC_RESOLVER_VERSION } from "./tactics/tacticResolver.js";
 
 export const MATCH_ASSEMBLER_DEPS_VERSION = "MatchAssemblerDeps.v1";
 
@@ -42,11 +43,13 @@ const CANONICAL_ADAPTERS = Object.freeze({
 const CANONICAL_ENGINE_ADAPTERS = Object.freeze({
   toEnginePlayerMods, toEngineHeroMods, toEngineHeroPassives, toEngineHeroPowerCurve, toEngineSpells,
   matchItemsConfig, toEngineItems, toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION,
+  resolveTacticBinding, TACTIC_RESOLVER_VERSION,
 });
 const ENGINE_ADAPTER_SOURCES = Object.freeze({
   toEnginePlayerMods: "mobaPlayerStats", toEngineHeroMods: "mobaHeroProfile", toEngineHeroPassives: "heroPassiveGameplay",
   toEngineHeroPowerCurve: "heroPowerCurve", toEngineSpells: "mobaHeroLoadout", matchItemsConfig: "buildStrategyPrep",
   toEngineItems: "itemsEngineAdapter", toEngineTactic: "MobaTacticConfig", toEngineTacticIdentity: "MobaTacticConfig",
+  resolveTacticBinding: "tacticResolver",
 });
 //  每個 adapter 函式的正式出處與該模組的契約常數（manifest 的內容）。
 const ADAPTER_SOURCES = Object.freeze({
@@ -69,7 +72,8 @@ export const fnLabel = (fn) => `override:${(typeof fn === "function" && fn.name)
  * @param {string}   [o.heroLookupLabel]  heroLookup 在 manifest 的標籤；未給 ⇒ override:<函式名>（無查表 ⇒ "none"）
  * @param {object}   [o.heroAdapters]     局部覆寫（工具／測試用；manifest 會如實標出覆寫）
  * @param {object}   [o.engineAdapters]   引擎側 adapter 局部覆寫（toEnginePlayerMods／HeroMods／HeroPassives／HeroPowerCurve／Spells／
- *                                        matchItemsConfig／toEngineItems／toEngineTactic／toEngineTacticIdentity／STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION）
+ *                                        matchItemsConfig／toEngineItems／toEngineTactic／toEngineTacticIdentity／STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION／
+ *                                        resolveTacticBinding／TACTIC_RESOLVER_VERSION）
  * @returns {Readonly<{ LogicEngine, heroLookup, heroAdapters, engineAdapters, manifest }>}
  */
 export function buildMatchAssemblerDepsFrom({ LogicEngine = CanonicalEngine, engineMarker = null, heroLookup = null, heroLookupLabel = null, heroAdapters = {}, engineAdapters = {} } = {}) {
@@ -89,6 +93,8 @@ export function buildMatchAssemblerDepsFrom({ LogicEngine = CanonicalEngine, eng
       [k, engineParts[k] === CANONICAL_ENGINE_ADAPTERS[k] ? ENGINE_ADAPTER_SOURCES[k] : fnLabel(engineParts[k])]))),
     //  戰術版本常數與 std 戰術本身也是輸出內容 ⇒ 以注入值入帳。
     tacticVersion: engineParts.MOBA_TACTIC_VERSION ?? null,
+    //  resolver 的版本常數（binding 解析規則的版本）也是輸出內容的一部分 ⇒ 以注入值入帳。
+    tacticResolverVersion: engineParts.TACTIC_RESOLVER_VERSION ?? null,
     stdTactic: engineParts.STANDARD_OPP_TACTIC === CANONICAL_ENGINE_ADAPTERS.STANDARD_OPP_TACTIC ? "canonical" : "override",
     archetypeContract: adapters.COMBAT_ARCHETYPE_CONTRACT_VERSION ?? null,
   });
