@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import { toEngineTactic, toEngineTacticIdentity, validateMobaTacticConfig, MOBA_TACTICS, STANDARD_OPP_TACTIC, mobaTacticById } from "../src/platform/contracts/MobaTacticConfig.js";
 import { stripComments } from "./lib/stripComments.mjs";
+import { effectSheet, copyViolationsOf, IMPOSSIBLE, mentionable, THRESHOLDS } from "./lib/tacticEffectSheet.mjs";
 import { SIMULATION_SEMANTICS_FILES } from "../src/platform/contracts/simulationVersion.js";
 import { DOCTRINE } from "../src/platform/mastery/doctrine.js";
 import * as Variant from "../src/platform/mastery/tacticVariant.js";
@@ -240,7 +241,7 @@ if (Templates) {
   const v2 = Templates.TACTIC_TEMPLATE_LIST.filter((t) => t.kind === "v2");
   const EXPECT = {   // brief Step 3 的 12 個（slug → [分類, 名稱])
     three_lane_pressure: ["前期節奏", "三路壓制"], jungle_invasion: ["前期節奏", "野區入侵"], bot_duo_pressure: ["前期節奏", "下路雙人壓制"],
-    mid_jungle_sync: ["中期控圖", "中野聯動"], support_river_control: ["中期控圖", "輔助遊走控河道"], dragon_pit_macro: ["中期控圖", "龍坑運營"],
+    mid_jungle_sync: ["中期控圖", "中野聯動"], support_roamer: ["中期控圖", "輔助遊走流"], dragon_pit_macro: ["中期控圖", "龍坑運營"],
     top_solo_split: ["分推牽制", "上路單帶（四一分推）"], mid_solo_split: ["分推牽制", "中路單帶"],
     hard_engage_stack: ["團戰決勝", "抱團強開"], protect_core_scaling: ["團戰決勝", "保核心拖後期"],
     standard_macro: ["穩健運營", "均衡運營"], defensive_hold: ["穩健運營", "劣勢穩守"],
@@ -248,101 +249,108 @@ if (Templates) {
   ck("V1 12 個 v2 模板，id／分類／名稱與 brief 一致", v2.length === 12 && J(v2.map((t) => t.templateId).sort()) === J(Object.keys(EXPECT).map((s) => `v2.${s}`).sort())
     && v2.every((t) => EXPECT[t.templateId.slice(3)][0] === t.category && EXPECT[t.templateId.slice(3)][1] === t.name));
   const CJK = /[一-鿿]/;
-  ck("V2 每個模板有 category／name／desc／cons，且是繁體中文、說明有實質內容（desc≥60 字、cons≥30 字、兩者不同）",
-    v2.every((t) => [t.category, t.name, t.desc, t.cons].every((s) => typeof s === "string" && CJK.test(s)) && t.desc.length >= 60 && t.cons.length >= 30 && t.desc !== t.cons));
+  ck("V2 每個模板有 category／name／desc／cons，且是繁體中文、說明有實質內容（desc≥60 字、cons 非空且至少 8 字——誠實的 cons 可以很短、兩者不同）",
+    v2.every((t) => [t.category, t.name, t.desc, t.cons].every((s) => typeof s === "string" && CJK.test(s)) && t.desc.length >= 60 && t.cons.length >= 8 && t.desc !== t.cons));
   ck("V2b 文案裡沒有未實作系統的承諾（視野／預示者／先鋒／Buff）", v2.every((t) => !/視野|預示者|先鋒|Buff|buff/.test(t.desc + t.cons)));
 
-  //  文案只能說「引擎真的會做的事」：關鍵詞 ⇒ 旋鈕條件；以及「引擎沒有的機制」清單。
-  //  （不是全面審查，只擋明確的過度承諾；真正的逐句出處表在 task-8-report.md Fix round 2。）
-  const knobsOf = (cfg) => ({ k: toEngineTactic(cfg), i: toEngineTacticIdentity(cfg), cfg });
-  const NEUTRAL = knobsOf(Templates.TACTIC_TEMPLATES.std.config);
-  const EPS = 0.011;
-  //  引擎實際的遊走率＝ supportRoamRate × roamK（LogicEngine ~6670），roamK 取自解析後的 identity，不在 gate 重抄 1.5／0.5 表。
-  const effRoam = (x) => x.k.roamRate * x.i.roamK;
-  //  接戰分數偏移＝ engageBias 在每個階段都加，再加該階段的 phaseEngage（LogicEngine ~3022）。階段 0／1／2＝前／中／後期。
-  const engageAt = (x, ph) => x.i.engageBias + x.i.phaseEngage[ph];
-  const nearNeutralEngage = (x, ph) => Math.abs(engageAt(x, ph) - engageAt(NEUTRAL, ph)) <= EPS;
-  const CLAIMS = [   // [說明, 文案命中的正則, 命中時旋鈕必須成立的條件]
-    ["說不入侵 ⇒ 入侵機率必須為 0", /不入侵|不會入侵/, (x) => x.k.invadeChance === 0],
-    ["提到入侵 ⇒ 打野重心是入侵，或入侵機率高於中性", /(?<!不)入侵/, (x) => x.cfg.lanePlan.jungle === "invade" || x.k.invadeChance > NEUTRAL.k.invadeChance],
-    ["入侵要有 invadeWithMid 才能說中單跟進", /中單跟著壓上去/, (x) => x.k.invadeWithMid === true],
-    ["救／保護射手 ⇒ carryPriority=adc", /先救射手|保護射手|射手為優先保護/, (x) => x.cfg.economy.carryPriority === "adc"],
-    ["救／照看中單 ⇒ carryPriority=mid", /優先救中單|照看中單|保護中單|先顧中單/, (x) => x.cfg.economy.carryPriority === "mid"],
-    ["讓出／放棄／不爭 龍 ⇒ dragonJoin 比中性低至少 0.10", /(?<!沒有)(讓出|放棄|不爭)[^，。；]{0,6}龍|龍[^，。；]{0,12}(?<!沒有)(讓出|放棄)/, (x) => x.k.dragonJoin <= NEUTRAL.k.dragonJoin - 0.1],
-    ["龍一出現就更常發起爭奪 ⇒ dragonJoin 高於中性", /龍一出現就更常|龍一出現，隊伍就比一般打法更常/, (x) => x.k.dragonJoin > NEUTRAL.k.dragonJoin],
-    ["對龍／巴龍不特別積極 ⇒ dragonJoin 與 baronJoin 不高於中性", /對龍和巴龍我們也不特別積極/, (x) => x.k.dragonJoin <= NEUTRAL.k.dragonJoin && x.k.baronJoin <= NEUTRAL.k.baronJoin],
-    ["抓人節奏快 ⇒ gankInterval 小於中性", /打野也跑得勤/, (x) => x.k.gankInterval < NEUTRAL.k.gankInterval],
-    ["抓人節奏放慢／頻率明顯降低 ⇒ 實際間隔（gankInterval×gankIntervalK）大於中性", /抓人的節奏也放慢|抓人的頻率明顯降低/, (x) => x.k.gankInterval * x.i.gankIntervalK > NEUTRAL.k.gankInterval * NEUTRAL.i.gankIntervalK],
-    ["抓人節奏跟標準差不多 ⇒ 實際間隔等於中性", /跟標準打法差不多/, (x) => x.k.gankInterval * x.i.gankIntervalK === NEUTRAL.k.gankInterval * NEUTRAL.i.gankIntervalK],
-    ["抓人最常挑中路 ⇒ 中路權重是最大", /抓人最常挑中路/, (x) => x.k.gankWeights.mid > Math.max(x.k.gankWeights.top, x.k.gankWeights.bot)],
-    ["比較常選下路 ⇒ 下路權重是最大", /比較常選下路/, (x) => x.k.gankWeights.bot > Math.max(x.k.gankWeights.top, x.k.gankWeights.mid)],
-    ["撤退較早 ⇒ retreatAt 高於中性", /撤退(也)?(比較|稍微)早|比較早撤|撤退時機較早/, (x) => x.k.retreatAt > NEUTRAL.k.retreatAt],
-    ["撤退較晚 ⇒ retreatAt 低於中性", /撤退(的時機只比平常晚|又比較晚|比較晚)|撤退比較晚/, (x) => x.k.retreatAt < NEUTRAL.k.retreatAt],
-    ["輔助常離開下路／常常離開 ⇒ 有效遊走率（roamRate×roamK）高於中性", /常常?離開下路|輪到遊走，就常/, (x) => effRoam(x) > effRoam(NEUTRAL)],
-    ["說遊走率提高 ⇒ 有效遊走率高於中性（以前只比 roamRate，hard_engage 因此漏網）", /遊走率(提高|明顯高於標準)/, (x) => effRoam(x) > effRoam(NEUTRAL)],
-    ["推塔不積極／保守 ⇒ siegeBias 為負", /推塔(也)?不積極|推塔時比較保守/, (x) => x.i.siegeBias < 0],
-    ["留線單獨推進 ⇒ 有 splitLane 且 splitPush 夠高", /單獨守在自己那條線|單獨推進/, (x) => x.k.splitLane !== null && x.k.splitPush >= 0.5],
-    ["前期不主動找架打 ⇒ 前期接戰偏移為負", /前期不主動找架打/, (x) => engageAt(x, 0) < engageAt(NEUTRAL, 0)],
-    ["中期更敢主動找團 ⇒ 中期接戰偏移為正", /進入中期之後更敢主動找團|打到中期，大家更敢主動找團/, (x) => engageAt(x, 1) > engageAt(NEUTRAL, 1)],
-    ["後期才恢復積極／再積極起來 ⇒ 後期偏移高於前期偏移", /等到後期，大家再積極起來|後期才恢復積極/, (x) => engageAt(x, 2) > engageAt(x, 0)],
-    ["整場都比較敢主動接戰 ⇒ engageBias 為正（每個階段都加）", /整場比賽隊伍都比較敢主動接戰|整場也都偏好主動接戰/, (x) => x.i.engageBias > 0],
+  //  ── 文案由「效果表」審查（tools/lib/tacticEffectSheet.mjs）──────────────────────────────
+  //  每個 v2 模板解析出一張效果表（旋鈕對中性 std 的方向）。玩家文案的每一句必須對應表中至少一列，
+  //  主張的方向必須等於該列的方向，方向是 same 的列不得被提到，強度詞要求幅度 ≥ 2 倍門檻；
+  //  另有「引擎沒有的機制」清單（每條註明缺哪個機制）。認不得的句子一律判違規（不是放行）。
+  const SHEET = Object.fromEntries(Templates.TACTIC_TEMPLATE_LIST.map((t) => [t.templateId, effectSheet(t.config)]));
+  const NEUTRAL_SHEET = SHEET.std;
+  const violationsFor = (slug, text) => copyViolationsOf(text, SHEET[`v2.${slug}`] ?? NEUTRAL_SHEET);
+  const by = (slug) => v2.find((t) => t.templateId === `v2.${slug}`);
+  ck("V2d 每個 v2 的 desc＋cons，每一句都對應效果表的一列、方向相符、沒有引擎沒有的機制", v2.every((t) => copyViolationsOf(`${t.desc}${t.cons}`, SHEET[t.templateId]).length === 0),
+    v2.flatMap((t) => copyViolationsOf(`${t.desc}${t.cons}`, SHEET[t.templateId]).map((m) => `${t.templateId}:${m}`)).slice(0, 3).join("; "));
+  ck("V2d2 效果表本身：std 對 std 全是 same；12 個 v2 各自至少有 3 列非 same（有可描述的差異）；門檻表都是正數",
+    Object.values(NEUTRAL_SHEET).every((r) => r.dir === "same") && v2.every((t) => mentionable(SHEET[t.templateId]).length >= 3) && Object.values(THRESHOLDS).every((x) => x > 0));
+  ck("V2d3 效果表方向的對照組：重新解析的 jungle_invasion 開局入侵為 higher、defensive_hold 後期淨接戰為 same（淨值＝engageBias＋phaseEngage）",
+    SHEET["v2.jungle_invasion"]["invade.chance"].dir === "higher" && SHEET["v2.defensive_hold"]["engage.late"].dir === "same" && SHEET["v2.defensive_hold"]["engage.early"].dir === "lower");
+  //  不在詞彙內的旋鈕（siegeBias）不出現在效果表，文案也不得提推塔（IMPOSSIBLE 第一條）
+  ck("V2d4 效果表沒有 siegeBias／towerPriority 的列（效果太薄，不描述）；文案不含「塔」", !Object.keys(NEUTRAL_SHEET).some((id) => /siege|tower/i.test(id)) && v2.every((t) => !/塔/.test(t.desc + t.cons)));
+
+  //  對照組一：把審查抓到的 round 1／2／3 句子種回去，**每一句各一個斷言**，必須被抓到。
+  const PLANTED = [
+    //  round 1
+    ["defensive_hold", "也不爭龍與巴龍，等對手露出破綻。"], ["defensive_hold", "龍、巴龍與外塔幾乎全部讓出，對手的優勢會持續擴大。"],
+    ["dragon_pit_macro", "隊伍在龍刷新前提早集結到龍坑附近。"], ["protect_core_scaling", "所有資源往射手傾斜。"],
+    ["mid_solo_split", "輔助保護射手。"], ["hard_engage_stack", "輔助與坦克留在隊伍中央準備先手。"],
+    ["support_roamer", "讓龍的爭奪每次都比對手早到一步。"], ["three_lane_pressure", "不入侵野區，所以拿不到野怪資源。"],
+    //  round 2
+    ["three_lane_pressure", "前期之後接戰意願回到標準，優勢不會自己延續。"], ["bot_duo_pressure", "前期之後接戰意願回到標準。"],
+    ["jungle_invasion", "目標是壓縮對手打野的野怪資源與發育空間。"], ["hard_engage_stack", "輔助以保護隊友為主，遊走率提高。"],
+    ["mid_solo_split", "中路離開時中塔就暴露給對手。"], ["mid_solo_split", "帶線與支援兩邊都要顧，操作失誤會兩頭落空。"],
+    //  round 3 審查指出的七句
+    ["three_lane_pressure", "哪一路被對手蹲到都不容易有人及時支援。"],
+    ["jungle_invasion", "入侵只發生在開局那一小段，打完就回到正常的打法。"], ["jungle_invasion", "衝進去被對手看穿、反蹲，一開場就送人頭。"],
+    ["bot_duo_pressure", "資源集中在單側，上路等於放養，對面上單可以安心補刀，甚至反過來帶節奏。"],
+    ["support_roamer", "適合想用低風險換取地圖主導權的隊伍。"], ["support_roamer", "推塔的速度會慢一些。"], ["support_roamer", "常撲空的話下路會發育得很慢。"],
+    ["support_roamer", "輔助遊走控河道，在河道放視野。"],
+    ["dragon_pit_macro", "對手趁你在龍坑的時候換塔，你就得拿龍的好處去補。"],
+    ["top_solo_split", "目的是讓對手得分神處理上路，少一個人可以專心對付我們的主力。"], ["top_solo_split", "團戰時上路也來不及趕回來。"],
+    ["hard_engage_stack", "各路的兵線和野區比較沒人管，對手可以轉點換塔。"],
+    //  round 3 的次要項目
+    ["mid_jungle_sync", "打空了就是白白丟線。"], ["mid_jungle_sync", "趁著人數優勢去搶龍。"], ["protect_core_scaling", "塔和資源讓得比較多。"],
+    ["defensive_hold", "等到後期才恢復積極。"], ["defensive_hold", "兵線推進的主動權就交給了對手。"],
+    ["hard_engage_stack", "全隊靠在一起。"], ["hard_engage_stack", "特別看重巴龍的爭奪。"],
   ];
-  //  「某階段回到標準」：文案說之後（中／後期）回到標準／正常／普通 ⇒ 該階段的接戰偏移（engageBias＋phaseEngage）必須接近中性。
-  //  round 1 的 "前期之後接戰意願回到標準" 對 aggression 高的模板為假：engageBias 整場都在。
-  const RETURN_TO_STANDARD = /(前期之後|中期之後|之後|後期)[^，。；]{0,10}(回到|恢復)[^，。；]{0,4}(標準|正常|普通)/;
-  const returnViolation = (text, x) => RETURN_TO_STANDARD.test(text) && !(nearNeutralEngage(x, 1) && nearNeutralEngage(x, 2));
-  //  引擎沒有的機制：這些說法無論旋鈕為何都是過度承諾（每條註明「缺哪個機制」，不是「我們曾經寫過這句」）。
-  const IMPOSSIBLE = [
-    [/龍刷新前|提早集結|預先集結/, "沒有「物件刷新前預先集結」：dragonJoin 只在龍已出現後的 12 秒擲骰裡起作用（LogicEngine ~6411）"],
-    [/所有資源/, "沒有資源分配機制：jungleResourceShare 未映射（MobaTacticConfig 檔頭）；carryPriority 只改護人順序（~2996）"],
-    [/每次/, "沒有任何旋鈕是確定性的：參戰、遊走、入侵都是機率或偏移，說「每次」必為假"],
-    [/早到一步|搶先到達|先一步/, "dragonJoin 是參與擲骰，不是抵達時間；沒有速度／時序旋鈕"],
-    [/留在隊伍中央|準備先手|先手開團|坦克/, "沒有站位／開團手旋鈕：teamfight.engager 是 design，引擎沒有陣型或先手選擇"],
-    [/壓縮對手|搶走對手|野怪資源|發育空間|剝奪|封鎖野區|斷.{0,2}野/, "沒有搶野怪／剝奪野區：打野只拿己方的營地（LogicEngine ~3349／3362 的 c.side === p.side），入侵只是開局一小段走向 INVASION_POINT（~6630）"],
-    [/帶線與支援|離開中路時|中塔就暴露|兩邊都要顧|帶線的同時[^，。]{0,6}(支援|遊走)|帶線.{0,6}(離開|遊走|支援)/, "帶線者留在自己的線上並略過團戰（skipFight，LogicEngine ~6620）；沒有離線／遊走／同時支援的機制"],
-  ];
-  const copyViolations = (t, cfg = t.config) => {
-    const text = `${t.desc}${t.cons}`.replace(/並?沒有放棄/g, "");
-    const x = knobsOf(cfg);
-    return [...CLAIMS.filter(([, re, cond]) => re.test(text) && !cond(x)).map(([w]) => w),
-      ...(returnViolation(text, x) ? ["說之後回到標準，但接戰偏移整場都在"] : []),
-      ...IMPOSSIBLE.filter(([re]) => re.test(text)).map(([re, why]) => `引擎沒有的機制（${why}）`)];
-  };
-  ck("V2d 文案與旋鈕一致：每個 v2 模板的說法都有旋鈕條件支撐（關鍵詞表）", v2.every((t) => copyViolations(t).length === 0),
-    v2.flatMap((t) => copyViolations(t).map((m) => `${t.templateId}:${m}`)).join("; "));
-  {
-    const by = (slug) => v2.find((t) => t.templateId === `v2.${slug}`);
-    //  對照組：把審查抓到的 round 1／round 2 舊句子種回去，每一句都必須被抓到。
-    const planted = [
-      ["defensive_hold", "也不爭龍與巴龍，等對手露出破綻。"], ["defensive_hold", "龍、巴龍與外塔幾乎全部讓出，對手的優勢會持續擴大。"],
-      ["dragon_pit_macro", "隊伍在龍刷新前提早集結到龍坑附近。"], ["protect_core_scaling", "所有資源往射手傾斜。"],
-      ["mid_solo_split", "輔助保護射手。"], ["hard_engage_stack", "輔助與坦克留在隊伍中央準備先手。"],
-      ["support_river_control", "讓龍的爭奪每次都比對手早到一步。"], ["three_lane_pressure", "不入侵野區，所以拿不到野怪資源。"],
-      //  round 2 審查新抓到的四類
-      ["three_lane_pressure", "前期之後接戰意願回到標準，優勢不會自己延續。"], ["bot_duo_pressure", "前期之後接戰意願回到標準。"],
-      ["jungle_invasion", "目標是壓縮對手打野的野怪資源與發育空間。"],
-      ["hard_engage_stack", "輔助以保護隊友為主，遊走率提高。"], ["mid_solo_split", "中路離開時中塔就暴露給對手。"],
-      ["mid_solo_split", "帶線與支援兩邊都要顧，操作失誤會兩頭落空。"],
-    ];
-    const missed = planted.filter(([slug, s]) => copyViolations({ ...by(slug), desc: s, cons: "" }).length === 0);
-    ck("V2e 對照組：審查抓到的 14 句舊文案（round 1＋round 2）種回去，全部被抓到", missed.length === 0, missed.map(([s, t]) => `${s}:${t}`).join(" | "));
-    //  每條新規則各自有一個「只靠這條規則才抓得到」的對照（把其他規則清空後仍然失敗）
-    const only = (re, slug, s) => { const t = { ...by(slug), desc: s, cons: "" }; const text = s; const x = knobsOf(t.config);
-      return CLAIMS.some(([, r, cond]) => r.source === re.source && r.test(text) && !cond(x)); };
-    ck("V2e2 對照組：遊走規則用的是有效遊走率——hard_engage 的 roamRate 高於中性、但 roamRate×roamK 低於中性",
-      (() => { const x = knobsOf(by("hard_engage_stack").config); return x.k.roamRate > NEUTRAL.k.roamRate && effRoam(x) < effRoam(NEUTRAL); })()
-      && only(/遊走率(提高|明顯高於標準)/, "hard_engage_stack", "輔助以保護隊友為主，遊走率提高。"));
-    ck("V2e3 對照組：「回到標準」規則只看接戰偏移——aggression 高的模板後期偏移不是中性，所以會被抓",
-      returnViolation("前期之後接戰意願回到標準", knobsOf(by("three_lane_pressure").config)) && !returnViolation("前期之後接戰意願回到標準", NEUTRAL));
-    ck("V2f 對照組：乾淨文案不會被誤抓（現行 12 個模板零違規，且關鍵詞表確實有命中過）",
-      v2.every((t) => copyViolations(t).length === 0) && v2.filter((t) => CLAIMS.some(([, re]) => re.test(`${t.desc}${t.cons}`.replace(/並?沒有放棄/g, "")))).length >= 10);
-    //  語氣：玩家文案不得有數字、百分比或旋鈕行話
-    const JARGON = /[0-9０-９％%]|接戰意願|參龍意願|參團意願|推塔意願|抓人週期|機率|joinFight|Priority|knob|旋鈕|週期/;
-    ck("V2g 玩家文案沒有數字／百分比／旋鈕行話（接戰意願、抓人週期、機率…）", v2.every((t) => !JARGON.test(`${t.name}${t.desc}${t.cons}`)),
-      v2.filter((t) => JARGON.test(`${t.name}${t.desc}${t.cons}`)).map((t) => `${t.templateId}:${(`${t.desc}${t.cons}`.match(JARGON) || [""])[0]}`).join(","));
-    ck("V2g2 對照組：行話規則抓得到舊寫法", ["接戰意願回到標準", "約一成半機率", "抓人週期縮短", "dragonJoin 0.83"].every((s) => JARGON.test(s)));
-    ck("V2h 12 份文案彼此不同（開頭一句各異、cons 各異），不是同一個句型換名字", new Set(v2.map((t) => t.desc.slice(0, 8))).size === 12 && new Set(v2.map((t) => t.cons.slice(0, 8))).size === 12);
+  for (const [slug, s] of PLANTED) {
+    ck(`V2e 舊句子被抓到：${slug}「${s.slice(0, 22)}${s.length > 22 ? "…" : ""}」`, violationsFor(slug, s).length > 0);
   }
+  //  對照組二：每個主張家族各一句**真**的句子必須通過；同一句放到中性模板（std，全是 same）必須失敗——規則不空洞也不過寬。
+  const TRUE_CASES = [
+    ["three_lane_pressure", "上、中、下三路的站位都推得比平常更前面。"], ["defensive_hold", "上、中、下三路的站位全部往後退。"],
+    ["three_lane_pressure", "打野也比平常更勤快地出來抓人。"], ["defensive_hold", "打野抓人的次數明顯比平常少。"],
+    ["jungle_invasion", "之後打野抓人較偏向中路。"], ["jungle_invasion", "打野抓人較少偏向上路和下路。"],
+    ["jungle_invasion", "開局很可能先往對方的野區入侵，中單也會跟著上去。"], ["defensive_hold", "開局也更不會去入侵。"],
+    ["bot_duo_pressure", "隊友一起有危險時優先救射手。"], ["mid_solo_split", "隊友一起有危險時，輔助優先救中單。"],
+    ["dragon_pit_macro", "隊友有危險時出手救人的時機也比較早。"], ["support_roamer", "輔助離開下路去遊走的次數比平常多很多。"], ["dragon_pit_macro", "輔助待在下路的時間比平常久。"],
+    ["hard_engage_stack", "隊伍加入團戰的程度比平常高很多。"], ["dragon_pit_macro", "隊伍對龍的爭奪遠比平常更願意參與。"], ["hard_engage_stack", "對巴龍的爭奪也比平常更願意參與。"],
+    ["defensive_hold", "對龍的爭奪則比較少參與。"], ["hard_engage_stack", "撤退的時機比平常晚。"], ["protect_core_scaling", "撤退的時機比平常早。"],
+    ["hard_engage_stack", "投入團戰的門檻也比較低。"], ["defensive_hold", "投入團戰的門檻也比較高。"],
+    ["three_lane_pressure", "整場比賽隊伍都比較敢主動接戰，前期尤其明顯。"], ["mid_jungle_sync", "進入中期之後，隊伍更敢主動接戰。"],
+    ["protect_core_scaling", "前期不太主動接戰。"], ["protect_core_scaling", "到了後期，隊伍更敢主動接戰。"], ["hard_engage_stack", "整場比賽都比較敢主動接戰，中期最明顯。"],
+    ["top_solo_split", "上路單獨留在自己的線上推進，團戰爆發時多半也不離開。"], ["mid_solo_split", "中單在線上的時候不參加團戰，隊伍就少一個人。"],
+    ["standard_macro", "只在少數地方和標準打法不同。"],
+  ];
+  const ADVICE = ["適合有坦克的陣容。", "適合射手後期輸出強的時候。"];   // 使用情境建議：「坦克」不是機制，不得被誤殺
+  ck(`V2e2 每個家族的真句子都通過（${TRUE_CASES.length} 句，各自用有該方向的模板）`, TRUE_CASES.every(([slug, s]) => violationsFor(slug, s).length === 0),
+    TRUE_CASES.filter(([slug, s]) => violationsFor(slug, s).length > 0).map(([slug, s]) => `${slug}:${s}`).join(" | "));
+  ck("V2e3 同樣的真句子放到全是 same 的中性模板，全部失敗（規則不空洞；「只在少數地方不同」除外，它本來就對 std 為真）",
+    TRUE_CASES.filter(([, s]) => !/只在少數地方/.test(s)).every(([, s]) => copyViolationsOf(s, NEUTRAL_SHEET).length > 0));
+  ck("V2e4 使用情境句（含「坦克」）不被誤殺；IMPOSSIBLE 裡沒有 /每次/ 與 /坦克/", ADVICE.every((s) => copyViolationsOf(s, NEUTRAL_SHEET).length === 0) && !IMPOSSIBLE.some(([re]) => re.test("每次") || re.test("坦克")));
+  ck("V2e5 IMPOSSIBLE 每條都附缺少的機制說明",
+    IMPOSSIBLE.every(([re, why]) => re instanceof RegExp && typeof why === "string" && why.length > 10) && IMPOSSIBLE.length >= 10);
+  //  對照組三：幾條規則本身的行為
+  ck("V2e6 遊走規則用有效遊走率：hard_engage 的 roamRate 高於中性、但有效遊走率不高於中性 ⇒「輔助比較常離開下路」被抓",
+    (() => { const t = by("hard_engage_stack"); const k = toEngineTactic(t.config), n = toEngineTactic(Templates.TACTIC_TEMPLATES.std.config); return k.roamRate > n.roamRate; })()
+    && SHEET["v2.hard_engage_stack"]["support.roam"].dir === "same" && violationsFor("hard_engage_stack", "輔助比較常離開下路。").length > 0);
+  ck("V2e7 「回到平常」規則不需要「之後／後期」前綴：「打完就回到正常的打法」「回到一般的接戰傾向」在整場偏積極的模板上被抓；defensive_hold 的「後期接戰傾向大致回到平常」為真且通過",
+    violationsFor("jungle_invasion", "打完就回到正常的打法。").length > 0 && violationsFor("three_lane_pressure", "接戰的傾向回到一般的水準。").length > 0
+    && violationsFor("defensive_hold", "到了後期，接戰的傾向大致回到平常的水準。").length === 0 && violationsFor("defensive_hold", "到了前期，接戰的傾向大致回到平常的水準。").length > 0);
+  ck("V2e8 「後期才恢復積極」用淨值判斷：defensive_hold 的後期淨接戰接近中性（same），所以說「恢復積極」為假；protect_core_scaling 後期淨值偏高，說「更敢主動接戰」為真",
+    violationsFor("defensive_hold", "到了後期，隊伍更敢主動接戰。").length > 0 && violationsFor("protect_core_scaling", "到了後期，隊伍更敢主動接戰。").length === 0);
+  ck("V2e9 強度詞要幅度：dragon 只高一階的模板說「遠比平常更願意參與」被抓；standard_macro 說「高很多」被抓",
+    violationsFor("standard_macro", "隊伍對龍的爭奪遠比平常更願意參與。").length > 0 && violationsFor("standard_macro", "隊伍加入團戰的程度比平常高很多。").length > 0);
+  ck("V2e10 認不得的句子判違規（不是放行）", violationsFor("three_lane_pressure", "這套打法非常優雅。").length > 0);
+
+  //  語氣：玩家文案不得有數字、百分比或旋鈕行話
+  const JARGON = /[0-9０-９％%]|接戰意願|參龍意願|參團意願|推塔意願|抓人週期|機率|joinFight|Priority|knob|旋鈕|週期/;
+  ck("V2g 玩家文案沒有數字／百分比／旋鈕行話", v2.every((t) => !JARGON.test(`${t.name}${t.desc}${t.cons}`)),
+    v2.filter((t) => JARGON.test(`${t.name}${t.desc}${t.cons}`)).map((t) => `${t.templateId}:${(`${t.desc}${t.cons}`.match(JARGON) || [""])[0]}`).join(","));
+  ck("V2g2 對照組：行話規則抓得到舊寫法", ["接戰意願回到標準", "約一成半機率", "抓人週期縮短", "dragonJoin 0.83"].every((s) => JARGON.test(s)));
+
+  //  區分度：沒有任何一個完整句子出現在兩個以上的模板；任兩個模板的 desc 字元二連詞重疊（Jaccard）< 0.5
+  const sentencesOf = (t) => `${t.desc}${t.cons}`.split(/(?<=。)/).map((x) => x.trim()).filter(Boolean);
+  const bigrams = (s) => { const g = new Set(); for (let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i + 2)); return g; };
+  const jaccard = (a, b) => { const A = bigrams(a), B = bigrams(b); let i = 0; for (const x of A) if (B.has(x)) i++; return i / (A.size + B.size - i); };
+  const OVERLAP_MAX = 0.5, SENTENCE_MAX_TEMPLATES = 2;
+  const sentCount = new Map(); for (const t of v2) for (const s of new Set(sentencesOf(t))) sentCount.set(s, (sentCount.get(s) ?? 0) + 1);
+  const worstPair = (texts) => { let w = 0; for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) w = Math.max(w, jaccard(texts[i], texts[j])); return w; };
+  const worst = worstPair(v2.map((t) => t.desc));
+  ck(`V2h 區分度：沒有完整句子出現在超過 ${SENTENCE_MAX_TEMPLATES} 個模板；任兩份 desc 的字元二連詞重疊 < ${OVERLAP_MAX}`, [...sentCount.values()].every((n) => n <= SENTENCE_MAX_TEMPLATES) && worst < OVERLAP_MAX, `最大重疊 ${worst.toFixed(2)}`);
+  ck("V2h2 對照組：同一句貼進三個模板、或把 desc 複製一份，區分度檢查會失敗", (() => { const s = "輔助待在下路的時間比平常久。"; const c = new Map([[s, 3]]); return [...c.values()].some((n) => n > SENTENCE_MAX_TEMPLATES) && worstPair([v2[0].desc, v2[0].desc]) >= OVERLAP_MAX; })());
   ck("V2c 全部 21 個模板名稱互異（含 std 與 v2 的標準／均衡運營）、legacyTacticId 是經典 id",
     new Set(Templates.TACTIC_TEMPLATE_LIST.map((t) => t.name)).size === Templates.TACTIC_TEMPLATE_LIST.length && v2.every((t) => ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "std"].includes(t.legacyTacticId)));
   ck("V3 每個 v2 的 config 都是合法 MobaTacticConfig.v1，且 deep-frozen", v2.every((t) => validateMobaTacticConfig(t.config).ok && deepFrozen(t)),
