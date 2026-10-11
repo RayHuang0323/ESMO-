@@ -193,6 +193,13 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/battle/moba/matchAssemblerDeps.js",
   //  · MatchSetup 契約：哪些欄位合法、哪些被正規化／拒絕、生產／工具分界（tool_field_in_production）。
   "src/platform/contracts/matchSetup.js",
+  //  ── 2026-10-11（Phase 3a T8，moba-sim.v21 候選）：戰術變體的數值來源 ────────────────────────────────
+  //  · 覆蓋層資料（由 TacticVariant 原樣遷移）：`applyVariant` 讀它 ⇒ Live 戰術設定（activeMatch.config.tactic）⇒ toEngineTactic。
+  //    ⚠ 改任何一個 changedFields 數值＝改比賽結果，所以資料檔本身必須在清單內，而不只是 MobaTacticConfig.js。
+  "src/platform/tactics/tacticOverlays.js",
+  //  · `applyVariant`／`TACTIC_VARIANTS`：決定哪些欄位准被覆蓋（allowed／forbidden）與如何套用。以前不在清單內（既有缺口），此處補上。
+  //  （tacticTemplates.js／tacticPlan.js／capabilityRegistry.js 目前不是引擎輸入——Task 9 的 Resolver 接線時再加。）
+  "src/platform/mastery/tacticVariant.js",
 ]);
 
 /**
@@ -467,7 +474,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  由 tools/check_match_setup_3a.mjs 走三個真實包裝逐案驗證（G-A2 39/39；G-A1 三個 ruleset × 6 seeds 同 setup 多路徑結果相同）。
   //  ⚠ v20 指紋 050b3f66620f0f57 與 v1～v20 全表不變（gate V2 釘整表雜湊）；正式站仍為 v20；v21 發布前須 Owner 決定。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 5caac9332cdf1e21 未曾發布）。
-  "moba-sim.v21": "b6264e0fa16c3b2d",
+  //  T8（TacticPlan.v2／模板／覆蓋層）：三個 TacticVariant 的數值遷移到 tactics/tacticOverlays.js，tacticVariant.js 改為投影它；
+  //  語意清單新增這兩支（變體數值是 Live 戰術設定的來源，以前只靠 tacticVariant.js 的字面值而且不在清單內）。
+  //  行為不變：applyVariant 對 9 個戰術 × 9 種變體輸入（81 組）的輸出與遷移前逐位元相同（tools/check_tactic_plan_3a.mjs §O，
+  //  fixture 擷取自 a7adeb9）；LogicEngine、組裝器與所有 adapter 未改 ⇒ 不是語意變化，v20 golden 39 案維持逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 b6264e0fa16c3b2d 未曾發布）。
+  "moba-sim.v21": "e695aa910251481a",
 });
 
 export const isKnownSimulationVersion = (v) =>
