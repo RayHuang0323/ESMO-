@@ -9,7 +9,8 @@
 //  兩邊吃同一份重建 ⇒ 「輸入重建」不可能在兩支 gate 間悄悄分歧。
 // ============================================================================
 import { CHAMPIONS_100, heroById } from "../../src/data/heroDatabase.js";
-import { snapshotHashOf, SNAPSHOT_INPUTS } from "../../src/platform/contracts/squadSnapshot.js";
+import { snapshotHashOf, SNAPSHOT_INPUTS, snapshotCovers } from "../../src/platform/contracts/squadSnapshot.js";
+import { mobaTacticById } from "../../src/platform/contracts/MobaTacticConfig.js";
 import { fixtureSnapshot, FIXTURE_OPPONENTS } from "../../src/platform/challenge/fixtureOpponents.js";
 import { createDraftResult } from "../../src/platform/challenge/draftResult.js";
 import { assignDraft } from "../../src/battle/moba/mobaDraftAssignment.js";
@@ -31,6 +32,26 @@ export const withoutDraftPolicy = (snap) => {
   s.hash = snapshotHashOf(s);
   return s;
 };
+
+/**
+ * buildChallengeMatchSetup 的入參（與 runChallenge 的內部決定相同：快照宣告了才組）。
+ * Phase 3a T7 由 check_challenge_setup_3a 抽出，check_match_setup_3a 共用。
+ * @param {ReturnType<typeof challengeGoldenInputs>} v
+ * @param {boolean} withDraft  false ⇒ 不帶 draftResult（英雄層不組）
+ */
+export function challengeBuilderArgs(v, withDraft) {
+  const use = {
+    loadout: snapshotCovers(v.challenger, SNAPSHOT_INPUTS.heroLoadout) && snapshotCovers(v.defender, SNAPSHOT_INPUTS.heroLoadout),
+    stats: snapshotCovers(v.challenger, SNAPSHOT_INPUTS.playerStats) && snapshotCovers(v.defender, SNAPSHOT_INPUTS.playerStats),
+    tactic: snapshotCovers(v.challenger, SNAPSHOT_INPUTS.tactic) && snapshotCovers(v.defender, SNAPSHOT_INPUTS.tactic),
+  };
+  return {
+    seed: v.challenge.matchSeed, opponentKey: v.challenge.opponentKey ?? null,
+    challengerSnapshot: v.challenger, defenderSnapshot: v.defender, use,
+    tactics: use.tactic ? { blue: mobaTacticById(v.challenge.challengerTacticId), red: mobaTacticById(v.challenge.defenderTacticId) } : null,
+    draftResult: withDraft ? v.draftResult : null, heroOf: heroById,
+  };
+}
 
 /**
  * @param {{ id: string, params: { index: number, seed: number, draft: boolean, tacticIds: [string, string] } }} c  golden challenge 案例

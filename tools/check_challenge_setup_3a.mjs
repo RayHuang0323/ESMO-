@@ -27,7 +27,7 @@ import { createChallengeInstance } from "../src/platform/contracts/challengeInst
 import { SNAPSHOT_AUTHORITY } from "../src/platform/challenge/snapshotAuthority.js";
 import { matchSetupHash } from "../src/platform/contracts/matchSetup.js";
 import { createStreamHasher, finalDigest } from "./lib/matchGolden.mjs";
-import { challengeGoldenInputs } from "./lib/challengeGolden.mjs";
+import { challengeGoldenInputs, challengeBuilderArgs } from "./lib/challengeGolden.mjs";
 import { mobaTacticById, toEngineTactic, toEngineTacticIdentity, MOBA_TACTIC_VERSION } from "../src/platform/contracts/MobaTacticConfig.js";
 import { sideInputs } from "../src/platform/challenge/challengeMatchSetup.js";
 import { stripComments } from "./lib/stripComments.mjs";
@@ -150,20 +150,8 @@ console.log(`  逐位元重現（經真實 runChallenge）：${summary[0]}/${sum
         && a.rulesetId === "challenge.v20" && b.rulesetId === "challenge.v20";
     })());
 }
-/** builder 的入參（與 runner 的內部決定相同：宣告了才組）。 */
-function builderArgs(v, withDraft) {
-  const use = {
-    loadout: snapshotCovers(v.challenger, SNAPSHOT_INPUTS.heroLoadout) && snapshotCovers(v.defender, SNAPSHOT_INPUTS.heroLoadout),
-    stats: snapshotCovers(v.challenger, SNAPSHOT_INPUTS.playerStats) && snapshotCovers(v.defender, SNAPSHOT_INPUTS.playerStats),
-    tactic: snapshotCovers(v.challenger, SNAPSHOT_INPUTS.tactic) && snapshotCovers(v.defender, SNAPSHOT_INPUTS.tactic),
-  };
-  return {
-    seed: v.challenge.matchSeed, opponentKey: v.challenge.opponentKey ?? null,
-    challengerSnapshot: v.challenger, defenderSnapshot: v.defender, use,
-    tactics: use.tactic ? { blue: mobaTacticById(v.challenge.challengerTacticId), red: mobaTacticById(v.challenge.defenderTacticId) } : null,
-    draftResult: withDraft ? v.draftResult : null, heroOf: heroById,
-  };
-}
+/** builder 的入參（與 runner 的內部決定相同：宣告了才組）。Phase 3a T7：抽到 tools/lib/challengeGolden.mjs 與 check_match_setup_3a 共用。 */
+function builderArgs(v, withDraft) { return challengeBuilderArgs(v, withDraft); }
 
 // ── B：builder 本身的性質 ────────────────────────────────────────────────────────────────
 {

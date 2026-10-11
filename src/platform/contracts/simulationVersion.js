@@ -175,6 +175,24 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/platform/challenge/challengeMatchSetup.js",
   //  · 組裝器 deps 的 adapter 清單（唯一一份；Live 的 matchAssemblerDeps.js 只是其上補預設查表的薄層）。
   "src/battle/moba/matchAssemblerDepsCore.js",
+  //  ── 2026-10-11（Phase 3a T7，moba-sim.v21 候選）：組裝路徑上其餘「決定引擎輸入」的模組 ───────────────
+  //  判準同上：**改它會不會讓同一份輸入跑出不同結果**。前面幾輪只收了組裝器、ruleset 與 Challenge builder，
+  //  Live 這一側與 deps 清單上的 adapter 還留在清單外——現在三個模式共用同一個組裝器，這個洞就不能留。
+  //  tools/check_match_setup_3a.mjs §V4 會自動檢查：組裝入口模組的每一條相對 import 都必須在這份清單裡（或是有理由的例外）。
+  //  · 出裝引擎 adapter（`toEngineItems`）：英雄陣容＋出裝策略 → configureItems 的設定（含各席位的購買序）。
+  "src/battle/moba/items/itemsEngineAdapter.js",
+  //  · `matchItemsConfig`／`normalizeBuildStrategy`：Live 的出裝設定與策略名稱正規化（deps 清單上的 adapter）。
+  "src/battle/moba/items/buildStrategyPrep.js",
+  //  · `BUILD_STRATEGIES`：組裝器驗證 buildStrategy 用的詞彙，也是上面兩支與出裝 runtime 的購買序來源。
+  "src/battle/moba/items/buildPolicy.js",
+  //  · `buildPlayerStatSlots`／`applyFatigueToLoadout`：Live 的選手素質席位與疲勞後 loadout（直接成為 configurePlayers／建構子輸入）。
+  "src/battle/moba/mobaRosterAdapter.js",
+  //  · Live 的 MatchSetup builder（seed 正規化、天賦選擇與出裝策略的濾除、紅方戰術來源）。
+  "src/battle/moba/liveMatchSetup.js",
+  //  · Live 用的 deps 層（在 core 上補預設查表 heroById 與模組內單例）。
+  "src/battle/moba/matchAssemblerDeps.js",
+  //  · MatchSetup 契約：哪些欄位合法、哪些被正規化／拒絕、生產／工具分界（tool_field_in_production）。
+  "src/platform/contracts/matchSetup.js",
 ]);
 
 /**
@@ -443,7 +461,13 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  T6 fix 1：tool 規則集只容忍引擎缺 v20 runner 有護欄的三個方法（TOOL_TOLERATED_ENGINE_METHODS）；tool 的技能層把
   //  selectBattleTalents 的結果原樣交給 toEngineHeroSkills（production 空選擇仍 ⇒ null）。結果與 v20 golden 逐位元相同。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 fe407dd69bda620b 未曾發布）。
-  "moba-sim.v21": "5caac9332cdf1e21",
+  //  T7（跨模式一致 gate，3a-A 架構完成點）：語意清單再收 7 支組裝路徑上的模組（itemsEngineAdapter／buildStrategyPrep／buildPolicy／
+  //  mobaRosterAdapter／liveMatchSetup／matchAssemblerDeps／matchSetup.js；理由見清單內註解）。只增加清單、沒有改任何一支的程式碼
+  //  ⇒ 不是語意變化：Live／Challenge／runner 的結果與 v20 golden 39 案（live 9、challenge 12、runner 18）逐位元相同——
+  //  由 tools/check_match_setup_3a.mjs 走三個真實包裝逐案驗證（G-A2 39/39；G-A1 三個 ruleset × 6 seeds 同 setup 多路徑結果相同）。
+  //  ⚠ v20 指紋 050b3f66620f0f57 與 v1～v20 全表不變（gate V2 釘整表雜湊）；正式站仍為 v20；v21 發布前須 Owner 決定。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 5caac9332cdf1e21 未曾發布）。
+  "moba-sim.v21": "b6264e0fa16c3b2d",
 });
 
 export const isKnownSimulationVersion = (v) =>

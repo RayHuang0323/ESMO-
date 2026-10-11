@@ -161,6 +161,7 @@ const SEGMENTS = [
   { id: "fairness_p0d", script: "tools/check_moba_nexus_wave_p0d.mjs", args: ["--out=tmp/hero-skills/seed608.json"], shape: /"pass": true/, note: "P0-D seed608" },
   { id: "simulation_version", script: "tools/check_simulation_version_gate.mjs", shape: /PASS|通過/, note: "Simulation fingerprint" },
   { id: "live_setup_3a", script: "tools/check_live_setup_3a.mjs", shape: /Live Setup 3a：\d+\/\d+ PASS/, note: "Phase 3a T4：Live hook → MatchSetup → 唯一組裝器（golden live 9 案逐位元、舊存檔恢復、規則集壽命、共用 deps）" },
+  { id: "match_setup_3a", script: "tools/check_match_setup_3a.mjs", shape: /Match Setup 3a：\d+\/\d+ PASS/, note: "Phase 3a T7：跨模式一致（golden 39 案走真實包裝、同 setup 多路徑、RS-1、正式組裝掃描、語意清單；153 檢查，約 5 分鐘）" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

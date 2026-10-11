@@ -50,6 +50,7 @@ import { matchItemsConfig, normalizeBuildStrategy } from "../src/battle/moba/ite
 import { stableStringify, stableHash } from "../src/platform/contracts/squadSnapshot.js";
 import { runAndHash, engineStreamHash, finalDigest, fnv, createStreamHasher } from "./lib/matchGolden.mjs";
 import { stripComments } from "./lib/stripComments.mjs";
+import { hookSeed, appRoster, goldenLiveOpts, goldenLiveCtx } from "./lib/liveGolden.mjs";
 import * as StreamSrc from "../src/battle/moba/debug/engineStreamHash.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
 
@@ -86,10 +87,7 @@ const firstDiff = (got, want) => {
 // ── 「hook 會怎麼呼叫」：hook 只決定 seed 的來源並交出**原始值**（session seed 或時鐘值）；
 //    正規化在 builder（normalizeLiveSeed）。這裡不帶任何一份正規化算式——預期值由 golden ctor.seed 與
 //    下方的 v20 hook 複本（獨立的對照組）提供。fallback＝hook 讀到的時鐘值。
-const hookSeed = (opts, fallback = 0x1234) => {
-  const authoritative = Number.isFinite(opts.seed);
-  return { seed: authoritative ? opts.seed : fallback, seedSource: authoritative ? "session" : "local" };
-};
+//    （hookSeed／appRoster／goldenLiveOpts 於 Phase 3a T7 抽到 tools/lib/liveGolden.mjs，check_match_setup_3a 共用。）
 function liveBuild(opts, { players, lineup, loadout = G.defaultLoadout, flags = FLAGS, ruleset = null, dev = null, allowTool = false, fallbackSeed } = {}) {
   const { seed, seedSource } = hookSeed(opts, fallbackSeed);
   const rs = ruleset ?? resolveLiveRuleset({ flags, dev, allowTool }).ruleset;
@@ -99,9 +97,6 @@ function liveBuild(opts, { players, lineup, loadout = G.defaultLoadout, flags = 
     opponentTeam: opts.opponentId ? aiTeamById(opts.opponentId) : null,
   });
 }
-/** golden 錄的是 { heroId, spells }；app（GameView → draftRoster）的列另外帶 player／hero（中文名）／lane。 */
-const appRow = (seat, r) => ({ player: `P-${seat}`, heroId: r.heroId, hero: heroById(r.heroId)?.zh ?? r.heroId, lane: null, spells: r.spells });
-const appRoster = (rows) => Object.fromEntries(Object.entries(rows).map(([s, r]) => [s, appRow(s, r)]));
 
 // ── v20 hook 的 Node 複本（src/useLocalServer.js @ c4b72a5 :147-295，逐行；DEV 參數以 dev 傳入）──────
 function v20LiveStart(opts, { players, lineup, loadout: heroLoadout = G.defaultLoadout, flags = FLAGS, dev = null, fallbackSeed = 0x1234 }) {
@@ -167,19 +162,8 @@ function newPath(opts, ctx) {
 // ════ G：golden live 案 ═════════════════════════════════════════════════════
 const liveCases = golden.cases.filter((c) => c.path === "live");
 ck("G0 golden 有 9 個 live 案（含 no-tactic／no-players／no-roster）", liveCases.length === 9 && ["live-notactic-13", "live-noplayers-17", "live-noroster-21"].every((id) => liveCases.some((c) => c.id === id)));
-const goldenOpts = (c) => {
-  const p = c.params;
-  return {
-    seed: c.seed,
-    roster: p.noRoster ? undefined : appRoster(G.liveRosters[String(c.seed)]),
-    tactic: p.tacticId ? mobaTacticById(p.tacticId) : undefined,
-    buildStrategy: p.buildStrategy,
-    talentSelections: c.liveOpts.talentSelections ?? undefined,
-    opponentId: c.liveOpts.opponentId,
-    sessionId: `golden-${c.id}`, mode: "moba",
-  };
-};
-const goldenCtx = (c) => (c.params.noPlayers ? { players: [], lineup: null } : { players: G.players, lineup: G.lineup });
+const goldenOpts = (c) => goldenLiveOpts(c, G);
+const goldenCtx = (c) => goldenLiveCtx(c, G);
 let gOk = 0;
 for (const c of liveCases) {
   const opts = goldenOpts(c);

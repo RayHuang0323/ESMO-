@@ -30,23 +30,16 @@ import { fileURLToPath } from "node:url";
 import { assembleMatch } from "../src/battle/moba/matchAssembler.js";
 import { buildMatchAssemblerDepsFrom } from "../src/battle/moba/matchAssemblerDepsCore.js";
 import { createMatchSetup, matchSetupHash } from "../src/platform/contracts/matchSetup.js";
-import { rulesetById, resolveRulesetForMode, MATCH_RULESETS } from "../src/platform/contracts/matchRuleset.js";
+import { MATCH_RULESETS } from "../src/platform/contracts/matchRuleset.js";
 import { mobaTacticById } from "../src/platform/contracts/MobaTacticConfig.js";
-import { stableStringify, stableHash, snapshotHashOf, SNAPSHOT_INPUTS, SNAPSHOT_SEATS, snapshotCovers } from "../src/platform/contracts/squadSnapshot.js";
+import { stableStringify, stableHash } from "../src/platform/contracts/squadSnapshot.js";
 import { LogicEngine } from "../src/LogicEngine.js";
-import { CHAMPIONS_100, heroById } from "../src/data/heroDatabase.js";
+import { heroById } from "../src/data/heroDatabase.js";
 import { toEngineHeroSkills } from "../src/battle/moba/skills/heroSkillGameplay.js";
 import { selectBattleTalents, battleTalentOptions } from "../src/battle/moba/talents/heroBattleTalents.js";
 import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "../src/data/heroCombatArchetypes.js";
-import { applyFatigueToLoadout, buildPlayerStatSlots } from "../src/battle/moba/mobaRosterAdapter.js";
-import { buildLoadout as buildHeroLoadout } from "../src/battle/moba/mobaHeroLoadout.js";
-import { fixtureSnapshot, FIXTURE_OPPONENTS } from "../src/platform/challenge/fixtureOpponents.js";
-import { createDraftResult, draftResultToRoster } from "../src/platform/challenge/draftResult.js";
-import { assignDraft } from "../src/battle/moba/mobaDraftAssignment.js";
-import { heroTags } from "../src/data/heroClassification.js";
-import { createChallengeInstance } from "../src/platform/contracts/challengeInstance.js";
-import { SNAPSHOT_AUTHORITY } from "../src/platform/challenge/snapshotAuthority.js";
 import { runAndHash } from "./lib/matchGolden.mjs";
+import { makeGoldenEncoder } from "./lib/matchGoldenSetup.mjs";
 import { stripComments } from "./lib/stripComments.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -83,91 +76,8 @@ const probedAssemble = (setup, deps = DEPS) => {
 };
 
 // ── Setup 編碼（結構同 Task 2 encodeCase；值為 v20 實際引擎輸入）──────────────────────
-const career = resolveRulesetForMode({ mode: "career", flags: golden.featureFlags });
-const challengeRs = rulesetById("challenge.v20");
-const toolRs = rulesetById("balanceTool.v20");
-const OFF_SKILLS = { heroSkills: false, heroPassives: false, heroPowerCurve: false, battleTalents: false, items: false };
-const legacy = (id) => ({ kind: "legacy", config: mobaTacticById(id) });
-const plainRoster = (r) => Object.fromEntries(Object.entries(r).map(([s, row]) => [s, { heroId: row.heroId, ...(Array.isArray(row.spells) ? { spells: row.spells } : {}) }]));
-
-// Challenge 輸入重建（與 capture 的 challengeInputs 相同步驟）
-const POOL = CHAMPIONS_100.map((h) => h.id).sort();
-const laneOf = (id) => heroById(id)?.lane ?? null;
-const FIXTURE_KEYS = FIXTURE_OPPONENTS.map((o) => o.key);
-const withTactic = (snap, tacticId) => { const s = { ...snap, standingOrders: { ...snap.standingOrders, tacticId } }; s.hash = snapshotHashOf(s); return s; };
-const withoutDraftPolicy = (snap) => { const s = { ...snap, capturedInputs: snap.capturedInputs.filter((x) => x !== SNAPSHOT_INPUTS.draftPolicy) }; s.hash = snapshotHashOf(s); return s; };
-const toRedSeat = (seat) => `r${seat.slice(1)}`;
-const sideInputs = (snapshot, side) => {
-  const slots = [], loadout = {};
-  for (const seat of SNAPSHOT_SEATS) {
-    const engineSeat = side === "red" ? toRedSeat(seat) : seat;
-    slots.push({ id: engineSeat, playerId: snapshot.seats.find((s) => s.seat === seat)?.playerId ?? null, stats: snapshot.combat.stats[seat] });
-    loadout[engineSeat] = { ...snapshot.combat.loadout[seat] };
-  }
-  return { slots, loadout };
-};
-function challengeSetupInput(c) {
-  const p = c.params;
-  const keyA = FIXTURE_KEYS[p.index % FIXTURE_KEYS.length], keyB = FIXTURE_KEYS[(p.index + 2) % FIXTURE_KEYS.length];
-  let a = withTactic(fixtureSnapshot(keyA, { playerMasteryLevel: 1 }).snapshot, p.tacticIds[0]);
-  let d = withTactic(fixtureSnapshot(keyB, { playerMasteryLevel: 1 }).snapshot, p.tacticIds[1]);
-  if (!p.draft) { a = withoutDraftPolicy(a); d = withoutDraftPolicy(d); }
-  let draftResult = null;
-  if (p.draft) {
-    const r = createDraftResult({ challengerActions: [], defenderPolicy: d.standingOrders.draftPolicy, challengerPolicy: a.standingOrders.draftPolicy,
-      pool: POOL, challengerSnapshot: a, defenderSnapshot: d, assign: assignDraft, tagsOf: heroTags, heroOf: heroById, laneOf });
-    if (!r.ok) throw new Error(`draft failed for ${c.id}`);
-    draftResult = r.draft;
-  }
-  const inst = createChallengeInstance({ challenger: a, defender: d, challengerTacticId: p.tacticIds[0], seedSource: p.seed, createdAt: 1757000000000,
-    issuedBy: SNAPSHOT_AUTHORITY.id, nonce: `golden-${c.id}`, opponentKey: keyB, draftResult });
-  if (!inst.ok) throw new Error(`challenge instance failed for ${c.id}`);
-  const ch = inst.challenge;
-  const covers = (inp) => snapshotCovers(a, inp) && snapshotCovers(d, inp);
-  const blue = sideInputs(a, "blue"), red = sideInputs(d, "red");
-  let roster = null;
-  if (draftResult) {
-    const withHero = Object.fromEntries(Object.entries(draftResultToRoster(draftResult)).map(([s, v]) => [s, { ...v, hero: heroById(v.heroId) ?? null }]));
-    const spells = buildHeroLoadout(withHero, heroById);
-    roster = Object.fromEntries(Object.keys(withHero).map((s) => [s, { heroId: withHero[s].heroId, spells: spells[s].spells }]));
-  }
-  return {
-    ruleset: challengeRs, seed: ch.matchSeed,
-    loadout: covers(SNAPSHOT_INPUTS.heroLoadout) ? { ...blue.loadout, ...red.loadout } : null,
-    playerSlots: covers(SNAPSHOT_INPUTS.playerStats) ? { blue: blue.slots, red: red.slots } : null,
-    roster,
-    tactic: covers(SNAPSHOT_INPUTS.tactic) ? { blue: legacy(ch.challengerTacticId), red: legacy(ch.defenderTacticId) } : null,
-    meta: { sessionId: null, mode: "challenge", opponentId: keyB, seedSource: "challenge" },
-  };
-}
-
-function encodeCase(c) {
-  const p = c.params;
-  if (c.path === "live") {
-    const players = p.noPlayers ? [] : G.players, lineup = p.noPlayers ? null : G.lineup;
-    return {
-      ruleset: career, seed: c.ctor.seed,
-      loadout: applyFatigueToLoadout(G.defaultLoadout, players, lineup),
-      playerSlots: { blue: buildPlayerStatSlots(players, "blue", lineup), red: [] },
-      roster: p.noRoster ? null : plainRoster(G.liveRosters[String(c.seed)]),
-      talentSelections: c.liveOpts.talentSelections, buildStrategy: c.live.buildStrategy,
-      tactic: { blue: p.tacticId ? legacy(p.tacticId) : null, red: c.live.redTacticId === "std" ? { kind: "std" } : legacy(c.live.redTacticId) },
-      meta: { sessionId: null, mode: "career", opponentId: c.liveOpts.opponentId, seedSource: "session" },
-    };
-  }
-  if (c.path === "challenge") return challengeSetupInput(c);
-  //  runner：策略側由 params 推導（runner:146-151），不讀 golden features（避免自我驗證）
-  let itemsStrategies;
-  if (p.config !== "off") {
-    const side = p.seed % 2 === 0 ? "blue" : "red";
-    itemsStrategies = p.config === "standard" ? { blue: "standard", red: "standard" }
-      : { blue: side === "blue" ? p.config : "standard", red: side === "red" ? p.config : "standard" };
-  }
-  const ruleset = p.skills === false ? Object.freeze({ ...toolRs, layers: Object.freeze({ ...toolRs.layers, ...OFF_SKILLS }) }) : toolRs;
-  return { ruleset, seed: c.seed, roster: plainRoster(G.runnerRosters[String(c.seed)]),
-    tactic: { blue: { kind: "std" }, red: { kind: "std" } }, ...(itemsStrategies ? { tool: { itemsStrategies } } : {}),
-    meta: { sessionId: null, mode: "balance", opponentId: null, seedSource: "tool" } };
-}
+//  Phase 3a T7：編碼抽到 tools/lib/matchGoldenSetup.mjs（check_match_setup_3a 的「手編 setup」吃同一份）。
+const { encodeCase, career, toolRs, legacy, plainRoster } = makeGoldenEncoder(golden);
 
 const deepFrozen = (o) => !o || typeof o !== "object" || (Object.isFrozen(o) && Object.values(o).every(deepFrozen));
 const firstDiff = (got, want) => {

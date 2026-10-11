@@ -126,7 +126,11 @@ ck("H2 UTF-8 位元組（非 UTF-16 碼元）：中文字串向量由獨立實�
 ck("H3 setup 雜湊為 stableStringify（去 meta）的 FNV-1a 64", (() => { const { meta, ...rest } = s1.setup; return h1 === fnv1a64Hex(stableStringify(rest)); })());
 ck("D4 matchSetup.js 不 import heroDatabase", !/heroDatabase|heroImages/.test(fs.readFileSync(new URL("../src/platform/contracts/matchSetup.js", import.meta.url), "utf8").replace(/\/\/.*$/gm, "")));
 ck("D5 matchSetup.js 無 React/zustand/localStorage/Date/Math.random", !/\b(react|zustand|localStorage|Date\.now|Math\.random|performance\.now)\b/.test(fs.readFileSync(new URL("../src/platform/contracts/matchSetup.js", import.meta.url), "utf8").replace(/\/\/.*$/gm, "")));
-ck("D6 matchSetup.js 不在 SIMULATION_SEMANTICS_FILES（清單非空且不含它）", Array.isArray(SIMULATION_SEMANTICS_FILES) && SIMULATION_SEMANTICS_FILES.length > 5 && !SIMULATION_SEMANTICS_FILES.includes("src/platform/contracts/matchSetup.js") && !SIMULATION_SEMANTICS_FILES.some((f) => /matchSetup/.test(f)));
+//  D6（Phase 3a T7 改向）：Task 2 時 setup 只是「描述」，不進模擬 ⇒ 不收；Task 4–6 之後三個模式的引擎輸入都由它建出來
+//  （正規化、拒絕、生產／工具分界），改它就可能改變同一份輸入的結果 ⇒ 現在必須收（Owner 於 T7 裁定）。
+//  一樣釘兩側：清單非空；matchSetup.js 在其中；Live／Challenge 的 builder 檔（名稱含 MatchSetup）也都在。
+ck("D6 matchSetup.js 在 SIMULATION_SEMANTICS_FILES（清單非空且含它；Live／Challenge builder 也在）", Array.isArray(SIMULATION_SEMANTICS_FILES) && SIMULATION_SEMANTICS_FILES.length > 5 && SIMULATION_SEMANTICS_FILES.includes("src/platform/contracts/matchSetup.js")
+  && SIMULATION_SEMANTICS_FILES.includes("src/battle/moba/liveMatchSetup.js") && SIMULATION_SEMANTICS_FILES.includes("src/platform/challenge/challengeMatchSetup.js"));
 
 // 玩家素質邊與 ruleset 一致
 ck("P1 career 可無 playerSlots（golden live-noplayers）；空 slots 正規化為 null", createMatchSetup(careerInput({ playerSlots: null })).ok && createMatchSetup(careerInput({ playerSlots: { blue: [], red: [] } })).setup.playerSlots === null);

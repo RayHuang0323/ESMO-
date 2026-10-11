@@ -455,6 +455,9 @@ const COMPS = {
   const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/battle/moba/matchAssembler.js"
     || (f === "src/battle/moba/matchAssemblerDepsCore.js" && coreItemImports.join("|") === "buildStrategyPrep.js:matchItemsConfig|itemsEngineAdapter.js:toEngineItems")
     || (f === "src/battle/moba/liveMatchSetup.js" && lmsItemImports.length === 1 && lmsItemImports[0] === "buildStrategyPrep.js:normalizeBuildStrategy")
+    //  Phase 3a T7：simulationVersion.js 的語意檔案清單**以字串列出**三支 items 檔路徑（不是 import）。
+    //  釘死「只是字串」：它不得真的 `from ".../items/..."` import 任何 items 模組（stripComments 之後再判）。
+    || (f === "src/platform/contracts/simulationVersion.js" && !/\bfrom\s*["'][^"']*\/items\//.test(stripComments(read(f))))
     || f === "src/battle/ui/BattleObserverHUD.jsx" || f === "src/battle/ui/BattleHeroSheet.jsx"
     || f === "src/screens/moba/TacticScreen.jsx" || f === "src/battle/moba/replay/replayBuffer.js" || f === "src/screens/moba/MobaReplayScreen.jsx"
     //  ⚠ 2026-09-22（Battle UX hotfix）：`src/battle/moba/itemInfo.js` 是裝備資訊卡的**唯讀 selector**
@@ -495,7 +498,14 @@ const COMPS = {
   const simVer = read("src/platform/contracts/simulationVersion.js");
   const semanticsList = simVer.slice(simVer.indexOf("export const SIMULATION_SEMANTICS_FILES"), simVer.indexOf("]);", simVer.indexOf("export const SIMULATION_SEMANTICS_FILES")));
   const currentSimVersion = simVer.match(/MOBA_SIMULATION_VERSION = "([^"]+)"/)?.[1] ?? "";
-  ck("G13", `模擬版本契約合法（${currentSimVersion}），items 模組未列入語意清單（正式輸入到不了它們）`, /^moba-sim\.v\d+$/.test(currentSimVersion) && !/moba\/items/.test(semanticsList));
+  //  Phase 3a T7 改向：原斷言「items 模組一個都不在語意清單（正式輸入到不了它們）」在 Live 經唯一組裝器呼叫 configureItems 之後已不成立
+  //  （itemsV1 正式預設 ON，featureFlags.js 的註解早就寫明那一天要把裝備模組列入清單）。
+  //  新斷言一樣釘兩側：組裝路徑上的三支 items 檔（adapter／策略準備／策略詞彙）**恰好**這三支在清單裡；
+  //  純 runtime／目錄／經濟／UI 選擇器（itemsEngineRuntime、itemCatalog、itemEconomy…）仍不在清單（刻意不擴張，見 simulationVersion.js 殘留缺口說明）。
+  const itemsInList = [...semanticsList.matchAll(/"(src\/[^"]*moba\/items\/[^"]+)"/g)].map((m) => m[1]).sort();
+  const T7_ITEMS = ["src/battle/moba/items/buildPolicy.js", "src/battle/moba/items/buildStrategyPrep.js", "src/battle/moba/items/itemsEngineAdapter.js"];
+  ck("G13", `模擬版本契約合法（${currentSimVersion}），語意清單內的 items 模組恰為組裝路徑上的三支（adapter／策略準備／策略詞彙）`,
+    /^moba-sim\.v\d+$/.test(currentSimVersion) && JSON.stringify(itemsInList) === JSON.stringify(T7_ITEMS), itemsInList.join(","));
 }
 
 const byGate = {};
