@@ -243,7 +243,7 @@ if (Templates) {
     mid_jungle_sync: ["中期控圖", "中野聯動"], support_river_control: ["中期控圖", "輔助遊走控河道"], dragon_pit_macro: ["中期控圖", "龍坑運營"],
     top_solo_split: ["分推牽制", "上路單帶（四一分推）"], mid_solo_split: ["分推牽制", "中路單帶"],
     hard_engage_stack: ["團戰決勝", "抱團強開"], protect_core_scaling: ["團戰決勝", "保核心拖後期"],
-    standard_macro: ["穩健運營", "標準運營"], defensive_hold: ["穩健運營", "劣勢穩守"],
+    standard_macro: ["穩健運營", "均衡運營"], defensive_hold: ["穩健運營", "劣勢穩守"],
   };
   ck("V1 12 個 v2 模板，id／分類／名稱與 brief 一致", v2.length === 12 && J(v2.map((t) => t.templateId).sort()) === J(Object.keys(EXPECT).map((s) => `v2.${s}`).sort())
     && v2.every((t) => EXPECT[t.templateId.slice(3)][0] === t.category && EXPECT[t.templateId.slice(3)][1] === t.name));
@@ -251,7 +251,55 @@ if (Templates) {
   ck("V2 每個模板有 category／name／desc／cons，且是繁體中文、說明有實質內容（desc≥60 字、cons≥30 字、兩者不同）",
     v2.every((t) => [t.category, t.name, t.desc, t.cons].every((s) => typeof s === "string" && CJK.test(s)) && t.desc.length >= 60 && t.cons.length >= 30 && t.desc !== t.cons));
   ck("V2b 文案裡沒有未實作系統的承諾（視野／預示者／先鋒／Buff）", v2.every((t) => !/視野|預示者|先鋒|Buff|buff/.test(t.desc + t.cons)));
-  ck("V2c 名稱互異、legacyTacticId 是經典 id", new Set(v2.map((t) => t.name)).size === 12 && v2.every((t) => ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "std"].includes(t.legacyTacticId)));
+
+  //  文案只能說旋鈕真的做的事：關鍵詞 ⇒ 旋鈕條件（不是全面審查，只擋明確的過度承諾）。
+  const knobsOf = (cfg) => ({ k: toEngineTactic(cfg), i: toEngineTacticIdentity(cfg), cfg });
+  const NEUTRAL = knobsOf(Templates.TACTIC_TEMPLATES.std.config);
+  const ALLK = Templates.TACTIC_TEMPLATE_LIST.map((t) => knobsOf(t.config));
+  const MAXJOIN = Math.max(...ALLK.map((x) => x.k.joinFight)), MAXDRG = Math.max(...ALLK.map((x) => x.k.dragonJoin));
+  const MARGIN = 0.1;   // 「讓出／不爭」龍：dragonJoin 必須比中性低至少這麼多
+  const CLAIMS = [   // [說明, 文案命中的正則, 命中時旋鈕必須成立的條件]
+    ["說不入侵 ⇒ 入侵機率必須為 0", /不入侵|不會入侵/, (x) => x.k.invadeChance === 0],
+    ["提到入侵 ⇒ 打野重心是入侵，或入侵機率高於中性", /(?<!不)入侵/, (x) => x.cfg.lanePlan.jungle === "invade" || x.k.invadeChance > NEUTRAL.k.invadeChance],
+    ["保護射手 ⇒ carryPriority=adc", /保護射手|射手為優先保護/, (x) => x.cfg.economy.carryPriority === "adc"],
+    ["照看／保護中單 ⇒ carryPriority=mid", /照看中單|保護中單|保護中路/, (x) => x.cfg.economy.carryPriority === "mid"],
+    ["讓出／放棄／不爭 龍 ⇒ dragonJoin 比中性低至少 0.10", /(?<!沒有)(讓出|放棄|不爭)[^，。；]{0,6}龍|龍[^，。；]{0,12}(?<!沒有)(讓出|放棄)/, (x) => x.k.dragonJoin <= NEUTRAL.k.dragonJoin - MARGIN],
+    ["參團意願最高 ⇒ joinFight 是全模板最大值", /參團意願是所有模板中最高/, (x) => x.k.joinFight === MAXJOIN],
+    ["爭龍意願最高 ⇒ dragonJoin 是全模板最大值", /爭龍的意願很高[^，。]*並列最高/, (x) => x.k.dragonJoin === MAXDRG],
+    ["抓人週期縮短 ⇒ gankInterval 小於中性", /抓人週期(縮短|較短)/, (x) => x.k.gankInterval < NEUTRAL.k.gankInterval],
+    ["抓人週期拉長 ⇒ gankInterval 大於中性", /抓人週期拉長/, (x) => x.k.gankInterval > NEUTRAL.k.gankInterval],
+    ["很少出來抓人 ⇒ 抓人週期係數>1 且各路權重<1", /很少出來抓人/, (x) => x.i.gankIntervalK > 1 && Object.values(x.k.gankWeights).every((w) => w < 1)],
+    ["撤退較早 ⇒ retreatAt 高於中性", /撤退時機(較早|略早)/, (x) => x.k.retreatAt > NEUTRAL.k.retreatAt],
+    ["撤退較晚 ⇒ retreatAt 低於中性", /撤退(時機(偏晚|只比標準略晚)|偏晚)|較晚撤退/, (x) => x.k.retreatAt < NEUTRAL.k.retreatAt],
+    ["遊走率提高 ⇒ roamRate 高於中性", /遊走率(提高|明顯高於標準)/, (x) => x.k.roamRate > NEUTRAL.k.roamRate],
+    ["推塔意願低 ⇒ siegeBias 為負", /推塔意願(低於標準|偏低|低)/, (x) => x.i.siegeBias < 0],
+    ["帶線 ⇒ 有 splitLane 且機率高", /帶線機率高/, (x) => x.k.splitLane !== null && x.k.splitPush >= 0.5],
+  ];
+  //  沒有任何旋鈕做得到的說法：出現就是過度承諾（無條件違規）
+  const IMPOSSIBLE = [/龍刷新前/, /提早集結/, /所有資源/, /每次/, /早到一步/, /留在隊伍中央/, /準備先手/, /坦克/];
+  const copyViolations = (t, cfg = t.config) => {
+    const text = `${t.desc}${t.cons}`.replace(/並?沒有放棄/g, "");
+    const x = knobsOf(cfg);
+    return [...CLAIMS.filter(([, re, cond]) => re.test(text) && !cond(x)).map(([w]) => w),
+      ...IMPOSSIBLE.filter((re) => re.test(text)).map((re) => `無旋鈕支撐的說法 ${re}`)];
+  };
+  ck("V2d 文案與旋鈕一致：每個 v2 模板的說法都有旋鈕條件支撐（關鍵詞表）", v2.every((t) => copyViolations(t).length === 0),
+    v2.flatMap((t) => copyViolations(t).map((m) => `${t.templateId}:${m}`)).join("; "));
+  {
+    const by = (slug) => v2.find((t) => t.templateId === `v2.${slug}`);
+    const planted = [   // 對照組：把審查抓到的舊句子種回去，必須被抓到
+      ["defensive_hold", "也不爭龍與巴龍，等對手露出破綻。"], ["defensive_hold", "龍、巴龍與外塔幾乎全部讓出，對手的優勢會持續擴大。"],
+      ["dragon_pit_macro", "隊伍在龍刷新前提早集結到龍坑附近。"], ["protect_core_scaling", "所有資源往射手傾斜。"],
+      ["mid_solo_split", "輔助保護射手。"], ["hard_engage_stack", "輔助與坦克留在隊伍中央準備先手。"],
+      ["support_river_control", "讓龍的爭奪每次都比對手早到一步。"], ["three_lane_pressure", "不入侵野區，所以拿不到野怪資源。"],
+    ];
+    const caught = planted.filter(([slug, s]) => copyViolations({ ...by(slug), desc: s, cons: "" }).length > 0);
+    ck("V2e 對照組：審查抓到的 8 句舊文案種回去，全部被抓到", caught.length === planted.length, `${caught.length}/${planted.length}`);
+    ck("V2f 對照組：乾淨文案不會被誤抓（現行 12 個模板零違規，且關鍵詞表確實有命中過）",
+      v2.every((t) => copyViolations(t).length === 0) && v2.filter((t) => CLAIMS.some(([, re]) => re.test(`${t.desc}${t.cons}`.replace(/並?沒有放棄/g, "")))).length >= 10);
+  }
+  ck("V2c 全部 21 個模板名稱互異（含 std 與 v2 的標準／均衡運營）、legacyTacticId 是經典 id",
+    new Set(Templates.TACTIC_TEMPLATE_LIST.map((t) => t.name)).size === Templates.TACTIC_TEMPLATE_LIST.length && v2.every((t) => ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "std"].includes(t.legacyTacticId)));
   ck("V3 每個 v2 的 config 都是合法 MobaTacticConfig.v1，且 deep-frozen", v2.every((t) => validateMobaTacticConfig(t.config).ok && deepFrozen(t)),
     v2.filter((t) => !validateMobaTacticConfig(t.config).ok).map((t) => t.templateId).join(","));
 
@@ -358,9 +406,46 @@ if (Plan) {
   ck("P3n 原型污染鍵（__proto__／constructor，任何層級）⇒ forbidden_key，且 Object.prototype 沒被污染",
     [r1, r2, r3, r4].every((r) => !r.ok && codesOf(r).includes(E.FORBIDDEN_KEY)) && ({}).polluted === undefined && ({}).polluted2 === undefined && ({}).polluted3 === undefined && ({}).polluted4 === undefined
     && Object.prototype.polluted === undefined);
-  ck("P3o 深度巢狀／循環參照的 choices ⇒ 拒絕而不是爆堆疊", (() => { const a = {}; a.a = a; let deep = {}; const root = deep; for (let i = 0; i < 400; i++) { deep.k = {}; deep = deep.k; } return rej({ templateId: "std", choices: a }, E.INVALID_CHOICES) && rej({ templateId: "std", choices: root }, E.INVALID_CHOICES); })());
+  ck("P3o 深度巢狀／循環參照的 choices ⇒ 拒絕而不是爆堆疊", (() => { const a = {}; a.a = a; let deep = {}; const root = deep; for (let i = 0; i < 400; i++) { deep.k = {}; deep = deep.k; } return rej({ templateId: "std", choices: a }) && rej({ templateId: "std", choices: root }); })());
   ck("P3p 覆蓋層衝突偵測（對照組：真實覆蓋層無衝突；人造重疊會被抓到）", Overlays.findOverlayConflicts(Overlays.TACTIC_OVERLAYS).length === 0
     && Overlays.findOverlayConflicts([{ overlayId: "a", changedFields: { "macro.aggression": 1 } }, { overlayId: "b", changedFields: { "macro.aggression": 2 } }]).length === 1);
+
+  //  敵意值：每個會被寫進錯誤訊息的欄位都不能讓 createTacticPlan 丟例外
+  const throwingToString = { toString() { throw new Error("boom"); }, valueOf() { throw new Error("boom"); } };
+  const throwingProxy = new Proxy({}, { get() { throw new Error("proxy get"); }, ownKeys() { throw new Error("proxy keys"); }, getPrototypeOf() { throw new Error("proxy proto"); } });
+  const getOnlyProxy = new Proxy({}, { get() { throw new Error("proxy get"); } });
+  const HOSTILE = [Object.create(null), throwingToString, Symbol("s"), throwingProxy, getOnlyProxy, [throwingToString], 10n];
+  const safeCall = (input) => { try { const r = mk(input); return { threw: false, r }; } catch { return { threw: true }; } };
+  const hostileInputs = [];
+  for (const h of HOSTILE) {
+    hostileInputs.push(["templateId", { templateId: h }], ["overlayIds 元素", { templateId: "std", overlayIds: [h] }], ["overlayIds 本身", { templateId: "std", overlayIds: h }],
+      ["choices 值", { templateId: "std", choices: { risk: { tolerance: h } } }], ["choices 鍵值（未知鍵）", { templateId: "std", choices: { bogus: h } }],
+      ["choices 本身", { templateId: "std", choices: h }], ["schema", { templateId: "std", schema: h }], ["contingencies", { templateId: "std", contingencies: h }], ["整個輸入", h]);
+  }
+  hostileInputs.push(["鍵為 Symbol", { templateId: "std", [Symbol("k")]: 1 }], ["getter 會丟例外", Object.defineProperty({ templateId: "std" }, "choices", { enumerable: true, get() { throw new Error("getter"); } })]);
+  const hres = hostileInputs.map(([label, input]) => [label, safeCall(input)]);
+  ck(`P3q 敵意值（null 原型、toString 會丟例外、Symbol、BigInt、會丟例外的 Proxy／getter）放進每個會被回顯的欄位：不丟例外（${hostileInputs.length} 組）`,
+    hres.every(([, x]) => !x.threw), hres.filter(([, x]) => x.threw).map(([l]) => l).slice(0, 4).join(","));
+  ck("P3q2 敵意值的結果結構完整：ok:false 時 code／field／message 都是字串；能 ok:true 的只有「沒有可列舉鍵的物件當 choices／當 live 葉（等同空）」與「Symbol 鍵（JSON 不可能帶、被忽略）」，且 plan 零數值",
+    hres.every(([l, x]) => x.r && (x.r.ok === false ? x.r.plan === null && x.r.errors.length > 0 && x.r.errors.every((e) => typeof e.code === "string" && typeof e.field === "string" && typeof e.message === "string")
+      : ["choices 本身", "choices 值", "鍵為 Symbol"].includes(l) ? !hasNumber(x.r.plan) : false)),
+    hres.filter(([l, x]) => !(x.r && (x.r.ok === false ? x.r.errors.length > 0 : ["choices 本身", "choices 值", "鍵為 Symbol"].includes(l)))).map(([l]) => l).join(","));
+  ck("P3q3 對照組：未加保護時這類值確實會在字串插值丟例外（Object.create(null)、Symbol、toString 會丟例外的物件）",
+    [Object.create(null), Symbol("x"), throwingToString].every((h) => { try { `${h}`; return false; } catch { return true; } }));
+  ck("P3q4 bindTacticPlan／planFromLegacyTacticId 對敵意值也不丟例外", HOSTILE.every((h) => { try { return Plan.bindTacticPlan(h, {}) === null && Plan.bindTacticPlan({ templateId: "std" }, { resolverVersion: h, templatesVersion: "a", overlaysVersion: "b" }) === null && Plan.planFromLegacyTacticId(h) === null && Plan.planFromLegacyTacticId("m1", h) === null; } catch { return false; } }));
+
+  //  先驗鍵、再套「null＝沒有選擇」
+  const KEYS = Registry.CAPABILITY_ROWS.filter((r) => r.status === "design");
+  ck("P3r 未知鍵不論值是 null／undefined／{}／字串 都被拒（頂層與巢狀）",
+    [null, undefined, {}, "x"].every((v) => rej({ templateId: "std", choices: { bogus: v } }, E.UNKNOWN_CHOICE_KEY) && rej({ templateId: "std", choices: { jungle: { bogus: v } } }, E.UNKNOWN_CHOICE_KEY)
+      && rej({ templateId: "std", choices: { risk: { nope: v }, jungle: { focus: "farm" } } }, E.UNKNOWN_CHOICE_KEY)));
+  ck("P3r2 design 鍵不論值是 null／undefined／{} 都以 design_choice 拒絕（頂層枝與巢狀葉）",
+    [null, undefined].every((v) => rej({ templateId: "std", choices: { teamfight: { style: v } } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: v } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { teamfight: v } }, E.DESIGN_CHOICE))
+    && rej({ templateId: "std", choices: { teamfight: {} } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: {} } }, E.DESIGN_CHOICE)
+    && KEYS.every((r) => { const ch = {}; r.dimension.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? null : {}, n[k]), ch); return rej({ templateId: "std", choices: ch }, E.DESIGN_CHOICE); }));
+  ck("P3r3 live 鍵的 null／undefined／空枝仍然＝沒有選擇，且雜湊與缺項相同（標準形保證不變）",
+    [{ risk: { tolerance: null } }, { risk: { tolerance: undefined } }, { risk: {} }, { seats: {} }, { jungle: { focus: null, tempo: undefined } }, { lanes: { top: {} } }, { phases: { early: { stance: null } } }].every((c) => { const r = mk({ templateId: "std", choices: c }); return r.ok && tacticPlanHash(r.plan) === tacticPlanHash(mk({ templateId: "std" }).plan); }));
+  ck("P3r4 對照組：合法 live 值仍然被接受（先驗鍵不會誤殺）", mk({ templateId: "std", choices: { risk: { tolerance: "bold" }, jungle: { focus: null } } }).ok);
 
   //  P4：plan 裡沒有任何 number
   const richPlans = [base, fullPlan, ...Templates.TACTIC_TEMPLATE_LIST.map((t) => mk({ templateId: t.templateId, overlayIds: ["m4_contested_stack"] }))];

@@ -15,6 +15,8 @@
 //       省略 overlayIds ＝ null ＝ []。
 //    2. choices：省略 ＝ null ＝ {}；葉值為 undefined／null 的鍵視為「沒有選擇」直接移除
 //       （JSON 往返會讓 undefined 消失，所以這兩種寫法必須等價）；空的中間節點移除；鍵依字串排序。
+//       ⚠ 「null＝沒有選擇」只對 live 鍵成立：**先驗鍵**——未知鍵不論值是什麼都 unknown_choice_key，
+//       design 鍵不論值是 null 或 {} 都 design_choice。
 //       只接受巢狀形（{ jungle: { focus: "farm" } }），不接受點分鍵（"jungle.focus"）。
 //    3. contingencies：省略 ＝ null ＝ []。schema 欄位省略時補上 TACTIC_PLAN_VERSION。
 //    4. 回傳的 plan 是 deep-frozen；對已建立的 plan 再呼叫 createTacticPlan 會得到逐位元相同的結果（冪等）。
@@ -31,7 +33,7 @@
 // ============================================================================
 import { stableStringify } from "../contracts/squadSnapshot.js";
 import { fnv1a64Hex } from "../contracts/matchSetup.js";
-import { CAPABILITY_STATUS, registryRow } from "./capabilityRegistry.js";
+import { CAPABILITY_STATUS, CAPABILITY_ROWS, registryRow } from "./capabilityRegistry.js";
 import { TACTIC_TEMPLATES, templateById, templateIdOfLegacyTactic } from "./tacticTemplates.js";
 import { overlayById, findOverlayConflicts } from "./tacticOverlays.js";
 
@@ -87,8 +89,19 @@ function collectLeaves(node, prefix, depth, leaves, errors) {
     const path = prefix ? `${prefix}.${k}` : k;
     if (FORBIDDEN_KEYS.includes(k)) { errors.push({ code: E.FORBIDDEN_KEY, field: `choices.${path}`, message: `choices 不得含 ${k} 鍵` }); continue; }
     if (k.includes(".")) { errors.push({ code: E.UNKNOWN_CHOICE_KEY, field: `choices.${path}`, message: `choices 只接受巢狀物件，不接受點分鍵：${k}` }); continue; }
+    //  先驗鍵、再套「null＝沒有選擇」：未知鍵不論值是什麼都拒絕；design 鍵不論值是什麼都以 design_choice 拒絕。
+    const under = CAPABILITY_ROWS.filter((r) => r.dimension === path || r.dimension.startsWith(`${path}.`));
+    if (under.length === 0) { errors.push({ code: E.UNKNOWN_CHOICE_KEY, field: `choices.${path}`, message: `不認得的選項：${path}` }); continue; }
+    const allDesign = under.every((r) => r.status !== CAPABILITY_STATUS.LIVE);
     const v = node[k];
-    if (v === undefined || v === null) continue;             // 「沒有選擇」＝缺項
+    if (v === undefined || v === null) {                      // 「沒有選擇」＝缺項（只對 live 鍵成立）
+      if (allDesign) errors.push({ code: E.DESIGN_CHOICE, field: `choices.${path}`, message: `${path} 目前還不能選（尚未接上引擎）` });
+      continue;
+    }
+    if (allDesign && isPlainObject(v) && ownKeys(v).length === 0) {
+      errors.push({ code: E.DESIGN_CHOICE, field: `choices.${path}`, message: `${path} 目前還不能選（尚未接上引擎）` });
+      continue;
+    }
     if (Array.isArray(v)) { errors.push({ code: E.INVALID_CHOICES, field: `choices.${path}`, message: "choices 的值不得是陣列" }); continue; }
     if (v !== null && typeof v === "object") {
       if (!isPlainObject(v)) { errors.push({ code: E.INVALID_CHOICES, field: `choices.${path}`, message: "choices 只接受純物件" }); continue; }
@@ -120,6 +133,22 @@ function validateLeaf(path, v, errors) {
  * @returns {{ok:true, plan:object, errors:[]} | {ok:false, plan:null, errors:Array<{code:string,field:string,message:string}>}}
  */
 export function createTacticPlan(input) {
+  //  「永不丟例外」的最後防線：敵意輸入（會丟例外的 getter／Proxy、奇怪的原型）一律變成 invalid_input。
+  try {
+    return buildTacticPlan(input);
+  } catch {
+    return { ok: false, plan: null, errors: [{ code: E.INVALID_INPUT, field: "", message: "戰術計畫無法讀取（輸入含有無法安全處理的值）" }] };
+  }
+}
+
+/** 把任何值安全地轉成可放進錯誤訊息的短字串：不呼叫 toString／valueOf（敵意物件可能丟例外），Symbol 不可轉字串。 */
+function show(v) {
+  if (typeof v === "string") return v.length > 40 ? `${v.slice(0, 40)}…` : v;
+  if (v === null || v === undefined || typeof v === "number" || typeof v === "boolean") return String(v);
+  return `[${typeof v}]`;
+}
+
+function buildTacticPlan(input) {
   const errors = [];
   const fail = () => ({ ok: false, plan: null, errors });
   if (!isPlainObject(input)) {
@@ -138,7 +167,7 @@ export function createTacticPlan(input) {
 
   //  模板
   const tpl = has("templateId") ? templateById(input.templateId) : null;
-  if (!tpl) errors.push({ code: E.UNKNOWN_TEMPLATE, field: "templateId", message: `沒有這個模板：${has("templateId") ? String(input.templateId) : "（未提供）"}` });
+  if (!tpl) errors.push({ code: E.UNKNOWN_TEMPLATE, field: "templateId", message: `沒有這個模板：${has("templateId") ? show(input.templateId) : "（未提供）"}` });
 
   //  覆蓋層（集合語意：去重＋排序；欄位重疊的組合拒絕）
   let overlayIds = [];
@@ -149,7 +178,7 @@ export function createTacticPlan(input) {
       const ok = [];
       rawOverlays.forEach((id, i) => {
         if (typeof id !== "string") errors.push({ code: E.INVALID_OVERLAY_IDS, field: `overlayIds[${i}]`, message: "覆蓋層 id 必須是字串" });
-        else if (!overlayById(id)) errors.push({ code: E.UNKNOWN_OVERLAY, field: `overlayIds[${i}]`, message: `沒有這個覆蓋層：${id}` });
+        else if (!overlayById(id)) errors.push({ code: E.UNKNOWN_OVERLAY, field: `overlayIds[${i}]`, message: `沒有這個覆蓋層：${show(id)}` });
         else ok.push(id);
       });
       overlayIds = [...new Set(ok)].sort();
