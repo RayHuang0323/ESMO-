@@ -35,6 +35,12 @@
 //  【不可變】setup 是深度凍結的；交給 adapter 的每一份資料都先複製（structuredClone），
 //   組裝器永不寫 setup。
 //
+//  【只做編排（Phase 3a T6 fix）】本檔不 import 任何 adapter 模組：引擎類別、英雄側 adapter（deps.heroAdapters）與引擎側 adapter
+//   （deps.engineAdapters：PlayerMods／HeroMods／Passives／PowerCurve／Spells／matchItemsConfig／toEngineItems／Tactic／Identity／
+//   STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION）全部經 deps，預設接線只在 matchAssemblerDepsCore.js 一處。
+//   理由：平衡工具 ESMO_BALANCE_ROOT 做跨版本 A/B，必須量到「同一棵樹」，不能引擎與一半 adapter 來自 M、另一半來自 runner 所在的樹。
+//   tool 規則集容忍舊樹引擎缺 configureObjectiveLayout／HeroPassives／HeroPowerCurve（略過，同 v20 runner 的 typeof 護欄）；production 不容忍。
+//
 //  【import 邊界】本檔**不得**（直接或間接）import `data/heroDatabase.js`（~396KB data URI）。
 //   需要英雄表的三個 adapter 模組（heroSkillGameplay / heroBattleTalents / heroCombatArchetypes）
 //   都靜態 import heroDatabase ⇒ 由呼叫端經 `deps.heroAdapters` 注入；LogicEngine 也由 deps 注入
@@ -42,15 +48,7 @@
 //
 //  純函式（除了建立與配置引擎實例）：不碰 React / zustand / localStorage / 時鐘 / 亂數。
 // ============================================================================
-import { toEnginePlayerMods } from "./mobaPlayerStats.js";
-import { toEngineHeroMods } from "./mobaHeroProfile.js";
-import { toEngineHeroPassives } from "./skills/heroPassiveGameplay.js";
-import { toEngineHeroPowerCurve } from "./heroPowerCurve.js";
-import { toEngineSpells } from "./mobaHeroLoadout.js";
-import { matchItemsConfig } from "./items/buildStrategyPrep.js";
-import { toEngineItems } from "./items/itemsEngineAdapter.js";
 import { BUILD_STRATEGIES } from "./items/buildPolicy.js";
-import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "../../platform/contracts/MobaTacticConfig.js";
 import { MATCH_SETUP_VERSION, fnv1a64Hex } from "../../platform/contracts/matchSetup.js";
 import { ASSEMBLY_ORDERS } from "../../platform/contracts/matchRuleset.js";
 import { stableStringify } from "../../platform/contracts/squadSnapshot.js";
@@ -73,6 +71,7 @@ export function describeAssemblerDeps(deps) {
     engine: typeof deps?.LogicEngine === "function" ? (deps.LogicEngine.name || "anonymous") : null,
     heroLookup: typeof deps?.heroLookup === "function" ? (deps.heroLookup.name || "anonymous") : null,
     adapters: Object.keys(H).sort().map((k) => (typeof H[k] === "function" ? `${k}:${H[k].name || "anonymous"}` : `${k}=${String(H[k])}`)),
+    engineAdapters: Object.keys(deps?.engineAdapters ?? {}).sort().map((k) => { const f = deps.engineAdapters[k]; return typeof f === "function" ? `${k}:${f.name || "anonymous"}` : `${k}=${typeof f}`; }),
   };
 }
 export const depsFingerprintOf = (deps) => fnv1a64Hex(stableStringify(describeAssemblerDeps(deps)));
@@ -96,7 +95,9 @@ const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArr
 
 /**
  * @param {object} setup  MatchSetup.v1（createMatchSetup 的輸出）
- * @param {object} deps   { LogicEngine, heroLookup, heroAdapters: { toEngineHeroSkills, selectBattleTalents,
+ * @param {object} deps   { LogicEngine, heroLookup, engineAdapters: { toEnginePlayerMods, toEngineHeroMods, toEngineHeroPassives,
+ *                          toEngineHeroPowerCurve, toEngineSpells, matchItemsConfig, toEngineItems, toEngineTactic, toEngineTacticIdentity,
+ *                          STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION }, heroAdapters: { toEngineHeroSkills, selectBattleTalents,
  *                          battleTalentOptions, toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } }
  * @returns {{ ok: boolean, engine: object|null,
  *             applied: { objectiveLayout, talentSelection, buildStrategy, tacticMeta, replayConfig, configured: string[],
@@ -119,6 +120,7 @@ export function assembleMatch(setup, deps = {}) {
   const tool = isTool ? (setup.tool ?? {}) : null;
   const { LogicEngine, heroLookup } = deps ?? {};
   const H = deps?.heroAdapters ?? {};
+  const A = deps?.engineAdapters ?? {};
   const hasRoster = setup.roster !== null && setup.roster !== undefined;
 
   // ── 驗證（全部在建構引擎之前；有任何錯誤就不建引擎、零 configure 呼叫）──────────
@@ -140,6 +142,22 @@ export function assembleMatch(setup, deps = {}) {
     need(typeof H.selectBattleTalents === "function", "deps.heroAdapters.selectBattleTalents", "battleTalents layer");
     need(typeof H.battleTalentOptions === "function", "deps.heroAdapters.battleTalentOptions", "talent vocabulary");
   }
+  //  引擎側 adapter（Phase 3a T6 fix）：組裝器自己不 import 任何 adapter 模組——ESMO_BALANCE_ROOT 的跨版本 A/B
+  //  必須量到「同一棵樹」，所以引擎類別與每一個被呼叫的 adapter 都來自 deps（預設值只在 matchAssemblerDepsCore.js 接一次）。
+  const needFn = (name, why) => need(typeof A[name] === "function", `deps.engineAdapters.${name}`, why);
+  if (E.players.blue || E.players.red) needFn("toEnginePlayerMods", "player stat layer");
+  if (E.heroMods) needFn("toEngineHeroMods", "hero mods layer");
+  if (E.heroPassives) needFn("toEngineHeroPassives", "hero passives layer");
+  if (E.heroPowerCurve) needFn("toEngineHeroPowerCurve", "hero power curve layer");
+  if (E.spells) needFn("toEngineSpells", "spells layer");
+  if (E.match) {
+    needFn("toEngineTactic", "match layer");
+    if (L.tacticIdentity) needFn("toEngineTacticIdentity", "tacticIdentity layer");
+    if (!isTool) need(typeof A.MOBA_TACTIC_VERSION === "string", "deps.engineAdapters.MOBA_TACTIC_VERSION", "tactic meta");
+    for (const side of SIDES) if (setup.tactic?.[side]?.kind === "std")
+      need(isPlainObject(A.STANDARD_OPP_TACTIC), "deps.engineAdapters.STANDARD_OPP_TACTIC", "std tactic");
+  }
+  if (E.items) needFn(isTool ? "toEngineItems" : "matchItemsConfig", "items layer");
   if (E.archetypes) {
     need(typeof H.toEngineArchetypes === "function", "deps.heroAdapters.toEngineArchetypes", "archetypes layer");
     if (!isTool) need(typeof H.COMBAT_ARCHETYPE_CONTRACT_VERSION === "string", "deps.heroAdapters.COMBAT_ARCHETYPE_CONTRACT_VERSION", "archetype meta");
@@ -196,7 +214,12 @@ export function assembleMatch(setup, deps = {}) {
   const engine = new LogicEngine(setup.seed, clone(setup.loadout ?? null));
   if (isTool && tool.ruleOverrides) engine.rules = { ...engine.rules, ...clone(tool.ruleOverrides) }; // runner:119
   const configured = [];
-  const call = (method, arg) => { engine[method](arg); configured.push(method); };
+  //  v20 平衡工具對舊樹的引擎有 typeof 護欄（configureObjectiveLayout／HeroPassives／HeroPowerCurve）⇒ 只有 tool 規則集
+  //  容忍引擎缺方法（略過、不記入 configured）；production 缺方法仍是錯誤（照原樣丟 TypeError）。
+  const call = (method, arg) => {
+    if (isTool && typeof engine[method] !== "function") return;
+    engine[method](arg); configured.push(method);
+  };
 
   //  英雄物件由 deps.heroLookup 補上（useLocalServer 的 opts.roster、challengeRunner:173-174 的 withHero）。
   //  ⚠ 依 CANONICAL_SEATS 重建（不是 setup 的插入順序）：每個 adapter 都以這份物件的走訪順序產出設定。
@@ -211,7 +234,7 @@ export function assembleMatch(setup, deps = {}) {
     talentSelection = selected && Object.keys(selected.players).length ? selected : null;
   }
 
-  const tacticCfg = (t) => (t.kind === "std" ? STANDARD_OPP_TACTIC : clone(t.config));
+  const tacticCfg = (t) => (t.kind === "std" ? A.STANDARD_OPP_TACTIC : clone(t.config));
   const blueCfg = setup.tactic?.blue ? tacticCfg(setup.tactic.blue) : null;
   let tacticMeta = null, itemsApplied = false;
 
@@ -221,13 +244,13 @@ export function assembleMatch(setup, deps = {}) {
     //  useLocalServer:204-207（紅方 []）；challengeRunner:139-142（雙方）。mods 為 null ⇒ 不呼叫。
     players() {
       if (!E.players.blue && !E.players.red) return;
-      const mods = toEnginePlayerMods({ blue: clone(setup.playerSlots.blue), red: clone(setup.playerSlots.red) });
+      const mods = A.toEnginePlayerMods({ blue: clone(setup.playerSlots.blue), red: clone(setup.playerSlots.red) });
       if (mods) call("configurePlayers", mods);
     },
     //  useLocalServer:215-216；challengeRunner:177-178；runner:126-127。全中性 ⇒ null ⇒ 不呼叫。
     heroes() {
       if (!E.heroMods) return;
-      const mods = toEngineHeroMods(roster, heroLookup);
+      const mods = A.toEngineHeroMods(roster, heroLookup);
       if (mods) call("configureHeroes", mods);
     },
     //  useLocalServer:220-229；runner:129-137。passives / curve 只疊在 skills 之上。
@@ -235,9 +258,9 @@ export function assembleMatch(setup, deps = {}) {
       if (!E.heroSkills) return;
       const skills = H.toEngineHeroSkills(roster, talentSelection);
       if (skills) call("configureHeroSkills", skills);
-      const passives = skills && E.heroPassives ? toEngineHeroPassives(roster) : null;
+      const passives = skills && E.heroPassives ? A.toEngineHeroPassives(roster) : null;
       if (passives) call("configureHeroPassives", passives);
-      const curves = skills && E.heroPowerCurve ? toEngineHeroPowerCurve(roster) : null;
+      const curves = skills && E.heroPowerCurve ? A.toEngineHeroPowerCurve(roster) : null;
       if (curves) call("configureHeroPowerCurve", curves);
     },
     //  useLocalServer:237-247；challengeRunner:180-186；runner:138-140（meta: null）。
@@ -256,7 +279,7 @@ export function assembleMatch(setup, deps = {}) {
     //  useLocalServer:262-263；challengeRunner:188-189（spells 由 builder 依英雄推導後放進 roster）；runner:141。
     spells() {
       if (!E.spells) return;
-      const mods = toEngineSpells(roster);
+      const mods = A.toEngineSpells(roster);
       if (mods) call("configureSpells", mods);
     },
     //  useLocalServer:270-280；challengeRunner:144-163；runner:143-144（std 對 std、meta: null）。
@@ -264,12 +287,12 @@ export function assembleMatch(setup, deps = {}) {
       if (!E.match) return;
       const redCfg = tacticCfg(setup.tactic.red);
       tacticMeta = isTool ? null
-        : { tacticId: blueCfg.tacticId, tacticName: blueCfg.name, version: MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
+        : { tacticId: blueCfg.tacticId, tacticName: blueCfg.name, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
       call("configureMatch", {
-        blue: toEngineTactic(blueCfg),
-        red: toEngineTactic(redCfg),
+        blue: A.toEngineTactic(blueCfg),
+        red: A.toEngineTactic(redCfg),
         //  tacticIdentity 是規則集層（整份 ruleset 已進 setup 雜湊），不依賴 setup 資料 ⇒ 不需要也不放進 effectiveLayers。
-        identity: L.tacticIdentity ? { blue: toEngineTacticIdentity(blueCfg), red: toEngineTacticIdentity(redCfg) } : null,
+        identity: L.tacticIdentity ? { blue: A.toEngineTacticIdentity(blueCfg), red: A.toEngineTacticIdentity(redCfg) } : null,
         meta: tacticMeta,
       });
     },
@@ -277,9 +300,9 @@ export function assembleMatch(setup, deps = {}) {
     items() {
       if (!E.items) return;
       const cfg = isTool
-        ? toEngineItems({ roster, heroLookup, defaultStrategy: "standard",
+        ? A.toEngineItems({ roster, heroLookup, defaultStrategy: "standard",
           strategies: Object.fromEntries(Object.keys(roster).map((pid) => [pid, tool.itemsStrategies[sideOfSeat(pid)]])) })
-        : matchItemsConfig({ roster, heroLookup, buildStrategy: setup.buildStrategy });
+        : A.matchItemsConfig({ roster, heroLookup, buildStrategy: setup.buildStrategy });
       if (!cfg) return;
       call("configureItems", cfg);
       itemsApplied = true;

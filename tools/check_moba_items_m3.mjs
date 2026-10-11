@@ -69,10 +69,10 @@ const SEATS = ["b1", "b2", "b3", "b4", "b5", "r1", "r2", "r3", "r4", "r5"];
   //  M3d：出裝策略經 buildStrategyPrep.matchItemsConfig（我方＝所選、對手＝標準；沒選／非法 ⇒ 標準），且在開關內才計算
   ck("G1", "出裝策略由 opts.buildStrategy 傳入（normalize ⇒ 預設 standard），經 matchItemsConfig 進 configureItems",
     /const buildStrategy = L\.items === true && roster \? normalizeBuildStrategy\(opts\.buildStrategy\) : null;/.test(lmsG1)
-    && /:\s*matchItemsConfig\(\{ roster, heroLookup, buildStrategy: setup\.buildStrategy \}\)/.test(asmG1)
+    && /:\s*A\.matchItemsConfig\(\{ roster, heroLookup, buildStrategy: setup\.buildStrategy \}\)/.test(asmG1)
     && /heroLookup = heroById/.test(depsG1)
     //  toEngineItems 只留在組裝器的工具分支（isTool ? toEngineItems(…) : matchItemsConfig(…)）；hook／Live builder 不得直接用
-    && /isTool\s*\?\s*toEngineItems\(/.test(asmG1) && (asmG1.match(/toEngineItems\(/g) ?? []).length === 1
+    && /isTool\s*\?\s*A\.toEngineItems\(/.test(asmG1) && (asmG1.match(/toEngineItems\(/g) ?? []).length === 1
     && !/toEngineItems\(/.test(uls) && !/toEngineItems\(/.test(lmsG1));
 
   //  實際 build 一次，確認 DEV 開啟路徑與樣張頁不在正式產物裡

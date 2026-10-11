@@ -13,6 +13,7 @@
 //   (a) 引擎上實際發生的 configure* 呼叫順序與每次引數的 8 位雜湊 ＝ golden `calls`
 //   (b) 整場 digest 與 streamHash ＝ golden
 //  另外（golden 沒有涵蓋的變體，對照 v20 configure() 的原文複本 legacyConfigure）：
+//   provenance（每個 adapter 都經 M 的包裝抵達）、舊樹引擎缺方法的容忍（tool 略過）、
 //   rosterOverride、incomeK≠1、ESMO_BALANCE_LAYOUT（呼叫當下讀取）、M 模組逐一置空（skills／talents／passives／curves／
 //   objectiveLayout／tacticIdentity）、ESMO_BALANCE_RULES（載入時讀取，子行程驗）、錯誤輸入、原始碼不再直接呼叫 e.configure*。
 // ============================================================================
@@ -220,6 +221,67 @@ const layoutArg = (calls) => calls.find((c) => c.m === "configureObjectiveLayout
   let msg2 = null;
   try { runner.configure(3, "not_a_strategy", M_ON); } catch (e) { msg2 = String(e.message); }
   ck("V12b 未知出裝策略 ⇒ 組裝器拒絕（build_strategy_unknown），不默默改成 standard", !!msg2 && /build_strategy_unknown/.test(msg2), msg2 ?? "no throw");
+}
+
+// ── P：provenance——assembly 呼叫的每一個 adapter 都是經 M 的包裝抵達的（ESMO_BALANCE_ROOT 量到同一棵樹）────────────
+{
+  const c = golden.cases.find((x) => x.id === "runner-early-3");
+  const hits = {};
+  const wrap = (label, fn) => { hits[label] = 0; return (...a) => { hits[label]++; return fn(...a); }; };
+  let stdSeen = false;
+  const stdClone = structuredClone(M_ON.tactic.STANDARD_OPP_TACTIC);
+  const toEngineTactic = (t) => { if (t === stdClone) stdSeen = true; return M_ON.tactic.toEngineTactic(t); };
+  hits.toEngineTactic = 0;
+  const countedTactic = (t) => { hits.toEngineTactic++; return toEngineTactic(t); };
+  class Counted extends M_ON.LE.LogicEngine { constructor(...a) { super(...a); hits.LogicEngine = (hits.LogicEngine ?? 0) + 1; } }
+  const M2 = {
+    ...M_ON,
+    LE: { ...M_ON.LE, LogicEngine: Counted },
+    heroes: { ...M_ON.heroes, heroById: wrap("heroLookup", M_ON.heroes.heroById) },
+    profile: { ...M_ON.profile, toEngineHeroMods: wrap("toEngineHeroMods", M_ON.profile.toEngineHeroMods) },
+    loadout: { ...M_ON.loadout, toEngineSpells: wrap("toEngineSpells", M_ON.loadout.toEngineSpells) },
+    adapter: { ...M_ON.adapter, toEngineItems: wrap("toEngineItems", M_ON.adapter.toEngineItems) },
+    tactic: { ...M_ON.tactic, STANDARD_OPP_TACTIC: stdClone, toEngineTactic: countedTactic,
+      toEngineTacticIdentity: wrap("toEngineTacticIdentity", M_ON.tactic.toEngineTacticIdentity) },
+    skills: { ...M_ON.skills, toEngineHeroSkills: wrap("toEngineHeroSkills", M_ON.skills.toEngineHeroSkills) },
+    talents: { ...M_ON.talents, selectBattleTalents: wrap("selectBattleTalents", M_ON.talents.selectBattleTalents) },
+    arche: { ...M_ON.arche, toEngineArchetypes: wrap("toEngineArchetypes", M_ON.arche.toEngineArchetypes) },
+    passives: { ...M_ON.passives, toEngineHeroPassives: wrap("toEngineHeroPassives", M_ON.passives.toEngineHeroPassives) },
+    curves: { ...M_ON.curves, toEngineHeroPowerCurve: wrap("toEngineHeroPowerCurve", M_ON.curves.toEngineHeroPowerCurve) },
+  };
+  ck("P0 起點：呼叫前所有包裝的計數都是 0（斷言可以失敗）", Object.values(hits).every((n) => n === 0));
+  const { out, calls } = probe(() => runner.configure(c.seed, c.params.config, M2));
+  const snap = { ...hits };
+  for (const k of ["LogicEngine", "heroLookup", "toEngineHeroMods", "toEngineHeroSkills", "selectBattleTalents", "toEngineHeroPassives", "toEngineHeroPowerCurve",
+    "toEngineArchetypes", "toEngineSpells", "toEngineTactic", "toEngineTacticIdentity", "toEngineItems"])
+    ck(`P1 ${k} 經 M 的包裝抵達（計數 ${snap[k] ?? 0} > 0）`, (snap[k] ?? 0) > 0);
+  ck("P2 STANDARD_OPP_TACTIC 是 M.tactic 給的那一份（參考相等）", stdSeen);
+  const d = firstDiff(calls, c.calls);
+  const res = runAndHash(out.e, { dt: golden.dt, maxT: golden.maxT.runner, every: golden.streamEvery });
+  ck("P3 全部經 M 包裝後仍逐位元＝golden（呼叫序列、digest、streamHash）", d === "" && res.digest === c.digest && res.streamHash === c.streamHash, d || res.digest);
+  //  負向：只換掉一個 adapter 的輸出 ⇒ 結果必須跟著變（證明 M 的函式真的被用在結果裡，而不是只被呼叫）
+  const M3 = { ...M_ON, loadout: { ...M_ON.loadout, toEngineSpells: (r) => { const m = M_ON.loadout.toEngineSpells(r); return m && JSON.parse(JSON.stringify(m).replace(/"flash"/g, '"heal"')); } } };
+  ck("P4 M.loadout.toEngineSpells 的輸出真的進了引擎（換掉輸出 ⇒ configureSpells 引數雜湊改變）",
+    firstDiff(probe(() => runner.configure(c.seed, c.params.config, M3)).calls, c.calls) !== "");
+  //  deps 指紋反映注入集：同樹 M ⇒ 全部 canonical；換任一函式 ⇒ manifest 標 override
+  const core = await import("../src/battle/moba/matchAssemblerDepsCore.js");
+  const manifestOf = (engineAdapters) => core.buildMatchAssemblerDepsFrom({ engineAdapters }).manifest.engineAdapters;
+  ck("P5 manifest 反映注入集：換掉 toEngineItems ⇒ 該欄位標 override，其餘維持原出處", /^override:/.test(manifestOf({ toEngineItems: () => null }).toEngineItems) && manifestOf({}).toEngineItems === "itemsEngineAdapter");
+}
+
+// ── O：舊樹引擎缺方法（typeof 護欄）：tool 規則集略過該呼叫，不丟例外、不回錯誤結果 ───────────────────────────
+{
+  const c = golden.cases.find((x) => x.id === "runner-standard-3");
+  class OldTree extends M_ON.LE.LogicEngine {}
+  const MISSING = ["configureHeroPassives", "configureHeroPowerCurve", "configureObjectiveLayout"];
+  for (const m of MISSING) OldTree.prototype[m] = undefined;
+  let out = null, thrown = null, calls = null;
+  try { const r = probe(() => runner.configure(c.seed, c.params.config, { ...M_ON, LE: { LogicEngine: OldTree } })); out = r.out; calls = r.calls; } catch (e) { thrown = e; }
+  ck("O1 缺 configureHeroPassives／PowerCurve／ObjectiveLayout 的舊引擎：configure() 不丟例外", !thrown && !!out, thrown ? String(thrown) : "");
+  const want = c.calls.filter((x) => !MISSING.includes(x.m));
+  const d = calls ? firstDiff(calls, want) : "no calls";
+  ck(`O2 呼叫序列＝golden 去掉那三個呼叫（${want.length} 呼叫），其餘引數雜湊不變`, d === "" && (calls ?? []).every((x) => !MISSING.includes(x.m)) && c.calls.some((x) => MISSING.includes(x.m)), d);
+  ck("O3 舊引擎照常跑完 300 秒（不是半套）", !!out && (() => { const r = shortRun(out.e); return typeof r.digest === "string" && out.e.t >= 300; })());
 }
 
 // ── R：ESMO_BALANCE_RULES 是「載入時」讀的模組常數；子行程驗（一次一個行程）───────────────────────

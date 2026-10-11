@@ -46,7 +46,7 @@ const asm24 = strip24(fs.readFileSync("src/battle/moba/matchAssembler.js", "utf8
 const lms24 = strip24(fs.readFileSync("src/battle/moba/liveMatchSetup.js", "utf8"));
 ck("useLocalServer → assembleMatch → engine.configureMatch（含 standard 對手）",
   /assembleMatch\(/.test(uls)
-  && /call\("configureMatch",\s*\{\s*blue:\s*toEngineTactic\(blueCfg\),\s*red:\s*toEngineTactic\(redCfg\)/.test(asm24)
+  && /call\("configureMatch",\s*\{\s*blue:\s*A\.toEngineTactic\(blueCfg\),\s*red:\s*A\.toEngineTactic\(redCfg\)/.test(asm24)
   && /opponentTeam\s*\?\s*mobaTacticForTeamStyle\(opponentTeam\.style\)\s*:\s*STANDARD_OPP_TACTIC/.test(lms24));
 const le = fs.readFileSync("src/LogicEngine.js", "utf8");
 ck("LogicEngine 無 tactic 直接寫 winner / 無傷害係數", !/tactic\w*[^\n]*winner\s*=/.test(le) && !/tactic\w*[^\n]*(dmgAmt|power)\s*\*=/.test(le) && !le.includes("damage *="));

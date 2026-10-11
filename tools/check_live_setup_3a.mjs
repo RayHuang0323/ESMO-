@@ -426,7 +426,10 @@ for (const v of V_CASES) {
     "heroLookup 換成別的函式": buildMatchAssemblerDeps({ heroLookup: (id) => heroById(id) }),
     "引擎換成子類別": buildMatchAssemblerDeps({ LogicEngine: class Patched extends LogicEngine {} }),
     "引擎換成子類別＋標記": buildMatchAssemblerDeps({ LogicEngine: class Patched2 extends LogicEngine {}, engineMarker: "tree:other" }),
-    "非共用 builder（手拼 deps，T3 測試形狀）": { LogicEngine, heroLookup: heroById, heroAdapters: { toEngineHeroSkills, selectBattleTalents, battleTalentOptions, toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } },
+    "非共用 builder（手拼 deps，T3 測試形狀＋T6 引擎側 adapter）": { LogicEngine, heroLookup: heroById, heroAdapters: { toEngineHeroSkills, selectBattleTalents, battleTalentOptions, toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION }, engineAdapters: { ...DEPS.engineAdapters } },
+    "matchItemsConfig 換成別的函式": buildMatchAssemblerDeps({ engineAdapters: { matchItemsConfig: (a) => DEPS.engineAdapters.matchItemsConfig(a) } }),
+    "toEngineTactic 換成別的函式": buildMatchAssemblerDeps({ engineAdapters: { toEngineTactic: (t) => DEPS.engineAdapters.toEngineTactic(t) } }),
+    "toEnginePlayerMods 換成別的函式": buildMatchAssemblerDeps({ engineAdapters: { toEnginePlayerMods: (x) => DEPS.engineAdapters.toEnginePlayerMods(x) } }),
   };
   const fps = Object.fromEntries(Object.entries(swaps).map(([k, d]) => [k, fp(d)]));
   const distinct = new Set([shared, ...Object.values(fps)]);

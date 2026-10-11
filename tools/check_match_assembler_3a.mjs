@@ -28,6 +28,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleMatch } from "../src/battle/moba/matchAssembler.js";
+import { buildMatchAssemblerDepsFrom } from "../src/battle/moba/matchAssemblerDepsCore.js";
 import { createMatchSetup, matchSetupHash } from "../src/platform/contracts/matchSetup.js";
 import { rulesetById, resolveRulesetForMode, MATCH_RULESETS } from "../src/platform/contracts/matchRuleset.js";
 import { mobaTacticById } from "../src/platform/contracts/MobaTacticConfig.js";
@@ -59,10 +60,11 @@ const codes = (r) => (r?.errors ?? []).map((e) => e.code);
 const golden = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/match_golden_v20.json"), "utf8"));
 const G = golden.inputs;
 
-const DEPS = Object.freeze({
-  LogicEngine,
-  heroLookup: heroById,
-  heroAdapters: Object.freeze({ toEngineHeroSkills, selectBattleTalents, battleTalentOptions, toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION }),
+//  Phase 3a T6 fix：組裝器不再 import 任何 adapter ⇒ 引擎側 adapter 也要經 deps。這裡用共用 core 的預設接線（唯一一份），
+//  英雄側 adapter 與 LogicEngine／heroLookup 仍由本測試明示注入（保持原本的注入面）。
+const DEPS = buildMatchAssemblerDepsFrom({
+  LogicEngine, heroLookup: heroById,
+  heroAdapters: { toEngineHeroSkills, selectBattleTalents, battleTalentOptions, toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION },
 });
 
 // ── Probe（與 capture_match_golden_v20.mjs 相同：prototype 上的 pass-through 包裝）──────────
@@ -272,6 +274,65 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
     r.ok ? `towerHp=${r.engine.rules.towerHp} incomeK=${r.engine.items?.incomeK}` : codes(r).join(","));
   const fresh = new LogicEngine(3);
   ck("A7b ruleOverrides 只影響這個實例（不改共享規則表）", fresh.rules.towerHp !== 1234);
+}
+
+// ── A9 引擎側 adapter 全部經 deps（Phase 3a T6 fix）─────────────────────────────────────────────
+//  缺哪個、哪一層生效 ⇒ 對應的 deps_missing（零 configure 呼叫、不建引擎）。
+{
+  const withoutEngine = (name) => ({ ...DEPS, engineAdapters: { ...DEPS.engineAdapters, [name]: undefined } });
+  const liveS = mk(liveIn()), toolS = mk(toolIn());
+  for (const [name, setup] of [["toEnginePlayerMods", liveS], ["toEngineHeroMods", liveS], ["toEngineHeroPassives", liveS], ["toEngineHeroPowerCurve", liveS],
+    ["toEngineSpells", liveS], ["toEngineTactic", liveS], ["toEngineTacticIdentity", liveS], ["matchItemsConfig", liveS], ["MOBA_TACTIC_VERSION", liveS],
+    ["STANDARD_OPP_TACTIC", liveS], ["toEngineItems", toolS], ["toEngineHeroMods", toolS]])
+    ck(`A9 缺 deps.engineAdapters.${name}（${setup === liveS ? "career" : "tool"}）⇒ deps_missing，零 configure 呼叫`, rejects(setup, "deps_missing", `deps.engineAdapters.${name}`, withoutEngine(name)));
+  ck("A9b 沒有 engineAdapters 區塊的手拼 deps ⇒ deps_missing（組裝器沒有私下的預設）",
+    rejects(liveS, "deps_missing", "deps.engineAdapters.toEnginePlayerMods", { LogicEngine, heroLookup: heroById, heroAdapters: DEPS.heroAdapters }));
+  //  關掉的層不要求該 adapter（tool 不套選手素質、不走 matchItemsConfig）
+  ck("A9c 層沒生效就不要求它的 adapter：tool 缺 toEnginePlayerMods／matchItemsConfig 仍可組裝",
+    assembleMatch(toolS, { ...DEPS, engineAdapters: { ...DEPS.engineAdapters, toEnginePlayerMods: undefined, matchItemsConfig: undefined } }).ok);
+  //  注入的函式真的被用（每個都能失敗）：包一層計數
+  const hits = {};
+  const counted = Object.fromEntries(Object.entries(DEPS.engineAdapters).map(([k, v]) => [k, typeof v === "function" ? (...a) => { hits[k] = (hits[k] ?? 0) + 1; return v(...a); } : v]));
+  const rl = assembleMatch(liveS, { ...DEPS, engineAdapters: counted }), rt = assembleMatch(toolS, { ...DEPS, engineAdapters: counted });
+  ck("A9d 注入的每個引擎側 adapter 都被呼叫到（career＋tool 兩條路徑合計）",
+    rl.ok && rt.ok && ["toEnginePlayerMods", "toEngineHeroMods", "toEngineHeroPassives", "toEngineHeroPowerCurve", "toEngineSpells", "toEngineTactic", "toEngineTacticIdentity", "matchItemsConfig", "toEngineItems"].every((k) => hits[k] > 0),
+    JSON.stringify(hits));
+}
+
+// ── A10 舊樹引擎缺方法：tool 略過、production 照原樣失敗 ─────────────────────────────────────────
+{
+  class OldTree extends LogicEngine {}
+  const MISS = ["configureHeroPassives", "configureHeroPowerCurve", "configureObjectiveLayout"];
+  for (const m of MISS) OldTree.prototype[m] = undefined;
+  const oldDeps = { ...DEPS, LogicEngine: OldTree };
+  const t = assembleMatch(mk(toolIn()), oldDeps);
+  ck("A10 tool 規則集：引擎缺 configureObjectiveLayout／HeroPassives／HeroPowerCurve ⇒ 略過（ok、configured 不含這三個）",
+    t.ok && MISS.every((m) => !t.applied.configured.includes(m)) && t.applied.configured.includes("configureHeroSkills"), t.ok ? t.applied.configured.join(",") : codes(t).join(","));
+  let threw = null;
+  try { assembleMatch(mk(liveIn()), oldDeps); } catch (e) { threw = e; }
+  ck("A10b production 規則集：同樣缺方法 ⇒ 照原樣失敗（丟 TypeError，不被容忍）", threw instanceof TypeError, threw ? String(threw.message).slice(0, 80) : "no throw");
+}
+
+// ── A11 原始碼：組裝器不 import 任何它所呼叫的 adapter 模組（只經 deps）──────────────────────────────
+{
+  const ADAPTER_NAMES = ["toEnginePlayerMods", "toEngineHeroMods", "toEngineHeroPassives", "toEngineHeroPowerCurve", "toEngineSpells", "matchItemsConfig", "toEngineItems",
+    "toEngineTactic", "toEngineTacticIdentity", "STANDARD_OPP_TACTIC", "MOBA_TACTIC_VERSION", "toEngineHeroSkills", "selectBattleTalents", "toEngineArchetypes"];
+  const ADAPTER_MODULES = /mobaPlayerStats|mobaHeroProfile|heroPassiveGameplay|heroPowerCurve|mobaHeroLoadout|buildStrategyPrep|itemsEngineAdapter|MobaTacticConfig|heroSkillGameplay|heroBattleTalents|heroCombatArchetypes|LogicEngine/;
+  const scan = (text) => {
+    const code = stripComments(text);
+    const imports = [...code.matchAll(/\bimport\s[^;]*?from\s*["']([^"']+)["']/g)].map((m) => m[1]);
+    const badImports = imports.filter((sp) => ADAPTER_MODULES.test(sp));
+    const bareCalls = ADAPTER_NAMES.filter((n) => new RegExp(`(?<![.\\w])${n}\\s*\\(`).test(code));
+    const importedNames = ADAPTER_NAMES.filter((n) => new RegExp(`import\\s*\\{[^}]*\\b${n}\\b[^}]*\\}\\s*from`).test(code));
+    return { badImports, bareCalls, importedNames, imports };
+  };
+  const real = scan(fs.readFileSync(path.join(ROOT, "src/battle/moba/matchAssembler.js"), "utf8"));
+  ck("A11 matchAssembler.js 沒有 import 任何 adapter 模組、沒有裸呼叫任何 adapter、沒有 import 任何 adapter 名稱",
+    real.badImports.length === 0 && real.bareCalls.length === 0 && real.importedNames.length === 0, JSON.stringify(real));
+  const ctl = scan('import { toEngineItems } from "./items/itemsEngineAdapter.js";\nconst c = toEngineItems({});\n');
+  ck("A11b 掃描器有檢定力：對含 adapter import＋裸呼叫的樣本必須各自命中", ctl.badImports.length === 1 && ctl.bareCalls.includes("toEngineItems") && ctl.importedNames.includes("toEngineItems"));
+  const ctl2 = scan('// import { toEngineItems } from "./items/itemsEngineAdapter.js"\n/* toEngineItems( */\nconst c = A.toEngineItems({});\n');
+  ck("A11c 掃描器不被註解／A. 前綴騙：註解裡的 import／呼叫與 A.toEngineItems( 都不算違規", ctl2.badImports.length === 0 && ctl2.bareCalls.length === 0 && ctl2.importedNames.length === 0);
 }
 
 // ── A8 applied：Live 需要的回傳值 ───────────────────────────────────────────────

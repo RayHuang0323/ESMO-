@@ -449,7 +449,11 @@ const COMPS = {
   //    · battle/moba/matchAssembler.js：唯一呼叫 configureItems 的地方（下一條斷言驗它受 itemsV1 層保護）
   //    · battle/moba/liveMatchSetup.js：只用 buildStrategyPrep.normalizeBuildStrategy 正規化出裝策略（下方另外釘死它只 import 這一個）
   const lmsItemImports = [...stripComments(read("src/battle/moba/liveMatchSetup.js")).matchAll(/import\s*\{([^}]*)\}\s*from\s*["'][^"']*\/items\/([^"']+)["']/g)].map((m) => `${m[2]}:${m[1].trim()}`);
+  //  Phase 3a T6 fix：組裝器不再自己 import adapter，預設接線只在 matchAssemblerDepsCore.js 一處 ⇒ 該檔是第三個正式 importer，
+  //  而且只准 import 這兩個 items 匯出（matchItemsConfig、toEngineItems）；多 import 任何 items 模組都會讓此條變紅。
+  const coreItemImports = [...stripComments(read("src/battle/moba/matchAssemblerDepsCore.js")).matchAll(/import\s*\{([^}]*)\}\s*from\s*["'][^"']*\/items\/([^"']+)["']/g)].map((m) => `${m[2]}:${m[1].trim()}`).sort();
   const allowedImporter = (f) => f === "src/LogicEngine.js" || f === "src/battle/moba/matchAssembler.js"
+    || (f === "src/battle/moba/matchAssemblerDepsCore.js" && coreItemImports.join("|") === "buildStrategyPrep.js:matchItemsConfig|itemsEngineAdapter.js:toEngineItems")
     || (f === "src/battle/moba/liveMatchSetup.js" && lmsItemImports.length === 1 && lmsItemImports[0] === "buildStrategyPrep.js:normalizeBuildStrategy")
     || f === "src/battle/ui/BattleObserverHUD.jsx" || f === "src/battle/ui/BattleHeroSheet.jsx"
     || f === "src/screens/moba/TacticScreen.jsx" || f === "src/battle/moba/replay/replayBuffer.js" || f === "src/screens/moba/MobaReplayScreen.jsx"

@@ -436,7 +436,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  ⇒ 不是語意變化；golden 39 案＋Live 9 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 d5af0958688d277a 未曾發布）。
   //  T5（Challenge 改走組裝器）：runChallenge 經 challenge.v20 組裝，golden 12 個 Challenge 案經真實 runChallenge 逐位元相同；
   //  語意清單新增 challengeMatchSetup.js、matchAssemblerDepsCore.js。v21 未發布 ⇒ 同版號重新登記（舊值 e94f45f2c87e9573 未曾發布）。
-  "moba-sim.v21": "d8935d1e9c0f2f8f",
+  //  T6 fix（平衡工具 ESMO_BALANCE_ROOT 跨版本 A/B 必須量到同一棵樹）：組裝器不再 import 任何 adapter，引擎側 adapter
+  //  （PlayerMods／HeroMods／Passives／PowerCurve／Spells／matchItemsConfig／toEngineItems／Tactic／Identity／STANDARD_OPP_TACTIC）
+  //  改經 deps.engineAdapters，預設接線只在 matchAssemblerDepsCore.js；tool 規則集容忍舊樹引擎缺 configure 方法。
+  //  結果與 v20 golden 39 案逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 d8935d1e9c0f2f8f 未曾發布）。
+  "moba-sim.v21": "fe407dd69bda620b",
 });
 
 export const isKnownSimulationVersion = (v) =>

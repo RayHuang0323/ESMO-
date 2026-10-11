@@ -36,11 +36,12 @@ export { MATCH_ASSEMBLER_DEPS_VERSION };
  * @param {Function} [o.heroLookup]    heroId → hero（預設 heroDatabase.heroById）
  * @param {object}   [o.heroAdapters]  局部覆寫 { toEngineHeroSkills, selectBattleTalents, battleTalentOptions,
  *                                      toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION }
- * @returns {Readonly<{ LogicEngine, heroLookup, heroAdapters, manifest }>}
+ * @param {object}   [o.engineAdapters] 引擎側 adapter 局部覆寫（見 matchAssemblerDepsCore.js）
+ * @returns {Readonly<{ LogicEngine, heroLookup, heroAdapters, engineAdapters, manifest }>}
  */
-export function buildMatchAssemblerDeps({ LogicEngine, engineMarker = null, heroLookup = heroById, heroAdapters = {} } = {}) {
+export function buildMatchAssemblerDeps({ LogicEngine, engineMarker = null, heroLookup = heroById, heroAdapters = {}, engineAdapters = {} } = {}) {
   return buildMatchAssemblerDepsFrom({
-    ...(LogicEngine === undefined ? {} : { LogicEngine }), engineMarker, heroLookup, heroAdapters,
+    ...(LogicEngine === undefined ? {} : { LogicEngine }), engineMarker, heroLookup, heroAdapters, engineAdapters,
     heroLookupLabel: heroLookup === heroById ? `heroDatabase.heroById@${CHAMPIONS_100.length}` : null,
   });
 }

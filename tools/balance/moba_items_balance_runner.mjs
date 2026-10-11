@@ -124,20 +124,18 @@ export function mirroredRoster(seed, M) {
  *   · M.skills 缺 ⇒ heroSkills／heroPassives／heroPowerCurve／battleTalents 全關（passives／curve 只疊在 skills 之上）
  *   · M.talents／M.passives／M.curves 缺 ⇒ 各自的層關
  *   · M.objectiveLayout 缺 ⇒ objectiveLayout 層 "standard"（不呼叫 configureObjectiveLayout；舊樹沒有這個契約）
- *   · 引擎類別沒有 configureObjectiveLayout／configureHeroPassives／configureHeroPowerCurve ⇒ 同樣關（舊樹的 typeof 護欄）
+ *   · 舊樹的引擎沒有 configureObjectiveLayout／HeroPassives／HeroPowerCurve ⇒ 組裝器在 tool 規則集下略過該呼叫（v20 的 typeof 護欄）
  *   · M.tactic 沒有 toEngineTacticIdentity ⇒ tacticIdentity 關（identity: null）
  * `ESMO_BALANCE_LAYOUT` 在呼叫當下讀取（不是載入時）；`RULE_OVERRIDES` 仍是載入時讀的模組常數。
  */
 export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
-  const proto = M.LE.LogicEngine.prototype;
-  const has = (name) => typeof proto[name] === "function";
   const base = rulesetById("balanceTool.v20");
   const skills = !!M.skills;
-  const layoutOn = !!M.objectiveLayout && has("configureObjectiveLayout");
+  const layoutOn = !!M.objectiveLayout;
   const ruleset = { ...base, layers: { ...base.layers,
     heroSkills: skills,
-    heroPassives: skills && !!M.passives && has("configureHeroPassives"),
-    heroPowerCurve: skills && !!M.curves && has("configureHeroPowerCurve"),
+    heroPassives: skills && !!M.passives,
+    heroPowerCurve: skills && !!M.curves,
     battleTalents: skills && !!M.talents,
     tacticIdentity: !!M.tactic.toEngineTacticIdentity,
     objectiveLayout: layoutOn ? base.layers.objectiveLayout : "standard" } };
@@ -170,11 +168,22 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
 export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
   const roster = rosterOverride ?? mirroredRoster(seed, M);
   const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster);
-  const adapters = {};
-  if (M.skills) adapters.toEngineHeroSkills = M.skills.toEngineHeroSkills;
-  if (M.talents) { adapters.selectBattleTalents = M.talents.selectBattleTalents; adapters.battleTalentOptions = M.talents.battleTalentOptions; }
-  if (M.arche.toEngineArchetypes) adapters.toEngineArchetypes = M.arche.toEngineArchetypes;
-  const deps = buildMatchAssemblerDepsFrom({ LogicEngine: M.LE.LogicEngine, heroLookup: M.heroes.heroById, heroAdapters: adapters });
+  //  英雄側 adapter：同樣全來自 M；M 沒有的明確給 undefined（對應層已關），不讓 core 的預設悄悄頂替。
+  const adapters = {
+    toEngineHeroSkills: M.skills?.toEngineHeroSkills, selectBattleTalents: M.talents?.selectBattleTalents,
+    battleTalentOptions: M.talents?.battleTalentOptions, toEngineArchetypes: M.arche.toEngineArchetypes,
+    COMBAT_ARCHETYPE_CONTRACT_VERSION: M.arche.COMBAT_ARCHETYPE_CONTRACT_VERSION,
+  };
+  //  引擎側 adapter 也全部來自 M（ESMO_BALANCE_ROOT 跨版本 A/B 量到的是同一棵樹）；M 缺的模組＝對應層已在 setup 關掉。
+  const engineAdapters = {
+    toEngineHeroMods: M.profile.toEngineHeroMods, toEngineSpells: M.loadout.toEngineSpells, toEngineItems: M.adapter.toEngineItems,
+    toEngineTactic: M.tactic.toEngineTactic, toEngineTacticIdentity: M.tactic.toEngineTacticIdentity,
+    STANDARD_OPP_TACTIC: M.tactic.STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION: M.tactic.MOBA_TACTIC_VERSION,
+    toEngineHeroPassives: M.passives?.toEngineHeroPassives, toEngineHeroPowerCurve: M.curves?.toEngineHeroPowerCurve,
+    //  runner 不套選手素質、也不走 production 的出裝（matchItemsConfig）⇒ 明確給 undefined：不讓 core 的預設（runner 所在樹）悄悄頂替。
+    toEnginePlayerMods: undefined, matchItemsConfig: undefined,
+  };
+  const deps = buildMatchAssemblerDepsFrom({ LogicEngine: M.LE.LogicEngine, heroLookup: M.heroes.heroById, heroAdapters: adapters, engineAdapters });
   const r = assembleMatch(setup, deps);
   if (!r.ok) throw new Error(`balance assembleMatch failed: ${r.errors.map((x) => `${x.code}@${x.field}`).join(",")}`);
   return { e: r.engine, roster, strategySide };
