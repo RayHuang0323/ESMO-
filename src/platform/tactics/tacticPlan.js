@@ -62,7 +62,6 @@ const E = TACTIC_PLAN_ERROR;
 
 const PLAN_FIELDS = ["schema", "templateId", "overlayIds", "choices", "contingencies"];
 const FORBIDDEN_KEYS = ["__proto__", "constructor", "prototype"];
-const MAX_CHOICE_DEPTH = 5;
 
 const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v)
   && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
@@ -84,7 +83,7 @@ function setPath(root, path, value) {
 }
 
 /** 走訪 choices，收集 [path, value] 葉節點；結構錯誤直接寫進 errors。 */
-function collectLeaves(node, prefix, depth, leaves, errors) {
+function collectLeaves(node, prefix, leaves, errors) {
   for (const k of ownKeys(node)) {
     const path = prefix ? `${prefix}.${k}` : k;
     if (FORBIDDEN_KEYS.includes(k)) { errors.push({ code: E.FORBIDDEN_KEY, field: `choices.${path}`, message: `choices 不得含 ${k} 鍵` }); continue; }
@@ -105,8 +104,10 @@ function collectLeaves(node, prefix, depth, leaves, errors) {
     if (Array.isArray(v)) { errors.push({ code: E.INVALID_CHOICES, field: `choices.${path}`, message: "choices 的值不得是陣列" }); continue; }
     if (v !== null && typeof v === "object") {
       if (!isPlainObject(v)) { errors.push({ code: E.INVALID_CHOICES, field: `choices.${path}`, message: "choices 只接受純物件" }); continue; }
-      if (depth + 1 >= MAX_CHOICE_DEPTH) { errors.push({ code: E.INVALID_CHOICES, field: `choices.${path}`, message: "choices 巢狀過深" }); continue; }
-      collectLeaves(v, path, depth + 1, leaves, errors);
+      //  遞迴深度不需要另設上限：每一層都先驗鍵，而 Registry 沒有任何一列是另一列的前綴，
+      //  所以走過葉節點再往下一層，第一個鍵就會是 unknown_choice_key（循環參照也一樣）。
+      //  這個性質由 tools/check_tactic_plan_3a.mjs P3o 證明，不是靠這裡的計數器。
+      collectLeaves(v, path, leaves, errors);
       continue;
     }
     leaves.push([path, v]);
@@ -195,7 +196,7 @@ function buildTacticPlan(input) {
     if (!isPlainObject(rawChoices)) errors.push({ code: E.INVALID_CHOICES, field: "choices", message: "choices 必須是物件" });
     else {
       const leaves = [];
-      collectLeaves(rawChoices, "", 0, leaves, errors);
+      collectLeaves(rawChoices, "", leaves, errors);
       const valid = leaves.filter(([path, v]) => validateLeaf(path, v, errors));
       valid.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
       for (const [path, v] of valid) setPath(choices, path, v);
