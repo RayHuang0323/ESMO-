@@ -228,9 +228,9 @@ const layoutArg = (calls) => calls.find((c) => c.m === "configureObjectiveLayout
   const c = golden.cases.find((x) => x.id === "runner-early-3");
   const hits = {};
   const wrap = (label, fn) => { hits[label] = 0; return (...a) => { hits[label]++; return fn(...a); }; };
-  let stdSeen = false;
+  let stdSeen = false, stdCalls = 0, identityStdCalls = 0;
   const stdClone = structuredClone(M_ON.tactic.STANDARD_OPP_TACTIC);
-  const toEngineTactic = (t) => { if (t === stdClone) stdSeen = true; return M_ON.tactic.toEngineTactic(t); };
+  const toEngineTactic = (t) => { if (t === stdClone) { stdSeen = true; stdCalls++; } return M_ON.tactic.toEngineTactic(t); };
   hits.toEngineTactic = 0;
   const countedTactic = (t) => { hits.toEngineTactic++; return toEngineTactic(t); };
   class Counted extends M_ON.LE.LogicEngine { constructor(...a) { super(...a); hits.LogicEngine = (hits.LogicEngine ?? 0) + 1; } }
@@ -242,7 +242,7 @@ const layoutArg = (calls) => calls.find((c) => c.m === "configureObjectiveLayout
     loadout: { ...M_ON.loadout, toEngineSpells: wrap("toEngineSpells", M_ON.loadout.toEngineSpells) },
     adapter: { ...M_ON.adapter, toEngineItems: wrap("toEngineItems", M_ON.adapter.toEngineItems) },
     tactic: { ...M_ON.tactic, STANDARD_OPP_TACTIC: stdClone, toEngineTactic: countedTactic,
-      toEngineTacticIdentity: wrap("toEngineTacticIdentity", M_ON.tactic.toEngineTacticIdentity) },
+      toEngineTacticIdentity: wrap("toEngineTacticIdentity", (t) => { if (t === stdClone) identityStdCalls++; return M_ON.tactic.toEngineTacticIdentity(t); }) },
     skills: { ...M_ON.skills, toEngineHeroSkills: wrap("toEngineHeroSkills", M_ON.skills.toEngineHeroSkills) },
     talents: { ...M_ON.talents, selectBattleTalents: wrap("selectBattleTalents", M_ON.talents.selectBattleTalents) },
     arche: { ...M_ON.arche, toEngineArchetypes: wrap("toEngineArchetypes", M_ON.arche.toEngineArchetypes) },
@@ -256,6 +256,9 @@ const layoutArg = (calls) => calls.find((c) => c.m === "configureObjectiveLayout
     "toEngineArchetypes", "toEngineSpells", "toEngineTactic", "toEngineTacticIdentity", "toEngineItems"])
     ck(`P1 ${k} 經 M 的包裝抵達（計數 ${snap[k] ?? 0} > 0）`, (snap[k] ?? 0) > 0);
   ck("P2 STANDARD_OPP_TACTIC 是 M.tactic 給的那一份（參考相等）", stdSeen);
+  //  Phase 3a T9 fix 1：戰術輸入一律經 resolver（來自 runner 所在的樹），但 resolver 收到的投影與 STD 是 M 的——std 輸入（藍紅各一）
+  //  時被呼叫的 toEngineTactic／toEngineTacticIdentity 就是 M 的包裝，而且收到的是 M 給的那一份 STD 物件（沒有被複製）。
+  ck("P2b std 輸入經 resolver：M 的 toEngineTactic 與 toEngineTacticIdentity 各以 M 的 STD 物件被呼叫 2 次（藍＋紅）", stdCalls === 2 && identityStdCalls === 2, `tactic=${stdCalls} identity=${identityStdCalls}`);
   const d = firstDiff(calls, c.calls);
   const res = runAndHash(out.e, { dt: golden.dt, maxT: golden.maxT.runner, every: golden.streamEvery });
   ck("P3 全部經 M 包裝後仍逐位元＝golden（呼叫序列、digest、streamHash）", d === "" && res.digest === c.digest && res.streamHash === c.streamHash, d || res.digest);

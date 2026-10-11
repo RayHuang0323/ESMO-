@@ -30,6 +30,7 @@ import * as Registry from "../src/platform/tactics/capabilityRegistry.js";
 import * as Templates from "../src/platform/tactics/tacticTemplates.js";
 import * as Overlays from "../src/platform/tactics/tacticOverlays.js";
 import * as Plan from "../src/platform/tactics/tacticPlan.js";
+import * as Choice from "../src/platform/tactics/tacticChoiceMapping.js";
 import { SIMULATION_SEMANTICS_FILES } from "../src/platform/contracts/simulationVersion.js";
 import { stableStringify, stableHash } from "../src/platform/contracts/squadSnapshot.js";
 import { heroById } from "../src/data/heroDatabase.js";
@@ -100,6 +101,12 @@ const fieldwiseSame = (a, b) => {
 const plan = (templateId, extra = {}) => { const r = Plan.createTacticPlan({ templateId, ...extra }); if (!r.ok) throw new Error(`fixture plan failed: ${codes(r)}`); return r.plan; };
 const bind = (templateId, extra = {}) => { const b = R.bindTacticPlanToCurrentVersions(plan(templateId, extra)); if (!b) throw new Error("fixture bind failed"); return b; };
 const resolveB = (binding) => R.resolveTactic({ kind: "binding", binding });
+//  繞過 createTacticPlan 手工拼的 plan／binding（用來證明 resolver 不信任 plan 來自 createTacticPlan；hash 照內容算，所以只有語意不合法）
+const rawPlan = (templateId, extra = {}) => ({ schema: "TacticPlan.v2", templateId, overlayIds: [], choices: {}, contingencies: [], ...extra });
+const rawBinding = (p) => ({
+  schema: "TacticPlanBinding.v1", plan: p, planHash: Plan.tacticPlanHash(p), legacyTacticId: Templates.templateById(p.templateId)?.legacyTacticId ?? "std",
+  resolverVersion: R.TACTIC_RESOLVER_VERSION, templatesVersion: Templates.TACTIC_TEMPLATES_VERSION, overlaysVersion: Overlays.TACTIC_OVERLAYS_VERSION,
+});
 const sigOfCfg = (cfg) => stableStringify([toEngineTactic(cfg), toEngineTacticIdentity(cfg)]);
 const clone = (o) => structuredClone(o);
 
@@ -115,6 +122,16 @@ console.log("\n§M CHOICE_MAPPING（選擇 → 契約欄位，唯一一份）");
   ck("M1c 每列的 target ＝ Registry `basis` 指名的旋鈕（carry 列＝basis 的 economy.carryPriority(lane)）",
     live.every((r) => { const row = M.rows[r.dimension]; return row && (row.kind === "carry" ? `${row.target}(${row.values.core})` : row.target) === r.basis; }),
     live.filter((r) => { const row = M.rows[r.dimension]; return !(row && (row.kind === "carry" ? `${row.target}(${row.values.core})` : row.target) === r.basis); }).map((r) => r.dimension).join(","));
+  ck("M1e Registry 的 touches ＝ 對照表這一列可能碰到的所有欄位（主欄位在前＋連帶欄位），逐列相等；touches 不含數字、frozen",
+    live.every((r) => Array.isArray(r.touches) && Object.isFrozen(r.touches) && J(r.touches) === J(Choice.touchedFieldsOf(M.rows[r.dimension])) && r.touches.every((t) => typeof t === "string")),
+    live.filter((r) => J(r.touches) !== J(Choice.touchedFieldsOf(M.rows[r.dimension]))).map((r) => `${r.dimension}:${J(r.touches)}`).join(" "));
+  ck("M1f 只有 jungle.focus（連帶 objectives.invadePriority）與 lanes.top／mid（連帶 macro.splitPush）有連帶欄位——其餘維度只碰主欄位",
+    J(live.filter((r) => r.touches.length > 1).map((r) => `${r.dimension}→${r.touches.slice(1)}`)) === J(["jungle.focus→objectives.invadePriority", "lanes.top.stance→macro.splitPush", "lanes.mid.stance→macro.splitPush"]));
+  const sp = M.rows["lanes.top.stance"].split;
+  ck("M1g 帶線規則：floor 取自 classic.m2、cap 取自 std（都是模板引用，不是字面數字）；floor 的值＝兩個單帶模板共用的值",
+    sp.target === "macro.splitPush" && sp.floor === "classic.m2" && sp.cap === "std" && !hasNumber(sp)
+    && ["v2.top_solo_split", "v2.mid_solo_split"].every((id) => Templates.TACTIC_TEMPLATES[id].config.macro.splitPush === Templates.TACTIC_TEMPLATES["classic.m2"].config.macro.splitPush)
+    && J(M.rows["lanes.mid.stance"].split) === J(sp) && M.rows["lanes.bot.stance"].split === undefined);
   ck("M1d 每格都有來源說明（source）", Object.values(M.rows).every((row) => (typeof row.source === "string" && row.source.length > 3) || (row.source && Object.values(row.source).every((s) => typeof s === "string" && s.length > 3))));
   //  數值只出現在 risk.tolerance，且每一個值都已存在於八套經典／std／覆蓋層的 macro.riskTolerance（不發明新量級）
   const numericRows = Object.entries(M.rows).filter(([, row]) => hasNumber(row.values)).map(([k]) => k);
@@ -143,7 +160,7 @@ console.log("\n§M CHOICE_MAPPING（選擇 → 契約欄位，唯一一份）");
     const hits = [];
     const walk = (d) => { for (const f of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) { const p = `${d}/${f.name}`; if (f.isDirectory()) walk(p); else if (/\.(js|jsx)$/.test(f.name) && /cautious\s*:\s*0\.\d/.test(stripComments(read(p)))) hits.push(p); } };
     walk("src");
-    return hits.length === 1 && hits[0] === "src/battle/moba/tactics/tacticResolver.js";
+    return hits.length === 1 && hits[0] === "src/platform/tactics/tacticChoiceMapping.js";
   })());
 }
 
@@ -268,8 +285,8 @@ console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇
     !R.offeredChoices("classic.m2", "lanes.mid.stance").includes("split") && R.offeredChoices("classic.m2", "lanes.top.stance").includes("split") && !R.offeredChoices("v2.mid_solo_split", "lanes.top.stance").includes("split")
     && R.offeredChoices("classic.m1", "lanes.mid.stance").includes("split"));
   //  resolver 拒絕不在提供清單內的選擇——用一個真的被保留的選擇
-  const rej = resolveB(bind("classic.m2", { choices: { lanes: { mid: { stance: "split" } } } }));
-  ck("X8 resolver 拒絕不在提供清單的選擇（m2 ＋ mid split ⇒ multiple_split_lanes，不丟例外）", !rej.ok && codes(rej).includes("multiple_split_lanes"), J(codes(rej)));
+  const rej = resolveB(rawBinding(rawPlan("classic.m2", { choices: { lanes: { mid: { stance: "split" } } } })));
+  ck("X8 resolver 拒絕不在提供清單的選擇（手工 binding：m2 ＋ mid split ⇒ multiple_split_lanes，不丟例外）", !rej.ok && codes(rej).includes("multiple_split_lanes"), J(codes(rej)));
   //  對照組一：把風險 bold 的值植成與 balanced 相同 ⇒ 矩陣必須抓到
   const doctored = clone(D); doctored.rows["risk.tolerance"].values.bold = doctored.rows["risk.tolerance"].values.balanced;
   const bad1 = matrix(R.makeResolver({ mapping: doctored }), contexts);
@@ -290,10 +307,12 @@ console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§C 帶線衝突（合併後最多一條 split）");
 {
-  const r1 = resolveB(bind("classic.m2", { choices: { lanes: { mid: { stance: "split" } } } }));
-  ck("C1 classic.m2（上路帶線）＋ lanes.mid.stance=split ⇒ multiple_split_lanes", !r1.ok && codes(r1).includes("multiple_split_lanes") && r1.errors.every((e) => e.message && e.field), J(r1.errors));
-  const r2 = resolveB(bind("v2.mid_solo_split", { choices: { lanes: { top: { stance: "split" } } } }));
-  ck("C2 v2.mid_solo_split（中路帶線）＋ top=split ⇒ 同一個碼", !r2.ok && codes(r2).includes("multiple_split_lanes"));
+  const c1 = { templateId: "classic.m2", choices: { lanes: { mid: { stance: "split" } } } }, c2 = { templateId: "v2.mid_solo_split", choices: { lanes: { top: { stance: "split" } } } };
+  const r1 = resolveB(rawBinding(rawPlan(c1.templateId, { choices: c1.choices }))), p1 = Plan.createTacticPlan(c1);
+  ck("C1 classic.m2（上路帶線）＋ lanes.mid.stance=split ⇒ createTacticPlan 與 resolver 都 multiple_split_lanes（同一個碼）", !r1.ok && codes(r1).includes("multiple_split_lanes") && r1.errors.every((e) => e.message && e.field)
+    && !p1.ok && codes(p1).includes("multiple_split_lanes"), J(r1.errors));
+  const r2 = resolveB(rawBinding(rawPlan(c2.templateId, { choices: c2.choices })));
+  ck("C2 v2.mid_solo_split（中路帶線）＋ top=split ⇒ 同一個碼（plan 層與 resolver 層）", !r2.ok && codes(r2).includes("multiple_split_lanes") && codes(Plan.createTacticPlan(c2)).includes("multiple_split_lanes"));
   const r3 = resolveB(bind("classic.m2", { choices: { lanes: { top: { stance: "aggressive" }, mid: { stance: "split" } } } }));
   ck("C3 把上路改成非 split、中路改成 split ⇒ 合併後只有一條，接受", r3.ok && r3.config.lanePlan.top === "aggressive" && r3.config.lanePlan.mid === "split" && ["top", "mid", "adc"].filter((p) => r3.config.lanePlan[p] === "split").length === 1, J(codes(r3)));
   const r4 = resolveB(bind("classic.m2", { choices: { lanes: { top: { stance: "split" } } } }));
@@ -312,8 +331,8 @@ console.log("\n§D 覆蓋層與模板 base 不符（ruling D）");
   const screen = stripComments(read("src/screens/moba/TacticScreen.jsx")), mastery = stripComments(read("src/platform/mastery/clubMastery.js"));
   const callers = []; const walk = (d) => { for (const f of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) { const p = `${d}/${f.name}`; if (f.isDirectory()) walk(p); else if (/\.(js|jsx)$/.test(f.name) && /\bapplyVariant\s*\(/.test(stripComments(read(p)))) callers.push(p); } };
   walk("src");
-  ck("D1 v20 可達性：正式程式裡呼叫 applyVariant 的只有 tacticVariant.js 自己、TacticScreen（v20 唯一入口）與本 task 新增的 resolver；變體清單以 baseTacticId === 所選戰術過濾",
-    J(callers.sort()) === J(["src/battle/moba/tactics/tacticResolver.js", "src/platform/mastery/tacticVariant.js", "src/screens/moba/TacticScreen.jsx"]) && /applyVariant\(cur, activeVariant\)/.test(screen) && /variantsAvailableForTactic\(clubMastery, sel\)/.test(screen)
+  ck("D1 v20 可達性：正式程式裡呼叫 applyVariant 的只有 tacticVariant.js 自己、TacticScreen（v20 唯一入口）與本 task 新增的選擇對照模組（tacticChoiceMapping，resolver 與 plan 共用）；變體清單以 baseTacticId === 所選戰術過濾",
+    J(callers.sort()) === J(["src/platform/mastery/tacticVariant.js", "src/platform/tactics/tacticChoiceMapping.js", "src/screens/moba/TacticScreen.jsx"]) && /applyVariant\(cur, activeVariant\)/.test(screen) && /variantsAvailableForTactic\(clubMastery, sel\)/.test(screen)
     && /\.filter\(\(v\) => v\.baseTacticId === tacticId\)/.test(mastery), J(callers));
   ck("D1b v20 一次只套一個變體（單一 variantSel）；applyVariant 本身不檢查 base——餵錯的 base 會得到一份混合設定（不是任何合法戰術）",
     /useState\(null\)/.test(screen) && (() => {
@@ -327,12 +346,14 @@ console.log("\n§D 覆蓋層與模板 base 不符（ruling D）");
   for (const o of Overlays.TACTIC_OVERLAYS) for (const t of Templates.TACTIC_TEMPLATE_LIST) {
     if (t.templateId === `classic.${o.baseTacticId}`) continue;
     unreach++;
-    const r = resolveB(bind(t.templateId, { overlayIds: [o.overlayId] }));
-    if (r.ok || codes(r)[0] !== "overlay_base_mismatch") unreachBad.push(`${t.templateId}+${o.overlayId}`);
+    const r = resolveB(rawBinding(rawPlan(t.templateId, { overlayIds: [o.overlayId] })));   // 手工 binding：resolver 自己也要擋
+    const p = Plan.createTacticPlan({ templateId: t.templateId, overlayIds: [o.overlayId] });
+    if (r.ok || codes(r)[0] !== "overlay_base_mismatch" || p.ok || codes(p)[0] !== "overlay_base_mismatch") unreachBad.push(`${t.templateId}+${o.overlayId}`);
   }
-  ck(`D3 v20 做不出來的配對（${unreach} 組：每個覆蓋層 × 其餘 20 個模板，含 std 與同 donor 的 v2）一律 overlay_base_mismatch，不發明結果`, unreach === 3 * 20 && unreachBad.length === 0, unreachBad.slice(0, 3).join(","));
+  ck(`D3 v20 做不出來的配對（${unreach} 組：每個覆蓋層 × 其餘 20 個模板，含 std 與同 donor 的 v2）一律 overlay_base_mismatch——createTacticPlan 與 resolver 同一個碼，不發明結果`, unreach === 3 * 20 && unreachBad.length === 0, unreachBad.slice(0, 3).join(","));
   const two = Plan.createTacticPlan({ templateId: "classic.m1", overlayIds: ["m1_measured_siege", "m4_contested_stack"] });
-  ck("D3b 兩個覆蓋層同時（v20 只能套一個）：plan 層允許，resolver 因其中一個 base 不符而拒絕", two.ok && !resolveB(R.bindTacticPlanToCurrentVersions(two.plan)).ok && codes(resolveB(R.bindTacticPlanToCurrentVersions(two.plan)))[0] === "overlay_base_mismatch");
+  const twoR = resolveB(rawBinding(rawPlan("classic.m1", { overlayIds: ["m1_measured_siege", "m4_contested_stack"] })));
+  ck("D3b 兩個覆蓋層同時（v20 只能套一個）：plan 層與 resolver 都因其中一個 base 不符而拒絕（同一個碼）", !two.ok && codes(two)[0] === "overlay_base_mismatch" && !twoR.ok && codes(twoR)[0] === "overlay_base_mismatch");
   ck("D4 覆蓋層後再套選擇：m1＋穩健速推＋risk=bold ⇒ riskTolerance 是 bold 的值（選擇在覆蓋層之後）、towerPriority 仍是覆蓋層的值",
     (() => { const r = resolveB(bind("classic.m1", { overlayIds: ["m1_measured_siege"], choices: { risk: { tolerance: "bold" } } })); return r.ok && r.config.macro.riskTolerance === R.CHOICE_MAPPING.rows["risk.tolerance"].values.bold && r.config.objectives.towerPriority === m1v.changedFields["objectives.towerPriority"]; })());
 }
@@ -404,11 +425,14 @@ console.log("\n§F 版本綁定與組裝器的錯誤出口");
   ck("F3 紅方的 binding 被竄改 ⇒ 同樣拒絕，欄位指到 tactic.red", !r2.r.ok && r2.calls.length === 0 && r2.r.errors.some((e) => e.code === "tactic_binding_rejected" && e.field.startsWith("tactic.red") && /plan_hash_mismatch/.test(e.message)));
   const r3 = probedAssemble(mkSetup({ blue: { kind: "binding", binding: { id: "x" } }, red: { kind: "std" } }));
   ck("F4 舊的占位 binding（{ id }）⇒ 拒絕並說明原因（binding_bad_schema）", !r3.r.ok && r3.r.errors.some((e) => e.code === "tactic_binding_rejected" && /binding_bad_schema|binding_unknown_field/.test(e.message)));
-  const noAdapter = { ...DEPS, engineAdapters: { ...DEPS.engineAdapters, resolveTacticBinding: undefined } };
-  const r4 = probedAssemble(mkSetup({ blue: { kind: "binding", binding: good }, red: { kind: "std" } }), noAdapter);
-  ck("F5 deps 沒有 resolveTacticBinding ⇒ deps_missing（組裝器沒有私下的 resolver），零 configure 呼叫", !r4.r.ok && r4.calls.length === 0 && r4.r.errors.some((e) => e.code === "deps_missing" && e.field === "deps.engineAdapters.resolveTacticBinding"));
-  const r5 = probedAssemble(mkSetup({ blue: { kind: "std" }, red: { kind: "std" } }), noAdapter);
-  ck("F5b 沒有 binding 的 setup 不需要 resolver adapter（legacy／std 路徑不受影響）", r5.r.ok);
+  const noAdapter = { ...DEPS, engineAdapters: { ...DEPS.engineAdapters, resolveTactic: undefined } };
+  const noneOk = ["binding", "std", "legacy"].map((k) => {
+    const t = k === "binding" ? { kind: "binding", binding: good } : k === "std" ? { kind: "std" } : { kind: "legacy", config: mobaTacticById("m4") };
+    const x = probedAssemble(mkSetup({ blue: t, red: { kind: "std" } }), noAdapter);
+    return !x.r.ok && x.calls.length === 0 && x.r.errors.some((e) => e.code === "deps_missing" && e.field === "deps.engineAdapters.resolveTactic");
+  });
+  ck("F5 deps 沒有 resolveTactic ⇒ 三種戰術輸入（binding／std／legacy）都 deps_missing，零 configure 呼叫（組裝器沒有私下的投影）", noneOk.every(Boolean), J(noneOk));
+  ck("F5b 對照：沒有戰術的 setup（不需要 match 層）不要求 resolver adapter", (() => { const s = createMatchSetup({ ...encodeCase(golden.cases.find((c) => c.id === "live-notactic-13")) }); return s.ok && probedAssemble(s.setup, noAdapter).r.ok; })());
   //  投影用注入的 toEngineTactic（跨版本 A/B 的前提）
   let seen = [];
   const spyDeps = buildMatchAssemblerDepsFrom({ LogicEngine, heroLookup: heroById,
@@ -417,7 +441,7 @@ console.log("\n§F 版本綁定與組裝器的錯誤出口");
   const r6 = probedAssemble(mkSetup({ blue: { kind: "binding", binding: good }, red: { kind: "std" } }), spyDeps);
   ck("F6 binding 的投影經注入的 toEngineTactic（藍方 m1、紅方 std 各一次）；覆寫的 adapter 會進 manifest/depsFingerprint", r6.r.ok && J(seen) === J(["m1", "std"])
     && r6.r.applied.depsFingerprint !== probedAssemble(mkSetup({ blue: { kind: "binding", binding: good }, red: { kind: "std" } })).r.applied.depsFingerprint);
-  ck("F7 deps manifest 把 resolver adapter 與版本入帳", DEPS.manifest.engineAdapters.resolveTacticBinding === "tacticResolver" && DEPS.engineAdapters.resolveTacticBinding === R.resolveTacticBinding
+  ck("F7 deps manifest 把 resolver adapter 與版本入帳", DEPS.manifest.engineAdapters.resolveTactic === "tacticResolver" && DEPS.engineAdapters.resolveTactic === R.resolveTactic
     && DEPS.manifest.tacticResolverVersion === R.TACTIC_RESOLVER_VERSION
     && spyDeps.manifest.engineAdapters.toEngineTactic.startsWith("override:"));
 }
@@ -465,6 +489,234 @@ console.log("\n§I MatchSetup 身分（ruling G）與 ruleset 的戰術種類（
   ck("H2 challenge.v20 的 setup 帶 binding ⇒ tactic_kind_not_allowed（歷史挑戰逐位元重現，只收 v20 有的種類）；career.v20 接受", !rch.ok && rch.errors.some((e) => e.code === "tactic_kind_not_allowed" && e.field === "tactic.blue") && rcr.ok);
   ck("H3 challenge.v20 仍接受 legacy 與 std（原樣）", createMatchSetup({ ...chIn, tactic: { blue: { kind: "legacy", config: mobaTacticById("m4") }, red: { kind: "std" } } }).ok);
   ck("H4 balanceTool.v20（非歷史重現、工具用）接受 binding", createMatchSetup(withBinding(rnIn)).ok);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立矩陣、組合、plan ≡ resolver、組裝器不丟例外");
+{
+  const res = R.makeResolver();
+  const M2V = Templates.TACTIC_TEMPLATES["classic.m2"].config.macro.splitPush, STD_SPLIT = STANDARD_OPP_TACTIC.macro.splitPush;
+  const contexts = [
+    ...Templates.TACTIC_TEMPLATE_LIST.map((tpl) => ({ tpl, overlayIds: [] })),
+    ...Overlays.TACTIC_OVERLAYS.map((o) => ({ tpl: Templates.TACTIC_TEMPLATES[`classic.${o.baseTacticId}`], overlayIds: [o.overlayId] })),
+  ];
+  const tag = (c) => `${c.tpl.templateId}${c.overlayIds.length ? `+${c.overlayIds[0]}` : ""}`;
+  const flat = (o, p = "", out = {}) => { for (const k of Object.keys(o)) { const v = o[k], q = p ? `${p}.${k}` : k; if (v && typeof v === "object" && !Array.isArray(v)) flat(v, q, out); else out[q] = J(v); } return out; };
+  const changedFields = (a, b) => { const fa = flat(a), fb = flat(b); return [...new Set([...Object.keys(fa), ...Object.keys(fb)])].filter((k) => fa[k] !== fb[k]); };
+
+  // ── W1 split 是真選擇（ruling 1）──────────────────────────────────────────
+  /** 對一個 resolver 實例：每個「提供 split 的 (模板, 路)」，選 split 後 splitLane＝該路、splitPush ≥ 地板；回傳違規。 */
+  function splitFloorBad(r) {
+    const bad = []; let offeredCells = 0;
+    for (const c of contexts) for (const lane of ["top", "mid"]) {
+      const dim = `lanes.${lane}.stance`;
+      if (!r.offeredChoices(c.tpl.templateId, dim, c.overlayIds).includes("split")) continue;
+      offeredCells++;
+      const cfg = r.applyChoice(r.mergeConfig(c.tpl, c.overlayIds, {}), dim, "split");
+      const k = toEngineTactic(cfg);
+      if (k.splitLane !== lane || !(k.splitPush >= M2V)) bad.push(`${tag(c)}|${dim}:splitLane=${k.splitLane} splitPush=${k.splitPush}`);
+    }
+    return { bad, offeredCells };
+  }
+  const realFloor = splitFloorBad(res);
+  ck(`W1 split 的行為地板：每個提供 split 的（模板, 路）共 ${realFloor.offeredCells} 格（含 3 個覆蓋層情境），選了之後 splitLane＝該路且 splitPush ≥ ${M2V}（＝ classic.m2／兩個單帶模板的值）——逐模板斷言`,
+    realFloor.bad.length === 0 && realFloor.offeredCells === (21 + 3) * 2 - 3, `${realFloor.offeredCells} 格；${realFloor.bad.slice(0, 3).join("; ")}`);
+  ck("W1b 每個模板各自：m1（0.15）、m3／m6／m7／m8（0.05）、m4／m5／std（0.1）選 split 後 splitPush 都被提到地板；原本就在地板的模板不變",
+    ["m1", "m3", "m4", "m5", "m6", "m7", "m8"].every((id) => res.applyChoice(Templates.TACTIC_TEMPLATES[`classic.${id}`].config, "lanes.top.stance", "split").macro.splitPush === M2V)
+    && res.applyChoice(Templates.TACTIC_TEMPLATES.std.config, "lanes.mid.stance", "split").macro.splitPush === M2V
+    && res.applyChoice(Templates.TACTIC_TEMPLATES["classic.m2"].config, "lanes.top.stance", "split").macro.splitPush === M2V
+    && Templates.TACTIC_TEMPLATES["v2.top_solo_split"].config.macro.splitPush === M2V);
+  //  對稱：離開 split ⇒ splitPush 降回 std 的值，且合併後沒有 split 路時 splitPush 不是懸空的 0.85
+  const leaveBad = [];
+  for (const [id, lane] of [["classic.m2", "top"], ["v2.top_solo_split", "top"], ["v2.mid_solo_split", "mid"]]) {
+    const dim = `lanes.${lane}.stance`, base = Templates.TACTIC_TEMPLATES[id].config;
+    for (const ch of res.offeredChoices(id, dim).filter((x) => x !== "split")) {
+      const cfg = res.applyChoice(base, dim, ch);
+      if (cfg.macro.splitPush !== STD_SPLIT || toEngineTactic(cfg).splitLane !== null) leaveBad.push(`${id}|${dim}=${ch}:${cfg.macro.splitPush}`);
+    }
+  }
+  ck(`W1c 離開 split（m2／兩個單帶模板，每個非 split 選擇）⇒ splitLane＝null 且 splitPush 降回 std 的值 ${STD_SPLIT}（不留 0.85 的死旋鈕）`, leaveBad.length === 0, leaveBad.join(";"));
+  ck("W1d 順序無關：m2 ＋ {top: aggressive, mid: split} 與只選 mid: split 的結果——splitLane＝mid、splitPush＝地板（離開 top 的降值規則不會砍掉 mid 的帶線）",
+    (() => { const cfg = resolveB(bind("classic.m2", { choices: { lanes: { top: { stance: "aggressive" }, mid: { stance: "split" } } } })).config; return cfg.lanePlan.top === "aggressive" && cfg.lanePlan.mid === "split" && cfg.macro.splitPush === M2V; })());
+  ck("W1e 引擎怎麼讀 splitPush（記錄在案的事實）：只在 `K.splitLane === 該路` 時讀；沒有 splitLane 的 splitPush 是死旋鈕",
+    (() => { const eng = stripComments(read("src/LogicEngine.js")); return /K\.splitLane === p\.lane/.test(eng) && /K\.splitPush/.test(eng) && toEngineTactic(Templates.TACTIC_TEMPLATES["classic.m1"].config).splitLane === null; })());
+  //  對照組：拿掉 split 規則 ⇒ 地板檢查必須抓到
+  const noSplit = clone(R.CHOICE_MAPPING); delete noSplit.rows["lanes.top.stance"].split; delete noSplit.rows["lanes.mid.stance"].split;
+  const bad0 = splitFloorBad(R.makeResolver({ mapping: noSplit }));
+  ck("W1f 對照組：拿掉 split 規則（只留舊的 lanePlan 切換）⇒ 行為地板檢查抓到一堆不及格的（模板, 路）", bad0.bad.length > 10 && bad0.bad.some((x) => x.startsWith("classic.m7|lanes.top.stance")), `${bad0.bad.length} 格違規`);
+
+  // ── W2 一個選擇碰到的欄位 ⊆ 宣告的 touches（ruling 2）──────────────────────
+  /** applyFn(base, dim, choice)；回傳違規。 */
+  function touchesBad(r, applyFn) {
+    const bad = []; let cells = 0;
+    for (const c of contexts) {
+      const base = r.mergeConfig(c.tpl, c.overlayIds, {});
+      for (const row of Registry.liveRows()) {
+        const d = r.offeredDetail(c.tpl.templateId, row.dimension, c.overlayIds);
+        for (const ch of d.offered) {
+          cells++;
+          const next = applyFn(base, row.dimension, ch);
+          const changed = changedFields(base, next);
+          const outside = changed.filter((f) => !row.touches.includes(f));
+          if (outside.length) bad.push(`${tag(c)}|${row.dimension}=${ch}: 未宣告 ${outside.join(",")}`);
+          if (ch !== d.own && !changed.includes(row.touches[0])) bad.push(`${tag(c)}|${row.dimension}=${ch}: 主欄位 ${row.touches[0]} 沒變`);
+          if (ch === d.own && changed.length) bad.push(`${tag(c)}|${row.dimension}=${ch}: 釘住自己的值卻改了 ${changed.join(",")}`);
+        }
+      }
+    }
+    return { bad, cells };
+  }
+  const tb = touchesBad(res, res.applyChoice);
+  ck(`W2 每個（模板, 維度, 提供的選擇）共 ${tb.cells} 格：實際改動的 config 欄位 ⊆ Registry touches；主欄位必變（除非選擇＝模板自己的值）；釘住自己的值＝零欄位改動`, tb.bad.length === 0 && tb.cells > 800, `${tb.cells} 格；${tb.bad.slice(0, 3).join("; ")}`);
+  const sneaky = (b, dim, ch) => { const n = res.applyChoice(b, dim, ch); if (dim === "risk.tolerance" && ch === "bold") n.macro.aggression = 0.99; return n; };
+  ck("W2b 對照組：risk=bold 偷偷多改 macro.aggression ⇒ 抓到未宣告的欄位", touchesBad(res, sneaky).bad.some((x) => /risk\.tolerance=bold.*macro\.aggression/.test(x)));
+  const lazy = (b, dim, ch) => (dim === "jungle.tempo" && ch === "fast" ? structuredClone(b) : res.applyChoice(b, dim, ch));
+  ck("W2c 對照組：jungle.tempo=fast 什麼都沒改 ⇒ 抓到「主欄位沒變」", touchesBad(res, lazy).bad.some((x) => /jungle\.tempo=fast: 主欄位/.test(x)));
+
+  // ── W3 獨立矩陣（ruling 7）：不借 offeredDetail 的結論 ─────────────────────────
+  const sigC = (cfg) => stableStringify([toEngineTactic(cfg), toEngineTacticIdentity(cfg)]);
+  //  「自己的值」用正式對照表的列（欄位值 ↔ 選擇）判斷，與被測實例的 offeredDetail 無關
+  const ownIndep = (regRow, base) => { const row = R.CHOICE_MAPPING.rows[regRow.dimension];
+    return row.kind === "carry" ? (base.economy.carryPriority === row.values.core ? "core" : "normal") : Object.keys(row.values).find((c) => row.values[c] === get(base, row.target)) ?? null; };
+  /** 獨立算「該被保留不提供」的集合：同旋鈕組的重複（留自己的值，否則留表序較前者）、不同於「沒有選擇」卻沒效果的、第二條 split 路。 */
+  function independentWithheld(r, c, row) {
+    const base = r.mergeConfig(c.tpl, c.overlayIds, {}), baseSig = sigC(base), own = ownIndep(row, base);
+    const lane = /^lanes\.(top|mid|bot)\.stance$/.exec(row.dimension)?.[1];
+    const pos = lane && { top: "top", mid: "mid", bot: "adc" }[lane];
+    const otherSplit = pos ? ["top", "mid", "adc"].some((p) => p !== pos && base.lanePlan[p] === "split") : false;
+    const out = new Set(), keep = new Map();
+    const order = own && row.choices.includes(own) ? [own, ...row.choices.filter((x) => x !== own)] : row.choices;
+    for (const ch of order) {
+      const next = r.applyChoice(base, row.dimension, ch), s = sigC(next);
+      if (ch !== own && ch === "split" && otherSplit) { out.add(ch); continue; }
+      if (ch !== own && s === baseSig) { out.add(ch); continue; }
+      if (keep.has(s)) { out.add(ch); continue; }
+      keep.set(s, ch);
+    }
+    return out;
+  }
+  function independentMatrix(r) {
+    const bad = [], exceptions = []; let cells = 0, pairs = 0;
+    for (const c of contexts) for (const row of Registry.liveRows()) {
+      cells++;
+      const want = independentWithheld(r, c, row), d = r.offeredDetail(c.tpl.templateId, row.dimension, c.overlayIds);
+      const got = new Set(d.withheld.map((w) => w.choice));
+      if (J([...want].sort()) !== J([...got].sort())) bad.push(`${tag(c)}|${row.dimension}: 獨立算 [${[...want]}] ≠ offeredDetail [${[...got]}]`);
+      const offeredIndep = row.choices.filter((x) => !want.has(x));
+      if (J(offeredIndep) !== J(d.offered)) bad.push(`${tag(c)}|${row.dimension}: 提供清單不同`);
+      const base = r.mergeConfig(c.tpl, c.overlayIds, {}), baseSig = sigC(base), own = ownIndep(row, base);
+      const sigs = offeredIndep.map((x) => sigC(r.applyChoice(base, row.dimension, x)));
+      for (let i = 0; i < sigs.length; i++) for (let j = i + 1; j < sigs.length; j++) { pairs++; if (sigs[i] === sigs[j]) bad.push(`${tag(c)}|${row.dimension}: ${offeredIndep[i]}≡${offeredIndep[j]}`); }
+      offeredIndep.forEach((x, i) => { if (x !== own && sigs[i] === baseSig) bad.push(`${tag(c)}|${row.dimension}: ${x} 與沒有選擇相同`); });
+      for (const x of want) exceptions.push(`${tag(c)}|${row.dimension}=${x}`);
+    }
+    return { bad, exceptions, cells, pairs };
+  }
+  const im = independentMatrix(res);
+  ck(`W3 獨立矩陣：${im.cells} 格、${im.pairs} 對。不經 offeredDetail 直接枚舉 Registry 選擇 × 模板、逐一解析算碰撞／無效果，結果＝offeredDetail 保留的集合與提供清單，且提供的每一對旋鈕組都不同`, im.bad.length === 0 && im.pairs > 400, im.bad.slice(0, 3).join("; "));
+  ck("W3b 獨立算出的例外 ＝ 釘住的 3 個第二條帶線路（沒有碰撞、沒有無效果的選擇）", J(im.exceptions) === J(["classic.m2|lanes.mid.stance=split", "v2.top_solo_split|lanes.mid.stance=split", "v2.mid_solo_split|lanes.top.stance=split"]), J(im.exceptions));
+  const dupMap = clone(R.CHOICE_MAPPING); dupMap.rows["risk.tolerance"].values.bold = dupMap.rows["risk.tolerance"].values.balanced;
+  const imBad = independentMatrix(R.makeResolver({ mapping: dupMap }));
+  ck("W3c 對照組：植入 bold＝balanced 的對照表 ⇒ 獨立矩陣的例外集合改變（抓到碰撞）", J(imBad.exceptions) !== J(im.exceptions) && imBad.exceptions.some((x) => /risk\.tolerance=/.test(x)));
+  //  offeredDetail 自己若說謊（少保留一個）⇒ 獨立矩陣會抓到：包一個謊報的實例
+  const liar = { ...res, offeredDetail: (t, d, o, x) => { const v = res.offeredDetail(t, d, o, x); return v && v.withheld.length ? { ...v, withheld: [], offered: Registry.registryRow(d).choices } : v; } };
+  ck("W3d 對照組：謊報「什麼都沒保留」的 offeredDetail ⇒ 獨立矩陣抓到", independentMatrix(liar).bad.length > 0);
+
+  // ── W4 組合（一次選兩個不同維度）：不得有一個選擇被另一個默默取消 ───────────────────
+  let comboN = 0; const comboBad = [];
+  for (const c of contexts) {
+    const base = res.mergeConfig(c.tpl, c.overlayIds, {});
+    const singles = [];
+    for (const row of Registry.liveRows()) { const d = res.offeredDetail(c.tpl.templateId, row.dimension, c.overlayIds); for (const ch of d.offered) if (ch !== d.own) singles.push([row.dimension, ch]); }
+    for (let i = 0; i < singles.length; i++) for (let j = i + 1; j < singles.length; j++) {
+      if (singles[i][0] === singles[j][0] || (i * 7 + j * 13) % 9 !== 0) continue;     // 確定性取樣：不同維度、固定算式
+      const choices = Choice.nestedOf([singles[i], singles[j]]);
+      const pl = Plan.createTacticPlan({ templateId: c.tpl.templateId, overlayIds: c.overlayIds, choices });
+      if (!pl.ok) continue;                                                              // 合法性由 W5 管（例：兩個核心、兩條帶線）
+      comboN++;
+      const both = res.mergeConfig(c.tpl, c.overlayIds, choices);
+      const a = res.mergeConfig(c.tpl, c.overlayIds, Choice.nestedOf([singles[i]])), b = res.mergeConfig(c.tpl, c.overlayIds, Choice.nestedOf([singles[j]]));
+      if (sigC(both) === sigC(a) || sigC(both) === sigC(b)) comboBad.push(`${tag(c)}: ${singles[i].join("=")} + ${singles[j].join("=")}`);
+      if (sigC(both) === sigC(base)) comboBad.push(`${tag(c)}: ${singles[i].join("=")} + ${singles[j].join("=")} 合起來等於沒選`);
+    }
+  }
+  ck(`W4 組合：${comboN} 組（每個情境確定性取樣的「不同維度、各自不是模板自己的值」的兩個選擇）合起來的旋鈕組 ≠ 任一單獨選擇，也 ≠ 沒有選擇`, comboBad.length === 0 && comboN > 300, `${comboN} 組；${comboBad.slice(0, 3).join("; ")}`);
+
+  // ── W5 plan ≡ resolver（ruling 3）：能建立的 plan 一定解析得出來；建立不了的，resolver 對手工 binding 也拒絕，碼相同 ─────────
+  let propN = 0, propBad = [];
+  const checkPlan = (input, expectOk) => {
+    propN++;
+    const pl = Plan.createTacticPlan(input);
+    if (expectOk !== undefined && pl.ok !== expectOk) { propBad.push(`${J(input)}: 預期 ok=${expectOk}，plan 層 ok=${pl.ok} ${codes(pl)}`); return; }
+    if (pl.ok) {
+      const b = R.bindTacticPlanToCurrentVersions(pl.plan), r = b && resolveB(b);
+      if (!r || !r.ok) propBad.push(`${J(input)}: plan ok 但 resolver 拒絕 ${r ? codes(r) : "bind=null"}`);
+    } else {
+      const canon = { ...rawPlan(input.templateId, { overlayIds: [...(input.overlayIds ?? [])].sort(), choices: input.choices ?? {} }) };
+      const r = resolveB(rawBinding(canon));
+      if (r.ok || !codes(pl).every((c) => codes(r).includes(c))) propBad.push(`${J(input)}: plan 拒絕 ${codes(pl)}，resolver ${r.ok ? "接受" : codes(r)}`);
+    }
+  };
+  for (const tpl of Templates.TACTIC_TEMPLATE_LIST) for (const ov of [[], ...Overlays.TACTIC_OVERLAYS.map((o) => [o.overlayId])]) {
+    checkPlan({ templateId: tpl.templateId, overlayIds: ov });
+    for (const row of Registry.liveRows()) for (const ch of row.choices) {
+      const choices = Choice.nestedOf([[row.dimension, ch]]);
+      //  獨立預期：覆蓋層歸屬正確，且該選擇不在獨立算出的保留集合內
+      const okOverlay = ov.every((id) => `classic.${Overlays.overlayById(id).baseTacticId}` === tpl.templateId);
+      const expectOk = okOverlay && !independentWithheld(res, { tpl, overlayIds: ov }, row).has(ch);
+      checkPlan({ templateId: tpl.templateId, overlayIds: ov, choices }, expectOk);
+    }
+  }
+  for (const bad of [
+    { templateId: "classic.m2", choices: { lanes: { mid: { stance: "split" } } } }, { templateId: "v2.top_solo_split", choices: { lanes: { mid: { stance: "split" } } } },
+    { templateId: "std", overlayIds: ["m1_measured_siege"] }, { templateId: "classic.m1", overlayIds: ["m1_measured_siege", "m4_contested_stack"] },
+    { templateId: "classic.m2", overlayIds: ["m1_measured_siege"], choices: { lanes: { top: { stance: "aggressive" }, mid: { stance: "split" } } } },
+  ]) checkPlan(bad, false);
+  checkPlan({ templateId: "classic.m2", choices: { lanes: { top: { stance: "aggressive" }, mid: { stance: "split" } } } }, true);
+  ck(`W5 plan ≡ resolver：${propN} 個 plan（21 模板 × {無、3 覆蓋層} × 每個 live 選擇＋已知的壞組合）——createTacticPlan.ok ⇔ 獨立預期；ok 的 resolver 一定接受；不 ok 的手工 binding resolver 也拒絕且碼相同`, propBad.length === 0 && propN > 3000, `${propN} 個；${propBad.slice(0, 3).join("; ")}`);
+  ck("W5b 對照組：這個性質檢查能失敗——把預期寫反的一筆會被記成違規", (() => { const before = propBad.length; checkPlan({ templateId: "classic.m2", choices: { lanes: { mid: { stance: "split" } } } }, true); const caught = propBad.length === before + 1; propBad.pop(); return caught; })());
+  ck("W5c createTacticPlan 的錯誤碼 ＝ resolver 的錯誤碼（共用同一組 TACTIC_CHOICE_ERROR）", ["OVERLAY_BASE_MISMATCH", "CHOICE_NOT_OFFERED", "MULTIPLE_SPLIT_LANES", "CONFIG_INVALID"].every((k) => Plan.TACTIC_PLAN_ERROR[k] === Choice.TACTIC_CHOICE_ERROR[k] && R.TACTIC_RESOLVER_ERROR[k] === Choice.TACTIC_CHOICE_ERROR[k]));
+
+  // ── W6 offeredChoices 不吞錯誤（ruling 6）────────────────────────────────────
+  const brokenMap = clone(R.CHOICE_MAPPING); brokenMap.rows["risk.tolerance"].values = null;
+  const brokenRes = R.makeResolver({ mapping: brokenMap });
+  let threwOffered = false; try { brokenRes.offeredChoices("std", "risk.tolerance"); } catch { threwOffered = true; }
+  ck("W6 對照表壞掉（values 不是物件）⇒ offeredChoices 丟例外，而不是悄悄回 []（預期的「不提供」才安靜）", threwOffered);
+  ck("W6b 預期的安靜結果仍安靜：未知模板、未知維度、design 維度 ⇒ []，不丟例外", (() => { try { return brokenRes.offeredChoices("nope", "risk.tolerance").length === 0 && brokenRes.offeredChoices("std", "teamfight.style").length === 0 && brokenRes.offeredChoices("std", "zzz").length === 0; } catch { return false; } })());
+  const rBroken = brokenRes.resolveBindingConfig(bind("classic.m4", { choices: { risk: { tolerance: "bold" } } }));
+  ck("W6c resolver 自己的 bug 變成明確的 resolver_internal_error（不是 binding_invalid，也不是默默通過）", !rBroken.ok && codes(rBroken).includes("resolver_internal_error"), J(codes(rBroken)));
+
+  // ── W7 組裝器永不丟例外（ruling 5）：手拼 setup 帶 Proxy／丟例外的 getter／循環 ─────────────────────
+  const liveCase = golden.cases.find((c) => c.id === "live-m4-3");
+  const okSetup = createMatchSetup({ ...encodeCase(liveCase) }).setup;
+  const withTactic = (tactic) => ({ ...okSetup, tactic });
+  const revoked = Proxy.revocable({}, {}); revoked.revoke();
+  const getterBinding = { get schema() { throw new Error("boom"); } };
+  const cyclic = {}; cyclic.self = cyclic;
+  const cases = [
+    ["已撤銷的 Proxy（binding）", withTactic({ blue: { kind: "binding", binding: revoked.proxy }, red: { kind: "std" } }), "tactic_unreadable"],
+    ["丟例外的 getter（binding）", withTactic({ blue: { kind: "binding", binding: getterBinding }, red: { kind: "std" } }), "tactic_unreadable"],
+    ["循環 binding", withTactic({ blue: { kind: "binding", binding: cyclic }, red: { kind: "std" } }), "tactic_binding_rejected"],
+    ["丟例外的 getter（legacy config）", withTactic({ blue: { kind: "legacy", config: getterBinding }, red: { kind: "std" } }), "tactic_unreadable"],
+    ["已撤銷的 Proxy（整個戰術物件，紅方）", withTactic({ blue: { kind: "std" }, red: revoked.proxy }), "tactic_unreadable"],
+    ["未知種類", withTactic({ blue: { kind: "wat" }, red: { kind: "std" } }), "tactic_rejected"],
+  ];
+  for (const [label, s, code] of cases) {
+    let out, threw = false;
+    try { out = probedAssemble(s); } catch { threw = true; }
+    ck(`W7 手拼 setup：${label} ⇒ 不丟例外，回 { ok:false, engine:null }、零 configure、錯誤碼 ${code}`, !threw && out.r.ok === false && out.r.engine === null && out.calls.length === 0 && out.r.errors.some((e) => e.code === code && e.field.startsWith("tactic.")), threw ? "threw" : J(out.r.errors));
+  }
+
+  // ── W8 組裝器只經 resolver 投影（ruling 4）：legacy／std 也一樣 ───────────────────────────────
+  const seenA = [];
+  const spyAll = { ...DEPS, engineAdapters: { ...DEPS.engineAdapters,
+    resolveTactic: (inp, adapters, opts) => { seenA.push([inp.kind, opts?.identity]); return DEPS.engineAdapters.resolveTactic(inp, adapters, opts); } } };
+  const w8 = probedAssemble(createMatchSetup({ ...encodeCase(liveCase) }).setup, spyAll);
+  ck("W8 Live（legacy 藍＋std 紅）：組裝器對兩方各呼叫一次 resolveTactic（kind＝legacy／std，identity 層開）", w8.r.ok && J(seenA) === J([["legacy", true], ["std", true]]), J(seenA));
+  const toolCase = golden.cases.find((c) => c.path === "runner");
+  seenA.length = 0;
+  const w8t = probedAssemble(createMatchSetup(encodeCase(toolCase)).setup, spyAll);
+  ck("W8b tool（std 對 std）同樣兩次 resolveTactic", w8t.r.ok && seenA.length === 2 && seenA.every(([k]) => k === "std"), J(seenA));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -525,7 +777,7 @@ console.log("\n§S 原始碼衛生、決定性、語意清單");
   ck("S1b resolver 沒有模組層級的可變狀態（沒有頂層 let／var；沒有快取 Map／WeakMap）", !/^(let|var)\s/m.test(resolverSrc) && !/\b(new Map|new WeakMap|new Set)\s*\(/.test(resolverSrc.split("export function makeResolver")[0]) && !/\bcache\b/i.test(resolverSrc));
   ck("S1c resolver 的 import 全在 platform 的契約／戰術資料／mastery 變體（不碰 heroDatabase、LogicEngine、store）", [...resolverSrc.matchAll(/from "([^"]+)"/g)].map((m) => m[1]).every((s) => /^\.\.\/\.\.\/\.\.\/platform\/(contracts|tactics|mastery)\//.test(s)));
   const asmSrc = stripComments(read("src/battle/moba/matchAssembler.js"));
-  ck("S2 組裝器不 import resolver（只經 deps.engineAdapters.resolveTacticBinding）；deps core 是唯一接線處", !/tacticResolver/.test(asmSrc) && /A\.resolveTacticBinding/.test(asmSrc) && /tacticResolver\.js/.test(stripComments(read("src/battle/moba/matchAssemblerDepsCore.js"))));
+  ck("S2 組裝器不 import resolver（只經 deps.engineAdapters.resolveTactic）；組裝器自己沒有第二份投影（match 步驟不再直接呼叫 A.toEngineTactic／A.toEngineTacticIdentity）；deps core 是唯一接線處", !/tacticResolver/.test(asmSrc) && /A\.resolveTactic\(/.test(asmSrc) && !/A\.toEngineTactic\(|A\.toEngineTacticIdentity\(/.test(asmSrc) && /tacticResolver\.js/.test(stripComments(read("src/battle/moba/matchAssemblerDepsCore.js"))));
   //  決定性：同一個輸入解析兩次、穿插別的輸入 ⇒ deep-equal；結果 frozen
   const ba = bind("classic.m7", { choices: { jungle: { focus: "gank" }, risk: { tolerance: "cautious" } } }), bb = bind("v2.top_solo_split", { choices: { phases: { late: { stance: "defensive" } } } });
   const r1 = resolveB(ba), rOther = resolveB(bb), r2 = resolveB(ba), r3 = R.resolveTacticBinding(ba), r4 = R.resolveTacticBinding(ba);
@@ -534,7 +786,7 @@ console.log("\n§S 原始碼衛生、決定性、語意清單");
   ck("S3b 兩個不同的 binding 解析出不同的旋鈕（沒有把第一個結果記住）", J(r1.knobs) !== J(rOther.knobs));
   ck("S3c 解析不改傳入的 binding（深凍結的輸入與可變輸入都一樣）", (() => { const m = JSON.parse(J(ba)), s = J(m); R.resolveTactic({ kind: "binding", binding: m }); return J(m) === s; })());
   //  語意清單
-  const need = ["src/battle/moba/tactics/tacticResolver.js", "src/platform/tactics/tacticTemplates.js", "src/platform/tactics/tacticPlan.js", "src/platform/tactics/capabilityRegistry.js", "src/platform/tactics/tacticOverlays.js", "src/platform/mastery/tacticVariant.js", "src/platform/contracts/MobaTacticConfig.js"];
+  const need = ["src/battle/moba/tactics/tacticResolver.js", "src/platform/tactics/tacticChoiceMapping.js", "src/platform/tactics/tacticTemplates.js", "src/platform/tactics/tacticPlan.js", "src/platform/tactics/capabilityRegistry.js", "src/platform/tactics/tacticOverlays.js", "src/platform/mastery/tacticVariant.js", "src/platform/contracts/MobaTacticConfig.js"];
   ck("S4 語意清單含 resolver、模板、plan、registry、覆蓋層、變體、MobaTacticConfig；每個檔案都存在", need.every((f) => SIMULATION_SEMANTICS_FILES.includes(f) && fs.existsSync(path.join(ROOT, f))), need.filter((f) => !SIMULATION_SEMANTICS_FILES.includes(f)).join(","));
   //  effectSheet 可用於解析結果（G-A7 之前的最低限度：binding 解析出的設定交給效果表不出錯，且 m7 gank 的入侵列方向由 higher 變 lower／same）
   const sheetM7 = effectSheet(Templates.TACTIC_TEMPLATES["classic.m7"].config), sheetG = effectSheet(resolveB(bind("classic.m7", { choices: { jungle: { focus: "gank" } } })).config);

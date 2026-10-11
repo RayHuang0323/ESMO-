@@ -193,7 +193,7 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
   const withoutEngine = (name) => ({ ...DEPS, engineAdapters: { ...DEPS.engineAdapters, [name]: undefined } });
   const liveS = mk(liveIn()), toolS = mk(toolIn());
   for (const [name, setup] of [["toEnginePlayerMods", liveS], ["toEngineHeroMods", liveS], ["toEngineHeroPassives", liveS], ["toEngineHeroPowerCurve", liveS],
-    ["toEngineSpells", liveS], ["toEngineTactic", liveS], ["toEngineTacticIdentity", liveS], ["matchItemsConfig", liveS], ["MOBA_TACTIC_VERSION", liveS],
+    ["toEngineSpells", liveS], ["toEngineTactic", liveS], ["resolveTactic", liveS], ["resolveTactic", toolS], ["toEngineTacticIdentity", liveS], ["matchItemsConfig", liveS], ["MOBA_TACTIC_VERSION", liveS],
     ["STANDARD_OPP_TACTIC", liveS], ["toEngineItems", toolS], ["toEngineHeroMods", toolS]])
     ck(`A9 缺 deps.engineAdapters.${name}（${setup === liveS ? "career" : "tool"}）⇒ deps_missing，零 configure 呼叫`, rejects(setup, "deps_missing", `deps.engineAdapters.${name}`, withoutEngine(name)));
   ck("A9b 沒有 engineAdapters 區塊的手拼 deps ⇒ deps_missing（組裝器沒有私下的預設）",
@@ -206,7 +206,7 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
   const counted = Object.fromEntries(Object.entries(DEPS.engineAdapters).map(([k, v]) => [k, typeof v === "function" ? (...a) => { hits[k] = (hits[k] ?? 0) + 1; return v(...a); } : v]));
   const rl = assembleMatch(liveS, { ...DEPS, engineAdapters: counted }), rt = assembleMatch(toolS, { ...DEPS, engineAdapters: counted });
   ck("A9d 注入的每個引擎側 adapter 都被呼叫到（career＋tool 兩條路徑合計）",
-    rl.ok && rt.ok && ["toEnginePlayerMods", "toEngineHeroMods", "toEngineHeroPassives", "toEngineHeroPowerCurve", "toEngineSpells", "toEngineTactic", "toEngineTacticIdentity", "matchItemsConfig", "toEngineItems"].every((k) => hits[k] > 0),
+    rl.ok && rt.ok && ["toEnginePlayerMods", "toEngineHeroMods", "toEngineHeroPassives", "toEngineHeroPowerCurve", "toEngineSpells", "toEngineTactic", "toEngineTacticIdentity", "resolveTactic", "matchItemsConfig", "toEngineItems"].every((k) => hits[k] > 0),
     JSON.stringify(hits));
 }
 
@@ -252,7 +252,7 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
 // ── A11 原始碼：組裝器不 import 任何它所呼叫的 adapter 模組（只經 deps）──────────────────────────────
 {
   const ADAPTER_NAMES = ["toEnginePlayerMods", "toEngineHeroMods", "toEngineHeroPassives", "toEngineHeroPowerCurve", "toEngineSpells", "matchItemsConfig", "toEngineItems",
-    "toEngineTactic", "toEngineTacticIdentity", "STANDARD_OPP_TACTIC", "MOBA_TACTIC_VERSION", "toEngineHeroSkills", "selectBattleTalents", "toEngineArchetypes"];
+    "toEngineTactic", "toEngineTacticIdentity", "resolveTactic", "STANDARD_OPP_TACTIC", "MOBA_TACTIC_VERSION", "toEngineHeroSkills", "selectBattleTalents", "toEngineArchetypes"];
   const ADAPTER_MODULES = /mobaPlayerStats|mobaHeroProfile|heroPassiveGameplay|heroPowerCurve|mobaHeroLoadout|buildStrategyPrep|itemsEngineAdapter|MobaTacticConfig|heroSkillGameplay|heroBattleTalents|heroCombatArchetypes|LogicEngine/;
   const scan = (text) => {
     const code = stripComments(text);

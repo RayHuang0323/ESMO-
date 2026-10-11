@@ -187,6 +187,9 @@ export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
     toEngineHeroPassives: M.passives?.toEngineHeroPassives, toEngineHeroPowerCurve: M.curves?.toEngineHeroPowerCurve,
     //  runner 不套選手素質、也不走 production 的出裝（matchItemsConfig）⇒ 明確給 undefined：不讓 core 的預設（runner 所在樹）悄悄頂替。
     toEnginePlayerMods: undefined, matchItemsConfig: undefined,
+    //  ⚠ resolveTactic（戰術輸入的編排）刻意不注入：它來自 runner 所在的樹，和組裝器本身一樣是「編排」；
+    //    它收到的投影（toEngineTactic／Identity）與 STANDARD_OPP_TACTIC 仍是上面 M 的那一份 ⇒ 量到的旋鈕是被量測那棵樹的。
+    //    tools/check_balance_runner_setup_3a.mjs P2b 驗：std 輸入時被呼叫的投影是 M 的包裝。
   };
   const deps = buildMatchAssemblerDepsFrom({ LogicEngine: M.LE.LogicEngine, heroLookup: M.heroes.heroById, heroAdapters: adapters, engineAdapters });
   const r = assembleMatch(setup, deps);

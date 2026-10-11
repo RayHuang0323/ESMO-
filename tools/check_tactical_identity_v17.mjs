@@ -148,7 +148,8 @@ const pair = (tacticId, opts = {}, seeds = SEEDS) => {
   const viaAssembler = (src) => /assembleMatch\(/.test(src) && !/\.configureMatch\(/.test(src);
   const passesIdentityItself = (src) => /identity:\s*\{\s*blue:\s*toEngineTacticIdentity\(/.test(src);
   ck('E1 Live（useLocalServer → 唯一組裝器）與 Challenge（challengeRunner）都以 toEngineTacticIdentity 傳 identity',
-    /identity:\s*L\.tacticIdentity\s*\?\s*\{\s*blue:\s*A\.toEngineTacticIdentity\(blueCfg\),\s*red:\s*A\.toEngineTacticIdentity\(redCfg\)\s*\}\s*:\s*null/.test(asm)
+    /identity:\s*L\.tacticIdentity\s*\?\s*\{\s*blue:\s*clone\(resolved\.blue\.identity\),\s*red:\s*clone\(resolved\.red\.identity\)\s*\}\s*:\s*null/.test(asm)
+      && /A\.resolveTactic\(t,\s*A,\s*\{\s*identity:\s*!!L\.tacticIdentity\s*\}\)/.test(asm) && /A\.toEngineTacticIdentity\(source\)/.test(readCode('src/battle/moba/tactics/tacticResolver.js'))
       && MATCH_RULESETS['career.v20'].layers.tacticIdentity === true && MATCH_RULESETS['challenge.v20'].layers.tacticIdentity === true
       && viaAssembler(uls) && (passesIdentityItself(chr) || viaAssembler(chr)));
   //  TD-HI5：紅方戰術來自對手隊伍自己的設定（AI 聯賽隊伍 style），查不到 ⇒ std。
@@ -175,7 +176,7 @@ const pair = (tacticId, opts = {}, seeds = SEEDS) => {
     /opponentTeam:\s*opts\.opponentId\s*\?\s*aiTeamById\(opts\.opponentId\)\s*:\s*null/.test(uls)
       && /opponentTeam\s*\?\s*mobaTacticForTeamStyle\(opponentTeam\.style\)\s*:\s*STANDARD_OPP_TACTIC/.test(lms)
       && /red:\s*\{\s*kind:\s*"legacy",\s*config:\s*toPlainData\(redTactic\)\s*\}/.test(lms)
-      && /red:\s*A\.toEngineTactic\(redCfg\)/.test(asm) && /red:\s*A\.toEngineTacticIdentity\(redCfg\)/.test(asm)
+      && /red:\s*clone\(resolved\.red\.knobs\)/.test(asm) && /red:\s*clone\(resolved\.red\.identity\)/.test(asm) && /A\.toEngineTactic\(source\)/.test(readCode('src/battle/moba/tactics/tacticResolver.js'))
       && /opponentTacticId:\s*redCfg\.tacticId/.test(asm)
       && AI_TEAMS.every((t) => liveOpponentTactic(t) === TC.mobaTacticForTeamStyle(t.style).tacticId) && liveOpponentTactic(null) === 'std',
     AI_TEAMS.map((t) => `${t.name}:${liveOpponentTactic(t)}`).join('、'));

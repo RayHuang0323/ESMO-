@@ -22,7 +22,7 @@
 //     （與 v20 Live／Challenge 的 `{ ...row, hero }` 相同；runner 原本沒有 hero 欄位，
 //      但所有 adapter 都以 heroId 為準，結果相同——golden 逐筆驗證）。
 //   · tactic：legacy ⇒ 該份 MobaTacticConfig；std ⇒ STANDARD_OPP_TACTIC；
-//     binding ⇒ deps.engineAdapters.resolveTacticBinding 解析成 MobaTacticConfig（Task 9；resolver 拒絕 ⇒ tactic_binding_rejected），之後同一對投影。
+//     binding ⇒ deps.engineAdapters.resolveTactic 解析成 MobaTacticConfig（Task 9；resolver 拒絕 ⇒ tactic_binding_rejected），之後同一對投影。
 //
 //  【production / tool 的差異（只有這三處，都是 v20 runner 的既有行為）】
 //   · tool.ruleOverrides：建構後立刻覆寫這一個實例的 rules（runner:119）。
@@ -38,7 +38,7 @@
 //
 //  【只做編排（Phase 3a T6 fix）】本檔不 import 任何 adapter 模組：引擎類別、英雄側 adapter（deps.heroAdapters）與引擎側 adapter
 //   （deps.engineAdapters：PlayerMods／HeroMods／Passives／PowerCurve／Spells／matchItemsConfig／toEngineItems／Tactic／Identity／
-//   STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION／resolveTacticBinding）全部經 deps，預設接線只在 matchAssemblerDepsCore.js 一處。
+//   STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION／resolveTactic）全部經 deps，預設接線只在 matchAssemblerDepsCore.js 一處。
 //   理由：平衡工具 ESMO_BALANCE_ROOT 做跨版本 A/B，必須量到「同一棵樹」，不能引擎與一半 adapter 來自 M、另一半來自 runner 所在的樹。
 //   tool 規則集容忍舊樹引擎缺 configureObjectiveLayout／HeroPassives／HeroPowerCurve（略過，同 v20 runner 的 typeof 護欄）；production 不容忍。
 //
@@ -122,6 +122,13 @@ export function assembleMatch(setup, deps = {}) {
   }
   const { ruleset, effectiveLayers: E } = setup;
   const L = ruleset.layers ?? {};
+  //  戰術輸入先安全地讀一份副本（手拼的 setup 可能帶已撤銷的 Proxy、丟例外的 getter）：讀不出來 ⇒ 錯誤結果，不是例外。
+  //  之後整個組裝器只看這份副本（tacticIn），不再碰 setup.tactic。
+  const tacticIn = { blue: null, red: null }, tacticUnreadable = { blue: false, red: false };
+  for (const side of ["blue", "red"]) {
+    try { const t = setup.tactic?.[side]; tacticIn[side] = t === undefined || t === null ? null : structuredClone(t); }
+    catch (e) { tacticUnreadable[side] = true; err("tactic_unreadable", `tactic.${side}`, `the tactic input could not be read safely (${String(e?.message ?? e).slice(0, 80)})`); }
+  }
   const isTool = ruleset.kind === "tool";
   const order = L.assemblyOrder;
   const tool = isTool ? (setup.tool ?? {}) : null;
@@ -159,9 +166,10 @@ export function assembleMatch(setup, deps = {}) {
   if (E.spells) needFn("toEngineSpells", "spells layer");
   if (E.match) {
     needFn("toEngineTactic", "match layer");
+    needFn("resolveTactic", "tactic resolver (legacy／std／binding)");
     if (L.tacticIdentity) needFn("toEngineTacticIdentity", "tacticIdentity layer");
     if (!isTool) need(typeof A.MOBA_TACTIC_VERSION === "string", "deps.engineAdapters.MOBA_TACTIC_VERSION", "tactic meta");
-    for (const side of SIDES) if (setup.tactic?.[side]?.kind === "std")
+    for (const side of SIDES) if (tacticIn[side]?.kind === "std")
       need(isPlainObject(A.STANDARD_OPP_TACTIC), "deps.engineAdapters.STANDARD_OPP_TACTIC", "std tactic");
   }
   if (E.items) needFn(isTool ? "toEngineItems" : "matchItemsConfig", "items layer");
@@ -185,23 +193,31 @@ export function assembleMatch(setup, deps = {}) {
     });
   }
 
-  //  plan binding（Phase 3a T9）：經 deps.engineAdapters.resolveTacticBinding 解析成 MobaTacticConfig，之後與 legacy 走同一對投影。
-  //  resolver 拒絕（版本不符、被竄改、design 選擇、未知覆蓋層……）＝開局前的錯誤結果，形狀與其他 setup 錯誤相同：
-  //  code 固定 tactic_binding_rejected、field 指到哪一方，message 帶 resolver 的原因碼。
-  const bindingCfg = { blue: null, red: null };
-  for (const side of SIDES) {
-    if (setup.tactic?.[side]?.kind !== "binding") continue;
-    if (typeof A.resolveTacticBinding !== "function") { need(false, "deps.engineAdapters.resolveTacticBinding", "binding tactic"); continue; }
-    const r = A.resolveTacticBinding(clone(setup.tactic[side].binding));
-    if (!r?.ok) {
-      const list = Array.isArray(r?.errors) && r.errors.length ? r.errors : [{ code: "unknown", field: "", message: "resolver rejected the binding" }];
-      for (const e of list) {
-        const sub = String(e.field ?? "").replace(/^binding\.?/, "");
-        err("tactic_binding_rejected", sub ? `tactic.${side}.${sub}` : `tactic.${side}`, `[${e.code}] ${e.message}`);
-      }
-    } else bindingCfg[side] = r.config;
+  //  戰術輸入（legacy／std／binding 三種）一律經 deps.engineAdapters.resolveTactic（Phase 3a T9 fix 1：規格 §7「兩個投影收進 Resolver」）。
+  //  組裝器沒有自己的投影：resolver 收到整份 engineAdapters，用裡面的 toEngineTactic／toEngineTacticIdentity／STANDARD_OPP_TACTIC
+  //  （ESMO_BALANCE_ROOT 的跨版本 A/B 因此量到被量測那棵樹的投影）。tacticIdentity 層關閉 ⇒ opts.identity=false（v20 不呼叫它）。
+  //  resolver 拒絕（版本不符、被竄改、design 選擇、未知覆蓋層……）或輸入讀不出來（Proxy、丟例外的 getter、循環）＝開局前的錯誤結果，
+  //  形狀與其他 setup 錯誤相同：binding ⇒ tactic_binding_rejected；其他種類 ⇒ tactic_rejected；讀不出來 ⇒ tactic_unreadable。
+  const resolved = { blue: null, red: null };
+  const tacticDepsOk = typeof A.resolveTactic === "function" && typeof A.toEngineTactic === "function"
+    && (!L.tacticIdentity || typeof A.toEngineTacticIdentity === "function") && isPlainObject(A.STANDARD_OPP_TACTIC);
+  if (E.match && tacticDepsOk) {
+    for (const side of SIDES) {
+      const t = tacticIn[side];
+      if (!t || tacticUnreadable[side]) continue;
+      let r;
+      try { r = A.resolveTactic(t, A, { identity: !!L.tacticIdentity }); }
+      catch (e) { err("tactic_unreadable", `tactic.${side}`, `the ${t?.kind ?? "?"} tactic could not be resolved safely (${String(e?.message ?? e).slice(0, 80)})`); continue; }
+      if (!r?.ok) {
+        const list = Array.isArray(r?.errors) && r.errors.length ? r.errors : [{ code: "unknown", field: "", message: "resolver rejected the tactic" }];
+        for (const e of list) {
+          const sub = String(e.field ?? "").replace(/^(binding|config)\.?/, "");
+          err(t.kind === "binding" ? "tactic_binding_rejected" : "tactic_rejected", sub ? `tactic.${side}.${sub}` : `tactic.${side}`, `[${e.code}] ${e.message}`);
+        }
+      } else resolved[side] = r;
+    }
   }
-  if (E.match && !setup.tactic?.red) err("tactic_red_missing", "tactic.red", "a match with a blue tactic needs an explicit red tactic (use { kind: \"std\" } for the neutral default)");
+  if (E.match && !tacticIn.red && !tacticUnreadable.red) err("tactic_red_missing", "tactic.red", "a match with a blue tactic needs an explicit red tactic (use { kind: \"std\" } for the neutral default)");
 
   if (setup.buildStrategy !== null && setup.buildStrategy !== undefined) {
     if (isTool) err("build_strategy_in_tool", "buildStrategy", "tool rulesets choose items through tool.itemsStrategies");
@@ -254,8 +270,7 @@ export function assembleMatch(setup, deps = {}) {
     talentSelection = selected && Object.keys(selected.players).length ? selected : null;
   }
 
-  const tacticCfg = (t, side) => (t.kind === "std" ? A.STANDARD_OPP_TACTIC : t.kind === "binding" ? clone(bindingCfg[side]) : clone(t.config));
-  const blueCfg = setup.tactic?.blue ? tacticCfg(setup.tactic.blue, "blue") : null;
+  const blueCfg = resolved.blue?.config ?? null;
   let tacticMeta = null, itemsApplied = false;
 
   const STEPS = {
@@ -307,14 +322,15 @@ export function assembleMatch(setup, deps = {}) {
     //  useLocalServer:270-280；challengeRunner:144-163；runner:143-144（std 對 std、meta: null）。
     match() {
       if (!E.match) return;
-      const redCfg = tacticCfg(setup.tactic.red, "red");
+      const redCfg = resolved.red.config;
       tacticMeta = isTool ? null
         : { tacticId: blueCfg.tacticId, tacticName: blueCfg.name, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
       call("configureMatch", {
-        blue: A.toEngineTactic(blueCfg),
-        red: A.toEngineTactic(redCfg),
+        //  旋鈕由 resolver 投影好（凍結的結果）；交給引擎的是副本，引擎想改也不會碰到 resolver 的輸出。
+        blue: clone(resolved.blue.knobs),
+        red: clone(resolved.red.knobs),
         //  tacticIdentity 是規則集層（整份 ruleset 已進 setup 雜湊），不依賴 setup 資料 ⇒ 不需要也不放進 effectiveLayers。
-        identity: L.tacticIdentity ? { blue: A.toEngineTacticIdentity(blueCfg), red: A.toEngineTacticIdentity(redCfg) } : null,
+        identity: L.tacticIdentity ? { blue: clone(resolved.blue.identity), red: clone(resolved.red.identity) } : null,
         meta: tacticMeta,
       });
     },

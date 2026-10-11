@@ -31,7 +31,7 @@ import { matchItemsConfig } from "./items/buildStrategyPrep.js";
 import { toEngineItems } from "./items/itemsEngineAdapter.js";
 import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "../../platform/contracts/MobaTacticConfig.js";
 import { MOBA_SIMULATION_VERSION } from "../../platform/contracts/simulationVersion.js";
-import { resolveTacticBinding, TACTIC_RESOLVER_VERSION } from "./tactics/tacticResolver.js";
+import { resolveTactic, TACTIC_RESOLVER_VERSION } from "./tactics/tacticResolver.js";
 
 export const MATCH_ASSEMBLER_DEPS_VERSION = "MatchAssemblerDeps.v1";
 
@@ -43,13 +43,13 @@ const CANONICAL_ADAPTERS = Object.freeze({
 const CANONICAL_ENGINE_ADAPTERS = Object.freeze({
   toEnginePlayerMods, toEngineHeroMods, toEngineHeroPassives, toEngineHeroPowerCurve, toEngineSpells,
   matchItemsConfig, toEngineItems, toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION,
-  resolveTacticBinding, TACTIC_RESOLVER_VERSION,
+  resolveTactic, TACTIC_RESOLVER_VERSION,
 });
 const ENGINE_ADAPTER_SOURCES = Object.freeze({
   toEnginePlayerMods: "mobaPlayerStats", toEngineHeroMods: "mobaHeroProfile", toEngineHeroPassives: "heroPassiveGameplay",
   toEngineHeroPowerCurve: "heroPowerCurve", toEngineSpells: "mobaHeroLoadout", matchItemsConfig: "buildStrategyPrep",
   toEngineItems: "itemsEngineAdapter", toEngineTactic: "MobaTacticConfig", toEngineTacticIdentity: "MobaTacticConfig",
-  resolveTacticBinding: "tacticResolver",
+  resolveTactic: "tacticResolver",
 });
 //  每個 adapter 函式的正式出處與該模組的契約常數（manifest 的內容）。
 const ADAPTER_SOURCES = Object.freeze({
@@ -73,7 +73,7 @@ export const fnLabel = (fn) => `override:${(typeof fn === "function" && fn.name)
  * @param {object}   [o.heroAdapters]     局部覆寫（工具／測試用；manifest 會如實標出覆寫）
  * @param {object}   [o.engineAdapters]   引擎側 adapter 局部覆寫（toEnginePlayerMods／HeroMods／HeroPassives／HeroPowerCurve／Spells／
  *                                        matchItemsConfig／toEngineItems／toEngineTactic／toEngineTacticIdentity／STANDARD_OPP_TACTIC／MOBA_TACTIC_VERSION／
- *                                        resolveTacticBinding／TACTIC_RESOLVER_VERSION）
+ *                                        resolveTactic／TACTIC_RESOLVER_VERSION）
  * @returns {Readonly<{ LogicEngine, heroLookup, heroAdapters, engineAdapters, manifest }>}
  */
 export function buildMatchAssemblerDepsFrom({ LogicEngine = CanonicalEngine, engineMarker = null, heroLookup = null, heroLookupLabel = null, heroAdapters = {}, engineAdapters = {} } = {}) {

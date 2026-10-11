@@ -32,9 +32,12 @@ const STANCE_LATE = ["standard", "defensive", "scaling"];
 const LANE_STANCE =["aggressive", "standard", "defensive"];
 const SPLITTABLE_LANE_STANCE = ["aggressive", "standard", "defensive", "split"];
 
-const live = (dimension, choices, basis) => Object.freeze({
+//  touches（Phase 3a T9 fix 1）：這個維度的任何選擇**可能改到的所有 MobaTacticConfig 欄位**（主欄位在前＝basis 的欄位路徑，
+//  之後是連帶欄位）。gate 逐「模板 × 選擇」比對實際改動的欄位 ⊆ touches，且主欄位真的改了（除非選擇就是模板自己的值）。
+const live = (dimension, choices, basis, extraTouches = []) => Object.freeze({
   dimension, choices: Object.freeze([...choices]), status: CAPABILITY_STATUS.LIVE,
   minSimVersion: CAPABILITY_SIM_VERSION_3A, basis, note: null,
+  touches: Object.freeze([basis.replace(/\(.*\)$/, ""), ...extraTouches]),
 });
 const design = (dimension, note, choices = []) => Object.freeze({
   dimension, choices: Object.freeze([...choices]), status: CAPABILITY_STATUS.DESIGN,
@@ -56,11 +59,13 @@ const ROWS = [
   //  打野節奏：macro.tempo → toEngineTactic.gankInterval（與 invadeWithMid）
   live("jungle.tempo", ["slow", "standard", "fast"], "macro.tempo"),
   //  打野重心：lanePlan.jungle → gankWeights／invadeChance／gankIntervalK
-  live("jungle.focus", ["gank", "farm", "invade"], "lanePlan.jungle"),
+  //  連帶 objectives.invadePriority：原本打野是 invade 的模板改選別的重心時降回中性（見 tacticChoiceMapping.js 檔頭）。
+  live("jungle.focus", ["gank", "farm", "invade"], "lanePlan.jungle", ["objectives.invadePriority"]),
   //  三路姿態與「帶線（單一路）」：lanePlan.top／mid／adc → laneOffset／gankWeights／splitLane。
   //  上、中路多一個 split（＝帶線）；下路沒有（引擎契約 LANE_PLAN_ENUM.adc 不含 split）。
-  live("lanes.top.stance", SPLITTABLE_LANE_STANCE, "lanePlan.top"),
-  live("lanes.mid.stance", SPLITTABLE_LANE_STANCE, "lanePlan.mid"),
+  //  連帶 macro.splitPush：選 split ⇒ 提到帶線的既有值；離開 split ⇒ 降回中性（引擎只在 splitLane 存在時才讀 splitPush）。
+  live("lanes.top.stance", SPLITTABLE_LANE_STANCE, "lanePlan.top", ["macro.splitPush"]),
+  live("lanes.mid.stance", SPLITTABLE_LANE_STANCE, "lanePlan.mid", ["macro.splitPush"]),
   live("lanes.bot.stance", LANE_STANCE, "lanePlan.adc"),
   //  輔助任務（b5 是輔助席）：lanePlan.support → roamK／protectHp
   live("seats.b5.mission", ["roam", "protect", "standard"], "lanePlan.support"),

@@ -537,9 +537,16 @@ if (Plan) {
   ck("P0c 每個模板 id（21 個）都能建 plan", Templates.TACTIC_TEMPLATE_LIST.every((t) => mk({ templateId: t.templateId }).ok));
   const full = { jungle: { focus: "farm", tempo: "slow" }, phases: { early: { stance: "defensive" }, late: { stance: "scaling" } }, lanes: { top: { stance: "split" }, bot: { stance: "defensive" } },
     seats: { b5: { mission: "protect" }, b4: { priority: "core" } }, risk: { tolerance: "cautious" } };
-  const fullPlan = mk({ templateId: "std", overlayIds: ["m8_early_footing", "m1_measured_siege"], choices: full });
-  ck("P0d 全 live 選擇的 plan：ok，overlayIds 排序，choices 保持巢狀", fullPlan.ok && J(fullPlan.plan.overlayIds) === J(["m1_measured_siege", "m8_early_footing"]) && fullPlan.plan.choices.lanes.top.stance === "split");
-  ck("P0e 三個真實覆蓋層可同時選（欄位互不重疊）", mk({ templateId: "classic.m1", overlayIds: Overlays.TACTIC_OVERLAYS.map((o) => o.overlayId) }).ok);
+  //  Task 9 fix 1：createTacticPlan 現在拒絕「永遠解析不出來」的 plan（覆蓋層只能配它的 base 經典模板、一次一個），
+  //  所以原本拿 std＋多個覆蓋層當語法載體的測試改用合法配對（classic.m1＋m1_measured_siege）；多覆蓋層排序的性質改在下方 P0f 以錯誤路徑驗證。
+  const fullPlan = mk({ templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: full });
+  ck("P0d 全 live 選擇的 plan：ok，overlayIds 為單一合法覆蓋層，choices 保持巢狀", fullPlan.ok && J(fullPlan.plan.overlayIds) === J(["m1_measured_siege"]) && fullPlan.plan.choices.lanes.top.stance === "split", J(fullPlan.errors));
+  ck("P0e 三個真實覆蓋層各自配它的 base 經典模板都 ok；三個一起放在同一個模板 ⇒ overlay_base_mismatch（v20 一次只套一個，且各屬不同 base）",
+    Overlays.TACTIC_OVERLAYS.every((o) => mk({ templateId: `classic.${o.baseTacticId}`, overlayIds: [o.overlayId] }).ok)
+    && J(codesOf(mk({ templateId: "classic.m1", overlayIds: Overlays.TACTIC_OVERLAYS.map((o) => o.overlayId) }))) === J([E.OVERLAY_BASE_MISMATCH]));
+  ck("P0f 覆蓋層是集合：多個覆蓋層的順序顛倒 ⇒ 完全相同的錯誤（排序仍在，只是多覆蓋層永遠不合法）",
+    J(mk({ templateId: "classic.m1", overlayIds: ["m4_contested_stack", "m1_measured_siege"] }).errors) === J(mk({ templateId: "classic.m1", overlayIds: ["m1_measured_siege", "m4_contested_stack"] }).errors)
+    && !mk({ templateId: "classic.m1", overlayIds: ["m1_measured_siege", "m4_contested_stack"] }).ok);
 
   //  P3：design／未知／錯誤型別（Review Focus 5）
   const rej = (input, code) => { const r = mk(input); return !r.ok && r.plan === null && r.errors.length > 0 && r.errors.every((e) => typeof e.code === "string" && typeof e.message === "string" && typeof e.field === "string") && (!code || codesOf(r).includes(code)); };
@@ -643,7 +650,7 @@ if (Plan) {
   ck("P3r4 對照組：合法 live 值仍然被接受（先驗鍵不會誤殺）", mk({ templateId: "std", choices: { risk: { tolerance: "bold" }, jungle: { focus: null } } }).ok);
 
   //  P4：plan 裡沒有任何 number
-  const richPlans = [base, fullPlan, ...Templates.TACTIC_TEMPLATE_LIST.map((t) => mk({ templateId: t.templateId, overlayIds: ["m4_contested_stack"] }))];
+  const richPlans = [base, fullPlan, ...Templates.TACTIC_TEMPLATE_LIST.map((t) => mk({ templateId: t.templateId, overlayIds: t.templateId === "classic.m4" ? ["m4_contested_stack"] : [] }))];
   ck("P4 plan 物件（遞迴）不存在任何 number", richPlans.every((r) => r.ok && !hasNumber(r.plan)));
   ck("P4b plan 物件（遞迴）也沒有假裝成數值的字串", richPlans.every((r) => !hasNumericString(r.plan)));
   ck("P4c 對照組：掃描器抓得到 number 與數字字串", hasNumber({ a: [{ b: 0 }] }) && hasNumber({ a: 1.5 }) && hasNumericString({ a: ["0.8"] }) && hasNumericString({ a: "1e3" }) && !hasNumber({ a: "x", b: [true, null] }) && !hasNumericString({ a: "m1", b: "v2.x" }));
@@ -651,14 +658,13 @@ if (Plan) {
 
   //  P5：標準形與雜湊
   const H = (o) => { const r = mk(o); return r.ok ? tacticPlanHash(r.plan) : `ERR:${codesOf(r)}`; };
-  const h0 = H({ templateId: "std", overlayIds: ["m1_measured_siege", "m4_contested_stack"], choices: full });
+  const h0 = H({ templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: full });
   ck("P5 planHash 是 16 位小寫十六進位", /^[0-9a-f]{16}$/.test(h0), h0);
   ck("P5a 同一 plan 不同鍵序（每一層反向）⇒ planHash 相同、plan 逐位元相同",
-    H(reorder({ templateId: "std", overlayIds: ["m1_measured_siege", "m4_contested_stack"], choices: full })) === h0
-    && J(mk(reorder({ templateId: "std", overlayIds: ["m1_measured_siege", "m4_contested_stack"], choices: full })).plan) === J(mk({ templateId: "std", overlayIds: ["m1_measured_siege", "m4_contested_stack"], choices: full }).plan));
+    H(reorder({ templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: full })) === h0
+    && J(mk(reorder({ templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: full })).plan) === J(mk({ templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: full }).plan));
   const eq = (label, a, b) => ck(`P5 等價寫法：${label}`, H(a) === H(b) && !H(a).startsWith("ERR"), `${H(a)} / ${H(b)}`);
-  eq("overlayIds 順序顛倒", { templateId: "std", overlayIds: ["m4_contested_stack", "m1_measured_siege"], choices: full }, { templateId: "std", overlayIds: ["m1_measured_siege", "m4_contested_stack"], choices: full });
-  eq("overlayIds 重複", { templateId: "std", overlayIds: ["m1_measured_siege", "m1_measured_siege", "m4_contested_stack"], choices: full }, { templateId: "std", overlayIds: ["m1_measured_siege", "m4_contested_stack"], choices: full });
+  eq("overlayIds 重複", { templateId: "classic.m1", overlayIds: ["m1_measured_siege", "m1_measured_siege"], choices: full }, { templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: full });
   const bare = { templateId: "classic.m2" };
   eq("overlayIds 省略 ＝ [] ＝ null", bare, { ...bare, overlayIds: [] });
   eq("overlayIds null ＝ 省略", bare, { ...bare, overlayIds: null });
@@ -671,16 +677,15 @@ if (Plan) {
   eq("contingencies 省略 ＝ [] ＝ null", bare, { ...bare, contingencies: [] });
   eq("contingencies null ＝ 省略", bare, { ...bare, contingencies: null });
   ck("P5b JSON 往返與重建冪等：createTacticPlan(plan) ＝ 同一份標準形、同一個雜湊", (() => { const p = fullPlan.plan; const rt = mk(JSON.parse(J(p))); const again = mk(p); return rt.ok && again.ok && J(rt.plan) === J(p) && J(again.plan) === J(p) && tacticPlanHash(rt.plan) === tacticPlanHash(p) && tacticPlanHash(again.plan) === tacticPlanHash(p); })());
-  ck("P5c 回傳的 plan 不與輸入共用參考（改輸入不影響 plan）", (() => { const inp = { templateId: "std", overlayIds: ["m1_measured_siege"], choices: { jungle: { focus: "farm" } } }; const r = mk(inp); inp.overlayIds.push("x"); inp.choices.jungle.focus = "gank"; return r.plan.overlayIds.length === 1 && r.plan.choices.jungle.focus === "farm"; })());
+  ck("P5c 回傳的 plan 不與輸入共用參考（改輸入不影響 plan）", (() => { const inp = { templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: { jungle: { focus: "farm" } } }; const r = mk(inp); inp.overlayIds.push("x"); inp.choices.jungle.focus = "gank"; return r.plan.overlayIds.length === 1 && r.plan.choices.jungle.focus === "farm"; })());
 
   //  語意不同 ⇒ 雜湊不同
   const hs = new Set(), labels = [];
   const addH = (label, o) => { const h = H(o); labels.push(label); hs.add(h); return h; };
   for (const t of Templates.TACTIC_TEMPLATE_LIST) addH(`tpl ${t.templateId}`, { templateId: t.templateId });
-  const ovIds = Overlays.TACTIC_OVERLAYS.map((o) => o.overlayId);
-  for (let m = 1; m < 8; m++) addH(`ov ${m}`, { templateId: "classic.m1", overlayIds: ovIds.filter((_, i) => m & (1 << i)) });
+  for (const o of Overlays.TACTIC_OVERLAYS) addH(`ov ${o.overlayId}`, { templateId: `classic.${o.baseTacticId}`, overlayIds: [o.overlayId] });
   const nTpl = Templates.TACTIC_TEMPLATE_LIST.length;
-  ck(`P5d ${nTpl} 個模板 ＋ 7 種非空覆蓋層組合，雜湊全部不同（${labels.length} 個）`, hs.size === labels.length && labels.length === nTpl + 7 && nTpl === 21);
+  ck(`P5d ${nTpl} 個模板 ＋ 3 種合法的（模板, 覆蓋層）配對，雜湊全部不同（${labels.length} 個；多覆蓋層組合不再合法）`, hs.size === labels.length && labels.length === nTpl + 3 && nTpl === 21);
   const hs2 = new Set([H({ templateId: "std" })]); let n2 = 1;
   for (const r of Registry.liveRows()) for (const c of r.choices) {
     const ch = {}; r.dimension.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? c : {}, n[k]), ch);
@@ -691,7 +696,7 @@ if (Plan) {
     const a = H({ templateId: "std", choices: { jungle: { focus: "farm" } } });
     return a !== H({ templateId: "std", choices: { jungle: { focus: "farm" }, risk: { tolerance: "bold" } } }) && a !== H({ templateId: "std", choices: { jungle: { tempo: "slow" } } })
       && a !== H({ templateId: "std", choices: { jungle: { focus: "gank" } } }) && a !== H({ templateId: "classic.m1", choices: { jungle: { focus: "farm" } } })
-      && a !== H({ templateId: "std", overlayIds: ["m1_measured_siege"], choices: { jungle: { focus: "farm" } } });
+      && a !== H({ templateId: "classic.m1", overlayIds: ["m1_measured_siege"], choices: { jungle: { focus: "farm" } } });
   })());
   ck("P5g 「明確寫下與模板相同的值」≠「缺項」（釘住 vs 跟隨模板是不同意圖，雜湊不同；規則寫在 tacticPlan.js 檔頭）",
     H({ templateId: "classic.m4", choices: { jungle: { focus: "farm" } } }) !== H({ templateId: "classic.m4" }));
@@ -714,7 +719,7 @@ if (Plan) {
   ck("B3 不合法的 plan 或版本字串 ⇒ null（不丟例外）", bindTacticPlan({ templateId: "nope" }, VS) === null && bindTacticPlan(null, VS) === null && bindTacticPlan(p) === null && bindTacticPlan(p, {}) === null
     && bindTacticPlan(p, { ...VS, resolverVersion: "" }) === null && bindTacticPlan(p, { ...VS, templatesVersion: 1 }) === null && bindTacticPlan(p, { ...VS, overlaysVersion: undefined }) === null
     && bindTacticPlan({ ...p, choices: { teamfight: { style: "x" } } }, VS) === null);
-  ck("B3b 不同寫法的同一 plan ⇒ 同一個 planHash", bindTacticPlan({ templateId: "std", overlayIds: ["m4_contested_stack", "m1_measured_siege"] }, VS).planHash === bindTacticPlan(reorder({ templateId: "std", overlayIds: ["m1_measured_siege", "m4_contested_stack", "m1_measured_siege"], choices: {} }), VS).planHash);
+  ck("B3b 不同寫法的同一 plan ⇒ 同一個 planHash", bindTacticPlan({ templateId: "classic.m1", overlayIds: ["m1_measured_siege"] }, VS).planHash === bindTacticPlan(reorder({ templateId: "classic.m1", overlayIds: ["m1_measured_siege", "m1_measured_siege"], choices: {} }), VS).planHash);
   ck("B3c 版本字串不同 ⇒ binding 不同，但 planHash 相同（planHash 只管玩家選擇）", bindTacticPlan(p, VS).planHash === bindTacticPlan(p, { ...VS, resolverVersion: "tacticResolver.v2" }).planHash && J(bindTacticPlan(p, VS)) !== J(bindTacticPlan(p, { ...VS, resolverVersion: "tacticResolver.v2" })));
 
   const ids = ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "std"];

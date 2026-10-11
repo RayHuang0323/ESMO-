@@ -36,6 +36,7 @@ import { fnv1a64Hex } from "../contracts/matchSetup.js";
 import { CAPABILITY_STATUS, CAPABILITY_ROWS, registryRow } from "./capabilityRegistry.js";
 import { TACTIC_TEMPLATES, templateById, templateIdOfLegacyTactic } from "./tacticTemplates.js";
 import { overlayById, findOverlayConflicts } from "./tacticOverlays.js";
+import { tacticPlanProblems, TACTIC_CHOICE_ERROR } from "./tacticChoiceMapping.js";
 
 export const TACTIC_PLAN_VERSION = "TacticPlan.v2";
 export const TACTIC_PLAN_BINDING_VERSION = "TacticPlanBinding.v1";
@@ -57,6 +58,8 @@ export const TACTIC_PLAN_ERROR = Object.freeze({
   MULTIPLE_SPLIT_LANES: "multiple_split_lanes",
   MULTIPLE_CORE_SEATS: "multiple_core_seats",
   CONTINGENCIES_NOT_LIVE: "contingencies_not_live",
+  //  語意檢查（Phase 3a T9 fix 1）：plan 層與 resolver 共用同一個碼——能建立的 plan 就一定解析得出來。
+  ...TACTIC_CHOICE_ERROR,
 });
 const E = TACTIC_PLAN_ERROR;
 
@@ -213,6 +216,9 @@ function buildTacticPlan(input) {
   if (rawCont !== null && rawCont !== undefined && !(Array.isArray(rawCont) && rawCont.length === 0)) {
     errors.push({ code: E.CONTINGENCIES_NOT_LIVE, field: "contingencies", message: "條件式戰術要到 3b 才開放" });
   }
+
+  //  語意檢查：覆蓋層歸屬、合併後的帶線路數、每個選擇是否「提供」。只在結構都合法之後做（它假設 id／鍵／列舉已驗證）。
+  if (!errors.length) errors.push(...tacticPlanProblems(tpl, overlayIds, choices));
 
   if (errors.length) return fail();
   const plan = deepFreeze({

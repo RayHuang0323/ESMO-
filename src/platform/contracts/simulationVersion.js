@@ -203,6 +203,8 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   //  組裝器現在能接受 plan binding：binding → MobaTacticConfig → toEngineTactic／toEngineTacticIdentity。
   //  · Resolver 與它的選擇對照表（CHOICE_MAPPING）：改任何一格＝同一份 binding 解析出不同旋鈕。
   "src/battle/moba/tactics/tacticResolver.js",
+  //  · 選擇對照表（CHOICE_MAPPING）、applyChoice、提供清單與 plan 層語意檢查（fix 1 由 resolver 搬到 platform，plan 與 resolver 共用唯一一份）。
+  "src/platform/tactics/tacticChoiceMapping.js",
   //  · 模板資料：binding 的起點設定（經典模板由 MobaTacticConfig 派生，v2 模板是新輸入）。
   "src/platform/tactics/tacticTemplates.js",
   //  · plan 驗證器（createTacticPlan）：決定哪些輸入被接受、標準形長什麼樣（resolver 每次都重新驗證）。
@@ -492,7 +494,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  binding 分支（經 deps.engineAdapters.resolveTacticBinding）、matchSetup/matchRuleset 多「ruleset 接受的戰術種類」檢查。
   //  行為不變：legacy／std 路徑一個位元都沒動，golden 39 案＋Live 9 案以 binding 輸入皆逐位元相同（check_tactic_resolver_3a）。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 e695aa910251481a 未曾發布）。
-  "moba-sim.v21": "048375d5ab576f18",
+  //  2026-10-12（Phase 3a T9 fix 1）：選擇對照表搬到 tacticChoiceMapping.js（新增進清單）；`split` 選擇連帶把 macro.splitPush 提到
+  //  classic.m2 的值（離開 split 降回 std 的值）；組裝器對 legacy／std／binding 一律經 resolveTactic。
+  //  legacy／std 路徑的旋鈕一個位元都沒動，golden 39 案＋Live 9 案（binding 輸入）仍逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 048375d5ab576f18 未曾發布）。
+  "moba-sim.v21": "88f4175a94025c1a",
 });
 
 export const isKnownSimulationVersion = (v) =>
