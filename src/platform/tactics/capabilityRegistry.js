@@ -114,7 +114,8 @@ const ROWS = [
   })),
   //  打野節奏：macro.tempo → toEngineTactic.gankInterval（與 invadeWithMid）
   live("jungle.tempo", ["slow", "standard", "fast"], "macro.tempo", [], {
-    resolverFields: ["knobs.gankInterval"], engineReads: ["gankInterval"],
+    //  連帶 knobs.invadeWithMid：toEngineTactic 在「tempo 為 fast 且 objectives.invadePriority ≥ 0.3」時讓中路跟進入侵（tempo 是其中一個輸入）。
+    resolverFields: ["knobs.gankInterval", "knobs.invadeWithMid"], engineReads: ["gankInterval", "invadeWithMid"],
     gate: {
       rank: ["slow", "standard", "fast"], claims: claimsOf(["slow", "standard", "fast"], "ganksPerMin"),
       deltaFields: ["knobs.gankInterval"], inverseFields: ["knobs.gankInterval"],   // 間隔越長抓得越少 ⇒ 名次與旋鈕反向
@@ -124,8 +125,8 @@ const ROWS = [
   //  打野重心：lanePlan.jungle → gankWeights／invadeChance／gankIntervalK
   //  連帶 objectives.invadePriority：原本打野是 invade 的模板改選別的重心時降回中性（見 tacticChoiceMapping.js 檔頭）。
   live("jungle.focus", ["gank", "farm", "invade"], "lanePlan.jungle", ["objectives.invadePriority"], {
-    resolverFields: ["identity.gankIntervalK", "knobs.invadeChance"],
-    engineReads: ["gankIntervalK", "invadeChance", "gankWeights"],
+    resolverFields: ["identity.gankIntervalK", "knobs.invadeChance", "knobs.gankWeights.top", "knobs.gankWeights.mid", "knobs.gankWeights.bot", "knobs.invadeWithMid"],
+    engineReads: ["gankIntervalK", "invadeChance", "gankWeights", "invadeWithMid"],
     gate: {
       claims: [
         { choice: "farm", metric: "ganksPerMin", direction: "down" },
@@ -243,7 +244,35 @@ export const liveCapabilities = (simVersion = CAPABILITY_SIM_VERSION_3A) => live
  * tacticChoiceMapping 的 offeredDetail 讀它：被列入的選擇回報 `withheld: no_measured_effect`。
  * tools/check_tactic_truth_3a.mjs 驗證這張表與量測結果表（tools/fixtures/tactic_truth_3a.json）完全一致。
  */
-export const MEASURED_EXCLUSIONS = deepFreeze([]);
+//  reason：no_measured_effect＝方向對但 z < 2 或方向不明顯；reversed_effect＝顯著朝反方向（z ≤ −2）。z／n 是事前登記指標的配對結果（seeds 1–40）。
+//  ⚠ 這些不是「證明沒有效果」：n=40 檢定力有限，許多是旋鈕本來就很小（例如階段姿態只平移 4–8 個百分點）。
+//    Owner 若要保留，另以 n≥400 的新 seeds 證明（見 task-10-report.md），不是放大係數。
+const ex = (template, dimension, choice, reason, metric, n, z) => ({ template, dimension, choice, reason, metric, n, z });
+export const MEASURED_EXCLUSIONS = deepFreeze([
+  ex("*", "phases.early.stance", "aggressive", "no_measured_effect", "fightEntriesPerMin.early", 40, 0.38),
+  ex("*", "phases.early.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.early", 40, -0.09),
+  ex("*", "phases.early.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.early", 40, -1.05),
+  ex("*", "phases.mid.stance", "aggressive", "no_measured_effect", "fightEntriesPerMin.mid", 40, 1.38),
+  ex("*", "phases.mid.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.mid", 40, 1.52),
+  ex("*", "phases.mid.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.mid", 40, 0.55),
+  ex("*", "phases.late.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.late", 23, 0.15),
+  ex("*", "phases.late.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.late", 23, -0.89),
+  ex("*", "jungle.tempo", "slow", "no_measured_effect", "ganksPerMin", 40, -0.85),
+  ex("*", "jungle.tempo", "fast", "no_measured_effect", "ganksPerMin", 40, 0.42),
+  ex("classic.m1", "jungle.focus", "farm", "no_measured_effect", "ganksPerMin", 40, -1.38),
+  ex("*", "lanes.top.stance", "aggressive", "no_measured_effect", "laneForward.top", 40, 0.71),
+  ex("*", "lanes.top.stance", "defensive", "reversed_effect", "laneForward.top", 40, 3.35),
+  ex("classic.m7", "lanes.top.stance", "split", "no_measured_effect", "seatFightEntriesPerMin.b1", 40, -0.97),
+  ex("*", "lanes.mid.stance", "aggressive", "reversed_effect", "laneForward.mid", 40, -3.23),
+  ex("*", "lanes.mid.stance", "defensive", "no_measured_effect", "laneForward.mid", 40, -0.19),
+  ex("classic.m1", "lanes.bot.stance", "aggressive", "no_measured_effect", "laneForward.bot", 40, -0.08),
+  ex("*", "lanes.bot.stance", "defensive", "no_measured_effect", "laneForward.bot", 40, 0.99),
+  ex("classic.m1", "seats.b1.priority", "core", "no_measured_effect", "coreProtectsPerMin.top", 40, 1.43),
+  ex("*", "seats.b3.priority", "core", "no_measured_effect", "coreProtectsPerMin.mid", 40, 1.43),
+  ex("*", "seats.b4.priority", "core", "no_measured_effect", "coreProtectsPerMin.adc", 40, 1),
+  ex("classic.m2", "risk.tolerance", "cautious", "no_measured_effect", "retreatStartsPerMin", 40, 0.79),
+  ex("*", "risk.tolerance", "bold", "no_measured_effect", "retreatStartsPerMin", 40, -1.64),
+]);
 /** 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。 */
 export const measuredExclusion = (template, dimension, choice) =>
   MEASURED_EXCLUSIONS.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)) ?? null;

@@ -36,6 +36,8 @@ const phaseOf = (t) => (t < PHASE_EDGES[0] ? 0 : t < PHASE_EDGES[1] ? 1 : 2);
 // ── 戰術輸入 ──────────────────────────────────────────────────────────────
 /** arm＝null 或 { templateId, choices }（choices 為巢狀物件）。std 且沒有選擇 ⇒ `{kind:"std"}`（與 balance runner 預設逐位元相同）。 */
 export function tacticInputOf(arm) {
+  //  Phase 2 的候選評估用：arm.legacyConfig＝完整的 MobaTacticConfig（走 legacy 輸入，不經 Registry／對照表）；Phase 1 的批次不使用。
+  if (arm?.legacyConfig) return { kind: "legacy", config: arm.legacyConfig };
   if (!arm || (arm.templateId === "std" && Object.keys(arm.choices ?? {}).length === 0)) return { kind: "std" };
   const created = createTacticPlan({ templateId: arm.templateId, choices: arm.choices ?? {} });
   if (!created.ok) throw new Error(`truth sim: plan rejected ${arm.templateId} ${JSON.stringify(arm.choices)}: ${created.errors.map((e) => e.code).join(",")}`);

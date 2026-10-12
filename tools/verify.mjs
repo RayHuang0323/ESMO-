@@ -162,6 +162,11 @@ const SEGMENTS = [
   { id: "simulation_version", script: "tools/check_simulation_version_gate.mjs", shape: /PASS|通過/, note: "Simulation fingerprint" },
   { id: "live_setup_3a", script: "tools/check_live_setup_3a.mjs", shape: /Live Setup 3a：\d+\/\d+ PASS/, note: "Phase 3a T4：Live hook → MatchSetup → 唯一組裝器（golden live 9 案逐位元、舊存檔恢復、規則集壽命、共用 deps）" },
   { id: "match_setup_3a", script: "tools/check_match_setup_3a.mjs", shape: /Match Setup 3a：\d+\/\d+ PASS/, note: "Phase 3a T7：跨模式一致（golden 39 案走真實包裝、同 setup 多路徑、RS-1、正式組裝掃描、語意清單；153 檢查，約 5 分鐘）" },
+  { id: "tactic_registry_3a", script: "tools/check_tactic_registry_3a.mjs", shape: /Capability Registry 3a：\d+\/\d+ PASS/, note: "Phase 3a T10 G-A5：Registry ↔ resolver ↔ 引擎（resolverFields 真的變、engineReads 真的被讀、UI 選項清單＝offeredChoices；秒級）" },
+  //  tactic_truth_3a 跑的是**快速模式**（驗證已提交的結果表 tools/fixtures/tactic_truth_3a.json，秒級）。
+  //  重新量測（約 1.5–2 小時、workers ≤ 3、可續跑）：node tools/check_tactic_truth_3a.mjs --measure --dir=<repo 外的資料夾>；
+  //  改了引擎語意檔、對照表或 Registry 的 live 列之後，快速模式會因結果表過期而紅，必須重新量測。
+  { id: "tactic_truth_3a", script: "tools/check_tactic_truth_3a.mjs", shape: /Tactic Truth 3a：\d+\/\d+ PASS/, note: "Phase 3a T10 G-A7：每個 live 選項在模擬裡有量得到的效果（快速模式驗證結果表；--measure 才重新模擬）" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

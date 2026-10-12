@@ -506,7 +506,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-12（Phase 3a T10 事前登記）：capabilityRegistry.js 的 live 列多了 resolverFields／engineReads／gate（真實性 gate 的事前登記資料）與
   //  CAPABILITIES／liveCapabilities 別名；isLiveChoice 多一個可省略的 simVersion 參數。都是純資料／查詢，解析器與對照表一個位元都沒動，
   //  golden 39 案仍逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 0300a71fcbc3a7df 未曾發布）。
-  "moba-sim.v21": "355cf3ef13b6b7e4",
+  //  2026-10-12（Phase 3a T10 結果）：Registry 多了 MEASURED_EXCLUSIONS（G-A7 量測不到效果的選擇逐模板不提供；23 筆），
+  //  offeredChoiceDetail 多一個可省略的 opts.withMeasured 與 tacticBookOptions（UI 選項清單）；resolver 重新匯出它。
+  //  排除表只影響「提供給玩家挑哪些」（offeredChoices／tacticBookOptions）；createTacticPlan 驗的仍是結構上合法（withMeasured:false），
+  //  所以**不改任何輸入的解析結果**、不碰引擎與組裝器：golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 355cf3ef13b6b7e4 未曾發布）。
+  "moba-sim.v21": "5419139708e72275",
 });
 
 export const isKnownSimulationVersion = (v) =>

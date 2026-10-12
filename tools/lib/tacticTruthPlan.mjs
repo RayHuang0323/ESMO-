@@ -12,10 +12,9 @@
 //  配對＝同 seed、同名單（鏡像名單）、只有「那一個選擇」在一側不同，另一側永遠是 std。
 // ============================================================================
 import { liveRows, registryRow } from "../../src/platform/tactics/capabilityRegistry.js";
-import { TACTIC_TEMPLATES } from "../../src/platform/tactics/tacticTemplates.js";
-import { offeredChoiceDetail, nestedOf } from "../../src/platform/tactics/tacticChoiceMapping.js";
-import { resolveTactic } from "../../src/battle/moba/tactics/tacticResolver.js";
-import { tacticInputOf } from "./tacticTruthSim.mjs";
+import { TACTIC_TEMPLATES, templateById } from "../../src/platform/tactics/tacticTemplates.js";
+import { offeredChoiceDetail, nestedOf, mergeTacticConfig } from "../../src/platform/tactics/tacticChoiceMapping.js";
+import { toEngineTactic, toEngineTacticIdentity } from "../../src/platform/contracts/MobaTacticConfig.js";
 
 const get = (o, p) => p.split(".").reduce((x, k) => x?.[k], o);
 export const TEMPLATE_IDS = Object.keys(TACTIC_TEMPLATES);
@@ -32,16 +31,16 @@ export function claimFor(row, choice, own) {
 
 /** 模板在這個維度上的（本來選擇, 提供的選擇）。 */
 export function offeredOf(templateId, dimension) {
-  const d = offeredChoiceDetail(templateId, dimension);
+  const d = offeredChoiceDetail(templateId, dimension, [], {}, { withMeasured: false });   // 量測計畫要看到所有候選（含已被排除的）
   return d ? { own: d.own, offered: d.offered } : null;
 }
 
 /** 旋鈕差距的尺度（讓不同單位的欄位可以相加）：抓人間隔以標準的 45 秒為 1、站位偏移以一階姿態的 0.05 為 1，其餘本來就是 0–1 的比例。 */
 export const unitOf = (path) => (path === "knobs.gankInterval" ? 45 : /^knobs\.laneOffset\./.test(path) ? 0.05 : 1);
+//  不經 createTacticPlan／resolveTactic（它們會套用量測排除表，被排除的選擇會被拒絕）；直接合併再投影，與 resolver 的投影同一對函式。
 const projected = (templateId, choices) => {
-  const r = resolveTactic(tacticInputOf({ templateId, choices }));
-  if (!r.ok) throw new Error(`resolve failed ${templateId}: ${r.errors.map((e) => e.code)}`);
-  return { knobs: r.knobs, identity: r.identity };
+  const cfg = mergeTacticConfig(templateById(templateId), [], choices);
+  return { knobs: toEngineTactic(cfg), identity: toEngineTacticIdentity(cfg) };
 };
 /** 這個選擇在這個模板上的旋鈕差距（各 deltaFields 的 |Δ|/unit 總和）。 */
 export function knobDelta(row, templateId, choice) {

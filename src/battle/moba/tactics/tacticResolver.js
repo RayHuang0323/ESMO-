@@ -186,6 +186,8 @@ export const applyChoice = DEFAULT.applyChoice;
 export const mergeTacticConfig = DEFAULT.mergeConfig;
 export const offeredChoices = DEFAULT.offeredChoices;
 export const offeredChoiceDetail = DEFAULT.offeredDetail;
+/** 戰術書 UI 的選項清單（Task 13 唯一來源）：[{ dimension, own, offered }]。 */
+export const tacticBookOptions = DEFAULT.tacticBookOptions;
 /** 組裝器經 deps.engineAdapters.resolveTactic 呼叫的入口（legacy／std／binding 三種都走這裡）。 */
 export const resolveTactic = DEFAULT.resolveTactic;
 /** binding → 凍結的 MobaTacticConfig（還沒投影）；組裝器不用它（走 resolveTactic），gate 與 UI 預覽用。 */

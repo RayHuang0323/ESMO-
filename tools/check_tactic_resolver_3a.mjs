@@ -101,6 +101,11 @@ const fieldwiseSame = (a, b) => {
 const plan = (templateId, extra = {}) => { const r = Plan.createTacticPlan({ templateId, ...extra }); if (!r.ok) throw new Error(`fixture plan failed: ${codes(r)}`); return r.plan; };
 const bind = (templateId, extra = {}) => { const b = R.bindTacticPlanToCurrentVersions(plan(templateId, extra)); if (!b) throw new Error("fixture bind failed"); return b; };
 const resolveB = (binding) => R.resolveTactic({ kind: "binding", binding });
+//  Phase 3a T10：G-A7 的量測排除表（MEASURED_EXCLUSIONS）只影響「提供給玩家挑哪些」；這支 gate 驗的是**結構上的**提供清單
+//  （旋鈕不同、不撞、不是第二條帶線路——knob 層），所以所有提供清單的呼叫一律帶 withMeasured:false。排除表本身由 check_tactic_truth_3a／check_tactic_registry_3a 驗。
+const STRUCT = { withMeasured: false };
+const offeredS = (t, d, o = [], oc = {}) => R.offeredChoices(t, d, o, oc, STRUCT);
+const detailS = (inst, t, d, o = []) => inst.offeredDetail(t, d, o, {}, STRUCT);
 //  繞過 createTacticPlan 手工拼的 plan／binding（用來證明 resolver 不信任 plan 來自 createTacticPlan；hash 照內容算，所以只有語意不合法）
 const rawPlan = (templateId, extra = {}) => ({ schema: "TacticPlan.v2", templateId, overlayIds: [], choices: {}, contingencies: [], ...extra });
 const rawBinding = (p) => ({
@@ -229,7 +234,7 @@ console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇
       const baseSig = sigRes(res, base);
       for (const row of Registry.liveRows()) {
         out.cells++;
-        const d = res.offeredDetail(tpl.templateId, row.dimension, overlayIds);
+        const d = detailS(res, tpl.templateId, row.dimension, overlayIds);
         const tag = `${tpl.templateId}${overlayIds.length ? `+${overlayIds[0]}` : ""}|${row.dimension}`;
         //  原始碰撞（不看提供清單）：登錄表的每個選擇兩兩比較——對照表本身不該造出重複
         const raw = row.choices.map((c) => [c, res.applyChoice(base, row.dimension, c)]).filter(([, cfg]) => cfg);
@@ -278,12 +283,12 @@ console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇
   })());
   //  公開 API
   ck("X7 offeredChoices(templateId, dimension)：回字串陣列；m7 的 jungle.focus 提供三個；風險三個；未知模板／維度／design 維度 ⇒ []",
-    J(R.offeredChoices("classic.m7", "jungle.focus")) === J(["gank", "farm", "invade"]) && J(R.offeredChoices("std", "risk.tolerance")) === J(["cautious", "balanced", "bold"])
-    && R.offeredChoices("nope", "jungle.focus").length === 0 && R.offeredChoices("std", "teamfight.style").length === 0 && R.offeredChoices("std", "nope").length === 0 && R.offeredChoices("__proto__", "x").length === 0
-    && R.offeredChoices(null, undefined).length === 0 && Array.isArray(R.offeredChoices("std", "jungle.tempo")) && R.offeredChoices("std", "jungle.tempo").every((x) => typeof x === "string"));
+    J(offeredS("classic.m7", "jungle.focus")) === J(["gank", "farm", "invade"]) && J(offeredS("std", "risk.tolerance")) === J(["cautious", "balanced", "bold"])
+    && offeredS("nope", "jungle.focus").length === 0 && offeredS("std", "teamfight.style").length === 0 && offeredS("std", "nope").length === 0 && offeredS("__proto__", "x").length === 0
+    && offeredS(null, undefined).length === 0 && Array.isArray(offeredS("std", "jungle.tempo")) && offeredS("std", "jungle.tempo").every((x) => typeof x === "string"));
   ck("X7b classic.m2 的 lanes.mid.stance 不提供 split（上路已經在帶線）；lanes.top.stance 仍提供自己的 split；v2.mid_solo_split 的 lanes.top.stance 不提供 split",
-    !R.offeredChoices("classic.m2", "lanes.mid.stance").includes("split") && R.offeredChoices("classic.m2", "lanes.top.stance").includes("split") && !R.offeredChoices("v2.mid_solo_split", "lanes.top.stance").includes("split")
-    && R.offeredChoices("classic.m1", "lanes.mid.stance").includes("split"));
+    !offeredS("classic.m2", "lanes.mid.stance").includes("split") && offeredS("classic.m2", "lanes.top.stance").includes("split") && !offeredS("v2.mid_solo_split", "lanes.top.stance").includes("split")
+    && offeredS("classic.m1", "lanes.mid.stance").includes("split"));
   //  resolver 拒絕不在提供清單內的選擇——用一個真的被保留的選擇
   const rej = resolveB(rawBinding(rawPlan("classic.m2", { choices: { lanes: { mid: { stance: "split" } } } })));
   ck("X8 resolver 拒絕不在提供清單的選擇（手工 binding：m2 ＋ mid split ⇒ multiple_split_lanes，不丟例外）", !rej.ok && codes(rej).includes("multiple_split_lanes"), J(codes(rej)));
@@ -301,7 +306,7 @@ console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇
   ck("X9c 對照組：植入第二個與 scaling 同值的後期選項 ⇒ 矩陣的碰撞偵測（原始碰撞）抓到", bad3.rawCollisions.some((x) => /phases\.late\.stance:.*≡/.test(x)) || bad3.exceptions.length !== PINNED_EXCEPTIONS.length);
   //  覆蓋層情境另外確認
   ck("X10 「經典＋覆蓋層」情境單獨成立：m8＋m8_early_footing 的 jungle.focus 提供 gank／farm／invade 且自己的值是 gank（覆蓋層後的有效值）",
-    J(R.offeredChoices("classic.m8", "jungle.focus", ["m8_early_footing"])) === J(["gank", "farm", "invade"]) && R.offeredChoiceDetail("classic.m8", "jungle.focus", ["m8_early_footing"]).own === "gank");
+    J(offeredS("classic.m8", "jungle.focus", ["m8_early_footing"])) === J(["gank", "farm", "invade"]) && R.offeredChoiceDetail("classic.m8", "jungle.focus", ["m8_early_footing"]).own === "gank");
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -510,7 +515,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
     const bad = []; let offeredCells = 0;
     for (const c of contexts) for (const lane of ["top", "mid"]) {
       const dim = `lanes.${lane}.stance`;
-      if (!r.offeredChoices(c.tpl.templateId, dim, c.overlayIds).includes("split")) continue;
+      if (!r.offeredChoices(c.tpl.templateId, dim, c.overlayIds, {}, STRUCT).includes("split")) continue;
       offeredCells++;
       const cfg = r.applyChoice(r.mergeConfig(c.tpl, c.overlayIds, {}), dim, "split");
       const k = toEngineTactic(cfg);
@@ -530,7 +535,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
   const leaveBad = [];
   for (const [id, lane] of [["classic.m2", "top"], ["v2.top_solo_split", "top"], ["v2.mid_solo_split", "mid"]]) {
     const dim = `lanes.${lane}.stance`, base = Templates.TACTIC_TEMPLATES[id].config;
-    for (const ch of res.offeredChoices(id, dim).filter((x) => x !== "split")) {
+    for (const ch of res.offeredChoices(id, dim, [], {}, STRUCT).filter((x) => x !== "split")) {
       const cfg = res.applyChoice(base, dim, ch);
       if (cfg.macro.splitPush !== STD_SPLIT || toEngineTactic(cfg).splitLane !== null) leaveBad.push(`${id}|${dim}=${ch}:${cfg.macro.splitPush}`);
     }
@@ -552,7 +557,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
     for (const c of contexts) {
       const base = r.mergeConfig(c.tpl, c.overlayIds, {});
       for (const row of Registry.liveRows()) {
-        const d = r.offeredDetail(c.tpl.templateId, row.dimension, c.overlayIds);
+        const d = detailS(r, c.tpl.templateId, row.dimension, c.overlayIds);
         for (const ch of d.offered) {
           cells++;
           const next = applyFn(base, row.dimension, ch);
@@ -599,7 +604,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
     const bad = [], exceptions = []; let cells = 0, pairs = 0;
     for (const c of contexts) for (const row of Registry.liveRows()) {
       cells++;
-      const want = independentWithheld(r, c, row), d = r.offeredDetail(c.tpl.templateId, row.dimension, c.overlayIds);
+      const want = independentWithheld(r, c, row), d = detailS(r, c.tpl.templateId, row.dimension, c.overlayIds);
       const got = new Set(d.withheld.map((w) => w.choice));
       if (J([...want].sort()) !== J([...got].sort())) bad.push(`${tag(c)}|${row.dimension}: 獨立算 [${[...want]}] ≠ offeredDetail [${[...got]}]`);
       const offeredIndep = row.choices.filter((x) => !want.has(x));
@@ -619,7 +624,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
   const imBad = independentMatrix(R.makeResolver({ mapping: dupMap }));
   ck("W3c 對照組：植入 bold＝balanced 的對照表 ⇒ 獨立矩陣的例外集合改變（抓到碰撞）", J(imBad.exceptions) !== J(im.exceptions) && imBad.exceptions.some((x) => /risk\.tolerance=/.test(x)));
   //  offeredDetail 自己若說謊（少保留一個）⇒ 獨立矩陣會抓到：包一個謊報的實例
-  const liar = { ...res, offeredDetail: (t, d, o, x) => { const v = res.offeredDetail(t, d, o, x); return v && v.withheld.length ? { ...v, withheld: [], offered: Registry.registryRow(d).choices } : v; } };
+  const liar = { ...res, offeredDetail: (t, d, o, x, op) => { const v = res.offeredDetail(t, d, o, x, op); return v && v.withheld.length ? { ...v, withheld: [], offered: Registry.registryRow(d).choices } : v; } };
   ck("W3d 對照組：謊報「什麼都沒保留」的 offeredDetail ⇒ 獨立矩陣抓到", independentMatrix(liar).bad.length > 0);
 
   // ── W4 組合（一次選兩個不同維度）：不得有一個選擇被另一個默默取消 ───────────────────
@@ -627,7 +632,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
   for (const c of contexts) {
     const base = res.mergeConfig(c.tpl, c.overlayIds, {});
     const singles = [];
-    for (const row of Registry.liveRows()) { const d = res.offeredDetail(c.tpl.templateId, row.dimension, c.overlayIds); for (const ch of d.offered) if (ch !== d.own) singles.push([row.dimension, ch]); }
+    for (const row of Registry.liveRows()) { const d = detailS(res, c.tpl.templateId, row.dimension, c.overlayIds); for (const ch of d.offered) if (ch !== d.own) singles.push([row.dimension, ch]); }
     for (let i = 0; i < singles.length; i++) for (let j = i + 1; j < singles.length; j++) {
       if (singles[i][0] === singles[j][0] || (i * 7 + j * 13) % 9 !== 0) continue;     // 確定性取樣：不同維度、固定算式
       const choices = Choice.nestedOf([singles[i], singles[j]]);

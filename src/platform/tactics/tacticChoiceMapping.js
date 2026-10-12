@@ -29,7 +29,7 @@ import {
 } from "../contracts/MobaTacticConfig.js";
 import { applyVariant, variantById } from "../mastery/tacticVariant.js";
 import { stableStringify } from "../contracts/squadSnapshot.js";
-import { CAPABILITY_STATUS, registryRow } from "./capabilityRegistry.js";
+import { CAPABILITY_STATUS, registryRow, liveRows, measuredExclusion } from "./capabilityRegistry.js";
 import { TACTIC_TEMPLATES, templateById } from "./tacticTemplates.js";
 import { overlayById } from "./tacticOverlays.js";
 
@@ -174,7 +174,9 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
    * @returns {null | { offered: string[], withheld: Array<{choice:string, reason:string, with?:string}>, own: string|null }}
    *   null＝預期的「沒有這個模板／不是 live 維度」。其他錯誤（對照表壞掉）會丟出去，不假裝「全部不提供」。
    */
-  function offeredDetail(templateId, dim, overlayIds = [], otherChoices = {}) {
+  function offeredDetail(templateId, dim, overlayIds = [], otherChoices = {}, opts = {}) {
+    //  opts.withMeasured:false ⇒ 不套用「量測排除表」（G-A7 的量測計畫要看到所有候選，包括已經被排除的）。
+    const useMeasured = opts?.withMeasured !== false;
     const tpl = templateById(templateId), live = registryRow(dim);
     if (!tpl || !live || live.status !== CAPABILITY_STATUS.LIVE || !rowOf(dim)) return null;
     const base = mergeConfig(tpl, overlayIds, otherChoices);
@@ -185,6 +187,8 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
     const seen = new Map(), kept = new Set(), withheld = [];
     for (const c of order) {
       if (c === own) { const s = sigOf(applyChoice(base, dim, c) ?? base); seen.set(s, c); kept.add(c); continue; }
+      //  G-A7：量測不到實際效果的選擇（Registry 的 MEASURED_EXCLUSIONS，逐模板或 "*"＝全部模板）不提供；不佔用旋鈕組的「已見」位置。
+      if (useMeasured && measuredExclusion(templateId, dim, c)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
       if (c === "split" && otherSplit) { withheld.push({ choice: c, reason: "second_split_lane" }); continue; }
       const next = applyChoice(base, dim, c);
       if (!next) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
@@ -197,7 +201,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
   }
 
   /** 模板在這個維度「真的有差別」的選擇。未知模板／維度 ⇒ []（預期結果）；對照表壞掉會丟例外。 */
-  const offeredChoices = (templateId, dim, overlayIds = [], otherChoices = {}) => offeredDetail(templateId, dim, overlayIds, otherChoices)?.offered ?? [];
+  const offeredChoices = (templateId, dim, overlayIds = [], otherChoices = {}, opts = {}) => offeredDetail(templateId, dim, overlayIds, otherChoices, opts)?.offered ?? [];
 
   /** 合併後的檢查：最多一條帶線路、結果必須是合法的 MobaTacticConfig。 */
   function problemsOf(cfg) {
@@ -226,19 +230,34 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
     if (problems.length) return problems;
     const leaves = leavesOf(choices);
     for (const [dim, v] of leaves) {
-      const detail = offeredDetail(tpl.templateId, dim, overlayIds, nestedOf(leaves.filter(([d]) => d !== dim)));
+      //  plan 層驗證的是「結構上合法」（旋鈕不同、不撞、不是第二條帶線路）：withMeasured:false。
+      //  量測排除表（G-A7）只決定「提供給玩家挑哪些」（offeredChoices／tacticBookOptions）——已存的計畫不會因為一次量測結論而失效。
+      const detail = offeredDetail(tpl.templateId, dim, overlayIds, nestedOf(leaves.filter(([d]) => d !== dim)), { withMeasured: false });
       if (!detail) return [err(E.CHOICE_NOT_OFFERED, `choices.${dim}`, `${dim} 在 ${tpl.templateId} 上不可選`)];
       if (!detail.offered.includes(v)) {
         const w = detail.withheld.find((x) => x.choice === v);
         const code = w?.reason === "second_split_lane" ? E.MULTIPLE_SPLIT_LANES : E.CHOICE_NOT_OFFERED;
-        const why = w?.reason === "no_effect" ? "選了也不會改變任何旋鈕" : w?.reason === "collides" ? `與 ${w.with} 解析出同一組旋鈕` : w?.reason === "second_split_lane" ? "已經有另一路在帶線" : "沒有對照";
+        const why = w?.reason === "no_measured_effect" ? "真實性量測（G-A7）沒有量到它的效果" : w?.reason === "no_effect" ? "選了也不會改變任何旋鈕" : w?.reason === "collides" ? `與 ${w.with} 解析出同一組旋鈕` : w?.reason === "second_split_lane" ? "已經有另一路在帶線" : "沒有對照";
         return [err(code, `choices.${dim}`, `${dim}=${v} 在 ${tpl.templateId} 上不提供（${why}）`)];
       }
     }
     return [];
   }
 
-  return { applyChoice, mergeConfig, ownChoiceOf, offeredChoices, offeredDetail, problemsOf, planProblems };
+  /**
+   * 戰術書 UI 的選項清單（Task 13 的唯一來源）：這個模板（＋覆蓋層＋目前已選的其他維度）之上，每個 live 維度提供哪些選擇。
+   * 回傳 [{ dimension, own, offered }]（Registry 順序）；offered 空 ⇒ 該維度在這個模板上沒有可選的（UI 不該顯示）。
+   * ⚠ Task 13 的瀏覽器 gate 必須拿 DOM 對照這個函式（不是另寫一份清單）。
+   */
+  function tacticBookOptions(templateId, overlayIds = [], choices = {}) {
+    const leaves = leavesOf(choices);
+    return liveRows().map((r) => {
+      const d = offeredDetail(templateId, r.dimension, overlayIds, nestedOf(leaves.filter(([k]) => k !== r.dimension)));
+      return { dimension: r.dimension, own: d?.own ?? null, offered: d?.offered ?? [] };
+    });
+  }
+
+  return { applyChoice, mergeConfig, ownChoiceOf, offeredChoices, offeredDetail, problemsOf, planProblems, tacticBookOptions };
 }
 
 const DEFAULT = makeChoiceEngine();
@@ -246,5 +265,6 @@ export const applyChoice = DEFAULT.applyChoice;
 export const mergeTacticConfig = DEFAULT.mergeConfig;
 export const offeredChoices = DEFAULT.offeredChoices;
 export const offeredChoiceDetail = DEFAULT.offeredDetail;
+export const tacticBookOptions = DEFAULT.tacticBookOptions;
 export const tacticPlanProblems = DEFAULT.planProblems;
 export const tacticConfigProblems = DEFAULT.problemsOf;
