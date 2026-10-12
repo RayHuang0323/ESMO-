@@ -81,6 +81,8 @@ const SIX = [plan("classic.m1"), plan("classic.m2"), plan("classic.m3"), plan("s
   const dirty = { plans: [{ plan: SIX[0], name: "好的" }, { plan: { templateId: "nope" } }, null, 7, { plan: SIX[0], name: "重複" }, { name: "沒有 plan" }, { plan: SIX[1], name: 5 }, ...SIX.slice(2).map((p) => ({ plan: p })), { plan: plan("classic.m5") }] };
   const norm = Book.normalizeTacticBook(dirty);
   ck("B8 正規化：讀不懂的項目不放進清單、重複的只留第一筆、超過 5 份的丟掉後面的、其餘保留", norm.plans.length === 5 && norm.plans[0].name === "好的" && norm.plans[1].id === tacticPlanHash(SIX[1]) && norm.plans[1].name === "四一分推" && new Set(norm.plans.map((e) => e.id)).size === 5, J(norm.plans.map((e) => e.name)));
+  ck("B8b 讀不懂但看起來是計畫的項目原樣留在 unreadable（不是悄悄丟掉）；純垃圾不留；存／刪別的計畫不會把它弄丟", J(norm.unreadable) === J([{ name: null, plan: { templateId: "nope" } }]) && J(Book.removeTacticPlan(norm, norm.plans[0].id).book.unreadable) === J(norm.unreadable) && J(Book.addTacticPlan({ plans: [], unreadable: norm.unreadable }, { plan: SIX[0] }).book.unreadable) === J(norm.unreadable) && !("unreadable" in Book.normalizeTacticBook({ plans: [{ plan: SIX[0] }, null, 7] })), J(norm.unreadable));
+  ck("B8c unreadable 裡的項目之後若讀得懂了，會回到 plans（不重複）", (() => { const r = Book.normalizeTacticBook({ plans: [], unreadable: [{ name: "回來了", plan: SIX[2] }, { name: null, plan: { templateId: "nope" } }] }); return r.plans.length === 1 && r.plans[0].name === "回來了" && r.unreadable.length === 1; })());
   ck("B9 正規化是冪等的；存的是標準形的 plan（JSON 往返後仍相同）；plan 裡沒有任何數字", J(Book.normalizeTacticBook(norm)) === J(norm) && J(Book.normalizeTacticBook(JSON.parse(J(norm)))) === J(norm) && norm.plans.every((e) => !/\d+\.\d+|:\d/.test(J(e.plan.choices))));
   ck("B10 存的計畫可以綁定並解析成引擎設定", norm.plans.every((e) => { const bd = bindTacticPlanToCurrentVersions(e.plan); return bd && resolveTactic({ kind: "binding", binding: bd }).ok; }));
 }
@@ -143,6 +145,7 @@ const SIX = [plan("classic.m1"), plan("classic.m2"), plan("classic.m3"), plan("s
   tampered.tacticBook.plans.push({ id: "x", name: "數字", plan: { templateId: "std", choices: { risk: { tolerance: 0.9 } } } }, "垃圾");
   const c = loadIn({ ...saved, [PROFILE_KEY]: J(tampered) }, "tampered");
   ck("L3 被手改的項目（未知模板、塞數字、不是物件）不放進清單，其餘項目與整份存檔照常載入（不進隔離區）", !c.error && c.tacticBook.plans.length === 1 && c.tacticBook.plans[0].name === "乙" && c.players === a.players && c.quarantined === 0, c.error ?? J(c.tacticBook));
+  ck("L3b 讀不懂的那兩筆計畫原樣留在 unreadable（下一次存檔不會把它們洗掉）", !c.error && c.tacticBook.unreadable?.length === 2 && c.tacticBook.unreadable.some((u) => u.plan.templateId === "classic.m99") && c.tacticBook.unreadable.some((u) => u.name === "數字"), J(c.tacticBook?.unreadable));
   const weird = JSON.parse(saved[PROFILE_KEY]); weird.tacticBook = "not an object";
   const d = loadIn({ ...saved, [PROFILE_KEY]: J(weird) }, "weird");
   ck("L4 整個欄位不是物件 ⇒ 空清單，其他資料照舊", !d.error && J(d.tacticBook) === J({ plans: [] }) && d.players === a.players, d.error ?? "");
@@ -182,7 +185,7 @@ const SIX = [plan("classic.m1"), plan("classic.m2"), plan("classic.m3"), plan("s
   const hook = stripComments(fs.readFileSync(path.join(ROOT, "src/useLocalServer.js"), "utf8"));
   ck("M8 原始碼：useLocalServer 只在有 binding 時才把 tacticPlanBinding 寫進本場設定；舊欄位 tactic 保留", /\.\.\.\(opts\.tacticPlanBinding \? \{ tacticPlanBinding: opts\.tacticPlanBinding \} : \{\}\)/.test(hook) && /tactic: opts\.tactic \?\? null/.test(hook));
   const shell = stripComments(fs.readFileSync(path.join(ROOT, "src/AppShell.jsx"), "utf8")), view = stripComments(fs.readFileSync(path.join(ROOT, "src/GameView.jsx"), "utf8"));
-  ck("M9 原始碼：恢復時 AppShell 從本場設定帶回 binding 並交給 GameView → start；舊戰術頁送出時清掉上一場的 binding", shell.includes("setTacticPlanBinding(config.tacticPlanBinding ?? null)") && shell.includes("tacticPlanBinding={tacticPlanBinding}") && shell.includes("setTactic(t); setTacticPlanBinding(null);") && /start\(\{\s*tactic,\s*tacticPlanBinding,/.test(view));
+  ck("M9 原始碼：恢復時 AppShell 從本場設定帶回 binding 並交給 GameView → start；戰術頁每次送出都重設 binding（沒有就是 null，不會沿用上一場的）", shell.includes("setTacticPlanBinding(config.tacticPlanBinding ?? null)") && shell.includes("tacticPlanBinding={tacticPlanBinding}") && shell.includes("setTactic(t); setTacticPlanBinding(binding ?? null);") && /start\(\{\s*tactic,\s*tacticPlanBinding,/.test(view));
 
   //  § P  熟練度計數鍵
   const meta = (b) => resolveTactic({ kind: "binding", binding: b }).meta;

@@ -44,6 +44,18 @@ import { applyVariant, variantById } from "../../platform/mastery/tacticVariant.
 import { statZh } from "../../data/playerModel.js";
 import { fitScore, fitGrade } from "./tacticFit.js";
 import { GC } from "../../ui/theme.js";
+//  Phase 3a T13：戰術書。模板、可調選項與指標全部由 view-model（tacticBookOptions.js）轉述 Registry／resolver／指標模組，
+//  本畫面只保存「選了哪個模板、疊了哪個變體、調了哪些選項」三個狀態，送出時交出 binding。
+import { templateById } from "../../platform/tactics/tacticTemplates.js";
+import { buildPlayerStatSlots } from "../../battle/moba/mobaRosterAdapter.js";
+import { getHeroCombatArchetype } from "../../data/heroCombatArchetypes.js";
+import { templateGroups, tacticBookView, withChoice, offeredChoicesOnly, dimensionLabel, choiceLabel } from "./tacticBook/tacticBookOptions.js";
+import TemplateStrip from "./tacticBook/TemplateStrip.jsx";
+import ChoicePanel from "./tacticBook/ChoicePanel.jsx";
+import IndicatorPanel from "./tacticBook/IndicatorPanel.jsx";
+
+const TEMPLATE_GROUPS = templateGroups();
+const DEFAULT_TEMPLATE_ID = `classic.${MOBA_TACTICS[0].tacticId}`;
 
 const riskC = (r) => (r === "高" ? GC.red : r === "中" ? GC.gold : GC.green);
 // S27：適性抽至 tacticFit.js（純函式、Node 可測），並改讀 derived stats（含天賦）。
@@ -80,12 +92,18 @@ function engineEffects(t) {
 }
 
 export default function TacticScreen({ onNext, onBack, roster = null, draft = null, onBuildStrategyChange = null }) {
-  const [sel, setSel] = useState("m1");
+  //  Phase 3a T13：選的是「模板」（經典八套＋標準＋v2）。`sel` 仍是經典戰術 id——變體資格、歷史表現、熟練度都以它為鍵。
+  const [templateId, setTemplateId] = useState(DEFAULT_TEMPLATE_ID);
+  const [choices, setChoices] = useState({});
+  const template = templateById(templateId) ?? templateById(DEFAULT_TEMPLATE_ID);
+  const sel = template.legacyTacticId;
   const allPlayers = useProfileStore((s) => s.players) ?? [];
+  const lineup = useProfileStore((s) => s.lineup) ?? null;
   //  Club Assets v1：讀合併權威（發展樹 ＋ 總教練），不自己合併。
   const developmentEffects = useProfileStore((s) => s.clubCapabilities()).total;
   const starters = useMemo(() => allPlayers.filter((p) => p.status === "主力"), [allPlayers]);
-  const cur = MOBA_TACTICS.find((t) => t.tacticId === sel);
+  //  模板的設定就是一份 MobaTacticConfig（經典模板＝MOBA_TACTICS 的那一筆，逐欄相同）。
+  const cur = template.config;
 
   //  ── 變體選擇 ────────────────────────────────────────────────────────
   //  `null` = 基礎戰術。m1–m8 永遠可選，這個狀態只決定「要不要疊一層變體」。
@@ -100,7 +118,11 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
     games: clubMastery?.tacticUsage?.moba?.[t.tacticId] ?? 0,
     intent: clubMastery?.tacticIntent?.moba?.[t.tacticId] ?? 0,
   })), [clubMastery]);
-  const variantInfo = useMemo(() => variantsAvailableForTactic(clubMastery, sel), [clubMastery, sel]);
+  //  變體（覆蓋層）只屬於它的經典模板：v2／標準模板沒有變體列。
+  const variantInfo = useMemo(
+    () => (template.kind === "classic" ? variantsAvailableForTactic(clubMastery, sel) : { variants: [] }),
+    [clubMastery, sel, template.kind],
+  );
   //  ⚠ 資格由 domain 決定，這裡只是「選到的那個現在還能不能用」。
   //    換基礎戰術或切換流派之後，原本選的變體若不再 equippable 就自動回到基礎，
   //    所以不需要 effect 去清狀態——也就不會出現「畫面顯示變體、送出去卻是基礎」。
@@ -111,7 +133,54 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   }, [variantSel, variantInfo]);
 
   //  真正要送進引擎的那一份。基礎戰術時就是 `cur` 本身（行為與變體上線前完全相同）。
-  const applied = useMemo(() => (activeVariant ? applyVariant(cur, activeVariant) : cur), [cur, activeVariant]);
+  const baseApplied = useMemo(() => (activeVariant ? applyVariant(cur, activeVariant) : cur), [cur, activeVariant]);
+
+  //  ── Phase 3a T13：戰術書 ──────────────────────────────────────────────
+  //  席位選手素質與英雄原型只用來算「適性／配合度」這兩個參考指標，不進計畫本身。
+  const talentRosterForBook = useMemo(() => (roster ? draftRoster(roster, draft) : null), [roster, draft]);
+  const seatPlayers = useMemo(() => buildPlayerStatSlots(allPlayers, "blue", lineup), [allPlayers, lineup]);
+  const book = useMemo(() => {
+    const heroLookup = (seat) => { const id = talentRosterForBook?.[seat]?.heroId; return id ? getHeroCombatArchetype(id) : null; };
+    const overlayIds = activeVariant ? [activeVariant.variantId] : [];
+    //  先拿掉目前不提供的選擇（從戰術書載入的舊計畫可能帶著後來被量測排除的選項；換變體後也可能有選項不再提供）
+    //  ⇒ 送出去的計畫永遠與畫面上看得到的選項一致。
+    const kept = offeredChoicesOnly(template.templateId, overlayIds, choices);
+    const view = tacticBookView({ templateId: template.templateId, overlayIds, choices: kept.choices, seatPlayers, heroLookup });
+    //  仍不合法 ⇒ 退回「模板＋變體、沒有額外選擇」，不送出不合法的計畫。
+    return view.ok ? { view, choices: kept.choices, dropped: kept.dropped }
+      : { view: tacticBookView({ templateId: template.templateId, overlayIds, choices: {}, seatPlayers, heroLookup }), choices: {}, dropped: kept.dropped };
+  }, [template.templateId, activeVariant, choices, seatPlayers, talentRosterForBook]);
+  const bookView = book.view.ok ? book.view : null;
+  //  真正生效的那一份：有戰術書的解析結果就用它（模板＋變體＋選擇，與引擎吃到的同一個合併函式）；否則是 v20 的基礎路徑。
+  const applied = bookView ? bookView.config : baseApplied;
+  const binding = bookView ? bookView.binding : null;
+  const changedCount = bookView ? bookView.dimensions.filter((d) => d.explicit).length : 0;
+  const chooseTemplate = (id) => { setTemplateId(id); setChoices({}); setVariantSel(null); setBookNote(null); };
+  const choose = (dimension, value, own) => { setChoices(withChoice(book.choices, dimension, value, own)); setBookNote(null); };
+
+  //  我的戰術書（存檔切片在 profileStore；這裡只呼叫公開動作）
+  const savedBook = useProfileStore((s) => s.tacticBook?.plans) ?? [];
+  const [bookName, setBookName] = useState("");
+  const [bookNote, setBookNote] = useState(null);
+  const activeBookId = binding ? (savedBook.find((e) => e.id === binding.planHash)?.id ?? null) : null;
+  const saveToBook = () => {
+    if (!bookView) return;
+    const r = useProfileStore.getState().saveTacticPlan(bookView.plan, { name: bookName });
+    setBookNote(r.ok ? { ok: true, text: r.replaced ? `已更新「${r.entry.name}」` : `已存成「${r.entry.name}」` } : { ok: false, text: r.errors[0]?.message ?? "存不進去" });
+    if (r.ok) setBookName("");
+  };
+  const loadFromBook = (entry) => {
+    setTemplateId(entry.plan.templateId);
+    setChoices(entry.plan.choices ?? {});
+    //  變體資格仍由俱樂部專精決定：存的時候有、現在不能用 ⇒ activeVariant 會是 null，計畫退回沒有變體的版本。
+    setVariantSel(entry.plan.overlayIds?.[0] ?? null);
+    setBookNote(null);
+  };
+  const deleteFromBook = (entry) => {
+    const r = useProfileStore.getState().deleteTacticPlan(entry.id);
+    setBookNote(r.ok ? { ok: true, text: `已刪除「${entry.name}」` } : { ok: false, text: r.errors[0]?.message ?? "刪除失敗" });
+  };
+  const fitOf = (id) => fitGrade(fitScore(templateById(id).config, starters));
 
   const curFit = fitScore(cur, starters);
   const curFG = fitGrade(curFit);
@@ -140,28 +209,12 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const focusHero = prep ? heroById(prep.seats.find((s) => s.seat === prep.focusSeat)?.heroId) : null;
 
   return (
-    <Frame title="戰術" sub="TEAM STRATEGY · 8 套戰術 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections)} nextLabel="開始載入 →">
+    <Frame title="戰術" sub="TEAM STRATEGY · 戰術書 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections, binding)} nextLabel="開始載入 →">
       <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-        {/* 戰術卡：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容 */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(190px,100%),1fr))", gap: 8 }}>
-          {MOBA_TACTICS.map((t) => {
-            const isSel = sel === t.tacticId;
-            const fg = fitGrade(fitScore(t, starters));
-            return (
-              <button key={t.tacticId} data-tactic-card={t.tacticId} onClick={() => { setSel(t.tacticId); setVariantSel(null); }} style={{ textAlign: "left", minWidth: 0, background: isSel ? GC.card2 : GC.card, border: `1px solid ${isSel ? GC.blueL : GC.line}`, borderRadius: 10, padding: "9px 11px", color: "#fff", cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 900, minWidth: 0 }}>{t.emoji} {t.name}</span>
-                  <span style={{ flexShrink: 0, fontSize: 8.5, fontWeight: 800, color: riskC(t.risk), border: `1px solid ${riskC(t.risk)}55`, borderRadius: 4, padding: "0 4px" }}>{t.risk}風險</span>
-                </div>
-                <div style={{ fontSize: 9.5, color: GC.gray, marginTop: 3, lineHeight: 1.5 }}>{t.desc}</div>
-                <div style={{ display: "flex", gap: 6, marginTop: 4, alignItems: "center" }}>
-                  <span style={{ fontSize: 8.5, color: GC.purp }}>核心 {t.focus}</span>
-                  <span style={{ marginLeft: "auto", fontSize: 8.5, fontWeight: 800, color: fg.c }}>適性 {fg.g}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {/* 模板列：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容；上方是「我的戰術書」 */}
+        <TemplateStrip groups={TEMPLATE_GROUPS} selectedId={template.templateId} onSelect={chooseTemplate} fitOf={fitOf}
+          columns="repeat(auto-fill,minmax(min(190px,100%),1fr))"
+          book={savedBook} activeBookId={activeBookId} onLoadBook={loadFromBook} onDeleteBook={deleteFromBook} />
 
         {developmentEffects.unlocks.mobaTacticInsight && (
           <TacticInsightPanel rows={tacticInsightRows} testId="moba-tactic-insight" />
@@ -263,6 +316,30 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
             </div>
           </div>
         </div>
+
+        {/* Phase 3a T13：戰術書——可調選項（Registry live 且量得到效果的）＋指標＋存成我的戰術書 */}
+        {bookView && (
+          <>
+            {book.dropped.length > 0 && (
+              <div data-testid="tb-dropped-note" role="status" style={{ fontSize: 11, lineHeight: 1.6, color: "#fde68a", background: "rgba(251,191,36,0.08)", border: `1px solid ${GC.gold}44`, borderRadius: 8, padding: "6px 10px", overflowWrap: "anywhere" }}>
+                這份計畫裡有 {book.dropped.length} 個選項目前不提供，已改回模板的設定：{book.dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}
+              </div>
+            )}
+            <ChoicePanel groups={bookView.groups} onChoose={choose} onReset={() => { setChoices({}); setBookNote(null); }} changedCount={changedCount} />
+            <IndicatorPanel profile={bookView.profile} seats={bookView.seats} load={bookView.load} contradictions={bookView.contradictions} />
+            <section data-testid="tb-save-row" aria-label="存成我的戰術書" style={{ background: GC.card, border: `1px solid ${GC.gold}33`, borderRadius: 12, padding: "10px 14px", minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 900, color: GC.gold }}>📘 我的戰術書</span>
+              <input data-testid="tb-save-name" aria-label="戰術書名稱" value={bookName} maxLength={20} placeholder={cur.name}
+                onChange={(e) => setBookName(e.target.value)}
+                style={{ flex: "1 1 140px", minWidth: 0, minHeight: 36, boxSizing: "border-box", background: GC.card2, border: `1px solid ${GC.line}`, borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12 }} />
+              <button type="button" data-testid="tb-save" onClick={saveToBook}
+                style={{ minHeight: 36, background: `${GC.gold}22`, border: `1px solid ${GC.gold}88`, borderRadius: 8, padding: "6px 14px", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 900 }}>
+                {activeBookId ? "更新名稱" : "存起來"}
+              </button>
+              {bookNote && <span data-testid="tb-save-note" data-ok={bookNote.ok ? "1" : "0"} role="status" style={{ flexBasis: "100%", fontSize: 11, color: bookNote.ok ? GC.green : GC.redL }}>{bookNote.text}</span>}
+            </section>
+          </>
+        )}
 
         {/* Item System M3d：出裝策略（全隊同一策略，對手固定標準）。itemsV1 OFF ⇒ prep 為 null ⇒ 整塊不渲染 */}
         {prep && (
