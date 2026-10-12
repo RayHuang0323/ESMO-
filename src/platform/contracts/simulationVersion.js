@@ -510,7 +510,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  offeredChoiceDetail 多一個可省略的 opts.withMeasured 與 tacticBookOptions（UI 選項清單）；resolver 重新匯出它。
   //  排除表只影響「提供給玩家挑哪些」（offeredChoices／tacticBookOptions）；createTacticPlan 驗的仍是結構上合法（withMeasured:false），
   //  所以**不改任何輸入的解析結果**、不碰引擎與組裝器：golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 355cf3ef13b6b7e4 未曾發布）。
-  "moba-sim.v21": "5419139708e72275",
+  //  2026-10-13（Phase 3a T10 Phase 2 事前登記）：對照表與 Registry 多了五個整場型 live 維度（teamfight.posture／grouping、objectives.dragon／baron／tower），
+  //  數值全部引用既有模板在同一欄位上的值。既有十三個維度的解析一個位元都沒動；沒選這些新鍵的輸入解析結果不變，golden 39 案仍逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 5419139708e72275 未曾發布）。
+  "moba-sim.v21": "96d6b4652146eaf1",
 });
 
 export const isKnownSimulationVersion = (v) =>

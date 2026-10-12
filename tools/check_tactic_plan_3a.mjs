@@ -118,7 +118,8 @@ console.log("\n§R Capability Registry 資料列");
     J(live.map((r) => r.dimension)) === J([
       "phases.early.stance", "phases.mid.stance", "phases.late.stance", "jungle.tempo", "jungle.focus",
       "lanes.top.stance", "lanes.mid.stance", "lanes.bot.stance", "seats.b5.mission",
-      "seats.b1.priority", "seats.b3.priority", "seats.b4.priority", "risk.tolerance"]));
+      "seats.b1.priority", "seats.b3.priority", "seats.b4.priority", "risk.tolerance",
+      "teamfight.posture", "teamfight.grouping", "objectives.dragon", "objectives.baron", "objectives.tower"]));
   const SPEC_DESIGN = ["winCondition", "teamfight.style", "teamfight.engager", "teamfight.focusTarget", "teamfight.peelFor", "risk.comeback",
     "comms.shotcaller", "comms.secondCaller", "jungle.route", "lanes.top.wave", "lanes.mid.wave", "lanes.bot.wave",
     "phases.early.tradePolicy", "phases.mid.tradePolicy", "phases.late.tradePolicy",
@@ -642,8 +643,8 @@ if (Plan) {
     [null, undefined, {}, "x"].every((v) => rej({ templateId: "std", choices: { bogus: v } }, E.UNKNOWN_CHOICE_KEY) && rej({ templateId: "std", choices: { jungle: { bogus: v } } }, E.UNKNOWN_CHOICE_KEY)
       && rej({ templateId: "std", choices: { risk: { nope: v }, jungle: { focus: "farm" } } }, E.UNKNOWN_CHOICE_KEY)));
   ck("P3r2 design 鍵不論值是 null／undefined／{} 都以 design_choice 拒絕（頂層枝與巢狀葉）",
-    [null, undefined].every((v) => rej({ templateId: "std", choices: { teamfight: { style: v } } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: v } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { teamfight: v } }, E.DESIGN_CHOICE))
-    && rej({ templateId: "std", choices: { teamfight: {} } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: {} } }, E.DESIGN_CHOICE)
+    [null, undefined].every((v) => rej({ templateId: "std", choices: { teamfight: { style: v } } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: v } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { comms: v } }, E.DESIGN_CHOICE))
+    && rej({ templateId: "std", choices: { comms: {} } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: {} } }, E.DESIGN_CHOICE)
     && KEYS.every((r) => { const ch = {}; r.dimension.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? null : {}, n[k]), ch); return rej({ templateId: "std", choices: ch }, E.DESIGN_CHOICE); }));
   ck("P3r3 live 鍵的 null／undefined／空枝仍然＝沒有選擇，且雜湊與缺項相同（標準形保證不變）",
     [{ risk: { tolerance: null } }, { risk: { tolerance: undefined } }, { risk: {} }, { seats: {} }, { jungle: { focus: null, tempo: undefined } }, { lanes: { top: {} } }, { phases: { early: { stance: null } } }].every((c) => { const r = mk({ templateId: "std", choices: c }); return r.ok && tacticPlanHash(r.plan) === tacticPlanHash(mk({ templateId: "std" }).plan); }));

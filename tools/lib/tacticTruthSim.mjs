@@ -16,6 +16,9 @@
 //   protects    p.decisionAt 變了（＝這一 tick 做出了新的戰鬥決策；決策有鎖定期，沒變就是沿用舊的）且 decisionAction 是 SUPPORT。
 //   coreProtects 同上，而且 decisionTargetId 指向的英雄是 role=某一路（top／mid／adc）的隊友。
 //   laneForward 對線期（60–480 秒）、存活、state=「對線」的 tick 上，與己方主堡的距離平均（站位本身就是姿態宣稱的東西）。
+//   engages     p.decisionAt 變了且 decisionAction 是 ENGAGE（新的接戰決策；沿用鎖定中的舊決策不算）。
+//   objFights   同 fights，但只算進入團戰那一刻離該物件的坑（引擎當場的 _pitOf，只讀）不超過 OBJ_RADIUS 的。
+//   siegeOpens  己方 fsm3 的主動權窗被（重新）設定、而且種類是 siege 的次數（initUntil 變了的那一 tick；窗多長不影響）。
 //  純函式部分（metricValue／pairStats）不碰引擎，gate 的快速模式會用它重算 z。
 // ============================================================================
 import path from "node:path";
@@ -23,12 +26,13 @@ import { fileURLToPath } from "node:url";
 import { createTacticPlan } from "../../src/platform/tactics/tacticPlan.js";
 import { bindTacticPlanToCurrentVersions } from "../../src/battle/moba/tactics/tacticResolver.js";
 
-export const TRUTH_SIM_VERSION = "tacticTruthSim.v1";
+export const TRUTH_SIM_VERSION = "tacticTruthSim.v2";
 export const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DT = 0.5;
 const CAP_S = 3600;
 const PHASE_EDGES = [480, 960];                 // 與引擎 _tidPhase 相同
 const LANE_WINDOW = [60, 480];                  // 站位量測窗
+const OBJ_RADIUS = 20;                          // 「在物件坑附近」的半徑（事前登記；引擎自己的坑邊判定是 9–12，團戰集結點就是坑心）
 const LANE_ROLE = { top: "top", mid: "mid", bot: "adc", adc: "adc" };
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const phaseOf = (t) => (t < PHASE_EDGES[0] ? 0 : t < PHASE_EDGES[1] ? 1 : 2);
@@ -64,9 +68,11 @@ export async function runTruthMatch(seed, spec = {}) {
     fights: [0, 0, 0], seatFights: [0, 0, 0, 0, 0], invasions: 0, retreats: 0, protects: 0,
     coreProtects: { top: 0, mid: 0, adc: 0 }, laneFwdSum: { top: 0, mid: 0, adc: 0 }, laneFwdN: { top: 0, mid: 0, adc: 0 },
     splitRolls: 0, splitRollsGo: 0, splitTicks: 0, splitLaneAliveTicks: 0,
+    engages: 0, objFights: { dragon: 0, baron: 0 }, siegeOpens: 0,
   });
   const S = { blue: zero(), red: zero() };
   const prev = new Map(players.map((p) => [p.id, { state: p.state, retreating: !!p.retreating, decisionAt: p.decisionAt }]));
+  const initSeen = { blue: e.fsm3?.blue?.initUntil, red: e.fsm3?.red?.initUntil };
   const splitSeen = { blue: e._tac?.blue?.splitEvalT, red: e._tac?.red?.splitEvalT };
   const byId = new Map(players.map((p) => [p.id, p]));
   const phaseSecs = [0, 0, 0];
@@ -76,9 +82,13 @@ export async function runTruthMatch(seed, spec = {}) {
     phaseSecs[ph] += DT;
     for (const p of players) {
       const s = S[p.side], q = prev.get(p.id), seatN = Number(p.id.slice(1));
-      if (p.state === "團戰!" && q.state !== "團戰!") { s.fights[ph]++; s.seatFights[seatN - 1]++; }
+      if (p.state === "團戰!" && q.state !== "團戰!") {
+        s.fights[ph]++; s.seatFights[seatN - 1]++;
+        for (const key of ["dragon", "baron"]) if (dist(p.pos, e._pitOf(key)) <= OBJ_RADIUS) s.objFights[key]++;
+      }
       if (p.state === "入侵" && q.state !== "入侵") s.invasions++;
       if (p.retreating && !q.retreating) s.retreats++;
+      if (p.decisionAt !== q.decisionAt && p.decisionAction === "ENGAGE") s.engages++;
       if (p.decisionAt !== q.decisionAt && p.decisionAction === "SUPPORT") {
         if (seatN === 5) s.protects++;
         const tgt = byId.get(p.decisionTargetId);
@@ -88,6 +98,10 @@ export async function runTruthMatch(seed, spec = {}) {
         s.laneFwdSum[p.role] += dist(p.pos, nexus[p.side]); s.laneFwdN[p.role]++;
       }
       q.state = p.state; q.retreating = !!p.retreating; q.decisionAt = p.decisionAt;
+    }
+    for (const side of ["blue", "red"]) {
+      const F = e.fsm3?.[side];
+      if (F && F.initUntil !== initSeen[side]) { initSeen[side] = F.initUntil; if (F.initKind === "siege") S[side].siegeOpens++; }
     }
     for (const side of ["blue", "red"]) {
       const T = e._tac?.[side], K = e.tk?.[side];
@@ -117,6 +131,10 @@ export const METRICS = Object.freeze({
   supportProtectsPerMin: { params: [], of: (s, r) => per(s.protects, r.duration) },
   coreProtectsPerMin: { params: ["top", "mid", "adc"], of: (s, r, role) => per(s.coreProtects[role], r.duration) },
   retreatStartsPerMin: { params: [], of: (s, r) => per(s.retreats, r.duration) },
+  fightEntriesPerMinAll: { params: [], of: (s, r) => per(s.fights[0] + s.fights[1] + s.fights[2], r.duration) },
+  engageDecisionsPerMin: { params: [], of: (s, r) => per(s.engages, r.duration) },
+  objectiveFightEntriesPerMin: { params: ["dragon", "baron"], of: (s, r, key) => per(s.objFights[key], r.duration) },
+  siegeWindowsPerMin: { params: [], of: (s, r) => per(s.siegeOpens, r.duration) },
   laneForward: { params: ["top", "mid", "bot"], of: (s, r, lane) => { const role = LANE_ROLE[lane]; return s.laneFwdN[role] >= 20 ? s.laneFwdSum[role] / s.laneFwdN[role] : null; } },
 });
 const parseMetric = (id) => { const [name, param] = String(id).split("."); const m = METRICS[name]; return m && (m.params.length ? m.params.includes(param) : param === undefined) ? { m, param } : null; };

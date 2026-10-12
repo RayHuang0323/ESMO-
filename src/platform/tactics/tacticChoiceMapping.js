@@ -110,6 +110,31 @@ export const CHOICE_MAPPING = deepFreeze({
       kind: "number", target: "macro.riskTolerance", values: { cautious: 0.3, balanced: 0.5, bold: 0.8 },
       source: { cautious: "classic.m4 macro.riskTolerance", balanced: "std macro.riskTolerance", bold: "classic.m3 macro.riskTolerance" },
     },
+    //  ── 整場型（Phase 3a T10 Phase 2）：引擎的旋鈕是整場共用的單一值，所以鍵也是整場一個（不掛在 phases.* 底下）。
+    //  每個數值都是某個既有模板在同一個欄位上的值（source＝「模板 id＋欄位路徑」，gate 逐格對照模板資料），不發明新量級。
+    //  團戰姿態：macro.aggression —— passive＝m8、standard＝std、aggressive＝m7（八套經典的最低與最高）。
+    "teamfight.posture": {
+      kind: "number", target: "macro.aggression", values: { passive: 0.25, standard: 0.5, aggressive: 0.85 },
+      source: { passive: "classic.m8 macro.aggression", standard: "std macro.aggression", aggressive: "classic.m7 macro.aggression" },
+    },
+    //  集結：macro.grouping —— standard＝std、tight＝m3。沒有「鬆散」：沒有任何既有模板低於 std 的 0.5。
+    "teamfight.grouping": {
+      kind: "number", target: "macro.grouping", values: { standard: 0.5, tight: 0.9 },
+      source: { standard: "std macro.grouping", tight: "classic.m3 macro.grouping" },
+    },
+    //  物件重心：objectives.dragonPriority／baronPriority／towerPriority —— 各取八套經典在該欄位的最低、std、最高。
+    "objectives.dragon": {
+      kind: "number", target: "objectives.dragonPriority", values: { low: 0.35, standard: 0.5, high: 0.95 },
+      source: { low: "classic.m1 objectives.dragonPriority", standard: "std objectives.dragonPriority", high: "classic.m4 objectives.dragonPriority" },
+    },
+    "objectives.baron": {
+      kind: "number", target: "objectives.baronPriority", values: { low: 0.4, standard: 0.5, high: 0.85 },
+      source: { low: "classic.m7 objectives.baronPriority", standard: "std objectives.baronPriority", high: "classic.m4 objectives.baronPriority" },
+    },
+    "objectives.tower": {
+      kind: "number", target: "objectives.towerPriority", values: { low: 0.35, standard: 0.5, high: 0.9 },
+      source: { low: "classic.m8 objectives.towerPriority", standard: "std objectives.towerPriority", high: "classic.m1 objectives.towerPriority" },
+    },
   },
 });
 

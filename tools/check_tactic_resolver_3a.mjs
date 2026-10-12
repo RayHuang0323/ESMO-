@@ -142,8 +142,18 @@ console.log("\n§M CHOICE_MAPPING（選擇 → 契約欄位，唯一一份）");
   const numericRows = Object.entries(M.rows).filter(([, row]) => hasNumber(row.values)).map(([k]) => k);
   const existing = new Set([...MOBA_TACTICS.map((t) => t.macro.riskTolerance), STANDARD_OPP_TACTIC.macro.riskTolerance,
     ...Overlays.TACTIC_OVERLAYS.map((o) => o.changedFields["macro.riskTolerance"]).filter((x) => x !== undefined)]);
-  ck("M2 只有 risk.tolerance 帶數值；三個值（0.3／0.5／0.8）都已存在於八套經典＋std＋覆蓋層", J(numericRows) === J(["risk.tolerance"]) && Object.values(M.rows["risk.tolerance"].values).every((v) => existing.has(v)),
-    J(Object.values(M.rows["risk.tolerance"].values)));
+  ck("M2 帶數值的列釘住：risk.tolerance＋五個整場型（T10 Phase 2）；風險三個值（0.3／0.5／0.8）都已存在於八套經典＋std＋覆蓋層",
+    J(numericRows) === J(["risk.tolerance", "teamfight.posture", "teamfight.grouping", "objectives.dragon", "objectives.baron", "objectives.tower"]) && Object.values(M.rows["risk.tolerance"].values).every((v) => existing.has(v)),
+    J(numericRows));
+  //  每一個數值格的 source 是「模板 id＋欄位路徑」，而且那個模板在那個欄位上真的是這個值（by reference，不是手抄的數字）
+  const badSrc = [];
+  for (const k of numericRows) for (const [c, v] of Object.entries(M.rows[k].values)) {
+    const [tplId, field] = String(M.rows[k].source?.[c] ?? "").split(" ");
+    const tpl = Templates.TACTIC_TEMPLATES[tplId];
+    if (!tpl || field !== M.rows[k].target || Choice.getPath(tpl.config, field) !== v) badSrc.push(`${k}=${c}`);
+  }
+  ck("M2c 每個數值格的來源（模板＋欄位）真的是那個值，欄位＝該列的 target；每列的值兩兩不同", badSrc.length === 0
+    && numericRows.every((k) => new Set(Object.values(M.rows[k].values)).size === Object.keys(M.rows[k].values).length), badSrc.join(","));
   ck("M2b 風險三值各自標出來源（cautious＝m4、balanced＝std、bold＝m3），而且來源真的是那個值",
     M.rows["risk.tolerance"].values.cautious === mobaTacticById("m4").macro.riskTolerance && M.rows["risk.tolerance"].values.bold === mobaTacticById("m3").macro.riskTolerance
     && M.rows["risk.tolerance"].values.balanced === STANDARD_OPP_TACTIC.macro.riskTolerance);

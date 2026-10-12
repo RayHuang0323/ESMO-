@@ -59,7 +59,7 @@ const ENGINE_SRC = fs.readFileSync(path.join(ROOT, "src/LogicEngine.js"), "utf8"
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§S 列的形狀");
-ck("S1 有 13 個 live 維度（早／中／後期姿態、打野節奏、打野重心、三路姿態、輔助任務、三席核心、風險）", live.length === 13, `${live.length}`);
+ck("S1 有 18 個 live 維度（早／中／後期姿態、打野節奏、打野重心、三路姿態、輔助任務、三席核心、風險＋整場型：團戰姿態、集結、巨龍／巴龍／推塔重心）", live.length === 18, `${live.length}`);
 ck("S2 每個 live 列：resolverFields、engineReads 是非空字串陣列且 frozen；gate 有 claims、why", live.every((r) =>
   Array.isArray(r.resolverFields) && r.resolverFields.length > 0 && r.resolverFields.every((x) => typeof x === "string") && Object.isFrozen(r.resolverFields)
   && Array.isArray(r.engineReads) && r.engineReads.length > 0 && r.engineReads.every((x) => typeof x === "string") && Object.isFrozen(r.engineReads)
@@ -166,7 +166,7 @@ for (const t of TEMPLATE_IDS) {
 }
 ck("U1 tacticBookOptions(模板) ＝ 每個 live 維度的 offeredChoices ⊆ Registry choices；＝（結構上提供 ∖ 量測排除表）；結構上提供的選擇 createTacticPlan 接受、沒提供的拒絕（21 模板）", uiOk, uiBad.slice(0, 4).join(" "));
 ck("U2 UI 清單只含 live 維度（design 維度永遠不會出現）", TEMPLATE_IDS.every((t) => tacticBookOptions(t).every((o) => Registry.registryRow(o.dimension)?.status === "live")));
-ck("U3 CAPABILITIES 是同一份列（別名）；liveCapabilities() ＝ liveRows()；v20 上沒有任何 live 列", Registry.CAPABILITIES === Registry.CAPABILITY_ROWS && J(Registry.liveCapabilities()) === J(Registry.liveRows()) && Registry.liveCapabilities("moba-sim.v20").length === 0 && Registry.liveCapabilities("moba-sim.v21").length === 13);
+ck("U3 CAPABILITIES 是同一份列（別名）；liveCapabilities() ＝ liveRows()；v20 上沒有任何 live 列", Registry.CAPABILITIES === Registry.CAPABILITY_ROWS && J(Registry.liveCapabilities()) === J(Registry.liveRows()) && Registry.liveCapabilities("moba-sim.v20").length === 0 && Registry.liveCapabilities("moba-sim.v21").length === 18);
 ck("U4 isLiveChoice 三參數：v21 ⇒ 可用；v20、亂字串 ⇒ 不可用；兩參數的舊行為不變",
   Registry.isLiveChoice("risk.tolerance", "bold", "moba-sim.v21") && !Registry.isLiveChoice("risk.tolerance", "bold", "moba-sim.v20") && !Registry.isLiveChoice("risk.tolerance", "bold", "garbage")
   && Registry.isLiveChoice("risk.tolerance", "bold") && !Registry.isLiveChoice("risk.tolerance", 0.8) && !Registry.isLiveChoice("winCondition", "x", "moba-sim.v21"));

@@ -184,6 +184,47 @@ const ROWS = [
       why: "數的是己方英雄「開始撤退」的次數（從沒在撤退變成撤退），除以分鐘數；撤退中的時間長短不影響這個數。",
     },
   }),
+  //  ── 整場型（T10 Phase 2）：引擎旋鈕是整場共用的單一值 ⇒ 鍵也是整場一個。規格裡依時期細分的鍵
+  //     （phases.*.grouping／objectiveOrder）仍是 design：那要引擎先支援分時期的旋鈕。
+  //  團戰姿態：macro.aggression → identity.engageBias（接戰分數偏移）；同一個欄位也平移三路站位（toEngineTactic 的 aggro 項）。
+  live("teamfight.posture", ["passive", "standard", "aggressive"], "macro.aggression", [], {
+    resolverFields: ["identity.engageBias", "knobs.laneOffset.top", "knobs.laneOffset.mid", "knobs.laneOffset.bot"],
+    engineReads: ["engageBias", "laneOffset"],
+    gate: {
+      rank: ["passive", "standard", "aggressive"], claims: claimsOf(["passive", "standard", "aggressive"], "engageDecisionsPerMin"),
+      deltaFields: ["identity.engageBias"],
+      why: "數的是己方英雄每做出一次新的「接戰」決策（決策有鎖定期，沿用舊決策不算），除以分鐘數；engageBias 平移的正是這個決策的分數。",
+    },
+  }),
+  //  集結：macro.grouping → knobs.joinFight（一般團戰的參團率）
+  live("teamfight.grouping", ["standard", "tight"], "macro.grouping", [], {
+    resolverFields: ["knobs.joinFight"], engineReads: ["joinFight"],
+    gate: {
+      rank: ["standard", "tight"], claims: claimsOf(["standard", "tight"], "fightEntriesPerMinAll"),
+      deltaFields: ["knobs.joinFight"],
+      why: "數的是己方英雄「進入團戰狀態」的次數（同時期姿態的計數，但整場合計），除以比賽分鐘數；joinFight 是被叫去參團時答應的機率。",
+    },
+  }),
+  //  物件重心：objectives.dragonPriority／baronPriority → knobs.dragonJoin／baronJoin；towerPriority → identity.siegeBias（連帶三路站位）
+  ...[["dragon", "dragonJoin"], ["baron", "baronJoin"]].map(([key, knob]) =>
+    live(`objectives.${key}`, ["low", "standard", "high"], `objectives.${key}Priority`, [], {
+      resolverFields: [`knobs.${knob}`], engineReads: [knob],
+      gate: {
+        rank: ["low", "standard", "high"], claims: claimsOf(["low", "standard", "high"], `objectiveFightEntriesPerMin.${key}`),
+        deltaFields: [`knobs.${knob}`],
+        why: "數的是己方英雄在這個物件的坑附近「進入團戰狀態」的次數（坑的位置讀引擎當場的物件位置，佈局對調也跟著走），除以分鐘數；"
+          + "量的是人真的去了坑邊集結，不是物件窗的擲骰結果。",
+      },
+    })),
+  live("objectives.tower", ["low", "standard", "high"], "objectives.towerPriority", [], {
+    resolverFields: ["identity.siegeBias", "knobs.laneOffset.top", "knobs.laneOffset.mid", "knobs.laneOffset.bot"],
+    engineReads: ["siegeBias", "laneOffset"],
+    gate: {
+      rank: ["low", "standard", "high"], claims: claimsOf(["low", "standard", "high"], "siegeWindowsPerMin"),
+      deltaFields: ["identity.siegeBias"],
+      why: "數的是己方「攻城主動權窗」開啟的次數（打贏一波之後決定去推塔的那一刻；窗持續多久不影響這個數），除以分鐘數。",
+    },
+  }),
 
   //  ── design：規格列了，但現行引擎沒有可解析的旋鈕 ────────────────────────────
   design("winCondition", "勝利路徑沒有對應的引擎旋鈕，列舉內容規格尚未定稿"),
