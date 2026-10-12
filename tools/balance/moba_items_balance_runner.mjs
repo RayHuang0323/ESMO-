@@ -128,7 +128,9 @@ export function mirroredRoster(seed, M) {
  *   · M.tactic 沒有 toEngineTacticIdentity ⇒ tacticIdentity 關（identity: null）
  * `ESMO_BALANCE_LAYOUT` 在呼叫當下讀取（不是載入時）；`RULE_OVERRIDES` 仍是載入時讀的模組常數。
  */
-export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
+//  Phase 3a T10：`tactic`（可省略）＝ { blue, red } 兩側的戰術輸入（`{kind:"std"}`／`{kind:"binding",binding}`…）。
+//  不傳 ⇒ 兩側 std（與 T6 起完全相同）。真實性 gate（check_tactic_truth_3a）用它把單一選擇綁在一側。
+export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic = null) {
   const base = rulesetById("balanceTool.v20");
   const skills = !!M.skills;
   const layoutOn = !!M.objectiveLayout;
@@ -158,7 +160,7 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
   }
   const plainRoster = Object.fromEntries(Object.entries(roster).map(([seat, row]) =>
     [seat, { heroId: row.heroId, ...(Array.isArray(row.spells) ? { spells: row.spells } : {}) }]));
-  const built = createMatchSetup({ ruleset, seed, roster: plainRoster, tactic: { blue: { kind: "std" }, red: { kind: "std" } }, tool,
+  const built = createMatchSetup({ ruleset, seed, roster: plainRoster, tactic: tactic ?? { blue: { kind: "std" }, red: { kind: "std" } }, tool,
     meta: { sessionId: null, mode: "balance", opponentId: null, seedSource: "tool" } });
   if (!built.ok) throw new Error(`balance MatchSetup rejected: ${built.errors.map((x) => `${x.code}@${x.field}`).join(",")}`);
   return { setup: built.setup, strategySide };
@@ -170,9 +172,9 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster) {
 //  ⚠ 與 v20 的兩個差異（沒有任何呼叫端會觸發；契約刻意不放寬）：rosterOverride 必須恰好是 b1–b5／r1–r5 十個席位
 //    （每席 { heroId, spells? }），否則丟 `MatchSetup rejected: roster_invalid…`（v20 會照跑）；config 若不是已知出裝策略
 //    （off／standard／early／scaling／counter／survival）丟 `build_strategy_unknown`（v20 會把未知名稱直接當策略送進 adapter）。
-export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
+export function configure(seed, config, M, incomeK = 1, rosterOverride = null, tactic = null) {
   const roster = rosterOverride ?? mirroredRoster(seed, M);
-  const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster);
+  const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic);
   //  英雄側 adapter：同樣全來自 M；M 沒有的明確給 undefined（對應層已關），不讓 core 的預設悄悄頂替。
   const adapters = {
     toEngineHeroSkills: M.skills?.toEngineHeroSkills, selectBattleTalents: M.talents?.selectBattleTalents,

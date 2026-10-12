@@ -503,7 +503,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v21 未發布 ⇒ 同版號重新登記（舊值 88f4175a94025c1a 未曾發布）。
   //  2026-10-12（Phase 3a T9 fix 3）：組裝器把注入 resolver 的結果在護欄內一次讀成純資料（ok 須嚴格為 true）。合法輸入的旋鈕一個位元都沒動。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 b1271c151bed7955 未曾發布）。
-  "moba-sim.v21": "0300a71fcbc3a7df",
+  //  2026-10-12（Phase 3a T10 事前登記）：capabilityRegistry.js 的 live 列多了 resolverFields／engineReads／gate（真實性 gate 的事前登記資料）與
+  //  CAPABILITIES／liveCapabilities 別名；isLiveChoice 多一個可省略的 simVersion 參數。都是純資料／查詢，解析器與對照表一個位元都沒動，
+  //  golden 39 案仍逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 0300a71fcbc3a7df 未曾發布）。
+  "moba-sim.v21": "355cf3ef13b6b7e4",
 });
 
 export const isKnownSimulationVersion = (v) =>

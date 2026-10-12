@@ -17,8 +17,21 @@
 //                  Resolver 才是權威映射）。design 列＝null。
 //    note          design 列＝為什麼還不能 live（一句話）；live 列＝null。
 //
-//  Task 10 會在同一批列上再加 resolverFields／engineReads／gate 欄位與真實性 gate；
-//  這裡刻意保持「一列一個 frozen 物件」，加欄位不需要改動既有欄位。
+//  ── Task 10 加進 live 列的欄位（design 列沒有）────────────────────────────────
+//    resolverFields  這個維度的任何選擇會改到的 resolver 輸出欄位（`resolveTactic(...)` 的 `knobs.*`／`identity.*` 路徑，
+//                    陣列用索引，例 `identity.phaseEngage.0`）。G-A5 逐格驗證：欄位真的在輸出裡、且選擇改變時至少一格跟著變。
+//    engineReads     引擎（LogicEngine.js，剝註解後）真的會讀的屬性名。G-A5 逐個掃描——沒人讀的旋鈕＝死旋鈕＝假選項。
+//    gate            真實性 gate（G-A7）的**事前登記**：每個選擇宣稱什麼行為、用哪個量測、方向。
+//        claims   [{ choice, ownIn?, metric, direction }]：direction ＝ "up"｜"down"（相對於「模板本來的選擇」）或 "rank"
+//                 （依 `rank` 的順序：選擇的名次高於本來的選擇 ⇒ up，低於 ⇒ down）。`ownIn` 限定這條只適用於模板本來的選擇在其中時。
+//        rank     名次（由低到高），只有 direction 為 "rank" 的列才需要。
+//        deltaFields  挑「旋鈕差距最小的模板」用：resolver 輸出欄位路徑的陣列（差距的尺度 unit 住在 tools/lib/tacticTruthPlan.mjs；
+//                 Registry 的列裡不放任何數字，tactic_plan R2b 守住）。
+//        inverseFields  deltaFields 之中「值越大、宣稱的行為越少」的欄位（例如抓人間隔）。有 rank 的列，G-A5 另外驗證
+//                 「沿 rank 往上，每一格的值（inverse 的取負）不遞減」＝事前登記的方向與旋鈕一致。
+//        why      這個量測為什麼算「行為」（不是狀態、不是擲骰、不是隨比賽長度放大的計數）。
+//    ⚠ 量測 id 的定義與計數方式在 tools/lib/tacticTruthSim.mjs（METRICS）；事前登記＝這個檔案先於結果進 git。
+//    ⚠ 量測不到的選擇不放大係數：該選擇從 live 移到 design，或進 MEASURED_EXCLUSIONS（逐模板不提供，原因與數字留底）。
 //
 //  純資料＋查詢，不 import 任何東西。
 // ============================================================================
@@ -26,6 +39,8 @@
 export const CAPABILITY_REGISTRY_VERSION = "CapabilityRegistry.v1";
 export const CAPABILITY_STATUS = Object.freeze({ LIVE: "live", DESIGN: "design" });
 export const CAPABILITY_SIM_VERSION_3A = "moba-sim.v21";
+/** G-A7 的事前登記門檻：固定 seeds 1–40、配對 z ≥ 2 才算有效果、2 ≤ z < 3 標為邊緣（marginal）。 */
+export const TRUTH_GATE = Object.freeze({ seedFrom: 1, seedTo: 40, minZ: 2, marginalBelowZ: 3 });
 
 const STANCE = ["aggressive", "standard", "defensive", "scaling"];
 const STANCE_LATE = ["standard", "defensive", "scaling"];
@@ -34,14 +49,23 @@ const SPLITTABLE_LANE_STANCE = ["aggressive", "standard", "defensive", "split"];
 
 //  touches（Phase 3a T9 fix 1）：這個維度的任何選擇**可能改到的所有 MobaTacticConfig 欄位**（主欄位在前＝basis 的欄位路徑，
 //  之後是連帶欄位）。gate 逐「模板 × 選擇」比對實際改動的欄位 ⊆ touches，且主欄位真的改了（除非選擇就是模板自己的值）。
-const live = (dimension, choices, basis, extraTouches = []) => Object.freeze({
+const deepFreeze = (o) => {
+  if (o && typeof o === "object" && !Object.isFrozen(o)) { Object.freeze(o); for (const v of Object.values(o)) deepFreeze(v); }
+  return o;
+};
+const live = (dimension, choices, basis, extraTouches = [], ext = {}) => Object.freeze({
   dimension, choices: Object.freeze([...choices]), status: CAPABILITY_STATUS.LIVE,
   minSimVersion: CAPABILITY_SIM_VERSION_3A, basis, note: null,
   touches: Object.freeze([basis.replace(/\(.*\)$/, ""), ...extraTouches]),
+  resolverFields: deepFreeze([...(ext.resolverFields ?? [])]),
+  engineReads: deepFreeze([...(ext.engineReads ?? [])]),
+  gate: deepFreeze(ext.gate ?? null),
 });
+const claimsOf = (choices, metric, direction = "rank") => choices.map((choice) => ({ choice, metric, direction }));
 const design = (dimension, note, choices = []) => Object.freeze({
   dimension, choices: Object.freeze([...choices]), status: CAPABILITY_STATUS.DESIGN,
   minSimVersion: null, basis: null, note,
+  resolverFields: Object.freeze([]), engineReads: Object.freeze([]), gate: null,
 });
 
 const PHASES = ["early", "mid", "late"];
@@ -50,30 +74,115 @@ const LANES = ["top", "mid", "bot"];
 const SEATS_WITH_LANE_CORE = { b1: "top", b3: "mid", b4: "adc" };   // 引擎 carryPriority 只認得 top／mid／adc
 const WHOLE_MATCH = "引擎的對應旋鈕是整場共用的單一值，無法依此鍵（每個時期各自）細分；要 live 需要引擎先支援";
 
+//  路姿態列。lane＝top／mid／bot（引擎的路位叫 adc，metric id 與 knob 路徑用 bot，座位 b1／b3／b4）。
+function laneRow(lane, seat, choices, extra) {
+  const pos = ["defensive", "standard", "aggressive", "split"].filter((c) => choices.includes(c));
+  const hasSplit = choices.includes("split");
+  const claims = [
+    ...(hasSplit ? [{ choice: "split", metric: `seatFightEntriesPerMin.${seat}`, direction: "down" }] : []),
+    ...(hasSplit ? choices.filter((c) => c !== "split").map((c) => ({ choice: c, ownIn: ["split"], metric: `seatFightEntriesPerMin.${seat}`, direction: "up" })) : []),
+    ...claimsOf(choices.filter((c) => c !== "split"), `laneForward.${lane}`),
+  ];
+  return live(`lanes.${lane}.stance`, choices, `lanePlan.${lane === "bot" ? "adc" : lane}`, extra, {
+    resolverFields: [`knobs.laneOffset.${lane}`, `knobs.gankWeights.${lane}`, ...(hasSplit ? ["knobs.splitLane", "knobs.splitPush"] : [])],
+    engineReads: ["laneOffset", "gankWeights", ...(hasSplit ? ["splitLane", "splitPush"] : [])],
+    gate: {
+      rank: pos, claims,
+      deltaFields: [`knobs.laneOffset.${lane}`],
+      why: "站位＝這一路的英雄在對線期（60–480 秒）、處於「對線」狀態時，離己方主堡的平均距離（越前越大）；這是姿態本身宣稱的東西。"
+        + (hasSplit ? "帶線＝帶線者參與團戰（進入團戰狀態）的次數變少；引擎每 6 秒擲一次 splitPush 決定留不留在線上，量的是他實際有沒有被拉去打團，不是擲骰結果。" : ""),
+    },
+  });
+}
+
 const ROWS = [
   //  ── live：現行 MobaTacticConfig 已有對應欄位 ───────────────────────────────
   //  時期姿態：macro.earlyGame／midGame／lateGame → toEngineTacticIdentity.phaseEngage／phaseJoin
   //  ⚠ 後期不提供 aggressive：引擎的後期偏移表（PHASE_ENGAGE_LATE）裡 aggressive 與 scaling 同值，
   //    兩個選項會解析成逐位元相同的旋鈕＝假選擇；留 scaling（語意較接近「後期」）。tools 的 gate 守住「同維度的每個選項旋鈕都不同」。
-  ...PHASES.map((p) => live(`phases.${p}.stance`, p === "late" ? STANCE_LATE : STANCE, PHASE_BASIS[p])),
+  ...PHASES.map((p, idx) => live(`phases.${p}.stance`, p === "late" ? STANCE_LATE : STANCE, PHASE_BASIS[p], [], {
+    resolverFields: [`identity.phaseEngage.${idx}`, `identity.phaseJoin.${idx}`],
+    engineReads: ["phaseEngage", "phaseJoin"],
+    gate: {
+      //  名次＝該階段「接戰偏移 phaseEngage／參團偏移 phaseJoin」由低到高（後期 scaling 反而高於 standard：scaling 隊伍後期要打）。
+      rank: p === "late" ? ["defensive", "standard", "scaling"] : ["defensive", "scaling", "standard", "aggressive"],
+      claims: claimsOf(p === "late" ? STANCE_LATE : STANCE, `fightEntriesPerMin.${p}`),
+      deltaFields: [`identity.phaseEngage.${idx}`, `identity.phaseJoin.${idx}`],
+      why: "數的是己方英雄「進入團戰狀態」的次數（狀態從非團戰變成團戰，持續待在團戰裡只算一次），除以該階段實際經過的分鐘數；"
+        + "只有該階段自己的偏移在動，不是整場長度的函數。階段邊界與引擎相同（前期 < 480 秒、中期 < 960 秒）。",
+    },
+  })),
   //  打野節奏：macro.tempo → toEngineTactic.gankInterval（與 invadeWithMid）
-  live("jungle.tempo", ["slow", "standard", "fast"], "macro.tempo"),
+  live("jungle.tempo", ["slow", "standard", "fast"], "macro.tempo", [], {
+    resolverFields: ["knobs.gankInterval"], engineReads: ["gankInterval"],
+    gate: {
+      rank: ["slow", "standard", "fast"], claims: claimsOf(["slow", "standard", "fast"], "ganksPerMin"),
+      deltaFields: ["knobs.gankInterval"], inverseFields: ["knobs.gankInterval"],   // 間隔越長抓得越少 ⇒ 名次與旋鈕反向
+      why: "引擎在打野真的出發抓人的那一刻（Gank 計時到點、沒有進行中的團戰）才加一；除以比賽分鐘數＝每分鐘出發幾次，不是「正在抓人」的時間占比。",
+    },
+  }),
   //  打野重心：lanePlan.jungle → gankWeights／invadeChance／gankIntervalK
   //  連帶 objectives.invadePriority：原本打野是 invade 的模板改選別的重心時降回中性（見 tacticChoiceMapping.js 檔頭）。
-  live("jungle.focus", ["gank", "farm", "invade"], "lanePlan.jungle", ["objectives.invadePriority"]),
+  live("jungle.focus", ["gank", "farm", "invade"], "lanePlan.jungle", ["objectives.invadePriority"], {
+    resolverFields: ["identity.gankIntervalK", "knobs.invadeChance"],
+    engineReads: ["gankIntervalK", "invadeChance", "gankWeights"],
+    gate: {
+      claims: [
+        { choice: "farm", metric: "ganksPerMin", direction: "down" },
+        { choice: "invade", metric: "invasionsActed", direction: "up" },
+        { choice: "gank", ownIn: ["farm"], metric: "ganksPerMin", direction: "up" },
+        { choice: "gank", ownIn: ["invade"], metric: "invasionsActed", direction: "down" },
+      ],
+      deltaFields: ["identity.gankIntervalK", "knobs.invadeChance"],
+      why: "發育＝抓人出發次數（同 jungle.tempo 的計數）變少；入侵＝開局 50 秒內有英雄真的走進「入侵」狀態的次數（不是只擲骰過關）。"
+        + "farm 的 gankWeights 三路等比縮小，正規化後路線占比不變，所以不拿它當證據。",
+    },
+  }),
   //  三路姿態與「帶線（單一路）」：lanePlan.top／mid／adc → laneOffset／gankWeights／splitLane。
   //  上、中路多一個 split（＝帶線）；下路沒有（引擎契約 LANE_PLAN_ENUM.adc 不含 split）。
   //  連帶 macro.splitPush：選 split ⇒ 提到帶線的既有值；離開 split ⇒ 降回中性（引擎只在 splitLane 存在時才讀 splitPush）。
-  live("lanes.top.stance", SPLITTABLE_LANE_STANCE, "lanePlan.top", ["macro.splitPush"]),
-  live("lanes.mid.stance", SPLITTABLE_LANE_STANCE, "lanePlan.mid", ["macro.splitPush"]),
-  live("lanes.bot.stance", LANE_STANCE, "lanePlan.adc"),
+  laneRow("top", "b1", SPLITTABLE_LANE_STANCE, ["macro.splitPush"]),
+  laneRow("mid", "b3", SPLITTABLE_LANE_STANCE, ["macro.splitPush"]),
+  laneRow("bot", "b4", LANE_STANCE, []),
   //  輔助任務（b5 是輔助席）：lanePlan.support → roamK／protectHp
-  live("seats.b5.mission", ["roam", "protect", "standard"], "lanePlan.support"),
+  live("seats.b5.mission", ["roam", "protect", "standard"], "lanePlan.support", [], {
+    resolverFields: ["identity.roamK", "identity.protectHp"], engineReads: ["roamK", "protectHp"],
+    gate: {
+      claims: [
+        { choice: "roam", metric: "supportRoamsPerMin", direction: "up" },
+        { choice: "protect", metric: "supportProtectsPerMin", direction: "up" },
+        { choice: "standard", ownIn: ["roam"], metric: "supportRoamsPerMin", direction: "down" },
+        { choice: "standard", ownIn: ["protect"], metric: "supportProtectsPerMin", direction: "down" },
+      ],
+      deltaFields: ["identity.roamK", "identity.protectHp"],
+      why: "遊走＝引擎在輔助真的選好路線出發（過了機率與「值不值得去」兩關）才加一，除以分鐘數；"
+        + "保護＝輔助（b5）每做出一次新的「支援」決策加一（決策有鎖定期，持續保護同一人只算一次），除以分鐘數。",
+    },
+  }),
   //  核心是誰：economy.carryPriority（top／mid／adc）→ protectRole。只有 b1／b3／b4 對得到。
   ...Object.entries(SEATS_WITH_LANE_CORE).map(([seat, lane]) =>
-    live(`seats.${seat}.priority`, ["core", "normal"], `economy.carryPriority(${lane})`)),
+    live(`seats.${seat}.priority`, ["core", "normal"], `economy.carryPriority(${lane})`, [], {
+      resolverFields: ["identity.protectRole"], engineReads: ["protectRole"],
+      gate: {
+        claims: [
+          { choice: "core", metric: `coreProtectsPerMin.${lane}`, direction: "up" },
+          { choice: "normal", ownIn: ["core"], metric: `coreProtectsPerMin.${lane}`, direction: "down" },
+        ],
+        deltaFields: ["identity.protectRole"],
+        why: "數的是己方保護型英雄每做出一次新的「支援」決策、而且被救的對象正好是這個席位（持續保護同一人只算一次），除以分鐘數；"
+          + "對照組與實驗組用同一個計數，不是只在選了 core 才會增加的專用計數器。",
+      },
+    })),
   //  風險：macro.riskTolerance → retreatAt／retreatFloorShift／commitShift
-  live("risk.tolerance", ["cautious", "balanced", "bold"], "macro.riskTolerance"),
+  live("risk.tolerance", ["cautious", "balanced", "bold"], "macro.riskTolerance", [], {
+    resolverFields: ["knobs.retreatAt", "identity.retreatFloorShift", "identity.commitShift"],
+    engineReads: ["retreatAt", "retreatFloorShift", "commitShift"],
+    gate: {
+      rank: ["bold", "balanced", "cautious"], claims: claimsOf(["cautious", "balanced", "bold"], "retreatStartsPerMin"),
+      deltaFields: ["knobs.retreatAt", "identity.retreatFloorShift", "identity.commitShift"],
+      why: "數的是己方英雄「開始撤退」的次數（從沒在撤退變成撤退），除以分鐘數；撤退中的時間長短不影響這個數。",
+    },
+  }),
 
   //  ── design：規格列了，但現行引擎沒有可解析的旋鈕 ────────────────────────────
   design("winCondition", "勝利路徑沒有對應的引擎旋鈕，列舉內容規格尚未定稿"),
@@ -106,8 +215,35 @@ export const registryRow = (key) => (typeof key === "string" ? BY_KEY.get(key) ?
 export const liveRows = () => CAPABILITY_ROWS.filter((r) => r.status === CAPABILITY_STATUS.LIVE);
 /** 這個鍵存在，而且是 design（只是還沒接上，不是打錯字）。 */
 export const isDesignKey = (key) => registryRow(key)?.status === CAPABILITY_STATUS.DESIGN;
-/** key 是 live 列，且 value 是它的列舉成員。型別不對（數字、物件）一律 false。 */
-export function isLiveChoice(key, value) {
+const simNumber = (v) => { const m = /^moba-sim\.v(\d+)$/.exec(typeof v === "string" ? v : ""); return m ? Number(m[1]) : null; };
+/** 這一列在 simVersion 上可用嗎（minSimVersion ≤ simVersion）。simVersion 不是 `moba-sim.vN` ⇒ false。 */
+const availableAt = (row, simVersion) => {
+  const have = simNumber(simVersion), need = simNumber(row.minSimVersion);
+  return have !== null && need !== null && have >= need;
+};
+/**
+ * key 是 live 列，且 value 是它的列舉成員。型別不對（數字、物件）一律 false。
+ * 第三個參數（可省略）＝模擬版本：給了就同時要求這一列在那個版本上已經可用（早於 minSimVersion ⇒ false）。
+ */
+export function isLiveChoice(key, value, simVersion) {
   const r = registryRow(key);
-  return !!r && r.status === CAPABILITY_STATUS.LIVE && typeof value === "string" && r.choices.includes(value);
+  if (!r || r.status !== CAPABILITY_STATUS.LIVE || typeof value !== "string" || !r.choices.includes(value)) return false;
+  return simVersion === undefined ? true : availableAt(r, simVersion);
 }
+
+//  Task 10 規格名稱（簡報／brief 用的名字）：與上面同一份資料，只是別名，不是第二份列表。
+/** 所有列（live＋design）。 */
+export const CAPABILITIES = CAPABILITY_ROWS;
+/** 在 simVersion 上可用的 live 列（預設＝3a 隨附的 moba-sim.v21）。 */
+export const liveCapabilities = (simVersion = CAPABILITY_SIM_VERSION_3A) => liveRows().filter((r) => availableAt(r, simVersion));
+
+/**
+ * 量測後逐模板不提供的選擇（G-A7 的結論，**資料表**）：[{ template, dimension, choice, reason, metric, n, z, mean? }]。
+ * template 為 "*" ＝所有模板（等於這個選擇退回 design，但保留在列舉裡讓錯誤碼明確）。
+ * tacticChoiceMapping 的 offeredDetail 讀它：被列入的選擇回報 `withheld: no_measured_effect`。
+ * tools/check_tactic_truth_3a.mjs 驗證這張表與量測結果表（tools/fixtures/tactic_truth_3a.json）完全一致。
+ */
+export const MEASURED_EXCLUSIONS = deepFreeze([]);
+/** 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。 */
+export const measuredExclusion = (template, dimension, choice) =>
+  MEASURED_EXCLUSIONS.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)) ?? null;
