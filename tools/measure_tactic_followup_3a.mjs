@@ -4,6 +4,7 @@
 //  執行：
 //    node tools/measure_tactic_followup_3a.mjs --study=replication --dir=<repo 外的資料夾> [--workers=3]
 //    node tools/measure_tactic_followup_3a.mjs --study=templates   --dir=<repo 外的資料夾> [--workers=3]
+//    node tools/measure_tactic_followup_3a.mjs --study=quickmode   --dir=<與 replication 同一個資料夾> [--workers=3]
 //    加 --report 只重算統計（不模擬）；加 --plan 只印批次數。資料夾裡放一個名為 STOP 的檔案會停下來，再執行一次會續跑。
 //
 //  量測程式與 G-A7 完全相同：同一個 worker（check_tactic_truth_3a.mjs --truth-worker → tacticTruthSim.runTruthMatch）、
@@ -32,6 +33,18 @@
 //   · 兩個模板「行為上可區分」＝至少一個指標的配對 |z| ≥ 4（210 對 × 16 指標＝3360 個檢定，|z| ≥ 4 的偶然次數期望值約 0.2）。
 //     達不到 ⇒ 列為「量不出差別」的一對；彼此量不出差別的模板連成一群。
 //   · 另外記錄每個模板對 std 的勝率（只供參考，不是判定依據）。
+//
+//  ── study=quickmode：快速模式的「物件優先」「強邊」在現有引擎裡有沒有可驗證的行為 ─────────────────────
+//   · 來由：G-A7 的批次（seeds 1–40）事後探索時看到——巨龍／巴龍重心調高，「到坑邊爭奪」的次數約 +14%（z 2.1–3.2）；
+//     某一路改成進攻，打野去那一路抓人的比例上升 17–84%（z 1.2–2.0）。那是看了資料才想到的指標，不能當證據；
+//     這裡用**沒看過的 seeds** 確認或否定它。
+//   · seeds 1001–1400（與 replication 共用同一個對照組），藍方與紅方各量一次。
+//   · 指標（由每場紀錄裡引擎自己的計數算出，都是瞬間事件）：
+//       contestsPerMin.<dragon|baron>  該物件每次重生後，己方第一次有人走到坑邊 9 以內的次數（每次重生最多一次）÷ 分鐘
+//       gankShare.<top|mid|bot>        打野出發抓人的次數裡，去這一路的比例（整場沒有抓人 ⇒ 不計入）
+//   · 判定與 replication 相同（兩側都方向相符、z ≥ 3、|Δ| ≥ 5% ⇒ verified）。
+//   · ⚠ 這個 study **不改變任何選擇的 live 狀態**：Registry 為這些選擇事前登記的是別的指標。verified 只代表
+//     「引擎有這個行為，可以作為重新登記指標的候選」，要不要據此重新登記並重測，由 Owner 決定。
 // ============================================================================
 import fs from "node:fs";
 import os from "node:os";
@@ -79,6 +92,27 @@ export const TEMPLATES_STUDY = Object.freeze({
     "seatFightEntriesPerMin.b3", "objectiveFightEntriesPerMin.dragon", "objectiveFightEntriesPerMin.baron", "coreProtectsPerMin.adc"],
 });
 
+export const QUICKMODE = Object.freeze({
+  seeds: [1001, 1400], minZ: 3, minRel: 0.05,
+  //  [維度, 選擇, 指標, 方向]
+  choices: [
+    ["objectives.dragon", "high", "contestsPerMin.dragon", "up"],
+    ["objectives.dragon", "low", "contestsPerMin.dragon", "down"],
+    ["objectives.baron", "high", "contestsPerMin.baron", "up"],
+    ["objectives.baron", "low", "contestsPerMin.baron", "down"],
+    ["lanes.top.stance", "aggressive", "gankShare.top", "up"],
+    ["lanes.mid.stance", "aggressive", "gankShare.mid", "up"],
+    ["lanes.bot.stance", "aggressive", "gankShare.bot", "up"],
+  ],
+});
+/** quickmode 專用指標：由紀錄裡引擎自己的 exec 計數算出（不經量測程式的指標表）。 */
+function quickMetric(rec, side, id) {
+  const [name, param] = id.split("."), e = rec[side].exec;
+  if (name === "contestsPerMin") return rec.duration >= 60 ? e[`${param}Contests`] / (rec.duration / 60) : null;
+  if (name === "gankShare") { const tot = e.topGanks + e.midGanks + e.botGanks; return tot > 0 ? e[`${param}Ganks`] / tot : null; }
+  throw new Error(`unknown quickmode metric ${id}`);
+}
+
 // ── 批次 ──────────────────────────────────────────────────────────────────
 function replicationBatches() {
   const R = REPLICATION, full = range(...R.seedsFull), confirm = range(...R.seedsConfirm);
@@ -87,6 +121,16 @@ function replicationBatches() {
     const arm = { templateId: "std", choices: nest(dim, choice) }, seeds = cls === "marginal" ? full : confirm;
     out.push({ key: `rep|blue|${dim}|${choice}`, seeds, blue: arm, red: null });
     out.push({ key: `rep|red|${dim}|${choice}`, seeds, blue: null, red: arm });
+  }
+  return out;
+}
+function quickmodeBatches() {
+  const seeds = range(...QUICKMODE.seeds);
+  const out = [{ key: "rep|control", seeds, blue: null, red: null }];
+  for (const [dim, choice] of QUICKMODE.choices) {
+    const arm = { templateId: "std", choices: nest(dim, choice) };
+    out.push({ key: `qm|blue|${dim}|${choice}`, seeds, blue: arm, red: null });
+    out.push({ key: `qm|red|${dim}|${choice}`, seeds, blue: null, red: arm });
   }
   return out;
 }
@@ -192,6 +236,27 @@ function replicationReport(dir) {
   return { schema: "TacticFollowup.replication.v1", meta: metaOf(), rule: { seedsFull: R.seedsFull, seedsConfirm: R.seedsConfirm, minZ: R.minZ, minRel: R.minRel }, rows, problems };
 }
 
+// ── 統計：quickmode ───────────────────────────────────────────────────────
+function quickmodeReport(dir) {
+  const Q = QUICKMODE, seeds = range(...Q.seeds), control = readBatch(dir, "rep|control");
+  const rows = [], problems = [];
+  for (const [dim, choice, metric, direction] of Q.choices) {
+    const sides = {};
+    for (const side of ["blue", "red"]) {
+      const trt = readBatch(dir, `qm|${side}|${dim}|${choice}`);
+      const missing = seeds.filter((s) => !control.has(s) || !trt.has(s)).length;
+      if (missing) problems.push(`${dim}=${choice} ${side}：缺 ${missing} 場`);
+      const st = statsOf(seeds.filter((s) => control.has(s) && trt.has(s)).map((s) => [quickMetric(control.get(s), side, metric), quickMetric(trt.get(s), side, metric)]));
+      const zd = st.z === null ? null : st.z * (direction === "up" ? 1 : -1);
+      const relD = st.rel === null ? null : st.rel * (direction === "up" ? 1 : -1);
+      sides[side] = { ...st, zDirected: r6(zd), meets: zd !== null && zd >= Q.minZ && relD !== null && relD >= Q.minRel, reversed: zd !== null && zd <= -Q.minZ };
+    }
+    const verdict = sides.blue.reversed || sides.red.reversed ? "reversed" : sides.blue.meets && sides.red.meets ? "verified" : sides.blue.meets || sides.red.meets ? "one_sided" : "insufficient";
+    rows.push({ dimension: dim, choice, metric, direction, blue: sides.blue, red: sides.red, verdict });
+  }
+  return { schema: "TacticFollowup.quickmode.v1", meta: metaOf(), rule: { seeds: Q.seeds, minZ: Q.minZ, minRel: Q.minRel }, note: "does not change any live status; verified = candidate for re-registering the metric (Owner decision)", rows, problems };
+}
+
 // ── 統計：templates ───────────────────────────────────────────────────────
 function templatesReport(dir) {
   const T = TEMPLATES_STUDY, ids = Object.keys(TACTIC_TEMPLATES), seeds = range(...T.seeds);
@@ -229,19 +294,22 @@ function templatesReport(dir) {
 
 // ── main ──────────────────────────────────────────────────────────────────
 const study = val("study");
-if (!["replication", "templates"].includes(study)) { console.error("需要 --study=replication 或 --study=templates"); process.exit(2); }
+if (!["replication", "templates", "quickmode"].includes(study)) { console.error("需要 --study=replication、--study=templates 或 --study=quickmode"); process.exit(2); }
 const bad = [...REPLICATION.choices.map((c) => c[2]), ...TEMPLATES_STUDY.metrics].filter((m) => !isKnownMetric(m));
 if (bad.length) { console.error(`未知的指標：${bad.join(",")}`); process.exit(2); }
 const dir = path.resolve(val("dir", path.join(os.tmpdir(), `esmo-tactic-followup-3a-${study}`)));
-const batches = study === "replication" ? replicationBatches() : templateBatches();
+const batches = study === "replication" ? replicationBatches() : study === "quickmode" ? quickmodeBatches() : templateBatches();
 if (flag("plan")) { console.log(`${study}：${batches.length} 批、${batches.reduce((s, b) => s + b.seeds.length, 0)} 場`); process.exit(0); }
 if (!flag("report")) { const ok = await runBatches(dir, batches); if (!ok) process.exit(3); }
-const report = study === "replication" ? replicationReport(dir) : templatesReport(dir);
+const report = study === "replication" ? replicationReport(dir) : study === "quickmode" ? quickmodeReport(dir) : templatesReport(dir);
 const out = path.join(ROOT, `tools/fixtures/tactic_followup_3a_${study}.json`);
 if (report.problems.length) { console.log(`資料不完整，不寫結果檔：${report.problems.slice(0, 5).join("；")}`); process.exit(1); }
 fs.writeFileSync(out, `${JSON.stringify(report)}\n`);
 console.log(`已寫入 ${path.relative(ROOT, out)}`);
-if (study === "replication") {
+if (study === "quickmode") {
+  console.log("| 選擇 | 指標 | 藍 Δ% | 藍 z | 紅 Δ% | 紅 z | 判定 |\n|---|---|---|---|---|---|---|");
+  for (const r of report.rows) console.log(`| ${r.dimension}=${r.choice} | ${r.metric} ${r.direction} | ${((r.blue.rel ?? 0) * 100).toFixed(1)} | ${r.blue.z?.toFixed(2)} | ${((r.red.rel ?? 0) * 100).toFixed(1)} | ${r.red.z?.toFixed(2)} | ${r.verdict} |`);
+} else if (study === "replication") {
   console.log("| 選擇 | 指標 | 原 z | 藍 Δ% | 藍 z | 紅 Δ% | 紅 z | 判定 |\n|---|---|---|---|---|---|---|---|");
   for (const r of report.rows) console.log(`| ${r.dimension}=${r.choice} | ${r.metric} ${r.direction} | ${r.originalZ?.toFixed(2)} | ${((r.blue.rel ?? 0) * 100).toFixed(1)} | ${r.blue.z?.toFixed(2)} | ${((r.red.rel ?? 0) * 100).toFixed(1)} | ${r.red.z?.toFixed(2)} | ${r.verdict} |`);
 } else {
