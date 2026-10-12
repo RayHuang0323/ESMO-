@@ -513,7 +513,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-13（Phase 3a T10 Phase 2 事前登記）：對照表與 Registry 多了五個整場型 live 維度（teamfight.posture／grouping、objectives.dragon／baron／tower），
   //  數值全部引用既有模板在同一欄位上的值。既有十三個維度的解析一個位元都沒動；沒選這些新鍵的輸入解析結果不變，golden 39 案仍逐位元相同。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 5419139708e72275 未曾發布）。
-  "moba-sim.v21": "96d6b4652146eaf1",
+  //  2026-10-13（Phase 3a T10 Phase 2 結果）：MEASURED_EXCLUSIONS 多 7 筆（集結 tight、巨龍 low／high、巴龍 low／high、推塔 low，以及 classic.m3 上的推塔 high）。
+  //  只影響提供給玩家挑的清單，不改任何輸入的解析結果：golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 96d6b4652146eaf1 未曾發布）。
+  "moba-sim.v21": "839ca79b396026b7",
 });
 
 export const isKnownSimulationVersion = (v) =>

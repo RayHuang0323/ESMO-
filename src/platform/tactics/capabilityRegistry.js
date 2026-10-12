@@ -313,6 +313,13 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("*", "seats.b4.priority", "core", "no_measured_effect", "coreProtectsPerMin.adc", 40, 1),
   ex("classic.m2", "risk.tolerance", "cautious", "no_measured_effect", "retreatStartsPerMin", 40, 0.79),
   ex("*", "risk.tolerance", "bold", "no_measured_effect", "retreatStartsPerMin", 40, -1.64),
+  ex("*", "teamfight.grouping", "tight", "no_measured_effect", "fightEntriesPerMinAll", 40, 0.73),
+  ex("*", "objectives.dragon", "low", "no_measured_effect", "objectiveFightEntriesPerMin.dragon", 40, -0.74),
+  ex("*", "objectives.dragon", "high", "no_measured_effect", "objectiveFightEntriesPerMin.dragon", 40, -0.13),
+  ex("*", "objectives.baron", "low", "no_measured_effect", "objectiveFightEntriesPerMin.baron", 40, -0.88),
+  ex("*", "objectives.baron", "high", "reversed_effect", "objectiveFightEntriesPerMin.baron", 40, -2.03),
+  ex("*", "objectives.tower", "low", "no_measured_effect", "siegeWindowsPerMin", 40, 0.87),
+  ex("classic.m3", "objectives.tower", "high", "no_measured_effect", "siegeWindowsPerMin", 40, 1.97),
 ]);
 /** 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。 */
 export const measuredExclusion = (template, dimension, choice) =>
