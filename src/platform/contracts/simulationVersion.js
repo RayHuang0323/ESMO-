@@ -501,7 +501,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-12（Phase 3a T9 fix 2）：戰術 adapter 只在用到時才必要（STANDARD_OPP_TACTIC 只在有一方是 std 時）；resolver 輸出先驗形狀；
   //  resolver 不再凍結投影回傳的物件（先複製）。合法輸入的旋鈕一個位元都沒動，golden 39 案仍逐位元相同。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 88f4175a94025c1a 未曾發布）。
-  "moba-sim.v21": "b1271c151bed7955",
+  //  2026-10-12（Phase 3a T9 fix 3）：組裝器把注入 resolver 的結果在護欄內一次讀成純資料（ok 須嚴格為 true）。合法輸入的旋鈕一個位元都沒動。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 b1271c151bed7955 未曾發布）。
+  "moba-sim.v21": "0300a71fcbc3a7df",
 });
 
 export const isKnownSimulationVersion = (v) =>

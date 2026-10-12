@@ -210,19 +210,30 @@ export function assembleMatch(setup, deps = {}) {
     for (const side of SIDES) {
       const t = tacticIn[side];
       if (!t || tacticUnreadable[side]) continue;
-      let r;
-      try { r = A.resolveTactic(t, A, { identity: !!L.tacticIdentity }); }
-      catch (e) { err("tactic_unreadable", `tactic.${side}`, `the ${t?.kind ?? "?"} tactic could not be resolved safely (${String(e?.message ?? e).slice(0, 80)})`); continue; }
-      if (!r?.ok) {
-        const list = Array.isArray(r?.errors) && r.errors.length ? r.errors : [{ code: "unknown", field: "", message: "resolver rejected the tactic" }];
+      //  resolver 的結果是「外來物件」（可能帶 getter、Proxy）：在護欄內**一次**讀成我們自己的純資料，之後整個組裝器只看這份副本，
+      //  不再碰 resolver 回傳的物件（match() 也只讀 resolved[side]）。ok 必須嚴格等於 true；讀不出來 ⇒ tactic_unreadable。
+      let snap;
+      try {
+        const r = A.resolveTactic(t, A, { identity: !!L.tacticIdentity });
+        if (r?.ok === true) {
+          const config = structuredClone(r.config), knobs = structuredClone(r.knobs), identity = L.tacticIdentity ? structuredClone(r.identity) : null;
+          snap = { ok: true, config, knobs, identity };
+        } else {
+          const raw = Array.isArray(r?.errors) ? r.errors : [];
+          snap = { ok: false, errors: raw.map((e) => ({ code: String(e?.code ?? "unknown"), field: String(e?.field ?? ""), message: String(e?.message ?? "") })) };
+        }
+      } catch (e) { err("tactic_unreadable", `tactic.${side}`, `the ${t?.kind ?? "?"} tactic could not be resolved safely (${String(e?.message ?? e).slice(0, 80)})`); continue; }
+      if (!snap.ok) {
+        const list = snap.errors.length ? snap.errors : [{ code: "unknown", field: "", message: "resolver rejected the tactic" }];
         for (const e of list) {
-          const sub = String(e.field ?? "").replace(/^(binding|config)\.?/, "");
+          const sub = e.field.replace(/^(binding|config)\.?/, "");
           err(t.kind === "binding" ? "tactic_binding_rejected" : "tactic_rejected", sub ? `tactic.${side}.${sub}` : `tactic.${side}`, `[${e.code}] ${e.message}`);
         }
-      } else if (!isPlainObject(r.config) || !isPlainObject(r.knobs) || (L.tacticIdentity && !isPlainObject(r.identity))) {
+      } else if (!isPlainObject(snap.config) || !isPlainObject(snap.knobs) || (L.tacticIdentity && !isPlainObject(snap.identity))) {
         //  注入的 resolver 說 ok 卻沒給齊 config／knobs（／identity）：開局前就拒絕，不讓 match() 在 8 次 configure 之後才丟 TypeError。
-        err("tactic_rejected", `tactic.${side}`, `[resolver_bad_shape] the injected resolveTactic returned ok without ${!isPlainObject(r.config) ? "config" : !isPlainObject(r.knobs) ? "knobs" : "identity"}`);
-      } else resolved[side] = r;
+        //  （v20 沒有要求 config.tacticId：缺 tacticId 的手拼 legacy config，tacticMeta.tacticId 是 undefined、replayConfig 略過它——這裡維持原樣，不新增要求。）
+        err("tactic_rejected", `tactic.${side}`, `[resolver_bad_shape] the injected resolveTactic returned ok without ${!isPlainObject(snap.config) ? "config" : !isPlainObject(snap.knobs) ? "knobs" : "identity"}`);
+      } else resolved[side] = snap;
     }
   }
   if (E.match && !tacticIn.red && !tacticUnreadable.red) err("tactic_red_missing", "tactic.red", "a match with a blue tactic needs an explicit red tactic (use { kind: \"std\" } for the neutral default)");

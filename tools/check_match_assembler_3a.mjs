@@ -227,7 +227,20 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
   const need = [["resolveTactic", bothLegacy], ["toEngineTactic", bothLegacy], ["toEngineTacticIdentity", bothLegacy], ["MOBA_TACTIC_VERSION", bothLegacy]];
   const needBad = need.filter(([name, s]) => { const x = noThrow(s, withEng({ [name]: undefined })); return !(x && !x.r.ok && x.r.engine === null && x.calls.length === 0 && x.r.errors.some((e) => e.code === "deps_missing" && e.field === `deps.engineAdapters.${name}`)); }).map(([n]) => n);
   ck("A9e-c 其餘每個必要的戰術 adapter 缺席（resolveTactic／toEngineTactic／toEngineTacticIdentity（identity 層開）／MOBA_TACTIC_VERSION）⇒ deps_missing 錯誤結果、零 configure、不丟例外——從不默默略過", needBad.length === 0, needBad.join(","));
-  ck("A9e-d tool 規則集在舊樹沒有 toEngineTacticIdentity（identity 層關閉）⇒ 照舊執行、identity 為 null：由 check_balance_runner_setup_3a V9／V9b 覆蓋（那裡走真實的 runner 與 M 包裝）", true);
+  //  tool 規則集、tacticIdentity 層關閉、deps 沒有 toEngineTacticIdentity（舊樹）⇒ 照 v20 組裝成功，configureMatch 的 identity 是 null；
+  //  對照：層開著卻缺 adapter ⇒ deps_missing。configureMatch 的引數用子類別攔截（不是只看雜湊）。
+  {
+    const toolNoId = mk(toolIn({ ruleset: { ...MATCH_RULESETS["balanceTool.v20"], layers: { ...MATCH_RULESETS["balanceTool.v20"].layers, tacticIdentity: false } } }));
+    const seenArgs = [];
+    class SpyEngine extends LogicEngine { configureMatch(a) { seenArgs.push(a); return super.configureMatch(a); } }
+    const depsOld = { ...DEPS, LogicEngine: SpyEngine, engineAdapters: { ...DEPS.engineAdapters, toEngineTacticIdentity: undefined } };
+    const rOld = assembleMatch(toolNoId, depsOld);
+    const toolWithId = mk(toolIn());
+    ck("A9e-d tool 規則集、identity 層關閉、deps 沒有 toEngineTacticIdentity（舊樹）⇒ 組裝成功，configureMatch 恰好一次且 identity 為 null、blue／red 旋鈕仍在；層開著卻缺 adapter ⇒ deps_missing",
+      rOld.ok && seenArgs.length === 1 && seenArgs[0].identity === null && typeof seenArgs[0].blue === "object" && seenArgs[0].blue !== null && typeof seenArgs[0].red === "object"
+      && rejects(toolWithId, "deps_missing", "deps.engineAdapters.toEngineTacticIdentity", { ...DEPS, engineAdapters: { ...DEPS.engineAdapters, toEngineTacticIdentity: undefined } }),
+      rOld.ok ? JSON.stringify(seenArgs.map((a) => Object.keys(a))) : JSON.stringify(rOld.errors));
+  }
   //  resolver 回 ok 卻缺欄位
   const stubs = {
     "{ ok:true }": () => ({ ok: true }), "缺 knobs": (i, a, o) => { const r = DEPS.engineAdapters.resolveTactic(i, a, o); const { knobs: _k, ...rest } = r; return rest; },
@@ -236,6 +249,28 @@ ck("A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge �
   };
   const stubBad = Object.entries(stubs).filter(([, fn]) => { const x = noThrow(bothLegacy, withEng({ resolveTactic: fn })); return !(x && !x.r.ok && x.r.engine === null && x.calls.length === 0 && x.r.errors.some((e) => e.code === "tactic_rejected" && /resolver_bad_shape/.test(e.message))); }).map(([k]) => k);
   ck("A9e-e 注入的 resolveTactic 回 ok 卻缺 config／knobs／identity ⇒ tactic_rejected（resolver_bad_shape）錯誤結果、零 configure，不是 8 次 configure 後的 TypeError", stubBad.length === 0, stubBad.join(","));
+  //  resolver 的「結果」是外來物件：丟例外的 getter、已撤銷的 Proxy、config 是丟例外的 Proxy、ok 不是嚴格 true ⇒ 錯誤結果，零 configure，不丟例外
+  {
+    const real = (i, a, o) => DEPS.engineAdapters.resolveTactic(i, a, o);
+    const revokedRes = Proxy.revocable({}, {}); revokedRes.revoke();
+    const boomProxy = () => new Proxy({}, { get() { throw new Error("boom"); }, ownKeys() { throw new Error("boom"); }, getPrototypeOf() { throw new Error("boom"); }, has() { throw new Error("boom"); } });
+    const hostile = {
+      "knobs 是丟例外的 getter": (i, a, o) => { const r = real(i, a, o); return { ok: true, config: r.config, identity: r.identity, get knobs() { throw new Error("boom"); } }; },
+      "ok 本身是丟例外的 getter": () => ({ get ok() { throw new Error("boom"); } }),
+      "整個結果是已撤銷的 Proxy": () => revokedRes.proxy,
+      "config 是丟例外的 Proxy": (i, a, o) => { const r = real(i, a, o); return { ok: true, config: boomProxy(), knobs: r.knobs, identity: r.identity }; },
+      "identity 是已撤銷的 Proxy": (i, a, o) => { const r = real(i, a, o); return { ok: true, config: r.config, knobs: r.knobs, identity: revokedRes.proxy }; },
+      "errors 陣列裡的項目是丟例外的 Proxy": () => ({ ok: false, errors: [boomProxy()] }),
+    };
+    const hostileBad = Object.entries(hostile).filter(([, fn]) => { const x = noThrow(bothLegacy, withEng({ resolveTactic: fn })); return !(x && !x.r.ok && x.r.engine === null && x.calls.length === 0 && x.r.errors.some((e) => /^tactic_/.test(e.code))); }).map(([k]) => k);
+    ck("A9e-h 注入的 resolveTactic 結果帶丟例外的 getter／已撤銷 Proxy／丟例外的 config／identity／errors ⇒ 錯誤結果（tactic_*）、零 configure、沒有引擎、不丟例外（結果只在護欄內讀一次成純資料）", hostileBad.length === 0, hostileBad.join(","));
+    const okYes = noThrow(bothLegacy, withEng({ resolveTactic: (i, a, o) => ({ ...real(i, a, o), ok: "yes" }) }));
+    ck("A9e-i ok 必須嚴格等於 true：\"yes\"、1 ⇒ tactic_rejected，零 configure", [ "yes", 1 ].every((v) => { const x = noThrow(bothLegacy, withEng({ resolveTactic: (i, a, o) => ({ ...real(i, a, o), ok: v }) })); return x && !x.r.ok && x.calls.length === 0 && x.r.errors.some((e) => e.code === "tactic_rejected"); }) && okYes && !okYes.r.ok);
+    //  v20 對缺 tacticId 的手拼 legacy config：不要求 tacticId（tacticMeta.tacticId 為 undefined、replayConfig 略過）——組裝器維持，不新增要求
+    const legacyNoId = (() => { const c = JSON.parse(JSON.stringify(mobaTacticById("m4"))); delete c.tacticId; return { ...bothLegacy, tactic: { blue: { kind: "legacy", config: c }, red: { kind: "legacy", config: JSON.parse(JSON.stringify(mobaTacticById("m7"))) } } }; })();
+    const stubNoId = noThrow(legacyNoId, withEng({ resolveTactic: (i, a, o) => { const r = i.kind === "legacy" && !i.config.tacticId ? { ok: true, config: i.config, knobs: a.toEngineTactic(i.config), identity: a.toEngineTacticIdentity(i.config) } : real(i, a, o); return r; } }));
+    ck("A9e-j 組裝器本身不要求 config.tacticId（v20 也沒有）：resolver 回 ok 的缺 tacticId 設定照常組裝，replayConfig 略過 tacticId", !!stubNoId && stubNoId.r.ok && stubNoId.r.applied.replayConfig.tacticId === undefined && stubNoId.r.applied.tacticMeta.tacticId === undefined);
+  }
   //  投影回傳共用常數：不被凍住，兩次組裝結果相同且＝基準
   const sharedK = toEngineTactic(mobaTacticById("m4")), sharedI = toEngineTacticIdentity(mobaTacticById("m4"));
   const sharedDeps = withEng({ toEngineTactic: (c) => (c.tacticId === "m4" ? sharedK : toEngineTactic(c)), toEngineTacticIdentity: (c) => (c.tacticId === "m4" ? sharedI : toEngineTacticIdentity(c)) });

@@ -25,7 +25,9 @@ import { heroById } from "../src/data/heroDatabase.js";
 import { stableStringify, stableHash, snapshotHashOf, SNAPSHOT_INPUTS, snapshotCovers } from "../src/platform/contracts/squadSnapshot.js";
 import { createChallengeInstance } from "../src/platform/contracts/challengeInstance.js";
 import { SNAPSHOT_AUTHORITY } from "../src/platform/challenge/snapshotAuthority.js";
-import { matchSetupHash } from "../src/platform/contracts/matchSetup.js";
+import { matchSetupHash, createMatchSetup } from "../src/platform/contracts/matchSetup.js";
+import { assembleMatch } from "../src/battle/moba/matchAssembler.js";
+import { toEnginePlayerMods } from "../src/battle/moba/mobaPlayerStats.js";
 import { createStreamHasher, finalDigest } from "./lib/matchGolden.mjs";
 import { challengeGoldenInputs, challengeBuilderArgs } from "./lib/challengeGolden.mjs";
 import { mobaTacticById, toEngineTactic, toEngineTacticIdentity, MOBA_TACTIC_VERSION } from "../src/platform/contracts/MobaTacticConfig.js";
@@ -219,6 +221,54 @@ function builderArgs(v, withDraft) { return challengeBuilderArgs(v, withDraft); 
   ck("R3b builder 層：use.stats 為否 ⇒ setup.playerSlots＝null、effectiveLayers.players 兩邊 false、仍有 match",
     (() => { if (!BUILDER?.buildChallengeMatchSetup || !vn) return false; const r = BUILDER.buildChallengeMatchSetup({ ...builderArgs(vn, false), use: { loadout: true, stats: false, tactic: true } });
       return r.ok && r.setup.playerSlots === null && !r.setup.effectiveLayers.players.blue && !r.setup.effectiveLayers.players.red && r.setup.effectiveLayers.match; })());
+  //  ── 沒有宣告戰術（Phase 3a T9 fix 3）：v20 的 `useTactic` 為假 ⇒ 整段 configureMatch 略過、照跑 ──────────────────────
+  //  (1) 真實 runChallenge：兩份快照都沒宣告 tactic ⇒ 與 v20 組裝段（只有 loadout＋configurePlayers，沒有 configureMatch）逐位元相同。
+  const dropTactic = (s) => { const t = { ...s, capturedInputs: s.capturedInputs.filter((x) => x !== SNAPSHOT_INPUTS.tactic) }; t.hash = snapshotHashOf(t); return t; };
+  const v20NoTactic = (v) => {   // v20 challengeRunner：useStats ⇒ configurePlayers，useTactic 假 ⇒ 沒有 configureMatch
+    const blue = sideInputs(v.challenger, "blue"), red = sideInputs(v.defender, "red");
+    const ctx = { calls: [], engine: null, hasher: createStreamHasher(golden.streamEvery) };
+    PROBE.ctx = ctx;
+    try {
+      const eng = new LogicEngine(v.challenge.matchSeed, { ...blue.loadout, ...red.loadout });
+      const mods = toEnginePlayerMods({ blue: blue.slots, red: red.slots });
+      if (mods) eng.configurePlayers(mods);
+      for (let t = CHALLENGE_DT; t <= CHALLENGE_MAX_T && !eng.over; t += CHALLENGE_DT) eng.tick(CHALLENGE_DT);
+    } finally { PROBE.ctx = null; }
+    return ctx;
+  };
+  {
+    const a2 = nd && dropTactic(vn.challenger), d2 = nd && dropTactic(vn.defender);
+    const inst = nd && createChallengeInstance({ challenger: a2, defender: d2, challengerTacticId: nd.params.tacticIds[0], seedSource: nd.params.seed, createdAt: 1757000000000,
+      issuedBy: SNAPSHOT_AUTHORITY.id, nonce: "t9-notactic", opponentKey: vn.keyB });
+    const vt = inst?.ok ? { ...vn, challenger: a2, defender: d2, challenge: inst.challenge } : null;
+    const rr = vt && runProbed(vt), ref = vt && v20NoTactic(vt);
+    ck("R5 兩份快照都沒宣告 tactic（真實 runChallenge）⇒ 照跑出結果；呼叫序列沒有 configureMatch；與 v20 組裝段逐位元相同（呼叫序列＋引數雜湊、digest、streamHash）",
+      !!rr && !!ref && rr.thrown === null && rr.out?.ok === true && !rr.ctx.calls.some((x) => x.m === "configureMatch") && rr.ctx.calls.length >= 1
+      && firstDiff(rr.ctx.calls, ref.calls) === "" && finalDigest(rr.ctx.engine) === finalDigest(ref.engine) && rr.ctx.hasher.hex === ref.hasher.hex,
+      rr ? (rr.out?.errors ? JSON.stringify(rr.out.errors) : rr.ctx.calls.map((x) => x.m).join(">")) : "no instance");
+  }
+  //  (2) 有 draft 的案：use.tactic 為否 ⇒ setup.tactic 為 null（建構後 {blue:null,red:null}）；組裝器的呼叫序列＝v20 golden 的序列去掉 configureMatch
+  //      （v20 順序 players→match→heroes→archetypes→spells，沒有戰術時剩 players→heroes→archetypes→spells）。
+  {
+    const dc = cases.find((x) => x.params.draft), vd = dc && INPUTS.get(dc.id);
+    const args = vd && { ...builderArgs(vd, true), use: { ...builderArgs(vd, true).use, tactic: false } };
+    const built = args && BUILDER?.buildChallengeMatchSetup?.(args);
+    const base = built?.ok ? built.setup : null;
+    const asInput = (tactic) => { const { schema: _s, effectiveLayers: _e, ...rest } = JSON.parse(JSON.stringify(base)); return { ...rest, tactic }; };
+    const deps = CORE?.buildMatchAssemblerDepsFrom?.({ heroLookup: heroById, heroLookupLabel: BUILDER?.CHALLENGE_HERO_LOOKUP_LABEL });
+    const run = (setup) => { const ctx = { calls: [], engine: null, hasher: createStreamHasher(golden.streamEvery) }; PROBE.ctx = ctx; let r; try { r = assembleMatch(setup, deps); } finally { PROBE.ctx = null; } return { r, ctx }; };
+    const want = dc ? dc.calls.filter((x) => x.m !== "configureMatch") : [];
+    const variants = base ? [["tactic = null", null], ["tactic = { blue: null, red: null }", { blue: null, red: null }]].map(([label, t]) => {
+      const s = createMatchSetup(asInput(t)); const x = s.ok ? run(s.setup) : null; return { label, s, x };
+    }) : [];
+    ck("R6 challenge.v20 沒有宣告戰術（setup.tactic＝null，以及 { blue:null, red:null }）經真實組裝器 ⇒ 組裝成功、effectiveLayers.match 為假、呼叫序列＝v20 golden 去掉 configureMatch（players→heroes→archetypes→spells，引數雜湊逐筆相同）、沒有任何 configureMatch",
+      variants.length === 2 && variants.every(({ s, x }) => s.ok && x?.r.ok && !s.setup.effectiveLayers.match && s.setup.tactic.blue === null && s.setup.tactic.red === null
+        && !x.ctx.calls.some((c) => c.m === "configureMatch") && JSON.stringify(x.ctx.calls.map((c) => c.m)) === JSON.stringify(["configurePlayers", "configureHeroes", "configureArchetypes", "configureSpells"])
+        && firstDiff(x.ctx.calls, want) === "")
+      && matchSetupHash(variants[0].s.setup) === matchSetupHash(variants[1].s.setup) && matchSetupHash(variants[0].s.setup) === matchSetupHash(base),
+      variants.map(({ label, s, x }) => `${label}: ${s.ok ? (x?.r.ok ? x.ctx.calls.map((c) => c.m).join(">") : JSON.stringify(x?.r.errors)) : JSON.stringify(s.errors)}`).join(" | "));
+    ck("R6b 對照組：同一個案帶戰術時（golden 原樣）的序列確實含 configureMatch（所以 R6 的「去掉」是有意義的）", !!dc && dc.calls.some((x) => x.m === "configureMatch") && want.length === dc.calls.length - 1);
+  }
   //  既有護欄原樣保留（錯誤碼與先後順序）：查不到戰術 ⇒ code "tactic"（在 setup 之前判定）
   const badTac = vn && runProbed({ ...vn, challenge: { ...vn.challenge, challengerTacticId: "no_such_tactic" } });
   ck("R4 既有護欄不變：戰術查不到 ⇒ 仍是舊的 replay／tactic 錯誤碼（不被 setup 錯誤蓋掉）",
