@@ -184,6 +184,7 @@ import {
   applyCsMapVetoAction, selectedCsMapKey,
 } from "./contracts/csMapVeto.js";
 import { csMapByKey } from "../battle/fps/csPrepData.js";
+import { normalizeTacticBook, addTacticPlan, removeTacticPlan } from "./tactics/tacticBook.js";
 import {
   syncSeasonStateV2, activeEventAdapter,
 } from "./competition/seasonStateV2.js";
@@ -425,6 +426,8 @@ const DEFAULT = {
   csHistory: [],                 // S23：CS 訓練賽紀錄（CsMatchResult.v1，最新在前，上限 30）
   //  C5V：玩家的地圖偏好，不是比賽結果 authority。實際選定地圖仍在 MatchSession。
   csMapPreferences: normalizeCsMapPreferences(null),
+  //  Phase 3a T12：我的戰術書（TacticPlan.v2，最多 5 份；零數值）。純函式在 tactics/tacticBook.js。
+  tacticBook: normalizeTacticBook(null),
   //  Milestone N：週結算帳本。settledWeeks 的 key = 累計週次（全域唯一）⇒ 冪等。
   //  N2：scenario 決定基礎營收與營運成本（economyConfig.SCENARIOS）。
   economy: { settledWeeks: {}, lastSettledWeek: 0, scenario: DEFAULT_SCENARIO },
@@ -812,6 +815,8 @@ const load = () => {
       csHistory: arr(saved.csHistory, []),   // S23：舊存檔沒有 → 空（向下相容）
       //  C5V：舊存檔沒有欄位時接受三圖、練習預設 Mirage；不重寫既有 Session。
       csMapPreferences: normalizeCsMapPreferences(saved.csMapPreferences),
+      //  Phase 3a T12：舊存檔沒有欄位 ⇒ 空的戰術書；讀不懂的項目不放進清單。
+      tacticBook: normalizeTacticBook(saved.tacticBook),
       //  Milestone N migration：舊存檔沒有 economy ⇒ 空帳本。
       //  ⚠ 刻意**不補結算過去的週**：那會在載入當下憑空扣一大筆薪資，
       //    使用者無從理解。舊存檔從載入後的下一個週結尾開始計費。
@@ -2847,6 +2852,25 @@ export const useProfileStore = create((rawSet, get) => {
     const seats = mode === "cs" ? get().csLineup : get().lineup;
     return validateSquad({ mode, seats, players });
   },
+  /**
+   * Phase 3a T12：把一份 TacticPlan.v2 存進「我的戰術書」（最多 5 份；同一份計畫再存一次＝改名）。
+   * 公開動作自行存檔（B1C）。失敗時 state 不變、不寫檔。
+   */
+  saveTacticPlan(plan, { name = null } = {}) {
+    const r = addTacticPlan(get().tacticBook, { plan, name });
+    if (!r.ok) return { ok: false, errors: r.errors };
+    set({ tacticBook: r.book });
+    get().save();
+    return { ok: true, entry: r.entry, replaced: r.replaced, tacticBook: r.book, errors: [] };
+  },
+  /** Phase 3a T12：從「我的戰術書」刪掉一份（id＝planHash）。公開動作自行存檔。 */
+  deleteTacticPlan(id) {
+    const r = removeTacticPlan(get().tacticBook, id);
+    if (!r.ok) return { ok: false, errors: r.errors };
+    set({ tacticBook: r.book });
+    get().save();
+    return { ok: true, tacticBook: r.book, errors: [] };
+  },
   /** C5V：更新玩家願意玩的 CS 地圖池。至少保留一張；只影響下一張票券。 */
   setCsAcceptedMapPool(pool) {
     const current = normalizeCsMapPreferences(get().csMapPreferences);
@@ -3788,6 +3812,7 @@ export const useProfileStore = create((rawSet, get) => {
       activeSponsor: ng.activeSponsor,
       csHistory: [],
       csMapPreferences: normalizeCsMapPreferences(null),
+      tacticBook: normalizeTacticBook(null),
       processedMatchTransactions: {},
       processedCompetitionAwards: {},
       competitionHistory: [],

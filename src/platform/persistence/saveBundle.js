@@ -65,6 +65,8 @@ export const CLOUD_PROFILE_KEYS = Object.freeze([
   //  賽季 / 賽事帳本
   "competitionByMode", "competitionHistoryByMode", "circuitHistory",
   "circuitPointsLedger", "honors", "csHistory", "csMapPreferences",
+  //  Phase 3a T12：我的戰術書（玩家自己編的計畫，重建不回來）
+  "tacticBook",
   //  ⚠ 冪等帳本：**比金額本身更重要**。只還原「錢與名次」而不還原帳本，
   //    玩家在另一台裝置重跑一次結算就能再領一次。
   "processedMatchTransactions", "processedCompetitionAwards",

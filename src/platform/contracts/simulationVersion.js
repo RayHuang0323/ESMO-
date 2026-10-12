@@ -515,7 +515,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v21 未發布 ⇒ 同版號重新登記（舊值 5419139708e72275 未曾發布）。
   //  2026-10-13（Phase 3a T10 Phase 2 結果）：MEASURED_EXCLUSIONS 多 7 筆（集結 tight、巨龍 low／high、巴龍 low／high、推塔 low，以及 classic.m3 上的推塔 high）。
   //  只影響提供給玩家挑的清單，不改任何輸入的解析結果：golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 96d6b4652146eaf1 未曾發布）。
-  "moba-sim.v21": "839ca79b396026b7",
+  //  2026-10-13（Phase 3a T12）：liveMatchSetup.js 的藍方戰術多一個來源——opts.tacticPlanBinding（戰術書）優先，沒有才走 v1 戰術物件。
+  //  沒帶 binding 的輸入走的是原本那一行，golden 39 案仍逐位元相同；binding（classic.mN、無額外選擇）整場結果＝同一套經典戰術的 golden
+  //  （tools/check_tactic_save_3a.mjs M2）。v21 未發布 ⇒ 同版號重新登記（舊值 839ca79b396026b7 未曾發布）。
+  "moba-sim.v21": "e66f38390c351919",
 });
 
 export const isKnownSimulationVersion = (v) =>

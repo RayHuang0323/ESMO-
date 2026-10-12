@@ -168,6 +168,7 @@ const SEGMENTS = [
   //  改了引擎語意檔、對照表或 Registry 的 live 列之後，快速模式會因結果表過期而紅，必須重新量測。
   { id: "tactic_truth_3a", script: "tools/check_tactic_truth_3a.mjs", shape: /Tactic Truth 3a：\d+\/\d+ PASS/, note: "Phase 3a T10 G-A7：每個 live 選項在模擬裡有量得到的效果（快速模式驗證結果表；--measure 才重新模擬）" },
   { id: "tactic_indicators_3a", script: "tools/check_tactic_indicators_3a.mjs", shape: /Tactic Indicators 3a：\d+\/\d+ PASS/, note: "Phase 3a T11：計畫輪廓、席位任務適性（係數只來自 STAT_MAP）、配合度負擔、矛盾提示（每條對得到 G-A7 結果表）" },
+  { id: "tactic_save_3a", script: "tools/check_tactic_save_3a.mjs", shape: /Tactic Save 3a：\d+\/\d+ PASS/, note: "Phase 3a T12：戰術書存檔切片（公開動作自行存檔、上限 5 份、舊存檔相容）、binding 進本場設定＝v20 golden、熟練度鍵不變" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

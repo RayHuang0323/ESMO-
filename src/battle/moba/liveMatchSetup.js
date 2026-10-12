@@ -163,7 +163,10 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
     roster,
     talentSelections,
     tactic: {
-      blue: opts.tactic?.tacticId ? { kind: "legacy", config: toPlainData(opts.tactic) } : null,
+      //  Phase 3a T12：戰術書的 binding 優先；沒有 binding 才走 v1 戰術物件（舊進行中場次的恢復路徑，結果＝v20）。
+      //  binding 不合法 ⇒ 組裝器照實拒絕，不退回 legacy 戰術偷偷開打。
+      blue: opts.tacticPlanBinding ? { kind: "binding", binding: toPlainData(opts.tacticPlanBinding) }
+        : opts.tactic?.tacticId ? { kind: "legacy", config: toPlainData(opts.tactic) } : null,
       red: { kind: "legacy", config: toPlainData(redTactic) },
     },
     ...(isTool

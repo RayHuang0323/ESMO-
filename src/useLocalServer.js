@@ -259,6 +259,8 @@ export function useLocalServer() {
       phase: "battle",
       draft: opts.draft ?? null,
       tactic: opts.tactic ?? null,
+      //  Phase 3a T12：戰術書開的場次另存 binding（恢復時沿用同一份計畫）；沒有 ⇒ 不寫這個欄位（存檔形狀與 T12 之前相同）
+      ...(opts.tacticPlanBinding ? { tacticPlanBinding: opts.tacticPlanBinding } : {}),
       ...(talentSelection && opts.talentSelections ? { talentSelections: opts.talentSelections } : {}),
       //  M3d：裝備系統真的開著才寫進本場設定（OFF 時存檔形狀與 M3d 之前相同）
       ...(buildStrategy ? { buildStrategy } : {}),

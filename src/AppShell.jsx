@@ -144,6 +144,7 @@ export default function AppShell() {
     restoredDraftRef.current = true;
     if (useProfileStore.getState().challenge?.pendingDraft) setScreen("challengeDraft");
   }, []);
+  const [tacticPlanBinding, setTacticPlanBinding] = useState(null);   // Phase 3a T12：戰術書的 TacticPlanBinding（恢復時從本場設定帶回；T13 的戰術書畫面才會設定它）
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
   const [buildStrategy, setBuildStrategy] = useState(null); // Item System M3d：本場出裝策略（itemsV1 開啟時才非 null；存檔在 activeMatch.config）
   const [talentSelections, setTalentSelections] = useState(null); // 本場英雄戰鬥天賦；與選手成長天賦分開。
@@ -208,6 +209,7 @@ export default function AppShell() {
       } else {
         setDraft(config.draft ?? null);
         setTactic(config.tactic ?? null);
+        setTacticPlanBinding(config.tacticPlanBinding ?? null);
         setBuildStrategy(config.buildStrategy ?? null);
         setTalentSelections(config.talentSelections ?? null);
         if (phase === "tactic") setScreen("tactic");
@@ -335,9 +337,9 @@ export default function AppShell() {
       {screen === "matchmaking" && <MatchmakingScreen onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "banpick" }); setScreen("banpick"); }} onBack={go("lineup")} />}
       {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { draft: d } }); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
       {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
-      {screen === "tactic" && <TacticScreen roster={battleRoster} draft={draft} onBuildStrategyChange={(s) => useProfileStore.getState().setActiveMatchContext({ config: { buildStrategy: s } })} onNext={(t, s, talents) => { setTactic(t); setBuildStrategy(s ?? null); setTalentSelections(talents ?? null); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { tactic: t, ...(s ? { buildStrategy: s } : {}), ...(talents ? { talentSelections: talents } : {}) } }); setScreen("loading"); }} onBack={go("banpick")} />}
+      {screen === "tactic" && <TacticScreen roster={battleRoster} draft={draft} onBuildStrategyChange={(s) => useProfileStore.getState().setActiveMatchContext({ config: { buildStrategy: s } })} onNext={(t, s, talents) => { setTactic(t); setTacticPlanBinding(null); setBuildStrategy(s ?? null); setTalentSelections(talents ?? null); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { tactic: t, ...(s ? { buildStrategy: s } : {}), ...(talents ? { talentSelections: talents } : {}) } }); setScreen("loading"); }} onBack={go("banpick")} />}
       {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} buildStrategy={buildStrategy} roster={battleRoster} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("battle"); }} />}
-      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} buildStrategy={buildStrategy} talentSelections={talentSelections} roster={battleRoster} onContinue={home} />}
+      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} tacticPlanBinding={tacticPlanBinding} buildStrategy={buildStrategy} talentSelections={talentSelections} roster={battleRoster} onContinue={home} />}
 
       {/* ── Sprint21 經營模組 ── */}
       {screen === "inbox" && <InboxScreen onBack={home} onNav={(t) => setScreen(t)} />}
