@@ -26,6 +26,11 @@
 //       reversed      任一側方向相反且 z ≤ −3 ⇒ 不能標為 live
 //     5% 是「玩家看得出差別」的下限；z ≥ 3 在 n=400 下對應的最小可偵測效果約 0.15 個標準差。
 //   · 不放大任何係數、不改引擎、不改門檻；這份結果只決定排除表要不要增列，以及 Owner Review 的證據。
+//   · 增補（2026-10-13，獨立審查之後、任何複驗結果產生之前；當時 replication 一場都還沒跑）：
+//     審查指出 engageDecisionsPerMin／supportProtectsPerMin／coreProtectsPerMin 數的是「每次重評決策的結果」，接戰或保護持續越久
+//     數到越多，帶有責任週期的成分。量測程式 v3 另外記了「只數開始」的計數（engageStarts／protectStarts／coreProtectStarts）。
+//     用到上述三個指標的四個選擇，**兩個指標都要達標**才算 confirmed；原指標達標但「只數開始」的指標沒達標 ⇒ duty_cycle_only，
+//     不能標為 live。原本的指標與門檻照舊量、照舊列出。
 //
 //  ── study=templates：21 個模板的實際行為是否不同 ───────────────────────────────────────────────
 //   · 每個模板當藍方（不加任何選擇），紅方 std；seeds 2001–2060（n=60），每個模板用同一批 seeds。
@@ -75,13 +80,13 @@ export const REPLICATION = Object.freeze({
     ["lanes.top.stance", "split", "seatFightEntriesPerMin.b1", "down", "marginal"],
     ["lanes.mid.stance", "split", "seatFightEntriesPerMin.b3", "down", "marginal"],
     ["lanes.bot.stance", "aggressive", "laneForward.bot", "up", "marginal"],
-    ["seats.b1.priority", "core", "coreProtectsPerMin.top", "up", "marginal"],
+    ["seats.b1.priority", "core", "coreProtectsPerMin.top", "up", "marginal", "coreProtectStartsPerMin.top"],
     ["risk.tolerance", "cautious", "retreatStartsPerMin", "up", "marginal"],
-    ["teamfight.posture", "aggressive", "engageDecisionsPerMin", "up", "marginal"],
+    ["teamfight.posture", "aggressive", "engageDecisionsPerMin", "up", "marginal", "engageStartsPerMin"],
     ["jungle.focus", "invade", "invasionsActed", "up", "pass"],
     ["seats.b5.mission", "roam", "supportRoamsPerMin", "up", "pass"],
-    ["seats.b5.mission", "protect", "supportProtectsPerMin", "up", "pass"],
-    ["teamfight.posture", "passive", "engageDecisionsPerMin", "down", "pass"],
+    ["seats.b5.mission", "protect", "supportProtectsPerMin", "up", "pass", "supportProtectStartsPerMin"],
+    ["teamfight.posture", "passive", "engageDecisionsPerMin", "down", "pass", "engageStartsPerMin"],
     ["objectives.tower", "high", "siegeWindowsPerMin", "up", "pass"],
   ],
 });
@@ -216,22 +221,27 @@ function replicationReport(dir) {
   const truth = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/tactic_truth_3a.json"), "utf8"));
   const control = readBatch(dir, "rep|control");
   const rows = [], problems = [];
-  for (const [dim, choice, metric, direction, cls] of R.choices) {
+  for (const [dim, choice, metric, direction, cls, strictMetric = null] of R.choices) {
     const prim = truth.rows.find((r) => r.role === "primary" && r.template === "std" && r.dimension === dim && r.choice === choice);
     if (!prim || prim.metric !== metric || prim.direction !== direction) problems.push(`${dim}=${choice}：事前登記的指標／方向與 G-A7 結果表不同`);
     const seeds = range(...(cls === "marginal" ? R.seedsFull : R.seedsConfirm));
-    const sides = {};
+    const sides = {}, strict = {};
+    const sideStat = (trt, side, m) => {
+      const st = statsOf(seeds.filter((s) => control.has(s) && trt.has(s)).map((s) => [metricValue(control.get(s), side, m), metricValue(trt.get(s), side, m)]));
+      const zd = st.z === null ? null : st.z * (direction === "up" ? 1 : -1);
+      const relD = st.rel === null ? null : st.rel * (direction === "up" ? 1 : -1);
+      return { ...st, zDirected: r6(zd), meets: zd !== null && zd >= R.minZ && relD !== null && relD >= R.minRel, reversed: zd !== null && zd <= -R.minZ };
+    };
     for (const side of ["blue", "red"]) {
       const trt = readBatch(dir, `rep|${side}|${dim}|${choice}`);
       const missing = seeds.filter((s) => !control.has(s) || !trt.has(s)).length;
       if (missing) problems.push(`${dim}=${choice} ${side}：缺 ${missing} 場`);
-      const st = statsOf(seeds.filter((s) => control.has(s) && trt.has(s)).map((s) => [metricValue(control.get(s), side, metric), metricValue(trt.get(s), side, metric)]));
-      const zd = st.z === null ? null : st.z * (direction === "up" ? 1 : -1);
-      const relD = st.rel === null ? null : st.rel * (direction === "up" ? 1 : -1);
-      sides[side] = { ...st, zDirected: r6(zd), meets: zd !== null && zd >= R.minZ && relD !== null && relD >= R.minRel, reversed: zd !== null && zd <= -R.minZ };
+      sides[side] = sideStat(trt, side, metric);
+      if (strictMetric) strict[side] = sideStat(trt, side, strictMetric);
     }
-    const verdict = sides.blue.reversed || sides.red.reversed ? "reversed" : sides.blue.meets && sides.red.meets ? "confirmed" : sides.blue.meets || sides.red.meets ? "one_sided" : "insufficient";
-    rows.push({ dimension: dim, choice, metric, direction, originalClass: cls, originalZ: prim ? r6(prim.z) : null, blue: sides.blue, red: sides.red, verdict });
+    let verdict = sides.blue.reversed || sides.red.reversed ? "reversed" : sides.blue.meets && sides.red.meets ? "confirmed" : sides.blue.meets || sides.red.meets ? "one_sided" : "insufficient";
+    if (verdict === "confirmed" && strictMetric && !(strict.blue.meets && strict.red.meets)) verdict = "duty_cycle_only";
+    rows.push({ dimension: dim, choice, metric, direction, originalClass: cls, originalZ: prim ? r6(prim.z) : null, blue: sides.blue, red: sides.red, strictMetric, strict: strictMetric ? strict : null, verdict });
   }
   return { schema: "TacticFollowup.replication.v1", meta: metaOf(), rule: { seedsFull: R.seedsFull, seedsConfirm: R.seedsConfirm, minZ: R.minZ, minRel: R.minRel }, rows, problems };
 }
@@ -295,7 +305,7 @@ function templatesReport(dir) {
 // ── main ──────────────────────────────────────────────────────────────────
 const study = val("study");
 if (!["replication", "templates", "quickmode"].includes(study)) { console.error("需要 --study=replication、--study=templates 或 --study=quickmode"); process.exit(2); }
-const bad = [...REPLICATION.choices.map((c) => c[2]), ...TEMPLATES_STUDY.metrics].filter((m) => !isKnownMetric(m));
+const bad = [...REPLICATION.choices.flatMap((c) => [c[2], c[5]].filter(Boolean)), ...TEMPLATES_STUDY.metrics].filter((m) => !isKnownMetric(m));
 if (bad.length) { console.error(`未知的指標：${bad.join(",")}`); process.exit(2); }
 const dir = path.resolve(val("dir", path.join(os.tmpdir(), `esmo-tactic-followup-3a-${study}`)));
 const batches = study === "replication" ? replicationBatches() : study === "quickmode" ? quickmodeBatches() : templateBatches();
@@ -311,6 +321,7 @@ if (study === "quickmode") {
   for (const r of report.rows) console.log(`| ${r.dimension}=${r.choice} | ${r.metric} ${r.direction} | ${((r.blue.rel ?? 0) * 100).toFixed(1)} | ${r.blue.z?.toFixed(2)} | ${((r.red.rel ?? 0) * 100).toFixed(1)} | ${r.red.z?.toFixed(2)} | ${r.verdict} |`);
 } else if (study === "replication") {
   console.log("| 選擇 | 指標 | 原 z | 藍 Δ% | 藍 z | 紅 Δ% | 紅 z | 判定 |\n|---|---|---|---|---|---|---|---|");
+  for (const r of report.rows) if (r.strict) console.log(`  （只數開始）${r.dimension}=${r.choice} ${r.strictMetric}：藍 ${((r.strict.blue.rel ?? 0) * 100).toFixed(1)}% z=${r.strict.blue.z?.toFixed(2)}　紅 ${((r.strict.red.rel ?? 0) * 100).toFixed(1)}% z=${r.strict.red.z?.toFixed(2)}`);
   for (const r of report.rows) console.log(`| ${r.dimension}=${r.choice} | ${r.metric} ${r.direction} | ${r.originalZ?.toFixed(2)} | ${((r.blue.rel ?? 0) * 100).toFixed(1)} | ${r.blue.z?.toFixed(2)} | ${((r.red.rel ?? 0) * 100).toFixed(1)} | ${r.red.z?.toFixed(2)} | ${r.verdict} |`);
 } else {
   console.log(J(report.counts));
