@@ -260,43 +260,44 @@ export function coordinationLoad(binding, seatPlayers) {
 // ════════════════════════════════════════════════════════════════════════════
 //  when：每一項是 [維度, 選擇]；全部成立才提示。「成立」＝這份計畫在該維度的有效選擇（明確選的，否則模板＋覆蓋層自己的）。
 //  evidence：G-A7 結果表裡 std／藍方的那一筆（dimension, choice, metric）；gate 逐條核對它存在、方向相符且達到門檻。
+//  ⚠ 文案只能轉述那兩筆量到的事（各自往哪個方向變），不得描述「兩個一起選會發生什麼」——兩個選擇同時啟用的結果沒有量過。
 const ev = (dimension, choice, metric) => Object.freeze({ dimension, choice, metric });
 export const CONTRADICTION_RULES = Object.freeze([
   {
     id: "split_top_vs_aggressive_fights",
     when: [["lanes.top.stance", "split"], ["teamfight.posture", "aggressive"]],
     evidence: [ev("lanes.top.stance", "split", "seatFightEntriesPerMin.b1"), ev("teamfight.posture", "aggressive", "engageDecisionsPerMin")],
-    text: "隊伍主動開戰的次數變多，但上路在帶線，比較少趕到團戰：容易變成四個人先打起來。",
+    text: "隊伍主動接戰的次數變多，但上路在帶線、參與團戰的次數變少：這兩個選擇的方向相反。",
   },
   {
     id: "split_mid_vs_aggressive_fights",
     when: [["lanes.mid.stance", "split"], ["teamfight.posture", "aggressive"]],
     evidence: [ev("lanes.mid.stance", "split", "seatFightEntriesPerMin.b3"), ev("teamfight.posture", "aggressive", "engageDecisionsPerMin")],
-    text: "隊伍主動開戰的次數變多，但中路在帶線，比較少趕到團戰：容易變成四個人先打起來。",
+    text: "隊伍主動接戰的次數變多，但中路在帶線、參與團戰的次數變少：這兩個選擇的方向相反。",
   },
   {
     id: "cautious_vs_aggressive_fights",
     when: [["risk.tolerance", "cautious"], ["teamfight.posture", "aggressive"]],
     evidence: [ev("risk.tolerance", "cautious", "retreatStartsPerMin"), ev("teamfight.posture", "aggressive", "engageDecisionsPerMin")],
-    text: "一邊要隊伍更常主動開戰，一邊又要大家更早撤退：開了戰卻打不完。",
+    text: "隊伍主動接戰的次數變多，同時撤退的次數也變多：這兩個選擇的方向相反。",
   },
   {
     id: "invade_vs_passive_fights",
     when: [["jungle.focus", "invade"], ["teamfight.posture", "passive"]],
     evidence: [ev("jungle.focus", "invade", "invasionsActed"), ev("teamfight.posture", "passive", "engageDecisionsPerMin")],
-    text: "打野會主動入侵對方野區，但隊伍整體不太願意開戰：入侵時比較難等到隊友支援。",
+    text: "打野入侵對方野區的次數變多，但隊伍主動接戰的次數變少：這兩個選擇的方向相反。",
   },
   {
     id: "bot_pressure_vs_farm_jungle",
     when: [["lanes.bot.stance", "aggressive"], ["jungle.focus", "farm"]],
     evidence: [ev("lanes.bot.stance", "aggressive", "laneForward.bot"), ev("jungle.focus", "farm", "ganksPerMin")],
-    text: "下路的站位推得更前面，但打野以刷野為主、比較少出來抓人：下路壓得深卻少了掩護。",
+    text: "下路的站位更靠前，但打野出來抓人的次數變少：這兩個選擇的方向相反。",
   },
   {
     id: "siege_vs_passive_fights",
     when: [["objectives.tower", "high"], ["teamfight.posture", "passive"]],
     evidence: [ev("objectives.tower", "high", "siegeWindowsPerMin"), ev("teamfight.posture", "passive", "engageDecisionsPerMin")],
-    text: "隊伍更常集合去推塔，但整體不太願意開戰：推到塔下時比較容易被對手逼退。",
+    text: "隊伍集合推塔的次數變多，但主動接戰的次數變少：這兩個選擇的方向相反。",
   },
 ].map((r) => Object.freeze({ ...r, when: Object.freeze(r.when.map((w) => Object.freeze(w))), evidence: Object.freeze(r.evidence) })));
 

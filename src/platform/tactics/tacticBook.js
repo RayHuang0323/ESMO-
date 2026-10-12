@@ -8,8 +8,10 @@
 //
 //  ⚠ 這裡驗的是「結構上合法」（createTacticPlan）。G-A7 的量測排除表只決定戰術書畫面**提供哪些選項**，
 //    不會讓已經存好的計畫失效。
-//  ⚠ 載入時讀不懂的項目（未知模板、被手改的 choices）直接不放進清單——它無法解析成引擎設定，留著也不能用；
-//    其餘項目照常保留。整個切片不是物件（舊存檔沒有這個欄位）⇒ 空清單，不報錯。
+//  ⚠ 載入時讀不懂的項目（未知模板、被手改的 choices、模板資料改版後對不上的舊計畫）不放進 plans——它無法解析成引擎設定；
+//    但**原樣留在 unreadable**（最多 TACTIC_BOOK_UNREADABLE_MAX 筆），跟著存檔一起寫回去，不會因為下一次存檔就消失。
+//    之後資料版本若能再讀懂，它會自動回到 plans。其餘項目照常保留。
+//    整個切片不是物件（舊存檔沒有這個欄位）⇒ 空清單，不報錯。沒有讀不懂的項目時不寫 unreadable 這個鍵。
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。store 的公開動作在 profileStore.js。
 // ============================================================================
@@ -18,6 +20,7 @@ import { templateById } from "./tacticTemplates.js";
 
 export const TACTIC_BOOK_MAX = 5;
 export const TACTIC_BOOK_NAME_MAX = 20;
+export const TACTIC_BOOK_UNREADABLE_MAX = 10;
 export const TACTIC_BOOK_ERROR = Object.freeze({
   INVALID_PLAN: "tactic_book_invalid_plan",
   FULL: "tactic_book_full",
@@ -48,17 +51,29 @@ function entryOf(raw) {
 
 /** 任何輸入 → 合法的 tacticBook（舊存檔沒有欄位 ⇒ 空清單）。重複的計畫只留第一筆；超過上限的丟掉後面的。 */
 export function normalizeTacticBook(raw) {
-  let list = [];
+  let list = [], held = [];
   try { list = isObj(raw) && Array.isArray(raw.plans) ? raw.plans : []; } catch { list = []; }
-  const plans = [], seen = new Set();
-  for (const item of list) {
+  try { held = isObj(raw) && Array.isArray(raw.unreadable) ? raw.unreadable : []; } catch { held = []; }
+  const plans = [], seen = new Set(), unreadable = [], heldSeen = new Set();
+  //  先讀 plans，再給 unreadable 一次機會（資料版本更新後可能又讀得懂了）。
+  for (const item of [...list, ...held]) {
     const e = entryOf(item);
-    if (!e || seen.has(e.id)) continue;
-    seen.add(e.id);
-    plans.push(e);
-    if (plans.length >= TACTIC_BOOK_MAX) break;
+    if (e) {
+      if (seen.has(e.id) || plans.length >= TACTIC_BOOK_MAX) continue;
+      seen.add(e.id);
+      plans.push(e);
+      continue;
+    }
+    //  只保留「看起來是一筆計畫」的東西（有 plan 物件）；純垃圾（null、數字、字串）不留。
+    let keep = null;
+    try { if (isObj(item) && isObj(item.plan)) keep = JSON.parse(JSON.stringify({ name: typeof item.name === "string" ? item.name : null, plan: item.plan })); } catch { keep = null; }
+    if (!keep) continue;
+    const key = JSON.stringify(keep);
+    if (heldSeen.has(key) || unreadable.length >= TACTIC_BOOK_UNREADABLE_MAX) continue;
+    heldSeen.add(key);
+    unreadable.push(keep);
   }
-  return { plans };
+  return unreadable.length ? { plans, unreadable } : { plans };
 }
 
 /**
@@ -77,12 +92,12 @@ export function addTacticPlan(book, { plan, name = null } = {}) {
   if (at >= 0) {
     const plans = cur.plans.slice();
     plans[at] = entry;
-    return { ok: true, book: { plans }, entry, replaced: true, errors: [] };
+    return { ok: true, book: { ...cur, plans }, entry, replaced: true, errors: [] };
   }
   if (cur.plans.length >= TACTIC_BOOK_MAX) {
     return { ok: false, book: cur, errors: [err(TACTIC_BOOK_ERROR.FULL, `戰術書最多存 ${TACTIC_BOOK_MAX} 份，請先刪除一份`)] };
   }
-  return { ok: true, book: { plans: [...cur.plans, entry] }, entry, replaced: false, errors: [] };
+  return { ok: true, book: { ...cur, plans: [...cur.plans, entry] }, entry, replaced: false, errors: [] };
 }
 
 /** 刪掉一份。找不到 ⇒ ok:false（book 不變）。 */
@@ -91,5 +106,5 @@ export function removeTacticPlan(book, id) {
   if (typeof id !== "string" || !cur.plans.some((p) => p.id === id)) {
     return { ok: false, book: cur, errors: [err(TACTIC_BOOK_ERROR.NOT_FOUND, "戰術書裡沒有這一份")] };
   }
-  return { ok: true, book: { plans: cur.plans.filter((p) => p.id !== id) }, errors: [] };
+  return { ok: true, book: { ...cur, plans: cur.plans.filter((p) => p.id !== id) }, errors: [] };
 }
