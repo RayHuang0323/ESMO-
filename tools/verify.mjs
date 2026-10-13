@@ -170,6 +170,7 @@ const SEGMENTS = [
   { id: "tactic_indicators_3a", script: "tools/check_tactic_indicators_3a.mjs", shape: /Tactic Indicators 3a：\d+\/\d+ PASS/, note: "Phase 3a T11：計畫輪廓、席位任務適性（係數只來自 STAT_MAP）、配合度負擔、矛盾提示（每條對得到 G-A7 結果表）" },
   { id: "tactic_save_3a", script: "tools/check_tactic_save_3a.mjs", shape: /Tactic Save 3a：\d+\/\d+ PASS/, note: "Phase 3a T12：戰術書存檔切片（公開動作自行存檔、上限 5 份、舊存檔相容）、binding 進本場設定＝v20 golden、熟練度鍵不變" },
   { id: "tactic_book_view_3a", script: "tools/check_tactic_book_view_3a.mjs", shape: /Tactic Book View 3a：\d+\/\d+ PASS/, note: "Phase 3a T13：戰術書 view-model（畫面選項＝Registry live 扣掉量測排除、每個選項都解析得出引擎設定）與接線；瀏覽器行為另跑 browser_check_tactic_book_3a" },
+  { id: "tactic_replication_3a", script: "tools/check_tactic_replication_3a.mjs", shape: /Tactic Replication 3a：\d+\/\d+ PASS/, note: "Phase 3a-A：複驗撤下清單（REPLICATION_WITHHELD）＝複驗結果檔推出（不多不少）、21 模板的提供清單、已存計畫仍可解析；秒級" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

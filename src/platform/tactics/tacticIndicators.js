@@ -23,6 +23,7 @@
 import { createTacticPlan } from "./tacticPlan.js";
 import { templateById } from "./tacticTemplates.js";
 import { mergeTacticConfig, tacticBookOptions, leavesOf } from "./tacticChoiceMapping.js";
+import { REPLICATION_WITHHELD } from "./capabilityRegistry.js";
 import { toEngineTactic, STANDARD_OPP_TACTIC } from "../contracts/MobaTacticConfig.js";
 import { STAT_MAP, NEUTRAL_STAT } from "../../battle/moba/mobaPlayerStats.js";
 
@@ -314,13 +315,25 @@ export function effectiveChoices(binding) {
 }
 
 /**
- * 矛盾提示。
- * @returns {Array<{ id:string, text:string }>}  規則表的順序；輸入不合法 ⇒ []
+ * 被複驗撤下的證據 ⇒ 規則不回報（推導式，規則資料原樣保留：複驗清單變了，規則自動恢復）。
+ * 一條規則只要有任何一筆 evidence 的（維度, 選擇）在撤下清單裡，文案就會把「複驗沒站住的效果」當事實講，所以整條不回報。
+ * @param {ReadonlyArray<{template:string,dimension:string,choice:string}>} withheld  預設＝Registry 的 REPLICATION_WITHHELD（測試可注入）
  */
-export function contradictions(binding) {
+export const ruleSuppressed = (rule, templateId, withheld = REPLICATION_WITHHELD) =>
+  rule.evidence.some((e) => withheld.some((w) => w.dimension === e.dimension && w.choice === e.choice && (w.template === "*" || w.template === templateId)));
+/** 在這份撤下清單下被抑制的規則 id（規則表順序；gate 用它對 REPLICATION_WITHHELD 推導出的集合）。 */
+export const suppressedRuleIds = (templateId = "std", withheld = REPLICATION_WITHHELD) => CONTRADICTION_RULES.filter((r) => ruleSuppressed(r, templateId, withheld)).map((r) => r.id);
+
+/**
+ * 矛盾提示。
+ * @returns {Array<{ id:string, text:string }>}  規則表的順序（扣掉證據被複驗撤下的規則）；輸入不合法 ⇒ []
+ */
+export function contradictions(binding, withheld = REPLICATION_WITHHELD) {
   const eff = effectiveChoices(binding);
   if (!eff) return [];
+  const templateId = resolved(binding)?.plan?.templateId;
   return CONTRADICTION_RULES
+    .filter((rule) => !ruleSuppressed(rule, templateId, withheld))
     .filter((rule) => rule.when.every(([dim, choice]) => eff[dim] === choice))
     .map((rule) => Object.freeze({ id: rule.id, text: rule.text }));
 }

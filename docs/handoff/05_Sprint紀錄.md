@@ -24541,3 +24541,52 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 正式站 smoke gate 版本期待值 v19 → v20（只改版本事實，commit `92245f4`）。
 - 維持不變：Map Topology FROZEN；CS／FPS、Online／DB 未碰；既有紅燈與技術債照舊。
 - Phase 3 尚未開始（Owner 指示）。
+
+## 2026-10-14 Phase 3a-A（教練戰術系統：架構）— 驗收未跑完，等 Owner Review（owner: Claude，local commit，未 push／deploy／整合 main）
+
+分支 `feature/moba-phase3a`（從 v20 `1d0e219` 分出，本節之前 57 個提交）。本節補記整個 3a-A；先前 T0–T13 的過程只寫在 `08_目前待辦與風險.md`。
+給 Owner 的總結：`review/tactic-book-3a/3a-A驗收總結.md`（五項驗收）、《戰術能力缺口》、《模板行為分群》。
+
+**狀態：3a-A 的架構項目已實作；T14 全套驗收沒有跑完；T13 未驗收；「戰術產品完整」未達成。3a-B 未開始。是否算完成、是否發布由 Owner 決定。**
+
+**完成項（已提交）**
+- T0–T7：v20 黃金基準 39 案；`MatchRuleset.v1`、`MatchSetup.v1`、唯一組裝器 `assembleMatch`；Live／Challenge／balance runner 全部改走同一支組裝器（與 v20 逐位元相同）；跨模式一致 gate；`moba-sim.v21` 未發布候選指紋。
+- T8–T9：`TacticPlan.v2`（只記選擇）、21 個模板與覆蓋層、`tacticResolver.v1`（與 v20 投影等價）。
+- T10：Capability Registry（48 維度：18 live、30 design）＋真實性 gate G-A7（91 列、`MEASURED_EXCLUSIONS` 30 筆）。
+- T11：戰術指標（計畫輪廓、席位適性、配合度負擔、矛盾提示）。
+- T12：戰術書存檔切片、binding 進本場設定。
+- T13（**未驗收**）：戰術書畫面骨架；`browser_check_tactic_book_3a` 30/30。三步驟／確認頁／對手情報／快速模式未做。
+- 追加量測（事前登記後才跑）：templates 1,260 場、replication 8,000 場、quickmode 5,600 場；結果 `1fbace0`、`7bd02ee`。
+- 本輪：複驗撤下清單 `REPLICATION_WITHHELD`（上路帶線、上路核心、下路進攻、風險謹慎；沒有調任何係數）＋ gate `check_tactic_replication_3a`（31 項）；矛盾提示不回報證據含被撤下選擇的規則（3 條）；`check_tactic_registry_3a` F4 改為明列例外；v21 候選指紋重新登記為 `a7d5b68e24d1f313`。實作 subagent＋獨立 reviewer 兩輪（第一輪要求修正：矛盾提示仍陳述沒站住的效果、F4 被靜默放寬；第二輪可合入）。
+
+**數字**
+- std 提供的非預設選項 12 → 8（畫面剩 5 個維度）；21 模板合計 393 → 322。
+- 322 個裡，在該模板自己身上用新 seeds 紅藍雙方複驗通過的只有 std 的 8 個（2.5%）；185 個是「改回標準值」、從未量過。
+- 18 個 live 維度：只有 5 個提供不同於標準的選擇；12 個只能改回標準值；1 個（`seats.b1.priority`）無任何可選項。
+- 模板：210 組兩兩比較 195 組量得出差別、15 組量不出；說明文字 93 條宣稱中相符 14、反向 5。
+
+**驗證（2026-10-14 實跑，撤下之後的程式）**
+- `npm run build` ✓ built in 25.25s；`regress` 結束率 15/15（平均 20.8 分）；`regress2` 節奏門檻 8/8。
+- 3a Node gate 16 支全過：ruleset 20、setup contract 85、match_setup 153（golden 39 案＝v20）、assembler 227、live_setup 119、challenge_setup 65、balance_runner 122、plan 219、resolver 136、registry 31、truth 25（未過期）、indicators 59、save 38、book_view 20、replication 31、simulation_version_gate 81。
+- `browser_check_tactic_book_3a` 30/30（變更後兩次）。
+- verify 以外的 MOBA／Replay／Challenge gate 76 支逐支跑：52 支通過、24 支沒通過。24 支在 v20 基準 worktree（`.sprints/v20-baseline-1d0e219`）逐支重跑對照：
+  - 與基準失敗項目完全相同 13 支：`check_moba_map`、`milestone_b1`／`b2`／`b_fix`／`c`／`c_fix`／`d_fix3`、`minions_h3`、`runtime_followup_baseline`、`runtime_map_h1` 61/5、`tail_rootcause_p0c`、`combat_credibility` 42/45、`lane_jungle_balance` 19/20。
+  - `items_m3`：基準 62/67、本分支 61/67；多的 G6 是「相對 HEAD 無改動」守衛（當時變更未提交）。
+  - 範圍守衛被 3a 的預期改動觸發 2 支（**本分支才有**）：`combat_feedback` X3／X4（基準 50/50）、`online_foundation_v2a` X6／X7（基準 90/90）。整合 main 前逐條確認。
+  - 逾時（10 分上限）未完成 5 支：`cs_c5d_side_bias_audit`、`recovery29b4`、`result_layout`、`roam_quality`、`worldscale29b5`。`recovery29b4`（6 條）與 `worldscale29b5`（12 條）逾時前已印出失敗，含順序公平性位移 18pp（TD-21）；有的與基準紀錄相同、有的無基準對照 ⇒ 未驗證，不得因逾時當成沒有。
+  - 執行不完整 1 支：`camera_replay29b6` 12 條失敗——4 條與基準相同（7／8／10 速度／17）；6 條（18–23）是子驗證在記憶體告急時啟動失敗（exit 3221225794）；2 條（10 replay mapMeta fallback、15 戰報 safe area）基準 400 秒沒跑到那段，所讀的原始碼本分支未動，推定既有、未實測。
+  - 沒執行 2 支：`nav_chrome_h2close`、`runtime_flicker_h2`（需先起 dev server）。
+- 批次清單漏掉、事後補跑：`check_player_challenge_slice6` 30/30、`slice7` 35/35。
+- 原始 log：session scratchpad 的 `accept/`（不在 repo；`extra_out/summary.txt`、`base_out*/`、`nodegates_final/`）。
+
+**未完成項（欠的驗收）**
+- `node tools/verify.mjs` 全套（113 段）：01:20 啟動，前 17 段十幾秒內跑完後卡在第 18 段（`cs_matchup_acceptance_r57`），約 01:40 被 Claude Code 的記憶體保護整批中止（確切時刻未記錄），只跑 17 段（4 PASS、13 FAIL，13 支都是 CS 歷史 gate，未對照基準）。**沒有重跑**（保護機制要求等使用者指示）。原因之一是協調者把 verify 與 gate 批次同時跑。⇒ CS 保護、`runtime29`、`stats28` 等本輪沒有證據。
+- 其餘瀏覽器 gate 在變更後未重跑。變更前（`1fbace0`）：`live_assembly_parity_3a` 25/25、`exit_flush` 12/12、`moba_combat_feedback` 18/18、`moba_gameplay_presentation` 10/10、`challenge_manual_draft` 26/27（TD-3A-13，既有）。`moba_variant_prep` 連接埠被占（TD-3A-15）。
+- 上面 8 支逾時／無效／沒執行的 gate。
+- T13 三步驟／確認頁／對手情報；快速模式；3a-B（T15–T17）。
+
+**已知風險**
+- 戰術書很薄（見數字）；模板說明文字與實測不符的部分沒有處理；8 個模板的預設值就是被撤下的選擇。
+- 追加量測結果檔沒有引擎雜湊，過期無法機械偵測（TD-3A-11）。
+- 機器認可記憶體長期在 40／44.8 GB；長驗收只能單線跑，建議重開機後再跑 verify 全套。
+- 待 Owner 決定的 9 件事見驗收總結第 5 節與 `08_目前待辦與風險.md` 同日一節。

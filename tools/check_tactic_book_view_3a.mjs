@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as View from "../src/screens/moba/tacticBook/tacticBookOptions.js";
-import { liveRows, CAPABILITY_ROWS, measuredExclusion } from "../src/platform/tactics/capabilityRegistry.js";
+import { liveRows, CAPABILITY_ROWS, measuredExclusion, replicationWithheld } from "../src/platform/tactics/capabilityRegistry.js";
 import { TACTIC_TEMPLATES } from "../src/platform/tactics/tacticTemplates.js";
 import { TACTIC_OVERLAYS } from "../src/platform/tactics/tacticOverlays.js";
 import { tacticBookOptions, resolveTactic, bindTacticPlanToCurrentVersions } from "../src/battle/moba/tactics/tacticResolver.js";
@@ -58,7 +58,7 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
       //  模板的數值對不到任何選項（own === null）⇒ 沒有選項被選中，改由「模板值」那一顆代表（templateCustom）
       if (d.choices.filter((c) => c.selected).length !== (d.own === null ? 0 : 1) || d.value !== d.own || d.explicit || d.templateCustom !== (d.own === null)) bad.push(`${id} ${d.dimension} 預設選中的不是模板自己的值`);
       for (const c of d.choices) {
-        if (c.id !== d.own && measuredExclusion(id, d.dimension, c.id)) bad.push(`${id} ${d.dimension}=${c.id} 是量測排除的選擇`);
+        if (c.id !== d.own && (measuredExclusion(id, d.dimension, c.id) || replicationWithheld(id, d.dimension, c.id))) bad.push(`${id} ${d.dimension}=${c.id} 是量測排除或複驗撤下的選擇`);
         if (c.id === d.own) continue;
         //  點下去：計畫合法、binding 解析得出引擎設定、畫面顯示它被選中
         const next = View.tacticBookView({ templateId: id, choices: View.withChoice({}, d.dimension, c.id, d.own) });
@@ -92,12 +92,12 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   const conflict = View.tacticBookView({ templateId: "std", choices: { jungle: { focus: "invade" }, teamfight: { posture: "passive" } } });
   ck("V8 互相打架的選擇 ⇒ 畫面拿得到矛盾提示（文案來自規則表）", conflict.ok && conflict.contradictions.length === 1 && conflict.contradictions[0].id === "invade_vs_passive_fights" && conflict.contradictions[0].text.length > 8);
   //  舊計畫（存檔只驗結構）可能帶著現在不提供的選擇：畫面載入前先拿掉，送出的計畫才會與看得到的選項一致。
-  const stale = { lanes: { mid: { stance: "aggressive" } }, jungle: { focus: "invade", tempo: "fast" }, risk: { tolerance: "cautious" }, phases: { early: { stance: "aggressive" } } };
+  const stale = { lanes: { mid: { stance: "aggressive" } }, jungle: { focus: "invade", tempo: "fast" }, risk: { tolerance: "cautious" }, seats: { b5: { mission: "roam" } }, phases: { early: { stance: "aggressive" } } };
   const kept = View.offeredChoicesOnly("std", [], stale);
   const keptView = View.tacticBookView({ templateId: "std", choices: kept.choices });
-  ck("V10 offeredChoicesOnly：量測排除的選擇（中路進攻、打野節奏快、前期主動）被拿掉並列出，仍提供的（入侵、謹慎）保留", J(kept.choices) === J({ jungle: { focus: "invade" }, risk: { tolerance: "cautious" } }) && J(kept.dropped.map((d) => d.dimension).sort()) === J(["jungle.tempo", "lanes.mid.stance", "phases.early.stance"]), J(kept));
+  ck("V10 offeredChoicesOnly：量測排除的選擇（中路進攻、打野節奏快、前期主動）與複驗撤下的選擇（謹慎）被拿掉並列出，仍提供的（入侵、輔助遊走）保留", J(kept.choices) === J({ jungle: { focus: "invade" }, seats: { b5: { mission: "roam" } } }) && J(kept.dropped.map((d) => d.dimension).sort()) === J(["jungle.tempo", "lanes.mid.stance", "phases.early.stance", "risk.tolerance"]), J(kept));
   const explicitLeaves = keptView.ok ? keptView.dimensions.filter((d) => d.explicit).map((d) => `${d.dimension}=${d.value}`).sort() : null;
-  ck("V10b 過濾之後：計畫裡的每個選擇都在畫面上顯示為已選（沒有「送出去但看不到」的選擇）", keptView.ok && J(explicitLeaves) === J(["jungle.focus=invade", "risk.tolerance=cautious"]) && J(keptView.plan.choices) === J(kept.choices), J(explicitLeaves));
+  ck("V10b 過濾之後：計畫裡的每個選擇都在畫面上顯示為已選（沒有「送出去但看不到」的選擇）", keptView.ok && J(explicitLeaves) === J(["jungle.focus=invade", "seats.b5.mission=roam"]) && J(keptView.plan.choices) === J(kept.choices), J(explicitLeaves));
   let leak = [];
   for (const id of TEMPLATE_IDS) for (const row of live) for (const c of row.choices) {
     const k = View.offeredChoicesOnly(id, [], View.withChoice({}, row.dimension, c));

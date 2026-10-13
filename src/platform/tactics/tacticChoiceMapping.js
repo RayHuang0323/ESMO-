@@ -29,7 +29,7 @@ import {
 } from "../contracts/MobaTacticConfig.js";
 import { applyVariant, variantById } from "../mastery/tacticVariant.js";
 import { stableStringify } from "../contracts/squadSnapshot.js";
-import { CAPABILITY_STATUS, registryRow, liveRows, measuredExclusion } from "./capabilityRegistry.js";
+import { CAPABILITY_STATUS, registryRow, liveRows, measuredExclusion, replicationWithheld } from "./capabilityRegistry.js";
 import { TACTIC_TEMPLATES, templateById } from "./tacticTemplates.js";
 import { overlayById } from "./tacticOverlays.js";
 
@@ -200,7 +200,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
    *   null＝預期的「沒有這個模板／不是 live 維度」。其他錯誤（對照表壞掉）會丟出去，不假裝「全部不提供」。
    */
   function offeredDetail(templateId, dim, overlayIds = [], otherChoices = {}, opts = {}) {
-    //  opts.withMeasured:false ⇒ 不套用「量測排除表」（G-A7 的量測計畫要看到所有候選，包括已經被排除的）。
+    //  opts.withMeasured:false ⇒ 不套用「量測排除表」與「複驗撤下清單」（G-A7 的量測計畫要看到所有候選，包括已經被排除的）。
     const useMeasured = opts?.withMeasured !== false;
     const tpl = templateById(templateId), live = registryRow(dim);
     if (!tpl || !live || live.status !== CAPABILITY_STATUS.LIVE || !rowOf(dim)) return null;
@@ -214,6 +214,8 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
       if (c === own) { const s = sigOf(applyChoice(base, dim, c) ?? base); seen.set(s, c); kept.add(c); continue; }
       //  G-A7：量測不到實際效果的選擇（Registry 的 MEASURED_EXCLUSIONS，逐模板或 "*"＝全部模板）不提供；不佔用旋鈕組的「已見」位置。
       if (useMeasured && measuredExclusion(templateId, dim, c)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      //  複驗撤下（REPLICATION_WITHHELD，獨立於量測排除表）：先查量測排除（reason 不變），沒命中才查這張。
+      if (useMeasured) { const rw = replicationWithheld(templateId, dim, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
       if (c === "split" && otherSplit) { withheld.push({ choice: c, reason: "second_split_lane" }); continue; }
       const next = applyChoice(base, dim, c);
       if (!next) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
@@ -262,7 +264,9 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
       if (!detail.offered.includes(v)) {
         const w = detail.withheld.find((x) => x.choice === v);
         const code = w?.reason === "second_split_lane" ? E.MULTIPLE_SPLIT_LANES : E.CHOICE_NOT_OFFERED;
-        const why = w?.reason === "no_measured_effect" ? "真實性量測（G-A7）沒有量到它的效果" : w?.reason === "no_effect" ? "選了也不會改變任何旋鈕" : w?.reason === "collides" ? `與 ${w.with} 解析出同一組旋鈕` : w?.reason === "second_split_lane" ? "已經有另一路在帶線" : "沒有對照";
+        //  no_measured_effect／not_replicated 這兩支目前不可達（這裡用 withMeasured:false，withheld 不會有這兩種原因）；
+        //  留著是為了日後若改成套用排除表時文案仍正確。
+        const why = w?.reason === "no_measured_effect" ? "真實性量測（G-A7）沒有量到它的效果" : w?.reason === "not_replicated" ? "用新 seeds 紅藍雙方複驗沒有站住" : w?.reason === "no_effect" ? "選了也不會改變任何旋鈕" : w?.reason === "collides" ? `與 ${w.with} 解析出同一組旋鈕` : w?.reason === "second_split_lane" ? "已經有另一路在帶線" : "沒有對照";
         return [err(code, `choices.${dim}`, `${dim}=${v} 在 ${tpl.templateId} 上不提供（${why}）`)];
       }
     }

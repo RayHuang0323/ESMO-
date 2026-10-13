@@ -518,7 +518,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-13（Phase 3a T12）：liveMatchSetup.js 的藍方戰術多一個來源——opts.tacticPlanBinding（戰術書）優先，沒有才走 v1 戰術物件。
   //  沒帶 binding 的輸入走的是原本那一行，golden 39 案仍逐位元相同；binding（classic.mN、無額外選擇）整場結果＝同一套經典戰術的 golden
   //  （tools/check_tactic_save_3a.mjs M2）。v21 未發布 ⇒ 同版號重新登記（舊值 839ca79b396026b7 未曾發布）。
-  "moba-sim.v21": "e66f38390c351919",
+  //  2026-10-14（Phase 3a-A 複驗撤下）：Registry 多了 REPLICATION_WITHHELD（4 筆：上路 split、下路 aggressive、b1 core、謹慎風險；複驗 seeds 1001–1400 紅藍雙方沒站住）
+  //  與 replicationWithheld 查詢；offeredChoiceDetail 預設再套用這張表（原因 not_replicated），withMeasured:false 兩張表都不套。
+  //  只影響提供給玩家挑的清單，不改任何輸入的解析結果（createTacticPlan／resolver 驗的仍是結構上合法）：golden 39 案仍逐位元相同。
+  //  同批另有：矛盾提示（tacticIndicators.js，不在語意清單內）改為證據含撤下選擇的規則不回報；planProblems 多一段註解——兩者都不改指紋（註解不計）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 e66f38390c351919 未曾發布）。
+  "moba-sim.v21": "a7d5b68e24d1f313",
 });
 
 export const isKnownSimulationVersion = (v) =>

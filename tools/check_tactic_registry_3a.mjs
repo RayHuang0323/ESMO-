@@ -94,8 +94,25 @@ for (const r of live) for (const t of TEMPLATE_IDS) {
 }
 ck("F2 每個提供的選擇（21 模板 × 13 維度）都改到至少一個 resolver 欄位", noChange.length === 0 && pairsChecked > 200, `${pairsChecked} 組${noChange.length ? "；沒變：" + noChange.slice(0, 5).join(" ") : ""}`);
 ck("F3 選擇改到的 resolver 欄位全都在該列的 resolverFields 裡（沒有沒登記的連帶效果）", outside.length === 0, outside.slice(0, 5).join(" "));
-ck("F4 resolverFields 沒有死欄位：清單裡每個欄位都被至少一個（模板, 選擇）真的改到", live.every((r) => r.resolverFields.every((f) => usedFields.get(r.dimension).has(f))),
-  live.flatMap((r) => r.resolverFields.filter((f) => !usedFields.get(r.dimension).has(f)).map((f) => `${r.dimension}:${f}`)).join(" "));
+//  F4（可見清單下的死欄位）：複驗撤下讓 seats.b1.priority 在 21 模板上都沒有可見的非預設選項（它唯一的選擇 core 被撤下），
+//  所以 identity.protectRole 在這一列上沒有可見的選擇會動它；同一欄位仍由 seats.b3／b4.priority 的可見選項改動（見 F4d），欄位本身沒死。
+//  明確例外（逐筆列舉；多一個、少一個都紅）：{ dimension, field }。
+const F4_EXCEPTIONS = [{ dimension: "seats.b1.priority", field: "identity.protectRole", why: "唯一會動它的選擇 core 被複驗撤下（REPLICATION_WITHHELD）" }];
+const deadVisible = live.flatMap((r) => r.resolverFields.filter((f) => !usedFields.get(r.dimension).has(f)).map((f) => ({ dimension: r.dimension, field: f })));
+const eKey = (x) => `${x.dimension}:${x.field}`;
+ck(`F4 resolverFields 沒有死欄位（可見清單下）：除了明確例外 ${F4_EXCEPTIONS.map(eKey).join(",")}（${F4_EXCEPTIONS[0].why}）之外，每個欄位都被至少一個可見的（模板, 選擇）真的改到；找到的死欄位集合恰好等於例外集合`,
+  J(deadVisible.map(eKey).sort()) === J(F4_EXCEPTIONS.map(eKey).sort()), `死欄位：${deadVisible.map(eKey).join(" ") || "無"}`);
+const structuralChanges = (dim, field) => TEMPLATE_IDS.some((t) => {
+  const d = Mapping.offeredChoiceDetail(t, dim, [], {}, { withMeasured: false });
+  if (!d) return false;
+  const base = projectedOf(t);
+  return d.offered.some((c) => c !== d.own && J(projectedOf(t, dim, c)[field]) !== J(base[field]));
+});
+ck("F4b 例外裡的每個欄位在結構清單（withMeasured:false）下確實會被改到，且屬於該列的 resolverFields（例外不是假的）", F4_EXCEPTIONS.every((x) => Registry.registryRow(x.dimension).resolverFields.includes(x.field) && structuralChanges(x.dimension, x.field)), F4_EXCEPTIONS.map(eKey).join(","));
+const noVisibleDims = live.filter((r) => TEMPLATE_IDS.every((t) => { const d = Mapping.offeredChoiceDetail(t, r.dimension); return !d || d.offered.every((c) => c === d.own); })).map((r) => r.dimension);
+ck(`F4c 在 21 個模板上都沒有可見非預設選項的維度集合恰好等於列舉值：${noVisibleDims.join(",") || "無"}`, J(noVisibleDims) === J(["seats.b1.priority"]), noVisibleDims.join(","));
+const otherProtect = live.filter((r) => r.dimension !== "seats.b1.priority" && r.resolverFields.includes("identity.protectRole")).map((r) => r.dimension);
+ck("F4d identity.protectRole 並非整個欄位都死：其他列（b3／b4 的資源優先）在可見清單下仍會動它", otherProtect.length > 0 && otherProtect.every((d) => usedFields.get(d).has("identity.protectRole")), otherProtect.join(","));
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§E engineReads（LogicEngine.js，剝註解後）");
@@ -154,17 +171,17 @@ for (const t of TEMPLATE_IDS) {
     if (J(o.offered) !== J(direct)) { uiOk = false; uiBad.push(`${t}/${o.dimension}:≠offeredChoices`); }
     if (!o.offered.every((c) => row.choices.includes(c))) { uiOk = false; uiBad.push(`${t}/${o.dimension}:不在 choices`); }
     //  兩層：結構上提供（旋鈕不同、不撞、不是第二條帶線路）＝createTacticPlan 接受；
-    //  玩家看到的清單＝結構上提供 ∖ 量測排除表（被排除的選擇，已存的計畫仍可解析，只是不再提供挑選）。
+    //  玩家看到的清單＝結構上提供 ∖ 量測排除表 ∖ 複驗撤下清單（被排除的選擇，已存的計畫仍可解析，只是不再提供挑選）。
     const structural = offeredChoices(t, o.dimension, [], {}, { withMeasured: false });
     for (const c of row.choices) {
       const ok = createTacticPlan({ templateId: t, choices: nested(o.dimension, c) }).ok;
       if (structural.includes(c) !== ok) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:structural=${structural.includes(c)} plan=${ok}`); }
-      const gone = Registry.measuredExclusion(t, o.dimension, c) !== null && c !== Mapping.offeredChoiceDetail(t, o.dimension, [], {}, { withMeasured: false }).own;
-      if (o.offered.includes(c) !== (structural.includes(c) && !gone)) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:UI清單≠結構提供∖排除表`); }
+      const gone = (Registry.measuredExclusion(t, o.dimension, c) !== null || Registry.replicationWithheld(t, o.dimension, c) !== null) && c !== Mapping.offeredChoiceDetail(t, o.dimension, [], {}, { withMeasured: false }).own;
+      if (o.offered.includes(c) !== (structural.includes(c) && !gone)) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:UI清單≠結構提供∖排除表∖複驗撤下`); }
     }
   }
 }
-ck("U1 tacticBookOptions(模板) ＝ 每個 live 維度的 offeredChoices ⊆ Registry choices；＝（結構上提供 ∖ 量測排除表）；結構上提供的選擇 createTacticPlan 接受、沒提供的拒絕（21 模板）", uiOk, uiBad.slice(0, 4).join(" "));
+ck("U1 tacticBookOptions(模板) ＝ 每個 live 維度的 offeredChoices ⊆ Registry choices；＝（結構上提供 ∖ 量測排除表 ∖ 複驗撤下清單）；結構上提供的選擇 createTacticPlan 接受、沒提供的拒絕（21 模板）", uiOk, uiBad.slice(0, 4).join(" "));
 ck("U2 UI 清單只含 live 維度（design 維度永遠不會出現）", TEMPLATE_IDS.every((t) => tacticBookOptions(t).every((o) => Registry.registryRow(o.dimension)?.status === "live")));
 ck("U3 CAPABILITIES 是同一份列（別名）；liveCapabilities() ＝ liveRows()；v20 上沒有任何 live 列", Registry.CAPABILITIES === Registry.CAPABILITY_ROWS && J(Registry.liveCapabilities()) === J(Registry.liveRows()) && Registry.liveCapabilities("moba-sim.v20").length === 0 && Registry.liveCapabilities("moba-sim.v21").length === 18);
 ck("U4 isLiveChoice 三參數：v21 ⇒ 可用；v20、亂字串 ⇒ 不可用；兩參數的舊行為不變",

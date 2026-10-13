@@ -366,10 +366,10 @@ async function main() {
     ck("T10 排除表的每一筆，offeredChoices 都不提供（原因 no_measured_effect）", withheldOk, `${ctx.exclusions.length} 筆`);
     const survivors = Registry.liveRows().every((r) => {
       const d1 = Mapping.offeredChoiceDetail("std", r.dimension), d0 = Mapping.offeredChoiceDetail("std", r.dimension, [], {}, { withMeasured: false });
-      const gone = (c) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === c && (x.template === "*" || x.template === "std"));
+      const gone = (c) => [...ctx.exclusions, ...Registry.REPLICATION_WITHHELD].some((x) => x.dimension === r.dimension && x.choice === c && (x.template === "*" || x.template === "std"));
       return d1 && d0 && J(d1.offered) === J(d0.offered.filter((c) => c === d0.own || !gone(c)));
     });
-    ck("T10b 在 std 上，提供清單恰好＝不套用排除表時的提供清單扣掉被排除的（排除表不影響其他選擇）", survivors);
+    ck("T10b 在 std 上，提供清單恰好＝不套用排除表時的提供清單扣掉被排除的（量測排除表與複驗撤下清單；兩張表都不影響其他選擇）", survivors);
     ck("T11 紅方子集：每個不對稱都已記錄（藍方通過而紅方沒通過，或反過來）；結果表記的與重算相同", sameSet((fx.asymmetries ?? []).map((a) => `${a.dimension}=${a.choice}`), deriveAsymmetries(fx.rows).map((a) => `${a.dimension}=${a.choice}`)), `${deriveAsymmetries(fx.rows).length} 個不對稱`);
     const sp = (fx.splitStayOut ?? []).filter((s) => s.role === "primary" && s.side === "blue");
     ck("T12 帶線者實測：上、中路各有一筆，擲骰次數 ≥ 20，留在線上的比例是數字", ["lanes.top.stance", "lanes.mid.stance"].every((d) => sp.some((s) => s.dimension === d && s.rolls >= 20 && typeof s.stayRate === "number" && typeof s.stayTicksShare === "number")), sp.map((s) => `${s.dimension}: ${s.rollsGo}/${s.rolls}=${s.stayRate}`).join(" "));

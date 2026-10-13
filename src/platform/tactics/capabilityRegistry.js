@@ -324,3 +324,22 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
 /** 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。 */
 export const measuredExclusion = (template, dimension, choice) =>
   MEASURED_EXCLUSIONS.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)) ?? null;
+
+/**
+ * 複驗後撤下的選擇（Owner 裁示：邊際選項要用新 seeds、紅藍雙方複驗；證據不足的不再提供）。**獨立於 MEASURED_EXCLUSIONS**：
+ * 那張表必須與真實性結果表（tools/fixtures/tactic_truth_3a.json）逐筆相同，這張表則由複驗結果檔
+ * （tools/fixtures/tactic_followup_3a_replication.json，seeds 1001–1400）推出：verdict ≠ confirmed 的列。
+ * 資料：{ template:"*", dimension, choice, reason:"not_replicated", verdict, metric, blue:{n,rel,z}, red:{n,rel,z} }（rel、z 照抄結果檔，六位小數）。
+ * 只影響「提供給玩家挑哪些」（offeredChoiceDetail 預設會套用；withMeasured:false 兩張表都不套）；模板自己的預設值不受影響，已存的計畫照常解析。
+ * tools/check_tactic_replication_3a.mjs 驗證這張表與複驗結果檔完全一致。
+ */
+const rw = (dimension, choice, verdict, metric, blue, red) => ({ template: "*", dimension, choice, reason: "not_replicated", verdict, metric, blue, red });
+export const REPLICATION_WITHHELD = deepFreeze([
+  rw("lanes.top.stance", "split", "one_sided", "seatFightEntriesPerMin.b1", { n: 400, rel: -0.059062, z: -3.583404 }, { n: 400, rel: -0.015394, z: -0.935816 }),
+  rw("lanes.bot.stance", "aggressive", "insufficient", "laneForward.bot", { n: 400, rel: 0.021285, z: 4.177613 }, { n: 400, rel: 0.002445, z: 0.560144 }),
+  rw("seats.b1.priority", "core", "one_sided", "coreProtectsPerMin.top", { n: 400, rel: 0.038399, z: 4.140798 }, { n: 400, rel: 0.057683, z: 4.351134 }),
+  rw("risk.tolerance", "cautious", "insufficient", "retreatStartsPerMin", { n: 400, rel: 0.025238, z: 3.904687 }, { n: 400, rel: 0.017559, z: 2.725016 }),
+]);
+/** 這個（模板, 維度, 選擇）被複驗撤下嗎？回傳該列或 null。 */
+export const replicationWithheld = (template, dimension, choice) =>
+  REPLICATION_WITHHELD.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)) ?? null;

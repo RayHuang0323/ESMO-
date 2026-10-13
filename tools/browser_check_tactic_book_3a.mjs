@@ -4,7 +4,7 @@
 //
 //  執行：node tools/browser_check_tactic_book_3a.mjs（本地 dev server；一次只跑這一支）
 //  正式 TacticScreen 動態掛載（與 App 同一份 React／store 模組），不開戰鬥。
-//    O  畫面上的選項＝tacticBookView（Registry live、扣掉量測排除）；design／被排除的選項不在 DOM
+//    O  畫面上的選項＝tacticBookView（Registry live、扣掉量測排除與複驗撤下）；design／被排除的選項不在 DOM
 //    C  點選項 ⇒ 被選中；送出的 binding＝Node 以同一份選擇算出來的 binding（逐字元）
 //    I  指標：輪廓六軸、五個席位、配合度負擔與 view-model 同值；互相打架的選擇 ⇒ 出現提示
 //    S  存成我的戰術書 ⇒ 清單出現、磁碟上有；換模板後點它 ⇒ 模板與選擇都回來；刪除 ⇒ 消失
@@ -70,8 +70,9 @@ const result = await runGate({
     const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) => r.dimension);
     await pick("std");
     const domDims = await ev("return JSON.stringify([...document.querySelectorAll('#tb-host [data-testid^=\"tb-dim-\"]')].map(e=>e.getAttribute('data-testid').slice(7)));");
-    ck("O2 design 維度與只剩一個選項的維度（時期姿態、打野節奏、集結、巨龍／巴龍重心）不在 DOM", Array.isArray(domDims) && domDims.length > 0 && !domDims.some((d) => designDims.includes(d)) && !["phases.early.stance", "phases.mid.stance", "phases.late.stance", "jungle.tempo", "teamfight.grouping", "objectives.dragon", "objectives.baron"].some((d) => domDims.includes(d)), J(domDims));
-    ck("O3 量測排除的選擇不在 DOM（中路進攻、上路防守、風險大膽）", !(await has("tb-choice-lanes.mid.stance-aggressive")) && !(await has("tb-choice-lanes.top.stance-defensive")) && !(await has("tb-choice-risk.tolerance-bold")));
+    const viewDims = tacticBookView({ templateId: "std" }).dimensions.map((d) => d.dimension).sort();
+    ck("O2 std 的 DOM 維度集合恰好等於 tacticBookView 的 dimensions 集合；design 維度與只剩一個選項的維度（時期姿態、打野節奏、集結、巨龍／巴龍重心，以及複驗撤下後只剩一個選項的上路／下路姿態、上路資源、風險）不在 DOM", Array.isArray(domDims) && domDims.length > 0 && J([...domDims].sort()) === J(viewDims) && !domDims.some((d) => designDims.includes(d)) && !["phases.early.stance", "phases.mid.stance", "phases.late.stance", "jungle.tempo", "teamfight.grouping", "objectives.dragon", "objectives.baron", "lanes.top.stance", "lanes.bot.stance", "seats.b1.priority", "risk.tolerance"].some((d) => domDims.includes(d)), J(domDims));
+    ck("O3 量測排除與複驗撤下的選擇不在 DOM（中路進攻、上路防守、風險大膽；上路帶線、下路進攻、上路資源核心、風險謹慎）", !(await has("tb-choice-lanes.mid.stance-aggressive")) && !(await has("tb-choice-lanes.top.stance-defensive")) && !(await has("tb-choice-risk.tolerance-bold")) && !(await has("tb-choice-lanes.top.stance-split")) && !(await has("tb-choice-lanes.bot.stance-aggressive")) && !(await has("tb-choice-seats.b1.priority-core")) && !(await has("tb-choice-risk.tolerance-cautious")));
     const cards = await ev("return JSON.stringify([...document.querySelectorAll('#tb-host [data-tactic-card]')].map(e=>e.getAttribute('data-tactic-card')).sort());");
     ck("O4 經典八套保留 data-tactic-card（既有 gate 的選擇器）", J(cards) === J(["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8"]), J(cards));
     const pro = await ev("const b=document.querySelector('#tb-host [data-testid=\"tb-pro-mode\"]'); return JSON.stringify(b?{disabled:b.disabled,text:b.textContent}:null);");

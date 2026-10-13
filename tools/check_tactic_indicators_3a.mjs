@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import * as I from "../src/platform/tactics/tacticIndicators.js";
 import { createTacticPlan, tacticPlanHash } from "../src/platform/tactics/tacticPlan.js";
 import { TACTIC_TEMPLATES } from "../src/platform/tactics/tacticTemplates.js";
-import { liveRows } from "../src/platform/tactics/capabilityRegistry.js";
+import { liveRows, REPLICATION_WITHHELD } from "../src/platform/tactics/capabilityRegistry.js";
 import { bindTacticPlanToCurrentVersions } from "../src/battle/moba/tactics/tacticResolver.js";
 import { STAT_MAP, toPlayerMods, NEUTRAL_STAT } from "../src/battle/moba/mobaPlayerStats.js";
 import { MOVEMENT_PROFILES, getHeroCombatArchetype, listArchetypeHeroIds } from "../src/data/heroCombatArchetypes.js";
@@ -212,14 +212,31 @@ const flat = (v) => Object.fromEntries(STAT_KEYS.map((k) => [k, v]));
   ].every((r) => ruleProblems(r).length > 0));
   ck("X2 規則的條件都是 live 維度的合法選擇；id 不重複；文案非空", I.CONTRADICTION_RULES.every((r) => r.when.length >= 2 && r.when.every(([d, c]) => live[d]?.includes(c)) && typeof r.text === "string" && r.text.length > 8) && new Set(I.CONTRADICTION_RULES.map((r) => r.id)).size === I.CONTRADICTION_RULES.length);
   const nest = (pairs) => { const o = {}; for (const [d, c] of pairs) d.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? c : (n[k] ?? {}), n[k]), o); return o; };
+  //  複驗撤下（REPLICATION_WITHHELD）：證據含被撤下選擇的規則不回報（規則資料保留）。預期集合在這裡獨立推導（不呼叫 ruleSuppressed）。
+  const wKeys = new Set(REPLICATION_WITHHELD.map((w) => `${w.dimension}=${w.choice}`));
+  const expectSuppressed = I.CONTRADICTION_RULES.filter((r) => r.evidence.some((e) => wKeys.has(`${e.dimension}=${e.choice}`))).map((r) => r.id);
   const unfired = I.CONTRADICTION_RULES.filter((r) => !I.contradictions(bind("std", nest(r.when))).some((x) => x.id === r.id && x.text === r.text));
-  ck("X3 每一條規則都觸發得到：std＋它的條件 ⇒ 出現該提示", unfired.length === 0, unfired.map((r) => r.id).join(","));
+  ck("X3 每一條規則都觸發得到（證據被複驗撤下的規則除外，見 X8）：std＋它的條件 ⇒ 出現該提示", J(unfired.map((r) => r.id)) === J(expectSuppressed), unfired.map((r) => r.id).join(","));
   const half = I.CONTRADICTION_RULES.filter((r) => I.contradictions(bind("std", nest([r.when[0]]))).some((x) => x.id === r.id));
   ck("X4 只成立一半不提示；std 本身沒有任何提示", half.length === 0 && I.contradictions(bind("std")).length === 0, half.map((r) => r.id).join(","));
   const m8 = I.contradictions(bind("classic.m8", { jungle: { focus: "invade" } }));
   ck("X5 模板自己的值也算：m8 的團戰姿態本來就是保守 ⇒ 加上打野入侵就提示", m8.some((x) => x.id === "invade_vs_passive_fights") && I.effectiveChoices(bind("classic.m8"))["teamfight.posture"] === "passive", J(m8.map((x) => x.id)));
   const perTemplate = Object.fromEntries(TEMPLATE_IDS.map((id) => [id, I.contradictions(bind(id)).map((x) => x.id)]));
   ck("X6 每個模板自己的提示清單（記錄用；模板本身不該一打開就滿是矛盾：每個 ≤ 1 條）", Object.values(perTemplate).every((l) => l.length <= 1), J(Object.fromEntries(Object.entries(perTemplate).filter(([, l]) => l.length))));
+  const suppressedNow = I.suppressedRuleIds();
+  ck(`X8 被抑制的規則集合恰好等於由 REPLICATION_WITHHELD 推導的集合（多一條少一條都紅）：${suppressedNow.join("、")}`, J(suppressedNow) === J(expectSuppressed) && J(suppressedNow) === J(unfired.map((r) => r.id)) && suppressedNow.length === 3
+    && J([...suppressedNow].sort()) === J(["bot_pressure_vs_farm_jungle", "cautious_vs_aggressive_fights", "split_top_vs_aggressive_fights"]), J(suppressedNow));
+  const reviewerCases = [["classic.m2", { teamfight: { posture: "aggressive" } }, "split_top_vs_aggressive_fights"], ["classic.m4", { teamfight: { posture: "aggressive" } }, "cautious_vs_aggressive_fights"],
+    ["classic.m5", { jungle: { focus: "farm" } }, "bot_pressure_vs_farm_jungle"], ["classic.m7", { jungle: { focus: "farm" } }, "bot_pressure_vs_farm_jungle"], ["v2.bot_duo_pressure", { jungle: { focus: "farm" } }, "bot_pressure_vs_farm_jungle"]];
+  const stillFiring = reviewerCases.filter(([t, c, id]) => I.contradictions(bind(t, c)).some((x) => x.id === id)).map(([t, , id]) => `${t}:${id}`);
+  const wouldFire = reviewerCases.filter(([t, c, id]) => I.contradictions(bind(t, c), []).some((x) => x.id === id)).length;
+  ck("X9 審查者實測的 5 組輸入（模板自己帶著被撤下的選擇，再點一個仍提供的選項）不再回報對應規則；清單換成空的時這 5 組都會回報（證明輸入真的會觸發）", stillFiring.length === 0 && wouldFire === reviewerCases.length, stillFiring.join(" "));
+  const kept = I.contradictions(bind("std", nest([["jungle.focus", "invade"], ["teamfight.posture", "passive"]]))).map((x) => x.id);
+  ck("X10 證據全數 confirmed 的規則仍照常回報（過濾器沒有把全部規則都關掉）：入侵＋保守、中路帶線＋積極接戰、推塔＋保守", kept.includes("invade_vs_passive_fights")
+    && I.contradictions(bind("std", nest([["lanes.mid.stance", "split"], ["teamfight.posture", "aggressive"]]))).some((x) => x.id === "split_mid_vs_aggressive_fights")
+    && I.contradictions(bind("std", nest([["objectives.tower", "high"], ["teamfight.posture", "passive"]]))).some((x) => x.id === "siege_vs_passive_fights"), J(kept));
+  const restored = I.CONTRADICTION_RULES.filter((r) => I.contradictions(bind("std", nest(r.when)), []).some((x) => x.id === r.id)).map((r) => r.id);
+  ck("X11 反向測試：撤下清單換成空的（注入，不改真實清單）⇒ 三條被抑制的規則全部回來，規則總數＝全部", J(I.suppressedRuleIds("std", [])) === "[]" && expectSuppressed.every((id) => restored.includes(id)) && restored.length === I.CONTRADICTION_RULES.length, restored.length + "/" + I.CONTRADICTION_RULES.length);
   const eff = I.effectiveChoices(bind("std", { risk: { tolerance: "bold" } }));
   ck("X7 有效選擇：涵蓋每個 live 維度；明確選的優先", J(Object.keys(eff)) === J(liveRows().map((r) => r.dimension)) && eff["risk.tolerance"] === "bold" && eff["jungle.focus"] === "gank");
 }
