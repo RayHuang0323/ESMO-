@@ -33,8 +33,8 @@ const result = await runGate({
     const click = (sel) => ev("const el=document.querySelector('#tb-host '+" + J(sel) + "); if(!el) return JSON.stringify(false); el.click(); return JSON.stringify(true);");
     const tid = (id) => '[data-testid="' + id + '"]';
     const has = (id) => ev("return JSON.stringify(!!document.querySelector('#tb-host '+" + J(tid(id)) + "));");
-    const choiceIds = () => ev("return JSON.stringify([...document.querySelectorAll('#tb-host [data-testid^=\"tb-choice-\"]')].map(e=>e.getAttribute('data-testid')).sort());");
-    const selectedIds = () => ev("return JSON.stringify([...document.querySelectorAll('#tb-host [data-testid^=\"tb-choice-\"][data-selected=\"1\"]')].map(e=>e.getAttribute('data-testid')).sort());");
+    const choiceIds = () => ev("return JSON.stringify([...document.querySelectorAll('#tb-host button[data-testid^=\"tb-choice-\"]')].map(e=>e.getAttribute('data-testid')).sort());");
+    const selectedIds = () => ev("return JSON.stringify([...document.querySelectorAll('#tb-host button[data-testid^=\"tb-choice-\"][data-selected=\"1\"]')].map(e=>e.getAttribute('data-testid')).sort());");
     const overflow = () => ev("const h=document.getElementById('tb-host'); return JSON.stringify(h?h.scrollWidth-h.clientWidth:null);");
     const mobile = async () => {
       await chrome.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
@@ -126,7 +126,7 @@ const result = await runGate({
     // ── L 手機 390 ─────────────────────────────────────────────────────
     await mobile(); await sleep(1200);
     ck("L2[m] 390 沒有橫向溢出（模板列、選項、指標、戰術書）", (await overflow()) <= 0, String(await overflow()));
-    const small = await ev("return JSON.stringify([...document.querySelectorAll('#tb-host [data-testid^=\"tb-choice-\"]')].filter(e=>{const r=e.getBoundingClientRect(); return r.height<32||r.width<40;}).length);");
+    const small = await ev("return JSON.stringify([...document.querySelectorAll('#tb-host button[data-testid^=\"tb-choice-\"]')].filter(e=>{const r=e.getBoundingClientRect(); return r.height<32||r.width<40;}).length);");
     ck("L3[m] 選項按鈕的觸控大小足夠（高 ≥ 32、寬 ≥ 40）", small === 0, String(small));
     await ev("const e=document.querySelector('#tb-host [data-testid=\"tb-choice-panel\"]'); if(e) e.scrollIntoView({block:'start'}); return JSON.stringify(1);"); await sleep(300);
     await shot("m390_tactic_book_choices");
