@@ -24571,7 +24571,7 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - `browser_check_tactic_book_3a` 30/30（變更後兩次）。
 - verify 以外的 MOBA／Replay／Challenge gate 76 支逐支跑：52 支通過、24 支沒通過。24 支在 v20 基準 worktree（`.sprints/v20-baseline-1d0e219`）逐支重跑對照：
   - 與基準失敗項目完全相同 13 支：`check_moba_map`、`milestone_b1`／`b2`／`b_fix`／`c`／`c_fix`／`d_fix3`、`minions_h3`、`runtime_followup_baseline`、`runtime_map_h1` 61/5、`tail_rootcause_p0c`、`combat_credibility` 42/45、`lane_jungle_balance` 19/20。
-  - `items_m3`：基準 62/67、本分支 61/67；多的 G6 是「相對 HEAD 無改動」守衛（當時變更未提交）。
+  - `items_m3`：基準 62/67、本分支 61/67；多的 G6 是「相對 HEAD 無改動」守衛（當時變更未提交）。提交 `d520116` 後重跑：62/67，失敗項目與基準完全相同。
   - 範圍守衛被 3a 的預期改動觸發 2 支（**本分支才有**）：`combat_feedback` X3／X4（基準 50/50）、`online_foundation_v2a` X6／X7（基準 90/90）。整合 main 前逐條確認。
   - 逾時（10 分上限）未完成 5 支：`cs_c5d_side_bias_audit`、`recovery29b4`、`result_layout`、`roam_quality`、`worldscale29b5`。`recovery29b4`（6 條）與 `worldscale29b5`（12 條）逾時前已印出失敗，含順序公平性位移 18pp（TD-21）；有的與基準紀錄相同、有的無基準對照 ⇒ 未驗證，不得因逾時當成沒有。
   - 執行不完整 1 支：`camera_replay29b6` 12 條失敗——4 條與基準相同（7／8／10 速度／17）；6 條（18–23）是子驗證在記憶體告急時啟動失敗（exit 3221225794）；2 條（10 replay mapMeta fallback、15 戰報 safe area）基準 400 秒沒跑到那段，所讀的原始碼本分支未動，推定既有、未實測。
