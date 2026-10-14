@@ -24619,3 +24619,20 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 停背景批次時 `TaskStop` 沒有停乾淨（bash＋`timeout`＋node 繼續往下跑），要自己查行程。
 
 **tactic24 修正的獨立審查**（sonnet，fresh context，只給驗收條件）：**APPROVED**，Critical 0／Important 0。逐條：29 項斷言數不變、其餘 28 項與 HEAD 逐字相同；舊條件逐一保留或被更嚴的檢查取代（拿掉 std 退路、knobs 不是契約投影都會紅）；probe 的判斷式與 gate 相同；7 個突變全部有效。Reviewer 另加 10 個突變，8 個抓得到；抓不到的 2 個是「組裝器迴圈內把 `resolved[side]` 存成對面那一方」與「組裝器傳 `{}` 而非自己的 adapters 給 resolver」——舊 gate 同樣抓不到，不算變弱，列為 Minor 未處理（可再加一條 regex 或改跑真正的 `assembleMatch` 來補）。
+
+## 2026-10-15 Phase 3a-A Architecture — ACCEPTED（Owner 正式核准；local commit，未 push／deploy／整合 main）
+
+**狀態：Owner 核准 Phase 3a-A 基礎架構驗收通過。範圍只限架構、相容性與已完成的測試，不代表完整戰術書產品已完成。開發暫停，等 Owner 決定 3a-B、戰術行為引擎（暫名 3a-C）與 3b 的順序。**
+
+**核准依據**：上一節的最終驗收（verify 113 段、v20 基準對照、瀏覽器 gate、8 支補跑）與 tactic24 修正（`b1ba62b`，獨立審查 APPROVED）。
+
+**明確記錄**
+- 3a-A Architecture：**ACCEPTED**。
+- 未完成（不在核准範圍內）：T13 的三步驟流程、確認頁、對手情報；快速模式。
+- verify **不宣稱全綠**：113 段 43 PASS／70 FAIL；70 段歷史紅燈的失敗行與 v20（`1d0e219`）逐字相同，屬基準已知差異。
+- `moba-sim.v21` 仍是**未發布候選**（指紋 `a7d5b68e24d1f313`）。
+- tactic24 審查發現的兩個突變盲點補登為 TD-3A-21（組裝器把藍紅解析結果存反）、TD-3A-22（組裝器傳 `{}` 而非自己的 adapters 給 resolver）；舊版檢查同樣抓不到。全文見 `08_目前待辦與風險.md`。
+
+**未完成項**：同上；另整合 main 前仍要逐條確認兩支範圍守衛（`combat_feedback` X3／X4、`online_foundation_v2a` X6／X7）。
+
+**已知風險**：戰術書很薄、模板說明與實測不符的部分未處理（見 2026-10-14 一節）；TD-3A-11～22。
