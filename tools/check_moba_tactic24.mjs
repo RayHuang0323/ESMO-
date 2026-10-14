@@ -52,7 +52,8 @@ const knobsOf24 = (input) => { const r = resolve24(input, { toEngineTactic, STAN
 const sameKnobs24 = (a, b) => a !== null && JSON.stringify(a) === JSON.stringify(b);
 ck("useLocalServer → assembleMatch → engine.configureMatch（含 standard 對手）",
   /assembleMatch\(/.test(uls)
-  && /A\.resolveTactic\(/.test(asm24)
+  && /A\.resolveTactic\(\s*t\s*,\s*A\s*,/.test(asm24)      // 第 2 參數必須是組裝器自己的 adapters（A），不是 {}／別的物件（TD-3A-21）
+  && /\}\s*else\s+resolved\[side\]\s*=\s*snap\s*;/.test(asm24)   // 結果以迴圈自己的 side 為鍵寫回，不得交叉（TD-3A-22）
   && /call\("configureMatch",\s*\{\s*blue:\s*clone\(resolved\.blue\.knobs\),\s*red:\s*clone\(resolved\.red\.knobs\)/.test(asm24)
   && MOBA_TACTICS.every((t) => sameKnobs24(knobsOf24({ kind: "legacy", config: t }), toEngineTactic(t)))
   && sameKnobs24(knobsOf24({ kind: "std" }), toEngineTactic(STANDARD_OPP_TACTIC))
