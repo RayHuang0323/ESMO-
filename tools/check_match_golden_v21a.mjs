@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+// ============================================================================
+//  tools/check_match_golden_v21a.mjs — Phase 3a-C1 Task 7：v21-A golden baseline 的 check mode（gate G-AC1）
+//
+//  執行：node tools/check_match_golden_v21a.mjs          （97 案重跑，數分鐘；一律走 tools/verify.mjs 的 match_golden_v21a 段）
+//
+//  把 tools/fixtures/match_golden_v21a.json（在 C2 之前的最終樹上錄的）逐案重跑，要求 digest／streamHash／resultHash／
+//  configure 序列（方法＋引數雜湊）全部相同，而且案例清單沒有多也沒有少。C2（LogicEngine 改成經過 Tactical Director 讀戰術資料）
+//  之後再跑一次：全綠＝逐位元相同。
+//
+//   F   fixture 結構：schema、案例數（v20 39＋模板 42＋提供的選擇 16＝97）、21 模板各 2 案、提供清單＝戰術書目前的提供清單（8 個非本來選擇）
+//   N   負向自檢（合成資料）：竄改一案的雜湊／少一案／多一案／順序改變／calls 改變，比對函式都要報出來
+//   C   逐案重跑，與 fixture 逐欄相同（每案一條檢查）；案例清單（缺／多）一條
+//   I   資訊（不計入通過數）：simVersion／指紋與 fixture 的差異。C2 改到語意檔時指紋會變，那不是這支 gate 要判的事（版本 gate 另有）。
+// ============================================================================
+import fs from "node:fs";
+
+let pass = 0, fail = 0;
+const ck = (l, ok, n = "") => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}${n ? `　${n}` : ""}`); };
+const progress = (s) => process.stderr.write(`  ${s}\n`);
+
+const L = await import("./lib/matchGoldenV21a.mjs");
+const { MOBA_SIMULATION_VERSION, SIMULATION_SEMANTICS_FINGERPRINTS } = await import("../src/platform/contracts/simulationVersion.js");
+
+ck("P0 runner 載入的引擎類別＝src/LogicEngine.js 的同一個類別（探針三條路徑量到同一棵樹）", L.PROBE_SHARES_RUNNER_ENGINE);
+
+const fixture = JSON.parse(fs.readFileSync(L.FIXTURE_V21A, "utf8"));
+const v20 = JSON.parse(fs.readFileSync(L.V20_FIXTURE, "utf8"));
+const cases = L.buildCaseList(v20);
+
+// ── F：fixture 結構 ─────────────────────────────────────────────────────────
+const nOf = (g) => fixture.cases.filter((c) => c.group === g).length;
+ck("F1 schema＝match_golden_v21a.v1", fixture.schema === L.SCHEMA, fixture.schema);
+ck("F2 案例數：v20 39（live 9、challenge 12、runner 18）＋模板 42＋提供的選擇 16＝97",
+  fixture.cases.length === 97 && nOf("v20") === 39 && nOf("binding-template") === 42 && nOf("binding-choice") === 16
+  && ["live", "challenge", "runner"].every((p, i) => fixture.cases.filter((c) => c.group === "v20" && c.path === p).length === [9, 12, 18][i]),
+  `v20 ${nOf("v20")}、template ${nOf("binding-template")}、choice ${nOf("binding-choice")}`);
+const tplIds = [...new Set(fixture.cases.filter((c) => c.group === "binding-template").map((c) => c.params.templateId))];
+ck("F3 21 個模板（含 std）各有 2 個 seed 的案例", tplIds.length === 21 && tplIds.includes("std")
+  && tplIds.every((t) => new Set(fixture.cases.filter((c) => c.group === "binding-template" && c.params.templateId === t).map((c) => c.seed)).size === 2));
+const offeredNow = L.offeredNonOwnOnStd();
+ck(`F4 提供的選擇＝戰術書目前的提供清單（std 上 ${L.EXPECT_OFFERED_ON_STD} 個非本來選擇），每個 2 個 seed`,
+  offeredNow.length === L.EXPECT_OFFERED_ON_STD
+  && JSON.stringify(fixture.offeredOnStd) === JSON.stringify(offeredNow)
+  && offeredNow.every((o) => fixture.cases.filter((c) => c.group === "binding-choice" && c.params.dimension === o.dimension && c.params.choice === o.choice).length === 2),
+  offeredNow.map((o) => `${o.dimension}=${o.choice}`).join(" "));
+ck("F5 binding 案都是 live 路徑、紅方＝標準對手；每案有 bindingHash", fixture.cases.filter((c) => c.group !== "v20").every((c) => c.path === "live" && c.params.redTactic === "std" && /^[0-9a-f]{1,8}$/.test(c.bindingHash)));
+ck("F6 每案都有 digest／streamHash／resultHash／configure 序列", fixture.cases.every((c) => c.digest && /^[0-9a-f]{1,8}$/.test(c.streamHash) && /^[0-9a-f]{1,8}$/.test(c.resultHash) && c.calls.length > 0));
+ck("F7 v20 fixture 沒變（案例數與 gitHead 同錄製時）", fixture.v20Fixture.cases === v20.cases.length && fixture.v20Fixture.gitHead === v20.gitHead);
+
+// ── N：負向自檢 ─────────────────────────────────────────────────────────────
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const asObserved = () => clone(fixture.cases);
+{
+  const same = L.compareToFixture(fixture, asObserved());
+  ck("N0 原樣比對＝0 差異", same.problems.length === 0 && same.matched === fixture.cases.length);
+  const t1 = asObserved(); t1[5].streamHash = t1[5].streamHash === "00000000" ? "00000001" : "00000000";
+  const r1 = L.compareToFixture(fixture, t1);
+  ck("N1 竄改一案的 streamHash ⇒ 報出該案", r1.problems.length === 1 && r1.problems[0].startsWith(`${fixture.cases[5].id}:`) && r1.problems[0].includes("streamHash"), r1.problems[0] ?? "");
+  const t2 = asObserved(); t2[7].resultHash = "deadbeef"; t2[9].digest = "0.0:x:0:0:0:0";
+  const r2 = L.compareToFixture(fixture, t2);
+  ck("N2 竄改 resultHash 與 digest ⇒ 兩案都報出", r2.problems.length === 2 && r2.matched === fixture.cases.length - 2);
+  const t3 = asObserved(); const dropped = t3.splice(50, 1)[0];
+  const r3 = L.compareToFixture(fixture, t3);
+  ck("N3 少一案（fixture 有、現在沒跑到）⇒ 報 missing", r3.problems.some((p) => p.startsWith("missing case") && p.endsWith(dropped.id)), r3.problems[0] ?? "");
+  const t4 = asObserved(); t4.push({ ...clone(t4[0]), id: "extra:case" });
+  const r4 = L.compareToFixture(fixture, t4);
+  ck("N4 多一案 ⇒ 報 extra", r4.problems.some((p) => p.startsWith("extra case") && p.endsWith("extra:case")), r4.problems[0] ?? "");
+  const t5 = asObserved(); t5[20].calls[0].h = "ffffffff";
+  const r5 = L.compareToFixture(fixture, t5);
+  ck("N5 configure 引數雜湊不同 ⇒ 報 calls 差異", r5.problems.length === 1 && r5.problems[0].includes("configure calls differ at #0"), r5.problems[0] ?? "");
+  const t6 = asObserved(); [t6[1], t6[2]] = [t6[2], t6[1]];
+  const r6 = L.compareToFixture(fixture, t6);
+  ck("N6 案例順序改變 ⇒ 報 order", r6.problems.includes("case order differs"));
+  const t7 = asObserved(); t7[40].params = { ...t7[40].params, choices: { x: 1 } };
+  ck("N7 案例輸入（params）改變 ⇒ 報出", L.compareToFixture(fixture, t7).problems.some((p) => p.includes("params differ")));
+}
+
+// ── C：逐案重跑 ─────────────────────────────────────────────────────────────
+const observed = [];
+const failedRun = new Map();
+const t0 = Date.now();
+for (const [n, spec] of cases.entries()) {
+  try { observed.push(L.recordOf(spec, v20)); } catch (e) { failedRun.set(spec.id, String(e.message ?? e)); }
+  progress(`${n + 1}/${cases.length} ${spec.id} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+}
+const cmp = L.compareToFixture(fixture, observed);
+const listProblems = cmp.problems.filter((p) => /^(missing|extra) case|^case order/.test(p));
+ck("C0 案例清單＝fixture（沒有缺、沒有多、順序相同）", listProblems.length === 0 && failedRun.size === 0, [...listProblems, ...[...failedRun].map(([i, m]) => `${i}: ${m}`)].join(" | "));
+for (const c of fixture.cases) {
+  const mine = cmp.problems.filter((p) => p.startsWith(`${c.id}:`));
+  const run = failedRun.get(c.id);
+  ck(`C ${c.id}　digest＋streamHash＋resultHash＋configure 序列＝fixture`, mine.length === 0 && !run, run ?? mine.join("; "));
+}
+
+// ── I：資訊 ─────────────────────────────────────────────────────────────────
+const fpNow = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
+console.log(`ℹ 錄製時：${fixture.simVersion} ／ 指紋 ${fixture.fingerprint} ／ gitHead ${fixture.gitHead.slice(0, 8)}`);
+console.log(`ℹ 目前：${MOBA_SIMULATION_VERSION} ／ 指紋 ${fpNow}${fpNow === fixture.fingerprint && MOBA_SIMULATION_VERSION === fixture.simVersion ? "（同錄製時）" : "（與錄製時不同——C2 改到語意檔時預期如此，不計入判定）"}`);
+
+console.log(`\nMatch Golden v21-A：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
+process.exit(fail ? 1 : 0);
