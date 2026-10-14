@@ -2,13 +2,13 @@
 // ============================================================================
 //  tools/check_match_golden_v21a.mjs — Phase 3a-C1 Task 7：v21-A golden baseline 的 check mode（gate G-AC1）
 //
-//  執行：node tools/check_match_golden_v21a.mjs          （97 案重跑，數分鐘；一律走 tools/verify.mjs 的 match_golden_v21a 段）
+//  執行：node tools/check_match_golden_v21a.mjs          （109 案重跑，數分鐘；一律走 tools/verify.mjs 的 match_golden_v21a 段）
 //
 //  把 tools/fixtures/match_golden_v21a.json（在 C2 之前的最終樹上錄的）逐案重跑，要求 digest／streamHash／resultHash／
 //  configure 序列（方法＋引數雜湊）全部相同，而且案例清單沒有多也沒有少。C2（LogicEngine 改成經過 Tactical Director 讀戰術資料）
 //  之後再跑一次：全綠＝逐位元相同。
 //
-//   F   fixture 結構：schema、案例數（v20 39＋模板 42＋提供的選擇 16＝97）、21 模板各 2 案、提供清單＝戰術書目前的提供清單（8 個非本來選擇）
+//   F   fixture 結構：schema、案例數（v20 39＋模板 42＋提供的選擇 16＋紅方 binding 12＝109）、21 模板各 2 案、提供清單＝戰術書目前的提供清單（8 個非本來選擇）
 //   N   負向自檢（合成資料）：竄改一案的雜湊／少一案／多一案／順序改變／calls 改變，比對函式都要報出來
 //   C   逐案重跑，與 fixture 逐欄相同（每案一條檢查）；案例清單（缺／多）一條
 //   I   資訊（不計入通過數）：simVersion／指紋與 fixture 的差異。C2 改到語意檔時指紋會變，那不是這支 gate 要判的事（版本 gate 另有）。
@@ -31,8 +31,8 @@ const cases = L.buildCaseList(v20);
 // ── F：fixture 結構 ─────────────────────────────────────────────────────────
 const nOf = (g) => fixture.cases.filter((c) => c.group === g).length;
 ck("F1 schema＝match_golden_v21a.v1", fixture.schema === L.SCHEMA, fixture.schema);
-ck("F2 案例數：v20 39（live 9、challenge 12、runner 18）＋模板 42＋提供的選擇 16＝97",
-  fixture.cases.length === 97 && nOf("v20") === 39 && nOf("binding-template") === 42 && nOf("binding-choice") === 16
+ck("F2 案例數：v20 39（live 9、challenge 12、runner 18）＋模板 42＋提供的選擇 16＋紅方 binding 12＝109",
+  fixture.cases.length === 109 && nOf("v20") === 39 && nOf("binding-template") === 42 && nOf("binding-choice") === 16 && nOf("binding-red") === 12
   && ["live", "challenge", "runner"].every((p, i) => fixture.cases.filter((c) => c.group === "v20" && c.path === p).length === [9, 12, 18][i]),
   `v20 ${nOf("v20")}、template ${nOf("binding-template")}、choice ${nOf("binding-choice")}`);
 const tplIds = [...new Set(fixture.cases.filter((c) => c.group === "binding-template").map((c) => c.params.templateId))];
@@ -44,8 +44,11 @@ ck(`F4 提供的選擇＝戰術書目前的提供清單（std 上 ${L.EXPECT_OFF
   && JSON.stringify(fixture.offeredOnStd) === JSON.stringify(offeredNow)
   && offeredNow.every((o) => fixture.cases.filter((c) => c.group === "binding-choice" && c.params.dimension === o.dimension && c.params.choice === o.choice).length === 2),
   offeredNow.map((o) => `${o.dimension}=${o.choice}`).join(" "));
-ck("F5 binding 案都是 live 路徑、紅方＝標準對手；每案有 bindingHash", fixture.cases.filter((c) => c.group !== "v20").every((c) => c.path === "live" && c.params.redTactic === "std" && /^[0-9a-f]{1,8}$/.test(c.bindingHash)));
+ck("F5 binding 案都是 live 路徑、紅方＝標準對手；每案有 bindingHash", fixture.cases.filter((c) => c.group === "binding-template" || c.group === "binding-choice").every((c) => c.path === "live" && c.params.redTactic === "std" && /^[0-9a-f]{1,8}$/.test(c.bindingHash)));
 ck("F6 每案都有 digest／streamHash／resultHash／configure 序列", fixture.cases.every((c) => c.digest && /^[0-9a-f]{1,8}$/.test(c.streamHash) && /^[0-9a-f]{1,8}$/.test(c.resultHash) && c.calls.length > 0));
+ck("F8 紅方 binding 案（runner 路徑，紅方帶 splitLane/protectRole）的 streamHash 都與同 seed 紅方 std 的對照案（v20:runner-standard-<seed>）不同＝真的讀到了",
+  fixture.cases.filter((c) => c.group === "binding-red").length === 12
+  && fixture.cases.filter((c) => c.group === "binding-red").every((c) => c.path === "runner" && c.params.red && fixture.cases.find((x) => x.id === `v20:runner-standard-${c.seed}`)?.streamHash !== c.streamHash));
 ck("F7 v20 fixture 沒變（案例數與 gitHead 同錄製時）", fixture.v20Fixture.cases === v20.cases.length && fixture.v20Fixture.gitHead === v20.gitHead);
 
 // ── N：負向自檢 ─────────────────────────────────────────────────────────────

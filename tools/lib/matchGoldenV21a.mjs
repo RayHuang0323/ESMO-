@@ -34,6 +34,7 @@ const { createTacticPlan } = await import("../../src/platform/tactics/tacticPlan
 const { TACTIC_TEMPLATES } = await import("../../src/platform/tactics/tacticTemplates.js");
 const { tacticBookOptions, nestedOf } = await import("../../src/platform/tactics/tacticChoiceMapping.js");
 const { bindTacticPlanToCurrentVersions } = await import("../../src/battle/moba/tactics/tacticResolver.js");
+const { tacticInputOf } = await import("./tacticTruthSim.mjs");
 const { runAndHash, createStreamHasher, finalDigest } = await import("./matchGolden.mjs");
 const { challengeGoldenInputs } = await import("./challengeGolden.mjs");
 const { goldenLiveInputs } = await import("./liveGolden.mjs");
@@ -117,6 +118,23 @@ export function buildCaseList(v20) {
         params: { templateId: "std", dimension, choice, own, choices: nestedOf([[dimension, choice]]), redTactic: "std" } });
     }
   });
+  //  Follow-up group (appended; the records above are unchanged): the RED side carries a real binding.
+  //  Path = balance-tool runner: runner.configure(seed, "standard", M, 1, null, { blue, red }) — the tool's own tactic
+  //  argument (the one tacticTruthSim uses).  Target reads: red splitLane (top / mid) and red protectRole (adc / mid),
+  //  which no legacy-config case and no blue-only binding case reaches on the red side.
+  const RED = [
+    { key: "red-top_solo_split", blue: null, red: { templateId: "v2.top_solo_split", choices: {} } },                  // red splitLane=top
+    { key: "red-mid_solo_split", blue: null, red: { templateId: "v2.mid_solo_split", choices: {} } },                  // red splitLane=mid + protectRole=mid
+    { key: "red-protect_core_scaling", blue: null, red: { templateId: "v2.protect_core_scaling", choices: {} } },      // red protectRole=adc
+    { key: "red-mid_jungle_sync", blue: null, red: { templateId: "v2.mid_jungle_sync", choices: {} } },                // red protectRole=mid
+    { key: "red-std+mid.split", blue: null, red: { templateId: "std", choices: nestedOf([["lanes.mid.stance", "split"]]) } },  // choice-driven red split
+    { key: "both-bot_duo_vs_top_split", blue: { templateId: "v2.bot_duo_pressure", choices: {} }, red: { templateId: "v2.top_solo_split", choices: {} } },
+  ];
+  RED.forEach((r, i) => {
+    for (const seed of seedsFor(i + 1)) {
+      cases.push({ id: `bind-red:${idPart(r.key)}:s${seed}`, group: "binding-red", path: "runner", seed, params: { blue: r.blue, red: r.red, config: "standard", skills: true } });
+    }
+  });
   return cases;
 }
 
@@ -154,6 +172,13 @@ export function runCase(spec, v20) {
     const { digest, streamHash } = runAndHash(out.e, RUN.runner);
     return { digest, streamHash, resultHash: snapshotHashOf(out.e), calls: ctx.calls };
   }
+  if (spec.group === "binding-red") {
+    const tactic = { blue: tacticInputOf(spec.params.blue), red: tacticInputOf(spec.params.red) };
+    const { out, thrown, ctx } = observe(() => runner.configure(spec.seed, spec.params.config, M_ON, 1, null, tactic), RUN.runner.every);
+    if (thrown) throw new Error(`golden v21a: runner.configure (red binding) failed for ${spec.id}: ${String(thrown)}`);
+    const { digest, streamHash } = runAndHash(out.e, RUN.runner);
+    return { digest, streamHash, resultHash: snapshotHashOf(out.e), calls: ctx.calls };
+  }
   //  binding 案：與 v20 的 live-notactic 同樣的 Live 入參骨架（名單＝v20 golden 的 liveRosters[seed]、藍方選手與出裝策略 standard、
   //  無天賦選擇、對手＝標準戰術），藍方戰術改由 binding 交進 opts.tacticPlanBinding。
   const synthetic = { id: spec.id, seed: spec.seed, params: { noRoster: false, noPlayers: false, tacticId: null, buildStrategy: "standard" }, liveOpts: { talentSelections: null, opponentId: null } };
@@ -163,7 +188,9 @@ export function runCase(spec, v20) {
 }
 
 /** binding 的雜湊（輸入端的指紋：bind 結果變了，case 的輸入就不同了，要看得出來）。 */
-export const bindingHashOf = (spec) => stableHash(stableStringify(bindingOf(spec.params.templateId, spec.params.choices)));
+export const bindingHashOf = (spec) => spec.group === "binding-red"
+  ? stableHash(stableStringify({ blue: tacticInputOf(spec.params.blue), red: tacticInputOf(spec.params.red) }))
+  : stableHash(stableStringify(bindingOf(spec.params.templateId, spec.params.choices)));
 
 /** 一案的紀錄（寫進 fixture 的形狀）。 */
 export function recordOf(spec, v20) {

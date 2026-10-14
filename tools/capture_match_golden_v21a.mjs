@@ -70,7 +70,7 @@ const fixture = {
   node: process.version,
   featureFlags: { ...FEATURE_FLAGS },
   hashes: "digest = final engine state; streamHash = sampled tick stream (every 20); resultHash = ChallengeResult hash (challenge) or engine.snapshot() hash at match end (live/runner); calls = configure*/enable* order with 8-hex argument hashes",
-  counts: { total: all.length, v20: count("v20"), bindingTemplate: count("binding-template"), bindingChoice: count("binding-choice") },
+  counts: { total: all.length, v20: count("v20"), bindingTemplate: count("binding-template"), bindingChoice: count("binding-choice"), bindingRed: count("binding-red") },
   seeds: {
     v20: "per v20 fixture (tools/fixtures/match_golden_v20.json, read-only)",
     bindingPool: L.BINDING_SEED_POOL,
@@ -82,5 +82,5 @@ const fixture = {
 };
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, JSON.stringify(fixture, null, 2) + "\n", "utf8");
-log(`wrote ${path.basename(OUT)} — ${records.length} cases (v20 ${count("v20")}, binding-template ${count("binding-template")}, binding-choice ${count("binding-choice")})`);
+log(`wrote ${path.basename(OUT)} — ${records.length} cases (v20 ${count("v20")}, binding-template ${count("binding-template")}, binding-choice ${count("binding-choice")}, binding-red ${count("binding-red")})`);
 err(`done in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
