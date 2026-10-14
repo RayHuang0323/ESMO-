@@ -26,6 +26,7 @@ import { toEngineTactic, toEngineTacticIdentity } from "../src/platform/contract
 import { MOBA_SIMULATION_VERSION } from "../src/platform/contracts/simulationVersion.js";
 import { tacticInputOf } from "./lib/tacticTruthSim.mjs";
 import { stripComments } from "./lib/stripComments.mjs";
+import * as Prov from "./lib/tacticMeasureProvenance.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
@@ -45,6 +46,12 @@ ck("R1 schema 與事前登記規則（seeds 1001–1400、minZ 3、minRel 0.05�
 ck("R2 12 列、problems 為空、每列有 verdict 與藍紅雙方統計", Array.isArray(fx.rows) && fx.rows.length === 12 && Array.isArray(fx.problems) && fx.problems.length === 0
   && fx.rows.every((r) => ["confirmed", "one_sided", "insufficient"].includes(r.verdict) && [r.blue, r.red].every((s) => s && Number.isFinite(s.n) && Number.isFinite(s.rel) && Number.isFinite(s.z))), `${fx.rows?.length} 列`);
 ck("R3 simVersion＝目前的 MOBA_SIMULATION_VERSION＝真實性結果表的 simVersion", fx.meta?.simVersion === MOBA_SIMULATION_VERSION && truth.meta?.simVersion === MOBA_SIMULATION_VERSION, `${fx.meta?.simVersion} / ${truth.meta?.simVersion} / ${MOBA_SIMULATION_VERSION}`);
+//  出處（Phase 3a-C0）：新格式的結果檔（meta.loadedFiles）走完整的依賴式過期判定；舊格式只有 gitHead（TD-3A-11），機械上驗不了。
+if (fx.meta?.loadedFiles) {
+  const probeFiles = await Prov.probeLoadedFiles({ workerEntry: path.join(ROOT, "tools/check_tactic_truth_3a.mjs"), seed: Registry.TRUTH_GATE.seedFrom });
+  const reasons = Prov.stalenessReasons(fx.meta, { hashes: await Prov.currentHashes(), probeFiles });
+  ck("R3b 結果檔沒有過期（雜湊、載入檔、探針的新依賴）", reasons.length === 0, reasons.slice(0, 4).join("；"));
+} else console.log("　legacy provenance: gitHead only (TD-3A-11) — staleness not mechanically checked");
 //  判定規則（與 tools/measure_tactic_followup_3a.mjs 第 233–243 行相同）：meets＝方向後的 z ≥ minZ 且方向後的 rel ≥ minRel；reversed＝方向後的 z ≤ −minZ；
 //  reversed（任一邊）> 兩邊都 meets ⇒ confirmed（若有 strictMetric 而 strict 沒有兩邊都 meets ⇒ duty_cycle_only）> 恰好一邊 ⇒ one_sided > insufficient。
 const sign = (row) => (row.direction === "up" ? 1 : -1);

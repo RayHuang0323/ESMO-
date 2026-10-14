@@ -22,18 +22,16 @@
 //   · 沒通過的不放大係數：std 上量不到 ⇒ 該選擇對所有模板不提供（MEASURED_EXCLUSIONS 的 template "*"，等於退回 design）；
 //     只在弱點模板量不到 ⇒ 只對那個模板不提供。紅方量不到只列為「不對稱」（不排除）。
 //
-//  快速模式的檢查：結果表沒有過期（模擬版本、引擎語意檔、對照表、Registry 的 live 列、量測程式的雜湊都與現在相同）、
+//  快速模式的檢查：結果表沒有過期（模擬版本、對照表、Registry 的 live 列、量測程式的雜湊相同；量測 worker 載入過的每個檔案都在且內容相同；探針場次沒載入新檔案）、
 //  計畫要求的每一批都有列、事前登記的指標與方向沒被改過、z 由原始配對值重算、每個選擇通過或已被排除、排除表與結果表一致、
 //  排除表與 offeredChoices 一致、帶線者留在線上的實測比例有數字；另有負向對照（竄改一個數字、改對照表雜湊、少一列、改方向都必須被抓到）。
 // ============================================================================
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto";
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { stripComments } from "./lib/stripComments.mjs";
-import { isKnownMetric, metricValue, pairStats, runTruthMatch, TRUTH_SIM_VERSION } from "./lib/tacticTruthSim.mjs";
+import * as Prov from "./lib/tacticMeasureProvenance.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SELF = fileURLToPath(import.meta.url);
@@ -46,12 +44,16 @@ const MAX_WORKERS = 3;
 // ════════════════════════════════════════════════════════════════════════════
 //   worker：單場模擬（--measure 的子行程）
 // ════════════════════════════════════════════════════════════════════════════
-if (flag("truth-worker")) {
+//  量測程式（tacticTruthSim）必須在 hook 註冊之後才載入，worker 才記得到它依賴的每一個檔案。
+const stopRecording = flag("truth-worker") ? Prov.installLoadRecorder() : null;
+const { isKnownMetric, metricValue, pairStats, runTruthMatch, TRUTH_SIM_VERSION } = await import("./lib/tacticTruthSim.mjs");
+if (stopRecording) {
+  const loaded = stopRecording;
   process.on("message", async (t) => {
     if (t?.type !== "run") return;
     try {
       const rec = await runTruthMatch(t.seed, { blue: t.blue, red: t.red, items: "standard" });
-      process.send({ type: "done", id: t.id, rec });
+      process.send({ type: "done", id: t.id, rec, files: loaded() });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
   process.send({ type: "ready" });
@@ -62,47 +64,16 @@ if (flag("truth-worker")) {
 async function main() {
   const Registry = await import("../src/platform/tactics/capabilityRegistry.js");
   const Mapping = await import("../src/platform/tactics/tacticChoiceMapping.js");
-  const SimV = await import("../src/platform/contracts/simulationVersion.js");
-  const Snap = await import("../src/platform/contracts/squadSnapshot.js");
-  const Templates = await import("../src/platform/tactics/tacticTemplates.js");
   const Plan = await import("./lib/tacticTruthPlan.mjs");
   const { TRUTH_GATE } = Registry;
   const SEEDS = Array.from({ length: TRUTH_GATE.seedTo - TRUTH_GATE.seedFrom + 1 }, (_, i) => TRUTH_GATE.seedFrom + i);
 
-  // ── 雜湊（過期偵測）──────────────────────────────────────────────────────
-  const sha = (s) => createHash("sha256").update(s).digest("hex").slice(0, 16);
-  const norm = (text) => stripComments(text).replace(/\s+/g, " ");
-  const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
-  //  引擎語意檔（SIMULATION_SEMANTICS_FILES，扣掉 Registry 本身——它的 live 列另有 registryHash，且 MEASURED_EXCLUSIONS 是這份結果表的「產物」，
-  //  放進雜湊會變成循環：填排除表就讓結果表過期）。
-  //  再扣掉 tacticChoiceMapping.js／tacticResolver.js：這兩支同時承載「提供給玩家挑哪些」（offeredChoices／tacticBookOptions，量測結論的出口）與
-  //  「選擇怎麼解析」（量測的對象）。文字雜湊會讓「改 UI 清單的實作」也讓結果表過期；所以改用**行為雜湊** resolvedHash：
-  //  21 模板 ×（每個 live 維度、每個結構上提供的選擇）經真實 plan→resolver 解析出的旋鈕。解析結果變了才算過期，與文字無關。
-  const TEXT_HASH_EXEMPT = ["src/platform/tactics/capabilityRegistry.js", "src/platform/tactics/tacticChoiceMapping.js", "src/battle/moba/tactics/tacticResolver.js"];
-  const engineHash = () => sha(SimV.SIMULATION_SEMANTICS_FILES.filter((f) => !TEXT_HASH_EXEMPT.includes(f)).map((f) => `${f}\0${norm(read(f))}`).join("\n"));
-  const resolvedHash = async () => {
-    const { tacticInputOf } = await import("./lib/tacticTruthSim.mjs");
-    const { resolveTactic } = await import("../src/battle/moba/tactics/tacticResolver.js");
-    const out = [];
-    for (const t of Plan.TEMPLATE_IDS) {
-      const base = resolveTactic(tacticInputOf({ templateId: t, choices: {} }));
-      out.push([t, "-", "-", base.knobs, base.identity]);
-      for (const row of Registry.liveRows()) {
-        const d = Mapping.offeredChoiceDetail(t, row.dimension, [], {}, { withMeasured: false });
-        for (const c of d.offered.filter((x) => x !== d.own)) {
-          const r = resolveTactic(tacticInputOf({ templateId: t, choices: Mapping.nestedOf([[row.dimension, c]]) }));
-          out.push([t, row.dimension, c, r.knobs, r.identity]);
-        }
-      }
-    }
-    return Snap.stableHash(Snap.stableStringify(out));
-  };
-  const registryHash = () => sha(Snap.stableStringify(Registry.liveRows().map((r) => ({ dimension: r.dimension, choices: r.choices, basis: r.basis, touches: r.touches, resolverFields: r.resolverFields, engineReads: r.engineReads, gate: r.gate }))));
-  const currentHashes = async () => ({
-    simVersion: SimV.MOBA_SIMULATION_VERSION, engineHash: engineHash(), registryHash: registryHash(), resolvedHash: await resolvedHash(),
-    mappingHash: Snap.stableHash(Snap.stableStringify(Mapping.CHOICE_MAPPING)), templatesVersion: Templates.TACTIC_TEMPLATES_VERSION,
-    harnessHash: sha(norm(read("tools/lib/tacticTruthSim.mjs"))), harnessVersion: TRUTH_SIM_VERSION,
-  });
+  // ── 雜湊（過期偵測）：實作在 tools/lib/tacticMeasureProvenance.mjs（與 measure_tactic_followup_3a 共用）──────
+  //  過期判定是依賴式：結果表記下量測 worker 實際載入的每個 repo 檔案（meta.loadedFiles）；沒載入的語意檔改了不會讓它過期。
+  //  Registry／tacticChoiceMapping／tacticResolver 的文字改動由 registryHash／mappingHash／resolvedHash（行為雜湊）管。
+  const currentHashes = Prov.currentHashes;
+  const WORKER_ENTRY = SELF;
+  const PROBE_SEED = TRUTH_GATE.seedFrom;
 
   // ── 統計與判定（快速模式與 --measure 共用）─────────────────────────────────
   const r6 = (v) => (v === null || v === undefined ? null : Number(Number(v).toFixed(6)));
@@ -173,6 +144,7 @@ async function main() {
       if (seeds.every((s) => have.has(s))) { doneBatches++; continue; }
       for (const s of seeds) if (!have.has(s)) tasks.push({ id: `${b.key}#${s}`, key: b.key, seed: s, blue: b.blue, red: b.red });
     }
+    const sidecar = Prov.loadedFilesSidecar(wdir);
     console.log(`量測：${total} 批（已完成 ${doneBatches}），待跑 ${tasks.length} 場，workers=${Math.min(MAX_WORKERS, Number(val("workers", MAX_WORKERS)))}，資料夾 ${wdir}`);
     if (tasks.length) {
       const workers = Math.max(1, Math.min(MAX_WORKERS, Number(val("workers", MAX_WORKERS))));
@@ -194,6 +166,7 @@ async function main() {
             if (m.type === "ready") return feed();
             const t = tasks.find((x) => x.id === m.id);
             if (m.type === "done") {
+              sidecar.add(m.files);
               fs.appendFileSync(fileOf(wdir, t.key), `${JSON.stringify({ seed: t.seed, rec: m.rec })}\n`);
               remaining.set(t.key, remaining.get(t.key) - 1);
               finished++;
@@ -257,8 +230,10 @@ async function main() {
 
   async function writeFixture(dir, plan) {
     const { rows, splitStayOut } = analyse(dir, plan);
+    const loaded = Prov.loadedFilesSidecar(dir).all();
+    if (!loaded.length) throw new Error(`${dir} 沒有 loadedFiles.json（這個資料夾的場次不是用記錄載入檔的 worker 跑的；重新 --measure）`);
     const fx = {
-      schema: "TacticTruth.v1", meta: { ...(await currentHashes()), seeds: [TRUTH_GATE.seedFrom, TRUTH_GATE.seedTo], minZ: TRUTH_GATE.minZ, marginalBelowZ: TRUTH_GATE.marginalBelowZ, items: "standard", skills: "on" },
+      schema: "TacticTruth.v1", meta: { ...(await currentHashes()), loadedFiles: Prov.hashLoadedFiles(loaded), seeds: [TRUTH_GATE.seedFrom, TRUTH_GATE.seedTo], minZ: TRUTH_GATE.minZ, marginalBelowZ: TRUTH_GATE.marginalBelowZ, items: "standard", skills: "on" },
       rows, splitStayOut, exclusionsDerived: deriveExclusions(rows), asymmetries: deriveAsymmetries(rows),
     };
     fs.mkdirSync(path.dirname(FIXTURE), { recursive: true });
@@ -298,9 +273,7 @@ async function main() {
       const problems = [];
       const P = (code, msg) => problems.push(`${code}: ${msg}`);
       if (!fx || fx.schema !== "TacticTruth.v1" || !Array.isArray(fx.rows)) { P("schema", "結果表格式不對"); return problems; }
-      for (const k of ["simVersion", "engineHash", "registryHash", "resolvedHash", "mappingHash", "templatesVersion", "harnessHash", "harnessVersion"]) {
-        if (fx.meta?.[k] !== ctx.hashes[k]) P("stale", `${k} 與現在不同（結果表是在別的版本量的；重新執行 --measure）`);
-      }
+      for (const reason of Prov.stalenessReasons(fx.meta, ctx)) P("stale", reason);
       const byKey = new Map(fx.rows.map((r) => [r.key, r]));
       if (byKey.size !== fx.rows.length) P("dup", "結果表有重複的列");
       for (const b of ctx.planRows) if (!byKey.has(b.key)) P("missing", `計畫要求的 ${b.key} 沒有列`);
@@ -327,14 +300,20 @@ async function main() {
       return problems;
     }
 
-    const ctx = { hashes: await currentHashes(), planRows, exclusions: Registry.MEASURED_EXCLUSIONS };
+    //  探針：跑一場最小的對局（對照組、固定 seed），看它載入了哪些 repo 檔案；不在 meta.loadedFiles 裡的就是新依賴。
+    let probeFiles = null, probeErr = "";
+    const tProbe = Date.now();
+    try { probeFiles = await Prov.probeLoadedFiles({ workerEntry: WORKER_ENTRY, seed: PROBE_SEED }); } catch (e) { probeErr = String(e?.message ?? e); }
+    const ctx = { hashes: await currentHashes(), probeFiles, planRows, exclusions: Registry.MEASURED_EXCLUSIONS };
     let fx = null;
     try { fx = JSON.parse(fs.readFileSync(FIXTURE, "utf8")); } catch { /* 下面的檢查會報 */ }
     ck("T1 結果表存在、格式 TacticTruth.v1", !!fx && fx.schema === "TacticTruth.v1" && Array.isArray(fx.rows), fx ? `${fx.rows?.length} 列` : "tools/fixtures/tactic_truth_3a.json 不存在或讀不出來（執行 --measure）");
     if (!fx) { console.log(`\nTactic Truth 3a：${pass}/${pass + fail} FAIL`); process.exit(1); }
 
-    const stale = ["simVersion", "engineHash", "registryHash", "resolvedHash", "mappingHash", "templatesVersion", "harnessHash", "harnessVersion"].filter((k) => fx.meta?.[k] !== ctx.hashes[k]);
-    ck("T2 結果表沒有過期：模擬版本、引擎語意檔、Registry live 列、對照表、模板版本、量測程式的雜湊都與現在相同", stale.length === 0, stale.length ? `過期欄位：${stale.join(",")}（改了這些之後要重新 --measure）` : `${ctx.hashes.simVersion} engine ${ctx.hashes.engineHash} mapping ${ctx.hashes.mappingHash}`);
+    ck("T1b 探針場次跑得起來（一場對照組，看它載入了哪些 repo 檔案）", !!probeFiles && probeFiles.length > 0, probeFiles ? `${probeFiles.length} 個檔案，${((Date.now() - tProbe) / 1000).toFixed(1)} 秒` : probeErr);
+    const stale = Prov.stalenessReasons(fx.meta, ctx);
+    ck("T2 結果表沒有過期：模擬版本、Registry live 列、對照表、解析結果、模板版本、量測程式的雜湊相同；記錄的載入檔都在且內容相同；探針沒載入新檔案",
+      stale.length === 0, stale.length ? `過期：${stale.slice(0, 6).join("；")}${stale.length > 6 ? `…（共 ${stale.length} 條）` : ""}` : `${ctx.hashes.simVersion} 載入檔 ${Object.keys(fx.meta.loadedFiles).length} mapping ${ctx.hashes.mappingHash}`);
     const rowsKeys = new Set(fx.rows.map((r) => r.key));
     ck("T3 計畫要求的每一批都有列，沒有多的", planRows.every((b) => rowsKeys.has(b.key)) && fx.rows.every((r) => planRows.some((b) => b.key === r.key)), `${planRows.length} 批 vs ${fx.rows.length} 列`);
     const liveStd = Registry.liveRows().flatMap((r) => { const o = Plan.offeredOf("std", r.dimension); return o ? o.offered.filter((c) => c !== o.own).map((c) => `${r.dimension}=${c}`) : []; });
@@ -378,15 +357,40 @@ async function main() {
 
     // ── 負向對照：驗證器抓得到壞的結果表 ──────────────────────────────────
     const clone = (o) => structuredClone(o);
-    const base = verifyFixture(fx, ctx);
-    ck("N0 基線：驗證器對真實結果表沒有問題", base.length === 0, base.slice(0, 3).join(" | "));
+    const base = verifyFixture(fx, ctx).filter((p) => !p.startsWith("stale"));
+    ck("N0 基線：驗證器對真實結果表沒有（過期以外的）問題；過期另由 T2 判定", base.length === 0, base.slice(0, 3).join(" | "));
+    //  「新鮮」的結果表：meta 的雜湊與載入檔都取自現在，其餘照真實結果表。過期類的負向對照一律從它出發，
+    //  否則真實結果表本身已過期時，每一條「⇒ 過期」的對照都會假綠。
+    const fresh = clone(fx);
+    fresh.meta = { ...fresh.meta, ...ctx.hashes, loadedFiles: Prov.hashLoadedFiles(probeFiles ?? []) };
+    delete fresh.meta.engineHash;
+    const freshProblems = verifyFixture(fresh, ctx);
+    ck("N0b 基線：新鮮的 meta（雜湊與載入檔取自現在）⇒ 驗證器不報過期，其餘問題也沒有", freshProblems.length === 0, freshProblems.slice(0, 3).join(" | "));
     const t1 = clone(fx); t1.rows[0].pairs[0][1] = (t1.rows[0].pairs[0][1] ?? 0) + 5;
     ck("N1 竄改一個原始配對值 ⇒ 重算不符被抓到", verifyFixture(t1, ctx).some((p) => p.startsWith("recompute")));
     const t2 = clone(fx); t2.rows[0].z = 99;
     ck("N2 竄改表上的 z ⇒ 被抓到", verifyFixture(t2, ctx).some((p) => p.startsWith("recompute")));
-    ck("N3 對照表雜湊改了（沒重新量測）⇒ 結果表過期", verifyFixture(fx, { ...ctx, hashes: { ...ctx.hashes, mappingHash: "0".repeat(16) } }).some((p) => p.startsWith("stale")));
-    ck("N3b 模擬版本改了 ⇒ 過期", verifyFixture(fx, { ...ctx, hashes: { ...ctx.hashes, simVersion: "moba-sim.v99" } }).some((p) => p.startsWith("stale")));
-    ck("N3c 選擇解析出的旋鈕變了（resolvedHash 不同，例如改了 applyChoice）⇒ 過期", verifyFixture(fx, { ...ctx, hashes: { ...ctx.hashes, resolvedHash: "f".repeat(16) } }).some((p) => p.startsWith("stale")));
+    ck("N3 對照表雜湊改了（沒重新量測）⇒ 結果表過期", verifyFixture(fresh, { ...ctx, hashes: { ...ctx.hashes, mappingHash: "0".repeat(16) } }).some((p) => p.startsWith("stale")));
+    ck("N3b 模擬版本改了 ⇒ 過期", verifyFixture(fresh, { ...ctx, hashes: { ...ctx.hashes, simVersion: "moba-sim.v99" } }).some((p) => p.startsWith("stale")));
+    ck("N3c 選擇解析出的旋鈕變了（resolvedHash 不同，例如改了 applyChoice）⇒ 過期", verifyFixture(fresh, { ...ctx, hashes: { ...ctx.hashes, resolvedHash: "f".repeat(16) } }).some((p) => p.startsWith("stale")));
+    //  依賴式過期（Phase 3a-C0）
+    const loadedKeys = Object.keys(fresh.meta.loadedFiles);
+    const tChanged = clone(fresh); tChanged.meta.loadedFiles[loadedKeys[0]] = "0".repeat(16);
+    ck("N3d 記錄的載入檔雜湊變了（檔案內容改了）⇒ 過期", verifyFixture(tChanged, ctx).some((p) => p.startsWith("stale") && p.includes("loaded file changed")));
+    const tMissing = clone(fresh); tMissing.meta.loadedFiles["tools/lib/__no_such_file__.mjs"] = "0".repeat(16);
+    ck("N3e 記錄的載入檔不見了 ⇒ 過期", verifyFixture(tMissing, ctx).some((p) => p.startsWith("stale") && p.includes("loaded file missing")));
+    ck("N3f 探針載入了沒記錄的檔案（新依賴）⇒ 過期", verifyFixture(fresh, { ...ctx, probeFiles: [...(probeFiles ?? []), "src/__new_dependency__.js"] }).some((p) => p.startsWith("stale") && p.includes("new dependency src/__new_dependency__.js")));
+    //  省下重量的那一邊：不在 loadedFiles 的語意檔改了 ⇒ 不過期（明確釘住，避免日後悄悄漂移）；同一手法用在記錄內的檔案則必須過期
+    const SimVersionMod = await import("../src/platform/contracts/simulationVersion.js");
+    const outside = SimVersionMod.SIMULATION_SEMANTICS_FILES.find((f) => !(f in fresh.meta.loadedFiles));
+    const inside = loadedKeys.find((f) => SimVersionMod.SIMULATION_SEMANTICS_FILES.includes(f));
+    const edit = (target) => (rel) => (rel === target ? `${fs.readFileSync(path.join(ROOT, rel), "utf8")}
+export const __edited_by_test__ = 1;` : fs.readFileSync(path.join(ROOT, rel), "utf8"));
+    ck("N3g 不在 loadedFiles 的語意檔（worker 沒載入）改了 ⇒ 不過期；同樣的改動用在記錄內的語意檔 ⇒ 過期",
+      !!outside && !!inside && Prov.stalenessReasons(fresh.meta, { hashes: ctx.hashes, probeFiles, readFn: edit(outside) }).length === 0 && Prov.stalenessReasons(fresh.meta, { hashes: ctx.hashes, probeFiles, readFn: edit(inside) }).some((r) => r.includes(inside)), `未載入：${outside} / 載入：${inside}`);
+    const legacy = clone(fx); legacy.meta = { ...legacy.meta, engineHash: "0".repeat(16) }; delete legacy.meta.loadedFiles;
+    ck("N3h 舊格式結果表（有 engineHash、沒有 loadedFiles）⇒ 過期，原因是 \"fixture predates dependency-based staleness; re-run --measure\"（沒有讓舊表通過的相容路徑）",
+      J(Prov.stalenessReasons(legacy.meta, { ...ctx })) === J([Prov.LEGACY_REASON]) && Prov.LEGACY_REASON === "fixture predates dependency-based staleness; re-run --measure");
     const t3 = clone(fx); t3.rows.pop();
     ck("N4 少一列 ⇒ 被抓到", verifyFixture(t3, ctx).some((p) => p.startsWith("missing")));
     const t4 = clone(fx); t4.rows[0].direction = t4.rows[0].direction === "up" ? "down" : "up";

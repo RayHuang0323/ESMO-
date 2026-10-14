@@ -56,9 +56,9 @@ import os from "node:os";
 import path from "node:path";
 import { fork, execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { metricValue, pairStats, isKnownMetric, TRUTH_SIM_VERSION } from "./lib/tacticTruthSim.mjs";
+import { metricValue, pairStats, isKnownMetric } from "./lib/tacticTruthSim.mjs";
 import { TACTIC_TEMPLATES } from "../src/platform/tactics/tacticTemplates.js";
-import { MOBA_SIMULATION_VERSION } from "../src/platform/contracts/simulationVersion.js";
+import * as Prov from "./lib/tacticMeasureProvenance.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(SELF), "..");
@@ -67,6 +67,7 @@ const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(`--${n}`);
 const val = (n, d = null) => { const h = argv.find((a) => a.startsWith(`--${n}=`)); return h ? h.slice(n.length + 3) : d; };
 const MAX_WORKERS = 3;
+const MAX_REQUEUES = 2;
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const nest = (dim, v) => { const o = {}; dim.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? v : {}, n[k]), o); return o; };
 const r6 = (v) => (v === null || v === undefined ? null : Number(Number(v).toFixed(6)));
@@ -165,6 +166,7 @@ async function runBatches(dir, batches) {
     remaining.set(b.key, todo.length);
     for (const s of todo) tasks.push({ id: `${b.key}#${s}`, key: b.key, seed: s, blue: b.blue, red: b.red });
   }
+  const sidecar = Prov.loadedFilesSidecar(dir);
   const total = batches.length;
   let doneBatches = batches.filter((b) => remaining.get(b.key) === 0).length;
   const workers = Math.max(1, Math.min(MAX_WORKERS, Number(val("workers", MAX_WORKERS))));
@@ -172,6 +174,7 @@ async function runBatches(dir, batches) {
   if (!tasks.length) return true;
   const t0 = Date.now();
   let next = 0, finished = 0, failed = 0, stopped = false;
+  const retry = [], attempts = new Map();     // 工作行程中途死掉時，它手上那場放回佇列（每場最多再試 MAX_REQUEUES 次）
   const bar = (x, n) => { const k = Math.round((x / n) * 20); return `[${"█".repeat(k)}${"░".repeat(20 - k)}]`; };
   const byId = new Map(tasks.map((t) => [t.id, t]));
   await new Promise((resolveAll) => {
@@ -179,15 +182,19 @@ async function runBatches(dir, batches) {
     const spawnWorker = () => {
       const child = fork(WORKER, ["--truth-worker"], { env: { ...process.env, ESMO_BALANCE_SKILLS: "on" }, stdio: ["ignore", "inherit", "inherit", "ipc"] });
       alive++;
+      let inflight = null, killedByUs = false;
       const feed = () => {
+        inflight = null;
         if (fs.existsSync(path.join(dir, "STOP"))) stopped = true;
-        if (stopped || next >= tasks.length) { child.kill(); return; }
-        child.send({ type: "run", ...tasks[next++] });
+        if (stopped || (next >= tasks.length && !retry.length)) { killedByUs = true; child.kill(); return; }
+        inflight = retry.length ? retry.shift() : tasks[next++];
+        child.send({ type: "run", ...inflight });
       };
       child.on("message", (m) => {
         if (m.type === "ready") return feed();
         const t = byId.get(m.id);
         if (m.type === "done") {
+          sidecar.add(m.files);
           fs.appendFileSync(fileOf(dir, t.key), `${JSON.stringify({ seed: t.seed, rec: m.rec })}\n`);
           remaining.set(t.key, remaining.get(t.key) - 1);
           finished++;
@@ -199,7 +206,19 @@ async function runBatches(dir, batches) {
         } else if (m.type === "error") { failed++; console.log(`✗ ${m.id}: ${String(m.error).slice(0, 300)}`); }
         feed();
       });
-      child.on("exit", () => { alive--; if (alive === 0) resolveAll(); });
+      child.on("exit", () => {
+        alive--;
+        if (inflight && !killedByUs) {
+          //  行程自己死掉（崩潰、被記憶體保護砍）時手上還有一場沒有結果：放回佇列，並補一個新的 worker
+          const t = inflight, n = (attempts.get(t.id) ?? 0) + 1;
+          inflight = null;
+          attempts.set(t.id, n);
+          if (n > MAX_REQUEUES) { failed++; console.log(`✗ ${t.id}: worker 中途結束，已重試 ${MAX_REQUEUES} 次，放棄`); }
+          else { retry.push(t); console.log(`↻ ${t.id}: worker 中途結束，放回佇列（第 ${n}/${MAX_REQUEUES} 次）`); }
+          if (!stopped && (retry.length || next < tasks.length)) spawnWorker();
+        }
+        if (alive === 0) resolveAll();
+      });
     };
     for (let i = 0; i < Math.min(workers, tasks.length); i++) spawnWorker();
   });
@@ -208,10 +227,12 @@ async function runBatches(dir, batches) {
   return true;
 }
 
+//  量測出處：與真實性結果表同一組雜湊 ＋ 量測 worker 載入過的 repo 檔案（聯集）；gitHead 保留當參考。main 在寫檔前設定 provenance。
+let provenance = null;
 const metaOf = () => {
   let gitHead = null;
   try { gitHead = execSync("git rev-parse HEAD", { cwd: ROOT, encoding: "utf8" }).trim(); } catch { /* 沒有 git 也照寫 */ }
-  return { simVersion: MOBA_SIMULATION_VERSION, harnessVersion: TRUTH_SIM_VERSION, gitHead, items: "standard", skills: "on" };
+  return { ...provenance.hashes, loadedFiles: provenance.loadedFiles, gitHead, items: "standard", skills: "on" };
 };
 const statsOf = (pairs) => { const s = pairStats(pairs); const se = s.sd === null || !s.n ? null : s.sd / Math.sqrt(s.n); return { n: s.n, meanA: r6(s.meanA), meanB: r6(s.meanB), diff: r6(s.diff), sd: r6(s.sd), z: r6(s.z), rel: r6(s.rel), ci95: se === null ? null : [r6(s.diff - 1.96 * se), r6(s.diff + 1.96 * se)] }; };
 
@@ -311,6 +332,11 @@ const dir = path.resolve(val("dir", path.join(os.tmpdir(), `esmo-tactic-followup
 const batches = study === "replication" ? replicationBatches() : study === "quickmode" ? quickmodeBatches() : templateBatches();
 if (flag("plan")) { console.log(`${study}：${batches.length} 批、${batches.reduce((s, b) => s + b.seeds.length, 0)} 場`); process.exit(0); }
 if (!flag("report")) { const ok = await runBatches(dir, batches); if (!ok) process.exit(3); }
+{
+  const loaded = Prov.loadedFilesSidecar(dir).all();
+  if (!loaded.length) { console.log(`${dir} 沒有 loadedFiles.json（這些場次不是用記錄載入檔的 worker 跑的）；不寫結果檔，請重新量測`); process.exit(1); }
+  provenance = { hashes: await Prov.currentHashes(), loadedFiles: Prov.hashLoadedFiles(loaded) };
+}
 const report = study === "replication" ? replicationReport(dir) : study === "quickmode" ? quickmodeReport(dir) : templatesReport(dir);
 const out = path.join(ROOT, `tools/fixtures/tactic_followup_3a_${study}.json`);
 if (report.problems.length) { console.log(`資料不完整，不寫結果檔：${report.problems.slice(0, 5).join("；")}`); process.exit(1); }
