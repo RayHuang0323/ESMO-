@@ -24657,3 +24657,20 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 新判定不再保護「量測時根本沒載入」的語意檔（例：`liveMatchSetup.js`）；改由每次量測的載入聯集＋快速模式探針把關。
 - gate 進入點、量測來源函式庫、`stripComments` 不在記錄內（與舊制度相同涵蓋範圍，不是退步）。
 - 三份既有追加量測結果檔仍無法機械判斷是否過期（下次重測時自動帶雜湊）。
+
+## 2026-10-15 Phase 3a-C1：Director 契約、規則集可選層、v21-A 黃金基準（不改模擬行為；owner: Claude，local commit，未 push／deploy／整合 main）
+
+**完成項**
+- Task 5（`7196d7a`）：`TacticalDirective.v1` 契約（`src/platform/contracts/tacticalDirective.js`）——「某一方目前生效的戰術」＝`{ schema, side, phase, knobs, identity }`，`knobs`／`identity` 的欄位集合直接取自既有兩個投影（`toEngineTactic`／`toEngineTacticIdentity`），沒有自己的詞彙或數值。C1 沒有任何程式載入它。gate `check_tactical_directive_3c` 61/61（verify 段 `tactical_directive_3c`）。
+- Task 6（`0e3c022`）：規則集新增可選層 `layers.tacticalDirector`，**沒寫＝static**，目前只接受 `"static"`；v20 三個規則集物件逐位元不變（gate 以字面值與雜湊釘住）。`check_match_ruleset_3a` 40/40。`matchRuleset.js` 是語意檔 ⇒ v21 候選指紋依慣例重新登記 `a7d5b68e24d1f313` → `29140fe0cb5a4c86`（v1–v20 未動）。
+- Task 7（`04ae0aa`、補強 `9dd1a14`）：v21-A 黃金基準（C2 的 G-AC1 參考）——109 案：v20 的 39 案、21 個模板（藍方 binding）×2 seeds、標準模板目前提供的 8 個選項×2 seeds、紅方 binding 12 案（紅方分推上／中路、保護 ADC／中路、雙方都非標準；走平衡工具 runner）。每案記錄 digest、stream hash（每 10 秒取樣 10 人位置／血量／擊殺）、結束時完整快照雜湊與 configure 呼叫序列。檢查模式 `Match Golden v21-A：127/127 PASS`（約 400 秒；verify 段 `match_golden_v21a`）。紅方案例由獨立審查指出覆蓋缺口後補上（原 97 筆紀錄不動、順序不變）。
+- Task 8：真實性表重測（`8a1718e`；4,080 場、0 失敗、69.7 分鐘）——91 列與所有非 meta 區段逐位元相同，只有 `matchRuleset.js`／`simulationVersion.js` 的載入雜湊改變。
+
+**驗證（2026-10-15 05:38–06:00 實跑，HEAD `8a1718e`）**
+- `check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 40/40、`check_simulation_version_gate` 81/81、`check_match_assembler_3a` 227/227、`check_live_setup_3a` 119/119、`check_challenge_setup_3a` 65/65、`check_balance_runner_setup_3a` 122/122、`check_match_setup_3a` 153/153（v20 黃金 39 案相同）、**`check_match_golden_v21a` 127/127**、`regress` 結束率 15/15（平均 20.8 分）、`regress2` 節奏門檻 8/8、`npm run build` ✓ built in 16.64s。
+- 獨立審查：Task 5＋6 一次通過；Task 7 一次通過，另依審查的覆蓋建議補紅方案例並經範圍複審通過。
+
+**已知風險／留給 C2、C3**
+- `MatchSetup` 目前不認得 `tacticalDirector` 這個鍵（基準規則集沒有）：C2 的 Director 只走「沒寫＝static」，不需要；C3 要啟用新模式時必須另立 v21 規則集，不得改 v20 物件。
+- 黃金基準的 F8 證明紅方計畫有改變對局，但不是逐一證明 splitLane／protectRole 讀取點本身被執行（沒有逐讀取點計數器）。
+- 指紋每重新登記一次，`simulationVersion.js` 本身（量測時會載入）就讓真實性表過期一次 ⇒ C1、C2 各需整輪重測約 70 分鐘。
