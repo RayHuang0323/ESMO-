@@ -24636,3 +24636,24 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **未完成項**：同上；另整合 main 前仍要逐條確認兩支範圍守衛（`combat_feedback` X3／X4、`online_foundation_v2a` X6／X7）。
 
 **已知風險**：戰術書很薄、模板說明與實測不符的部分未處理（見 2026-10-14 一節）；TD-3A-11～22。
+
+## 2026-10-15 Phase 3a-C0：量測工具整理（不改模擬語意；owner: Claude，local commit，未 push／deploy／整合 main）
+
+依 Owner 2026-10-15 夜間授權（C0 → C1 → C2 依序）執行。計畫 `docs/superpowers/plans/2026-10-15-moba-phase3a-c0-c2.md`；SDD 帳 `.superpowers/sdd/2026-10-15-moba-phase3a-c0-c2/progress.md`。
+
+**完成項**
+- Task 1（`0e6e4c7`、修正 `d7c5498`）：真實性表的過期判定改為「依實際載入的檔案」——量測 worker 用 Node 的模組載入掛鉤記下載入的 repo 檔案與內容雜湊（`meta.loadedFiles`），取代原本對全部語意檔的文字雜湊；快速模式多跑一場探針，出現沒記錄的新依賴就判過期。原本刻意排除的三個檔（能力登記表、選擇對照表、解析器）照舊不做文字雜湊（改由 registryHash／mappingHash／resolvedHash 涵蓋）——第一版漏了這點，獨立審查抓到（會讓「填排除表」本身使結果表過期），修正後複審通過。追加量測工具：結果檔改帶同一組雜湊＋載入檔案（TD-3A-11 的後續量測部分），當掉 worker 手上的場次會重新排入（最多 2 次，TD-3A-12）。三份既有追加量測結果檔仍只有 gitHead，複驗 gate 對它們維持原本的版本字串檢查並明印「legacy provenance」。
+- Task 3（`91f00d9`）：tactic24 接線檢查補上兩個盲點（TD-3A-21：`resolved[side] = snap`；TD-3A-22：`A.resolveTactic(t, A, …)`），仍是 29 項；verify 的 `q5_history`、`hero_skills_round2` 改用「通過數＝總數」的寫法（TD-3A-16）。審查通過。
+- Task 2（`bbbfda6`）：真實性表以新格式整輪重測（102 批、4,080 場、0 失敗、69.4 分鐘，workers=3）；91 列、排除推導 30 筆、紅藍不對稱 6 筆與重測前逐位元相同，只有 meta 不同（`engineHash` → `loadedFiles` 68 個檔）。`MEASURED_EXCLUSIONS` 不需改。
+
+**驗證（2026-10-15 03:52–03:58 實跑，HEAD `bbbfda6`）**
+- `check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactic_registry_3a` 31/31、`check_tactic_indicators_3a` 59/59、`check_tactic_book_view_3a` 20/20、`check_simulation_version_gate` 81/81（v21 候選指紋未變）、`check_match_setup_3a` 153/153（v20 黃金 39 案相同）、`npm run build` ✓ built in 17.01s。
+- `node tools/verify.mjs --only=q5_history,hero_skills_round2,tactic24`：前兩段 PASS；tactic24 27/29，接線檢查 ✅，兩條紅與 v20 相同（m6／m4 gank ×0.97、BattleResult.v2）。
+- 獨立審查：Task 1 一輪修正後通過（第一版把刻意排除的三個檔重新納入文字雜湊，會造成循環過期）；Task 3 一次通過。
+
+**未完成項**：C1、C2（見後續節）；C3～C10 未開始（勝利條件與戰術行為契約待 Owner 核定）。
+
+**已知風險**
+- 新判定不再保護「量測時根本沒載入」的語意檔（例：`liveMatchSetup.js`）；改由每次量測的載入聯集＋快速模式探針把關。
+- gate 進入點、量測來源函式庫、`stripComments` 不在記錄內（與舊制度相同涵蓋範圍，不是退步）。
+- 三份既有追加量測結果檔仍無法機械判斷是否過期（下次重測時自動帶雜湊）。
