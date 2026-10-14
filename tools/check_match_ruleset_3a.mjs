@@ -1,4 +1,6 @@
-import { MATCH_RULESETS, resolveRulesetForMode, validateRuleset, LAYER_RELEASE_FLAG, MATCH_RULESET_VERSION, ASSEMBLY_ORDERS } from "../src/platform/contracts/matchRuleset.js";
+import { MATCH_RULESETS, resolveRulesetForMode, validateRuleset, LAYER_RELEASE_FLAG, MATCH_RULESET_VERSION, ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf } from "../src/platform/contracts/matchRuleset.js";
+import { stableStringify } from "../src/platform/contracts/squadSnapshot.js";
+import { createHash } from "node:crypto";
 import { FEATURE_FLAGS } from "../src/featureFlags.js";
 let pass = 0, fail = 0; const ck = (l, ok, n = "") => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}${n ? `　${n}` : ""}`); };
 for (const r of Object.values(MATCH_RULESETS)) ck(`R1 ${r.rulesetId} 通過驗證`, validateRuleset(r).ok, validateRuleset(r).errors.join(";"));
@@ -35,4 +37,29 @@ const noBattle = resolveRulesetForMode({ mode: "career", flags: { ...FEATURE_FLA
 ck("R10 heroBattleTalentsV1=false ⇒ battleTalents關", !noBattle.layers.battleTalents && noBattle.layers.heroSkills === true);
 ck("R11 resolveRulesetForMode releaseRequirements 凍結", Object.isFrozen(career.releaseRequirements));
 ck("R14 resolveRulesetForMode 保留 assemblyOrder（旗標只關布林層）", career.layers.assemblyOrder === "live" && off.layers.assemblyOrder === "live" && resolveRulesetForMode({ mode: "challenge", flags: FEATURE_FLAGS }).layers.assemblyOrder === "challengeV20");
+//  Phase 3a-C1：可選層 tacticalDirector（缺少 ≡ static；只收 "static"）
+{
+  const base = { ...badRuleset, releaseRequirements: ["itemsV1"] };
+  const withTd = (v) => ({ ...base, layers: { ...base.layers, tacticalDirector: v } });
+  ck("R15 基準樣本通過（R15 反例只差 tacticalDirector）", validateRuleset(base).ok);
+  ck("R15a 缺少 tacticalDirector ⇒ 通過，且視為 static", validateRuleset(base).ok && tacticalDirectorModeOf(base) === "static");
+  ck("R15b tacticalDirector=\"static\" ⇒ 通過", validateRuleset(withTd("static")).ok && tacticalDirectorModeOf(withTd("static")) === "static");
+  for (const v of ["dynamic", "adaptive", "", "Static", null, undefined, 0, 1, true, false, {}, ["static"]])
+    ck(`R15c tacticalDirector=${JSON.stringify(v) ?? "undefined"} ⇒ 拒絕（tacticalDirector）`, (() => { const r = validateRuleset(withTd(v)); return !r.ok && r.errors.includes("tacticalDirector"); })());
+  ck("R15d 只接受 static（模式清單凍結）", Object.isFrozen(TACTICAL_DIRECTOR_MODES) && TACTICAL_DIRECTOR_MODES.join(",") === "static");
+  //  v20 三份 ruleset 與 resolveRulesetForMode 的輸出，與變更前的值逐字相同（setup 雜湊／golden 依賴它們）
+  const V20_BEFORE = {
+    "career.v20": '{"kind":"production","layers":{"assemblyOrder":"live","battleTalents":true,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":true,"objectiveLayout":"bySeed","playerStatSides":"blue","redTactic":"styleTemplate","tacticIdentity":true},"releaseRequirements":["heroSkillsV1","heroBattleTalentsV1","itemsV1"],"rulesetId":"career.v20","simVersion":"moba-sim.v20","version":"MatchRuleset.v1"}',
+    "challenge.v20": '{"kind":"production","layers":{"assemblyOrder":"challengeV20","battleTalents":false,"heroPassives":false,"heroPowerCurve":false,"heroSkills":false,"items":false,"objectiveLayout":"standard","playerStatSides":"both","redTactic":"snapshot","tacticIdentity":true},"releaseRequirements":[],"rulesetId":"challenge.v20","simVersion":"moba-sim.v20","version":"MatchRuleset.v1"}',
+    "balanceTool.v20": '{"kind":"tool","layers":{"assemblyOrder":"live","battleTalents":true,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":true,"objectiveLayout":"bySeed","playerStatSides":"none","redTactic":"std","tacticIdentity":true},"releaseRequirements":[],"rulesetId":"balanceTool.v20","simVersion":"moba-sim.v20","version":"MatchRuleset.v1"}',
+  };
+  for (const [id, lit] of Object.entries(V20_BEFORE))
+    ck(`R16 ${id} 與變更前逐字相同（未加 tacticalDirector）`, stableStringify(MATCH_RULESETS[id]) === lit && !("tacticalDirector" in MATCH_RULESETS[id].layers));
+  const outs = [];
+  for (let m = 0; m < 8; m++) outs.push(stableStringify(resolveRulesetForMode({ mode: "career", flags: { heroSkillsV1: !!(m & 1), heroBattleTalentsV1: !!(m & 2), itemsV1: !!(m & 4) } })));
+  outs.push(stableStringify(resolveRulesetForMode({ mode: "challenge", flags: {} })));
+  outs.push(stableStringify(resolveRulesetForMode({ mode: "career", flags: undefined })));
+  ck("R17 resolveRulesetForMode（career 8 種旗標組合＋challenge＋無旗標）輸出與變更前相同",
+    createHash("sha256").update(outs.join("\n")).digest("hex").slice(0, 16) === "11093581c4605dae" && outs.every((s) => !s.includes("tacticalDirector")));
+}
 console.log(`\nMatch Ruleset 3a：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`); process.exit(fail ? 1 : 0);

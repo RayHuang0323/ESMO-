@@ -13,6 +13,10 @@ export const LAYER_RELEASE_FLAG = Object.freeze({
   battleTalents: "heroBattleTalentsV1",
   items: "itemsV1"
 });
+export const TACTICAL_DIRECTOR_MODES = Object.freeze(["static"]);
+export const DEFAULT_TACTICAL_DIRECTOR_MODE = "static";
+/** 讀取 ruleset 的 tacticalDirector 層；缺少 ≡ "static"。 */
+export const tacticalDirectorModeOf = (r) => r?.layers?.tacticalDirector ?? DEFAULT_TACTICAL_DIRECTOR_MODE;
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 export const MATCH_RULESETS = Object.freeze({
   "career.v20": R({ rulesetId: "career.v20", kind: "production", simVersion: "moba-sim.v20",
@@ -60,6 +64,10 @@ export function validateRuleset(r) {
   if (!["blue", "both", "none"].includes(r?.layers?.playerStatSides)) errors.push("playerStatSides");
   if (!["bySeed", "standard", "explicit"].includes(r?.layers?.objectiveLayout)) errors.push("objectiveLayout");
   if (!ASSEMBLY_ORDERS.includes(r?.layers?.assemblyOrder)) errors.push("assemblyOrder");
+  //  Phase 3a-C1：可選層 tacticalDirector——欄位不存在 ≡ "static"（Director 原樣回傳設定的 knobs＝今天的行為）。
+  //  C1／C2 只收 "static"；其他值一律拒絕，避免有人開啟尚未實作的行為（RS-1 精神）。
+  //  v20 三份 ruleset 不加此欄位（整份進 setup 雜湊，加欄位會改變每一份 setup 的身分）。
+  if (r?.layers && "tacticalDirector" in r.layers && !TACTICAL_DIRECTOR_MODES.includes(r.layers.tacticalDirector)) errors.push("tacticalDirector");
 
   // RS-1: For production rulesets, every enabled layer must have its flag in releaseRequirements
   if (r?.kind === "production") {

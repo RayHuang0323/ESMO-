@@ -523,7 +523,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  只影響提供給玩家挑的清單，不改任何輸入的解析結果（createTacticPlan／resolver 驗的仍是結構上合法）：golden 39 案仍逐位元相同。
   //  同批另有：矛盾提示（tacticIndicators.js，不在語意清單內）改為證據含撤下選擇的規則不回報；planProblems 多一段註解——兩者都不改指紋（註解不計）。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 e66f38390c351919 未曾發布）。
-  "moba-sim.v21": "a7d5b68e24d1f313",
+  //  2026-10-15（Phase 3a-C1）：matchRuleset.js 多了可選層 tacticalDirector（缺少 ≡ "static"；validateRuleset 只收 "static"）與兩個讀取輔助。
+  //  v20 三份 ruleset 與 resolveRulesetForMode 的輸出逐字不變（tools/check_match_ruleset_3a.mjs R16／R17）、沒有任何檢查點讀它 ⇒ 不是語意變化：
+  //  golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 a7d5b68e24d1f313 未曾發布）。
+  "moba-sim.v21": "29140fe0cb5a4c86",
 });
 
 export const isKnownSimulationVersion = (v) =>
