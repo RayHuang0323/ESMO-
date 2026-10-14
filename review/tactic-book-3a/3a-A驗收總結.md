@@ -1,5 +1,7 @@
 # Phase 3a-A 驗收總結（給 Owner Review）
 
+> **最新狀態註記：** 2026-10-15 Owner 已正式核准 Phase 3a-A Architecture（ACCEPTED）。本文件保留 10/14 驗收時的歷史狀態，最新完整驗收與核准紀錄請參考 docs/handoff/05_Sprint紀錄.md。核准僅限基礎架構，不代表 T13 戰術書 UI 或完整戰術產品已完成。
+
 日期：2026-10-14　分支：`feature/moba-phase3a`（只在本機；未 push、未 deploy、未整合 main）
 狀態：**3a-A 的架構項目已實作並通過各自的檢查；T14 全套驗收尚未跑完（見 3.3 節），T13 戰術書畫面未驗收。「戰術產品完整」未達成。** 3a-A 是否算完成由 Owner 決定；本文不下這個結論。
 
