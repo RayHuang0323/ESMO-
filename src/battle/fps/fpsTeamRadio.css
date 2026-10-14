@@ -1,0 +1,10 @@
+.fps-team-radio { min-width:0; padding:10px 0; font-size:12px; }
+.fps-team-radio summary { cursor:pointer; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.fps-team-radio-latest { opacity:.75; overflow-wrap:anywhere; min-width:0; }
+.fps-team-radio-controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+.fps-team-radio-controls button { font:inherit; min-height:44px; border:1px solid currentColor; background:transparent; color:inherit; border-radius:8px; padding:6px 12px; cursor:pointer; }
+.fps-team-radio-controls button:disabled { opacity:.5; cursor:default; }
+.fps-team-radio-controls button:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
+.fps-team-radio small { opacity:.65; display:block; overflow-wrap:anywhere; }
+.fps-team-radio ol { padding-left:20px; max-height:160px; overflow:auto; }
+.fps-team-radio li { margin:6px 0; overflow-wrap:anywhere; }

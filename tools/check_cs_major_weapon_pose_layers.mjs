@@ -149,7 +149,20 @@ try {
     const renderer = fs.readFileSync(new URL('../src/battle/fps/presentation/FpsCharacterRenderer.js', import.meta.url), 'utf8');
     assert.match(renderer, /clipMap\(animationLibrary, optimized\)/);
     assert.match(renderer, /if \(optimized && !controller\.poseLayers\)/);
-    assert.ok(!renderer.includes('optionalClips.reload')); assert.ok(!renderer.includes('optionalClips.crouch'));
+    // B7 now has authoritative handling fields. Preserve the original
+    // no-fake-events guarantee with actual legacy/missing-authority fixtures.
+    fixture({}, f => {
+      const p={...f.player,stance:'crouched',reloading:true,reloadStartedAtMs:0,reloadEndsAtMs:3000};
+      f.update({player:p,roundTimeMs:1500});
+      assert.ok(!f.c.poseLayers.lowerName.startsWith('Crouch'));
+      assert.notEqual(f.c.poseLayers.upperName,'Pistol_Reload');
+    });
+    fixture({optimized:false}, f => {
+      f.update({player:{...f.player,weaponHandlingVersion:1,stance:'crouched',reloading:true,reloadStartedAtMs:0,reloadEndsAtMs:3000},roundTimeMs:1500});
+      assert.ok(!f.c.poseLayers?.active);
+      assert.notEqual(f.c.currentAction,'Pistol_Reload');
+      assert.ok(!f.c.currentAction.startsWith('Crouch'));
+    });
   });
   check('來源 GLB bytes 及共享 tracks 完全不變', () => { assert.ok(assets.unchanged()); assert.equal(snapshot(), originalClips); });
 } finally { assets.dispose(); }

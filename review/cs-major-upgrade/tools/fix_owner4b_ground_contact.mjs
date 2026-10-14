@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import {createHash} from 'node:crypto';
+const sha=b=>createHash('sha256').update(b).digest('hex');
+const files=['src/battle/fps/presentation/fpsVisibleGrounding.js','src/battle/fps/presentation/FpsCharacterRenderer.js'],before=files.map(path=>({path,bytes:fs.readFileSync(path)}));
+const out='review/cs-major-upgrade/evidence/owner4b-review-20261014/ground-contact-diagnostic-delta.json';if(fs.existsSync(out))throw Error('Refuse overwrite');
+let s=before[0].bytes.toString('utf8');s=s.replace('let gap=Infinity,samples=0;','let gap=Infinity,samples=0,contactY=null;');
+s=s.replace('gap=Math.min(gap,point.y-sampleGroundHeight(point.x,point.z));samples++;','const floor=sampleGroundHeight(point.x,point.z),candidate=point.y-floor;if(candidate<gap){gap=candidate;contactY=floor;}samples++;');
+s=s.replace('return{gap,samples};','return{gap,samples,contactY};');fs.writeFileSync(files[0],s);
+s=before[1].bytes.toString('utf8').replace('controller.groundSupportSamples=measured.samples;','controller.groundSupportSamples=measured.samples;\n          controller.groundContactY=measured.contactY;');
+s=s.replace('controller.deathGroundContactY=riggedRoot.getWorldPosition(controller._groundPosition||(controller._groundPosition=new THREE.Vector3())).y+controller.groundOffset;','controller.deathGroundContactY=controller.groundContactY??null;');fs.writeFileSync(files[1],s);
+fs.writeFileSync(out,JSON.stringify({schema:'cs-ground-contact-diagnostic-delta.v1',scope:'Record sampled contact surface Y, not root Y plus model offset; pose/root/authority/offset calculation unchanged',files:before.map(row=>({path:row.path,beforeSha256:sha(row.bytes),beforeBase64:row.bytes.toString('base64'),afterSha256:sha(fs.readFileSync(row.path))})),reusable:'Ground Browser anchor 22/22; diagnostic fields only, original logs and archive retained'},null,2),{flag:'wx'});

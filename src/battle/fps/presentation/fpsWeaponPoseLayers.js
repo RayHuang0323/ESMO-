@@ -68,7 +68,7 @@ export function createFpsWeaponPoseLayers({ model, mixer, actions }) {
     get currentAction() { return current[1]; },
     get upperName() { return names[1]; },
     get lowerName() { return names[0]; },
-    update({ lower, upper, firing = false, fireEvent = false, paused = false }) {
+    update({ lower, upper, firing = false, fireEvent = false, paused = false, upperProgress = null, lowerTimeScale = 1 }) {
       const first = !active;
       if (first) {
         actions.forEach(action => action.stop());
@@ -77,7 +77,12 @@ export function createFpsWeaponPoseLayers({ model, mixer, actions }) {
       // 暫停保留兩層及淡出時間；seek／reset 後則立刻呈現目標姿態。
       if (paused && !first) return;
       select(lower, false, false, false, first || paused);
+      if (current[0]) current[0].setEffectiveTimeScale(Number.isFinite(lowerTimeScale) && lowerTimeScale > 0 ? lowerTimeScale : 1);
       select(upper, true, firing, fireEvent, first || paused);
+      if(Number.isFinite(upperProgress)&&current[1]){
+        current[1].time=Math.max(0,Math.min(1,upperProgress))*current[1].getClip().duration;
+        current[1].setEffectiveTimeScale(0);
+      }else if(current[1])current[1].setEffectiveTimeScale(1);
     },
     cleanup() {
       for (const [action, end] of retiring) {

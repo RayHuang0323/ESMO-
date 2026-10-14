@@ -1,0 +1,21 @@
+import * as THREE from 'three';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {createUtilityPresentation} from '../src/battle/fps/presentation/fpsUtilityPresentation.js';
+const group=new THREE.Group(),textures=Object.fromEntries(['smoke','fire','glow','flash'].map(k=>[k,new THREE.Texture()])),sphereGeometry=new THREE.SphereGeometry(1,8,6),floor=2.2;
+let floorCalls=0;
+const fx=createUtilityPresentation({group,textures,sphereGeometry,sampleGroundHeight:()=>{floorCalls++;return floor;}}),W={vx:x=>x-50,vz:y=>y-50},results=[],samples=[];
+const he={id:'he-inferno-raised',type:'he',flying:false,t:1,boom:3,detonatedAtRoundSec:20,from:{x:75,y:74},to:{x:80,y:74}},flash={...he,id:'flash-world',type:'flash'};
+const ck=(label,fn)=>{try{fn();results.push({label,ok:true});console.log('PASS '+label);}catch(e){results.push({label,ok:false,error:e.message});console.log('FAIL '+label+' '+e.message);}};
+function sample(age,{throwables=[he],players=[],time=0}={}){const base={rnd:0,roundSec:20,players,smokes:[],mollys:[],throwables},next={...base,roundSec:20.5,throwables:throwables.map(t=>({...t,boom:2}))};const before=JSON.stringify([base,next]);fx.update({frame:base,nextFrame:next,sub:age/.5,time,W,frameIndex:0});assert.equal(JSON.stringify([base,next]),before);const visible=[];group.traverse(o=>{if(!o.material||!o.visible)return;for(let p=o.parent;p&&p!==group;p=p.parent)if(!p.visible)return;visible.push({name:o.name,type:o.type,position:o.getWorldPosition(new THREE.Vector3()).toArray(),scale:o.scale.toArray(),opacity:o.material.opacity,map:o.material.map===textures.glow?'glow':o.material.map===textures.flash?'flash':o.material.map===textures.fire?'fire':'other'});});samples.push({age,time,visible});return visible;}
+const start=sample(.03);
+for(const part of ['contact','spark','dust'])ck('raised-floor HE '+part+' anchors above actual floor',()=>{const p=start.filter(o=>o.name.startsWith('fps-he-'+part+'-'));assert.ok(p.length>0,'Expected actual visible '+part);assert.ok(p.every(o=>o.position[1]>floor),JSON.stringify(p));});
+ck('HE presentation calls authoritative ground sampler',()=>assert.ok(floorCalls>0));
+ck('blinded actor never emits a world-space white halo',()=>assert.equal(sample(0,{throwables:[],players:[{id:'ct1',pos:{x:80,y:74},blindSec:12,flash:6}]}).length,0));
+ck('flash has a genuine brief world burst at onset',()=>assert.ok(sample(.03,{throwables:[flash]}).length>0));
+ck('flash world burst ends by .151s while saved blindness remains 12s',()=>{const actor={id:'ct1',pos:{x:80,y:74},blindSec:12,flash:6};assert.equal(sample(.151,{throwables:[flash],players:[actor]}).length,0);assert.equal(actor.blindSec,12);});
+ck('raised-floor pose remains stationary on pause and restores after seek',()=>{const a=sample(.10,{time:1});assert.deepEqual(sample(.10,{time:999}),a);sample(.40);assert.deepEqual(sample(.10),a);});
+fx.dispose();sphereGeometry.dispose();Object.values(textures).forEach(t=>t.dispose());
+const source=['src/battle/fps/presentation/fpsUtilityPresentation.js','src/battle/fps/presentation/fpsHeVfx.js'],report={schema:'cs-owner4c-he-flash-ground.v1',source:source.map(file=>({file,sha256:createHash('sha256').update(fs.readFileSync(file)).digest('hex')})),scope:'Actual module CPU boundary: true raised floor, short world flash, no blind halo; NOT_RENDERED',floor,floorCalls,results,samples,pass:results.filter(r=>r.ok).length,total:results.length,gpuRun:false,simulationRun:false,visualAcceptance:'NOT_RENDERED'};
+const arg=process.argv.indexOf('--report');if(arg>=0)fs.writeFileSync(process.argv[arg+1],JSON.stringify(report,null,2),{flag:'wx'});console.log(`Owner4C HE/flash/floor: ${report.pass}/${report.total} PASS`);process.exitCode=report.pass===report.total?0:1;

@@ -288,7 +288,9 @@ async function startOwnedDevServer({ port, base = "/ESMO-/", timeoutMs = DEFAULT
  * WebSocket 開啟也有明確逾時。
  */
 async function launchOwnedChrome({ url, port, headless = true,
-  targetTimeoutMs = DEFAULT_TIMEOUTS.chromeTargetMs, wsOpenMs = DEFAULT_TIMEOUTS.wsOpenMs, workspaceOnly = false } = {}) {
+  targetTimeoutMs = DEFAULT_TIMEOUTS.chromeTargetMs, wsOpenMs = DEFAULT_TIMEOUTS.wsOpenMs, workspaceOnly = false, angleBackend = null } = {}) {
+  if(angleBackend!==null&&!['gl','d3d11'].includes(angleBackend))throw new HarnessError('ANGLE後端只允許gl／d3d11或原預設');
+  if(angleBackend&&headless)throw new HarnessError('指定實際GPU後端須headed Chrome');
   const exe = CHROME_CANDIDATES.find((p) => existsSync(p));
   if (!exe) throw new HarnessError(`找不到 Chrome：${CHROME_CANDIDATES.join(" / ")}`);
   const cdpPort = port ?? await allocatePort();
@@ -307,6 +309,7 @@ async function launchOwnedChrome({ url, port, headless = true,
     "--disable-backgrounding-occluded-windows",
     "--window-size=1280,900",
   ];
+  if(angleBackend)args.push(`--use-angle=${angleBackend}`);
   if (headless) args.push("--headless=new", "--disable-gpu", "--disable-gpu-sandbox", "--no-sandbox");
   args.push(url);
 
@@ -487,7 +490,7 @@ export async function runGate({
   //    起本地 dev server。傳了就跳過 startOwnedDevServer，其餘（Chrome 擁有權、
   //    總時限、PASS / PRODUCT_FAIL / HARNESS_FAIL 分類、保證收尾）完全相同。
   //    正式站是打包後的 bundle，沒有 `/src/...` ⇒ gate 內只能點 UI 與讀 localStorage。
-  externalUrl = null, workspaceOnly = false,
+  externalUrl = null, workspaceOnly = false, angleBackend = null,
 } = {}) {
   const startedAt = Date.now();
   let phase = "startup";
@@ -506,7 +509,7 @@ export async function runGate({
       server = await startOwnedDevServer({ port, base, timeoutMs: DEFAULT_TIMEOUTS.devServerStartMs });
     }
     const targetUrl = externalUrl ?? server.url;
-    chrome = await launchOwnedChrome({ url: targetUrl, port: cdpPort, headless, workspaceOnly });
+    chrome = await launchOwnedChrome({ url: targetUrl, port: cdpPort, headless, workspaceOnly, angleBackend });
 
     phase = "test";
     await Promise.race([
@@ -535,7 +538,7 @@ export async function runGate({
 
   const elapsedMs = Date.now() - startedAt;
   const evidence = {
-    name, verdict, pass, fail, elapsedMs,
+    name, verdict, pass, fail, elapsedMs, angleBackendRequested:angleBackend||'default',
     failurePhase: verdict === "HARNESS_FAIL" ? harnessReason : null,
     ports: { vite: server?.port ?? null, cdp: chrome?.port ?? null },
     pids: { vite: server?.pid ?? null, chrome: chrome?.pid ?? null },

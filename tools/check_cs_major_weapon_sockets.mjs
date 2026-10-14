@@ -120,6 +120,8 @@ function cleanup(fixture) {
 
 try {
   const character = await loadActualGlb(FILES[0]), animations = await loadActualGlb(FILES[1]);
+  const weaponAssets = {};
+  for(const family of Object.keys(FAMILY_GUNS))weaponAssets[family]=(await loadActualGlb(`public/assets/fps/major-weapons-v1/${family}.glb`)).scene;
   check("真實 GLB／65 骨骼與動畫 clip，僅記憶體去除 image slots", () => {
     expect(character.scene.getObjectsByProperty("isBone", true).length === 65 && character.scene.getObjectsByProperty("isSkinnedMesh", true).length > 0, "來源不是真實 rig");
     expect(animations.animations.some(clip => clip.name === "Pistol_Aim_Neutral"), "來源缺少真實持槍動畫");
@@ -131,15 +133,21 @@ try {
   });
   for (const side of ["ct", "t"]) for (let i = 0; i < 5; i++) {
     const player = { id: `${side}${i + 1}`, side, role: ROLES[i], gun: Object.values(FAMILY_GUNS)[i] }, beforePlayer = JSON.stringify(player);
-    const major = makeFixture(character.scene, player, { optimized: true, handWeaponMount: true });
-    const mobile = makeFixture(character.scene, player, { optimized: true, handWeaponMount: true, mobile: true });
+    const major = makeFixture(character.scene, player, { optimized: true, handWeaponMount: true, weaponAssets });
+    const mobile = makeFixture(character.scene, player, { optimized: true, handWeaponMount: true, mobile: true, weaponAssets });
     const batched = makeFixture(character.scene, player, { optimized: true });
     const legacy = makeFixture(character.scene, player, { optimized: false, handWeaponMount: true });
-    check(`${player.id} 新姿態不增加真 Mesh／triangles／材質，維持原預算`, () => {
+    check(`${player.id} 真來源socket不增加繪製資產，私有成本維持原預算`, () => {
       const baseline = resources(batched.root, true);
+      const desktop = resources(major.root, true);
       for (const fixture of [major, mobile]) {
         const actual = resources(fixture.root, true);
-        expect(actual.meshes === baseline.meshes && actual.triangles === baseline.triangles && actual.material.size === baseline.material.size, "socket 增加繪製資產");
+        expect(actual.meshes === desktop.meshes && actual.triangles === desktop.triangles && actual.material.size === desktop.material.size, "desktop/mobile 私有資產不一致");
+        expect(actual.meshes <= baseline.meshes && actual.triangles <= baseline.triangles && actual.material.size <= baseline.material.size, `來源共用後私有成本超過原kit ${JSON.stringify({actual:{meshes:actual.meshes,triangles:actual.triangles,materials:actual.material.size},baseline:{meshes:baseline.meshes,triangles:baseline.triangles,materials:baseline.material.size}})}`);
+        for(const family of Object.keys(FAMILY_GUNS)) {
+          expect(fixture.state.weaponGroups[family].userData.esmoAuthoredWeapon?.imported===true,"fixture未使用產品GLB");
+          for(const socket of Object.values(fixture.state.weaponSockets[family]))socket.traverse(object=>expect(!object.isMesh&&!object.geometry&&!object.material,"socket含新增繪製資產"));
+        }
         expect(actual.triangles <= 5200 && actual.material.size <= 8 && fixture.root.getObjectsByProperty("isBone", true).length === 65, "原成本／骨架預算超標");
       }
       expect(resources(mobile.root, true).meshes > 0 && mobile.state.quality === "mobile", "mobile 人物未保留");

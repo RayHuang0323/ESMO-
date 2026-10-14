@@ -1,4 +1,10 @@
-# CS/FPS Major Upgrade（Owner Review 候選）
+> 2026-10-11 Owner 最新指示：人物美術接受目前完成度，停止人體／手指完美化，不再以舊獨立 1／U findings 阻擋反覆追修；原審查分數與遮擋限制保留，不宣稱獨立藝術 PASS 或量測90分。只收必要 B 技術驗證後直接 C → D → E，完成停 Owner Review，不 push／deploy、不動 MOBA。升級完成後已授權清理本 CS 工作區淘汰 evidence／profile-builds，保留最終可用版、必要完整驗證紀錄、素材授權與唯一恢復點；執行前逐份核對明確清單、resolved path、連結及使用中程序。 最新技術結果與執行狀態見 review/cs-major-upgrade/RESUME_CHECKPOINT.md。
+
+> CS Major已完成必要實作與驗證，■ A／B／C／D／E，停Owner Review。指定B7 GPU45/45/95720ms未重跑，C37/42/34、D51與新增input15/Browser15、契約28/完成36、正式flow25+終局8、Worker12、雙尺寸三圖60s各18全依真native收件；完整成果與限制見review/cs-major-upgrade/OWNER_REVIEW.md。不push/deploy/commit、不動MOBA，真手機與視覺待Owner驗收。
+
+## 2026-10-08 歷史狀態：B7仍未放行（以checkpoint最新段為準）
+
+■ A｜▣ B7｜□ C｜□ D｜□ E；尚未Owner Review。anatomy-taper局部GPU17/17、衣料37/37及4/4pixels均native0，但獨立四圖肘／布袖口仍1；蒙皮摺高中位僅7–8mm，正在修正可見回折面與摺形。最新source與實際執行狀態唯一入口：review/cs-major-upgrade/RESUME_CHECKPOINT.md；當次審查合併VISUAL_REVIEW_B7_CUFF_RECOVERED_20261008.md。先前完整56圖藝術否決仍保存，不能以局部或技術PASS覆蓋。esbuild原失敗為OOM／環境問題；另查出Worker CSS注入真回歸已修，12/12只屬該source。證據產出已改局部4PNG／純量測0PNG／同源archive共用／CS-only封存；盤點與清理邊界見EVIDENCE_RETENTION.md，未刪歷史資料。不push／deploy、不動MOBA，真手機FPS／觸控／safe area／音效未實測。
 
 ## 範圍與正式基準
 
@@ -14,10 +20,10 @@
 |---|---|---|---|
 | Baseline | 三圖、10 角色、桌機／390 視窗、載入與 renderer／memory | 同 seed、1×、GPU／viewport／DPR／build 清楚記錄 | DEV 實際 GPU 已完成；production 對照待補 |
 | A | 原創場景、建築、材質、區域地標、掩體與路線對齊 | 實際 Battle 截圖、效能比較、導航／LOS／地圖 verifier | A37通過場景階段最低門檻；完整24PNG World2，最終頂級品質／整體polish仍待E |
-| B | rig、持槍、武器差異、聲音與 feedback | 動作／槍聲／hit/death 真事件、效能比較 | 唯讀稽核進行中 |
-| C | peek／hold／entry／trade／crossfire／lurk／rotate／fake／execute／retake／clutch／save／eco | 決策→路徑→事件證據；同 seed 決定性及雙方測試 | 未開始 |
-| D | HUD／economy／spectator／Replay／Result 與真統計 | 正式流程、舊契約相容、320／360／390／430 版面 | 未開始 |
-| E | 效能與整體 polish | 最終同情境效能、整體 verifier、Owner Review 報告 | 未開始 |
+| B | rig、持槍、武器差異、聲音與 feedback | 動作／槍聲／hit/death 真事件、效能比較 | Owner接受美術＋必要技術PASS；指定390 GPU45/45與Worker12/12沿用，不重做 |
+| C | peek／hold／entry／trade／crossfire／lurk／rotate／fake／execute／retake／clutch／save／eco | 決策→路徑→事件證據；同 seed 決定性及雙方測試 | C1 37/37、coordinator42/42、runtime34/34 native0；legacy24/24與completion36/36保持 |
+| D | HUD／economy／spectator／Replay／Result 與真統計 | 正式流程、舊契約相容、320／360／390／430 版面 | Node51、原48重播行為＋分段四寬度、新input15與真Legacy Browser15收件；真手機未測 |
+| E | 效能與整體 polish | 最終同情境效能、整體 verifier、Owner Review 報告 | 正式flow25＋終局8、Worker12、最新build1、雙尺寸各18/18 native0；舊archive明確10清理完成，停Owner Review |
 
 Phase 未通過，不推進下一 Phase。明顯 frame-time regression 先修正。
 
@@ -472,3 +478,219 @@ AMD Radeon(TM) Graphics，headed Chrome，seed `505001`，1×、10 秒活動取�
 - POV借用既有真五族 geometry／material、grip／muzzle，不造替代武器；角色ID查asset，私有手／flash與事件時鐘。major camera必須在scene hierarchy才渲染子Mesh。首輪87技術通過卻無可見槍的失敗已保留並補scene gate；修正來源401bf403d6a065e2edf7c2d30bc034b9bb3827975aa9c4e9e5e6e643d256a9ad、Node25／Worker12／兩尺寸87與24PNG保存。近看槍造型仍方塊化，列後續原創武器美術，不冒称成熟FPS品質。
 - 短樣本390max166.7／150ms保留；同品質60秒靜音B4／B5約59.99／60.02、p99均16.8，開聲A/B仍待。POV另3秒paused raster只證明該情境成本，不是完整交戰／真手機。效能門檻未確認前不增加角色幾何。
 - 人物改造應major-only衍生連續蒙皮服裝取代Cylinder／RoundedBox proxy，保留65骨與socket／原動畫；不可直接露出來源superhero肌肉，也不可修改共用source geometry。計實際可見tri、共享生命週期、mobile shadow與同鏡位實測。可靠蹲換彈資料、槍造型、環境音、D遮擋與C–E仍待，未READY_TO_REVIEW。
+
+### B7 動作資料切片與武器精修 brief（2026-10-05，續跑）
+
+- 唯一彈量來源：major回合初始化 `fpsWeaponHandling.js`，每把容量、三匣備彈；手槍1800／SMG2200／步槍2500／狙擊3000／霰彈2800ms換彈。這是本遊戲候選設定，非官方CS規則。真射擊逐發扣彈；空匣後才換彈，死亡取消、拾槍保留剩彈。禁止靠呈現層補算彈量。
+- 蹲姿來自模擬靜止hold／cover／engage；目前沒有蹲走或命中倍率。frame只存純量與round-local ms，真GLB蹲姿腿部／通用Pistol_Reload上層互斥，以保存時刻定位action。五族專用換彈美術仍未完成；legacy無新欄位／RNG，逐格與固定baseline守門保留。
+- 21項新動作verifier、26項B4、19項生命週期、25項POV、20項服裝、24項三圖simulation、build及正式Worker12項已過。首次19/21與過時B4 literal禁止新接線25/26完整失敗log保留，修正原因見Sprint新節；未跑全121段。
+- Mirage真UI換彈中途pause／seek與蹲姿，1366／390各27/27 PASS exit0；固定browser情境的Dust2／Inferno沒有合適換彈中段，列SKIP_NO_ELIGIBLE_FRAME。Node Inferno有9個換彈frame不能替代Chrome情境。兩次缺前提HARNESS_FAIL exit2保留；不改seed／產品／門檻。
+- 武器精修：五族沿用原創Vector-9共享第三人稱／POV來源。以切角機匣、可讀握把、槍托、護木、鏡筒及功能性表面取代方塊輪廓；保留真grip／muzzle，增加各族support grip。掌心、指節、拇指與袖口使用合批私有geometry，貼來源socket；不增加命中／碰撞規則。
+- 技術美術：共用metal／polymer／dark材質，不新增貼圖、燈光或post；細節沿剛性mount合批，POV借geometry／material、手部資源私有且dispose一次。每族POV總mesh≤12保持，新增三角形預算每族≤1500；DPR／shadow不降以掩蓋成本。交戰draw calls既有約490–523超初始技能建議，E仍需量測優化。
+- 本輪已讀AAA visual-scorecard、implementation-blueprint、model-recipes、render-recipes、technical-art與procedural／performance checklists。threejs-3d-generator／image-generator／audio-generator在技能path ladder均不存在，使用Director fallback；Git Bash官方probe已實跑，`TRIPO_API_KEY=MISSING`、`GEMINI_API_KEY=MISSING`、`ELEVENLABS_API_KEY=MISSING`（完整輸出在ignored evidence/b7-asset-credential-probe-20261005.log）。不假稱已讀缺失技能或成功呼叫生成API。
+- 資產ledger：人物沿既有Quaternius CC0 rig＋原創服装atlas混合；武器原創程序精修，外部3D來源受上述缺技能／credential阻擋；手部原創程序合批；音效沿既有CC0真錄音，環境音仍待可靠來源與接線。缺外部來源不等於premium通過，圖片驗收、完整效能與真手機仍待。
+
+### B7 Owner武器品質追修：來源模型、真手、權威POV換彈（2026-10-05）
+
+- Owner否決程序積木槍，前節程序來源限制已由實際合法下載解決。major-only以五族CC0 GLB取代程序主體，人物與POV共用geometry／PBR；各作者、原包、處理與限制見public/assets/fps/major-weapons-v1/SOURCES.md。並非22槍逐一或Valve原作素材：AWP仍共用SVD、Deagle仍共用M1911，逐槍外形對應是可見品質風險。
+- 擷取既有Quaternius來源真手指權重與瞄準骨姿，鏡像／平滑法線；每手1658tri，POV私有clone與袖口貼合。握點至槍口採pistol .23／smg .25／rifle .52／sniper .74／shotgun .55m，沿原grip／muzzle／support定位，不改彈道或碰撞。
+- 長槍白模根因是來源Blender材料未輸出PBR factor；新增Principled材料與保留面材質分區後，金屬／聚合物／木件實際可見，失敗比較圖仍保存。硬質反射共用有限DataTexture，末一actor釋放，不增常駐點光源。
+- 成本：武器2243／2708／3888／5388／3047tri，分族上限2400／2800／4000／5500／3200；本體<17000、私有kit≤5200／材質≤8維持，整人新增明列22000上限。服裝fixture改用實際來源模型，新增成本與legacy反例21/21；不把新增幾何當免費。
+- POV只讀保存frame的version=1換彈時間，通用抬轉槍與支援手姿態；不是作者五族專用clip。首次browser 28/30 PRODUCT_FAIL因相機追焦資料缺handling欄位，major接線改讀同一frame玩家後桌機30/30、390版46/46重驗通過。Node33/33，不用牆鐘、不寫ammo。
+- 環境音採SketchMan3 CC0 wind-loop原檔，251584 bytes，沿原單AudioContext控制loop、frame offset及低通／gain。純14/14、較早390三圖132/132與最新版Mirage46/46原生PCM／pause／mute測過；OS喇叭與真手機未測。
+- 最新雙尺寸三圖完整圖庫、60秒長樣本與獨立盲視覺review正在補驗。技術PASS不表示達到Owner要求的CS畫面或premium門檻；B7、C–E與A最終polish仍待，不push／deploy。
+
+### B7 武器品質盲審、共享材質與M4真PBR追修（2026-10-05 UTC07:47，未結案）
+
+- 舊版完整75張獨立Fresh-Eyes盲審平均1.4/3，採較低分，報告review/cs-major-upgrade/VISUAL_REVIEW_B7_20261005.md。粗簡手套／袖管、重複人物／方形建築與窄版人物卡遮槍尚未達Premium；新追修需再看全套圖片，不沿用舊評分作新版本驗收。
+- B1原socket補跑53/63，改真GLB fixture仍53/63，實測每actor武器複製19材質超原private 8。新增按共享reflection environment鍵控的有引用計數材質池，原來源不改，最後lease才dispose並先於reflection釋放；原本private geometry≤5200／材質≤8門檻保留。fixture改載實際五族GLB並檢查真import、無Mesh socket與原成本，63/63。完整原FAIL與診斷log保留；不是單改fixture消除真正產品成本問題。
+- 手／袖新增袖口皺摺、私有微表面與權威支援手逐次更新。首輪38/38雖PASS，production build警告THREE.RGBFormat不存在，保留log且不當紋理正常輸出；改合法RGBA資料、增加真資料／末一釋放反例，POV35/35。新版面板移出POV戰場，真UI檢查panel與canvas不相交、控制44px、無水平溢出，雙尺寸各39/39、原生exit0。仍未完成手套美術。
+- rifle換為nisu／3DModelsCC0作者CC0 M4A1（https://opengameart.org/content/m4a1-assault-rifle），原Base Color／Normal／Metallic-Roughness縮1K，9236→3772tri，主體＋原Magazine兩mesh，保留4000上限。原ZIP SHA ed5779ec82718861964227e2aad2a900978ea087081154365d6d86246be62f0d，成品GLB SHA 0d8f3f208b7f7b54d56185fa69abff6541727703ea124fe377579c6dc44da944。首候選FBX父transform重疊產生異常坐標，失敗GLB／JSON／log封存；烘入world transform並解除parent、加入有限bounds守門後再整合。舊Tabasco rifle封存，不丟失來源。
+- 真PBR fixture以textured rifle必須內嵌有效baseColor／normal／metallicRoughness texture與原Magazine，取代該族舊純factor三材質條件；未貼圖SMG／sniper原factor和白色反例仍保留。POV35／服裝21／socket63 runner 3/3、exit0，累計22/122非全套。兩尺寸M4各33/33、PASS／exit0。
+- POV原Magazine只在私有clone按保存換彈進度抽出／復位，支援手跟真彈匣；不修改ammo／actor來源。純35/35增強pause、前後seek及結束復位。最新phase-b7-author-magazine-reload-desktop-20261005/1366 Mirage41/41；mobile同名phase/390三圖107/107，PASS／原生exit0、原生console/page error 0。fingerprint 909511d50d344feae001f22ecb3230f7be12c5ff52db950249ed4c52b87f59c8（51檔）。只Mirage pistol／sniper有保存中段換彈；rifle及其餘缺情境全部NOT_MEASURED_NO_RECORDED_RELOAD，不改seed／frame、不冒稱步槍browser彈匣已過。圖庫新增每張實測canvas rect，像素工具用exact file匹配；舊缺rect圖保持未測。
+- 修改前雙尺寸三圖長樣本各114/114，390 FPS59.605／59.944／59.912、p99 17／16.9／17ms、max150／33.4／33.4；桌機Mirage與runner重疊22秒，保留有負載標記，乾淨同artifact補測59.301FPS／p99 17.2／max133.3ms。這些與舊build22.92秒均不是最新版本最終效能／正式build，不挪用。
+- 官方quota本輪codex剩64%，pauseRequired=false。手與袖仍需品質修整；另合法CC0 para/MakeHuman FPS arms原包已下載至ignored evidence供評估、尚未整合。Windows tar無LZMA，使用官方7-Zip portable 7zr置tmp解壓，不作全域安裝、不提交。B7未完成，C／D／E待；新工作未commit、不push／deploy、不動MOBA。
+
+### B7 解剖手型與GPU隔離取證（2026-10-05 UTC08:15，驗證中）
+
+- 合法CC0 para／MakeHuman FPS arms替換POV手部靜態幾何：只用原手指／掌骨權重、離線自製曲指握持姿態，3196→1756tri／手，保留1800上限；不採來源皮膚貼圖、sample animation／IK runtime，不改第三人稱原Quaternius。原hands.glb封存，來源／處理／ZIP及成品SHA已記public SOURCES。POV私有clone加原創掌背／指縫／袖口色與微表面；袖徑縮細、布色降低飽和。面板次級文字GC.blueL，現金按$N.N萬。
+- 真fixture純35／服裝21／socket63 runner3/3、原生exit0。原hand成本錯用position.count/3，現在按index?.count計真tri；1800上限不變。舊尺寸assert限定Quaternius開掌長厚，改實際人體曲指局部合理長寬厚範圍並增加上限／color attribute長度，不能靠無效巨型／零幾何過關。來源export初輪constraints.clear例外但Blender退出0且沒有成品，判FAIL；逐一remove並加--python-exit-code 1。第二輪保存Pose mode使select_all失敗exit1，轉OBJECT後成功；preview world缺失首輪exit1也保留。
+- browser初輪phase-b7-para-hand-grip-desktop-20261005為HARNESS_FAIL exit2、0/0，GPU recent crash且場景atlas未ready。隔離重跑desktop-clean為38/40 PRODUCT_FAIL exit1：shader驗證失敗，整場white、淡出program讀不到，完整PNG／log保留。未針對紅燈修改產品；舊PASS封存artifact與同一新手型artifact各9/9基本gate／exit0／console 0，新手型真POV實圖正常。支持GPU狀態問題，但不把原PRODUCT_FAIL抹成PASS，也不宣稱已證明根因。
+- 重新build三圖recovery再次GPU崩潰／CDP失去回應，確認僅本worktree私有Chrome PID100012、profile esmo-cdp-5WjM1e／port60409後停止該Chrome；RESULT=HARNESS_FAIL、原生exit2、0/0，283051ms、cleanup confirmed/profileRemoved，完整log保留。未停止使用者瀏覽器，不以無輸出推論測試通過。
+- 工具新增reuseCurrentPhase／reuseWidth，來源完整SHA及檔數必須與該封存build一致，全部public資產逐byte一致；才以同bundle跨地圖／視窗重取證，紀錄bundle SHA／來源關聯且不覆寫原verdict。trace／baseline混用仍拒絕，舊referencePhase禁止新probe規則不變。source drift反例實跑exit1，明確拒絕舊M4／舊手型build，不讓新來源沿用舊PASS。當前唯一GPU session12210，desktop-reuse三圖全武器／圖庫／音效／成本 gate；後續390再驗、像素與完整盲審／正式build仍待。
+- 像素advisory在前一909511來源版本：桌機11／窄版29張全部MEASURED、NOT_MEASURED0／ERROR0，真圖庫rect實測。不作Premium／PASS結論、不代替最新手型圖片。B7未結案，C／D／E待，新修改未commit，不push／deploy，不動MOBA。
+
+## 休眠前最新安全停點（2026-10-05，B7 未完成）
+
+- 本節優先於下方歷史 session 記錄。最新 GPU gates 已全部結束，已查無本輪 esmo-cdp／browser_measure／Worker gate 行程，沒有 build 或驗證在背景執行；因 Owner 準備出門與休眠，不啟動下一輪。
+- 原 checkpoint commit 已完整建立：0be09c29774c81e06113dc9cc649101d74114658。本輪新實作、素材、工具與文件已保存至磁碟，但全部仍未 commit，沒有 staged；原始素材 assets-source／tmp、browser profile、log、測試輸出不應提交，保留完整失敗證據。
+- 最新產品 fingerprint：6e17e6c9cac611869fb8cb6ea747853fb3085e23d03c809e820de09afec19787（51 檔）。封存成品：review/cs-major-upgrade/profile-builds/phase-b7-anatomical-grip-build-20261005-1366。buildOnly 18.11 秒／exit0 僅代表來源與 bundle manifest 保存，browser NOT RUN，不是正式 npm build 或 browser PASS。
+- 新版真曲指主手朝握把、支援手托護木；袖口按每手 quaternion 轉換的真腕點接合。POV 純 35／服裝 21／socket 63 通過，原每手 1800tri 上限保留；新增法線／index 合法與真腕點接合誤差 <1e-6，不改模擬、彈量或 legacy。runner 累計 22/122，非全套。
+- 最新預設 D3D11 桌機 phase-b7-anatomical-grip-desktop-20261005/1366：Mirage／Dust2 部分 74/74 後 Inferno GPU 崩潰，RESULT=HARNESS_FAIL／exit2，不能算三圖 PASS。僅確認本輪私有 Chrome 後停止，原 log／PNG／metrics 保留；M／D FPS 59.673／60.075、p99 16.9／16.8ms。
+- 同來源 OpenGL 三圖 phase-b7-anatomical-grip-desktop-gl-20261005/1366：110/110 PASS／exit0、console/page error 0；真 AMD OpenGL。FPS 18.480／19.040／19.628、p99 100／83.4／66.6ms，明顯慢，不能採為最終效能交付或直接與 D3D11 基線比較。harness 可選 gl／d3d11 僅作用於私有 Chrome，預設不變；真 renderer 前提斷言保留，拒絕 software。
+- 最新 390px D3D11 單圖：phase-b7-anatomical-grip-mobile-mirage-20261005/390 為 41/41 PASS／exit0，FPS 58.747、p99 17.7、max166.7ms；phase-b7-anatomical-grip-mobile-dust2-20261005/390 為 33/33 PASS／exit0，FPS59.768、p99 16.9、max49.9ms。兩輪 console/page error 0、Chrome cleanup confirmed／profileRemoved。只是桌機 GPU 的窄版 viewport，不是真手機。
+- 下一步醒來先查官方 quota（最近 UTC08:17 codex 剩61%，pauseRequired=false），再以同來源封存 build 單輪隔離補 390 Inferno 與桌機 Inferno D3D11；接著最新像素 advisory／完整同版 Fresh-Eyes 複審、B 正式 build／scoped 守門，才續 C → D → E。最新完整盲審與正式 build 尚未執行；舊版盲審1.4/3不能挪用。步槍 browser 中段換彈缺保存情境仍 NOT_MEASURED，不改 seed／frame 補圖。
+- 整體：B ▣（B7 品質與驗證中）→ C □ → D □ → E □。不動 MOBA、不 push、不 deploy；完成後停 Owner Review。休眠期間不承諾背景執行，續跑從本節開始，不重做已完成內容。
+
+## 連網續跑最新停點（2026-10-05 UTC13:35後，B7 複審中）
+
+- Owner 已連網並要求續跑；官方額度 UTC13:28:54 codex 剩59%，pauseRequired=false。原 checkpoint commit 0be09c29774c81e06113dc9cc649101d74114658 未改，新工作仍未 commit／staged；不動 MOBA、不 push／deploy。
+- 同產品 fingerprint 6e17e6c9cac611869fb8cb6ea747853fb3085e23d03c809e820de09afec19787、同封存 build，補齊 Inferno 隔離 D3D11：phase-b7-anatomical-grip-mobile-inferno-resume-20261005/390 與 desktop-inferno-resume/1366 各43/43 PASS／原生exit0、console/page error 0、Chrome/profile清理確認。390 FPS60.075／p99 17.1／max18ms；桌機60.078／p99 16.8／max16.9ms，只是10秒樣本與桌機GPU窄viewport，非真手機。原三圖74項部分HARNESS_FAIL與OpenGL低FPS歷史保留，不改原verdict。
+- 正式 npm run build 已成功，25.29秒／原生exit0，完整stdout/stderr與exit檔在 evidence/b7-formal-build-resume-20261005.*；既有大型chunk提示保留。與先前buildOnly的browser NOT RUN明確分開。
+- 完整同來源6集合共87 PNG像素fallback全87 MEASURED、0 NOT_MEASURED／0 ERROR，各工具exit0；不作Premium證明。完整索引與metrics為 evidence/b7-current-complete-review-inputs-20261005.json，獨立唯讀Fresh-Eyes只收圖片、scorecard與量測，不收原始碼／舊分數，正在逐張審查。
+- GPU gates均已結束。當前純驗證runner session25561：11段B scoped，前10段PASS，最後simulation進行中；不是11/11或全套PASS，完成必查原生exit與完整輸出形狀。log為evidence/b7-formal-scoped-resume-20261005.log，runner保存各段完整log及tools/.verify-state.json。
+- 下一步收runner與87圖獨立結論，武器／手／袖必要追修及同版重驗後才決定B結案；C→D→E未開始，最終Owner Review。任何新增圖片需納入完整複審，不沿用舊版評分宣稱完成。
+
+## B7 手套／袖品質追修最新停點（2026-10-05，GPU驗證中）
+
+- 87/87完整Fresh-Eyes獨立審核已完成，平均1.6/3；槍械2、握持／手套／袖各1，不放行B7。報告 VISUAL_REVIEW_B7_ANATOMICAL_20261005.md 對應6e17e6…版本，不挪作新版本審核。窄版通訊遮視野與人物輪廓重複留D／E，原三圖74項HARNESS_FAIL與OpenGL低FPS歷史保留。
+- 共用手／袖追修：沿私有真手geometry增加掌背／指節墊片、車線色分區，原每手1756tri／1800上限保留；手槍支撐掌改姿態與接觸方向，長槍托握分離；袖增加腕部壓縮、肘折與厚袖口，整套私有geometry實測≤5200，不新增Mesh／骨架／燈光、不改模擬或legacy。袖色讀同一actor服裝材質並copy，來源color不改。
+- Poly Haven作者Rob Tuytel CC0 Leather White／Fabric Pattern 05原1K OpenGL法線，逐byte MD5符合作者公開API；原JPEG無改／重壓縮，兩張估計10.67MiB RGBA+mipmap，非VRAM。只major有界app cache下載、POV借用不釋放；原privateRGBA fallback保留，法線就緒後停用重複bump。來源URL／license／MD5／SHA／成本在public SOURCES，API metadata只放ignored evidence。
+- verifier擴充原POV35項中的生命週期檢查，驗原作者bytes、私有RGBA一次釋放、借用normal不釋放、source衣色不改、真私有geometry≤5200；不改count／門檻。POV35／服裝21／socket63 runner3/3 PASS／原生exit0，累計22/122非全套。browser新增真解碼1024²／NoColorSpace／禁雙重bump／私有成本前提斷言，未放寬舊斷言。
+- 新source fingerprint 0ed1d11f352b1343e7960d0d9a1d5152017a4a88f85c2761808b6dc562c6eccb（53檔），buildOnly phase-b7-textile-contact-build-20261005-1366 已23.38秒／exit0，只保存來源與bundle，不是browser PASS／最新正式npm build。上一6e17e…正式build25.29秒與11/11守門都有效但屬前版，不挪用。
+- 當前唯一GPU session1314：phase-b7-textile-contact-mobile-mirage-20261005/390，同build與public逐byte核對，真保存幀五族／中段換彈／handling／音效／最新法線與成本gate。完整log／exit需收尾，不預報PASS。下一步看pistol／rifle／sniper reload真圖，必要追修後桌機／另兩圖、完整同版複審／長樣本／正式build，B通過才C→D→E。
+- 不動MOBA、不commit／push／deploy；原checkpoint SHA0be09c29774c81e06113dc9cc649101d74114658仍不變。官方quota最近UTC13:41:29 codex剩57%，pauseRequired=false；最終Owner Review，真手機仍未測。
+
+## B7 握持與抬槍校正最新停點（2026-10-05 UTC14:20後）
+
+- 原 checkpoint commit 已核對成功：0be09c29774c81e06113dc9cc649101d74114658；git log -5、status、cached/stat 已查，無 staged；後續產品、合法素材、工具及文件皆未 commit。tmp／assets-source 原始資料與 ignored evidence／log／browser profile 保留但不應 commit。不 push／deploy、不動 MOBA。
+- 下方 session1314／79785／82658 均已原生 exit0 結束，不是在背景執行。0ed1d…窄版 Mirage 58/58；6bc059…掌背校正版 Mirage 桌機與390各58/58，390 FPS59.277／p99 17.2／max133.4ms；各完整log／exit在evidence，尖峰留E追查。這些是前版，不替代目前版本的驗證。
+- B7仍未放行；87張前版獨立審核1.6/3且手／袖各1，報告保留。最新縮窄袖口與手套腕帶、沿真握把pivot向內偏轉、真保存shot以正pitch抬槍並向眼側kick；僅major呈現，不改ammo／shot／damage／legacy。真muzzle世界位置方向與pause／原frame不變新增1項因果測試，原35全部保留，POV成36；registry對齊36，不放寬斷言。runner POV36／服裝21／socket63 3/3 PASS／exit0，累計22/122非全套。
+- 最新fingerprint e6522607124340700863c83247d83c6b365c38c3e0bb7887a9eb6c16a352753f（53檔），buildOnly phase-b7-grip-pivot-build-20261005-1366 18.29秒／exit0，browser NOT RUN，最新正式npm build未跑。兩張CC0 1K法線原bytes／授權及借用生命期保留；SOURCES繁中寬字修正已納入新build。
+- 當前唯一GPU session74441：phase-b7-grip-pivot-desktop-mirage-20261005/1366，重用指紋與所有public逐byte相同的build；正在真保存幀五族／換彈／handling／音效gate，不預報PASS。下一步收完整log及原生exit、檢視pistol／rifle／sniper換彈→390與另兩圖同版→獨立全捕獲審核→長樣本／正式build／Worker後B結案，才C→D→E。
+- 官方quota UTC14:13:36 codex剩53%，pauseRequired=false。沒有正式goal物件，不偽造背景／goal狀態。最終停Owner Review，真手機FPS／觸控／音效未測。
+
+## B7 側向包握與袖皺最新停點（2026-10-05 UTC14:51）
+
+- 原 checkpoint commit 完整：0be09c29774c81e06113dc9cc649101d74114658。git log -5／status／cached-stat／diff-stat 已重查，無 staged；後續產品、合法素材、工具及文件皆未 commit。tmp／assets-source／ignored evidence、log、profile 保留但不應提交。不動 MOBA、不 push／deploy，最終 Owner Review。
+- 最新產品 fingerprint 6b5887fc627d0c5fc8c2db8db464363a83a4ddc4c72e1b05b1c9bedcd8648c5e（53檔），封存 phase-b7-side-grip-folds-build-20261005-1366，buildOnly 18.04秒／exit0；bundle cbb224fbf8fd113fcde89f4927d00f10f607a4d3c3a82c0a98aa44a8462991f0。最新正式 npm build／Worker／長樣本尚未跑，不沿用前版結果。
+- 左支援掌改向護木側面包握；原 CC0 真手骨姿重新匯出、掌背與指節護墊合入每手原 Mesh，各1773tri≤1800；袖真 geometry 三道斜壓皺／腕口收束，私有總5118tri≤5200。真腕接合、POV36／服裝21／socket63 全過，runner3/3原生exit0、累計22/122非全套。
+- 同來源最新 Mirage 桌機與390各42/42 PASS／原生exit0，各14 PNG共28張，像素各14/14 MEASURED／exit0。桌機58.908FPS、p99 33.3／max66.7ms；390約60.1FPS、p95約16.8ms、console/page error 0，只是桌機GPU窄viewport。完整log／exit／metrics在 evidence/phase-b7-side-grip-folds-{desktop,mobile}-mirage-20261005/{1366,390} 及 b7-side-grip-folds-*.log。session18951／56941／80853 均已結束；下方歷史GPU執行中記錄不再有效。
+- B7未放行：前版 e652 全50圖獨立審核1.6/3，手／袖1，報告 VISUAL_REVIEW_B7_GRIP_PIVOT_20261005.md 保留；不能挪作新版本。新28圖獨立唯讀審核中。新側向握持已看，但袖仍欠可讀布料細節；CC0候選原JPEG只下載到ignored evidence，尚未接產品，Fabric Pattern 05棋盤格albedo不採用。需選適合制服的素織布與皮革、保留來源byte／授權與資源預算。
+- e652 另兩圖首輪缺固定種子真中段換彈，HARNESS_FAIL exit2原證據保留；不改seed／frame／產品補情境。移除該非成立情境後另兩圖coverage56/56 PASS僅屬前版。最新6b5887 Dust2／Inferno NOT RUN；M4中段換彈缺保存情境仍 NOT_MEASURED。
+- 官方quota先前UNKNOWN現已恢復：UTC14:51:34 codex剩49%，pauseRequired=false；其他limitId不相加。下一步完成手／袖材質、收28圖盲審→新來源build與全同版視覺／音效／長樣本／Worker／正式build→B結案後C→D→E。真手機FPS／觸控／音效仍未測。沒有正式goal物件，不偽造背景或goal狀態。
+
+## B7 素織布／皮革校色最新停點（2026-10-05 UTC15:08後）
+
+- 原完整checkpoint SHA 0be09c29774c81e06113dc9cc649101d74114658未改；無staged，後續新工作全部已存磁碟、未commit。不動MOBA、不push／deploy；tmp／assets-source／ignored evidence／log／profile不應提交，原始與失敗證據保留。
+- 最新6b5887側向包握版本28/28圖獨立審查已完成：VISUAL_REVIEW_B7_SIDE_GRIP_20261005.md，平均1.4/3；握持各2、手套／袖各1。互動物件0只是本集缺圖，不是功能不存在；手機五行通訊遮戰場列D。前版分數不挪用，B7仍未放行，C／D／E未開始。
+- 已接原CC0 Terlenka素織布colour／normal、Leather White colour＋既有normal，共四張app-cache借用；素織布原JPEG1024×1026、皮革1024²，原MD5／SHA／授權／物理尺寸保存在SOURCES。每手1773tri、整套私有5118tri，不提高1800／5200門檻。原actor色copy不改來源；按原JPEG實測線性RGB平均校色，避免複乘米色變暗；斜向壓皺與暗縫沿原geometry加強，不加Mesh／燈光／runtime骨架。
+- 第一輪source4635c34291d0acb769397a1704918dd2d11777a763fdbcf0c17b055860860221，buildOnly26.32秒／exit0；桌機 phase-b7-woven-leather-desktop-mirage-20261005/1366 33/34 PRODUCT_FAIL／exit1。唯一失敗是驗證將官方1K誤當方形1024²，實際兩張Terlenka均1024×1026且正確解碼／sRGB。原證據完整保留、私有Chrome cleanup confirmed。檢查改成依實際作者檔名精確尺寸（不是放寬區間），原geometry與色彩空間門檻保留；Sprint紀錄本節記原因。實圖也確實偏暗，因此另校色，不以該錯誤尺寸紅燈推論產品壞掉。
+- 校色後runner POV36／服裝21／socket63 3/3 PASS／原生exit0，累計22/122非全套，完整log b7-woven-neutral-scoped-20261005.log。新 buildOnly phase-b7-woven-neutral-build-20261005-1366 執行中（session待工具原生完成）；當前無GPU。前兩個build原來源文件繁中文字修正造成byte不同，保留各manifest，不重用來源不符build。
+- 下一步收新manifest與原生exit→逐一隔離桌機／390 Mirage完整五族及真換彈實圖→必要手／袖追修→全同版獨立複審／另兩圖／音效／長樣本／Worker／正式npm build，B放行後C→D→E。官方quota最近UTC14:51:34 codex剩49%，pauseRequired=false；真手機FPS／觸控／音效未測，最終Owner Review。
+
+## B7 正向狙擊／相向握姿／護具最新停點（2026-10-05 UTC15:42後）
+
+- 原 checkpoint commit 完整，SHA 0be09c29774c81e06113dc9cc649101d74114658；無 staged，後續工作均存磁碟、未 commit。本輪依設計不另 commit、不 push／deploy、不動 MOBA。tmp、assets-source、ignored evidence／logs／browser profiles 保留且不得提交。
+- 上輪素織布校色 source d07b128c…：Mirage 桌機及390各42/42 PASS／原生exit0，各14 PNG與14/14像素MEASURED。完整28圖 Fresh-Eyes 審查平均1.7/3，VISUAL_REVIEW_B7_WOVEN_NEUTRAL_20261005.md；手套／袖各1，人物與敵人剪影各1，不能當新版分數。手機通訊遮戰場列D；B7仍未放行，C／D／E未開始。
+- 原狙擊槍實際GLB方向與握點有誤：只重匯出major source，原Tabasco CC0 blend SHA ccdc960c722b58752cf33cd04f391b7fb9ea9a2352d4299c3605c409d5868eda未改。真握把[-4.83959,-2.82,-.53]、+Y原管口，正旋轉det+1；5388tri≤5500。新sniper.glb SHA afab27895b8bba29b8843a2f4fe5d9ecbde2276f4c6f897dc3415eb1e9cb4f48。舊檔與首個缺extras候選完整保留，36/37紅燈因匯出漏provenance，補extras後37/37，不放寬斷言。
+- 主手移到真握把外側2.5cm，左右掌相向；真腕接點、原65骨、saved-frame換彈／shot authority不改。私有128²／65536B縫線遮罩共用兩手、僅釋放一次，四張CC0貼圖借用不釋放。前一seam-only source a22d6a…桌機43/43 PASS、sampler實際GPU編譯已證；390未跑，不能冒充最新版驗證。
+- major才修正RoundedBoxGeometry參數順序，軟包／面罩真bevel；支援包加厚、marksman長包拉長，加同材質織帶。legacy保留原幾何。既有成本fixture擴成兩隊×5身份×5槍族50組，全部仍在原上限。最新scoped runner POV37／服裝21／socket63 3/3 PASS／原生exit0（累計22/122非全套），完整log b7-sniper-major-gear-scoped-20261005.log。
+- 最新buildOnly phase-b7-inward-grip-sniper-gear-build-20261005-1366：22.54秒／原生exit0。source fingerprint 52286a4d5fa76efb694632efd4eb1ede7c47f8e88acefc92e619ebb8e982df1a（56檔），bundle972cf238148460aec1f93be6f6afb22893286f94d43c3b662feaedff6e96dd3b。此建置本身browser NOT RUN；目前唯一GPU session51282執行桌機Mirage完整武器與新增兩隊各三種人物前後圖，不預報PASS。新增readonly operator probe只走原生UI／真frame0，像素audit按實測canvasRect，不改產品source。
+- 下一步收session51282原生exit／完整metrics→同build逐一390→查看全部圖、完整像素audit與獨立複審→必要追修→另兩地圖、音效／生命週期、長樣本、Worker、正式npm build；B放行後C→D→E。官方quota UTC15:42:21 codex剩44%，pauseRequired=false；真手機FPS／觸控／音效未實測，最終停Owner Review。
+
+## B7 真腕口／人物布料與預算修正最新停點（2026-10-06 台灣／UTC16:50後）
+
+- 原 checkpoint commit 完整，SHA 0be09c29774c81e06113dc9cc649101d74114658；git log -5／status／cached-stat／diff-stat 已重查，無 staged。後續工作均已存磁碟、未 commit；本輪依設計不另 commit，不 push／deploy、不動 MOBA。tmp、assets-source、ignored evidence／logs／browser profiles 保留但不得提交。
+- 下方 session51282／76408／70692 均已結束，沒有本輪 GPU／build 在背景執行。52286a4d5fa76efb694632efd4eb1ede7c47f8e88acefc92e619ebb8e982df1a 來源的 Mirage 桌機 retry 與390各55/55 PASS／原生exit0，各26 PNG及26/26像素 MEASURED；首次 timeout22圖為 HARNESS_FAIL／exit2，沒有最終metrics。全部74圖加三張參考由獨立 Fresh-Eyes 實際讀完，VISUAL_REVIEW_B7_INWARD_GEAR_20261005.md 平均1.50/3，槍形2、握姿／手套／袖／正面身份各1，B未放行，不能挪用到新來源。
+- 52286桌機10.718FPS／390 11.590FPS與舊B5對照15.34FPS均保留。唯讀查到另一工作區 MOBA browser gate 共用GPU，沒有停止或改動其行程；該行程自行結束後乾淨B5對照6/6 PASS／exit0，60.1FPS、p95 16.8ms，phase-b7-perf-b5-clean-20261005/1366。這只證明環境恢復，不證明新來源性能。正式新增 tools/run_isolated_gpu_gate.ps1（此任務review/tools下），在原生PowerShell前後唯讀CIM快照；其他esmo-cdp gate存在或查詢失敗都HARNESS_FAIL，不能把UNKNOWN當空。Node子行程CIM曾access denied，該實驗已移除；不停止外工作區／一般瀏覽器，不保證快照間絕無外部負載。
+- 新來源尚未建置／browser。人物衣褲與背包借用原CC0 Terlenka兩張貼圖，以shader線性增益維持原材質色；skinned私有clone也接相同gain，不改來源圖／canonical色。原7432頂點新增89184B共用私有顏色，以真手骨20mm連續腕口過渡取代T袖三角鋸齒分區；不改原65骨、12862tri、權重／面積守恆。POV手套灰化、17段袖縱縫門檻修正，背包織帶移到真外表。
+- 增加major正面肩墊／胸包身份輪廓後，scoped服裝21/22 FAIL／exit1：CT assault狙擊22158tri、support狙擊22090tri超過22000。保留完整 b7-woven-wrist-front-kit-scoped-20261005.log 與成本診斷。軟包及新增護具改成封閉真倒角44tri（六面／十二邊／八角），代替生成器108tri；legacy幾何不變。修後POV37／服裝22／socket63 runner3/3 PASS／exit0，累計22/122不是全套；b7-woven-wrist-bevel-budget-scoped-20261005.log。5200 owned／22000整人／17000本體／8材質及五槍族原預算都保留。
+- 服裝21→22新增借用貼圖與skinned shader／釋放檢查；原「不能有任何color」假設改成明確禁止來源superhero paint、只准真腕口私有有限連續色，原面積／權重／骨架守恆及成本不放寬。人物gallery改原生眼平拖曳及有限真wheel拉遠，驗Head／grip／muzzle實際相機投影落畫面，不只固定近距離；原characterViews距離門檻未改。新GPU布料uniform讀回檢查與圖庫構圖尚未執行。
+- 下一步：完成SOURCES新來源紀錄→buildOnly新fingerprint→GPU guard序列桌機及390 Mirage完整武器／換彈／人物圖→全圖像素與獨立複審，必要追修；之後另兩圖、音效／生命週期、長樣本、Worker、正式npm build，B放行才C→D→E。C／D／E未開始。官方quota UTC16:46:10 codex剩39%，pauseRequired=false，其他limitId不相加。真手機FPS／觸控／音效未測；最終停Owner Review。
+
+## B7 衣料細摺／袖口下一候選停點（2026-10-06 台灣／UTC17:16後）
+
+- 原完整checkpoint commit SHA 0be09c29774c81e06113dc9cc649101d74114658未改；無staged、新工作均已存磁碟但未commit。tmp、assets-source、ignored evidence／logs／profile保留不提交；不動MOBA、不push／deploy，本輪依設計不新commit。
+- 上版52368c9f…57檔，buildOnly21.18秒、Mirage桌機與390各56/56／原生exit0、各26 PNG／26像素MEASURED。全52圖及三錨點獨立Fresh-Eyes完成，VISUAL_REVIEW_B7_WRIST_BEVEL_20261006.md：平均1.6/3；五槍除SMG1其餘2，右握2／左握1／手套1／袖1，六身份正面1、背面2。B仍未放行，不能將shader就緒當可見質感完成。D的回合banner／通訊疊字與卡遮腳未修。
+- 該來源12段B runner12/12 PASS／exit0（累計22/122非全套），三圖simulation24含legacy完整frame/result等價，187秒；正式npm build23.30秒／exit0；production Worker12/12 PASS／exit0，同一瀏覽器canonical與Worker完整SHA一致、等待主線回應。完整log b7-woven-wrist-bevel-all-b-scoped／formal-build／worker-20261006.*。所有session61396／87906／89854已結束。
+- 依新圖追修（尚未build／browser）：減POV袖過大環形鼓起／偏心，增加腕口實際厚度；沿原geometry bind-space加約1.6mm nominal衣料細摺與雙線topstitch，藉真表面導數改normal、維持原CC0 weave，不加texture／mesh／燈光，不改原材質色或骨架權重。POV與rigid／skinned布料共用helper；POV既有色增益不重複套用。正面assault既有肩墊／support既有胸包放大主輪廓，沒有新增小配件或提高成本門檻。
+- 新scoped POV37／服裝22／socket63 3/3 PASS／exit0，完整 b7-sewn-cloth-scoped-20261006.log；補入既有材質生命週期斷言確認bind varying與normal導數callback，不放寬成本／骨架／面積。後加雙線topstitch需建置與GPU實測，不預報PASS。下一步先SOURCES紀錄／新buildOnly→GPU guard逐一桌機與390完整52圖／像素→全圖獨立複審，必要追修；再另兩圖、音效生命週期／長樣本／正式build與Worker，B放行才C→D→E。真手機未測，最終Owner Review。官方quota UTC17:14:58 codex剩35%，pauseRequired=false。
+
+
+## B7 POV拼片／SMG凹口候選最新停點（2026-10-05T18:17:52.809Z）
+
+- 原checkpoint已完整，HEAD仍0be09c29774c81e06113dc9cc649101d74114658；git log -5／status／cached-stat／diff-stat已核對，無staged。最新工作都已寫磁碟、尚未commit。本輪設計不新增commit、不動MOBA、不push／deploy；tmp、assets-source、ignored evidence／log／browser profiles均保留且不提交。
+- 目前B▣／C□／D□／E□；B7未放行，完成後停Owner Review。3ae20faf…全52圖獨立複審1.7/3（VISUAL_REVIEW_B7_SEWN_CLOTH_SMG_EYE_20261006.md）；SMG／袖／手套仍1，support／marksman正面1，不能挪作新版本分數。原桌機與390各57/57 PASS／exit0、各26像素MEASURED；桌機53.3/p95 33.3ms，39058.6/p9516.8ms。相同build另60秒跨回合6/6 PASS／exit0、59.3/p9516.8ms，短樣本落差仍保留。
+- 真手槍組裝已修：固定七個原matrix_world，解除parent後轉原Frame座標再烘焙；新GLB SHA6665515998470bf8dc020b88ad21ddea9c49356b5586b8af9e613b1cdded84d3，仍2243tri／2564頂點／原四張1K貼圖。原97e175bb…保存在ignored source evidence，原.blend未改。真握點截面與管口幾何已在原POV37內加斷言；budget不變。該候選e522febf…桌機57/57 PASS／exit0（phase-b7-pistol-assembly-desktop-mirage-20261006），實圖散件已回同一組裝；POV袖GPU確讀0.0016，不能將平滑外觀歸因shader未啟用。e522未跑390／獨立複審，不能套用。
+- 首輪手槍build受PowerShell5重定向stderr＋ErrorActionPreference=Stop中斷，wrapper native1、gate exit未知／manifest未保存、browser NOT RUN；原log／部分build／guard保留，記HARNESS_FAIL而非產品fail。guard只在native node工序用Continue保留stderr後讀原生exit，CIM查詢仍Stop；沒有刪警告、沒有改Vite門檻。隔離retry建置17.45秒／原生exit0／manifest完整，確認是chunk-size advisory；source e522febf0f93a90d9a6f1e76ab305b9272318062f257957c782d4fb1d279b44f。
+- 下一候選只改POV私有袖拼片／3cm袖口與雙車線、原64KiB手套護片灰綠層次／粗糙度、SMG同借用shader機匣凹口與有下界握把區；SMG原GLB逐byte不變，整組槍／雙手／袖上移6cm。私有5118tri≤5200、原RGBA大小、Mesh／Texture／draw上限不增加。離線72度POV投影magazine minNDC.y=-.956998，僅離線，不當browser PASS。
+- scoped POV37／clothing22／socket63 runner3/3 PASS／exit0（b7-pov-panel-port-scoped-20261006.*）。最新buildOnly18.78秒／原生exit0（phase-b7-pov-panel-port-build-20261006-1366），source800c385f273a6745a570f347a59e179351e0cf84f5b70f0a856bb2888c256c1a／57檔、bundlebbe5a69bbb5fa145f3ccc0e5b4c42272450661625466553ac262824b866fe2b1。此buildOnly不等於browser PASS／正式npm build。最新正式build／Worker仍是舊52368c9f…，不能套用。
+- 唯一本任務GPU session48649正在phase-b7-pov-panel-port-desktop-mirage-20261006重用此精確build；完整log b7-pov-panel-port-desktop-mirage-20261006.log，尚未有native exit／metrics，不預報PASS。下一步先收session→同build390→全部52PNG像素／獨立複審→針對SMG／袖／手套品質與正面剪影修正；不以技術green放行B，不重做已完成simulation／世界。最新quota UTC18:01:43 codex剩31%、pauseRequired=false；下次大型工序／階段切換重查。
+
+
+## Owner額度預留規則更新（2026-10-05T18:42:17.444Z）
+
+- 2026-10-05T18:42:17.444Z Owner新指示已保存：Codex每週usage剩餘10%或以下，先保存程式、完整log／原生exit與最新進度／下一步，再暫停；取代舊0%門檻，不用剩餘積分。AGENTS.md與check_weekly_quota.mjs已更新，guard輸出pauseAtRemainingPercent=10，語法檢查通過。續跑／階段切換／大型工序前查，達門檻停新工作與子代理，安全收尾／中止測試，保存停點；有goal才設paused，未有goal不造假。官方查詢最新兩次UNKNOWN（RPC -32600／exit1），不可當0%、10%或即時27%；最後成功UTC18:34:12.538Z codex剩27%。
+- GPU session22415已結束／原生exit0，新production桌機Mirage46/46 PASS、source944719f9f66e9582636d89ae3e51a2cb41a53f1c8081264d8892ca3f7cc9a8ab／57檔、bundle3a6379ddee4381eb80446b5fcd0ddf532328fe73c82942d5f85b74541523ce02；完整b7-compressed-sleeve-desktop-mirage-20261006.log／.exit.txt與manifest保留。此輪flags不同前版57項，不能宣稱46涵蓋舊57，390／全像素／獨立審查／正式build／Worker尚未跑新版。沒有本任務GPU／build／runner在跑，B7未放行，C／D／E未開始。下一步先重查官方quota，再確認袖子實際輪廓效果與必要shader診斷，品質改善後同版390及完整複審，不重做已完成內容。
+- Owner原圖覆核發現800c385f版390 rifle／SMG／sniper的返回觀戰／✕／資訊均清楚可見；審查者已撤回rifle與sniper reload缺失，但仍稱SMG／sniper未見，與Owner直接原圖相衝突。原獨立分數保存但缺控制finding不作產品修改依據，不能宣稱控制壞掉。
+
+
+## B7 內前臂拼片方向與鋼木shotgun候選（2026-10-05T19:18:10.727Z）
+
+- 2026-10-05T19:18:10.727Z 最新停點：原完整checkpoint0be09c29774c81e06113dc9cc649101d74114658不變；無staged，新工作均寫磁碟未commit，不動MOBA、不push／deploy。Owner新10%或以下保存進度後暫停規則已寫AGENTS及官方唯讀guard，最新成功UTC19:11:51 codex剩23%、pauseAtRemainingPercent=10、pauseRequired=false；間歇RPC -32600 UNKNOWN仍保留，不當成0或即時舊值。B▣／C□／D□／E□、未READY_TO_REVIEW。
+- 944719f9…46/46原圖＋3anchors獨立唯讀審查已完：VISUAL_REVIEW_B7_COMPRESSED_SLEEVE_20261006.md平均1.7/3，袖1／shotgun1，左右握持／手套／另四槍族2；全部底部返回／✕／資訊可見。opening十秒D47.67FPS／p9533.5/p9983.3/max183.3、M58.91/p9516.8/max216.7；不是combat受控比較。全46像素MEASURED／error0，B7不放行。
+- 只加深POV布面5mm／12%（body仍原1.6mm／4%）的a830d0ab…桌機combat57/57 PASS／exit0、123179ms，尚無390／獨立複審。後續真幾何投影診斷發現原拼片normal朝鏡頭反側；原袖只對齊肘腕軸、缺roll。按來源手掌+Y面投影到軸垂面對齊內前臂裁片，不跟鏡頭、不改手或腕端點；五族右袖panel朝鏡頭dot由約-.86至+.71，左袖長槍由負值轉+.06–.31，pistol左側仍-.26，不能宣稱全角度可見。原37內加拼片與掌面平行的獨立幾何斷言，腕點1e-6／5118tri≤5200／所有權上限保留；3/3 scoped PASS／exit0。首次temp診斷清理呼叫不存在assets.restore、native1，JSON數據已寫但不標PASS；改正assets.dispose後native0，前／後／palm-side診斷分檔保留，不覆寫。
+- roll-only dfef4a50…production桌機Mirage57/57 PASS／exit0、109479ms，真實圖拼片／縫線可見；無390／獨立複審／正式build／Worker，不能挪前版結果。再在crookedmouth CC0 shotgun原單steel slot的借用材質加ESMO原創鋼／木製前托、握把、木紋／止滑紋分區，GLB3047tri／原socket逐byte不改，零新增Mesh／Texture／draw；與原有有界lease共用，原37增末一引用釋放反例、3/3 PASS／exit0。公用SOURCES已記轉換／原JPEG保持；browser額外核對真shotgun GPU uniform，不放寬舊斷言。
+- 唯一GPU session91646執行phase-b7-palm-panel-shotgun-desktop-mirage-20261006：新production build、combat、五槍／真reload／六身份全正反／衣料及handling。尚未收原生exit／新manifest／metrics，不預報PASS；log b7-palm-panel-shotgun-desktop-mirage-20261006.log。下一步收session→看袖／shotgun真實圖→同精確build390→全52像素與獨立複審；B品質過再另兩地圖、音效／動畫／長樣本與正式build／Worker，才C→D→E，最終Owner Review。之前800c385f…正式build20.54秒／Worker12等都是舊來源，不套用現在。
+
+
+## 2026-10-08 CS Major B7 續跑取證與Owner重開停點
+
+- A■／B▣／C□／D□／E□／Owner Review□。本輪未改产品source、未動MOBA、未commit／push／deploy；最新HEAD0be09c2、source c2a744dc…59檔。
+- 同精確封存build的新桌機／390各25/25、native0，32PNG及32/32pixels完整；32圖＋3anchors獨立複審已保存VISUAL_REVIEW_B7_SEGMENTED_SLEEVE_20261008.md，肩／肘／袖口不足，背面部分遮擋先補證，B7不放行。
+- 新版60秒33.892FPS／p9549.9ms；即時舊fdaa控制40.445／p9533.6ms，各7/7 native0。技術PASS不是效能放行，差異未定位。
+- tool-only靜態matrix診斷與選用三分之四背側取景草案已加，三檔語法exit0；runtime尚NOT RUN，下一session先補齊probe完整性守門，再取證，不宣稱產品優化已完成。沒有放寬或刪除原断言。
+- Owner要求再次重開Codex，已保存最新RESUME_CHECKPOINT.md、完整logs／exit／inventory與Git快照；所有本任務GPU／runner與兩個唯讀子代理已完成，無本任務背景工作。另有其他MOBA工作區Vite build，未操作。
+- 官方quota UTC18:34:03 codex剩31%、pauseRequired=false；暫停是Owner重開要求，已建立goal將paused。沿現停點續B→C→D→E，不重做已完成取證。真手機FPS／觸控／safe area／音訊仍未實測。
+
+## CS B7 肘部切面修正已通過 scoped 技術守門（2026-10-08）
+
+真腕口上一來源D/M各37/37、各28PNG及pixels28/28；獨立56PNG＋3anchors仍未放行，詳VISUAL_REVIEW_B7_TRUE_WRIST_20261008.md。此輪只修CS第三人稱衣袖，真肘切面upper-.046／upper+.014、布腕total-.015，428tri／224vertices；原450小預算、17000／22000／5200成本上限不變。肩cap補正已累積法線位移，35號雙肩真頂點反例已過。四段87／63／37／35、4/4、native0，完整logs/state存evidence/b7-elbow-local-scoped-20261008/。
+
+最新D GPU phase-b7-elbow-rows-desktop-20261008 session22134取證中，尚未收exit，不報美術PASS。下一步同archive M390、pixels、完整獨立藝術檢視；B7未放行，C/D/E未實作。最新正式build／Worker／三圖lifecycle仍NOT RUN。不動MOBA、不commit／push／deploy；真手機FPS／觸控／safe area／音訊未實测。官方UTC20:43:13 codex剩15%，≤10%安全保存暫停。
+
+## CS B7 已保存停點：quota spawn EPERM（2026-10-08）
+
+任務未完成，尚未Owner Review。最新肘切面source34a2c118（59檔）四段87／63／37／35全過；同archive D/M各37/37、各28PNG／pixels28/28及native0完整保存。獨立56圖：肩2／肘1／前臂2／布腕1／衣料1／輪廓1，B7未放行，見VISUAL_REVIEW_B7_ELBOW_ROWS_20261008.md。本輪anchors未看；已定位skill assets/scorecard-anchors三圖，續跑待完成。主流程及子代理已完成收尾，無待收GPU/runner。
+
+官方quota子行程spawn EPERM／native1，停止新工序，不做retry without sandbox或追加approval。最後成功剩14%，本次UNKNOWN非10%門檻；完整保存及下一步見RESUME_CHECKPOINT.md最上。C/D/E未實作；最新正式build／Worker／三圖lifecycle NOT RUN。不動MOBA、不commit／push／deploy，真手機未實測。
+
+
+## 2026-10-12 CS Major：C／D／E收件，停止於Owner Review
+
+■ A｜■ B｜■ C｜■ D｜■ E；不commit/push/deploy、不動MOBA。指定B7390 GPU45/45/95720ms保留未重跑；Owner接受人物現在完成度，舊藝術1／U原樣保留，沒有新藝術PASS或90分。
+
+C1 37/37、coordinator42/42、runtime34/34全native0，真utility/情報/路徑/fake/crossfire/trade/clutch/save與same-seed完整SHA收件。D保存權威幀CsReplay.v1/gzip、正常simulation/cursor cache與重播零simulation/Worker/completion/發獎、stable五人身份/HUD移出戰場/真逐局十人結果完成。Major-only CsMatchResult.v1可選sceneVersion/roundDetails/utilityDamage，Legacy原形狀及Reward/Store路徑保持；契約28/28、completion36/36、D Node51/51 native0。
+
+D原48/53只44px紅燈，430與12/12三窄版分段補驗收件；正式flow原25/26唯一終局高度修後8/8通過。新casts/events壞輸入、未來歷史prefix與Legacy重播退出真缺陷已修，input Node15/15与原生Browser15/15/native0通過；保留原反例/紅燈，不放寬真因果或冒稱單次full gate全綠。新版窄輸入gate加入runner；C1改只檢查真存在zone類型、缺Mirage火區明確SKIP，兩其他圖非空火區因果仍強制，不造事件以滿足測試。C其他修正都是canonical真缺陷：盲效秒尺度、炸彈40秒/單一拆彈者、114秒提前切局、fake真到達再轉進、角色路徑phase保留、crossfire真32距離節點、save依nav實際退離。Legacy完整24/24与completion既有PASS保留。
+
+E最新Worker12/12/native0、pristine build1/1/native0；桌機1366与390三圖各60秒均18/18 RESULTPASS/native0，0PNG。桌機FPS57.72/54.00/52.67，390桌機GPU窄視窗59.75/59.47/59.69；max尖峰/首載/heap及drawcalls超起始預算均如實保存，真手機FPS/觸控/音效/safe area/熱節流/人物場景視覺未實測。沒有假稱Android完成或嚴格A/B。
+
+最新source c9b686f5…97檔；canonical C domain89c34e18…與191011bytes純模擬逐byte保持。e-input-only-provenance.json逆修後完整97檔SHA重建前版69016eb3…，已PASS桌機/Worker/formal25/D48依未受影響來源沿用，不重做。正式dist与唯一最新archive、source恢復gzip653711bytes、B恢復点、C/D/Legacy真fixture與素材來源/授權保留。
+
+已依既有Owner授權完成明確10份舊CS archive清理，native0/10確認；elbow cwd UNKNOWN与其餘不確定候選保留，全部PNG/evidence/log/metrics/native/原失敗保留。resolved path、實際JS bundle與全檔handle/cwd現場重查，沒有操作使用者程序。原历史建置引用由e-approved-root-review-history-v2.md接續，較早結論不改寫；logical數字不當磁碟或OneDrive實際回收量。
+
+恢復與所有完整驗證入口：`review/cs-major-upgrade/RESUME_CHECKPOINT.md`；交付成果与限制：`review/cs-major-upgrade/OWNER_REVIEW.md`。桌機正式localhost:5179/ESMO-/已啟動，手機HTTPS缺cloudflared未自行安裝。只留Owner preview，停止新工作與下一Sprint，等待Owner Review。
+
+
+## 2026-10-14 最終四項收件：工程完成，Owner Review（本節優先）
+
+最新桌機 [Owner Preview](http://localhost:5183/ESMO-/)。正式獨立 owner4-pristine-final-20261014，session39140／PID147032；source 15ae830c7923ee71ad67a294500c2366a707cd5c8d8780e055e2eb32b2075d8d，bundle 4ae13686774921db249405c3cfa694645c287899d2f9ee466e27b13cf2bec834。HTTP200、HTML與全部JS逐byte同archive。
+最後地面記號包含道具圈／球尾與A/B固定圓環／圓形填色均移除，保留A/B字母。實Browser31/31＋新pristine正式Dashboard→CS→Battle→Result26/26，native0與自有Chrome cleanup confirmed/profileRemoved；root人工看B點新PNG無圈。
+最後兩個Major-only visible旗標精確反轉後，全部105份source/asset的SHA回到已驗LOD版本：ground-only-source-delta.json。所有simulation、pose、utility、shader、素材與controls不變，原contact12/12、tactical34/34、POV41/41（最壞5096<5200）、utility27/27與動作Browser29/29證據繼續有效，沒有重跑舊對局／30／55／B7。
+最後工具首輪30/31把objective-site共用tag六個物件誤算為字母；保留原失敗與native1，再以實PlaneGeometry+CanvasTexture精確挑兩個字母，兩字母及visibility門檻未放寬。後續未改產品或scene/frame救測試。
+主閱：review/cs-major-upgrade/OWNER4_CLOSURE.md；完整收件與所有native/streams證據索引：evidence/owner4-review-20261013/owner4-engineering-complete.json（SHA c5431308fc792196b2c3ab9b8eb0980cdc05c4a7cd60e840c9d9fee032fa2322）。前版所有source/hash/Preview收件只作歷史對照，本節為最新After。
+Legacy完整JSON同c9，但原安包0仍2/3/native1 NOT_TRIGGERED；未改seed洗綠。Owner專業CS體感、所有位置／全時間視覺與手機真機FPS/觸控仍待驗收。進度條與剩餘時間偏好已保存在AGENTS.md。
+■ 修正｜■ 必要驗證｜■ Preview/文件｜□ Owner／真機驗收。工程剩餘0；Owner驗收時間由Owner安排。沒有CS背景測試仍跑，僅保留Review Preview服務。僅停止核對過的自有舊5183／PID175048再替換，其他舊Preview與foreign/MOBA／未知程序保留。未commit/push/deploy，不開始下一Sprint。
+
+
+### Owner4B接地與HE呈現架構（2026-10-14）
+
+新增 src/battle/fps/presentation/fpsVisibleGrounding.js：nondeath pelvis保留經parent matrix投回local的世界UP位移，鎖住水平root motion；支撐點只取可見鞋底80候選/屍體1597候選，不拿cached Box3/hidden mesh當接地證據。fpsBoundsSampler.js繼續用於既有framing/診斷，沒有被改成另一份真地面。FpsCharacterRenderer順序是restore→mixer/pose→衣物sync→可見support取樣/apply單一modelY→衣物再次sync。停止的屍體使用姿態/root/visibility signature快取；權威parent X/Z與frame不變。Death contactY另記真取樣surfaceY，不能以rootY+offset代替。
+
+新增 fpsFloorSampler.js：初始化讀同一份場景ground/roads/paving/room floor/paint triangles並以2m空間格索引；真callback傳入renderer，包含ramp tessellation與各種lift，不把.045寫死全圖。它只服務呈現，沒有第二份導航/collider/Store。真CPU15定姿+99動態與Browser三圖已保存完整可見vertex oracle；5mm候選不是全部通過（3個5.213mm），原8cm門檻不放寬。
+
+新增 fpsHeVfx.js：4事件、每事件2暖色contact/6 sparks/3 brown-grey dust，最多44葉物件；contact .18s、sparks .32s、dust1.10s，依保存detonatedAtRoundSec與subframe，不讀wall time。Reduced motion移除動態火花仍保留暖色/塵煙；不新增PointLight/後處理/傷害或地圈。時間是本案設計值，非Valve公布參數；[Valve CS2視覺](https://www.counter-strike.net/cs2)僅作風格參考。
+
+fpsAwarenessLook增加同源walls/lineBlocked，僅公共node/local clear-ray與TTL情報；保留合法corner/trueintel預瞄與封閉空間明示理由，沒讀hidden enemy/沒改duty或route。Mirage closedFacade只省內部outer endcaps（window jamb保留），belt兩端退30mm；crate steel最多20mm呈現外突、正規collider不變。Geometry candidate不是flicker outcome KPI；所有角度、專業CS體感与手機真機仍Owner驗收。

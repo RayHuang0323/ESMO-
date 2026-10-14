@@ -1,5 +1,6 @@
 // 只依呈現中的角色與已安裝炸彈計算取景；不改模擬或保存的frame。
-export function fpsChaseMinimumRadius(sceneVersion){return sceneVersion==="legacy"?4.5:2.7;}
+// 手動滾輪／雙指可近看腕部；預設14/18m觀戰與2.7m全身取景保持。
+export function fpsChaseMinimumRadius(sceneVersion){return sceneVersion==="legacy"?4.5:1.2;}
 export function fpsChaseForwardOffset({sceneVersion,manualRadius=null,close=false}){
   const base=close?2.5:3;
   if(sceneVersion==="legacy"||!Number.isFinite(manualRadius))return base;

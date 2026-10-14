@@ -1,3 +1,4 @@
+import { createFpsFloorSampler } from "./presentation/fpsFloorSampler.js";
 // ============================================================================
 //  EsportsFPS3D.jsx — 3D CS 對戰引擎（自 EsportsGame.jsx 原封抽離，Phase 4）
 //  ⚠ 引擎主體 = 原內聯 __FPS3D_MODULE，逐位元組未改；IIFE 保留（改動最小化）。
@@ -6,6 +7,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as THREE from "three";
 import MatchSpeedControls from "../ui/MatchSpeedControls.jsx";
+import FpsTeamRadio from "./FpsTeamRadio.jsx";
 import { checkFpsRendererIdentity } from "./fpsIdentity.js";
 import { FPS_ROLE_ZH } from "./fpsRoster.js";
 import { checkFpsRuntimeVisibility, evaluateFpsCameraRecovery, isFpsBodyScreenReadable, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
@@ -15,8 +17,19 @@ import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
 import { createMajorMapEnvironment } from "./presentation/fpsMajorMapEnvironment.js";
 import { createFpsMajorRoofShaderWarmup } from "./presentation/fpsMajorShaderWarmup.js";
 import { fpsMajorElevation } from "./fpsMajorTerrain.js";
+import { createFpsWeaponHandling, advanceFpsWeaponHandling, consumeFpsWeaponShot, fpsWeaponReadyAtMs, resolveFpsWeaponStance } from "./fpsWeaponHandling.js";
+import { fpsFlashDurationSec, fpsDecayBlind, chooseFpsUtilityThrow, advanceFpsDefuse } from "./fpsMajorUtilityRules.js";
+import { collectFpsTeamIntel, decideFpsTacticalIntent, selectFpsCrossfireAnchor, getFpsRoundOutcomeMetrics, fpsTacticalPlanningTarget } from "./fpsTacticalCoordinator.js";
+import { createCsReplay, readCsReplay } from "./fpsReplay.js";
+import { groupFpsTeams, getFpsFrameMessages, fmtFpsMoney } from "./fpsMatchUi.js";
+import { downloadCsReplay, loadCsReplayFile } from "./fpsReplayFiles.js";
+import FpsSavedFrameHud from "./FpsSavedFrameHud.jsx";
+import { planFpsBombRoute, chooseFpsContextUtility, fpsAssignTacticalDuties, fpsAttackStage, planFpsUtilityLoadout } from "./fpsBombObjectivePlanning.js";
+import {createFpsDirectedShotQueue} from './fpsDirectedShotQueue.js';
+import {fpsAwarenessLook,planFpsCoverPeek} from './fpsAwarenessSteering.js';
 import { FPS_MAJOR_MAP_ART } from "./fpsMapIdentity.js";
 import { useIsMobile } from "../../ui/useViewport.js";
+import { GC } from "../../ui/theme.js";
 import { FPS_LEGACY_MAPS } from "./fpsLegacyMapData.js";
 import { FPS_MAJOR_AUTHORED_ROOMS, majorRoomWalls } from "./fpsMajorArchitecture.js";
 import { createFpsMajorSegmentCache } from "./fpsMajorNavigationCache.js";
@@ -26,6 +39,7 @@ import { createUtilityPresentation } from "./presentation/fpsUtilityPresentation
 import { createFpsMatchPresentation } from "./presentation/fpsMatchPresentation.js";
 import { createFpsAudioVoicePool } from "./presentation/fpsAudioVoicePool.js";
 import { createFpsAudioPlaybackGate, resolveFpsAudioSpatial } from "./presentation/fpsAudioPlayback.js";
+import { createFpsAmbientAudio } from "./presentation/fpsAmbientAudio.js";
 import { createMajorFpsPovWeapon } from "./presentation/fpsPovWeapon.js";
 import { csLoadMark, csLoadSpan, csLoadTime, csSimCacheEvent } from "./csLoadTiming.js";
 
@@ -169,7 +183,7 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
   // Utility presentation uses one clean CC0 recording per cue. These assets
   // stay separate from authoritative gunfire and never use synth fallback.
   const C5A2_UTILITY_AUDIO_PROFILES=Object.freeze({
-    footstep:{sample:"utility-footstep.wav",source:"Spring Spring / OpenGameArt",gain:0.34,duration:0.72},
+    footstep:{sample:"utility-footstep.wav",source:"Spring Spring / OpenGameArt",gain:pooled?0.18:0.34,duration:0.72},
     "utility-throw":{sample:"utility-throw.wav",source:"Spring Spring / OpenGameArt",gain:0.46,duration:0.9},
     "utility-bounce":{sample:"utility-bounce.wav",source:"Spring Spring / OpenGameArt",gain:0.42,duration:0.9},
     "smoke-deploy":{sample:"utility-smoke.ogg",source:"0new4y / OpenGameArt",gain:0.4,duration:1.4},
@@ -182,7 +196,7 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
     "bomb-defused":{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.42,duration:0.9},
     "bomb-tick":{sample:"utility-tick.wav",source:"Spring Spring / OpenGameArt",gain:0.3,duration:0.35},
   });
-  const timers=new Set();let activeVoices=0,droppedVoices=0,disposed=false,voicePool=null;const firedEventIds=new Set(),cueEventIds=new Set();
+  const timers=new Set();let activeVoices=0,droppedVoices=0,disposed=false,voicePool=null,ambient=null;const firedEventIds=new Set(),cueEventIds=new Set();
   const audioBuffers=new Map(),presentationBuffers=new Map(),loadErrors={},presentationLoadErrors={};
   const audioBase=`${import.meta.env?.BASE_URL||"/"}audio/cs/c5a2/`;
   const audioDiag={version:pooled?4:3,assetSource:"CC0 real firearm recordings",assetLicense:"CC0-1.0",assetBase:audioBase,gunfireSourcePolicy:"one-recorded-buffer-per-shot",presentationAssetSource:"CC0 recorded utility samples from OpenGameArt",presentationAssetLicense:"CC0-1.0",presentationSourcePolicy:"one-recorded-buffer-per-cue with stereo spatialisation",presentationProfiles:C5A2_UTILITY_AUDIO_PROFILES,synthesizedToneStarts:0,
@@ -193,6 +207,7 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
   audioDiag.preloadStarts=0;audioDiag.preloadStartedAt=null;audioDiag.preloadReadyAt=null;audioDiag.unmuteRequestedAt=null;audioDiag.resumeResolvedAt=null;audioDiag.firstSourceStartAt=null;
   const publish=()=>{if(pooled&&disposed)return;audioDiag.activeVoices=activeVoices;audioDiag.droppedVoices=droppedVoices;audioDiag.contextState=ctx.state;audioDiag.destination=ctx.destination?.constructor?.name||"AudioDestinationNode";audioDiag.masterGain=master.gain.value;if(voicePool)audioDiag.voicePool=voicePool.diagnostics();if(typeof window!=="undefined")window.__ESMO_FPS_AUDIO_DIAGNOSTICS__=audioDiag;};
   if(pooled)voicePool=createFpsAudioVoicePool({context:ctx,destination:master,limit:mobile?32:64,onChange:data=>{activeVoices=data.active;droppedVoices=data.dropped;publish();}});
+  if(pooled)ambient=createFpsAmbientAudio({context:ctx,destination:master,url:`${import.meta.env?.BASE_URL||"/"}audio/cs/major-v1/wind-loop.ogg`,onChange:data=>{audioDiag.ambient=data;publish();}});
   const spatial=(position,distance)=>pooled?resolveFpsAudioSpatial(position,getListener(),distance):{distance,pan:0};
   const remember=(set,id)=>{set.add(id);if(pooled&&set.size>4096)set.delete(set.values().next().value);};
   const schedule=(fn,delay)=>{const timer=setTimeout(()=>{timers.delete(timer);fn();},delay);timers.add(timer);return timer;};
@@ -219,7 +234,7 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
       audioDiag.recordedSourceStarts+=1;audioDiag.recordedSourceStartsByFamily[key]=(audioDiag.recordedSourceStartsByFamily[key]||0)+1;if(!audioDiag.playedFamilies.includes(key))audioDiag.playedFamilies.push(key);audioDiag.playbackEvents.push({family:key,sample:C5A1_AUDIO_PROFILES[key]?.sample||null,layer:"prepared-direct",sourceNode:s.constructor?.name||"AudioBufferSourceNode",bufferDuration:Number(buffer.duration.toFixed(4)),offset:Number(offset.toFixed(4)),duration:Number(playable.toFixed(4)),playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),contextState:ctx.state,destination:ctx.destination?.constructor?.name||"AudioDestinationNode",masterGain:master.gain.value,atContextTime:Number(t.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();});
   }
   function recordedCue(type,buffer,{distance,eventId,delay=0,gain=0.4,duration=0.8,position=null}){
-    if(voicePool){const location=spatial(position,distance),attenuation=distanceGain(location.distance),pitch=1+((hsh(eventId||type)%11)-5)*0.006;const played=voicePool.playBuffer({buffer,delay,duration,pitch,gain:gain*attenuation,pan:location.pan,fadeOut:true,priority:type==="footstep"?0:type==="bomb-exploded"?3:2});if(!played)return false;
+    if(voicePool){const location=spatial(position,distance),attenuation=type==="footstep"?1/(1+Math.pow(Math.max(0,location.distance)/8,2)):distanceGain(location.distance),pitch=1+((hsh(eventId||type)%11)-5)*0.006;const played=voicePool.playBuffer({buffer,delay,duration,pitch,gain:gain*attenuation,pan:location.pan,fadeOut:true,priority:type==="footstep"?0:type==="bomb-exploded"?3:2});if(!played)return false;
       audioDiag.recordedPresentationSourceStarts+=1;audioDiag.playbackEvents.push({type,sample:C5A2_UTILITY_AUDIO_PROFILES[type]?.sample||null,layer:"recorded-single",sourceNode:played.source.constructor?.name||"AudioBufferSourceNode",spatialNode:"StereoPannerNode",playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(location.pan.toFixed(3)),position:position?{x:position.x,y:position.y}:null,contextState:ctx.state,atContextTime:Number(played.atContextTime.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();return true;}
     const playable=Math.min(duration,Math.max(0.001,buffer.duration));if(playable<=0)return;
     const attenuation=distanceGain(distance),pitch=1+((hsh(eventId||type)%11)-5)*0.006,lateral=((hsh(`${eventId||type}:pan`)%101)/50)-1;
@@ -233,8 +248,8 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
     audioDiag.events.push({eventId,family:key,source:"recorded-prepared-direct",sourceRecording:p.sourceRecording,sample:p.sample,layers:["prepared-direct"],shotAtMs:Number.isFinite(Number(shotAtMs))?Number(shotAtMs):null,scheduledDelaySec:Number(baseDelay.toFixed(4)),distance:Number(Number(distance).toFixed(2)),attenuation:Number(attenuation.toFixed(3)),kill:Boolean(kill)});if(audioDiag.events.length>96)audioDiag.events.shift();publish();
   }
   function tone(freq,dur,gain,attenuation=1){if(voicePool){if(voicePool.playTone({frequency:freq,duration:dur,gain:gain*attenuation,priority:1}))audioDiag.synthesizedToneStarts+=1;publish();return;}voice(dur,()=>{const o=ctx.createOscillator();o.type="triangle";o.frequency.value=freq;const g=ctx.createGain();const t=now();g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur);audioDiag.synthesizedToneStarts+=1;publish();});}
-  function presentationCue(type,{eventId="",distance=20,position=null}={}){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.presentationCueCalls+=1;if(eventId&&cueEventIds.has(eventId)){audioDiag.duplicateCueDispatches+=1;publish();return;}if(eventId)remember(cueEventIds,eventId);audioDiag.presentationCueStarts+=1;audioDiag.cueTypes[type]=(audioDiag.cueTypes[type]||0)+1;const a=distanceGain(distance),profile=C5A2_UTILITY_AUDIO_PROFILES[type],buffer=profile&&presentationBuffers.get(profile.sample);
-    if(profile){if(buffer)recordedCue(type,buffer,{distance,eventId,gain:profile.gain,duration:profile.duration,position});else{audioDiag.missedPresentationAssets+=1;publish();}}
+  function presentationCue(type,{eventId="",distance=20,position=null,scheduleDelaySec=0}={}){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.presentationCueCalls+=1;if(eventId&&cueEventIds.has(eventId)){audioDiag.duplicateCueDispatches+=1;publish();return;}if(eventId)remember(cueEventIds,eventId);audioDiag.presentationCueStarts+=1;audioDiag.cueTypes[type]=(audioDiag.cueTypes[type]||0)+1;const a=distanceGain(distance),profile=C5A2_UTILITY_AUDIO_PROFILES[type],buffer=profile&&presentationBuffers.get(profile.sample);
+    if(profile){if(buffer)recordedCue(type,buffer,{distance,eventId,gain:profile.gain,duration:profile.duration,position,delay:pooled?Math.max(0,Number(scheduleDelaySec)||0):0});else{audioDiag.missedPresentationAssets+=1;publish();}}
     else if(type==="round-start"){tone(420,0.16,0.1,a);tone(620,0.22,0.08,a);}
     else if(type==="round-end"||type==="clutch"||type==="multikill"){tone(type==="clutch"?760:type==="multikill"?680:520,0.14,0.1,a);tone(type==="round-end"?320:980,0.18,0.07,a);}
     else if(type==="kill"){tone(180,0.045,0.035,a);}
@@ -242,10 +257,11 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
   const api={ctx,async resume(){audioDiag.resumeCalls+=1;audioDiag.resumeRequestedAt=Date.now();audioDiag.contextStateBeforeResume=ctx.state;if(ctx.state!=="running")await ctx.resume();audioDiag.resumeResolvedAt=Date.now();publish();return ctx.state;},markUnmuteRequest(){audioDiag.unmuteRequestedAt=Date.now();publish();},preload,ready:preload(),assetProfiles:C5A1_AUDIO_PROFILES,setVol(v){master.gain.value=v;publish();},shot,shoot(sniper){shot(sniper?"sniper":"rifle");},cue:presentationCue,
     // 一個 authoritative muzzle event = 一個聲音事件；連發差異由實際 frame 事件頻率表現。
     burst(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position){shot(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position);},
-    stopAll(){voicePool?.stopAll();},
-    resetGunfireEvents(){firedEventIds.clear();if(voicePool){voicePool.stopAll();cueEventIds.clear();}},
+    syncAmbient(state){ambient?.sync(state);},
+    stopAll(){voicePool?.stopAll();ambient?.stop();},
+    resetGunfireEvents(){firedEventIds.clear();if(voicePool){voicePool.stopAll();cueEventIds.clear();ambient?.stop();}},
     boom(){presentationCue("bomb-exploded",{distance:10});},
-    dispose(){disposed=true;voicePool?.dispose();timers.forEach((timer)=>clearTimeout(timer));timers.clear();if(pooled){audioBuffers.clear();presentationBuffers.clear();master.disconnect();}try{ctx.close();}catch{};if(typeof window!=="undefined"&&window.__ESMO_FPS_AUDIO_DIAGNOSTICS__===audioDiag){delete window.__ESMO_FPS_AUDIO_DIAGNOSTICS__;if(import.meta.env?.DEV)delete window.__ESMO_FPS_AUDIO_API__; }},
+    dispose(){disposed=true;ambient?.dispose();voicePool?.dispose();timers.forEach((timer)=>clearTimeout(timer));timers.clear();if(pooled){audioBuffers.clear();presentationBuffers.clear();master.disconnect();}try{ctx.close();}catch{};if(typeof window!=="undefined"&&window.__ESMO_FPS_AUDIO_DIAGNOSTICS__===audioDiag){delete window.__ESMO_FPS_AUDIO_DIAGNOSTICS__;if(import.meta.env?.DEV)delete window.__ESMO_FPS_AUDIO_API__; }},
   };
   if(typeof window!=="undefined"&&import.meta.env?.DEV)window.__ESMO_FPS_AUDIO_API__=api;
   preload();publish();return api;
@@ -512,6 +528,10 @@ const MAPS={
       {x:7,y:42,w:8,h:25,hgt:8},{x:26,y:45,w:14,h:18,hgt:4.5,win:1,art:"water-tower"},
       {x:84,y:42,w:9,h:24,hgt:7},
       {x:22,y:78,w:14,h:12,hgt:7,win:1},{x:64,y:78,w:14,h:12,hgt:7,win:1},
+      // An opaque spawn screen breaks the otherwise open 80-unit spawn-to-spawn
+      // sniper axis. Both flanking exits remain navigable; the same wall owns LOS.
+      {x:43,y:78,w:14,h:3,hgt:4},
+      {x:41,y:38,w:22,h:3,hgt:4},
       {x:14,y:10,w:10,h:8,hgt:8},...FPS_MAJOR_AUTHORED_ROOMS.mirage.flatMap(majorRoomWalls),
       {x:12,y:30,w:10,h:8,hgt:5},{x:32,y:32,w:10,h:8,hgt:5},
       {x:86,y:17,w:7,h:20,hgt:8},{x:65,y:28,w:8,h:10,hgt:7},
@@ -1257,7 +1277,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
   };
   // 正式 CS 單張地圖：MR12、先到 13；OT 為每組 MR3（6 局，先到 4）。
   // team identity 永遠由 rosterTeamById 決定；p.side 只代表該回合 currentSide。
-  const ROUNDS=CS_REGULATION_ROUNDS;let ctScore=0,tScore=0,fi=0,rnd=0;
+  const ROUNDS=CS_REGULATION_ROUNDS;let ctScore=0,tScore=0,fi=0,rnd=0,majorMatchTimeSec=0;
   const rosterTeamById=new Map(RS.map(c=>[c.id,csRosterTeamId(c)]));
   const teamOfRosterId=id=>rosterTeamById.get(id)??CS_TEAM_US;
   const ruleState=createCsRuleState();
@@ -1295,13 +1315,14 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
     const teamAvg=side=>RS.filter(c=>sideByTeam[teamOfRosterId(c.id)]===side).reduce((s,c)=>s+econ[c.id].money,0)/5;
     const pistolRound=csIsPistolReset(roundPlan.economyResetReason);
     const decideBuy=(side,my,en)=>{if(pistolRound)return"pistol";const m=teamAvg(side),behind=en-my;if(m>=4200)return"full";if(m<2200)return"eco";if(behind>=2&&m>=2700)return"force";if(m>=3700)return"full";return"eco";};
-    const buyT=decideBuy("t",tScore,ctScore),buyCT=decideBuy("ct",ctScore,tScore);
     const attackScore=attackTeam===CS_TEAM_US?tScore:ctScore,defenseScore=attackTeam===CS_TEAM_US?ctScore:tScore;
+    const buyT=decideBuy("t",sceneVersion==="legacy"?tScore:attackScore,sceneVersion==="legacy"?ctScore:defenseScore),buyCT=decideBuy("ct",sceneVersion==="legacy"?ctScore:defenseScore,sceneVersion==="legacy"?tScore:attackScore);
     const target=chooseRoundTacticalSite(attackTactic,{round:rnd,scoreFor:attackScore,scoreAgainst:defenseScore,buyType:buyT,previousControl:previousTacticalControl.t});
     if(target!==attackTactic.site)tacticalAudit.targetChanges.push({round:rnd+1,from:attackTactic.site||null,to:target,scoreFor:attackScore,scoreAgainst:defenseScore,buyType:buyT,previousControl:previousTacticalControl.t});
     const ecoT=buyT==="eco"||buyT==="pistol",ecoCT=buyCT==="eco"||buyCT==="pistol";
     const ARMOR=1000,NADE={flash:200,smoke:300,he:300,molly:400},sidePistol=s=>s==="t"?"glock":"usp";
     const roundRoster=RS.map(c=>({...c,teamId:teamOfRosterId(c.id),teamIdentity:teamOfRosterId(c.id),side:sideByTeam[teamOfRosterId(c.id)]}));
+    const roundDuties=sceneVersion!=="legacy"?fpsAssignTacticalDuties({players:roundRoster}):null;
     const startMoneyByPlayer=Object.fromEntries(RS.map(c=>[c.id,econ[c.id].money]));
     const buyTypeByTeam={[attackTeam]:buyT,[defenseTeam]:buyCT};
     const roundFrameStart=fi;
@@ -1323,26 +1344,30 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
     const lastShotAtByActor=new Map();
     let shotSequence=0;
     let contactCalled=false,defuseCalled=false,defuseProg=0,bombResultRecorded=false,bombPlantEventEmitted=false,defuseStartEventEmitted=false,defuseResultEventEmitted=false,explosionEventEmitted=false;
+    let majorDefuse={defuserId:null,progress:0};
+    let majorIntel=[];
+    const majorKills=[],clutchEpisodes=[];
     map.doors.forEach((d,i)=>doorStates[i]=false);
     const ps=RS.map(rosterPlayer=>{
       const teamId=teamOfRosterId(rosterPlayer.id),side=sideByTeam[teamId];
       const c={...rosterPlayer,teamId,teamIdentity:teamId,side};
       const e=econ[c.id];const buy=side==="t"?buyT:buyCT;const tactic=tac[side];const sp=sidePistol(side);
-      let gun=e.gun,armor=e.armor,helmet=e.helmet,money=e.money,nades=[],boughtWeapon=null;
+      let gun=e.gun,armor=e.armor,helmet=e.helmet,money=e.money,nades=sceneVersion!=="legacy"?[...(e.nades||[])]:[],boughtWeapon=null;
+      const utilityCarried=[...nades],utilityPurchased=[];
       if(buy==="pistol"){
         gun=sp;boughtWeapon=gun;
         if(money>=ARMOR){armor=true;helmet=true;money-=ARMOR;}
         if((c.role==="awp"||c.role==="entry")&&money>=700){gun="deagle";boughtWeapon=gun;money-=700;}
         else if(money>=300&&rand()<0.5){gun="p250";boughtWeapon=gun;money-=300;}
-        if(money>=NADE.flash&&rand()<0.6){nades.push("flash");money-=NADE.flash;}
-        if(money>=NADE.smoke&&rand()<0.45){nades.push("smoke");money-=NADE.smoke;}
+        if(sceneVersion==="legacy"&&money>=NADE.flash&&rand()<0.6){nades.push("flash");money-=NADE.flash;}
+        if(sceneVersion==="legacy"&&money>=NADE.smoke&&rand()<0.45){nades.push("smoke");money-=NADE.smoke;}
       }else if(buy==="eco"){
         // Team-level eco remains authoritative.  An AWP player who has enough
         // personal money for a primary plus armor may keep a viable loadout
         // through the same buy authority; only a true personal eco falls back
         // to the sidearm.
         if(!gun&&c.role==="awp"&&money>=COST.mp9+ARMOR){
-          const fallback=c5bFullBuyWeapon(c,{side,money,mapKey,round:rnd,tactic,target,scoreDiff:attackScore-defenseScore});
+          const fallback=c5bFullBuyWeapon(c,{side,money,mapKey,round:rnd,tactic,target,scoreDiff:sceneVersion!=="legacy"&&side==="ct"?defenseScore-attackScore:attackScore-defenseScore});
           if(fallback&&c5a1WeaponFamily(fallback)!=="pistol"){gun=fallback;boughtWeapon=fallback;money-=COST[fallback]??0;}
         }
         if(!gun)gun=sp;
@@ -1350,30 +1375,50 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
         if(gun===sp&&money>=300&&rand()<0.35){gun="p250";boughtWeapon=gun;money-=300;}
       }else{ // full / force：負擔得起就買最好的，否則退階
         const legal=(ROLE_GUNS[c.role]||["ak"]).filter(g=>side==="t"?g!=="m4"&&g!=="m4a4":g!=="ak");
-        const bought=c5bFullBuyWeapon(c,{side,money,mapKey,round:rnd,tactic,target,scoreDiff:attackScore-defenseScore});
+        const bought=c5bFullBuyWeapon(c,{side,money,mapKey,round:rnd,tactic,target,scoreDiff:sceneVersion!=="legacy"&&side==="ct"?defenseScore-attackScore:attackScore-defenseScore});
         if(bought){gun=bought;boughtWeapon=bought;money-=COST[bought]??0;}else if(!gun)gun=sp;
         if(!armor&&money>=ARMOR){armor=true;helmet=true;money-=ARMOR;}
-        for(const n of ["flash","smoke","he","molly"]){if(money>=NADE[n]&&rand()<0.7){nades.push(n);money-=NADE[n];}}
+        for(const n of sceneVersion==="legacy"?["flash","smoke","he","molly"]:[]){if(money>=NADE[n]&&rand()<0.7){nades.push(n);money-=NADE[n];}}
       }
+      const utilityPlans=sceneVersion!=="legacy"?planFpsUtilityLoadout({player:c,duty:roundDuties[c.id],nodes:N,target,tactic,round:rnd+1,buyType:buy}):null;
+      if(utilityPlans)for(const plan of utilityPlans)if(plan.purchaseEligible&&!nades.includes(plan.type)&&money>=NADE[plan.type]&&nades.length<4){nades.push(plan.type);utilityPurchased.push(plan.type);money-=NADE[plan.type];}
       e.money=money;
       // 路線指派：戰術未定義該角色時，退回相近角色路線（避免指揮/輔助等留在出生點不參戰）
       const RKF={igl:"rifler",support:"rifler",lurker:"rifler",awp:"rifler",rifler:"entry",entry:"rifler"};
       const tr=tactic.routes||{};
       const routeKeys=leadershipRouteKeys(c,tactic,tr,RKF,RS);
       const route=navigableRoute(routeKeys.map(nk=>N[nk]).filter(Boolean));
-      const hasBomb=side==="t"&&c.role==="entry";
+      const carrierId=roundRoster.filter(p=>p.side==="t").sort((a,b)=>
+        (a.role==="support"?0:a.role==="igl"?1:a.role==="rifler"?2:3)-(b.role==="support"?0:b.role==="igl"?1:b.role==="rifler"?2:3)||String(a.id).localeCompare(String(b.id)))[0]?.id;
+      const hasBomb=side==="t"&&(sceneVersion==="legacy"?c.role==="entry":c.id===carrierId);
       return{...c,teamId,teamIdentity:teamId,side,pos:{...SPAWN[side==="ct"?"ct":"t"]},prevPos:{...SPAWN[side==="ct"?"ct":"t"]},
-        hp:100,armor,helmet,money,gun,k:0,d:0,a:0,hsCount:0,dmgDealt:0,dead:false,state:"BUY",va:side==="ct"?225:45,flash:0,
-        route:[],routeIdx:0,routeT:0,hasBomb,reassigned:false,picking:0,shooting:0,nades,pistol:sp,buyType:buy,purchase:boughtWeapon,purchaseMoney:boughtWeapon?(COST[boughtWeapon]??0):0,
-        _activeTacticId:null,_lastRouteBuild:null,_spawnDistance:0,_spawnPeakDistance:0,_leftSpawn:false,_spawnRegressionRouteId:null};
+        hp:100,armor,helmet,money,gun,k:0,d:0,a:0,hsCount:0,dmgDealt:0,dead:false,state:"BUY",va:side==="ct"?225:45,flash:0,...(utilityPlans?{utilityPlans}:{}),
+        route:[],routeIdx:0,routeT:0,hasBomb,reassigned:false,picking:0,shooting:0,nades,...(sceneVersion!=="legacy"?{utilityCarried,utilityPurchased,utilityCost:utilityPurchased.reduce((sum,type)=>sum+NADE[type],0)}:{}),pistol:sp,buyType:buy,purchase:boughtWeapon,purchaseMoney:boughtWeapon?(COST[boughtWeapon]??0):0,
+        _activeTacticId:null,_lastRouteBuild:null,_spawnDistance:0,_spawnPeakDistance:0,_leftSpawn:false,_spawnRegressionRouteId:null,
+        ...(sceneVersion!=="legacy"?{...createFpsWeaponHandling(gun),stance:"standing"}:{})};
     });
+    if(sceneVersion!=="legacy"){
+      const duties=fpsAssignTacticalDuties({players:ps});
+      for(const side of ["t","ct"])ps.filter(p=>p.side===side).sort((a,b)=>String(a.id).localeCompare(String(b.id))).forEach((p,index)=>{
+        const sp=SPAWN[side];p.pos=collideResolve({x:sp.x+(index%3-1)*3,y:sp.y+(Math.floor(index/3)-.5)*3},walls,PLAYER_R);
+        p.tacticalDuty=duties[p.id];p.engagementRange=weaponAuthority(p.gun).range;
+      });
+      separateFpsPlayers(ps,walls,movementAudit);
+      ps.forEach(p=>{p.prevPos={...p.pos};p._freezePos={...p.pos};});
+    }
     const roundRKF={igl:"rifler",support:"rifler",lurker:"rifler",awp:"rifler",rifler:"entry",entry:"rifler"};
+    const majorRoutePlan=(p,plan,phase,phaseTactic)=>{
+      if(sceneVersion==="legacy")return plan;
+      return {...plan,...planFpsBombRoute({player:p,players:ps,tactic:phaseTactic,library:routeLibraryBySide[p.side],target,phase,
+        selectionId:p.teamId===CS_TEAM_US?preMatchLayout.phases[phase]?.selectionId:null,nodes:N})};
+    };
     ps.forEach(p=>{
       const sideScore=p.side==="t"?attackScore:defenseScore,opponentScore=p.side==="t"?defenseScore:attackScore;
       const phase=CS_TACTICAL_PHASES.OPENING,weaponMix=tacticalWeaponMix(ps,p.side);
       const phaseTactic=tacticForSidePhase(p.side,phase);
-      const plan=tacticalRoutePlan({player:p,tactic:phaseTactic,routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,
-        context:{phase,target,scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:5,controlRatio:0,weaponMix,openness:preMatchLayout.openness},round:rnd,mapKey});
+      let plan=tacticalRoutePlan({player:p,tactic:phaseTactic,routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,
+        context:{phase,target:fpsTacticalPlanningTarget({player:p,tactic:phaseTactic,planted,target,sceneVersion}),scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:5,controlRatio:0,weaponMix,openness:preMatchLayout.openness},round:rnd,mapKey});
+      plan=majorRoutePlan(p,plan,phase,phaseTactic);
       p._activeTacticId=phaseTactic?.id??phaseTactic?.name??null;
       assignRoute(p,plan.keys.map(key=>N[key]).filter(Boolean),{...plan,roundSec:0,routeSignature:plan.keys.join(">"),routeRebuildReason:"round-reset",allowSpawnAnchor:true});
       p.tacticalPhase=phase;p._tacticalPhase=phase;p.objectiveState="OPENING";
@@ -1383,61 +1428,97 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
     });
     previousTacticalControl.t=tacticalControlSnapshot(ps,"t",N).ratio;
     previousTacticalControl.ct=tacticalControlSnapshot(ps,"ct",N).ratio;
-    buyAudit.rounds.push({round:rnd+1,phase:roundPlan.phase,target,buyTypeByTeam,score:{t:tScore,ct:ctScore},players:ps.map(p=>({id:p.id,side:p.side,teamId:p.teamId,buyType:p.buyType,startMoney:startMoneyByPlayer[p.id],endMoney:p.money,spent:Math.max(0,(startMoneyByPlayer[p.id]??0)-p.money),weapon:p.gun,weaponFamily:c5a1WeaponFamily(p.gun),purchase:p.purchase,purchaseCost:p.purchaseMoney,authority:weaponAuthority(p.gun)}))});
+    buyAudit.rounds.push({round:rnd+1,phase:roundPlan.phase,target,buyTypeByTeam,score:{t:tScore,ct:ctScore},players:ps.map(p=>({id:p.id,side:p.side,teamId:p.teamId,buyType:p.buyType,startMoney:startMoneyByPlayer[p.id],endMoney:p.money,spent:Math.max(0,(startMoneyByPlayer[p.id]??0)-p.money),weapon:p.gun,weaponFamily:c5a1WeaponFamily(p.gun),purchase:p.purchase,purchaseCost:p.purchaseMoney,...(sceneVersion!=="legacy"?{utilityPurchased:[...p.utilityPurchased],utilityCarried:[...p.utilityCarried],utilityCost:p.utilityCost,utilityPlans:p.utilityPlans.map(plan=>({...plan})),utilityPurchases:p.utilityPurchased.map(type=>({...p.utilityPlans.find(plan=>plan.type===type),cost:NADE[type],round:rnd+1})),utilityWindows:{}}:{}),authority:weaponAuthority(p.gun)}))});
     ps.forEach(p=>{const loadoutFamily=c5a1WeaponFamily(p.gun);buyAudit.loadoutCounts[loadoutFamily]=(buyAudit.loadoutCounts[loadoutFamily]||0)+1;if(p.purchase){const family=c5a1WeaponFamily(p.purchase);buyAudit.totalPurchases+=1;buyAudit.purchaseCounts[family]=(buyAudit.purchaseCounts[family]||0)+1;buyAudit.spendByFamily[family]=(buyAudit.spendByFamily[family]||0)+(p.purchaseMoney||0);}});
-    for(let sec=0;sec<115;sec+=C5A2_SIM_STEP_SEC){
+    for(let sec=0;sec<115||(sceneVersion!=="legacy"&&planted&&c4t>0);sec+=C5A2_SIM_STEP_SEC){
       const telemetryStart=reactionTelemetry.length;
       const visibleReactionKeys=new Set();
       const events=[],casts=[],comms=[],buyP=sec<12;const prog=buyP?0:clamp((sec-12)/90,0,1);
+      const utilityThrownIds=new Set();
+      const throwMajorUtility=(player,type,land,intent,planId=null,purchasePurpose=null)=>{
+        const index=player?.nades?.indexOf(type)??-1;
+        if(index<0||player.dead||utilityThrownIds.has(player.id)||!Number.isFinite(land?.x)||!Number.isFinite(land?.y))return false;
+        player.nades=player.nades.filter((_,i)=>i!==index);utilityThrownIds.add(player.id);player.lastUtilityAtSec=sec;player.lastUtilityType=type;player.lastUtilityIntent=intent;
+        const id=`nd${fi}${player.id}`,flightDistance=dist(player.pos,land),flight=c5a2ProjectileProfile(type,flightDistance);
+        throwables.push({id,type,side:player.side,throwerId:player.id,thrownAtRoundSec:sec,intent,planId,purchasePurpose,from:{...player.pos},to:{...land},t:0,flightElapsedSec:0,flightDistance:Number(flightDistance.toFixed(4)),...flight,flying:true,detonate:false});
+        throwerByNadeId[id]=player.id;
+        events.push({id:`utility-throw-${id}`,type:"utility-throw",round:rnd+1,roundSec:sec,playerId:player.id,throwableId:id,utility:type,intent,planId,purchasePurpose,pos:{...player.pos},to:{...land}});
+        return true;
+      };
       const aliveT=ps.filter(p=>p.side==="t"&&!p.dead),aliveCT=ps.filter(p=>p.side==="ct"&&!p.dead);
+      if(sceneVersion!=="legacy"&&!buyP)majorIntel=collectFpsTeamIntel({players:ps,previous:majorIntel,roundSec:sec,walls,canSee:(actor,target)=>!(actor.blindSec>0)&&canEngage(actor,target,walls,smokes,prog)});
       const applyDamage=(at,df,damage,source="firearm",sourceId=null)=>{
         if(!df._hitters)df._hitters=[];if(!df._hitters.includes(at.id))df._hitters.push(at.id);
         const hpBefore=df.hp,effectiveDamage=Math.min(damage,hpBefore);
-        df.hp-=damage;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;
+        df.hp-=damage;if(sceneVersion!=="legacy"&&effectiveDamage>0)df.plantProgressSec=0;at.dmgDealt=(at.dmgDealt||0)+effectiveDamage;roundDmg[at.id]=(roundDmg[at.id]||0)+effectiveDamage;
         if(source==="he"||source==="molly")roundUtilDmg[at.id]=(roundUtilDmg[at.id]||0)+effectiveDamage;
         return{hpBefore,effectiveDamage,killed:df.hp<=0};
       };
-      const finalizeKill=(at,df,{weapon=at.gun,isHS=false,distance=Infinity,sourceId=null}={})=>{
+      const finalizeKill=(at,df,{weapon=at.gun,isHS=false,distance=Infinity,sourceId=null,killAtSec=sec}={})=>{
         df.dead=true;df.hp=0;at.k++;df.d++;if(isHS)at.hsCount++;at.money+=killReward(weapon);roundKills[at.id]=(roundKills[at.id]||0)+1;roundDeaths[df.id]=1;
-        const leadershipSecond=leadershipFollowUpAfterKill(df,ps,target,N);
+        if(sceneVersion!=="legacy"){
+          // Publish the causal death before its trade/clutch consequences.
+          events.push({id:`kill-${rnd+1}-${shotSequence}-${at.id}-${df.id}`,type:"kill",killerId:at.id,killer:at.name,killerSide:at.side,victim:df.name,victimId:df.id,victimSide:df.side,roundSec:killAtSec,gun:weapon,weaponFamily:c5a1WeaponFamily(weapon),hs:isHS,pos:{...df.pos},firstKill:!firstKill});
+          const loss=majorKills.find(k=>k.killerId===df.id&&k.victimSide===at.side&&killAtSec>k.roundSec&&killAtSec-k.roundSec<=5);
+          if(loss)events.push({id:`trade-${rnd+1}-${at.id}-${df.id}`,type:"trade",round:rnd+1,roundSec:killAtSec,playerId:at.id,victimId:df.id,tradedPlayerId:loss.victimId,deathAtSec:loss.roundSec});
+          majorKills.push({roundSec:killAtSec,killerId:at.id,victimId:df.id,killerSide:at.side,victimSide:df.side});
+          for(const side of ["t","ct"]){const survivors=ps.filter(p=>!p.dead&&p.side===side),opponents=ps.filter(p=>!p.dead&&p.side!==side);if(survivors.length===1&&opponents.length&&!clutchEpisodes.some(e=>e.playerId===survivors[0].id)){const episode={playerId:survivors[0].id,side,opponentCount:opponents.length,startedAtSec:killAtSec};clutchEpisodes.push(episode);events.push({id:`clutch-start-${rnd+1}-${episode.playerId}`,type:"clutch-start",round:rnd+1,roundSec:killAtSec,...episode});}}
+        }
+        const leadershipSecond=sceneVersion==="legacy"?leadershipFollowUpAfterKill(df,ps,target,N):{action:false};
         if(leadershipSecond.action){const followUp=ps.find(player=>player.id===leadershipSecond.playerId);if(followUp&&followUp.route)assignRoute(followUp,followUp.route,{kind:"leadership-followup",phase:tacticalPhaseFor(sec,planted),objective:"follow-up",roundSec:sec,routeSignature:"leadership-follow-up"});}
         (df._hitters||[]).forEach(id=>{if(id!==at.id){const ap=ps.find(x=>x.id===id);if(ap){ap.a++;roundAst[id]=(roundAst[id]||0)+1;}}});
-        if(!["glock","usp"].includes(df.gun))droppedGuns.push({id:`dg${fi}${df.id}`,gun:df.gun,pos:{...df.pos}});
+        if(!["glock","usp"].includes(df.gun))droppedGuns.push({id:`dg${fi}${df.id}`,gun:df.gun,pos:{...df.pos},...(sceneVersion!=="legacy"?{ammo:df.ammo,reserveAmmo:df.reserveAmmo}:{})});
+        if(sceneVersion!=="legacy")Object.assign(df,advanceFpsWeaponHandling(df,Math.round(sec*1000),true));
         if(df.hasBomb&&!planted){df.hasBomb=false;droppedBomb={pos:{...df.pos}};casts.push(`💣 炸彈掉落！`);}
         const isFirst=!firstKill;firstKill=true;if(isFirst)openKill={id:at.id,side:at.side};
-        events.push({id:`kill-${rnd+1}-${shotSequence}-${at.id}-${df.id}`,type:"kill",killerId:at.id,killer:at.name,killerSide:at.side,victim:df.name,gun:weapon,weaponFamily:c5a1WeaponFamily(weapon),hs:isHS,pos:{...df.pos},firstKill:isFirst});
+        if(sceneVersion==="legacy")events.push({id:`kill-${rnd+1}-${shotSequence}-${at.id}-${df.id}`,type:"kill",killerId:at.id,killer:at.name,killerSide:at.side,victim:df.name,gun:weapon,weaponFamily:c5a1WeaponFamily(weapon),hs:isHS,pos:{...df.pos},firstKill:isFirst});
         const rk=roundKills[at.id];
         if(rk>=2){const ml={2:"雙殺",3:"三殺",4:"四殺",5:"團滅"};events.push({id:`multikill-${rnd+1}-${at.id}-${rk}`,type:"multikill",player:at.name,playerId:at.id,side:at.side,count:rk,label:ml[Math.min(rk,5)]});highlights.push({fi,label:`${at.name} ${ml[Math.min(rk,5)]}`});}
         if(weapon==="molly")casts.push(`🔥 ${at.name} 燃燒彈擊殺 ${df.name}`);else if(weapon==="he")casts.push(`💥 ${at.name} 高爆彈擊殺 ${df.name}！`);else if(isHS)casts.push(`💀 ${at.name} 爆頭擊殺 ${df.name}！`);else if(isFirst)casts.push(`🔫 ${at.name} 取得首殺，拿下開局優勢`);else if(distance<12)casts.push(`${at.name} 近距離擊殺 ${df.name}`);else if(GUNS[weapon]?.cls==="狙擊")casts.push(`🎯 ${at.name} 一槍狙掉 ${df.name}`);else if(rand()<0.4)casts.push(`${at.name} 擊殺 ${df.name}`);
         if(rand()<0.4)comms.push({side:at.side,name:at.name,text:rk>=2?"清掉了，跟上！":isHS?"爆頭收掉":`收一個，剩 ${df.side==="t"?aliveT.length-1:aliveCT.length-1} 個`});
         const sameTeam=ps.filter(x=>x.side===df.side&&!x.dead&&!x.reassigned);
-        if(sameTeam.length&&rand()<0.6){const taker=sameTeam[0];taker.reassigned=true;const goal=df.side==="t"?N[target==="a"?"aSite":"bSite"]:df.pos;if(goal){assignRoute(taker,[taker.pos,goal],{kind:"death-follow-up",phase:tacticalPhaseFor(sec,planted),objective:"follow-up",roundSec:sec,routeSignature:"death-follow-up"});casts.push(`🔄 ${taker.name} 接管 ${df.name} 的位置`);}}
+        if(sceneVersion==="legacy"&&sameTeam.length&&rand()<0.6){const taker=sameTeam[0];taker.reassigned=true;const goal=df.side==="t"?N[target==="a"?"aSite":"bSite"]:df.pos;if(goal){assignRoute(taker,[taker.pos,goal],{kind:"death-follow-up",phase:tacticalPhaseFor(sec,planted),objective:"follow-up",roundSec:sec,routeSignature:"death-follow-up"});casts.push(`🔄 ${taker.name} 接管 ${df.name} 的位置`);}}
       };
       if(sec===12){
         const tIgl=ps.find(p=>p.side==="t"&&p.role==="igl")||aliveT[0];
         const cIgl=ps.find(p=>p.side==="ct"&&p.role==="igl")||aliveCT[0];
-        if(tIgl)comms.push({side:"t",name:tIgl.name,text:attackTactic.site==="a"?"預設打 A，控好中路跟我節奏":"下 B！香蕉壓上，記得丟煙"});
-        if(cIgl)comms.push({side:"ct",name:cIgl.name,text:defenseTactic.site==="a"?"A 雙人守，注意中路 timing":"B 留一個，其餘抓資訊"});
+        if(tIgl)comms.push({side:"t",...(sceneVersion!=="legacy"?{senderId:tIgl.id}:{}),name:tIgl.name,text:sceneVersion==="legacy"?(attackTactic.site==="a"?"預設打 A，控好中路跟我節奏":"下 B！香蕉壓上，記得丟煙"):`${attackTactic.name}，${attackTactic.type==="rush"?"直接進點，後排跟上":attackTactic.type==="pick"?"先架槍找機會，不急著壓上":"分頭控圖，集結後掩護進點"}`});
+        if(cIgl)comms.push({side:"ct",...(sceneVersion!=="legacy"?{senderId:cIgl.id}:{}),name:cIgl.name,text:sceneVersion==="legacy"?(defenseTactic.site==="a"?"A 雙人守，注意中路 timing":"B 留一個，其餘抓資訊"):`${defenseTactic.name}，${defenseTactic.type==="stack"?"守住部署點，留意側線":defenseTactic.type==="aggro"?"前排探資訊，其餘守好兩點":"兩點留守，看到人再叫支援"}`});
       }
       // 先老化上一 tick 的槍火，讓本 tick 新生的曳光彈/槍口閃光能存入快照
       tracers=tracers.map(t=>({...t,tl:t.tl-C5A2_SIM_STEP_RATIO})).filter(t=>t.tl>0);
       muzzles=muzzles.map(m=>({...m,tl:m.tl-C5A2_SIM_STEP_RATIO})).filter(m=>m.tl>0);
       ps.forEach(p=>{
-        p.flash=Math.max(0,p.flash-C5A2_SIM_STEP_RATIO);p.shooting=Math.max(0,p.shooting-C5A2_SIM_STEP_RATIO);p.prevPos={...p.pos};p.picking=Math.max(0,p.picking-C5A2_SIM_STEP_RATIO);
+        if(sceneVersion!=="legacy")Object.assign(p,advanceFpsWeaponHandling(p,Math.round(sec*1000)));
+        if(sceneVersion!=="legacy"){p.blindSec=fpsDecayBlind(p.blindSec,C5A2_SIM_STEP_SEC);p.flash=0;}else p.flash=Math.max(0,p.flash-C5A2_SIM_STEP_RATIO);
+        p.shooting=Math.max(0,p.shooting-C5A2_SIM_STEP_RATIO);p.prevPos={...p.pos};p.picking=Math.max(0,p.picking-C5A2_SIM_STEP_RATIO);
         const separationMoved=Boolean(p._separationMoved);p._separationMoved=false;
         if(p.dead)return;
         if(buyP){const sp=SPAWN[p.side==="ct"?"ct":"t"];const h=hsh(p.id);
           if(!p._off)p._off={x:((h%5)-2)*1.7,y:(((h>>4)%5)-2)*1.7};
-          p.pos=collideResolve({x:sp.x+p._off.x+Math.sin(sec*0.55+h*0.11)*0.6,y:sp.y+p._off.y+Math.cos(sec*0.5+h*0.13)*0.6},walls,PLAYER_R);p.state="BUY";return;}
+          p.pos=sceneVersion==="legacy"?collideResolve({x:sp.x+p._off.x+Math.sin(sec*0.55+h*0.11)*0.6,y:sp.y+p._off.y+Math.cos(sec*0.5+h*0.13)*0.6},walls,PLAYER_R):{...p._freezePos};p.state="BUY";return;}
         const currentPhase=tacticalPhaseFor(sec,planted),control=tacticalControlSnapshot(ps,p.side,N);
-        if(sec%8===0&&tacticalAudit.mapControlSamples.length<1200)tacticalAudit.mapControlSamples.push({round:rnd+1,roundSec:sec,side:p.side,phase:currentPhase,controlRatio:Number(control.ratio.toFixed(3)),controlledKeys:control.controlledKeys,survival:control.survival,siteControl:control.siteControl});
-        if(p._tacticalPhase!==currentPhase){
+        if(sceneVersion!=="legacy"&&p.side==="t"&&!planted){
+          const phaseTactic=tacticForSidePhase(p.side,currentPhase),selection=p.teamId===CS_TEAM_US?preMatchLayout.phases[currentPhase]?.selectionId:null;
+          const mode=({f1:"default",f2:"rush",f3:"split",f4:"pick",f5:"execute",f6:"fake",f8:"default"})[selection]||phaseTactic.type;
+          if(p._attackMode!==mode||p._attackTarget!==target){p.tacticalStage=null;p.controlledSinceSec=undefined;p.utilityStageSinceSec=undefined;p._attackMode=mode;p._attackTarget=target;}
+          if(['control','pick'].includes(p.tacticalStage)&&p.route.length>1&&p.routeIdx>=p.route.length-1&&!Number.isFinite(p.controlledSinceSec))p.controlledSinceSec=sec;
+          const stage=fpsAttackStage({player:p,players:ps,mode,roundSec:sec,planted,sites:{a:N.aSite,b:N.bSite},target,intel:majorIntel});
+          if(p.tacticalStage!==stage.stage){if(stage.stage==="utility")p.utilityStageSinceSec=sec;p.tacticalStage=stage.stage;p._tacticalPhase=null;
+            events.push({id:`stage-${rnd+1}-${p.id}-${fi}`,type:"tactical-stage",playerId:p.id,side:p.side,roundSec:sec,stage:stage.stage,reason:stage.reason,pos:{...p.pos}});}
+          p.attackStage=stage;
+        }
+        if(sceneVersion!=="legacy"&&p.fakeStage==="approach"&&p.fakeGoal&&dist(p.pos,p.fakeGoal)<6){
+          p.fakeStage="complete";p.fakeReachedAtSec=sec;p._tacticalPhase=null;
+          events.push({id:`fake-reached-${rnd+1}-${p.id}`,type:"fake-reached",round:rnd+1,roundSec:sec,playerId:p.id,pos:{...p.pos},fakeGoal:{...p.fakeGoal},fakeNodeKey:p.fakeNodeKey,fakeSite:p.fakeSite,target});
+        }
+        if(p._tacticalPhase!==currentPhase&&(!(sceneVersion!=="legacy"&&p.fakeStage==="approach")||p._tacticalPhase===null)){
           const sideScore=p.side==="t"?attackScore:defenseScore,opponentScore=p.side==="t"?defenseScore:attackScore;
           const phaseTactic=tacticForSidePhase(p.side,currentPhase);
           let plan=null,objective=currentPhase===CS_TACTICAL_PHASES.POST_PLANT?(p.side==="t"?"post-plant-hold":"retake"):currentPhase;
           if(currentPhase===CS_TACTICAL_PHASES.POST_PLANT&&c4pos){
             if(p.side==="t"){
-              const anchor=tacticalPostPlantAnchor(p,phaseTactic,N,target,preMatchLayout.postPlantMode);if(anchor)plan={kind:"post-plant-cover",keys:["position","anchor"],points:[p.pos,anchor],objective:"post-plant-hold"};
+              const anchor=sceneVersion!=="legacy"&&preMatchLayout.postPlantMode==="crossfire"?selectFpsCrossfireAnchor({player:p,players:ps,nodes:N,target}):tacticalPostPlantAnchor(p,phaseTactic,N,target,preMatchLayout.postPlantMode);if(anchor)plan={kind:"post-plant-cover",keys:["position","anchor"],points:[p.pos,anchor],objective:"post-plant-hold"};
               p.objectiveState="HOLD_ANGLE";p.state="POST_PLANT";
             }else{
               const retake=tacticalRetakeRoute(p,phaseTactic,N,c4pos)||[p.pos,c4pos];plan={kind:"retake",keys:["position","retake","c4"],points:retake,objective:"retake"};
@@ -1446,22 +1527,46 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
           }else{
             const weaponMix=tacticalWeaponMix(ps,p.side);
             plan=tacticalRoutePlan({player:p,tactic:phaseTactic,routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,
-              context:{phase:currentPhase,target,scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:control.survival,controlRatio:control.ratio,weaponMix,openness:preMatchLayout.openness},round:rnd,mapKey});
-            plan.points=plan.keys.map(key=>N[key]).filter(Boolean);
+              context:{phase:currentPhase,target:fpsTacticalPlanningTarget({player:p,tactic:phaseTactic,planted,target,sceneVersion}),scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:control.survival,controlRatio:control.ratio,weaponMix,openness:preMatchLayout.openness},round:rnd,mapKey});
+            plan=majorRoutePlan(p,plan,currentPhase,phaseTactic);plan.points=plan.keys.map(key=>N[key]).filter(Boolean);
           }
           p._activeTacticId=phaseTactic?.id??phaseTactic?.name??null;
-          if(plan?.points?.length>1)assignRoute(p,plan.points,{...plan,roundSec:sec,routeRebuildReason:"phase-transition",routeSignature:(plan.keys||[]).join(">")});
+          if(plan?.points?.length>1){
+            const signature=(plan.keys||[]).join(">");
+            // An unchanged entry/lurk lane continues from its real cursor.
+            // Rebuilding its full spawn route at 26/70 seconds sent the actor
+            // backwards through already traversed waypoints.
+            const keepRoleRoute=sceneVersion!=="legacy"&&["entry","lurk","execute","rush-entry","split-mid","route-control","pick-angle","regroup","utility-stage","hold-a","hold-b","information","information-peek"].includes(plan.kind)&&!p._coordinatorKind&&p._routePlan?.routeSignature===signature&&p._routePlan?.kind===plan.kind;
+            if(keepRoleRoute)p._routePlan={...p._routePlan,phase:currentPhase,objective:plan.objective};
+            else assignRoute(p,plan.points,{...plan,roundSec:sec,routeRebuildReason:"phase-transition",routeSignature:signature});
+          }
           p._tacticalPhase=currentPhase;p.tacticalPhase=currentPhase;
           tacticalAudit.phases[currentPhase]+=1;
           tacticalAudit.phaseSelections.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,tacticType:phaseTactic?.type??null,ownerTeamId:({t:attackTeam,ct:defenseTeam}[p.side]),currentSideTacticId:phaseTactic?.id??null,currentSideTacticType:phaseTactic?.type??null,source:"pre-match-layout"});
           tacticalAudit.decisions.push({round:rnd+1,roundSec:sec,playerId:p.id,side:p.side,phase:currentPhase,target,buyType:p.buyType,scoreDiff:sideScore-opponentScore,survival:control.survival,controlRatio:Number(control.ratio.toFixed(3)),weaponMix:tacticalWeaponMix(ps,p.side),variant:plan?.kind||"hold",routeSignature:(plan?.keys||[]).join(">"),objective,selectionId:preMatchLayout.phases[currentPhase]?.selectionId??null,tacticId:phaseTactic?.id??null,ownerTeamId:({t:attackTeam,ct:defenseTeam}[p.side]),currentSideTacticId:phaseTactic?.id??null,currentSideTacticType:phaseTactic?.type??null,openness:preMatchLayout.openness});
         }
+        if(sceneVersion!=="legacy"){
+          let travelDurationSec;
+          if(planted&&p.side==="ct"&&c4pos){
+            const retakePath=p.route?.length&&dist(p.route.at(-1),c4pos)<3?[p.pos,...p.route.slice(p.routeIdx+1)]:navigableRoute([p.pos,c4pos]);
+            const pathLength=retakePath.slice(1).reduce((sum,point,index)=>sum+dist(retakePath[index],point),0);
+            const movementPerSec=(4.8+(p.sta?(p.sta-82)*0.025:0))*C5A2_SIM_STEP_RATIO*1.3/C5A2_SIM_STEP_SEC;
+            travelDurationSec=pathLength/Math.max(0.1,movementPerSec);
+          }
+          p.engagementRange=weaponAuthority(p.gun).range;
+          const intent=decideFpsTacticalIntent({player:p,intel:majorIntel,recentKills:majorKills,roundSec:sec,planted,sites:{a:N.aSite,b:N.bSite},bombPos:c4pos,bombTimeSec:c4t*C5A2_LEGACY_SNAPSHOT_SEC,travelDurationSec,defuseDurationSec:3.5/((p.stats?(0.45+persStat(p,"foc")/250+persStat(p,"dec")/300):0.7)/C5A2_LEGACY_SNAPSHOT_SEC),spawn:spawnPointFor(p)});
+          p.tacticalIntent={...intent,roundSec:sec};
+          p.awareness=fpsAwarenessLook({player:p,nodes:N,intel:majorIntel,roundSec:sec,dtSec:C5A2_SIM_STEP_SEC,walls,lineBlocked});p.va=p.awareness.va;
+          if(intent.routeTarget&&dist(p.pos,intent.routeTarget)>3&&p._coordinatorKind!==intent.kind){assignRoute(p,[p.pos,intent.routeTarget],{kind:intent.kind,phase:currentPhase,objective:intent.kind,roundSec:sec,routeSignature:intent.kind,informationSource:intent.source,targetId:intent.targetId,observedAtSec:intent.observedAtSec});p._coordinatorKind=intent.kind;}
+          else if(!intent.routeTarget){if(p._coordinatorKind)p._tacticalPhase=null;p._coordinatorKind=null;}
+        }
+        if(sec%8===0&&tacticalAudit.mapControlSamples.length<1200)tacticalAudit.mapControlSamples.push({round:rnd+1,roundSec:sec,side:p.side,phase:currentPhase,controlRatio:Number(control.ratio.toFixed(3)),controlledKeys:control.controlledKeys,survival:control.survival,siteControl:control.siteControl});
         // 龜縮/撤退：素質保守（進攻性低）且殘血者，遇敵會後撤而非硬拚
-        {const en=ps.filter(e=>!e.dead&&e.side!==p.side);
+        {const en=sceneVersion==="legacy"?ps.filter(e=>!e.dead&&e.side!==p.side):majorIntel.filter(i=>i.side===p.side).map(i=>({id:i.targetId,pos:i.pos}));
          const near=en.length?en.reduce((a,b)=>dist(b.pos,p.pos)<dist(a.pos,p.pos)?b:a):null;
          const mates=(p.side==="t"?aliveT:aliveCT).length;
-         if(near&&!buyP&&dist(near.pos,p.pos)<32&&p.hp<48&&aggr(p)<0.82&&mates>1){
-            const adaptiveGoal=adaptiveRouteGoal(p,target,N);
+         if(near&&!buyP&&dist(near.pos,p.pos)<32&&p.hp<48&&aggr(p)<0.82&&mates>1&&(sceneVersion==="legacy"||!p.tacticalIntent?.routeTarget)){
+            const adaptiveGoal=sceneVersion==="legacy"?adaptiveRouteGoal(p,target,N):null;
             if(adaptiveGoal){assignRoute(p,[p.pos,adaptiveGoal],{kind:"low-hp-rotate",phase:tacticalPhaseFor(sec,planted),objective:"retreat",roundSec:sec,routeSignature:"low-hp-rotate"});p.state="ROTATE";return;}
            const dx=p.pos.x-near.pos.x,dy=p.pos.y-near.pos.y,L=Math.hypot(dx,dy)||1;
            const retreatStep=3.2*C5A2_SIM_STEP_RATIO;
@@ -1470,8 +1575,14 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
          }}
         // A visible, legal contact interrupts locomotion before the next waypoint;
         // the reaction/combat system below still owns hit resolution and damage.
-        const contact=ps.filter(e=>e.side!==p.side&&canEngage(p,e,walls,smokes,prog)).sort((a,b)=>dist(p.pos,a.pos)-dist(p.pos,b.pos))[0];
-        if(contact){
+        const withdrawing=sceneVersion!=="legacy"&&["save","retreat"].includes(p.tacticalIntent?.kind);
+        const contact=withdrawing?null:ps.filter(e=>e.side!==p.side&&(sceneVersion==="legacy"||!(p.blindSec>0))&&canEngage(p,e,walls,smokes,prog)).sort((a,b)=>dist(p.pos,a.pos)-dist(p.pos,b.pos))[0];
+        // An entry may stop to fire briefly, but a distant contact cannot freeze
+        // the entire execute indefinitely. Retreat/save still use their own route.
+        if(sceneVersion!=="legacy"){if(contact){if(p._contactId!==contact.id){p._contactId=contact.id;p._contactSinceSec=sec;}}else{p._contactId=null;p._contactSinceSec=null;}}
+        const stopForContact=contact&&(sceneVersion==="legacy"||p.tacticalIntent?.stopMovement||dist(p.pos,contact.pos)<12||
+          (p.side==="ct"&&!planted&&p.routeIdx>=p.route.length-1)||sec-(p._contactSinceSec??sec)<1);
+        if(sceneVersion!=="legacy"&&p.hasBomb&&(p.plantProgressSec||0)>0&&!stopForContact){p.state="安裝中";}else if(stopForContact){
           const routeActive=p.routeIdx<p.route.length-1;
           const routeInterruptKey=routeActive?`${rnd}:${p.id}:${p.routeIdx}:${contact.id}`:null;
           if(routeActive&&p._routeInterruptKey!==routeInterruptKey){
@@ -1503,7 +1614,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
           const wp=p.route[p.routeIdx],tgt=p.route[p.routeIdx+1];
           const segLen=Math.max(2,dist(wp,tgt));
           const spd=4.8+(p.sta?(p.sta-82)*0.025:0);
-          const maxStep=spd*C5A2_SIM_STEP_RATIO*1.3;
+          const maxStep=spd*C5A2_SIM_STEP_RATIO*1.3*(sceneVersion!=="legacy"?(p.tacticalIntent?.pace??1)*(p.awareness?.pace??1):1);
           const dx=tgt.x-p.pos.x,dy=tgt.y-p.pos.y,remaining=Math.hypot(dx,dy);
           const step=Math.min(maxStep,remaining);
           const des=remaining>0.001?{x:p.pos.x+dx/remaining*step,y:p.pos.y+dy/remaining*step}:{...tgt};
@@ -1536,7 +1647,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
                  if(!validRoute(alternate)||alternate.map(point=>`${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(">")===beforeSignature){
                    const controlNow=tacticalControlSnapshot(ps,p.side,N),sideScore=p.side==="t"?attackScore:defenseScore,opponentScore=p.side==="t"?defenseScore:attackScore;
                    const recoveryPhase=tacticalPhaseFor(sec,planted),recoveryTactic=tacticForSidePhase(p.side,recoveryPhase);p._activeTacticId=recoveryTactic?.id??recoveryTactic?.name??null;
-                   const replPlan=tacticalRoutePlan({player:p,tactic:recoveryTactic,routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,context:{phase:recoveryPhase,target,scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:controlNow.survival,controlRatio:controlNow.ratio,weaponMix:tacticalWeaponMix(ps,p.side),openness:preMatchLayout.openness,replanOrdinal:navigationAudit.replanCount+1},round:rnd,mapKey});
+                   let replPlan=tacticalRoutePlan({player:p,tactic:recoveryTactic,routeLibrary:routeLibraryBySide[p.side],RKF:roundRKF,context:{phase:recoveryPhase,target:fpsTacticalPlanningTarget({player:p,tactic:recoveryTactic,planted,target,sceneVersion}),scoreDiff:sideScore-opponentScore,buyType:p.buyType,survival:controlNow.survival,controlRatio:controlNow.ratio,weaponMix:tacticalWeaponMix(ps,p.side),openness:preMatchLayout.openness,replanOrdinal:navigationAudit.replanCount+1},round:rnd,mapKey});replPlan=majorRoutePlan(p,replPlan,recoveryPhase,recoveryTactic);
                    const replPoints=replPlan.keys.map(key=>N[key]).filter(Boolean);if(validRoute(navigableRoute([p.pos,...replPoints])))alternate=navigableRoute([p.pos,...replPoints]);planMeta={...replPlan,...planMeta,routeSignature:replPlan.keys.join(">")};
                  }
                  if(validRoute(alternate)&&alternate.length>1){assignRoute(p,alternate,{...planMeta,roundSec:sec,routeRebuildReason:"stuck-recovery",stuckRecovery:true,routeSignature:planMeta.routeSignature||alternate.map(point=>`${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(">")});p._awaitingReplanProgress=true;movementAudit.replanCount+=1;navigationAudit.replanCount+=1;navigationAudit.replanHistory.push({round:rnd,roundSec:sec,playerId:p.id,fromRoute:beforeSignature,toRoute:alternate.map(point=>`${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(">"),obstacles:blockers,waypointIndex:p.routeIdx});}
@@ -1546,42 +1657,46 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
             }
           }
           const faceTarget=p.route[Math.min(p.routeIdx+1,p.route.length-1)]||tgt;
-          const fdx=faceTarget.x-p.pos.x,fdy=faceTarget.y-p.pos.y;if(Math.hypot(fdx,fdy)>0.5)p.va=Math.atan2(fdy,fdx)*180/Math.PI;
+          const fdx=faceTarget.x-p.pos.x,fdy=faceTarget.y-p.pos.y;if(sceneVersion==="legacy"&&Math.hypot(fdx,fdy)>0.5)p.va=Math.atan2(fdy,fdx)*180/Math.PI;
           p.state=p.routeIdx<p.route.length-2?"ROTATE":"EXECUTE";
         }else{
           // 路線走完仍無接觸：T 方推進至炸彈點/包點匯入戰鬥（避免狙擊/指揮在後方空轉整局）
-          const threatNear=ps.find(e=>!e.dead&&e.side!==p.side&&dist(e.pos,p.pos)<40);
-          if(p.side==="t"&&!threatNear&&prog>0.4&&!p._pushed){
+          const threatNear=sceneVersion==="legacy"?ps.find(e=>!e.dead&&e.side!==p.side&&dist(e.pos,p.pos)<40):majorIntel.filter(i=>i.side===p.side).map(i=>({id:i.targetId,pos:i.pos})).find(e=>dist(e.pos,p.pos)<40);
+          if(p.side==="t"&&(sceneVersion==="legacy"?!threatNear&&prog>0.4:!planted&&p.attackStage?.stage==="entry"&&p.attackStage.canAdvance)&&!p._pushed&&(sceneVersion==="legacy"||p.fakeStage!=="approach")){
             const goal=(planted&&c4pos)?c4pos:N[target==="a"?"aSite":"bSite"];
             if(goal&&dist(p.pos,goal)>10){p._pushed=true;const via=N[target==="a"?"aConn":"car"];assignRoute(p,via&&dist(p.pos,via)>8&&!planted?[p.pos,via,goal]:[p.pos,goal],{kind:planted?"post-plant-push":"site-execute",phase:tacticalPhaseFor(sec,planted),objective:planted?"post-plant-hold":"execute",roundSec:sec,routeSignature:planted?"post-plant-push":"site-execute"});p.state="EXECUTE";}
           }
            if(planted){p.state=p.side==="ct"?"COVER":"POST_PLANT";p.objectiveState=p.side==="ct"?"COVER":"HOLD_ANGLE";}else{p.state="HOLD";p.objectiveState="HOLD";}
           if(!p._hold)p._hold={x:p.pos.x,y:p.pos.y};
           const threat=threatNear;
-          if(threat){const dx=threat.pos.x-p.pos.x,dy=threat.pos.y-p.pos.y;p.va=Math.atan2(dy,dx)*180/Math.PI;p.state="架槍";}
-          else if(rand()<0.25){p.va+=(rand()-0.5)*30;}
+          if(threat){const dx=threat.pos.x-p.pos.x,dy=threat.pos.y-p.pos.y;if(sceneVersion==="legacy")p.va=Math.atan2(dy,dx)*180/Math.PI;p.state="架槍";}
+          else if(sceneVersion==="legacy"&&rand()<0.25){p.va+=(rand()-0.5)*30;}
           const h=hsh(p.id);const hx=p._hold.x+Math.sin(sec*0.5+h*0.1)*1.1,hy=p._hold.y+Math.cos(sec*0.45+h*0.17)*1.1;
           let hp2=vl(p.pos,{x:hx,y:hy},0.3*C5A2_SIM_STEP_RATIO);const hst=dist(hp2,p.pos);if(hst>2.0*C5A2_SIM_STEP_RATIO)hp2=vl(p.pos,hp2,2.0*C5A2_SIM_STEP_RATIO/hst);
-          p.pos=collideResolve(hp2,walls,PLAYER_R); // 平滑且受限的待機微動
+          if(sceneVersion==="legacy")p.pos=collideResolve(hp2,walls,PLAYER_R); // 平滑且受限的待機微動
+          if(sceneVersion!=="legacy"&&!planted){const peek=planFpsCoverPeek({player:p,nodes:N,walls,roundSec:sec,blocked,navLineBlocked,lineBlocked,radius:PLAYER_R});
+            if(peek){p.lastPeekAtSec=sec;p.coverPeek={...peek,startedAtSec:sec,cover:{...p.pos}};assignRoute(p,peek.points,{kind:'cover-peek',phase:currentPhase,objective:'information-peek',roundSec:sec,routeSignature:`peek:${peek.approachKey}`});events.push({id:`peek-${rnd}-${p.id}-${sec}`,type:'cover-peek',playerId:p.id,round:rnd+1,roundSec:sec,source:peek.source,points:peek.points,approachKey:peek.approachKey});}}
         }
         map.doors.forEach((d,i)=>{if(!doorStates[i]&&dist(p.pos,{x:d.x,y:d.y})<6){doorStates[i]=true;events.push({type:"door",idx:i,label:d.label});}});
-        if(p.picking<=0&&["glock","usp"].includes(p.gun)){const near=droppedGuns.find(g=>dist(g.pos,p.pos)<5);if(near){p.gun=near.gun;p.picking=20;droppedGuns=droppedGuns.filter(g=>g.id!==near.id);casts.push(`🔫 ${p.name} 撿起 ${GUNS[near.gun].name}`);}}
+        if(p.picking<=0&&["glock","usp"].includes(p.gun)){const near=droppedGuns.find(g=>dist(g.pos,p.pos)<5);if(near){p.gun=near.gun;if(sceneVersion!=="legacy"){Object.assign(p,createFpsWeaponHandling(near.gun,near));fireClockByActor.delete(p.id);}p.picking=20;droppedGuns=droppedGuns.filter(g=>g.id!==near.id);casts.push(`🔫 ${p.name} 撿起 ${GUNS[near.gun].name}`);}}
         if(droppedBomb&&p.side==="t"&&dist(droppedBomb.pos,p.pos)<5){p.hasBomb=true;droppedBomb=null;casts.push(`💣 ${p.name} 撿起炸彈，繼續執行`);}
-        if(p.state==="EXECUTE"&&p.nades?.length>0&&rand()<0.06){
-          const nt=p.nades[0];p.nades=p.nades.slice(1);
-          const enemy=ps.find(e=>!e.dead&&e.side!==p.side&&dist(e.pos,p.pos)<30);
+        if(sceneVersion==="legacy"&&p.state==="EXECUTE"&&p.nades?.length>0&&rand()<0.06){
+          const nt=p.nades[0];if(sceneVersion==="legacy")p.nades=p.nades.slice(1);
+          const enemy=sceneVersion==="legacy"?ps.find(e=>!e.dead&&e.side!==p.side&&dist(e.pos,p.pos)<30):majorIntel.filter(i=>i.side===p.side).map(i=>({id:i.targetId,pos:i.pos})).find(e=>dist(e.pos,p.pos)<30);
           const land=enemy?{x:lerp(p.pos.x,enemy.pos.x,0.85),y:lerp(p.pos.y,enemy.pos.y,0.85)}:{x:clamp(p.pos.x+(rand()-0.5)*14,5,95),y:clamp(p.pos.y+(rand()-0.5)*14,5,95)};
+          if(sceneVersion!=="legacy")throwMajorUtility(p,nt,land,"opportunistic");else{
           const nadeId=`nd${fi}${p.id}`;
           const flightDistance=dist(p.pos,land);
           const flight=c5a2ProjectileProfile(nt,flightDistance);
           throwables.push({id:nadeId,type:nt,side:p.side,from:{...p.pos},to:land,t:0,flightElapsedSec:0,flightDistance:Number(flightDistance.toFixed(4)),...flight,flying:true,detonate:false});throwerByNadeId[nadeId]=p.id;
           if(nt==="flash"&&enemy)enemy.flash=Math.max(enemy.flash,4);
+          }
           if(nt==="flash")casts.push(`⚡ ${p.name} 丟出閃光彈`);else if(nt==="he")casts.push(`💥 ${p.name} 高爆彈攻擊`);
         }
       });
       // 所有移動分支完成後再做一次 pairwise separation，避免路線／待機／撤退
       // 各自合法卻在同一 tick 把兩名角色推到同一個位置。
-      separateFpsPlayers(ps,walls,movementAudit);
+      if(sceneVersion==="legacy"||!buyP)separateFpsPlayers(ps,walls,movementAudit);
       if(sceneVersion!=="legacy")ps.forEach(p=>{p.elevation=fpsMajorElevation(mapKey,p.pos);});
       ps.forEach(p=>{
         const locomotion=c5a2LocomotionFor(p);p.velocityUnitsPerSec=locomotion.velocityUnitsPerSec;p.velocity=locomotion.velocity;p.locomotion=locomotion.locomotion;
@@ -1609,8 +1724,21 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
         // misclassified as a teleport or a direct wall crossing.
         const movementEnd=p._preSeparationPos||p.pos,step=dist(p.prevPos||movementEnd,movementEnd);if(!buyP){movementAudit.maxStep=Math.max(movementAudit.maxStep,step);if(step>6.5*C5A2_SIM_STEP_RATIO*1.1)movementAudit.teleportViolations+=1;if(step>0.05&&lineBlocked(p.prevPos||movementEnd,movementEnd,walls)){movementAudit.wallSegmentCrossings+=1;if(movementAudit.wallCrossingSamples.length<24)movementAudit.wallCrossingSamples.push({id:p.id,round:rnd,roundSec:sec,state:p.state,from:{...p.prevPos},to:{...movementEnd},step:Number(step.toFixed(3))});}}
       });
-      if(sec===18)(attackTactic.smokes||[]).forEach(sk=>{const n=N[sk];if(n)smokes.push({id:`s${rnd}${sk}`,pos:{...n},tl:18,age:0});});
-      if(sec===24)(attackTactic.mollys||[]).forEach(mk=>{const n=N[mk];if(n)mollys.push({id:`m${rnd}${mk}`,pos:{...n},tl:8});});
+      if(sceneVersion==="legacy"){
+        if(sec===18)(attackTactic.smokes||[]).forEach(sk=>{const n=N[sk];if(n)smokes.push({id:`s${rnd}${sk}`,pos:{...n},tl:18,age:0});});
+        if(sec===24)(attackTactic.mollys||[]).forEach(mk=>{const n=N[mk];if(n)mollys.push({id:`m${rnd}${mk}`,pos:{...n},tl:8});});
+      }else{
+        for(const player of ps){const utility=chooseFpsContextUtility({player,players:ps,intel:majorIntel,nodes:N,target,planted,bombPos:c4pos,roundSec:sec,smokes,throwables,walls,lineBlocked,onSkip:(reason,type)=>{
+          const audit=buyAudit.rounds.at(-1).players.find(p=>p.id===player.id);
+          audit.utilityNoUseReasons??={};
+          const counts=audit.utilityNoUseReasons[type]??={};counts[reason]=(counts[reason]??0)+1;
+        },onWindow:(type,reason,plan)=>{
+          const audit=buyAudit.rounds.at(-1).players.find(p=>p.id===player.id),window=audit.utilityWindows[type]??={planId:plan?.id||null,observations:{},firstEligibleSec:null};
+          window.observations[reason]=(window.observations[reason]??0)+1;if(reason==='eligible'&&window.firstEligibleSec===null)window.firstEligibleSec=sec;
+        }});
+          if(utility)throwMajorUtility(player,utility.type,utility.to,utility.intent,utility.planId,utility.purchasePurpose);}
+
+      }
       // Buy phase is the only global combat lock. Once the round is live, route
       // execution is tactical intent and must never suppress legal acquisition.
       if(!buyP&&aliveT.length&&aliveCT.length){
@@ -1646,26 +1774,57 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
         // actor/target reservation reshape round outcomes.
         const maxEngage=Math.min(pairs.length,Math.max(2,Math.ceil((aliveT.length+aliveCT.length)/3)));
         let done=0;
-        for(const[tp,cp,d,mapAwareT,mapAwareCT,freshPair,pairMeta] of ordered){
+        const pendingShotKills=new Map();
+        const flushShotKills=()=>{for(const {at,df,meta}of pendingShotKills.values())if(!df.dead)finalizeKill(at,df,meta);pendingShotKills.clear();};
+        let shotQueue=null;
+        if(sceneVersion!=="legacy"){
+          const candidates=[];
+          for(const pair of ordered){const [tp,cp,d,canT,canCT]=pair;for(const [actor,target,visible,forcedTw]of [[tp,cp,canT,true],[cp,tp,canCT,false]]){
+            if(!visible||actor.dead||target.dead||actor.blindSec>0||actor.hasBomb&&(actor.plantProgressSec||0)>0)continue;
+            const episode=activeReactionEpisodes.get(reactionKey(actor,target));if(!episode)continue;
+            if(episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=contactNowMs;episode.reactionReadyAtMs=contactNowMs+episode.reactionDelayMs;if(episode.routeActiveAtAcquisition)combatAudit.routeInterruptAcquisitions+=1;}
+            candidates.push({actor,target,pair,forcedTw,reactionReadyAtMs:episode.firstAuthoritativeShotAtMs==null?episode.reactionReadyAtMs:contactNowMs,distance:d,priority:actor._combatTargetId===target.id?1:0});
+          }}
+          shotQueue=createFpsDirectedShotQueue({candidates,windowStartMs:contactNowMs,windowEndMs:combatWindowEndMs,
+            getWeaponReadyAtMs:(actor,t)=>fpsWeaponReadyAtMs(actor,t),getIntervalMs:actor=>weaponAuthority(actor.gun).intervalMs,
+            getCadenceReadyAtMs:actor=>Math.max(contactNowMs,fireClockByActor.get(actor.id)||contactNowMs,(lastShotAtByActor.get(actor.id)??-Infinity)+weaponAuthority(actor.gun).intervalMs),
+            isActorAvailable:actor=>!actor.dead&&!(actor.blindSec>0)&&!(actor.hasBomb&&(actor.plantProgressSec||0)>0),
+            isCandidateVisible:c=>canEngage(c.actor,c.target,walls,smokes,prog)});
+        }
+        const engagements=sceneVersion==="legacy"?ordered:{[Symbol.iterator]:function*(){let time=null,op;try{while((op=shotQueue.next())){if(time!==null&&op.shotAtMs>time)flushShotKills();time=op.shotAtMs;yield [...op.pair,op.forcedTw,op.shotAtMs,op];}}finally{flushShotKills();}}};
+        for(const[tp,cp,d,mapAwareT,mapAwareCT,freshPair,pairMeta,forcedTw,opportunityAtMs,queueOp] of engagements){
+          let queueFired=false,queueShotAtMs=opportunityAtMs;
+          try{
           const sniperInvolved=isSniperPair([tp,cp]);
-          if(!sniperInvolved&&done>=maxEngage)break;
-          if(tp.dead||cp.dead||usedT.has(tp.id)||usedCT.has(cp.id))continue;
+          if(sceneVersion==="legacy"&&!sniperInvolved&&done>=maxEngage)break;
+          if(tp.dead||cp.dead||sceneVersion==="legacy"&&(usedT.has(tp.id)||usedCT.has(cp.id)))continue;
           if(mapAwareT){const episode=activeReactionEpisodes.get(reactionKey(tp,cp));if(episode&&episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=Math.round(sec*1000);episode.reactionReadyAtMs=episode.targetAcquiredAtMs+episode.reactionDelayMs;if(episode.routeActiveAtAcquisition)combatAudit.routeInterruptAcquisitions+=1;}}
           if(mapAwareCT){const episode=activeReactionEpisodes.get(reactionKey(cp,tp));if(episode&&episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=Math.round(sec*1000);episode.reactionReadyAtMs=episode.targetAcquiredAtMs+episode.reactionDelayMs;if(episode.routeActiveAtAcquisition)combatAudit.routeInterruptAcquisitions+=1;}}
           let fireChance=d<15?0.85:d<30?0.55:(sniperInvolved?0.55:0.3);
           fireChance*=(0.55+0.5*Math.max(aggr(tp),aggr(cp))); // 進攻性影響交火意願（雙方都龜縮→少對槍）
-          if(!contactCalled){contactCalled=true;const spotter=cp;comms.push({side:spotter.side,name:spotter.name,text:`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`});const handoffReceiver=applyCommsHandoff(spotter,tp,ps,walls);if(handoffReceiver&&handoffReceiver.route)assignRoute(handoffReceiver,handoffReceiver.route,{kind:"comms-handoff",phase:tacticalPhaseFor(sec,planted),objective:"handoff",roundSec:sec,routeSignature:"comms-handoff"});}
+          if(!contactCalled){contactCalled=true;const spotter=sceneVersion==="legacy"||canEngage(cp,tp,walls,smokes,prog)?cp:tp,observed=spotter===cp?tp:cp;
+            const visibleCount=sceneVersion==="legacy"?aliveT.length:ps.filter(e=>e.side!==spotter.side&&canEngage(spotter,e,walls,smokes,prog)).length;
+            comms.push({side:spotter.side,...(sceneVersion!=="legacy"?{senderId:spotter.id}:{}),name:spotter.name,text:sceneVersion==="legacy"?`${nearCO(tp.pos)} 有人，${aliveT.length} 個！`:`${nearCO(observed.pos)} 看到 ${visibleCount} 人！`});
+            const handoffReceiver=applyCommsHandoff(spotter,observed,ps,walls);if(handoffReceiver&&handoffReceiver.route){assignRoute(handoffReceiver,handoffReceiver.route,{kind:"comms-handoff",phase:tacticalPhaseFor(sec,planted),objective:"handoff",roundSec:sec,routeSignature:"comms-handoff"});
+              if(sceneVersion!=="legacy")comms.push({side:handoffReceiver.side,senderId:handoffReceiver.id,name:handoffReceiver.name,text:"收到報點，我來補位"});}}
           // 對槍勝負由雙方 16 項素質 + 武器 + 情境決定（非隨機）
           const tHold=(tp.state==="架槍"||tp.state==="HOLD"),cHold=(cp.state==="架槍"||cp.state==="HOLD");
           const tSk=combatSkill(tp,{holding:tHold,entry:tp.role==="entry"&&!tHold,lurk:tp.role==="lurker"&&tHold,lastAlive:aliveT.length===1,lowHP:tp.hp<40});
           const cSk=combatSkill(cp,{holding:cHold,entry:cp.role==="entry"&&!cHold,lurk:cp.role==="lurker"&&cHold,lastAlive:aliveCT.length===1,lowHP:cp.hp<40});
           const ecoEdge=(ecoCT&&!ecoT)?0.16:(ecoT&&!ecoCT)?-0.16:0;
-          const flashPen=(tp.flash>0?-0.12:0)+(cp.flash>0?0.12:0);
+          const flashPen=((sceneVersion==="legacy"?tp.flash:tp.blindSec)>0?-0.12:0)+((sceneVersion==="legacy"?cp.flash:cp.blindSec)>0?0.12:0);
           // Side is not a player-team handicap.  Keep the engagement contest
           // symmetric and let roster, weapon authority, economy, utility,
           // tactics, and geometry provide the actual evidence.
           const Pt=clamp(0.5+(tSk-cSk)*0.013+ecoEdge+flashPen+tacEdge,0.07,0.93);
-          const tw=combatRand()<Pt;const at=tw?tp:cp,df=tw?cp:tp;
+          let tw=sceneVersion==="legacy"?combatRand()<Pt:forcedTw;
+          if(sceneVersion!=="legacy"){
+            const tReady=mapAwareT&&fpsWeaponReadyAtMs(tp,contactNowMs)<combatWindowEndMs,cReady=mapAwareCT&&fpsWeaponReadyAtMs(cp,contactNowMs)<combatWindowEndMs;
+            if(!tReady&&!cReady)continue;
+            if(tReady!==cReady)tw=tReady;
+          }
+          const at=tw?tp:cp,df=tw?cp:tp;
+          if(sceneVersion!=="legacy"&&at.hasBomb&&(at.plantProgressSec||0)>0)continue;
           const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;
           const attackerFov=tw?pairMeta?.fovT:pairMeta?.fovCT;
           const attackerFlank=tw?pairMeta?.flankT:pairMeta?.flankCT;
@@ -1681,41 +1840,53 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
           const hasCadenceClock=Number.isFinite(scheduledShotAtMs);
           const reactionShotAtMs=actorEpisode?.firstAuthoritativeShotAtMs==null&&Number.isFinite(actorEpisode?.reactionReadyAtMs)?actorEpisode.reactionReadyAtMs:null;
           const firstContactReady=Boolean(Number.isFinite(reactionShotAtMs)&&!hasCadenceClock);
-          if(!firstContactReady&&!hasCadenceClock&&combatRand()>=fireChance)continue;
+          if(sceneVersion==="legacy"&&!firstContactReady&&!hasCadenceClock&&combatRand()>=fireChance)continue;
           const synergyPartner=synergyTradeCandidate(at,df,ps,walls);
-          const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD);
+          const synergyReady=Boolean(synergyPartner&&Math.max(persStat(at,"coo"),persStat(synergyPartner,"coo"))>=SYNERGY_TRADE_THRESHOLD&&(sceneVersion==="legacy"||at._synergyTargetId!==df.id||sec-(at._lastSynergyAtSec??-Infinity)>=3));
           const synergySecond=synergyReady?synergyCoverFollowUpRoute(at,synergyPartner,df):null;
           if(synergyReady){
-            synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";synergyPartner.shooting=Math.max(synergyPartner.shooting,1);
+            if(sceneVersion!=="legacy"){at._synergyTargetId=df.id;at._lastSynergyAtSec=sec;}
+            synergyPartner.va=Math.atan2(df.pos.y-synergyPartner.pos.y,df.pos.x-synergyPartner.pos.x)*180/Math.PI;synergyPartner.state="ENGAGE";if(sceneVersion==="legacy")synergyPartner.shooting=Math.max(synergyPartner.shooting,1);
             if(synergySecond){assignRoute(at,synergySecond,{kind:"trade-cover",phase:tacticalPhaseFor(sec,planted),objective:"trade-cover",roundSec:sec,routeSignature:"trade-cover"});at.state="ROTATE";}
           }
           const g=GUNS[at.gun],auth=weaponAuthority(at.gun);if(!g)continue;
           const reactionEpisode=activeReactionEpisodes.get(reactionKey(at,df));
           if((Number.isFinite(scheduledShotAtMs)&&scheduledShotAtMs>combatWindowEndMs)||(Number.isFinite(reactionShotAtMs)&&reactionShotAtMs>=combatWindowEndMs)){combatAudit.scheduledSkips+=1;continue;}
+          const handlingReadyAtMs=sceneVersion!=="legacy"?fpsWeaponReadyAtMs(at,contactNowMs):contactNowMs;
+          if(handlingReadyAtMs>=combatWindowEndMs)continue;
           // Do not consume the per-tick pair reservation until this pair is
           // actually ready to emit. A deferred cadence clock must not starve
           // another legal target for multiple snapshots.
-          usedT.add(tp.id);usedCT.add(cp.id);if(!sniperInvolved)done++;
+          if(sceneVersion==="legacy"){usedT.add(tp.id);usedCT.add(cp.id);if(!sniperInvolved)done++;}
           const rawAccuracy=at.stats?.acc||80,effectiveAccuracy=at.stats?.acc!=null?persStat(at,"acc"):rawAccuracy;
           const automatic=auth.fireMode==="automatic";
           const actorPreviousShotAtMs=lastShotAtByActor.get(fireKey);
           // A weapon swap must not inherit a shorter ready time from the old
           // weapon (for example Glock 500ms -> Scout 900ms).
           const authorityReadyAtMs=Number.isFinite(actorPreviousShotAtMs)?actorPreviousShotAtMs+auth.intervalMs:contactNowMs;
-          let authoritativeShotAtMs=Math.max(contactNowMs,authorityReadyAtMs,Number.isFinite(scheduledShotAtMs)?scheduledShotAtMs:contactNowMs,Number.isFinite(reactionShotAtMs)?reactionShotAtMs:contactNowMs);
+          let authoritativeShotAtMs=Math.max(contactNowMs,authorityReadyAtMs,handlingReadyAtMs,Number.isFinite(scheduledShotAtMs)?scheduledShotAtMs:contactNowMs,Number.isFinite(reactionShotAtMs)?reactionShotAtMs:contactNowMs);
+          if(queueOp)authoritativeShotAtMs=Math.max(authoritativeShotAtMs,opportunityAtMs);
           let emittedShots=0;
-          while(authoritativeShotAtMs<combatWindowEndMs&&emittedShots<(automatic?auth.maxShotsPerTrigger:1)&&!df.dead){
+          while(authoritativeShotAtMs<combatWindowEndMs&&emittedShots<(queueOp?1:automatic?auth.maxShotsPerTrigger:1)&&!df.dead){
             const roundedShotAtMs=Math.round(authoritativeShotAtMs);
+            let ammoBeforeShot=null;
+            if(sceneVersion!=="legacy"){
+              const consumed=consumeFpsWeaponShot(at,roundedShotAtMs);Object.assign(at,consumed.state);
+              if(!consumed.fired){authoritativeShotAtMs=fpsWeaponReadyAtMs(at,roundedShotAtMs);break;}
+              ammoBeforeShot=consumed.ammoBefore;
+            }
             const previousShotAtMs=lastShotAtByActor.get(fireKey);
             const rangeFactor=clamp(1-(d/Math.max(1,auth.range))*0.35,0.58,1);
-            const hitChance=clamp(auth.accuracy*(0.46+effectiveAccuracy/210)*rangeFactor,0.32,0.92);
+            const skillFactor=sceneVersion==="legacy"?1:clamp(1+(tw?tSk-cSk:cSk-tSk)*.004,.75,1.2);
+            const hitChance=clamp(auth.accuracy*(0.46+effectiveAccuracy/210)*rangeFactor*skillFactor,0.32,0.92)*(sceneVersion!=="legacy"&&at.blindSec>0?.55:1);
             const hit=combatRand()<hitChance;
             const isHS=hit&&combatRand()<g.hs*(0.72+0.55*(effectiveAccuracy/100))*auth.accuracy;
             let killed=false,damage=0;
-            if(hit){
+            if(hit&&(sceneVersion==="legacy"||df.hp>0)){
               let dmg=(g.dmg+Math.floor(combatRand()*40))*(isHS?2:1);
               if(df.armor&&!isHS)dmg*=0.72;
               ({killed,effectiveDamage:damage}=applyDamage(at,df,Math.round(dmg)));
+              if(queueOp&&killed&&pendingShotKills.has(df.id))killed=false;
               combatAudit.damageEvents+=1;
             }
             combatAudit.shotEvents+=1;
@@ -1729,30 +1900,36 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
               }
             }
             const eventId=`shot-${rnd}-${fi}-${++shotSequence}`;
-            shotCadenceTelemetry.push({eventId,attackerId:at.id,targetId:df.id,gun:at.gun,weaponFamily:auth.family,shotAtMs:roundedShotAtMs,profileIntervalMs:Math.round(auth.intervalMs),actualIntervalMs:Number.isFinite(previousShotAtMs)?roundedShotAtMs-previousShotAtMs:null,round:rnd,hit,damage:Number(damage||0),fov:Boolean(attackerFov),lineOfSight:Boolean(pairMeta?.lineOfSight),targetLock:true,engagementPermission:true,flank:Boolean(attackerFlank)});
+            shotCadenceTelemetry.push({eventId,attackerId:at.id,targetId:df.id,gun:at.gun,weaponFamily:auth.family,shotAtMs:roundedShotAtMs,profileIntervalMs:Math.round(auth.intervalMs),actualIntervalMs:Number.isFinite(previousShotAtMs)?roundedShotAtMs-previousShotAtMs:null,round:rnd,hit,damage:Number(damage||0),fov:Boolean(attackerFov),lineOfSight:Boolean(pairMeta?.lineOfSight),targetLock:true,engagementPermission:true,flank:Boolean(attackerFlank),...(sceneVersion!=="legacy"?{ammoBefore:ammoBeforeShot,ammoAfter:at.ammo}:{})});
             lastShotAtByActor.set(fireKey,roundedShotAtMs);
+            if(queueOp){queueFired=true;queueShotAtMs=roundedShotAtMs;at._combatTargetId=df.id;}
             const missAngle=(combatRand()-0.5)*0.36,missDistance=hit?0:Math.max(1.5,d*0.08);
             const tracerTo=hit?{x:df.pos.x,y:df.pos.y}:{x:df.pos.x+Math.cos(missAngle+at.va*Math.PI/180)*missDistance,y:df.pos.y+Math.sin(missAngle+at.va*Math.PI/180)*missDistance};
             tracers.push({id:`tr-${eventId}`,eventId,from:{...at.pos},to:tracerTo,tl:1,visualLifetimeMs:95,shotAtMs:roundedShotAtMs,color:at.side==="ct"?"#7dd3fc":"#fdba74",hit,sniper:auth.family==="sniper",attackerId:at.id,gun:at.gun,weaponFamily:auth.family,surface:hit?"player":"concrete",reactionId:reactionEpisode?.id||null});
-            muzzles.push({id:`mz-${eventId}`,eventId,pos:{...at.pos},side:at.side,va:at.va,attackerId:at.id,gun:at.gun,weaponFamily:auth.family,tl:1,visualLifetimeMs:110,shotAtMs:roundedShotAtMs,big:auth.family==="sniper",cls:g.cls,kill:killed,distance:d,reactionId:reactionEpisode?.id||null});
+            muzzles.push({id:`mz-${eventId}`,eventId,pos:{...at.pos},side:at.side,va:at.va,attackerId:at.id,gun:at.gun,weaponFamily:auth.family,tl:1,visualLifetimeMs:110,shotAtMs:roundedShotAtMs,big:auth.family==="sniper",cls:g.cls,kill:killed,distance:d,...(sceneVersion!=="legacy"?{hit,damage:Number(damage||0),targetId:df.id}:{}),reactionId:reactionEpisode?.id||null});
             emittedShots+=1;authoritativeShotAtMs+=auth.intervalMs;
-            if(killed)finalizeKill(at,df,{weapon:at.gun,isHS,distance:d});
+            if(killed){const meta={weapon:at.gun,isHS,distance:d,killAtSec:roundedShotAtMs/1000};if(queueOp)pendingShotKills.set(df.id,{at,df,meta});else finalizeKill(at,df,meta);}
           }
           fireClockByActor.set(fireKey,authoritativeShotAtMs);
-          if(emittedShots>0){at.flash=3;df.flash=3;at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.dead?1:2;if(attackerFlank)combatAudit.flankEngagements+=1;}
+          if(emittedShots>0){if(sceneVersion==="legacy"){at.flash=3;df.flash=3;}at.state="ENGAGE";df.state="ENGAGE";at.shooting=df.dead?1:2;if(attackerFlank)combatAudit.flankEngagements+=1;}
           if(df.dead){}
           else if(df.hp<35&&combatRand()<0.25){comms.push({side:df.side,name:df.name,text:"我殘血，先撤一下"});}
+          }finally{if(queueOp)shotQueue.afterShot(queueOp,{fired:queueFired,shotAtMs:queueShotAtMs,nextReadyAtMs:queueFired?fpsWeaponReadyAtMs(queueOp.actor,queueShotAtMs):Math.max(fpsWeaponReadyAtMs(queueOp.actor,queueShotAtMs),queueShotAtMs+1)});}
         }
       }
-      if(!planted&&prog>0.4){
+      if(!planted&&(sceneVersion==="legacy"?prog>0.4:!buyP)){
         const sitePos=N[target==="a"?"aSite":"bSite"];const carrier=ps.find(p=>p.side==="t"&&!p.dead&&p.hasBomb);
         if(carrier){
+          if(sceneVersion!=="legacy"&&dist(carrier.pos,sitePos)>=9)carrier.plantProgressSec=0;
           const endsNear=carrier.route.length&&dist(carrier.route[carrier.route.length-1],sitePos)<10;
-          if(!endsNear&&dist(carrier.pos,sitePos)>8){const ap=N[target==="a"?"aConn":"car"];assignRoute(carrier,ap?[carrier.pos,ap,sitePos]:[carrier.pos,sitePos],{kind:"site-execute",phase:tacticalPhaseFor(sec,planted),objective:"plant",roundSec:sec,routeSignature:ap?`${target}Approach>${target}Site`:`${target}Site`});}
-          if(dist(carrier.pos,sitePos)<9){const ctNear=aliveCT.filter(cp=>dist(cp.pos,sitePos)<13&&!lineBlocked(carrier.pos,cp.pos,walls)).length;const canPlant=(ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18);if(canPlant){planted=true;c4pos={...sitePos};c4t=20;carrier.hasBomb=false;carrier.state="安裝中";carrier.money+=300;casts.push(`💣 ${carrier.name} 安裝炸彈！`);highlights.push({fi,label:`R${rnd+1} 炸彈安裝`});
-            bombAudit.plantEvents.push({round:rnd+1,roundSec:sec,site:target,position:{...c4pos},carrierId:carrier.id,carrierName:carrier.name,score:{t:tScore,ct:ctScore},aliveT:aliveT.length,aliveCT:aliveCT.length});
+          if(!endsNear&&dist(carrier.pos,sitePos)>8&&(sceneVersion==="legacy"||carrier.attackStage?.canAdvance)&&carrier.fakeStage!=="approach"){const ap=N[target==="a"?"aConn":"car"];assignRoute(carrier,ap?[carrier.pos,ap,sitePos]:[carrier.pos,sitePos],{kind:"site-execute",phase:tacticalPhaseFor(sec,planted),objective:"plant",roundSec:sec,routeSignature:ap?`${target}Approach>${target}Site`:`${target}Site`});}
+          if(dist(carrier.pos,sitePos)<9&&(sceneVersion==="legacy"||carrier.fakeStage!=="approach")){const ctNear=aliveCT.filter(cp=>dist(cp.pos,sitePos)<13&&!lineBlocked(carrier.pos,cp.pos,walls)).length;const safeToPlant=ctNear===0;
+            if(sceneVersion!=="legacy")carrier.plantProgressSec=safeToPlant?(carrier.plantProgressSec||0)+C5A2_SIM_STEP_SEC:0;
+            const canPlant=sceneVersion==="legacy"?((ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18)):carrier.plantProgressSec>=3;
+            if(canPlant){planted=true;c4pos={...sitePos};c4t=20;carrier.hasBomb=false;carrier.state="安裝中";carrier.money+=300;casts.push(`💣 ${carrier.name} 安裝炸彈！`);highlights.push({fi,label:`R${rnd+1} 炸彈安裝`});
+            bombAudit.plantEvents.push({round:rnd+1,roundSec:sec,site:target,position:{...c4pos},carrierId:carrier.id,carrierName:carrier.name,...(sceneVersion!=="legacy"?{carrierPosition:{...carrier.pos}}:{}),score:{t:tScore,ct:ctScore},aliveT:aliveT.length,aliveCT:aliveCT.length});
             bombAudit.objectiveTransitions.push({round:rnd+1,roundSec:sec,from:"PLANTING",to:"PLANTED",side:"t",site:target});
-            aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const anchor=tacticalPostPlantAnchor(p,tacticForSidePhase("t",CS_TACTICAL_PHASES.POST_PLANT),N,target,preMatchLayout.postPlantMode);if(anchor){p._adaptivePostPlant=true;assignRoute(p,[p.pos,anchor],{kind:"post-plant-cover",phase:CS_TACTICAL_PHASES.POST_PLANT,objective:"post-plant-hold",roundSec:sec,routeSignature:`post-plant>${target}`});p.objectiveState="HOLD_ANGLE";p.state="POST_PLANT";}});
+            aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const anchor=sceneVersion!=="legacy"&&preMatchLayout.postPlantMode==="crossfire"?selectFpsCrossfireAnchor({player:p,players:ps,nodes:N,target}):tacticalPostPlantAnchor(p,tacticForSidePhase("t",CS_TACTICAL_PHASES.POST_PLANT),N,target,preMatchLayout.postPlantMode);if(anchor){p._adaptivePostPlant=true;assignRoute(p,[p.pos,anchor],{kind:"post-plant-cover",phase:CS_TACTICAL_PHASES.POST_PLANT,objective:"post-plant-hold",roundSec:sec,routeSignature:`post-plant>${target}`});p.objectiveState="HOLD_ANGLE";p.state="POST_PLANT";}});
             comms.push({side:"t",name:carrier.name,text:`包下了，${target==="a"?"A":"B"} 點，全員交叉！`});const bombAwareReceiver=applyCommsBombAwareness(carrier,c4pos,aliveT);if(bombAwareReceiver){assignRoute(bombAwareReceiver,bombAwareReceiver.route,{kind:"bomb-awareness",phase:CS_TACTICAL_PHASES.POST_PLANT,objective:"post-plant-hold",roundSec:sec,routeSignature:"bomb-awareness"});comms.push({side:"t",name:bombAwareReceiver.name,text:"收到包點資訊，調整路線"});}
             const cd=aliveCT[0];if(cd)comms.push({side:"ct",name:cd.name,text:`${target==="a"?"A":"B"} 響了，全員回防拆彈！`});
             // 炸彈安裝後：所有存活警察立刻往包點移動（回防 / 拆彈）
@@ -1768,13 +1945,22 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       });
       mollys=mollys.map(m=>({...m,tl:m.tl-C5A2_SIM_STEP_RATIO})).filter(m=>m.tl>0);
       if(planted&&!bombPlantEventEmitted&&c4pos){bombPlantEventEmitted=true;const plantEvent=bombAudit.plantEvents.at(-1);events.push({id:`bomb-planted-${rnd+1}`,type:"bomb-planted",round:rnd+1,roundSec:sec,site:target,playerId:plantEvent?.carrierId||null,playerName:plantEvent?.carrierName||null,position:{...c4pos},pos:{...c4pos}});}
-      throwables=throwables.map(tw=>{if(tw.flying){tw.flightElapsedSec=(tw.flightElapsedSec||0)+C5A2_SIM_STEP_SEC;tw.t=clamp(tw.flightElapsedSec/Math.max(0.1,tw.flightDurationSec||C5A2_PROJECTILE_FLIGHT_SEC),0,1);if(tw.t>=1){tw.flying=false;tw.detonate=true;tw.boom=3;
-        if(tw.type==="flash"){ps.forEach(pl=>{if(pl.dead)return;const d=dist(pl.pos,tw.to);if(d<24&&!lineBlocked(pl.pos,tw.to,walls)){const enemy=pl.side!==tw.side;pl.flash=Math.max(pl.flash,enemy?(d<12?6:4):(d<8?3:0));}});}
+      throwables=throwables.map(tw=>{if(tw.flying){if(sceneVersion!=="legacy"&&tw.thrownAtRoundSec===sec)return tw;tw.flightElapsedSec=(tw.flightElapsedSec||0)+C5A2_SIM_STEP_SEC;tw.t=clamp(tw.flightElapsedSec/Math.max(0.1,tw.flightDurationSec||C5A2_PROJECTILE_FLIGHT_SEC),0,1);if(tw.t>=1){tw.flying=false;tw.detonate=true;tw.boom=3;
+        if(sceneVersion!=="legacy"){tw.detonatedAtRoundSec=sec;events.push({id:`utility-detonate-${tw.id}`,type:"utility-detonate",round:rnd+1,roundSec:sec,playerId:tw.throwerId,throwableId:tw.id,utility:tw.type,pos:{...tw.to}});}
+        if(tw.type==="flash"){ps.forEach(pl=>{if(sceneVersion!=="legacy"){pl.blindSec=Math.max(pl.blindSec||0,fpsFlashDurationSec({player:pl,throwable:tw,walls,lineBlocked}));return;}if(pl.dead)return;const d=dist(pl.pos,tw.to);if(d<24&&!lineBlocked(pl.pos,tw.to,walls)){const enemy=pl.side!==tw.side;pl.flash=Math.max(pl.flash,enemy?(d<12?6:4):(d<8?3:0));}});}
         if(tw.type==="he"){const at=ps.find(pl=>pl.id===throwerByNadeId[tw.id]);if(at)ps.forEach(df=>{if(df.dead||df.side===tw.side)return;const d=dist(df.pos,tw.to);if(d>=HE_R||lineBlocked(tw.to,df.pos,walls))return;const rawDamage=Math.max(0,Math.round(HE_MAX_DAMAGE*(1-d/HE_R)));const damage=Math.round(rawDamage*(df.armor?HE_ARMOR_SCALE:1));if(damage<=0)return;const {killed}=applyDamage(at,df,damage,"he",tw.id);if(killed)finalizeKill(at,df,{weapon:"he",distance:d,sourceId:tw.id});});}
         if(tw.type==="smoke")smokes.push({id:`s${tw.id}`,pos:{...tw.to},tl:18,age:0});
         if(tw.type==="molly")mollys.push({id:`m${tw.id}`,pos:{...tw.to},tl:MOLLY_TL});
       }}else if(tw.detonate){tw.boom--;}return tw;}).filter(tw=>tw.flying||tw.boom>0);
-      if(planted&&c4t!==null){c4t-=C5A2_SIM_STEP_RATIO;bombAudit.timerSamples+=1;
+      if(sceneVersion!=="legacy"&&planted&&c4t!==null){
+        majorDefuse=advanceFpsDefuse({previous:majorDefuse,players:ps,bombPos:c4pos,walls,lineBlocked,dtSec:C5A2_SIM_STEP_SEC,timerSec:c4t*C5A2_LEGACY_SNAPSHOT_SEC,rateFor:p=>p.stats?(0.45+persStat(p,"foc")/250+persStat(p,"dec")/300)/C5A2_LEGACY_SNAPSHOT_SEC:0.35});
+        defuseProg=majorDefuse.progress;c4t-=C5A2_SIM_STEP_RATIO;bombAudit.timerSamples+=1;
+        ps.filter(p=>!p.dead&&p.side==="ct").forEach(p=>{p.objectiveState=p.id===majorDefuse.defuserId?"DEFUSE":"COVER";if(p.id===majorDefuse.defuserId){p.state="拆彈中";p.va=Math.atan2(c4pos.y-p.pos.y,c4pos.x-p.pos.x)*180/Math.PI;}});
+        for(const [type,id] of [["defuse-interrupt",majorDefuse.interrupted?majorDefuse.interruptedId:null],["defuse-start",majorDefuse.started?majorDefuse.defuserId:null]])if(id!==null)events.push({id:`${type}-${rnd+1}-${fi}`,type,round:rnd+1,roundSec:sec,playerId:id,pos:{...c4pos},position:{...c4pos}});
+        if(majorDefuse.completed){roundEnd={winner:"ct",how:"defuse"};bombResultRecorded=true;defuseResultEventEmitted=true;bombAudit.defuseEvents.push({round:rnd+1,roundSec:sec,defuserId:majorDefuse.defuserId,progress:Number(defuseProg.toFixed(3))});bombAudit.objectiveTransitions.push({round:rnd+1,roundSec:sec,from:"DEFUSE",to:"DEFUSED",side:"ct",playerId:majorDefuse.defuserId});events.push({id:`bomb-defused-${rnd+1}`,type:"bomb-defused",round:rnd+1,roundSec:sec,playerId:majorDefuse.defuserId,pos:{...c4pos},position:{...c4pos}});}
+        else if(majorDefuse.exploded){roundEnd={winner:"t",how:"bomb"};bombResultRecorded=true;bombAudit.explosionEvents.push({round:rnd+1,roundSec:sec,position:{...c4pos},timer:0});bombAudit.objectiveTransitions.push({round:rnd+1,roundSec:sec,from:"PLANTED",to:"EXPLODED",side:"t",site:target});}
+      }
+      if(sceneVersion==="legacy"&&planted&&c4t!==null){c4t-=C5A2_SIM_STEP_RATIO;bombAudit.timerSamples+=1;
         // 警察必須真的抵達包點且無匪徒壓制，才會累積拆彈進度（受專注力/決策影響）
         const defuseAliveCT=ps.filter(p=>p.side==="ct"&&!p.dead),defuseAliveT=ps.filter(p=>p.side==="t"&&!p.dead);
         const defuser=defuseAliveCT.find(cp=>dist(cp.pos,c4pos)<6);
@@ -1791,25 +1977,28 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       }
       if(defuseCalled&&!defuseStartEventEmitted){const defuser=aliveCT.find(player=>player.objectiveState==="DEFUSE")||aliveCT.find(player=>player.state==="拆彈中");defuseStartEventEmitted=true;events.push({id:`defuse-start-${rnd+1}`,type:"defuse-start",round:rnd+1,roundSec:sec,playerId:defuser?.id||null,playerName:defuser?.name||null,position:c4pos?{...c4pos}:null,pos:c4pos?{...c4pos}:null});}
       if(defuseProg>=3.5&&!defuseResultEventEmitted){defuseResultEventEmitted=true;events.push({id:`bomb-defused-${rnd+1}`,type:"bomb-defused",round:rnd+1,roundSec:sec,playerId:aliveCT.find(player=>player.objectiveState==="DEFUSE")?.id||null,position:c4pos?{...c4pos}:null,pos:c4pos?{...c4pos}:null});}
-      if(planted&&c4t<=0&&!explosionEventEmitted){explosionEventEmitted=true;events.push({id:`bomb-exploded-${rnd+1}`,type:"bomb-exploded",round:rnd+1,roundSec:sec,site:target,position:c4pos?{...c4pos}:null,pos:c4pos?{...c4pos}:null});}
+      if(planted&&c4t<=0&&!explosionEventEmitted&&(sceneVersion==="legacy"||roundEnd?.how==="bomb")){explosionEventEmitted=true;events.push({id:`bomb-exploded-${rnd+1}`,type:"bomb-exploded",round:rnd+1,roundSec:sec,site:target,position:c4pos?{...c4pos}:null,pos:c4pos?{...c4pos}:null});}
       if(!roundEnd){
         if(aliveT.length===0&&!planted)roundEnd={winner:"ct",how:"elim"};
         else if(aliveCT.length===0)roundEnd={winner:"t",how:"elim"};
-        else if(sec>=114)roundEnd={winner:planted?"t":"ct",how:"time"};
+        else if(sec>=114&&(sceneVersion==="legacy"||!planted))roundEnd={winner:planted?"t":"ct",how:"time"};
       }
       for(const[key] of activeReactionEpisodes){if(!visibleReactionKeys.has(key))activeReactionEpisodes.delete(key);}
       // roundHist is append-only. Keep one shared immutable-by-prefix array and
       // record the visible prefix length instead of cloning the growing array
       // on every 0.5s snapshot. The old `[...roundHist]` made C5A.2 long maps
       // quadratic in both allocation and GC pressure (especially Inferno).
-      frames.push({fi,ts:rnd*120+sec,rnd,roundSec:sec,roundHistCount:rnd, target,planted,tacticalPhase:tacticalPhaseFor(sec,planted),bombState:planted?(c4t<=0?"exploded":"planted"):"carried",buyP,c4t:c4t!==null?Math.ceil(c4t):null,c4pos:c4pos?{...c4pos}:null,
-        players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos},routePoints:(p.route||[]).map(point=>({x:Number(point.x.toFixed(3)),y:Number(point.y.toFixed(3))}))})),
+      if(sceneVersion!=="legacy")ps.forEach(p=>{p.stance=resolveFpsWeaponStance(p);});
+      frames.push({fi,ts:sceneVersion==="legacy"?rnd*120+sec:majorMatchTimeSec+sec,rnd,roundSec:sec,roundHistCount:rnd, target,planted,tacticalPhase:tacticalPhaseFor(sec,planted),bombState:planted?(sceneVersion!=="legacy"&&roundEnd?.how==="defuse"?"defused":c4t<=0?"exploded":"planted"):"carried",buyP,c4t:c4t!==null?Math.ceil(c4t):null,c4pos:c4pos?{...c4pos}:null,
+        ...(sceneVersion!=="legacy"?{bombTimeRemainingSec:c4t===null?null:Math.max(0,c4t*C5A2_LEGACY_SNAPSHOT_SEC),teamIntel:majorIntel.map(i=>({...i,pos:{...i.pos}})),defuse:{defuserId:majorDefuse.defuserId,progress:majorDefuse.progress}}:{}),
+        players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos},...(sceneVersion!=="legacy"?{...(p._hitters?{_hitters:[...p._hitters]}:{}),...(p._activeStuckEpisode?{_activeStuckEpisode:{...p._activeStuckEpisode}}:{})}:{}),routePoints:(p.route||[]).map(point=>({x:Number(point.x.toFixed(3)),y:Number(point.y.toFixed(3))}))})),
         smokes:smokes.map(s=>({...s})),mollys:mollys.map(m=>({...m})),tracers:tracers.map(t=>({...t})),muzzles:muzzles.map(m=>({...m})),
         throwables:throwables.map(tw=>({...tw,from:{...tw.from},to:{...tw.to}})),droppedGuns:droppedGuns.map(g=>({...g})),droppedBomb:droppedBomb?{...droppedBomb}:null,doorStates:{...doorStates},
         events,casts,comms,reactionEvents:reactionTelemetry.slice(telemetryStart).map(episode=>({...episode})),ctScore,tScore,roundHist,ecoT,ecoCT,phase:roundPlan.phase,half:roundPlan.half,otGroup:roundPlan.otGroup,
         roundInPhase:roundPlan.roundInPhase,currentSideByTeam:cloneCsSides(sideByTeam),roundStart:fi===roundFrameStart?roundMeta:null});
       fi++;if(roundEnd)break;
     }
+    if(sceneVersion!=="legacy")majorMatchTimeSec=(frames.at(-1)?.ts||0)+C5A2_SIM_STEP_SEC;
     if(!roundEnd)roundEnd={winner:"ct",how:"time"};
     ps.forEach(player=>{
       const episode=player._activeStuckEpisode;
@@ -1828,9 +2017,11 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
     finishCsRound(ruleState,winnerTeam);
     ctScore=ruleState.score[CS_TEAM_ENEMY];tScore=ruleState.score[CS_TEAM_US];
     const _rnds=rnd+1;
-    const _rs=ps.map(p=>({name:p.name,side:p.side,teamId:p.teamId,role:p.fpsRole||p.role,k:roundKills[p.id]||0,d:roundDeaths[p.id]||0,a:roundAst[p.id]||0,dmg:Math.round(roundDmg[p.id]||0),adr:Math.round((p.dmgDealt||0)/_rnds),tk:p.k,td:p.d,ta:p.a})).sort((a,b)=>(b.k*100+b.dmg)-(a.k*100+a.dmg));
+    const majorOutcome=sceneVersion!=="legacy"?getFpsRoundOutcomeMetrics({players:ps,kills:majorKills,clutchEpisodes,winnerTeam}):null;
+    const _rs=ps.map(p=>({name:p.name,side:p.side,teamId:p.teamId,role:p.fpsRole||p.role,k:roundKills[p.id]||0,d:roundDeaths[p.id]||0,a:roundAst[p.id]||0,dmg:Math.round(roundDmg[p.id]||0),adr:Math.round((sceneVersion==="legacy"?(p.dmgDealt||0):(agg[p.id].dmg+(roundDmg[p.id]||0)))/_rnds),tk:p.k,td:p.d,ta:p.a,...(sceneVersion!=="legacy"?{id:p.id,utilDmg:Math.round(roundUtilDmg[p.id]||0),traded:majorOutcome.tradedIds.includes(p.id),clutch:p.id===majorOutcome.clutchId,survived:!p.dead}:{})})).sort((a,b)=>(b.k*100+b.dmg)-(a.k*100+a.dmg));
     roundHist.push({...roundMeta,winner:winnerTeam===CS_TEAM_US?"t":"ct",winnerTeam,winnerSide,how:roundEnd.how,
       mvp:_rs[0]&&(_rs[0].k>0||_rs[0].dmg>0)?_rs[0]:null,top:_rs.slice(0,4),tS:tScore,cS:ctScore,
+      ...(sceneVersion!=="legacy"?{roundStats:_rs,clutchEpisodes:clutchEpisodes.map(e=>({...e}))}:{}),
       nextCurrentSideByTeam:cloneCsSides(ruleState.currentSideByTeam),completed:ruleState.completed});
     bombAudit.resultLinks.push({round:rnd+1,winnerSide,winnerTeam,how:roundEnd.how,planted,plantCount:bombAudit.plantEvents.filter(event=>event.round===rnd+1).length,defuseCount:bombAudit.defuseEvents.filter(event=>event.round===rnd+1).length,explosionCount:bombAudit.explosionEvents.filter(event=>event.round===rnd+1).length,timerSamples:bombAudit.timerSamples});
     const finalFrame=frames[frames.length-1];
@@ -1840,13 +2031,13 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       const wn=winnerSide;
       const mvpName=_rs[0]&&(_rs[0].k>0||_rs[0].dmg>0)?_rs[0].name:null;
        const winSurv=ps.filter(x=>x.teamId===winnerTeam&&!x.dead); // 勝方殘存者（stable team）
-      const clutchId=(winSurv.length===1&&(roundKills[winSurv[0].id]||0)>=1)?winSurv[0].id:null; // 1打多殘局
+      const clutchId=sceneVersion!=="legacy"?majorOutcome.clutchId:(winSurv.length===1&&(roundKills[winSurv[0].id]||0)>=1)?winSurv[0].id:null;
       if(openKill)agg[openKill.id].entry++;                        // 開局擊殺
       RS.forEach(c=>{const p=ps.find(x=>x.id===c.id);const A=agg[c.id];
         A.k+=roundKills[c.id]||0;A.d+=roundDeaths[c.id]||0;A.a+=roundAst[c.id]||0;
         A.dmg+=Math.round(roundDmg[c.id]||0);A.utilDmg+=Math.round(roundUtilDmg[c.id]||0);A.hs+=p?(p.hsCount||0):0;
         // KAST：本回合有 擊殺/助攻/存活 之一即算
-        if((roundKills[c.id]||0)>0||(roundAst[c.id]||0)>0||!roundDeaths[c.id])A.kastR++;
+        if((roundKills[c.id]||0)>0||(roundAst[c.id]||0)>0||!roundDeaths[c.id]||(sceneVersion!=="legacy"&&majorOutcome.tradedIds.includes(c.id)))A.kastR++;
         if(c.id===clutchId){A.clutch++;if(finalFrame){finalFrame.events=[...(finalFrame.events||[]),{id:`clutch-${rnd+1}-${c.id}`,type:"clutch",round:rnd+1,playerId:c.id,player:c.name,side:c.side,label:"關鍵殘局",pos:finalFrame.players.find(player=>player.id===c.id)?.pos||null}];}}
         if(c.name===mvpName)A.mvpR++;
       });
@@ -1862,6 +2053,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       e.money+= won?3250:(LB[Math.min(lossStreak[teamId],5)-1]||1400);
       if(c.side==="t"&&planted&&!won)e.money+=800; // 種包補助歸屬當回合攻方 team
       e.money=clamp(Math.round(e.money),0,16000);
+      if(sceneVersion!=="legacy")e.nades=p&&!p.dead?[...p.nades]:[];
       if(p&&!p.dead){e.gun=p.gun;e.armor=p.armor;e.helmet=p.helmet;} // 存活保留
       else{e.gun=null;e.armor=false;e.helmet=false;}
     });
@@ -1971,6 +2163,7 @@ function buildMatchResult(sim,opts={}){
   const topFraggers=[...sim.players].sort((a,b)=>b.k-a.k).slice(0,3);
   return{
     id:matchId ?? stableResultId(sim, seed, tacticT, tacticCT),mode:"CS",map:sim.mapKey,date,
+    ...(sim.sceneVersion&&sim.sceneVersion!=="legacy"?{sceneVersion:sim.sceneVersion}:{}),
     completed:sim.completed,winner:sim.winner,win,scoreT:sim.tScore,scoreCT:sim.ctScore,tName,ctName,
     tactic:{ours:tacticT?.name||null,theirs:tacticCT?.name||null,ourType:tacticT?.type||null,theirType:tacticCT?.type||null},
     players:sim.players,ourPlayers,theirPlayers,
@@ -2059,7 +2252,10 @@ function createFpsPovWeapon(camera){
 
 function updateFpsPovWeapon(st,frame,ch,pov,dt){
   const weapon=st.povWeapon;if(!weapon)return;
-  if(weapon.major){const live=st.liveRef.current,actor=pov&&ch?.alive?st.players.find(player=>player.id===ch.id):null;weapon.update({frame,chase:ch,pov,live,family:c5a1WeaponFamily(ch?.gun),dt,weaponGroups:actor?.rigged?.c2c?.weaponGroups,frameAgeSec:Math.max(0,Number(st.subT)||0)*(Number(live.playbackFrameSec)||C5A2_PLAYBACK_FRAME_SEC)});st.povWeaponDiagnostics=weapon.diagnostics;return;}
+  if(weapon.major){const live=st.liveRef.current,actor=pov&&ch?.alive?st.players.find(player=>player.id===ch.id):null;
+    // Camera chase data contains only framing fields; handling belongs to the saved player.
+    const savedPlayer=frame.players?.find(player=>player.id===ch?.id);
+    weapon.update({feedbackRoot:st.renderer.domElement.closest(".fps-major-battle"),nextFrame:live.sim?.frames?.[live.fIdx+1],frame,chase:savedPlayer?{...ch,...savedPlayer}:ch,pov,live,family:c5a1WeaponFamily(ch?.gun),dt,weaponGroups:actor?.rigged?.c2c?.weaponGroups,handGeometries:actor?.rigged?.c2c?.povHandGeometries,textiles:actor?.rigged?.c2c?.povTextiles,clothColor:actor?.rigged?.c2c?.materials?.fabric?.color,frameAgeSec:Math.max(0,Number(st.subT)||0)*(Number(live.playbackFrameSec)||C5A2_PLAYBACK_FRAME_SEC)});st.povWeaponDiagnostics=weapon.diagnostics;return;}
   weapon.group.visible=Boolean(pov&&ch?.alive);
   if(!weapon.group.visible){weapon.flash.visible=false;weapon.diagnostics={visible:false,gun:weapon.gun||null,family:weapon.family||null,weaponParts:12,fireCount:weapon.fireCount,authority:"frame.muzzles + player.shooting"};st.povWeaponDiagnostics=weapon.diagnostics;return;}
   const family=c5a1WeaponFamily(ch.gun),profile={pistol:{scale:0.86,x:0.02,y:0.04,z:0.02,color:0xb9c2cf},smg:{scale:0.96,x:0,y:0,z:0,color:0x9ca8b6},rifle:{scale:1.04,x:-0.01,y:0,z:0,color:0x7f8b98},sniper:{scale:1.18,x:-0.03,y:0.01,z:0.01,color:0x9dc4d4},shotgun:{scale:1.08,x:-0.01,y:-0.01,z:0,color:0xb68e72}}[family]||{scale:1,x:0,y:0,z:0,color:0x9ca8b6};
@@ -2178,7 +2374,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
       el.style.cursor=wantPan?"move":"grabbing";};
     const onMove=e=>{if(!drag)return;const p=e.touches?e.touches[0]:e;
       if(drag.pan)panBy(p.clientX-drag.x,p.clientY-drag.y,drag.r*0.0018,drag.th,drag.tx,drag.tz);
-      else if(drag.chasing){cam.chaseYaw=drag.cy-(p.clientX-drag.x)*0.006;cam.chasePitch=clamp(drag.cp-(p.clientY-drag.y)*0.005,-0.55,0.78);} // 追焦時：單指環繞選手
+      else if(drag.chasing){if(stateRef.current.sceneVersion!=="legacy"&&liveRef.current?.cameraMode==="pov")return;cam.chaseYaw=drag.cy-(p.clientX-drag.x)*0.006;cam.chasePitch=clamp(drag.cp-(p.clientY-drag.y)*0.005,-0.55,0.78);} // 觀戰追焦環繞；Major POV由選手aim控制
       else{cam.dTheta=drag.th-(p.clientX-drag.x)*0.0055;cam.dPhi=clamp(drag.ph-(p.clientY-drag.y)*0.0055,0.1,1.5);}};
     const onUp=()=>{drag=null;pinch=null;el.style.cursor="grab";};
     const onWheel=e=>{e.preventDefault();cancelPresetTransition();const chasing=!!(stateRef.current._chase&&stateRef.current._chase.alive);const pov=chasing&&liveRef.current?.cameraMode==="pov";cam.autoFollow=false;cam.viewPreset=null;
@@ -2269,7 +2465,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
         const clock=st.clock||{wallClockSec:0,lastFrameIndex:null,frameTransitions:0,samples:[]};clock.wallClockSec=st.time;clock.simulationTimeSec=Number(frame.ts)||0;clock.playbackFrame=fIdx;clock.displayedTimerSec=frame.buyP?null:(frame.planted?Number((frame.c4t??0)*2):Math.max(0,115-Number(frame.roundSec)||0));if(clock.lastFrameIndex!==fIdx){if(clock.lastFrameIndex!=null)clock.frameTransitions+=1;clock.lastFrameIndex=fIdx;}if(clock.samples.length<240)clock.samples.push({wallClockSec:Number(st.time.toFixed(4)),simulationTimeSec:Number((frame.ts||0).toFixed(4)),playbackFrame:fIdx,displayedTimerSec:clock.displayedTimerSec});st.clock=clock;window.__ESMO_FPS_CLOCK__={...clock,samples:clock.samples.slice(-240)};
       }
       const sub=live.playing?clamp(st.subT,0,1):0;
-      if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt,fIdx);}
+      if(frame){updateDynamic(st,frame,nf,pf,sub,live,W,dt,fIdx,wallDt);}
       updateCamera(st,frame,sub,dt,W,live.cameraMode);
       if(st.sceneVersion!=="legacy"){
         // 觀戰聽音位置在鏡頭焦點；POV 在眼睛，不以高空相機距離壓低整場音量。
@@ -2442,6 +2638,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
     const streetSegments=sceneVersion==="legacy"?null:createFpsMajorSegmentCache(solidObstacles,PLAYER_R);
     const streets=[map.sites.a,map.sites.b,map.nodes.mid,map.spawns.ct].filter(Boolean).map(p=>buildNavigableRoute([map.spawns.t,p],solidObstacles,PLAYER_R,streetMemo,streetSegments));
     st.c3Environment=csLoadTime("scene:map-environment",()=>createMajorMapEnvironment({group:worldGroup,mapKey,map,obstacles:solidObstacles,W,mobile,streets,terrain:sceneVersion!=="legacy"}),{mapKey});
+    if(sceneVersion!=="legacy")st.sampleGroundHeight=createFpsFloorSampler(st.c3Environment.group,(x,z)=>fpsMajorElevation(mapKey,{x:x+50,y:z+50}));
 
     // 地板
     if(st.floorTex)st.floorTex.dispose?.();
@@ -2460,15 +2657,15 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
     // 炸彈點 A/B 標記（地面紅環 + 大字）
     ["a","b"].forEach(k=>{const s=map.sites[k];if(!s)return;
       const major=sceneVersion!=="legacy";
-      const zone=new THREE.Mesh(new THREE.RingGeometry(5.2,major?5.48:7.2,40),new THREE.MeshBasicMaterial({color:major?0xdcb96a:0xef4444,transparent:true,opacity:major?.42:.32,side:THREE.DoubleSide}));
+      const zone=new THREE.Mesh(new THREE.RingGeometry(5.2,major?5.48:7.2,40),new THREE.MeshBasicMaterial({color:major?0xdcb96a:0xef4444,transparent:true,opacity:major?.42:.32,side:THREE.DoubleSide,depthWrite:!major}));
       const elevation=sceneVersion==="legacy"?0:fpsMajorElevation(mapKey,s);
-      const conformMarker=geometry=>{geometry.rotateX(-Math.PI/2);const pos=geometry.attributes.position;for(let i=0;i<pos.count;i++)pos.setY(i,(sceneVersion==="legacy"?0:fpsMajorElevation(mapKey,{x:s.x+pos.getX(i),y:s.y+pos.getZ(i)}))+.06);geometry.computeVertexNormals();};
-      conformMarker(zone.geometry);zone.position.set(W.vx(s.x),0,W.vz(s.y));worldGroup.add(zone);
-      const fill=new THREE.Mesh(new THREE.CircleGeometry(5.2,40),new THREE.MeshBasicMaterial({color:major?0xdcb96a:0xef4444,transparent:true,opacity:major?.025:.08,side:THREE.DoubleSide}));
-      conformMarker(fill.geometry);fill.position.set(W.vx(s.x),0,W.vz(s.y));worldGroup.add(fill);
+      const conformMarker=(geometry,lift=.06)=>{geometry.rotateX(-Math.PI/2);const pos=geometry.attributes.position;for(let i=0;i<pos.count;i++)pos.setY(i,(sceneVersion==="legacy"?0:fpsMajorElevation(mapKey,{x:s.x+pos.getX(i),y:s.y+pos.getZ(i)}))+lift);geometry.computeVertexNormals();};
+      conformMarker(zone.geometry,major?.12:.06);zone.position.set(W.vx(s.x),0,W.vz(s.y));zone.renderOrder=major?11:0;zone.visible=!major;worldGroup.add(zone);
+      const fill=new THREE.Mesh(new THREE.CircleGeometry(5.2,40),new THREE.MeshBasicMaterial({color:major?0xdcb96a:0xef4444,transparent:true,opacity:major?.025:.08,side:THREE.DoubleSide,depthWrite:!major}));
+      conformMarker(fill.geometry,major?.115:.06);fill.position.set(W.vx(s.x),0,W.vz(s.y));fill.renderOrder=major?10:0;fill.visible=!major;worldGroup.add(fill);
       const letTex=makeBigLetter(k.toUpperCase(),major?"rgba(238,219,166,0.8)":"rgba(248,113,113,0.55)");letTex.__keep=false;
-      const let3=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshBasicMaterial({map:letTex,transparent:true}));
-      let3.rotation.x=-Math.PI/2;let3.position.set(W.vx(s.x),elevation+0.06,W.vz(s.y));let3.userData.fpsMarkerType="objective-site";worldGroup.add(let3);
+      const let3=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshBasicMaterial({map:letTex,transparent:true,depthWrite:!major}));
+      let3.rotation.x=-Math.PI/2;let3.position.set(W.vx(s.x),elevation+(major?.14:.06),W.vz(s.y));let3.renderOrder=major?12:0;let3.userData.fpsMarkerType="objective-site";worldGroup.add(let3);
       zone.userData.fpsMarkerType="objective-site";fill.userData.fpsMarkerType="objective-site";
       st.objectiveSiteCount=(st.objectiveSiteCount||0)+1;
     });
@@ -2572,7 +2769,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
       spark:mkPool(24,()=>new THREE.Sprite(new THREE.SpriteMaterial({map:tex.glow,color:0xfff1c0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
     };
     st.c5aGunplayFx=createGunplayPresentation({group:fxGroup,scene,tex,beamGeometry:st.beamGeo,mapKey,sceneVersion});
-    st.utilityFx=createUtilityPresentation({group:fxGroup,textures:tex,sphereGeometry:sphereGeo});
+    st.utilityFx=createUtilityPresentation({group:fxGroup,textures:tex,sphereGeometry:sphereGeo,sampleGroundHeight:st.sampleGroundHeight,major:sceneVersion!=="legacy"});
     // 槍口閃光點光（共用，循環）
     st.flashLights=[0,1,2].map(()=>{const l=new THREE.PointLight(0xffe6a0,0,14,2);l.visible=false;scene.add(l);return l;});
     st.flashIdx=0;
@@ -2759,7 +2956,7 @@ function publishFpsVisibilityDiagnostics(st,frame,frameIndex){
   canvas.dataset.esmoFpsVisibilityFrame=String(frameIndex);canvas.dataset.esmoFpsVisibilityJson=JSON.stringify(snapshot);
   if(typeof window!=="undefined")window.__ESMO_FPS_VISIBILITY__=snapshot;
 }
-function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
+function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null,playbackDeltaSec=dt){
   const time=st.time;const showLabels=live.showLabels!==false;
   // 地名顯隱
   if(st.calloutSprites)st.calloutSprites.forEach(s=>{s.visible=Boolean(FPS_DEBUG_ENABLED&&showLabels);});
@@ -2798,7 +2995,10 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
     const elevation=np&&sameRound?lerp(p.elevation||0,np.elevation||0,sub):(p.elevation||0);
     P.g.position.set(W.vx(x),elevation,W.vz(y));
     st.c5a1AuthoritativeDriftMax=Math.max(st.c5a1AuthoritativeDriftMax,Math.hypot(P.g.position.x-W.vx(x),P.g.position.z-W.vz(y)));
-    P.rigged?.update?.({player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,frameIndex,dt,playbackActive:Boolean(live.playing),seekNonce:live.seekNonce});
+    const outgoingSec=sameRound?Number(nf.roundSec)-Number(frame.roundSec):0;
+    const presentationVelocity=np&&sameRound&&!p.dead&&!np.dead&&outgoingSec>0?{x:(np.pos.x-p.pos.x)/outgoingSec,y:(np.pos.y-p.pos.y)/outgoingSec}:{x:0,y:0};
+    P.rigged?.setFacingDegrees?.(va);
+    P.rigged?.update?.({sampleGroundHeight:st.sampleGroundHeight,events:frame.events,nextEvents:sameRound?nf?.events:[],defuse:frame.defuse,player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,frameIndex,dt,playbackDeltaSec,playbackSpeed:live.speed,presentationVelocity:st.sceneVersion!=="legacy"?presentationVelocity:undefined,playbackActive:Boolean(live.playing),seekNonce:live.seekNonce,roundTimeMs:(frame.roundSec+(sameRound?sub*C5A2_SIM_STEP_SEC:0))*1000});
     if(P.rigged){st.c5a1HitDriftMax=Math.max(st.c5a1HitDriftMax,P.rigged.maxHitPositionDrift||0);st.c5a1HitDriftSamples=st.players.reduce((sum,player)=>sum+(player.rigged?.hitPositionDriftSamples||0),0);}
     const riggedActive=P.rigged?.mode==="rigged";
     const riggedMode=P.rigged?.mode||"fallback";
@@ -2955,9 +3155,9 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null){
   // 追焦資料：擷取被選中選手的內插位置與視角 + 最近敵人（供戰鬥感 chase 相機）
   const selId=live.selected;
   if(selId){const a=frame.players.find(p=>p.id===selId);const b=nf?.players.find(p=>p.id===selId);
-    if(a){const px=b?lerp(a.pos.x,b.pos.x,sub):a.pos.x,py=b?lerp(a.pos.y,b.pos.y,sub):a.pos.y;
+    if(a){const interpolate=b&&(st.sceneVersion==="legacy"||(nf?.rnd===frame.rnd&&!a.dead&&!b.dead)),px=interpolate?lerp(a.pos.x,b.pos.x,sub):a.pos.x,py=interpolate?lerp(a.pos.y,b.pos.y,sub):a.pos.y,povVa=st.sceneVersion!=="legacy"&&interpolate?lerpAngle(a.va,b.va,sub):a.va;
       let ne=null,nd=1e9;for(const e of frame.players){if(e.dead||e.side===a.side)continue;const d=Math.hypot(e.pos.x-px,e.pos.y-py);if(d<nd){nd=d;ne=e;}}
-      st._chase={id:a.id,x:px,y:py,elevation:st.sceneVersion==="legacy"?0:fpsMajorElevation(st.mapKey,{x:px,y:py}),va:a.va,gun:a.gun,alive:!a.dead,side:a.side,state:a.state,shooting:a.shooting>0,shootingValue:a.shooting||0,shootingFamily:c5a1WeaponFamily(a.gun),enemy:ne&&nd<55?{x:ne.pos.x,y:ne.pos.y,d:nd}:null};}else st._chase=null;}
+      st._chase={id:a.id,x:px,y:py,elevation:st.sceneVersion==="legacy"?0:fpsMajorElevation(st.mapKey,{x:px,y:py}),va:povVa,gun:a.gun,alive:!a.dead,side:a.side,state:a.state,shooting:a.shooting>0,shootingValue:a.shooting||0,shootingFamily:c5a1WeaponFamily(a.gun),enemy:ne&&nd<55?{x:ne.pos.x,y:ne.pos.y,d:nd}:null};}else st._chase=null;}
   else st._chase=null;
 
   // 路線疊加（顯示全部路線 或 僅高亮選中選手）
@@ -3029,7 +3229,9 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
   const cam=st.cam;const ch=st._chase;const rects=st.wallRects||[];
   const chasing=ch&&ch.alive;
   const pov=Boolean(chasing&&cameraMode==="pov");
-  const desiredNear=pov?0.18:0.1;
+  // A 100m map needs depth precision at the overview distance. Keep the
+  // close weapon plane in POV and preserve the Legacy projection.
+  const desiredNear=pov?0.18:st.sceneVersion==="legacy"?0.1:1;
   if(st.camera.near!==desiredNear){st.camera.near=desiredNear;st.camera.updateProjectionMatrix();}
   // 取消選取（按 ✕ 或點空白）時，凍結在目前的對戰視角，不跳回大視角
   if(st._wasChasing&&!chasing&&!cam.overview){cam.autoFollow=false;cam.dTheta=cam.theta;cam.dPhi=cam.phi;cam.dRadius=cam.radius;cam.dTgt.copy(cam.tgt);}
@@ -3144,7 +3346,7 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
   // 3) 遮擋處理：完全交給建物半透明（fadeOccluders），不再旋轉鏡頭閃避（會在密集建築區來回擺動造成晃動）
   // 平滑插值
   if(pov){
-    const va=(ch.va||0)*Math.PI/180+(cam.chaseYaw||0),pitch=cam.chasePitch||0;
+    const authoritativePov=st.sceneVersion!=="legacy",va=(ch.va||0)*Math.PI/180+(authoritativePov?0:(cam.chaseYaw||0)),pitch=authoritativePov?0:(cam.chasePitch||0);
     // The eye is a stable head anchor, slightly forward of the body center.
     // The old 0.12 offset put the camera inside the fallback/rigger envelope
     // during interpolation and made the selected operator enter the view.
@@ -3152,7 +3354,7 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
     const eye=new THREE.Vector3(W.vx(ch.x+Math.cos(va)*eyeOffset),eyeHeight,W.vz(ch.y+Math.sin(va)*eyeOffset));
     const look=new THREE.Vector3(W.vx(ch.x+Math.cos(va)*12),eyeHeight+Math.sin(pitch)*4.5,W.vz(ch.y+Math.sin(va)*12));
     const k=1-Math.pow(0.0015,Math.max(0,dt));
-    if(cam.povPosition.lengthSq()===0){cam.povPosition.copy(eye);cam.povLookAt.copy(look);}else{cam.povPosition.lerp(eye,k);cam.povLookAt.lerp(look,k);}
+    if(authoritativePov||cam.povPosition.lengthSq()===0){cam.povPosition.copy(eye);cam.povLookAt.copy(look);}else{cam.povPosition.lerp(eye,k);cam.povLookAt.lerp(look,k);}
     st.camera.fov=cam.povFov||(st.sceneVersion==="legacy"?42:72);st.camera.updateProjectionMatrix();st.camera.position.copy(cam.povPosition);st.camera.lookAt(cam.povLookAt);
   }else{
     st.camera.fov=42;st.camera.updateProjectionMatrix();
@@ -3320,7 +3522,7 @@ function ScoreBar({frame,sim,fIdx}){
 }
 
 const CS_PLAYER_CARD_ICON_HELP=Object.freeze({
-  armor:{label:"防彈衣",description:"減少身體受到的子彈傷害。"},
+  armor:{label:"防彈衣",description:"減少身體子彈與高爆手榴彈的傷害。"},
   helmet:{label:"頭盔",description:"降低頭部被子彈命中時的傷害。"},
   grenade:{label:"高爆手榴彈",description:"爆炸後對範圍內敵人造成傷害。"},
   flash:{label:"閃光彈",description:"使範圍內敵人短暫失去視線。"},
@@ -3361,7 +3563,7 @@ function GameIcon({type,count=1,detail=""}){
 function IconHelp(props){return <GameIcon {...props}/>;}
 function SemanticIcon({type,title,count=1}){return <IconHelp type={type} count={count} detail={type==="weapon"?title:""}/>;}
 
-function PlayerRow({p,selected,onClick}){
+function PlayerRow({p,selected,onClick,major=false}){
   const col=sideColor(p.side);const hp=clamp(p.hp,0,100);
   const g=GUNS[p.gun]||{name:p.gun,cls:""};
   const nf=p.nades||[];const flashN=nf.filter(n=>n==="flash").length;
@@ -3381,7 +3583,7 @@ function PlayerRow({p,selected,onClick}){
           <span style={{fontSize:8,opacity:p.dead?0.4:0.95,display:"inline-flex",alignItems:"center",gap:3,flex:"0 1 auto",minWidth:0,flexWrap:"wrap"}}>
             {p.armor&&<SemanticIcon type="armor" title="防彈衣"/>}{p.helmet&&<SemanticIcon type="helmet" title="頭盔"/>}{flashN>0&&<SemanticIcon type="flash" title="閃光彈" count={flashN}/>} {nf.includes("he")&&<SemanticIcon type="grenade" title="高爆手榴彈"/>}{nf.includes("smoke")&&<SemanticIcon type="smoke" title="煙霧彈"/>}{nf.includes("molly")&&<SemanticIcon type="molly" title="燃燒彈"/>}
           </span>
-          <span style={{color:C.green,fontSize:7.5,fontWeight:700,marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:2,flex:"0 0 auto"}}><SemanticIcon type="money" title="金錢"/>${p.money}</span>
+          <span style={{color:C.green,fontSize:7.5,fontWeight:700,marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:2,flex:"0 0 auto"}}><SemanticIcon type="money" title="金錢"/>{major?fmtFpsMoney(p.money):`$${p.money}`}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:3,marginTop:2}}><SemanticIcon type="hp" title="生命值"/><div style={{height:3,flex:1,background:"rgba(255,255,255,0.1)",borderRadius:9,overflow:"hidden"}}>
           <div style={{height:"100%",width:`${hp}%`,background:hp>50?C.green:hp>25?C.gold:C.red,transition:"width 0.2s"}}/>
@@ -3498,32 +3700,46 @@ function EsportsFPS3D({
   tacticalLayout:tacticalLayoutProp, // 賽前四階段布局：opening/mid-round/late-round/post-plant
   ctTactic:ctTacticProp,      // 對手 CT 戰術 id（可選；未給則 AI 預設）
   mapKey:mapKeyProp,          // 指定地圖
-  sceneVersion="major.v1",    // 舊進行中比賽保留 legacy 空間；新比賽使用原創配置
+  sceneVersion:sceneVersionProp="major.v1", // 舊進行中比賽保留 legacy 空間
   seed:seedProp,              // 指定亂數種子
   teamName:teamNameProp,      // 我方隊名
   oppName:oppNameProp,        // 對手隊名
   onComplete,                 // (matchResult)=>void：播放結束時觸發一次
   resumeFrameIndex=0,         // R63：由 ActiveMatch snapshot 恢復同一份正式 frames
   onProgress=null,             // R63：回報目前 frame，外層負責節流保存
+  replayData=null,             // CsReplay.v1：只播放保存幀
+  onReplayModeChange=null,
   embedded=false,             // 嵌入主遊戲：隱藏內建選圖/選戰術面板
   asyncSimulation=false,      // hotfix/cs-resume-worker：快取沒命中時改在 Worker 算（外層必須有 <Suspense>）
 }={}){
   const mobile=useIsMobile();
+  const [importedReplay,setImportedReplay]=useState(null);
+  const externalReplay=useMemo(()=>replayData?readCsReplay(replayData):null,[replayData]);
+  const replayEnvelope=importedReplay||externalReplay;
+  const replayMode=Boolean(replayEnvelope);
+  const sceneVersion=replayEnvelope?.metadata.sceneVersion||sceneVersionProp;
+  const [replayBusy,setReplayBusy]=useState(false);
+  const [replayError,setReplayError]=useState("");
+  const normalSimulationRef=useRef(null);
+  const normalCursorRef=useRef(Number(resumeFrameIndex)||0);
+  useEffect(()=>{onReplayModeChange?.(replayMode,replayEnvelope?.metadata||null);},[replayMode,replayEnvelope,onReplayModeChange]);
   // 名稱覆寫（嵌入時）
-  if(teamNameProp)T_NAME=teamNameProp; if(oppNameProp)CT_NAME=oppNameProp;
+  T_NAME=replayEnvelope?.metadata.teamName||teamNameProp||"德國海豹";CT_NAME=replayEnvelope?.metadata.opponentName||oppNameProp||"Compulsary";
   const loadMountMarked=useRef(false);
   if(!loadMountMarked.current){loadMountMarked.current=true;csLoadMark("fps:component-first-render");}
-  const [mapKey,setMapKey]=useState(mapKeyProp||"inferno");
-  useEffect(()=>{if(mapKeyProp&&mapKeyProp!==mapKey)setMapKey(mapKeyProp);},[mapKeyProp]);
-  const lib=useMemo(()=>TACTICS_DB[mapKey],[mapKey]);
+  const [normalMapKey,setMapKey]=useState(mapKeyProp||"inferno");
+  const mapKey=replayEnvelope?.metadata.mapKey||normalMapKey;
+  useEffect(()=>{if(mapKeyProp&&mapKeyProp!==normalMapKey)setMapKey(mapKeyProp);},[mapKeyProp]);
+  const lib=useMemo(()=>TACTICS_DB[normalMapKey],[normalMapKey]);
   // 即時名單：同一份有效名單同時提供模擬與 renderer。
-  const effectiveRoster=useMemo(()=>{
+  const normalRoster=useMemo(()=>{
     const bt=ROSTER.filter(p=>p.side==="t"),bc=ROSTER.filter(p=>p.side==="ct");
     const tSide=(rosterProp&&rosterProp.length)?rosterProp.map(p=>({...p,side:"t"})):bt;
     const ctSide=(oppProp&&oppProp.length)?oppProp.map(p=>({...p,side:"ct"})):bc;
     const rs=[...tSide,...ctSide];
     return rs;
   },[rosterProp,oppProp]);
+  const effectiveRoster=replayEnvelope?replayEnvelope.simulation.frames[0].players:normalRoster;
   // 解析我方戰術索引（id 字串 / 物件 / 數字）
   const resolveTIdx=()=>{
     if(tacticProp!=null){const id=typeof tacticProp==="object"?tacticProp.id:tacticProp;const i=lib.t.findIndex(t=>t.id===id||t.name===id);if(i>=0)return i;if(typeof tacticProp==="number")return tacticProp;}
@@ -3531,7 +3747,7 @@ function EsportsFPS3D({
     return 0;
   };
   const [tIdx,setTIdx]=useState(resolveTIdx());
-  useEffect(()=>{setTIdx(resolveTIdx());},[tacticProp,tacticTypeProp,mapKey]);
+  useEffect(()=>{setTIdx(resolveTIdx());},[tacticProp,tacticTypeProp,normalMapKey]);
   const baseTactic=lib.t[Math.min(tIdx,lib.t.length-1)];
   const preMatchLayout=useMemo(()=>normalizeCsTacticalLayout(tacticalLayoutProp,lib.t,baseTactic),[tacticalLayoutProp,lib,baseTactic]);
   // CT 戰術：有指定用指定；否則 AI 依我方站點挑一個合理防守（堆同點），增添對抗性
@@ -3542,17 +3758,25 @@ function EsportsFPS3D({
     const rng=mkRng((seedProp||42)+7);
     if(tSite&&tSite!=="mid"&&rng()<0.5){const i=lib.ct.findIndex(t=>t.site===tSite);if(i>=0)return i;}
     return Math.floor(rng()*lib.ct.length);
-  },[ctTacticProp,tIdx,mapKey,seedProp,preMatchLayout]);
+  },[ctTacticProp,tIdx,normalMapKey,seedProp,preMatchLayout]);
   const [ctIdx,setCtIdx]=useState(aiCtIdx);
   useEffect(()=>{if(embedded)setCtIdx(aiCtIdx);},[aiCtIdx,embedded]);
   const [seed,setSeed]=useState(seedProp||42);
   useEffect(()=>{if(seedProp!=null&&seedProp!==seed)setSeed(seedProp);},[seedProp]);
   const tacticT=preMatchLayout.phases[CS_TACTICAL_PHASES.OPENING]?.tactic||baseTactic,tacticCT=lib.ct[Math.min(ctIdx,lib.ct.length-1)];
-  const sim=useMemo(()=>(asyncSimulation?simulateFpsForMountAsync:simulateFpsForMount)(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp,sceneVersion),[mapKey,sceneVersion,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT,asyncSimulation]);
+  const sim=useMemo(()=>{
+    if(replayEnvelope)return replayEnvelope.simulation;
+    const signature=[mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp,sceneVersion,asyncSimulation];
+    const saved=normalSimulationRef.current;
+    if(saved&&signature.every((value,index)=>value===saved.signature[index]))return saved.sim;
+    const simulation=(asyncSimulation?simulateFpsForMountAsync:simulateFpsForMount)(mapKey,tacticT,tacticCT,seed,effectiveRoster,tacticalLayoutProp,sceneVersion);
+    normalSimulationRef.current={signature,sim:simulation};normalCursorRef.current=Number(resumeFrameIndex)||0;
+    return simulation;
+  },[mapKey,sceneVersion,tIdx,ctIdx,seed,effectiveRoster,tacticalLayoutProp,tacticT,tacticCT,asyncSimulation,replayEnvelope]);
   // 賽後結果（給主遊戲）；播放到最後一格時透過 onComplete 回傳一次
-  const matchResult=useMemo(()=>csLoadTime("sim:buildMatchResult",()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed})),[sim,seed]);
+  const matchResult=useMemo(()=>replayEnvelope?.rawResult||csLoadTime("sim:buildMatchResult",()=>buildMatchResult(sim,{tacticT,tacticCT,tName:T_NAME,ctName:CT_NAME,seed})),[sim,seed,replayEnvelope]);
   const completedRef=useRef(null);
-  useEffect(()=>{completedRef.current=null;},[matchResult]); // 換場後重置觸發旗標
+  useEffect(()=>{if(!replayMode&&completedRef.current!==matchResult.id)completedRef.current=null;},[matchResult,replayMode]); // 只有新的正常比賽重置；返回原比賽保留已交付旗標
 
   const [fIdx,setFIdx]=useState(0);
   const [playing,setPlaying]=useState(true);
@@ -3594,6 +3818,7 @@ function EsportsFPS3D({
   const liveRef=useRef({});
   const publishFpsFrame=(next,reason)=>{
     liveRef.current.fIdx=next;
+    if(!replayMode)normalCursorRef.current=next;
     const p0Contract=getFpsP0Contract();
     if(p0Contract){p0Contract.fidxTransitions+=1;p0Contract.lastAuthoritativeFidx=next;p0Contract.lastReason=reason;}
     setFIdx(next);
@@ -3603,7 +3828,10 @@ function EsportsFPS3D({
     seekNonce.current++;liveRef.current.seekNonce=seekNonce.current;
     if(sceneVersion!=="legacy"){
       audioRef.current?.resetGunfireEvents?.();audioGateRef.current.seek({simulation:sim,frameIndex:next,seekNonce:seekNonce.current});
-      const presentation=presentationRef.current;presentation.reset({resumeFrameIndex:next});presentation.update({frame:sim.frames[next],previousFrame:sim.frames[Math.max(0,next-1)],frameIndex:next});presentation.drainAudio();
+      const presentation=presentationRef.current;const start=Math.max(0,next-10);presentation.reset({resumeFrameIndex:start});
+      presentation.update({frame:sim.frames[Math.max(0,start-1)],frameIndex:Math.max(0,start-1)});
+      for(let index=start;index<=next;index++)presentation.update({frame:sim.frames[index],previousFrame:sim.frames[Math.max(0,index-1)],frameIndex:index});
+      presentation.drainAudio();
       setPresentationRevision(value=>value+1);
     }
     publishFpsFrame(next,reason);
@@ -3618,36 +3846,42 @@ function EsportsFPS3D({
   // tear down the close-up chase roughly once per save interval. Initialize
   // only when the authoritative simulation changes; the initial prop value is
   // still used to resume the newly entered simulation.
-  useEffect(()=>{const startFrame=clamp(Number(resumeFrameIndex) || 0, 0, Math.max(0, sim.frames.length - 1));audioRef.current?.resetGunfireEvents?.();audioGateRef.current.reset();presentationRef.current?.reset?.({resumeFrameIndex:startFrame});publishFpsFrame(clamp(Number(resumeFrameIndex) || 0,0,Math.max(0,sim.frames.length-1)),"reset");setSelected(null);setCameraMode("tactical");setCameraPreset(null);setCasts([]);setComms([]);setPresentationRevision(value=>value+1);seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(true);},[sim]);
+  useEffect(()=>{const startFrame=clamp(replayMode?0:normalCursorRef.current,0,Math.max(0,sim.frames.length-1));audioRef.current?.resetGunfireEvents?.();audioGateRef.current.reset();presentationRef.current?.reset?.({resumeFrameIndex:startFrame});publishFpsFrame(startFrame,"reset");setSelected(null);setCameraMode("tactical");setCameraPreset(null);setCasts([]);setComms([]);setPresentationRevision(value=>value+1);seekNonce.current++;setQuickFinishing(false);setQuickCompleted(false);setPlaying(!replayMode);},[sim]);
   useEffect(()=>{if(sceneVersion!=="legacy"){if(!playing||!soundOn)audioRef.current?.stopAll?.();audioGateRef.current.seek({simulation:sim,frameIndex:liveRef.current.fIdx,seekNonce:seekNonce.current});}},[playing,soundOn,sim,sceneVersion]);
+  useEffect(()=>{if(sceneVersion!=="legacy")audioRef.current?.syncAmbient?.({playing,soundOn,simulation:sim,
+    seekNonce:seekNonce.current,mapKey,frameTimeSec:sim.frames[publishedFidx]?.ts||0});},[playing,soundOn,sim,publishedFidx,sceneVersion,mapKey,seekNonce.current]);
 
   // R63：只保存可重建的 frame 游標與該 frame 的真實比分／時間，不複製 simulator。
   useEffect(()=>{
-    if(!frame||!onProgress)return;
+    if(replayMode||!frame||!onProgress)return;
     onProgress({
       frameIndex:fIdx,
       totalFrames:total,
       simulationTimeSec:Number(frame.ts)||0,
       snapshot:{sceneVersion,frameIndex:fIdx,totalFrames:total,simulationTimeSec:Number(frame.ts)||0,rnd:frame.rnd,ctScore:frame.ctScore,tScore:frame.tScore},
     });
-  },[fIdx,frame,total,onProgress]);
+  },[fIdx,frame,total,onProgress,replayMode]);
 
   // 依 fIdx 觸發擊殺播報 / 多殺 / 回合結算
   useEffect(()=>{
     if(!frame)return;
     const presentation=presentationRef.current;
     const previousFrame=sim.frames[Math.max(0,fIdx-1)];
-    const presentationView=presentation?.update({frame,previousFrame,frameIndex:fIdx})||null;
+    const presentationView=presentation?.update({frame,previousFrame,nextFrame:sim.frames[fIdx+1]||null,frameIndex:fIdx})||null;
     if(presentationView){
       liveRef.current.presentationDirector=presentation.getDirectorIntent();
       if(import.meta.env?.DEV&&typeof window!=="undefined")window.__ESMO_C5C_PRESENTATION__={contract:presentation.contract,view:presentationView,diagnostics:presentation.diagnostics()};
       setPresentationRevision(value=>value+1);
     }
-    frame.casts?.forEach(c=>{const id=++fidc.current;setCasts(cs=>[...cs.slice(-3),{id,text:c}]);setTimeout(()=>setCasts(cs=>cs.filter(x=>x.id!==id)),3600);});
-    frame.comms?.forEach(c=>{const id=++fidc.current;setComms(cs=>[...cs.slice(-4),{id,...c}]);setTimeout(()=>setComms(cs=>cs.filter(x=>x.id!==id)),4200);});
+    if(sceneVersion!=="legacy"||replayMode){
+      const messages=getFpsFrameMessages(sim.frames,fIdx);setCasts(messages.casts);setComms(messages.comms);
+    }else{
+      frame.casts?.forEach(c=>{const id=++fidc.current;setCasts(cs=>[...cs.slice(-3),{id,text:c}]);setTimeout(()=>setCasts(cs=>cs.filter(x=>x.id!==id)),3600);});
+      frame.comms?.forEach(c=>{const id=++fidc.current;setComms(cs=>[...cs.slice(-4),{id,...c}]);setTimeout(()=>setComms(cs=>cs.filter(x=>x.id!==id)),4200);});
+    }
     // ── 音效 ──
     const A=audioRef.current;
-    const dispatchAudio=sceneVersion==="legacy"?soundOn:audioGateRef.current.update({simulation:sim,frameIndex:fIdx,seekNonce:seekNonce.current,playing,soundOn});
+    const dispatchAudio=sceneVersion==="legacy"&&!replayMode?soundOn:audioGateRef.current.update({simulation:sim,frameIndex:fIdx,seekNonce:seekNonce.current,playing,soundOn});
     if(dispatchAudio&&A){
       const frameStartMs=(Number(frame.roundSec)||0)*1000,frameEndMs=frameStartMs+C5A2_SIM_STEP_MS,playbackRate=Math.max(0.1,Number(speed)||1);
       (frame.muzzles||[]).filter(mz=>Number(mz.shotAtMs)>=frameStartMs&&Number(mz.shotAtMs)<frameEndMs).forEach(mz=>{
@@ -3656,40 +3890,81 @@ function EsportsFPS3D({
       });
     }
     const presentationAudio=presentation?.drainAudio?.()||[];
-    if(dispatchAudio&&A){presentationAudio.forEach(cue=>A.cue?.(cue.type,{eventId:cue.eventId,distance:cue.distance,position:cue.position}));if(frame.droppedBomb&&!previousFrame?.droppedBomb)A.cue?.("bomb-dropped",{eventId:`bomb-dropped-${frame.rnd}-${fIdx}`,distance:12,position:frame.c4pos});}
+    if(dispatchAudio&&A){presentationAudio.forEach(cue=>A.cue?.(cue.type,{eventId:cue.eventId,distance:cue.distance,position:cue.position,scheduleDelaySec:Math.max(0,Number(cue.delaySec)||0)/Math.max(.1,Number(speed)||1)}));if(frame.droppedBomb&&!previousFrame?.droppedBomb)A.cue?.("bomb-dropped",{eventId:`bomb-dropped-${frame.rnd}-${fIdx}`,distance:12,position:frame.c4pos});}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[fIdx]);
+  },[fIdx,sim]);
 
   const seek=useCallback(v=>{beginFpsSeek(clamp(Math.floor(Number(v)||0),0,total-1),"seek");},[total,beginFpsSeek]);
   const selP=selected?frame?.players.find(p=>p.id===selected):null;
   const povShotActive=Boolean(cameraMode==="pov"&&selP&&!selP.dead&&frame?.muzzles?.some(muzzle=>muzzle.attackerId===selP.id));
   const matchOver=Boolean(sim.completed)&&fIdx>=total-1;
   const completeOnce=useCallback(()=>{
-    if(!onComplete||completedRef.current===matchResult.id)return false;
+    if(replayMode||!onComplete||completedRef.current===matchResult.id)return false;
     completedRef.current=matchResult.id;onComplete(matchResult);releaseMountSimulation(sim);return true;
-  },[matchResult,onComplete,sim]);
+  },[matchResult,onComplete,sim,replayMode]);
   // Quick Finish 直接交付 simulator 已計算好的 MatchResult；不把 completion 綁在 final frame seek/render。
   const quickFinish=useCallback(()=>{
-    if(matchOver||quickCompleted||completedRef.current===matchResult.id)return;
+    if(replayMode||matchOver||quickCompleted||completedRef.current===matchResult.id)return;
     setQuickFinishing(true);setPlaying(false);setQuickCompleted(true);
     completeOnce();setQuickFinishing(false);
-  },[matchOver,quickCompleted,matchResult,completeOnce]);
+  },[matchOver,quickCompleted,matchResult,completeOnce,replayMode]);
   // Natural playback 到達合法終局時沿用同一個 exactly-once completion gate。
   useEffect(()=>{
-    if(matchOver){completeOnce();setQuickFinishing(false);}
+    if(matchOver&&!replayMode){completeOnce();setQuickFinishing(false);}
   },[matchOver,completeOnce]);
 
+  const exportReplay=async()=>{
+    if(replayBusy)return;setReplayBusy(true);setReplayError("");
+    try{await downloadCsReplay(replayEnvelope||createCsReplay(sim,{seed,mapKey,sceneVersion,teamName:T_NAME,opponentName:CT_NAME,rawResult:matchResult}));}
+    catch(error){setReplayError(error.message||"無法匯出重播，請稍後重試。");}
+    finally{setReplayBusy(false);}
+  };
+  const importReplay=async event=>{
+    const file=event.target.files?.[0];event.target.value="";if(!file||replayBusy)return;
+    setReplayBusy(true);setReplayError("");
+    try{const saved=await loadCsReplayFile(file);onReplayModeChange?.(true,saved.metadata);setImportedReplay(saved);}
+    catch(error){setReplayError(error.message||"無法讀取重播檔，原比賽仍可繼續。");}
+    finally{setReplayBusy(false);}
+  };
+  const seekBySeconds=delta=>{
+    const desired=Math.max(0,frame.roundSec+delta);
+    const candidates=sim.frames.map((f,index)=>({f,index})).filter(({f})=>f.rnd===frame.rnd);
+    const closest=candidates.reduce((a,b)=>Math.abs(b.f.roundSec-desired)<Math.abs(a.f.roundSec-desired)?b:a);
+    seek(closest.index);
+  };
+
   if(!frame)return null;
+  const teamGroups=sceneVersion==="legacy"?{us:frame.players.filter(p=>p.side==="t"),enemy:frame.players.filter(p=>p.side==="ct")}:groupFpsTeams(frame);
+  const viewportTools=(<>
+{/* 音效開關（畫面內小按鈕） */}
+          <button data-testid="cs-audio-toggle" data-cs-audio-state={soundOn?"on":"off"} onClick={()=>{const A=audioRef.current||(audioRef.current=makeAudio({pooled:sceneVersion!=="legacy",mobile,getListener:()=>liveRef.current.audioListener}));const enabling=!soundOn;if(!A)return;if(!enabling){if(sceneVersion!=="legacy")A.stopAll?.();setSoundOn(false);return;}A.markUnmuteRequest?.();A.resume().then(state=>{if(state==="running"){setSoundOn(true);void A.ready?.catch?.(error=>{if(import.meta.env?.DEV)console.warn("[FPS audio] preload failed",error);});}else setSoundOn(false);}).catch(error=>{setSoundOn(false);if(import.meta.env?.DEV)console.warn("[FPS audio] resume failed",error);});}} title={soundOn?"關閉音效":"開啟音效"} aria-label={soundOn?"關閉音效":"開啟音效"} style={{position:sceneVersion==="legacy"?"absolute":"static",top:8,right:8,zIndex:25,width:sceneVersion==="legacy"?34:44,height:sceneVersion==="legacy"?34:44,display:"flex",alignItems:"center",justifyContent:"center",background:soundOn?"rgba(56,189,248,0.22)":"rgba(13,17,25,0.85)",border:`1px solid ${soundOn?C.ct+"88":C.line}`,borderRadius:"50%",cursor:"pointer",fontSize:15,backdropFilter:"blur(6px)"}}>{soundOn?"🔊":"🔇"}</button>
+
+          {/* 重新置中 */}
+          <button data-testid="cs-camera-auto-director" onClick={()=>{selectPlayer(null);setCameraPreset(null);recenter.current&&recenter.current();}} style={{position:sceneVersion==="legacy"?"absolute":"static",minHeight:sceneVersion==="legacy"?undefined:44,bottom:8,right:8,zIndex:25,display:"flex",alignItems:"center",gap:4,background:"rgba(13,17,25,0.85)",border:`1px solid ${C.line}`,borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#cfd4dc",fontSize:10,fontWeight:700,backdropFilter:"blur(6px)"}}>
+            <span style={{fontSize:11}}>◎</span> 重新置中
+          </button>
+  </>);
   const tType=TAC_TYPE[tacticT.type]||TAC_TYPE.default,cType=TAC_TYPE[tacticCT.type]||TAC_TYPE.default;
 
   return(
-    <div style={{minHeight:"100vh",background:`radial-gradient(120% 80% at 50% 0%, #0c1018 0%, ${C.bg} 60%)`,fontFamily:"system-ui,-apple-system,sans-serif",color:"#e8ebf0",padding:"10px 10px 18px",userSelect:"none",overflowX:"hidden"}}>
+    <div className={sceneVersion!=="legacy"||replayMode?"fps-major-battle":undefined} style={{minHeight:"100vh",background:`radial-gradient(120% 80% at 50% 0%, #0c1018 0%, ${C.bg} 60%)`,fontFamily:"system-ui,-apple-system,sans-serif",color:"#e8ebf0",padding:"10px 10px 18px",userSelect:"none",overflowX:"hidden"}}>
       <div style={{maxWidth:mobile?430:1120,margin:"0 auto"}}>
 
         {/* 頂部比分列 */}
-        <div style={{position:"sticky",top:0,zIndex:40,background:"rgba(7,10,16,0.92)",backdropFilter:"blur(10px)",borderRadius:12,border:`1px solid ${C.line}`,padding:"8px 10px",marginBottom:8}}>
+        <div style={{position:sceneVersion==="legacy"?"sticky":"relative",top:0,zIndex:40,background:"rgba(7,10,16,0.92)",backdropFilter:"blur(10px)",borderRadius:12,border:`1px solid ${C.line}`,padding:"8px 10px",marginBottom:8}}>
           <ScoreBar frame={frame} sim={sim} fIdx={fIdx}/>
         </div>
+
+        {(sceneVersion!=="legacy"||replayMode)&&(
+          <div className="fps-major-viewport-tools" data-testid="cs-major-viewport-tools" style={{color:GC.blueL,borderColor:GC.line}}>
+            {sceneVersion!=="legacy"?<FpsTeamRadio messages={comms} side={cameraMode==="pov"?selP?.side:null} playing={playing} soundOn={soundOn} simulation={sim} seekNonce={seekNonce.current}/>:<details className="fps-major-radio" data-testid="cs-major-radio">
+              <summary><span>📻 隊伍通訊</span><span className="fps-major-radio-latest">{comms.length?comms.at(-1).name+'：'+comms.at(-1).text:'目前沒有通訊'}</span></summary>
+              <ol>{comms.map(c=><li key={c.id}><b style={{color:sideColor(c.side)}}>{c.name}</b>：{c.text}</li>)}</ol>
+            </details>}
+            {viewportTools}
+          </div>
+        )}
+        {(sceneVersion!=="legacy"||replayMode)&&<FpsSavedFrameHud frame={frame} view={presentationView} casts={casts} revision={presentationRevision} replayMode={replayMode} playing={playing} matchOver={matchOver}/>}
 
         {/* 3D 戰術畫面 */}
         <div style={{position:"relative",width:"100%",paddingBottom:mobile?"118%":"56.25%",overflow:"visible",background:"#05070c"}}>
@@ -3701,18 +3976,19 @@ function EsportsFPS3D({
           </div>
 
           {/* LIVE */}
-          <div style={{position:"absolute",top:9,left:"50%",transform:"translateX(-50%)",zIndex:20,display:"flex",alignItems:"center",gap:4,pointerEvents:"none"}}>
+          {sceneVersion==="legacy"&&!replayMode&&<div style={{position:"absolute",top:9,left:"50%",transform:"translateX(-50%)",zIndex:20,display:"flex",alignItems:"center",gap:4,pointerEvents:"none"}}>
             <div style={{width:6,height:6,borderRadius:"50%",background:C.red,animation:"pls 1.1s infinite"}}/>
             <span style={{color:C.red,fontSize:9,fontWeight:900,letterSpacing:"0.12em",textShadow:"0 1px 3px black"}}>直播中</span>
-          </div>
+          </div>}
 
           {/* 地圖名 + 戰術籤 */}
           <div style={{position:"absolute",top:8,left:8,zIndex:20,pointerEvents:"none"}}>
             <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:800,letterSpacing:"0.08em",textShadow:"0 1px 2px black"}}>{MAPS[mapKey].name.toUpperCase()}</div>
           </div>
 
-          <C5CPresentationHUD view={presentationView} frame={frame} revision={presentationRevision}/>
+          {sceneVersion==="legacy"&&!replayMode&&<C5CPresentationHUD view={presentationView} frame={frame} revision={presentationRevision}/>}
 
+          <div className="fps-pov-feedback" data-fps-pov-feedback aria-hidden="true"><div className="fps-pov-flash" /><div className="fps-pov-hit" /><span className="fps-pov-blind-label">視線受閃光影響</span></div>
           {cameraMode==="pov"&&selP&&!selP.dead&&(
             <div data-testid="cs-pov-reticle" data-cs-pov-shot-state={povShotActive?"active":"idle"} aria-label="第一人稱瞄準準星" style={{position:"absolute",left:"50%",top:"50%",width:36,height:36,transform:"translate(-50%,-50%)",zIndex:24,pointerEvents:"none",filter:"drop-shadow(0 1px 2px rgba(0,0,0,0.9))"}}>
               <span style={{position:"absolute",left:"50%",top:0,width:2,height:10,transform:"translateX(-50%)",borderRadius:2,background:povShotActive?C.gold:"#f8fafc"}} />
@@ -3725,7 +4001,7 @@ function EsportsFPS3D({
           )}
 
           {/* 隊伍無線電（同隊溝通，配合實際戰況） */}
-          {comms.length>0&&(
+          {sceneVersion==="legacy"&&!replayMode&&comms.length>0&&(
             <div style={{position:"absolute",left:8,top:"36%",zIndex:21,display:"flex",flexDirection:"column",gap:3,pointerEvents:"none",maxWidth:"60%"}}>
               {comms.map(c=>{const col=sideColor(c.side);return(
                 <div key={c.id} style={{display:"flex",alignItems:"center",gap:5,background:"rgba(6,9,15,0.82)",borderLeft:`3px solid ${col}`,borderRadius:"0 6px 6px 0",padding:"2px 7px",fontSize:9,animation:"slideR 0.3s",alignSelf:"flex-start"}}>
@@ -3737,22 +4013,16 @@ function EsportsFPS3D({
           )}
 
           {/* 主播台 */}
-          {!selP&&(
+          {!selP&&sceneVersion==="legacy"&&!replayMode&&(
             <div style={{position:"absolute",bottom:8,left:8,zIndex:20,display:"flex",flexDirection:"column",gap:3,pointerEvents:"none",maxWidth:"66%"}}>
               {casts.map(c=>(<div key={c.id} style={{background:"rgba(0,0,0,0.78)",borderLeft:`2px solid ${C.gold}`,borderRadius:"0 6px 6px 0",padding:"3px 8px",fontSize:9,color:"rgba(255,255,255,0.9)",animation:"slideR 0.3s",alignSelf:"flex-start"}}>{c.text}</div>))}
             </div>
           )}
 
-          {/* 音效開關（畫面內小按鈕） */}
-          <button data-testid="cs-audio-toggle" data-cs-audio-state={soundOn?"on":"off"} onClick={()=>{const A=audioRef.current||(audioRef.current=makeAudio({pooled:sceneVersion!=="legacy",mobile,getListener:()=>liveRef.current.audioListener}));const enabling=!soundOn;if(!A)return;if(!enabling){if(sceneVersion!=="legacy")A.stopAll?.();setSoundOn(false);return;}A.markUnmuteRequest?.();A.resume().then(state=>{if(state==="running"){setSoundOn(true);void A.ready?.catch?.(error=>{if(import.meta.env?.DEV)console.warn("[FPS audio] preload failed",error);});}else setSoundOn(false);}).catch(error=>{setSoundOn(false);if(import.meta.env?.DEV)console.warn("[FPS audio] resume failed",error);});}} title={soundOn?"關閉音效":"開啟音效"} aria-label={soundOn?"關閉音效":"開啟音效"} style={{position:"absolute",top:8,right:8,zIndex:25,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",background:soundOn?"rgba(56,189,248,0.22)":"rgba(13,17,25,0.85)",border:`1px solid ${soundOn?C.ct+"88":C.line}`,borderRadius:"50%",cursor:"pointer",fontSize:15,backdropFilter:"blur(6px)"}}>{soundOn?"🔊":"🔇"}</button>
-
-          {/* 重新置中 */}
-          <button data-testid="cs-camera-auto-director" onClick={()=>{selectPlayer(null);setCameraPreset(null);recenter.current&&recenter.current();}} style={{position:"absolute",bottom:8,right:8,zIndex:25,display:"flex",alignItems:"center",gap:4,background:"rgba(13,17,25,0.85)",border:`1px solid ${C.line}`,borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#cfd4dc",fontSize:10,fontWeight:700,backdropFilter:"blur(6px)"}}>
-            <span style={{fontSize:11}}>◎</span> 重新置中
-          </button>
+          {sceneVersion==="legacy"&&viewportTools}
 
           {/* 選手詳情（精簡卡片，不擋畫面） */}
-          {selP&&(
+          {selP&&sceneVersion==="legacy"&&(
             <div style={{position:"absolute",bottom:8,left:8,width:"calc(100% - 16px)",maxWidth:290,minWidth:0,zIndex:30,background:"rgba(8,11,18,0.82)",border:`1px solid ${sideColor(selP.side)}77`,borderRadius:10,padding:"7px 9px",animation:"slideU 0.25s",backdropFilter:"blur(8px)"}}>
               <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0,flexWrap:"wrap"}}>
                 <div style={{width:24,height:24,borderRadius:7,background:`${sideColor(selP.side)}2a`,border:`1px solid ${sideColor(selP.side)}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,flexShrink:0}}>{selP.dead?"💀":"🎯"}</div>
@@ -3802,7 +4072,32 @@ function EsportsFPS3D({
 
         </div>
 
-        <C5CRoundHistory view={presentationView}/>
+        {sceneVersion!=="legacy"&&selP&&(
+          <div data-testid={cameraMode==="pov"?"cs-pov-player-panel":"cs-major-player-panel"} style={{marginTop:8,padding:10,border:`1px solid ${GC.line}`,borderRadius:10,background:GC.card,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:GC.blueL,fontWeight:800,fontSize:12,overflowWrap:"anywhere"}}>{selP.name}{selP.hasBomb?" 💣":""}</div>
+                <div style={{color:GC.blueL,fontSize:10}}>{GUNS[selP.gun]?.name} · {selP.dead?"陣亡":`${selP.hp} HP`}{selP.weaponHandlingVersion===1&&` · ${selP.ammo} / ${selP.reserveAmmo}`}</div>
+              </div>
+              {cameraMode==="pov"&&<button data-testid="cs-exit-pov" onClick={()=>{setCameraMode("tactical");setCameraPreset(null);}} style={{minHeight:44,padding:"8px 12px",borderRadius:8,border:`1px solid ${C.gold}66`,background:`${C.gold}16`,color:C.gold,fontSize:11,fontWeight:800,cursor:"pointer",flexShrink:0}}>返回觀戰</button>}
+              <button aria-label="關閉選手視角" onClick={()=>selectPlayer(null)} style={{width:44,height:44,borderRadius:8,border:`1px solid ${GC.line}`,background:"transparent",color:GC.blueL,cursor:"pointer",flexShrink:0}}>✕</button>
+            </div>
+            <details style={{marginTop:6,color:GC.blueL,fontSize:10}}>
+              <summary style={{minHeight:44,display:"flex",alignItems:"center",cursor:"pointer"}}>選手資訊 · {selP.k}/{selP.d}/{selP.a||0}</summary>
+              <div style={{overflowWrap:"anywhere"}}>最擅長：{FPS_ROLE_ZH[selP.bestFpsRole]||selP.fpsRole||ROLE_ZH[selP.role]||selP.role}{selP.taskFpsRole&&` · 本場定位：${FPS_ROLE_ZH[selP.taskFpsRole]}`} · {selP.dead?"陣亡":stZh(selP.state)}</div>
+              {selP.stats&&<div>綜合能力 {ovr(selP)} · FPS戰力 {selP.fps} · 體力 {selP.energy??selP.sta}</div>}
+              <div style={{padding:"4px 0",color:GC.green}}>現金 {fmtFpsMoney(selP.money)}</div>
+              {selP.stats&&STAT_GROUPS.map(([gname,keys])=>(
+                <div key={gname} style={{marginTop:6}}><b style={{color:C.gold}}>{gname}</b>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6,marginTop:4}}>{keys.map(([key,label])=><span key={key}>{label} <b style={{color:GC.blueL}}>{selP.stats[key]}</b></span>)}</div>
+                </div>
+              ))}
+            </details>
+          </div>
+        )}
+
+        {sceneVersion==="legacy"?<C5CRoundHistory view={presentationView}/>:<div data-testid="cs-c5c-round-history" className="fps-major-rounds">{(frame.roundHist||[]).slice(0,frame.roundHistCount??frame.roundHist?.length??0).map((round,index)=><button key={index} title={`第 ${index+1} 回合 · ${round.winnerTeam==="us"?T_NAME:CT_NAME} 勝利`} onClick={()=>{seek(sim.frames.findIndex(f=>f.rnd===index));setPlaying(false);}} style={{border:`1px solid ${GC.line}`,borderRadius:6,background:GC.card,color:round.winnerTeam==="us"?GC.green:GC.red,fontSize:10}}>R{index+1} {round.winnerTeam==="us"?"勝":"負"}</button>)}</div>}
+        {sceneVersion!=="legacy"&&frame.roundHistCount>0&&<details className="fps-major-round-details"><summary>逐回合十人數據</summary>{(frame.roundHist||[]).slice(0,frame.roundHistCount).map((round,index)=><details key={index}><summary>第 {index+1} 回合 · {round.winnerTeam==="us"?T_NAME:CT_NAME} 勝利</summary>{(round.roundStats||[]).map(row=><div key={row.id} className="fps-major-round-player"><span>{row.name} · {row.side==="ct"?"防守":"進攻"}</span><span>{row.k}/{row.d}/{row.a} · ADR {row.adr} · 道具傷害 {row.utilDmg}</span></div>)}</details>)}</details>}
 
         {/* 播放控制 */}
         <div data-testid="cs-playback-controls" style={{display:"flex",alignItems:"center",gap:5,marginTop:8,background:C.panel,borderRadius:11,border:`1px solid ${C.line}`,padding:"8px 9px",minWidth:0,flexWrap:"wrap"}}>
@@ -3811,21 +4106,31 @@ function EsportsFPS3D({
             const nextRound=()=>{const t=sim.frames.findIndex(f=>f.rnd===frame.rnd+1);seek(t<0?total-1:t);};
             return(<>
               <button onClick={prevRound} title="上一局" style={tb}>⏮</button>
-              <button onClick={()=>seek(fIdx-5)} title="倒退10秒" style={tb}>⏪</button>
-              <button onClick={()=>{if(matchOver)seek(0);setPlaying(p=>!p);}} style={{width:36,height:36,borderRadius:"50%",background:`linear-gradient(135deg,${C.ct},#2563eb)`,border:"none",cursor:"pointer",color:"#fff",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 3px 12px ${C.ct}55`}}>{playing?"❚❚":"▶"}</button>
-              <button onClick={()=>seek(fIdx+5)} title="快進10秒" style={tb}>⏩</button>
+              <button onClick={()=>sceneVersion==="legacy"?seek(fIdx-5):seekBySeconds(-10)} title="倒退10秒" style={tb}>⏪</button>
+              <button aria-label={playing?"暫停比賽播放":"播放比賽"} onClick={()=>{if(matchOver)seek(0);setPlaying(p=>!p);}} style={{width:36,height:36,borderRadius:"50%",background:`linear-gradient(135deg,${C.ct},#2563eb)`,border:"none",cursor:"pointer",color:"#fff",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 3px 12px ${C.ct}55`}}>{playing?"❚❚":"▶"}</button>
+              <button onClick={()=>sceneVersion==="legacy"?seek(fIdx+5):seekBySeconds(10)} title="快進10秒" style={tb}>⏩</button>
               <button onClick={nextRound} title="下一局" style={tb}>⏭</button>
             </>);})()}
           <div style={{flex:"1 1 130px",minWidth:120,maxWidth:"100%"}}>
-            <input type="range" min={0} max={total-1} value={fIdx} onChange={e=>seek(+e.target.value)} style={{width:"100%",accentColor:C.ct,height:4}}/>
+            <input type="range" aria-label="比賽保存畫面時間軸" min={0} max={total-1} value={fIdx} onChange={e=>seek(+e.target.value)} style={{width:"100%",accentColor:C.ct,height:4}}/>
             <div style={{display:"flex",justifyContent:"space-between",marginTop:1}}>
               <span style={{color:C.gray2,fontSize:8}}>回合 {frame.rnd+1}</span>
               <span style={{color:C.gray2,fontSize:8}}>{fIdx+1}/{total} 格</span>
             </div>
           </div>
-          <MatchSpeedControls rates={[1,2.4,4]} rate={speed} onRate={setSpeed} onQuickFinish={quickFinish}
+          <MatchSpeedControls rates={[1,2.4,4]} rate={speed} onRate={setSpeed} onQuickFinish={replayMode?null:quickFinish}
             quickFinishPending={quickFinishing} compact accent={C.ct} testId="cs-match-speed-controls" />
         </div>
+        {(sceneVersion!=="legacy"||replayMode)&&<details className="fps-major-replay" style={{color:GC.blueL}}>
+          <summary>保存與開啟重播{replayMode&&<span data-testid="cs-replay-mode" style={{marginLeft:8,color:GC.gold}}>保存重播 · 不影響比賽進度</span>}</summary>
+          <div className="fps-major-replay-actions">
+            <button data-testid="cs-replay-export" disabled={replayBusy} onClick={exportReplay} style={{background:GC.card,color:GC.blueL,border:`1px solid ${GC.line}`,borderRadius:8,padding:"6px 12px"}}>匯出本場重播</button>
+            <label className="fps-major-replay-file" style={{borderColor:GC.line}}>開啟重播檔<input data-testid="cs-replay-import" aria-label="開啟保存重播檔" type="file" accept=".json,.gz,application/json,application/gzip" disabled={replayBusy} onChange={importReplay}/></label>
+            {importedReplay&&!externalReplay&&<button data-testid="cs-replay-exit" onClick={()=>{onReplayModeChange?.(false);setImportedReplay(null);setReplayError("");}} style={{background:GC.card,color:GC.blueL,border:`1px solid ${GC.line}`,borderRadius:8,padding:"6px 12px"}}>返回原比賽</button>}
+          </div>
+          {replayBusy&&<div role="status">正在處理重播檔…</div>}
+          {replayError&&<div data-testid="cs-replay-error" role="alert" style={{color:GC.red,overflowWrap:"anywhere"}}>{replayError}</div>}
+        </details>}
         {quickCompleted&&!matchOver&&(
           <button data-testid="cs-quick-finish-terminal-seek" onClick={()=>seek(total-1)} style={{width:"100%",marginTop:5,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.ct}66`,background:`${C.ct}18`,color:C.ctL,fontSize:10,fontWeight:800,cursor:"pointer"}}>
             查看終局畫面（最後一格）
@@ -3836,7 +4141,7 @@ function EsportsFPS3D({
         <div style={{display:"flex",gap:6,marginTop:7,minWidth:0,flexWrap:"wrap"}}>
           {FPS_DEBUG_ENABLED&&<button onClick={()=>setShowRoutes(r=>!r)} style={toolBtn(showRoutes)}>🧭 路線</button>}
           <div style={{flex:"1 1 180px",minWidth:0,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",padding:"0 4px",color:C.gray2,fontSize:8.5,lineHeight:1.35}}>
-            <span style={{color:C.t,fontWeight:800}}>{tacticT?.name}</span><span style={{opacity:0.5}}>vs</span><span style={{color:C.ct,fontWeight:800}}>{lib.ct[ctIdx]?.name}</span><span style={{opacity:0.55}}>· 四階段{preMatchLayout.openness==="open"?"開放布局":preMatchLayout.openness==="structured"?"固定布局":"自適應布局"}</span>
+            <span style={{color:C.t,fontWeight:800}}>{replayEnvelope?.rawResult.tactic?.ours||tacticT?.name}</span><span style={{opacity:0.5}}>vs</span><span style={{color:C.ct,fontWeight:800}}>{replayEnvelope?.rawResult.tactic?.theirs||lib.ct[ctIdx]?.name}</span>{!replayMode&&<span style={{opacity:0.55}}>· 四階段{preMatchLayout.openness==="open"?"開放布局":preMatchLayout.openness==="structured"?"固定布局":"自適應布局"}</span>}
           </div>
         </div>
         {/* C3 全場導播視角：切換只改相機，不改戰鬥資料或幾何契約 */}
@@ -3852,20 +4157,20 @@ function EsportsFPS3D({
         <div data-esmo-fps-team-roster="1" style={{display:"flex",gap:8,marginTop:8,minWidth:0}}>
           <div style={{flex:"1 1 0",minWidth:0,background:C.panel,borderRadius:11,border:`1px solid ${C.t}22`,padding:"8px"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,padding:"0 2px"}}>
-              <span style={{color:C.tL,fontSize:9,fontWeight:800}}>🟠 {T_NAME}</span>
-              <span style={{color:C.green,fontSize:8,fontWeight:700}}>💰 ${frame.players.filter(p=>p.side==="t").reduce((s,p)=>s+(p.money||0),0)} · {buyZh(frame.players.find(p=>p.side==="t")?.buyType)}</span>
+              <span style={{color:C.tL,fontSize:9,fontWeight:800}}>🟠 {T_NAME} · {teamGroups.us[0]?.side==="ct"?"防守":"進攻"}</span>
+              <span style={{color:C.green,fontSize:8,fontWeight:700}}>💰 {sceneVersion==="legacy"?`$${teamGroups.us.reduce((s,p)=>s+(p.money||0),0)}`:fmtFpsMoney(teamGroups.us.reduce((s,p)=>s+(p.money||0),0))} · {buyZh(teamGroups.us[0]?.buyType)}</span>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {frame.players.filter(p=>p.side==="t").map(p=><PlayerRow key={p.id} p={p} selected={selected===p.id} onClick={selectPlayer}/>)}
+              {teamGroups.us.map(p=><PlayerRow key={p.id} p={p} selected={selected===p.id} onClick={selectPlayer} major={sceneVersion!=="legacy"}/>)}
             </div>
           </div>
           <div style={{flex:"1 1 0",minWidth:0,background:C.panel,borderRadius:11,border:`1px solid ${C.ct}22`,padding:"8px"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,padding:"0 2px"}}>
-              <span style={{color:C.ctL,fontSize:9,fontWeight:800}}>🔵 {CT_NAME}</span>
-              <span style={{color:C.green,fontSize:8,fontWeight:700}}>💰 ${frame.players.filter(p=>p.side==="ct").reduce((s,p)=>s+(p.money||0),0)} · {buyZh(frame.players.find(p=>p.side==="ct")?.buyType)}</span>
+              <span style={{color:C.ctL,fontSize:9,fontWeight:800}}>🔵 {CT_NAME} · {teamGroups.enemy[0]?.side==="ct"?"防守":"進攻"}</span>
+              <span style={{color:C.green,fontSize:8,fontWeight:700}}>💰 {sceneVersion==="legacy"?`$${teamGroups.enemy.reduce((s,p)=>s+(p.money||0),0)}`:fmtFpsMoney(teamGroups.enemy.reduce((s,p)=>s+(p.money||0),0))} · {buyZh(teamGroups.enemy[0]?.buyType)}</span>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {frame.players.filter(p=>p.side==="ct").map(p=><PlayerRow key={p.id} p={p} selected={selected===p.id} onClick={selectPlayer}/>)}
+              {teamGroups.enemy.map(p=><PlayerRow key={p.id} p={p} selected={selected===p.id} onClick={selectPlayer} major={sceneVersion!=="legacy"}/>)}
             </div>
           </div>
         </div>

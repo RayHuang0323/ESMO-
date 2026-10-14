@@ -1,7 +1,9 @@
+import { createHeVfx } from "./fpsHeVfx.js";
 import * as THREE from "three";
+import { createOriginalUtilityModelFactory } from "./fpsUtilityModels.js";
 
 const SMOKE_LIFETIME_UNITS = 18;
-const SMOKE_GROW_UNITS = 3.5;
+const SMOKE_GROW_UNITS = 0.45;
 const SMOKE_DISSIPATE_UNITS = 6;
 const SMOKE_CLOUDS_PER_EVENT = 8;
 const MAX_SMOKE_EVENTS = 4;
@@ -13,7 +15,7 @@ const MAX_MOLLY_EVENTS = 4;
 // C5B is presentation-only.  The frame owns throw timing, landing, detonation,
 // smoke LOS and flash gameplay; this module only presents those facts.
 export const C5B_UTILITY_FX_CONTRACT = Object.freeze({
-  version: "C5B.1",
+  version: "C5B.2",
   owner: "fpsUtilityPresentation",
   authority: "frame.throwables/frame.smokes/frame.mollys/frame.players",
   trajectory: "authoritative from/to/t/flightDurationSec/arcHeightUnits",
@@ -27,7 +29,7 @@ export const C5B_UTILITY_FX_CONTRACT = Object.freeze({
     flashBursts: MAX_FLASH_BURSTS,
     mollyEvents: MAX_MOLLY_EVENTS,
   }),
-  reducedMotion: "prefers-reduced-motion reduces pulses/debris, never removes markers",
+  reducedMotion: "prefers-reduced-motion reduces pulses/debris, retains physical smoke/fire",
   cleanup: "idempotent dispose on map rebuild and unmount",
   postprocessing: "none",
 });
@@ -147,7 +149,7 @@ function setRing(ring, W, x, z, scale, opacity, color) {
   ring.scale.setScalar(scale);
   ring.material.color.setHex(color);
   ring.material.opacity = opacity;
-  ring.visible = opacity > 0.001;
+  ring.visible = false; // Owner: no ground utility circles; the physical FX carries the state.
 }
 
 function makeSmokeClouds(group, textures) {
@@ -158,7 +160,7 @@ function makeSmokeClouds(group, textures) {
  * Bounded utility presentation for the formal Battle runtime.
  * No gameplay state, camera state, RAF, shader or post-processing is owned here.
  */
-export function createUtilityPresentation({ group, textures, sphereGeometry }) {
+export function createUtilityPresentation({ group, textures, sphereGeometry, sampleGroundHeight=()=>0, major=true }) {
   const reducedMotion = typeof window !== "undefined"
     && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
   const geometries = {
@@ -166,20 +168,19 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
     blastRing: new THREE.RingGeometry(0.42, 0.62, 20),
     debris: new THREE.BoxGeometry(0.18, 0.12, 0.42),
   };
+  const utilityModels = createOriginalUtilityModelFactory();
+  const throwableModels = [];
   const pools = {
     smokeCloud: makeSmokeClouds(group, textures),
     smokeMarker: createPool(group, MAX_SMOKE_EVENTS, () => mesh(group, geometries.marker, UTILITY_COLORS.smoke, { depthTest: true })),
     throwableTrail: createPool(group, MAX_THROWABLE_EVENTS * 3, () => new THREE.Mesh(sphereGeometry, new THREE.MeshBasicMaterial({ color: UTILITY_COLORS.smokeDeep, transparent: true, opacity: 0, depthTest: true, depthWrite: false }))),
-    throwable: createPool(group, MAX_THROWABLE_EVENTS, () => new THREE.Mesh(sphereGeometry, new THREE.MeshStandardMaterial({ color: 0x333a3d, roughness: 0.76, metalness: 0.28, transparent: true, opacity: 0 }))),
-    blast: createPool(group, MAX_HE_BURSTS * 3, () => sprite(group, textures.glow, UTILITY_COLORS.he)),
-    dust: createPool(group, MAX_HE_BURSTS * 3, () => sprite(group, textures.smoke, UTILITY_COLORS.heDust)),
-    blastRing: createPool(group, MAX_HE_BURSTS, () => mesh(group, geometries.blastRing, UTILITY_COLORS.he, { blending: THREE.AdditiveBlending })),
-    debris: createPool(group, MAX_HE_BURSTS * 8, () => new THREE.Mesh(geometries.debris, new THREE.MeshBasicMaterial({ color: UTILITY_COLORS.heDust, transparent: true, opacity: 0, depthTest: true, depthWrite: false }))),
+    throwable: createPool(group, MAX_THROWABLE_EVENTS, index => {const instance=utilityModels.createInstance();throwableModels.push(instance);instance.group.name='fps-utility-body-'+index;return instance.group;}),
     flashBurst: createPool(group, MAX_FLASH_BURSTS * 2, () => sprite(group, textures.flash, UTILITY_COLORS.flash)),
     flashHalo: createPool(group, MAX_FLASH_BURSTS, () => sprite(group, textures.glow, UTILITY_COLORS.flash)),
     mollyFire: createPool(group, MAX_MOLLY_EVENTS * 8, () => sprite(group, textures.fire, UTILITY_COLORS.molly)),
     mollyMarker: createPool(group, MAX_MOLLY_EVENTS, () => mesh(group, geometries.marker, UTILITY_COLORS.molly, { blending: THREE.AdditiveBlending })),
   };
+  const heVfx = createHeVfx({group,smokeTexture:textures.smoke,reducedMotion});
   const point = new THREE.Vector3();
   const previousPoint = new THREE.Vector3();
   const evidence = {
@@ -204,21 +205,30 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
     if (disposed) return evidence;
     Object.values(pools).forEach(hidePool);
     evidence.frameIndex = frameIndex;
+    evidence.utilityModels = utilityModels.diagnostics();
     evidence.activeSmoke = 0;
     evidence.smokeStages = { grow: 0, hold: 0, dissipate: 0 };
     evidence.activeThrowables = 0;
     evidence.trajectorySamples = 0;
-    evidence.heBursts = 0;
+    evidence.heVfx = heVfx.update({frame,nextFrame,sub,W,sampleGroundHeight});
+    evidence.heBursts = evidence.heVfx.active;
     evidence.flashBursts = 0;
     evidence.flashRecoverySamples = 0;
     evidence.mollyZones = 0;
     evidence.visibleMarkers = 0;
 
-    const nextThrowables = new Map((nextFrame?.throwables || []).map((item) => [item.id, item]));
+    const sameRound = nextFrame && nextFrame.rnd === frame?.rnd;
+    const mix = sameRound ? clamp(sub, 0, 1) : 0;
+    const nextThrowables = new Map((sameRound ? nextFrame.throwables || [] : []).map((item) => [item.id, item]));
+    const nextSmokes = new Map((sameRound ? nextFrame.smokes || [] : []).map((item) => [item.id, item]));
     const smokeClouds = pools.smokeCloud;
     let smokeCloudIndex = 0;
     let smokeMarkerIndex = 0;
-    (frame?.smokes || []).slice(0, MAX_SMOKE_EVENTS).forEach((smoke) => {
+    (frame?.smokes || []).slice(0, MAX_SMOKE_EVENTS).forEach((savedSmoke) => {
+      const next = nextSmokes.get(savedSmoke.id);
+      const smoke = { ...savedSmoke,
+        age: lerp(Number(savedSmoke.age) || 0, Number(next?.age ?? savedSmoke.age) || 0, mix),
+        tl: lerp(Number(savedSmoke.tl) || 0, Number(next?.tl ?? (sameRound ? 0 : savedSmoke.tl)) || 0, mix) };
       if (!finitePoint(smoke.pos)) return;
       const stage = smokeStage(smoke);
       const { grow, fade, strength } = smokeStrength(smoke);
@@ -231,7 +241,7 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
       const marker = pools.smokeMarker[smokeMarkerIndex++];
       if (marker) {
         setRing(marker, W, cx, cz, radius * (0.82 + 0.08 * fade), 0.34 * fade, UTILITY_COLORS.smoke);
-        evidence.visibleMarkers += 1;
+        // Ground circles removed; no marker count increment.
       }
       for (let cloud = 0; cloud < SMOKE_CLOUDS_PER_EVENT; cloud += 1) {
         const item = smokeClouds[smokeCloudIndex++];
@@ -246,7 +256,7 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
         setWorldPosition(item, W, x, y, z);
         item.scale.set(scale, scale * (1.02 + level * 0.08), 1);
         item.material.color.setHex(level % 3 === 0 ? UTILITY_COLORS.smokeDeep : UTILITY_COLORS.smoke);
-        item.material.opacity = (0.12 + (level === 1 ? 0.12 : 0.06)) * strength;
+        item.material.opacity = (0.52 + (level === 1 ? 0.20 : 0.10)) * strength;
         item.visible = item.material.opacity > 0.005;
       }
     });
@@ -263,14 +273,13 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
       if (throwable.flying) {
         evidence.trajectorySamples += 1;
         const nextT = next?.flying ? Number(next.t) : Math.min(1, Number(throwable.t) + 0.5 / Math.max(0.1, Number(throwable.flightDurationSec) || 1.6));
-        const t = clamp(lerp(Number(throwable.t) || 0, nextT, sub), 0, 1);
+        const t = clamp(lerp(Number(throwable.t) || 0, nextT, mix), 0, 1);
         trajectoryPoint(throwable, t, W, point);
         if (body) {
           body.position.copy(point);
-          body.scale.setScalar(throwable.type === "flash" ? 0.4 : 0.44);
-          body.material.color.setHex(colour);
-          body.material.opacity = 1;
-          body.rotation.set(time * 4.5, time * 6.2, time * 3.8);
+          throwableModels[throwableIndex-1].setType(throwable.type);
+          body.scale.setScalar(1); // Original, metre-scale grenade/bottle geometry.
+          body.rotation.set(t * Math.PI * 6, t * Math.PI * 8, t * Math.PI * 4);
           body.visible = true;
         }
         for (let segment = 1; segment <= 3; segment += 1) {
@@ -281,98 +290,51 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
           tail.scale.setScalar((0.28 - segment * 0.045) * (throwable.type === "flash" ? 1.08 : 1));
           tail.material.color.setHex(colour);
           tail.material.opacity = 0.42 - segment * 0.08;
-          tail.visible = true;
+          tail.visible = false; // No giant spherical projectile trail.
         }
         return;
       }
 
-      const boom = clamp((Number(throwable.boom) || 0) / 3, 0, 1);
-      if (throwable.type === "he" && boom > 0 && evidence.heBursts < MAX_HE_BURSTS) {
-        const phase = 1 - boom;
-        setWorldPosition(body || pools.throwable[0], W, throwable.to.x, 0.8, throwable.to.y);
-        if (body) {
-          body.scale.setScalar(0.42 + phase * 0.8);
-          body.material.color.setHex(UTILITY_COLORS.heDust);
-          body.material.opacity = 0.7 * boom;
-          body.visible = true;
-        }
-        const burstIndex = evidence.heBursts;
-        const ring = pools.blastRing[burstIndex];
-        if (ring) {
-          setRing(ring, W, throwable.to.x, throwable.to.y, 0.8 + phase * 6.5, 0.8 * boom, UTILITY_COLORS.he);
-        }
-        for (let layer = 0; layer < 3; layer += 1) {
-          const burst = pools.blast[burstIndex * 3 + layer];
-          const dust = pools.dust[burstIndex * 3 + layer];
-          if (burst) {
-            setWorldPosition(burst, W, throwable.to.x, 0.78 + layer * 0.42, throwable.to.y);
-            const scale = (1.2 + phase * 4.6) * (1 - layer * 0.12);
-            burst.scale.set(scale, scale, 1);
-            burst.material.color.setHex(layer === 0 ? 0xfff0bd : UTILITY_COLORS.he);
-            burst.material.opacity = (0.82 - layer * 0.15) * boom;
-            burst.visible = true;
-          }
-          if (dust) {
-            const drift = phase * (0.8 + layer * 0.45);
-            setWorldPosition(dust, W, throwable.to.x + Math.cos(hash(throwable.id) + layer) * drift, 0.7 + layer * 0.6 + phase * 1.1, throwable.to.y + Math.sin(hash(throwable.id) + layer) * drift);
-            const scale = (1.5 + phase * 4.2) * (1 - layer * 0.1);
-            dust.scale.set(scale, scale * 0.72, 1);
-            dust.material.color.setHex(UTILITY_COLORS.heDust);
-            dust.material.opacity = (0.26 - layer * 0.045) * boom;
-            dust.visible = true;
-          }
-        }
-        if (!reducedMotion) {
-          for (let debrisIndex = 0; debrisIndex < 8; debrisIndex += 1) {
-            const debris = pools.debris[burstIndex * 8 + debrisIndex];
-            if (!debris) break;
-            const debrisSeed = hash(`${throwable.id}:${debrisIndex}`);
-            const angle = (debrisSeed % 360) * Math.PI / 180;
-            const distance = phase * (1.1 + (debrisSeed % 13) / 8);
-            setWorldPosition(debris, W, throwable.to.x + Math.cos(angle) * distance, 0.38 + Math.sin(phase * Math.PI) * (1.2 + (debrisSeed % 7) / 6), throwable.to.y + Math.sin(angle) * distance);
-            debris.rotation.set(phase * 5 + debrisIndex, phase * 7, phase * 9 + debrisIndex * 0.4);
-            debris.material.color.setHex(UTILITY_COLORS.heDust);
-            debris.material.opacity = 0.76 * boom;
-            debris.visible = true;
-          }
-        }
-        evidence.heBursts += 1;
-        evidence.visibleMarkers += 1;
-      } else if (throwable.type === "flash" && boom > 0 && evidence.flashBursts < MAX_FLASH_BURSTS) {
+      const boom = clamp(lerp(Number(throwable.boom) || 0, Number(next?.boom ?? (sameRound ? 0 : throwable.boom)) || 0, mix) / 3, 0, 1);
+      if(body&&finitePoint(throwable.to))setWorldPosition(body,W,throwable.to.x,.8,throwable.to.y);
+      const visualSec=(frame.roundSec||0)+(sameRound?mix*Math.max(0,nextFrame.roundSec-frame.roundSec):0);
+      const flashAge=Number.isFinite(throwable.detonatedAtRoundSec)?visualSec-throwable.detonatedAtRoundSec:Infinity;
+      const flashWorldStrength=major?clamp(1-flashAge/.12,0,1):boom;
+      if (throwable.type === "flash" && boom > 0 && flashWorldStrength>0 && evidence.flashBursts < MAX_FLASH_BURSTS) {
         const burstIndex = evidence.flashBursts;
-        const phase = 1 - boom;
+        const phase = major?1-flashWorldStrength:1-boom;
         const burst = pools.flashBurst[burstIndex * 2];
         const core = pools.flashBurst[burstIndex * 2 + 1];
         if (burst) {
-          setWorldPosition(burst, W, throwable.to.x, 1.2, throwable.to.y);
-          const scale = 1.4 + phase * 7.2;
+          setWorldPosition(burst, W, throwable.to.x, sampleGroundHeight(W.vx(throwable.to.x),W.vz(throwable.to.y))+1.2, throwable.to.y);
+          const scale = major?.7+phase*.25:1.4+phase*7.2;
           burst.scale.set(scale, scale, 1);
-          burst.material.opacity = 0.82 * boom;
+          burst.material.opacity = 0.82 * flashWorldStrength;
           burst.visible = true;
         }
         if (core) {
-          setWorldPosition(core, W, throwable.to.x, 1.15, throwable.to.y);
-          core.scale.setScalar(0.8 + phase * 3.5);
+          setWorldPosition(core, W, throwable.to.x, sampleGroundHeight(W.vx(throwable.to.x),W.vz(throwable.to.y))+1.15, throwable.to.y);
+          core.scale.setScalar(major?.4+phase*.15:.8+phase*3.5);
           core.material.color.setHex(0xffffff);
-          core.material.opacity = 0.68 * boom;
+          core.material.opacity = 0.68 * flashWorldStrength;
           core.visible = true;
         }
         evidence.flashBursts += 1;
-        evidence.visibleMarkers += 1;
+        // Ground circles removed; no marker count increment.
       }
     });
 
     let flashHaloIndex = 0;
     (frame?.players || []).forEach((player) => {
       if (!finitePoint(player.pos)) return;
-      const flashStrength = clamp((Number(player.flash) || 0) / 6, 0, 1);
+      const flashStrength = clamp(player.blindSec != null ? Number(player.blindSec) / 12 : (Number(player.flash) || 0) / 6, 0, 1);
       if (flashStrength <= 0 || flashHaloIndex >= MAX_FLASH_BURSTS) return;
       const halo = pools.flashHalo[flashHaloIndex++];
       setWorldPosition(halo, W, player.pos.x, 1.38, player.pos.y);
       halo.scale.setScalar(1.0 + flashStrength * 3.2);
       halo.material.opacity = 0.13 + flashStrength * 0.42;
       halo.material.color.setHex(UTILITY_COLORS.flash);
-      halo.visible = true;
+      halo.visible = !major;
       evidence.flashRecoverySamples += 1;
     });
 
@@ -384,7 +346,7 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
       const marker = pools.mollyMarker[mollyMarkerIndex++];
       if (marker) {
         setRing(marker, W, molly.pos.x, molly.pos.y, 1.6, 0.42 * fade, UTILITY_COLORS.molly);
-        evidence.visibleMarkers += 1;
+        // Ground circles removed; no marker count increment.
       }
       evidence.mollyZones += 1;
       for (let flame = 0; flame < 8; flame += 1) {
@@ -412,6 +374,8 @@ export function createUtilityPresentation({ group, textures, sphereGeometry }) {
       item.parent?.remove(item);
       item.material?.dispose?.();
     }));
+    heVfx.dispose();
+    utilityModels.dispose();
     Object.values(geometries).forEach((geometry) => geometry.dispose?.());
   };
 

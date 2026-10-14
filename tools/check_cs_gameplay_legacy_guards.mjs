@@ -1,0 +1,21 @@
+// Narrow source-bound metadata guards only. No simulation and no outcome fixture.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {gunzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
+const hash=value=>createHash('sha256').update(value).digest('hex');
+const source=fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8');
+const output=process.env.ESMO_CS_LEGACY_GUARDS_REPORT;assert.ok(output&&!fs.existsSync(output));
+let pass=0;const checks=[];const check=(name,fn)=>{try{fn();pass++;checks.push({name,result:'PASS'});console.log(`PASS ${name}`);}catch(error){checks.push({name,result:'FAIL',reason:error.message});console.error(`FAIL ${name}: ${error.stack}`);}};
+const archive='review/cs-major-upgrade/evidence/retention-policy-20261011/e-final-source-recovery.json.gz',gz=fs.readFileSync(archive),recovery=JSON.parse(gunzipSync(gz).toString());
+const entry=recovery.files.find(row=>row.path==='src/battle/fps/EsportsFPS3D.jsx'),archived=Buffer.from(entry.base64,'base64');
+check('archive and original exact Legacy evidence provenance',()=>{assert.equal(hash(gz),'adf060de48c15a988fcf5e9626d1ce92120982d1513211ef25d387a3d2971fe9');assert.equal(hash(archived),entry.sha256);const exact=JSON.parse(fs.readFileSync('tools/.cs-major-verifier-recovery/authenticity-v4-legacy-exact-20261012.report.json','utf8'));assert.equal(exact.before.sha256,exact.after.sha256);assert.equal(exact.before.plants,0);assert.equal(exact.after.plants,0);});
+const plant=body=>{const marker='bombAudit.plantEvents.push(';assert.equal(body.split(marker).length,2);return body.split(marker)[1].split(');')[0];};
+const evaluatePlant=(body,sceneVersion)=>new Function('sceneVersion','rnd','sec','target','c4pos','carrier','tScore','ctScore','aliveT','aliveCT',`return (${plant(body)});`)(sceneVersion,0,50,'a',{x:80,y:24},{id:'schema-player',name:'schema-fixture',pos:{x:79,y:25}},0,0,[],[]);
+check('plant metadata Legacy matches archived schema; Major retains position',()=>{const legacy=evaluatePlant(source,'legacy'),prior=evaluatePlant(archived.toString(),'legacy'),major=evaluatePlant(source,'major.v1');assert.equal(JSON.stringify(legacy),JSON.stringify(prior));assert.equal(Object.hasOwn(legacy,'carrierPosition'),false);assert.deepEqual(major.carrierPosition,{x:79,y:25});});
+const playerFragment='...(sceneVersion!=="legacy"?{utilityCarried,utilityPurchased,utilityCost:utilityPurchased.reduce((sum,type)=>sum+NADE[type],0)}:{})';
+check('actual player ledger guard excludes Legacy before accessing new variables',()=>{assert.equal(source.split(playerFragment).length,2);const evaluate=new Function('sceneVersion','utilityCarried','utilityPurchased','NADE',`return ({${playerFragment}});`);assert.deepEqual(evaluate('legacy',undefined,undefined,undefined),{});assert.deepEqual(evaluate('major.v1',['flash'],['smoke'],{smoke:300}),{utilityCarried:['flash'],utilityPurchased:['smoke'],utilityCost:300});});
+const buyFragment='...(sceneVersion!=="legacy"?{utilityPurchased:[...p.utilityPurchased],utilityCarried:[...p.utilityCarried],utilityCost:p.utilityCost}:{})';
+check('actual buyAudit player guard excludes Legacy missing ledger arrays',()=>{assert.equal(source.split(buyFragment).length,2);const evaluate=new Function('sceneVersion','p',`return ({${buyFragment}});`);assert.deepEqual(evaluate('legacy',{}),{});assert.deepEqual(evaluate('major.v1',{utilityPurchased:['smoke'],utilityCarried:['flash'],utilityCost:300}),{utilityPurchased:['smoke'],utilityCarried:['flash'],utilityCost:300});});
+const report={schema:'cs-gameplay-legacy-guards.v1',mainSHA256:hash(source),archivedMainSHA256:entry.sha256,checks,status:pass===4?'PASS':'FAIL',inputs:'explicit neutral synthetic schema fixture; source-extracted expressions; no simulated plant/winner/outcome',runtimeEvidence:'original old/new complete Legacy simulation exact SHA equivalence for 0-plant inputs; reused evidence only, no repeated simulation',limits:'narrow three metadata guards, not a whole-source equivalence alias and not real Legacy plant gameplay coverage'};
+fs.writeFileSync(output,JSON.stringify(report,null,2),{flag:'wx'});console.log(`CS Gameplay Legacy Guards: ${pass}/4 PASS`);if(pass!==4)process.exitCode=1;

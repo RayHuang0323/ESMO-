@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+const [sourcePath,fitPath,out]=process.argv.slice(2);assert(out?.startsWith('review/cs-major-upgrade/evidence/')&&!fs.existsSync(out));
+let code=fs.readFileSync(sourcePath,'utf8');const fit=JSON.parse(fs.readFileSync(fitPath));assert.equal(fit.candidateSha256,crypto.createHash('sha256').update(code).digest('hex'));
+const angles=['index','middle','ring','pinky'].map(d=>fit.fingers.find(r=>r.digit===d).best.angles);assert(angles.flat().every(Number.isFinite));assert(fit.thumb.best.distance<.010);
+assert(/const SNIPER_SUPPORT_FLEX=Object.freeze\(\[.*\]\);/.test(code));code=code.replace(/const SNIPER_SUPPORT_FLEX=Object.freeze\(\[.*\]\);/,`const SNIPER_SUPPORT_FLEX=Object.freeze(${JSON.stringify(angles)});`);
+assert(code.includes('thumbs[3].quaternion.set(.6705633433115176,.7113966133396122,.2042261976029676,-.050510606296538814).normalize();'));
+code=code.replace('thumbs[3].quaternion.set(.6705633433115176,.7113966133396122,.2042261976029676,-.050510606296538814).normalize();',`thumbs[3].quaternion.set(...${JSON.stringify(fit.thumb.best.rotation)}).normalize();`);
+assert(code.includes('thumbs[4].quaternion.setFromAxisAngle(X_AXIS,1.5);thumbs[5].quaternion.setFromAxisAngle(X_AXIS,1.5);'));
+code=code.replace('thumbs[4].quaternion.setFromAxisAngle(X_AXIS,1.5);thumbs[5].quaternion.setFromAxisAngle(X_AXIS,1.5);',`thumbs[4].quaternion.setFromAxisAngle(X_AXIS,${fit.thumb.best.flex[0]});thumbs[5].quaternion.setFromAxisAngle(X_AXIS,${fit.thumb.best.flex[1]});`);
+fs.writeFileSync(out,code,{flag:'wx'});console.log(JSON.stringify({status:'MERGED_AUTHOR_FINGER_CANDIDATE_NOT_PRODUCT_PASS',out,sourceSha256:fit.candidateSha256,fitSha256:crypto.createHash('sha256').update(fs.readFileSync(fitPath)).digest('hex'),sha256:crypto.createHash('sha256').update(code).digest('hex')}));

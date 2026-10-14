@@ -2,6 +2,7 @@
 // Authoritative frame/event -> read-only HUD/audio/camera intents.
 // This module never changes gameplay state and never infers a kill from HP.
 import { resolveFpsAudioEmitter } from "./fpsAudioPlayback.js";
+import { deriveFpsAnimationState, FPS_PRESENTATION_STATES } from "./fpsAnimationState.js";
 
 const WEAPON_LABELS = Object.freeze({
   pistol: "手槍",
@@ -114,6 +115,8 @@ function emptyState() {
     resumeFrameIndex: 0,
     lastDirectorAt: -Infinity,
     lastFootstepFrame: new Map(),
+    footstepDistance: new Map(),
+    footstepRound: null,
     lastThrowableIds: new Set(),
   };
 }
@@ -147,7 +150,7 @@ export function createFpsMatchPresentation({ major = false } = {}) {
 
   const addAudio = (type, event, frame) => {
     const id = `${type}-${eventId(event, frame, type)}`;
-    state.audio.push({ type, id, eventId: id, distance: Number(event?.distance ?? 20), position: major ? resolveFpsAudioEmitter(event, frame) : clone(event?.pos ?? event?.position ?? null) });
+    state.audio.push({ type, id, eventId: id, distance: Number(event?.distance ?? 20), position: major ? resolveFpsAudioEmitter(event, frame) : clone(event?.pos ?? event?.position ?? null), ...(major && Number.isFinite(event?.delaySec) ? { delaySec: event.delaySec } : {}) });
     state.diagnostics.audioRequests += 1;
   };
 
@@ -245,7 +248,7 @@ export function createFpsMatchPresentation({ major = false } = {}) {
     addAudio("round-start", startEvent, frame);
   };
 
-  const update = ({ frame, previousFrame = null, frameIndex = 0 }) => {
+  const update = ({ frame, previousFrame = null, nextFrame = null, frameIndex = 0 }) => {
     if (!frame) return getView();
     state.diagnostics.updateCalls += 1;
     if ((frame.events?.length ?? 0) > 0) state.diagnostics.framesWithEvents += 1;
@@ -260,6 +263,7 @@ export function createFpsMatchPresentation({ major = false } = {}) {
       state.diagnostics.duplicateEvents += (frame.events?.length ?? 0) > 0 ? 1 : 0;
       state.diagnostics.sameFramePublishes += 1;
     } else if (rewound) {
+      if (major) state.footstepDistance.clear();
       // A manual seek can move the cursor backwards. Keep the dedup set and
       // current diagnostics so a seek cannot erase proof of already consumed
       // events; the explicit reset on a new simulation handles reload/map
@@ -303,11 +307,32 @@ export function createFpsMatchPresentation({ major = false } = {}) {
     });
     const moving = (player) => player && !player.dead && (player.state === "ROTATE" || player.state === "EXECUTE") && distance2(player.pos, player.prevPos) >= 0.55;
     if (major && !frame.buyP && previousFrame?.rnd === frame.rnd) {
+      if (state.footstepRound !== frame.rnd) {
+        state.footstepDistance.clear();state.footstepRound = frame.rnd;
+      }
       const previousPlayers = new Map((previousFrame.players ?? []).map(player => [player.id, player]));
+      const outgoing = nextFrame?.rnd === frame.rnd && Number(nextFrame.roundSec) > Number(frame.roundSec);
+      const nextPlayers = new Map((nextFrame?.players ?? []).map(player => [player.id, player]));
       for (const player of frame.players ?? []) {
         const previous = previousPlayers.get(player.id);
-        if (player.dead || previous?.dead || !finiteAudioPosition(previous?.pos) || !finiteAudioPosition(player.pos) || distance2(player.pos, previous.pos) < .55) continue;
-        addAudio("footstep", { id: `${frame.rnd}-${frameIndex}-${player.id}`, pos: player.pos, playerId: player.id }, frame);
+        const target = outgoing ? nextPlayers.get(player.id) : player;
+        const origin = outgoing ? player : previous;
+        const frameSec = outgoing ? nextFrame.roundSec-frame.roundSec : frame.roundSec-previousFrame.roundSec;
+        if (player.dead || origin?.dead || target?.dead || !finiteAudioPosition(origin?.pos) || !finiteAudioPosition(target?.pos) || !(frameSec>0)) continue;
+        const distance = distance2(origin.pos, target.pos), velocity = {x:(target.pos.x-origin.pos.x)/frameSec,y:(target.pos.y-origin.pos.y)/frameSec};
+        const animation = deriveFpsAnimationState({player,presentationVelocity:velocity});
+        if (!animation.moving) continue;
+        // 真 GLB 左右 foot excursion 平均：一個足部落點的位移，不是逐格播一次。
+        const stepLength = animation.crouched ? .7785020884346814 : animation.locomotion===FPS_PRESENTATION_STATES.RUN ? 1.098506718371743 : .6368358368924394;
+        const previousStep = state.footstepDistance.get(player.id);
+        const phase = previousStep ? previousStep.fraction*stepLength : 0;
+        const firstContact = stepLength-phase;
+        const crossings = Math.floor((phase+distance)/stepLength);
+        state.footstepDistance.set(player.id,{fraction:((phase+distance)%stepLength)/stepLength});
+        for(let step=0;step<crossings;step++){
+          const fraction=Math.max(0,Math.min(1,(firstContact+step*stepLength)/distance));
+          addAudio("footstep", { id: `${frame.rnd}-${frameIndex}-${player.id}-${step}`, pos:{x:origin.pos.x+(target.pos.x-origin.pos.x)*fraction,y:origin.pos.y+(target.pos.y-origin.pos.y)*fraction}, playerId:player.id, delaySec:fraction*frameSec }, frame);
+        }
       }
     } else if (!major && !firstFrame && frameIndex % 2 === 0) {
       (frame.players ?? []).forEach((player) => {

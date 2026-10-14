@@ -83,6 +83,8 @@ function findCapture(filename,rows){
   const matches=rows.filter(row=>typeof row.map==='string'&&stem.startsWith(`${row.map}-`));
   if(matches.length!==1)return{reason:'無法唯一匹配 screenshot map；不猜 metadata'};
   const row=matches[0],state=stem.slice(row.map.length+1);
+  const gallery=[...(row.weaponGallery||[]),...(row.weaponReloadGallery||[]),...(row.operatorGallery||[])].find(entry=>entry.captureRect&&filename.replaceAll('\\','/').endsWith('/'+entry.file));
+  if(gallery)return{row,state,rect:gallery.captureRect};
   return row.captureRects?.[state]?{row,state,rect:row.captureRects[state]}:{row,state,reason:`缺少 captureRects.${state}，不猜 canvas 位置`};
 }
 function canvasCrop(png,viewport,rect){

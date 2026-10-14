@@ -7,7 +7,7 @@ import { majorPlantKind, appendMajorPlantAssembly } from "./fpsMajorPlantAssembl
 export { FPS_MAJOR_MAP_ART } from "../fpsMapIdentity.js";
 
 // 原創美術套件；legacy map key 僅作存檔相容。所有實體外框來自同一份
-// authoritative obstacles；裝飾只在實體內、屋頂或不可行走的外圍。
+// authoritative obstacles；局部裝飾外突20mm作表面分層，導航／掩體不變。
 
 const ATLAS = `${import.meta.env?.BASE_URL || "/"}assets/fps/major-v1/environment-albedo-atlas.png`;
 const TERRAIN_ATLAS = `${import.meta.env?.BASE_URL || "/"}assets/fps/major-v1/terrain-albedo-atlas-v1.png`;
@@ -115,7 +115,7 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
     if(closedFacade){
       // 不能進入的封閉建物省掉內側背板；保留窗洞四邊、外牆與厚度。
       const normals=geo.attributes.normal,indices=[];
-      for(let i=0;i<normals.count;i+=3)if(!(normals.getZ(i)<-.99&&normals.getZ(i+1)<-.99&&normals.getZ(i+2)<-.99))indices.push(i,i+1,i+2);
+      geo.computeBoundingBox();const p=geo.attributes.position,minX=geo.boundingBox.min.x,maxX=geo.boundingBox.max.x;for(let i=0;i<normals.count;i+=3){const rear=normals.getZ(i)<-.99&&normals.getZ(i+1)<-.99&&normals.getZ(i+2)<-.99,outerEnd=[minX,maxX].some(x=>[0,1,2].every(n=>Math.abs(p.getX(i+n)-x)<1e-5))&&[0,1,2].every(n=>Math.abs(normals.getX(i+n))>.99);if(!rear&&!outerEnd)indices.push(i,i+1,i+2);}
       geo.setIndex(indices);
     }
     remap(geo,tile,color);geo.applyMatrix4(transform(x,y,z,1,1,1,rotation));list.push(geo);
@@ -177,12 +177,12 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
         // 耐火牆裙與成跨鋼骨是同一承重系統；替換石牆／青柱拼接。
         const pump=processRoom.processKind==='pump-hall';
         const cap=pump?.4:.65,sill=pump?Math.min(2.45,height-cap-.4):4.4,span=Math.max(1,Math.ceil(len/5));
-        box(shell,pump?0:2,pump?0xb5b29a:0x938978,x,sill/2,z,w.w,sill,w.h);
-        box(shell,1,0x555b55,x,height-cap/2,z,w.w,cap,w.h);
-        box(panels,1,0x4d605d,x,(sill+height-cap)/2,z,alongX?w.w:.12,height-cap-sill,alongX?.12:w.h);
+        box(shell,pump?0:2,pump?0xb5b29a:0x938978,x,sill/2,z,alongX?w.w-.04:w.w,sill,alongX?w.h:w.h-.04);
+        box(shell,1,0x555b55,x,height-cap/2,z,alongX?w.w-.04:w.w,cap,alongX?w.h:w.h-.04);
+        box(panels,1,0x4d605d,x,(sill+height-cap)/2,z,alongX?w.w-.04:.12,height-cap-sill,alongX?.12:w.h-.04);
         for(let n=0;n<=span;n++){
-          const p=Math.max(.25,Math.min(len-.25,n*len/span)),px=alongX?w.x+p:x,pz=alongX?z:w.y+p;
-          if(pump)box(shell,0,0xc1b99f,px,height/2,pz,alongX?.5:.8,height,alongX?.8:.5);
+          const p=Math.max(.28,Math.min(len-.28,n*len/span)),px=alongX?w.x+p:x,pz=alongX?z:w.y+p;
+          if(pump)box(shell,0,0xc1b99f,px,height/2,pz,alongX?.5:.84,height,alongX?.84:.5);
           else{
             box(shell,1,0x535a54,px,height/2,pz,alongX?.22:.76,height,alongX?.76:.22);
             for(const side of [-1,1])box(shell,1,0x737568,px+(alongX?0:side*.32),height/2,pz+(alongX?side*.32:0),alongX?.5:.12,height,alongX?.12:.5);
@@ -205,13 +205,14 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
         for(let n=0;n<=span;n++){
           const p=Math.max(.22,Math.min(len-.22,n*len/span)),px=alongX?w.x+p:x,pz=alongX?z:w.y+p;
           box(shell,1,0x414e4c,px,height/2,pz,alongX?.28:.76,height,alongX?.76:.28);
-          box(shell,1,0x6b7970,px,1.05/2,pz,alongX?.44:.8,1.05,alongX?.8:.44);
+          box(shell,1,0x6b7970,px,1.05/2,pz,alongX?.44:.84,1.05,alongX?.84:.44);
         }
-        box(shell,1,0x4f5b56,x,3.9,z,w.w,.36,w.h);
+        // A projecting belt has physical depth; equal footprints compete with the wall.
+        box(shell,1,0x4f5b56,x,3.9,z,w.w+.04,.36,w.h+.04);
       }else if(len>8){
         const sill=1.8,windowHeight=2.4,bays=Math.max(2,Math.floor(len/4));
-        box(shell,art.tile,art.shell,x,sill/2,z,w.w,sill,w.h);
-        box(shell,art.tile,art.shell,x,(sill+windowHeight+height)/2,z,w.w,height-sill-windowHeight,w.h);
+        box(shell,art.tile,art.shell,x,sill/2,z,w.w-(w.architecture==='pump-gallery'&&alongX?.04:0),sill,w.h-(w.architecture==='pump-gallery'&&!alongX?.04:0));
+        box(shell,art.tile,art.shell,x,(sill+windowHeight+height)/2,z,w.w-(w.architecture==='pump-gallery'&&alongX?.04:0),height-sill-windowHeight,w.h-(w.architecture==='pump-gallery'&&!alongX?.04:0));
         for(let bay=0;bay<bays;bay++){
           const along=(bay+.5)*len/bays;
           if(w.compactArchitecture){
@@ -222,9 +223,16 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
             continue;
           }
           const id=mapKey==='mirage'?(bay===0?'building-kit/wall-window-wide-round-detailed':'building-kit/wall-window-wide-round'):'building-kit/wall-window-wide-square-detailed';
-          authored(panels,id,alongX?w.x+along:x,sill,alongX?z:w.y+along,4,1,len/bays/4,alongX?Math.PI/2:0);
+          const authoredStart=panels.length;
+          authored(panels,id,alongX?w.x+along:x,sill,alongX?z:w.y+along,3.7,1,len/bays/4,alongX?Math.PI/2:0);
+          // Return only the terminal 4cm band into the closed perpendicular corner; keep the window jamb and interior bay joins.
+          if(w.architecture==='pump-gallery'&&(bay===0||bay===bays-1))for(const geo of panels.slice(authoredStart)){
+            const attr=geo.attributes.position,axis=alongX?0:2,lo=alongX?W.vx(w.x):W.vz(w.y),hi=alongX?W.vx(w.x+w.w):W.vz(w.y+w.h);
+            for(let vi=0;vi<attr.count;vi++){const coord=attr.getComponent(vi,axis);if(bay===0&&coord<lo+.04)attr.setComponent(vi,axis,lo+.02+(coord-lo)*.5);else if(bay===bays-1&&coord>hi-.04)attr.setComponent(vi,axis,hi-.02-(hi-coord)*.5);}
+            geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();
+          }
         }
-      }else box(shell,art.tile,art.shell,x,height/2,z,w.w,height,w.h);
+      }else box(shell,art.tile,art.shell,x,height/2,z,alongX?w.w-.04:w.w,height,alongX?w.h:w.h-.04);
       let batch=roomWallBatches.get(w.architecture);
       if(!batch){batch={shell:[],panels:[],fades:[],mat:material(0xffffff,{map:atlas,vertexColors:true}),panelMat:material(0xffffff,{vertexColors:true,roughness:.65})};roomWallBatches.set(w.architecture,batch);}
       batch.shell.push(...shell);batch.panels.push(...panels);
@@ -306,7 +314,7 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
           // 封板和壁厚之間保留清楚深度；不是貼在石牆上的藍色圖形。
           const closed=profile(center,new THREE.Shape());
           extrusion(dark,closed,.035,1,waterFacade?0x4c6560:mapKey==='mirage'?0x6e8985:mapKey==='dust2'?0x82999b:0x697472,bx-face.sign*(!horizontal?.015:0),0,bz-face.sign*(horizontal?.015:0),rotation);
-          panel(shell,2,mapKey==='mirage'?0xc6b99a:0xa4a894,center,sill-.13,openingWidth+.45,.26,.14,.28);
+          panel(shell,2,mapKey==='mirage'?0xc6b99a:0xa4a894,center,sill-.13,openingWidth+.45,.26,.12,.28);
           if(waterFacade){
             // 藍色大窗換成高位採光與厚實拱墩；下方檢修板完全封閉且後退不超0.28m。
             if(waterFacade==='pump'){
@@ -343,9 +351,9 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
           const center=Math.max(-face.len/2+.3,Math.min(face.len/2-.3,bay*pitch-face.len/2));
           const pierWidth=waterFacade?1.05:.56;
           const pierCenter=Math.max(-face.len/2+pierWidth/2,Math.min(face.len/2-pierWidth/2,center));
-          panel(shell,mapKey==='mirage'?0:1,mapKey==='mirage'?0xc6b99a:art.trim,pierCenter,height*.48,pierWidth,height*.96,.14,.28);
+          panel(shell,mapKey==='mirage'?0:1,mapKey==='mirage'?0xc6b99a:art.trim,pierCenter,height*.48,pierWidth,height*.96,.12,.28);
         }
-        panel(shell,2,mapKey==='mirage'?0xd0c3a6:0x9faeaa,0,height-.2,face.len,.4,.14,.28);
+        panel(shell,2,mapKey==='mirage'?0xd0c3a6:0x9faeaa,0,height-.2,face.len-.06,.4,.12,.28);
       }
     }else if(recessed){
       // 關閉廠房的厚牆與內凹窗；完整 collider 不變，玻璃封口不假裝可通行。
@@ -370,7 +378,7 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
       remap(geo,art.tile,shade);geo.applyMatrix4(transform(x,0,z,1,1,1));shell.push(geo);
     }else box(shell, art.tile, shade, x, height / 2, z, w.w, height, w.h);
     // 基座、腰線及屋頂收邊都貼在 collider 內；不製造新增的戰術掩體。
-    box(shell, 2, 0x96988c, x, .28, z, w.w, .56, w.h);
+    box(shell, 2, 0x96988c, x, .28, z, w.w+.04, .56, w.h+.04);
     if(!framedBuilding)box(shell, 2, art.trim, x, height * .55, z, w.w + .05, .18, w.h + .05);
     box(shell, perimeter&&terrain?2:1, perimeter&&terrain?art.shell:art.roof, x, height + .16, z, w.w, .32, w.h);
     // 依用途及區域改變天際線，並非全場同一棟盒子複製。
@@ -579,9 +587,17 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
   });
 
   const groundMat = material(0xffffff, { map: atlas, vertexColors: true, roughness: .97 });
+  // At the overview camera distance, the 13mm paving/road gap can quantize
+  // to the same depth value. Keep the visible paving and road geometry,
+  // and give only this thin overlay one resolvable unit of depth separation.
+  const pavingMat = terrain ? material(0xffffff, { map: atlas, vertexColors: true, roughness: .97, polygonOffset:true, polygonOffsetFactor:0, polygonOffsetUnits:-1 }) : groundMat;
   const terrainMat = material(0xffffff, { map: terrainAtlas, vertexColors: true, roughness: .98,metalness:0 }, 'terrain');
+  // 地坪圖層只改可視薄面，不改 authoritative elevation／導航。
+  // 原中路標線、室內地坪與庭院同在 .045；場外不同塗裝亦共用 .025。
+  // 以明確層序消除不同paint的共面競爭，保留既有合批及材質／陰影。
+  const surfaceLift={paving:.045,room:.075,line:.09,hazard:.105,districtRoad:.025,districtApron:.055,districtMark:.085,districtGreen:.015};
   const paving = [], accents = [];
-  const groundPatch=(list,tile,color,x,z,width,depth,lift=.045)=>{
+  const groundPatch=(list,tile,color,x,z,width,depth,lift=surfaceLift.paving)=>{
     const geo=new THREE.PlaneGeometry(width,depth,Math.max(1,Math.min(6,Math.ceil(width))),Math.max(1,Math.min(6,Math.ceil(depth))));geo.rotateX(-Math.PI/2);geo.translate(W.vx(x),0,W.vz(z));
     const pos=geo.attributes.position;for(let i=0;i<pos.count;i++)pos.setY(i,lift+elevation(pos.getX(i)+50,pos.getZ(i)+50));geo.computeVertexNormals();remap(geo,tile,color);list.push(geo);
   };
@@ -641,13 +657,13 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
     groundPatch(paving, 2, i < 2 ? siteColor : art.paving, p.x,p.y,i < 2 ? 15 : 10,i < 2 ? 14 : 11);
     // 工業警戒線與 site 語意相同，細節無透明 overdraw。
     if (i < 2) for (const side of [-1, 1]) {
-      groundPatch(accents,2,0xc6a557,p.x+side*6.8,p.y,.18,12,.058);
-      groundPatch(accents,2,0xc6a557,p.x,p.y+side*6,13.6,.18,.058);
+      groundPatch(accents,2,0xc6a557,p.x+side*6.8,p.y,.18,12,surfaceLift.line);
+      groundPatch(accents,2,0xc6a557,p.x,p.y+side*6,13.6,.18,surfaceLift.line);
     }
-    if(i<2)for(let n=0;n<10;n++)groundPatch(accents,2,n%2?0x343e40:0xd7b65b,p.x-5.8+n*1.28,p.y-6.1,.7,.55,.06);
+    if(i<2)for(let n=0;n<10;n++)groundPatch(accents,2,n%2?0x343e40:0xd7b65b,p.x-5.8+n*1.28,p.y-6.1,.7,.55,surfaceLift.hazard);
     if(i===2){
-      for(let n=-2;n<=2;n++)groundPatch(accents,1,0x456771,p.x+n*.32,p.y, .14,7);
-      groundPatch(accents,2,0xaab3a6,p.x,p.y+4,6,.14);
+      for(let n=-2;n<=2;n++)groundPatch(accents,1,0x456771,p.x+n*.32,p.y, .14,7,surfaceLift.line);
+      groundPatch(accents,2,0xaab3a6,p.x,p.y+4,6,.14,surfaceLift.line);
     }
   });
   // 地面齊平排水溝與檢修蓋只沿已有實體邊緣配置，不增加導航／射線碰撞。
@@ -660,7 +676,7 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
     groundPatch(accents,2,0x455454,x,z,length,.32,.065);
     for(let n=0;n<6;n++)groundPatch(accents,2,0x93a29c,x+(n-2.5)*length/6,z,.045,.3,.07);
   }
-  flush(paving, groundMat, "Courtyards_and_service-paving");
+  flush(paving, pavingMat, "Courtyards_and_service-paving");
   flush(accents, groundMat, "Site_safety-lines");
 
   // 真正的室內中繼空間：屋頂梁架位於牆頂，門洞仍以原碰撞資料為準。
@@ -674,7 +690,7 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
         // 官方模型最窄門口為2.9m；縮放後恰與 authoritative 4.8m門洞一致。
         if(!room.processKind&&(mapKey!=='dust2'||room.id==='customs-transfer')){
           const first=doorParts.length;
-          authored(doorParts,'building-kit/wall-doorway-wide-square',x,0,z,4,1.5,room.doorWidth/2.9,room.entryAxis==='y'?Math.PI/2:0);
+          authored(doorParts,'building-kit/wall-doorway-wide-square',x,0,z,3.7,1.5,room.doorWidth/2.9,room.entryAxis==='y'?Math.PI/2:0);
           // 真正使用的海關門框保留官方厚轉角；只在clone上統一鋼骨塗裝，非白框貼片。
           if(mapKey==='dust2')for(const geo of doorParts.slice(first)){
             const colors=geo.getAttribute('color'),paint=new THREE.Color(0x63736b);
@@ -688,8 +704,8 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
           for(const side of [-1,1]){
             const offset=side*(room.doorWidth/2+.22);
             box(doorParts,1,0x3e4946,x+(alongX?offset:0),1.8,z+(alongX?0:offset),alongX?.2:.72,3.6,alongX?.72:.2);
-            for(const face of [-1,1])box(doorParts,1,0x667168,x+(alongX?offset:face*.3),1.8,z+(alongX?face*.3:offset),alongX?.44:.12,3.6,alongX?.12:.44);
-            box(doorParts,1,0x9b9478,x+(alongX?offset:0),.3,z+(alongX?0:offset),alongX?.44:.76,.6,alongX?.76:.44);
+            for(const face of [-1,1])box(doorParts,1,0x667168,x+(alongX?offset:face*.32),1.8,z+(alongX?face*.32:offset),alongX?.44:.12,3.6,alongX?.12:.44);
+            box(doorParts,1,0x9b9478,x+(alongX?offset:0),.3,z+(alongX?0:offset),alongX?.44:.80,.6,alongX?.80:.44);
           }
           box(doorParts,1,0x3e4946,x,3.925,z,alongX?room.doorWidth+.88:.35,.65,alongX?.35:room.doorWidth+.88);
           for(const y of [3.66,4.19])box(doorParts,1,0x737b6c,x,y,z,alongX?room.doorWidth+.88:.76,.12,alongX?.76:room.doorWidth+.88);
@@ -783,9 +799,9 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
       wallBatch.panels.push(...doorParts,...fittings);
       const roof=flush(beams,roofMat,`${room.label}_authored-hall-roof`,true);roof.geometry.computeBoundingBox();
       fadeRoofs.push({rect:{x0:W.vx(room.x),z0:W.vz(room.y),x1:W.vx(room.x+room.w),z1:W.vz(room.y+room.h)},material:roofMat,cur:1,occupiedOpacity:.1});
-      const roomPaving=[];groundPatch(roomPaving,2,art.paving,cx,cz,room.w-.8,room.h-.8);
+      const roomPaving=[];groundPatch(roomPaving,2,art.paving,cx,cz,room.w-.8,room.h-.8,surfaceLift.room);
       if(mapKey==='dust2')for(const side of [-1,1]){
-        groundPatch(roomPaving,1,0xa69d72,cx+side*(room.w*.5-1.15),cz,.13,room.h-1.6,.06);
+        groundPatch(roomPaving,1,0xa69d72,cx+side*(room.w*.5-1.15),cz,.13,room.h-1.6,surfaceLift.line);
       }
       allRoomPaving.push(...roomPaving);
       continue;
@@ -918,8 +934,11 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
         const wheel=new THREE.CylinderGeometry(h*.22,h*.22,.24,mobile?8:12);remap(wheel,2,0x293032);wheel.rotateX(Math.PI/2);wheel.applyMatrix4(transform(x+axle*o.w*.3,h*.23,z+side*(o.h*.5-.16),1,1,1));coverVariants.push(wheel);
       }
     }else{
-      for (const side of [-1, 1]) box(coverTrim, 1, 0x6b706b, x + side * (o.w / 2 - .13), h / 2, z, .18, h, o.h);
-      box(coverTrim, 1, 0x858b7b, x, h * .85, z, o.w, .13, o.h);
+      // Straps need real surface separation from the crate and each other;
+      // equal-depth end caps with different atlas UVs fought in moving POV.
+      // Keep the largest presentation overhang at 20mm; collider is unchanged.
+      for (const side of [-1, 1]) box(coverTrim, 1, 0x6b706b, x + side * (o.w / 2 - .13), h / 2, z, .18, h-.03, o.h+.03);
+      box(coverTrim, 1, 0x858b7b, x, h * .85, z, o.w+.04, .13, o.h+.04);
     }
     coverBounds.push({ x: o.x, y: o.y, w: o.w, h: o.h, height: h, kind: o.kind });
   });
@@ -998,7 +1017,7 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
     if(mapKey!=='mirage'){
       // 場外運輸道路、裝卸坪與種植帶接續廠房；全部在競技邊界之外。
       const yard=[];
-      const surface=(x,z,width,depth,color,tile=3,lift=.025)=>{
+      const surface=(x,z,width,depth,color,tile=3,lift=surfaceLift.districtRoad)=>{
         const geo=new THREE.PlaneGeometry(width,depth);geo.rotateX(-Math.PI/2);remap(geo,tile,color);geo.translate(W.vx(x),lift,W.vz(z));yard.push(geo);
       };
       if(mapKey==='inferno'){
@@ -1007,12 +1026,12 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
         surface(50,123,90,40,0x9eaaa3,1,.018);
       }
       for(const [x,z,width,depth] of [[-5,50,8,126],[105,50,8,126],[50,-7,118,8],[50,105,118,8]])surface(x,z,width,depth,0x566365);
-      for(const [x,z,width,depth] of [[-15,26,27,11],[-15,77,27,11],[24,-26,35,10],[65,135,45,10]])surface(x,z,width,depth,0xd1c9b7,1);
+      for(const [x,z,width,depth] of [[-15,26,27,11],[-15,77,27,11],[24,-26,35,10],[65,135,45,10]])surface(x,z,width,depth,0xd1c9b7,1,surfaceLift.districtApron);
       // 閘門外作業坪真正接上既有環廠路/碼頭；閘門保持封閉，無穿越提示。
       if(mapKey==='dust2')surface(102,64,8,8,0xa4afa1,1,.03);
       else surface(-1.5,62,7,6,0xa4afa1,1,.03);
-      for(const [x,z,width,depth] of [[-33,50,9,122],[51,-35,118,12],[46,145,114,9]])surface(x,z,width,depth,0xc1c9ae,2);
-      for(let n=0;n<12;n++)for(const [x,z,width,depth] of [[-5,-3+n*10,.14,3],[10+n*8,105,3,.14]])surface(x,z,width,depth,0xd2c4a0);
+      for(const [x,z,width,depth] of [[-33,50,9,122],[51,-35,118,12],[46,145,114,9]])surface(x,z,width,depth,0xc1c9ae,2,surfaceLift.districtGreen);
+      for(let n=0;n<12;n++)for(const [x,z,width,depth] of [[-5,-3+n*10,.14,3],[10+n*8,105,3,.14]])surface(x,z,width,depth,0xd2c4a0,3,surfaceLift.districtMark);
       for(const [x,z,width,depth] of [[-9.4,50,.3,126],[-.6,50,.3,126],[50,-11.4,118,.3],[50,100.6,118,.3]])box(district,2,0x969c8c,x,.13,z,width,.25,depth);
       flush(yard,terrainMat,'Industrial_access-roads_and_service-yards');
     }

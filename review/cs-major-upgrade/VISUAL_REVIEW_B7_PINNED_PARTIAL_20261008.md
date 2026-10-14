@@ -1,5 +1,28 @@
 # B7 pinned候選：桌機Fresh-Eyes完成，手機未看
 
+## 額度恢復後完成審查（2026-10-08）
+
+同一reviewer已補M28原圖，累計D28／M28／anchors3完整original檢視，並讀兩份metrics與pixel-metrics；未重看已完成桌機、不讀程式或歷史。兩尺寸像素各28/28 MEASURED、ERROR0、native0。**B7仍未放行**，沒有before，不判斷改善幅度。下方「手機未看」保留為上一停點歷史。
+
+以下兩尺寸分開檢視後分數相同，依序肩／肘／前臂／真正布袖口／衣料／袖輪廓：
+
+| 身份 | D1366 | M390 |
+|---|---|---|
+| ct1 assault | 2/1/1/1/1/1 | 2/1/1/1/1/1 |
+| ct2 support | 2/1/2/1/1/1 | 2/1/2/1/1/1 |
+| ct3 marksman | 2/1/2/1/1/1 | 2/1/2/1/1/1 |
+| t1 assault | 2/1/2/1/2/1 | 2/1/2/1/2/1 |
+| t2 support | 2/2/2/1/2/2 | 2/2/2/1/2/2 |
+| t3 marksman | 2/1/2/1/2/1 | 2/1/2/1/2/1 |
+
+六身份共通：正面肩／前臂縫線可見；背面肩腰大皺可見但裝備遮住前臂；左右後視袖形仍平滑。T2露出最多布袖，壓縮隆起較可讀；CT深色合併暗部，ct3窄版後右鏡位較遠。所有布袖口只有與手套交界，無獨立翻折厚度，不能借護具／手套加分。active／overview角色太小，不驗衣料；detail可讀輪廓但不足袖口；POV不替第三人稱加分。
+
+十類目前截圖證據評分依scorecard順序：Art2／Hero2／Enemies1／Interactables1／World2／Materials2／Lighting2／VFX1／UI2／Performance2，平均1.7，未達各類≥2與平均≥2.3。部分1分來自本組截圖缺互動／動態證據，不直接當既有系統不存在或重新實作依據。
+
+D59.00FPS／p9516.8ms／calls444／tri218616；M60.00／16.8／450／214276；geometries348／textures38，估計texture74.39／70.39MB。calls超advisory300／150，不能以桌機60FPS判真手機通過。pixel為自製fallback，不是官方inspector，也不推翻局部CT暗部的可讀性問題。
+
+本source233b2f81完整審查結束；下一候選僅先做support兩身份正面／後左局部診斷，確認造型有效才做完整驗收，避免無差別重拍56圖。
+
 因官方每週codex剩0%停止。唯讀reviewer `b7_pinned_fresh` 已逐張original檢視 `phase-b7-pinned-recovered-desktop-20261008/1366` 根目錄4PNG與gallery六身份各4角度，共28PNG，以及3張scorecard anchors；讀同目錄metrics。未讀產品程式、checkpoint或歷史報告，未修改檔案。手機0/28；没有最終分數、Premium結論或改善幅度判定。
 
 ## 已完成桌機觀察

@@ -1,3 +1,4 @@
+import {projectNonDeathPelvisWorldVertical} from "../../src/battle/fps/presentation/fpsVisibleGrounding.js";
 // 真GLB fixture：只在記憶體移除Node無法decode的image slots，不修改磁碟素材。
 import fs from 'node:fs';
 import * as THREE from 'three';
@@ -28,18 +29,24 @@ function normalizedClone(scene){
 }
 export async function readFpsRigTestAssets(){
   const character=await readGlb(new URL('../../public/assets/fps/c2a/esmo-fps-character.glb',import.meta.url)),library=await readGlb(new URL('../../public/assets/fps/c2a/esmo-fps-animation-library.glb',import.meta.url));
+  const pistol=await readGlb(new URL('../../public/assets/fps/major-weapons-v1/pistol.glb',import.meta.url));
+  const imported=[pistol,...await Promise.all(['smg','rifle','sniper','shotgun'].map(family=>readGlb(new URL(`../../public/assets/fps/major-weapons-v1/${family}.glb`,import.meta.url))))];
+  const weaponAssets=Object.fromEntries(['pistol','smg','rifle','sniper','shotgun'].map((family,index)=>[family,imported[index].gltf.scene]));
+  const hands=await readGlb(new URL('../../public/assets/fps/major-weapons-v1/hands.glb',import.meta.url));imported.push(hands);
+  weaponAssets.povHands={right:hands.gltf.scene.getObjectByName('ESMO_POV_Right_AnatomicalHand').geometry,left:hands.gltf.scene.getObjectByName('ESMO_POV_Left_AnatomicalHand').geometry};
   const clips=library.gltf.animations.map(original=>{const clip=original.clone(),roots=/death/i.test(clip.name)?['root']:['root','hips','pelvis'];clip.tracks=clip.tracks.filter(t=>!t.name.endsWith('.position')||!roots.some(root=>t.name.toLowerCase().includes(root)));return clip;});
   return{
     clips,
-    make({optimized=true,floor=0,gun='m4',continuousClothing=false,mobile=false}={}){
-      const player={id:'ct1',side:'ct',role:'rifler',gun,hp:100,dead:false,shooting:0,state:'HOLD',pos:{x:17,y:23},va:0,elevation:floor};
+    originalClips: library.gltf.animations.map(clip=>clip.clone()),
+    make({optimized=true,floor=0,gun='m4',continuousClothing=false,mobile=false,importedWeapons=false,operatorId='ct1',side='ct',role='rifler',textiles=null}={}){
+      const player={id:operatorId,side,role,gun,hp:100,dead:false,shooting:0,state:'HOLD',pos:{x:17,y:23},va:0,elevation:floor};
       const parent=new THREE.Group();parent.position.set(17,floor,23);
       const c=createFpsCharacterRenderer({parent,player,enabled:false,optimized});
       const model=normalizedClone(character.gltf.scene);c.root.add(model);c.model=model;c.baseModelPosition=model.position.clone();
-      c.c2c=createC2cHeroPresentation({root:model,player,optimized,handWeaponMount:optimized,continuousClothing,mobile});c.mixer=new THREE.AnimationMixer(model);c.actions=new Map(clips.map(clip=>[clip.name,c.mixer.clipAction(clip)]));c.mode='rigged';c.boundsSampler=optimized?createFpsBoundsSampler(c.root):null;
+      c.c2c=createC2cHeroPresentation({root:model,player,optimized,handWeaponMount:optimized,continuousClothing,mobile,weaponAssets:optimized&&importedWeapons?(textiles?{...weaponAssets,povTextiles:textiles}:weaponAssets):null});c.mixer=new THREE.AnimationMixer(model);c.actions=new Map((optimized?library.gltf.animations.map(clip=>projectNonDeathPelvisWorldVertical(clip,model)):clips).map(clip=>[clip.name,c.mixer.clipAction(clip)]));c.mode='rigged';c.boundsSampler=optimized?createFpsBoundsSampler(c.root):null;
       return{c,parent,player,update(overrides={}){const current=overrides.player||player;c.update({player:current,previousPlayer:current,nextPlayer:current,frameRound:1,frameIndex:10,seekNonce:0,dt:.05,playbackActive:true,...overrides});return c;},dispose(){c.dispose();c.mixer.uncacheRoot(model);}};
     },
-    unchanged(){return[character,library].every(a=>fs.readFileSync(a.url).equals(a.original));},
-    dispose(){const resources=new Set();for(const a of[character,library])a.gltf.scene.traverse(o=>{if(o.geometry)resources.add(o.geometry);for(const m of(Array.isArray(o.material)?o.material:[o.material]).filter(Boolean))resources.add(m);});resources.forEach(r=>r.dispose());},
+    unchanged(){return[character,library,...imported].every(a=>fs.readFileSync(a.url).equals(a.original));},
+    dispose(){const resources=new Set();for(const a of[character,library,...imported])a.gltf.scene.traverse(o=>{if(o.geometry)resources.add(o.geometry);for(const m of(Array.isArray(o.material)?o.material:[o.material]).filter(Boolean))resources.add(m);});resources.forEach(r=>r.dispose());},
   };
 }

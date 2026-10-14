@@ -51,6 +51,15 @@ const STATE = resolve(ROOT, "tools/.verify-state.json");
  * 順序＝由快到慢、由基礎到整合，讓失敗盡早出現。
  */
 const SEGMENTS = [
+  { id: "cs_awareness_steering", script: "tools/check_cs_awareness_steering.mjs", shape: /CS Awareness Steering: 15\/15 PASS/, note: "Owner4真來源pure視線wrap／corner pace／TTL情報與公開地圖cover peek安全及禁用條件；非runtime或GPU" },
+  { id: "cs_owner4_contact_runtime", script: "tools/check_cs_owner4_contact_runtime.mjs", shape: /CS Owner4 Contact Runtime: 12\/12 PASS/, note: "Owner4三圖同seed真5v5可視loaded reaction-ready actor timeline；>=1.5s等待守門與多射手/反擊OBSERVED或NOT_TRIGGERED" },
+  { id: "cs_utility_purchase_named30", script: "tools/check_cs_utility_purchase_plan_runtime.mjs", shape: /CS Utility Purchase Plan Runtime: 30\/30 PASS/, note: "原45列涉及30個具名舊canonical inputs，只驗受影響30場新版purpose/window/inventory因果" },
+  { id: "cs_utility_purchase_plan_runtime", script: "tools/check_cs_utility_purchase_plan_runtime.mjs", shape: /CS Utility Purchase Plan Runtime: 4\/4 PASS/, note: "原Utility反覆購入零用四個具名真5v5案例；購入purpose／carry／真window／throw一對一" },
+  { id: "cs_owner5_runtime", script: "tools/check_cs_owner5_runtime.mjs", shape: /CS Owner5 Runtime: 6\/6 PASS/, note: "Owner五項新問題：指定單圖／fresh陣容真對局與出生／道具起步／責任分工" },
+  { id: "cs_gameplay_legacy_exact_equivalence", script: "tools/check_cs_gameplay_legacy_exact_equivalence.mjs", shape: /CS Gameplay Legacy Exact Equivalence: 3\/3 PASS/, note: "本輪Major變更後舊c9封存與新源同inputs完整Legacy全sim SHA相等" },
+  { id: "cs_gameplay_authenticity_diagnostic", script: "tools/check_cs_gameplay_authenticity_matrix.mjs", shape: /CS Gameplay Authenticity Matrix: 3\/3 COMPLETE/, note: "Owner7問題新版三圖完整真對局診斷，非最終gameplay acceptance" },
+  { id: "cs_gameplay_authenticity_fixture_retry", script: "tools/check_cs_gameplay_authenticity_matrix.mjs", shape: /CS Gameplay Authenticity Matrix: 1\/1 COMPLETE/, note: "僅補原生保存失敗而缺證據的Mirage完整對局，其他已PASS不重跑" },
+  { id: "cs_gameplay_authenticity_matrix", script: "tools/check_cs_gameplay_authenticity_matrix.mjs", shape: /CS Gameplay Authenticity Matrix: 55\/55 COMPLETE/, note: "新版55場真對局含UI選擇，各回合分布與炸彈道具統計另判讀" },
   { id: "cs_bounds_sampler", script: "tools/check_cs_bounds_sampler.mjs", shape: /CS bounds sampler: 14\/14 PASS/, note: "CS 原生bounds等價／單次矩陣走訪／動態掛件與隱藏幾何" },
   { id: "cs_visibility_bounds", script: "tools/check_cs_visibility_bounds.mjs", shape: /CS visibility bounds: 8\/8 PASS/, note: "CS 真實產品visibility snapshot原生／major完整欄位等價與安全診斷" },
   { id: "cs_major_navigation_cache", script: "tools/check_cs_major_navigation_cache.mjs", shape: /CS Major Navigation Cache: 23\/23 PASS/, note: "CS major 有界精確路段快取／三圖路線及完整模擬與未快取等價" },
@@ -61,14 +70,23 @@ const SEGMENTS = [
   { id: "cs_camera_recovery", script: "tools/check_cs_camera_recovery.mjs", shape: /CS camera recovery: 21\/21 checks passed/, note: "CS 鏡頭恢復／局部遮擋／POV實牆／major透明shader狀態切換／legacy保留" },
   { id: "cs_major_character_v1", script: "tools/check_cs_major_character_v1.mjs", shape: /CS Major Character v1: 87\/87 PASS/, note: "CS Major 真實 rig／配件合批／形體等價／mobile 品質與釋放" },
   { id: "cs_major_weapon_sockets", script: "tools/check_cs_major_weapon_sockets.mjs", shape: /CS Major Weapon Sockets B1: 63\/63 PASS/, note: "CS major 真GLB／五槍族手骨握把及世界槍口／真動畫／原成本預算／legacy隔離" },
+  { id: "cs_major_support_grip", script: "tools/check_cs_major_support_grip.mjs", shape: /CS Major Support Grip B7: 21\/21 PASS/, note: "CS major真五族支撐接觸／真動畫骨長不變／射擊蹲姿及移動／暫停seek不漂移／換彈受擊死亡交還動畫／不可達fail closed／零繪製成本及legacy隔離" },
   { id: "cs_major_gunplay_sockets", script: "tools/check_cs_major_gunplay_sockets.mjs", shape: /CS Major Gunplay Sockets: 18\/18 PASS/, note: "CS major 槍口position及direction接線／權威彈道終點／高度回退／244池上限／legacy保留" },
   { id: "cs_major_animation_lifecycle", script: "tools/check_cs_major_animation_lifecycle.mjs", shape: /CS Major Animation Lifecycle B2: 19\/19 PASS/, note: "CS major 真GLB暫停／地形接地／倒帶及seek／回合重置／legacy舊流程保留" },
   { id: "cs_major_weapon_pose_layers", script: "tools/check_cs_major_weapon_pose_layers.mjs", shape: /CS Major Weapon Pose Layers B4: 26\/26 PASS/, note: "CS major 真GLB互斥雙層／跑射相位／共享clip不共享action／暫停seek／原hit及death／零新增Mesh" },
-  { id: "cs_major_pov_weapon", script: "tools/check_cs_major_pov_weapon.mjs", shape: /CS Major POV Weapon B5: 25\/25 PASS/, note: "CS major五族真POV模型共用geometry／socket／pause及seek時鐘／幀內shotAtMs／私有資源釋放" },
-  { id: "cs_major_tailored_clothing", script: "tools/check_cs_major_tailored_clothing.mjs", shape: /CS Major Tailored Clothing B6: 20\/20 PASS/, note: "CS major連續服裝真65骨／996接縫連續／領腰分割面積守恆／Head旋轉及折領合批／停止21隱藏updater／來源不變／共用末一釋放／可見成本" },
+  { id: "cs_major_weapon_handling", script: "tools/check_cs_major_weapon_handling.mjs", shape: /CS Major Weapon Handling B7: 21\/21 PASS/, note: "CS major權威逐發扣彈／空匣換彈／死亡拾槍／真GLB蹲姿及換彈進度／pause與seek／真事件彈量" },
+  { id: "cs_major_pov_weapon", script: "tools/check_cs_major_pov_weapon.mjs", shape: /CS Major POV Weapon B5: 41\/41 PASS/, note: "CS major五族真POV模型共用geometry／grip及support socket／真來源手部私有clone／狙擊槍真管口幾何與後槍托軸向／真GLB PBR分區／權威POV換彈pause及seek／合批手套預算／硬質材質反射共用及末一釋放／跨actor材質池末一釋放／私有RGBA布料與車線末一釋放／pause及seek時鐘／幀內roundSec shotAtMs／真射擊抬槍及眼側kick／null actor與真投擲上臂橋接袖口／四type循環scene恆四part且私有tree嚴格5200tri／私有資源釋放" },
+  { id: "cs_major_tailored_clothing", script: "tools/check_cs_major_tailored_clothing.mjs", shape: /CS Major Tailored Clothing B6: 37\/37 PASS/, note: "CS major真65骨連續服裝／領腰面積守恆／真腕口私有連續顏色／雙袖bind裁片與shader隔離／方向性肘皺與位移上限／裁片共面與包邊／真肩肘前臂袖口覆蓋／寬面肩裁片外肘袖口方向性／局部GLSL有界與非袖隔離／布料借用及skinned校色／來源不變／末一釋放／50套真GLB槍成本與legacy原上限" },
   { id: "cs_major_audio_pool", script: "tools/check_cs_major_audio_pool.mjs", shape: /CS Major Audio Pool B3: 22\/22 PASS/, note: "CS 原生Gain／Panner有界重用／排程取消／priority／stale callback／一次性source回收" },
+  { id: "cs_major_ambient_audio", script: "tools/check_cs_major_ambient_audio.mjs", shape: /CS Major Ambient Audio B7: 14\/14 PASS/, note: "CS major CC0環境loop／來源SHA／單graph／frame時間定位／pause及seek清理／晚到取消" },
   { id: "cs_major_audio_playback", script: "tools/check_cs_major_audio_playback.mjs", shape: /CS Major Audio Playback B3: 25\/25 PASS/, note: "CS major正向播放gate／真位置及鏡頭左右／腳步唯一事件／legacy與frame不變" },
   { id: "cs_major_simulation_v1", script: "tools/check_cs_major_simulation_v1.mjs", shape: /CS Major Simulation v1: 24\/24 PASS/, note: "CS Major 原創空間／廠房雙入口／路線／決定性／舊進行中比賽相容" },
+  { id: "cs_major_utility_rules", script: "tools/check_cs_major_utility_rules.mjs", shape: /CS Major Utility Rules C1: 37\/37 PASS/, note: "CS Major 秒制致盲／真庫存飛行／煙火合計非空因果／拆彈中斷保槍轉交" },
+  { id: "cs_major_tactical_coordinator", script: "tools/check_cs_major_tactical_coordinator.mjs", shape: /CS Major Tactical Coordinator: 42\/42 PASS/, note: "CS Major 不偷攻點／隊伍情報意圖／六點交叉站位／真trade與clutch純規則" },
+  { id: "cs_major_tactical_runtime", script: "tools/check_cs_major_tactical_runtime.mjs", shape: /CS Major Tactical Runtime C2-C4: 34\/34 PASS/, note: "CS Major 三圖真情報／目標角色lane與phase游標／trade與1vN／保槍／假攻因果" },
+  { id: "cs_major_tactical_edge_runtime", script: "tools/check_cs_major_tactical_edge_runtime.mjs", shape: /CS Major Tactical Edge Runtime: 10\/10 PASS/, note: "CS Major 單一合法遠距CT輔助陣容，同seed真交叉火力／保槍／晚安包權威倒數" },
+  { id: "cs_major_replay_ui", script: "tools/check_cs_major_replay_ui.mjs", shape: /CS Major Replay UI D: 51\/51 PASS/, note: "CS Major 保存真frame重播／compact全欄位／逐回合ADR與stable隊伍HUD／v1可選真統計與legacy形狀；需ESMO_CS_D_FIXTURE" },
+  { id: "cs_major_replay_input", script: "tools/check_cs_major_replay_input.mjs", shape: /CS Major Replay Input D: 15\/15 PASS/, note: "CS Major Replay損壞輸入中文拒絕／歷史游標防未來曝光／唯一真1111frames與21round唯讀相容" },
   { id: "cs_identity_gap_r38", script: "tools/check_cs_identity_gap_r38.mjs", shape: /CS 16-Stat Gameplay Identity Gap Closure R38: PASS/, note: "CS seven identity-gap classification and prioritization" },
   { id: "cs_reflex_calibration_r39", script: "tools/check_cs_reflex_calibration_r39.mjs", shape: /CS Reflex Calibration Pilot R39: PASS/, note: "CS Reflex finite calibration sweep" },
   { id: "cs_apm_calibration_r40", script: "tools/check_cs_apm_calibration_r40.mjs", shape: /CS APM Calibration Pilot R40: PASS/, note: "CS APM finite calibration sweep" },
@@ -179,6 +197,16 @@ const SEGMENTS = [
 ];
 
 const argv = process.argv.slice(2);
+// 查用法或拼錯參數不可默默展開全部長驗證／資料產出。
+if (argv.includes('--help')) {
+  console.log('用法：node tools/verify.mjs [--list] [--only=<id,...>] [--resume] [--timeout=<ms>]');
+  process.exit(0);
+}
+const unsupported = argv.filter(arg => !['--list','--resume'].includes(arg) && !/^--(only|timeout)=.+$/.test(arg));
+if (unsupported.length) {
+  console.error(`不支援的參數：${unsupported.join(', ')}。請用 --help 查看用法；未啟動驗證。`);
+  process.exit(2);
+}
 const flag = (n) => argv.includes(`--${n}`);
 const val = (n) => {
   const hit = argv.find((a) => a.startsWith(`--${n}=`));
