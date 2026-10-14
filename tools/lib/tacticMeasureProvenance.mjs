@@ -12,6 +12,7 @@
 //  【記錄範圍】hook 註冊之後才載入的模組才看得到：入口檔、本檔、stripComments 在註冊之前就載入了，不在記錄裡
 //  （入口檔的 worker 區段很薄；量測邏輯在 tacticTruthSim.mjs，由 harnessHash 與 loadedFiles 雙重保護）。
 //  node_modules 與 repo 外的檔案不記。
+//  另外 TEXT_HASH_EXEMPT 的三支（Registry／對照表／解析器）也不記、不比對：它們由行為雜湊保護（見該常數說明）。
 //
 //  本檔**不得**靜態 import 任何 src/ 或 tacticTruthSim：那樣它們會在 hook 註冊之前載入，worker 就漏記。
 // ============================================================================
@@ -32,6 +33,13 @@ export const HASH_KEYS = Object.freeze(["simVersion", "registryHash", "resolvedH
 export const sha = (s) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 export const norm = (text) => stripComments(text).replace(/\s+/g, " ");
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+/**
+ *  不進 loadedFiles 的檔案（沿用先前 TEXT_HASH_EXEMPT）：capabilityRegistry.js 的 MEASURED_EXCLUSIONS 是結果表的「產物」
+ *  （填排除表就讓結果表過期＝循環）；tacticChoiceMapping.js／tacticResolver.js 同時承載「提供哪些選擇」的 UI 清單與「怎麼解析」，
+ *  文字雜湊會讓只改 UI 清單也過期。這三支改由 registryHash／mappingHash／resolvedHash（行為雜湊）保護。
+ */
+export const TEXT_HASH_EXEMPT = Object.freeze(["src/platform/tactics/capabilityRegistry.js", "src/platform/tactics/tacticChoiceMapping.js", "src/battle/moba/tactics/tacticResolver.js"]);
+const tracked = (rel) => !TEXT_HASH_EXEMPT.includes(rel);
 /** 一個 repo 內檔案的正規化內容雜湊（loadedFiles 的值）。 */
 export const hashFile = (rel, readFn = read) => sha(norm(readFn(rel)));
 
@@ -108,7 +116,7 @@ export function installLoadRecorder() {
 }
 /** 把一批相對路徑現在的內容雜湊成 loadedFiles 形狀。 */
 export function hashLoadedFiles(rels, readFn = read) {
-  return Object.fromEntries([...rels].sort().map((r) => [r, hashFile(r, readFn)]));
+  return Object.fromEntries([...rels].filter(tracked).sort().map((r) => [r, hashFile(r, readFn)]));
 }
 
 // ── 探針：用一個 worker 跑一場最小的對局，回傳它載入的 repo 檔案 ─────────────────
@@ -139,10 +147,11 @@ export function stalenessReasons(meta, { hashes, probeFiles = null, readFn = rea
   if (!meta?.loadedFiles || typeof meta.loadedFiles !== "object") { reasons.push(LEGACY_REASON); return reasons; }
   for (const k of HASH_KEYS) if (meta[k] !== hashes[k]) reasons.push(`${k} 與現在不同（結果是在別的版本量的；重新執行 --measure）`);
   for (const [rel, h] of Object.entries(meta.loadedFiles)) {
+    if (!tracked(rel)) continue;
     if (!exists(rel)) reasons.push(`loaded file missing ${rel}`);
     else if (hashFile(rel, readFn) !== h) reasons.push(`loaded file changed ${rel}`);
   }
-  if (probeFiles) for (const rel of probeFiles) if (!(rel in meta.loadedFiles)) reasons.push(`new dependency ${rel}`);
+  if (probeFiles) for (const rel of probeFiles) if (tracked(rel) && !(rel in meta.loadedFiles)) reasons.push(`new dependency ${rel}`);
   return reasons;
 }
 

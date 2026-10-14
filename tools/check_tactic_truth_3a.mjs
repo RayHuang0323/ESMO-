@@ -375,6 +375,8 @@ async function main() {
     ck("N3c 選擇解析出的旋鈕變了（resolvedHash 不同，例如改了 applyChoice）⇒ 過期", verifyFixture(fresh, { ...ctx, hashes: { ...ctx.hashes, resolvedHash: "f".repeat(16) } }).some((p) => p.startsWith("stale")));
     //  依賴式過期（Phase 3a-C0）
     const loadedKeys = Object.keys(fresh.meta.loadedFiles);
+    if (!loadedKeys.length) ck("N3d-N3i 依賴式過期的負向對照（需要探針載入檔清單）", false, "probe failed, cannot evaluate");
+    else {
     const tChanged = clone(fresh); tChanged.meta.loadedFiles[loadedKeys[0]] = "0".repeat(16);
     ck("N3d 記錄的載入檔雜湊變了（檔案內容改了）⇒ 過期", verifyFixture(tChanged, ctx).some((p) => p.startsWith("stale") && p.includes("loaded file changed")));
     const tMissing = clone(fresh); tMissing.meta.loadedFiles["tools/lib/__no_such_file__.mjs"] = "0".repeat(16);
@@ -388,6 +390,17 @@ async function main() {
 export const __edited_by_test__ = 1;` : fs.readFileSync(path.join(ROOT, rel), "utf8"));
     ck("N3g 不在 loadedFiles 的語意檔（worker 沒載入）改了 ⇒ 不過期；同樣的改動用在記錄內的語意檔 ⇒ 過期",
       !!outside && !!inside && Prov.stalenessReasons(fresh.meta, { hashes: ctx.hashes, probeFiles, readFn: edit(outside) }).length === 0 && Prov.stalenessReasons(fresh.meta, { hashes: ctx.hashes, probeFiles, readFn: edit(inside) }).some((r) => r.includes(inside)), `未載入：${outside} / 載入：${inside}`);
+    //  循環防護：這三支（Registry／對照表／解析器）改由行為雜湊保護，不進 loadedFiles；改了它們（例如填 MEASURED_EXCLUSIONS）不得讓新鮮結果表過期
+    const exempt = Prov.TEXT_HASH_EXEMPT[0];
+    const editExempt = (rel) => (rel === exempt ? `${fs.readFileSync(path.join(ROOT, rel), "utf8")}
+export const __edited_by_test__ = 1;` : fs.readFileSync(path.join(ROOT, rel), "utf8"));
+    const withExempt = clone(fresh); withExempt.meta.loadedFiles[exempt] = "0".repeat(16);
+    ck("N3i 免文字雜湊的三支檔案（Registry／對照表／解析器）：不進 loadedFiles；改動或探針載入它們都不過期；非豁免的載入檔改動仍過期",
+      Prov.TEXT_HASH_EXEMPT.length === 3 && Prov.TEXT_HASH_EXEMPT.every((f) => !(f in fresh.meta.loadedFiles))
+      && Prov.stalenessReasons(fresh.meta, { hashes: ctx.hashes, probeFiles: [...(probeFiles ?? []), ...Prov.TEXT_HASH_EXEMPT], readFn: editExempt }).length === 0
+      && Prov.stalenessReasons(withExempt.meta, { hashes: ctx.hashes, probeFiles, readFn: editExempt }).length === 0
+      && Prov.stalenessReasons(fresh.meta, { hashes: ctx.hashes, probeFiles, readFn: edit(loadedKeys[0]) }).some((r) => r.includes(loadedKeys[0])));
+    }
     const legacy = clone(fx); legacy.meta = { ...legacy.meta, engineHash: "0".repeat(16) }; delete legacy.meta.loadedFiles;
     ck("N3h 舊格式結果表（有 engineHash、沒有 loadedFiles）⇒ 過期，原因是 \"fixture predates dependency-based staleness; re-run --measure\"（沒有讓舊表通過的相容路徑）",
       J(Prov.stalenessReasons(legacy.meta, { ...ctx })) === J([Prov.LEGACY_REASON]) && Prov.LEGACY_REASON === "fixture predates dependency-based staleness; re-run --measure");
