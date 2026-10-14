@@ -24590,3 +24590,32 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 追加量測結果檔沒有引擎雜湊，過期無法機械偵測（TD-3A-11）。
 - 機器認可記憶體長期在 40／44.8 GB；長驗收只能單線跑，建議重開機後再跑 verify 全套。
 - 待 Owner 決定的 9 件事見驗收總結第 5 節與 `08_目前待辦與風險.md` 同日一節。
+
+## 2026-10-15 Phase 3a-A 最終驗收：113 段 verify、v20 基準對照、tactic24 修正（owner: Claude，local commit，未 push／deploy／整合 main）
+
+接續上一節「未完成項（欠的驗收）」。2026-10-14 重開機後單線跑完；過程與原始 log 在 `.superpowers/sdd/2026-10-09-moba-phase3a-foundation/progress.md`（2026-10-14 13:00、2026-10-15 00:45／01:10 三節）與同目錄 `checkpoints/2026-10-14-verify/`、`checkpoints/2026-10-15-acceptance/`（git-ignored）。
+
+**狀態：上一節欠的驗收全部有結果；與 v20 對照後沒有發現新的回歸；本分支造成的紅燈只有 tactic24 一條，已修。3a-A 仍待 Owner 正式核准；3a-B 未開始。**
+
+**完成項**
+- `node tools/verify.mjs` 全 113 段都有結果：**43 PASS／70 FAIL／0 TIMEOUT**。98 段先跑完：94 段在 2026-10-14 11:34–12:46（HEAD `c90eb81`）、4 段在 01:20（`d520116`，程式與 `c90eb81` 相同，後者只改文件）；剩下 15 段 18:15–18:24 用 `--resume --only=<15 段>` 補跑：15/15 PASS（fairness_p0c、map_topology_final、tactical_ai_p1、tactical_ai_p2、fairness_p0d、simulation_version、3a 的 8 段、build ✓ built in 17.97s）。
+  - 通過的重點段：`regress`、`regress2`、`runtime29`（107 秒）、`experience26`（CLAUDE.md 列為既有紅 TD-19，這次通過）、`talent27`、`cs23`。
+- **v20 基準對照**（`.sprints/v20-baseline-1d0e219`，detached `1d0e219`，同樣經 verify runner 實跑 70 段紅燈，比對每段的失敗行，只正規化時間／埠號／路徑／雜湊）：
+  - 67 段失敗行與 v20 逐字相同（含數值，例如 quality_p03 死亡對稱 8.15 vs 4.8）⇒ 既有。46 段是 CS（多數在 0–2 秒載入守衛就紅：`LIVE_SOURCE_SHA256`、`R15_LEGACY_R51_SYNERGY_BLOCK`、`[MARKER] signature`），依 Owner 規定只記錄、不修。
+  - 2 段斷言全過、exit 0，是 `verify.mjs` 的 `shape` 過期：`q5_history`（69/69）、`hero_skills_round2`（410/410）⇒ TD-3A-16。
+  - `tactic24`：其餘失敗行與 v20 相同，**只多一條**「useLocalServer → assembleMatch → engine.configureMatch」⇒ 本分支造成（T9 把投影搬進 resolver 後 gate 文字沒跟上）。v20 這段第一次跑時被休眠凍結、喚醒判 `TIMEOUT 12986s`，結果作廢，單獨重跑 516 秒。
+- **瀏覽器 gate**（一次一支；截圖用 `ESMO_REVIEW_OUT` 導到 scratchpad，不寫 repo）：`live_assembly_parity_3a` 25/25、`exit_flush` 12/12、`moba_gameplay_presentation` 10/10；`challenge_manual_draft` 26/27，v20 實跑同樣 26/27 紅在同一條 ⇒ TD-3A-13 確認為既有；`moba_variant_prep` 斷言 16/16 通過但行程不結束 ⇒ TD-3A-17；`moba_combat_feedback` 第一次 9/12（桌機 WebGL context 遺失，環境），重跑分支 17/18 兩次、v20 17/18 一次，都只紅 desktop O1 團戰截圖 ⇒ TD-3A-18。
+- **上一節 8 支沒有結果的 gate**：`result_layout` 49/49、`roam_quality` 18/18、`cs_c5d_side_bias_audit` exit 0（`NO_T_SIDE_SYSTEMIC_BIAS`，CS 線只記錄）。`recovery29b4` 20/21、`worldscale29b5` 17/20、`camera_replay29b6` 14/16 用 `SKIP_NESTED=1` 跑（直接跑會巢狀展開完整 runtime29，跑不完；巢狀子項都是 verify 段）⇒ TD-3A-19；`nav_chrome_h2close` 13/15、`runtime_flicker_h2` 25/31（自起 5173 dev server）⇒ TD-3A-20。五支在 v20 上都紅在同幾條。
+- **tactic24 修正**（Owner 2026-10-15 核准）：`tools/check_moba_tactic24.mjs` 那條接線檢查改成「組裝器呼叫 `A.resolveTactic`，`configureMatch` 收到的是 `clone(resolved.blue.knobs)`／`clone(resolved.red.knobs)`」＋行為驗證「`resolveTactic` 對 m1–m8（legacy）與 std 產出的 knobs 與 `toEngineTactic` 逐值相同」，`assembleMatch` 呼叫與 standard 對手退路兩個條件保留。突變實驗 7 種全部變紅（藍紅對調、傳 config 不傳 knobs、resolver 投影偏 0.01、legacy 被當 std、組裝器不呼叫 resolver、useLocalServer 不呼叫組裝器、拿掉 std 退路）。`node tools/verify.mjs --only=tactic24`：**27/29**，修的那條通過；剩下兩條（m6／m4 gank ×0.97、BattleResult.v2 字串）與 v20 逐字相同。檢查數維持 29。⇒ **本分支造成的紅燈：0**。
+
+**未完成項**
+- 3a-A 正式核准（Owner）；T13 三步驟／確認頁／對手情報；快速模式；3a-B（T15–T17）。
+- 上一節的範圍守衛 2 支（`combat_feedback` X3／X4、`online_foundation_v2a` X6／X7）仍是本分支才有，整合 main 前逐條確認。
+- 70 段既有紅燈本身沒有修（不屬本輪；CS 那 46 段屬 Codex 的 CS 線）。
+
+**已知風險／新登記技術債**（全文見 `08_目前待辦與風險.md` 2026-10-15 一節）
+- TD-3A-16 verify `shape` 過期 2 段；TD-3A-17 `moba_variant_prep` 跑完不結束；TD-3A-18 `combat_feedback` 團戰截圖靠真實時間取樣；TD-3A-19 29b4／29b5／29b6 必須 `SKIP_NESTED=1`；TD-3A-20 H.2 時代兩支瀏覽器 gate 的既有紅。
+- 休眠會讓 verify 當下那段被判 TIMEOUT（計時器把休眠時間算進去），結果要作廢重跑；瀏覽器 gate 不可跨休眠。
+- 停背景批次時 `TaskStop` 沒有停乾淨（bash＋`timeout`＋node 繼續往下跑），要自己查行程。
+
+**tactic24 修正的獨立審查**（sonnet，fresh context，只給驗收條件）：**APPROVED**，Critical 0／Important 0。逐條：29 項斷言數不變、其餘 28 項與 HEAD 逐字相同；舊條件逐一保留或被更嚴的檢查取代（拿掉 std 退路、knobs 不是契約投影都會紅）；probe 的判斷式與 gate 相同；7 個突變全部有效。Reviewer 另加 10 個突變，8 個抓得到；抓不到的 2 個是「組裝器迴圈內把 `resolved[side]` 存成對面那一方」與「組裝器傳 `{}` 而非自己的 adapters 給 resolver」——舊 gate 同樣抓不到，不算變弱，列為 Minor 未處理（可再加一條 regex 或改跑真正的 `assembleMatch` 來補）。

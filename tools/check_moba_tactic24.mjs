@@ -44,9 +44,18 @@ const strip24 = stripComments;   // tools/lib/stripComments.mjs（唯一實作�
 const uls = strip24(fs.readFileSync("src/useLocalServer.js", "utf8"));
 const asm24 = strip24(fs.readFileSync("src/battle/moba/matchAssembler.js", "utf8"));
 const lms24 = strip24(fs.readFileSync("src/battle/moba/liveMatchSetup.js", "utf8"));
+//  Phase 3a T9 起投影搬進 resolver（組裝器 resolveTactic → knobs → configureMatch），原本比對
+//  `A.toEngineTactic(blueCfg)` 的字面從 T9 起就是假紅燈。改成：組裝器把 resolver 的 knobs 交給
+//  configureMatch（結構）＋ resolver 的 knobs 真的等於契約投影 toEngineTactic（行為，legacy 與 std 都驗）。
+const { resolveTactic: resolve24 } = await import("../src/battle/moba/tactics/tacticResolver.js");
+const knobsOf24 = (input) => { const r = resolve24(input, { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION }, { identity: false }); return r.ok ? r.knobs : null; };
+const sameKnobs24 = (a, b) => a !== null && JSON.stringify(a) === JSON.stringify(b);
 ck("useLocalServer → assembleMatch → engine.configureMatch（含 standard 對手）",
   /assembleMatch\(/.test(uls)
-  && /call\("configureMatch",\s*\{\s*blue:\s*A\.toEngineTactic\(blueCfg\),\s*red:\s*A\.toEngineTactic\(redCfg\)/.test(asm24)
+  && /A\.resolveTactic\(/.test(asm24)
+  && /call\("configureMatch",\s*\{\s*blue:\s*clone\(resolved\.blue\.knobs\),\s*red:\s*clone\(resolved\.red\.knobs\)/.test(asm24)
+  && MOBA_TACTICS.every((t) => sameKnobs24(knobsOf24({ kind: "legacy", config: t }), toEngineTactic(t)))
+  && sameKnobs24(knobsOf24({ kind: "std" }), toEngineTactic(STANDARD_OPP_TACTIC))
   && /opponentTeam\s*\?\s*mobaTacticForTeamStyle\(opponentTeam\.style\)\s*:\s*STANDARD_OPP_TACTIC/.test(lms24));
 const le = fs.readFileSync("src/LogicEngine.js", "utf8");
 ck("LogicEngine 無 tactic 直接寫 winner / 無傷害係數", !/tactic\w*[^\n]*winner\s*=/.test(le) && !/tactic\w*[^\n]*(dmgAmt|power)\s*\*=/.test(le) && !le.includes("damage *="));
