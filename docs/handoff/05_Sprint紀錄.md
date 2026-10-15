@@ -24710,3 +24710,21 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **修正波（審查的 Important 3 與小項；只動工具與兩份 review 文件，不動 `src/`、量測工具與 fixture ⇒ 不需重新登記指紋或重測）**：`69a083a`——v21-A 黃金檢查改為「照 fixture 內存的參數重跑每一案」（不再從目前的戰術書提供清單推案例，提供清單日後合法改變不會誤報紅；提供清單差異改為資訊行），並把 fixture 的錄製 gitHead `0e3c0224…` 與指紋 `29140fe0cb5a4c86` 釘成檢查工具內的常數（重錄必須看得見地改這兩個常數），檢查項 127 → 131（P1、P2 與兩個負向自檢），`Match Golden v21-A：131/131 PASS`（109 案仍逐位元相同）；錄製工具的乾淨檢查加入 `tools/lib`；verify 註記改為約 7 分鐘。`8289e20`——C3～C6 草稿的 4 個一致性小項與 C7 兩處措辭。範圍複審：全部 ADDRESSED，無新問題。
 
 **留給 C3 的前提（審查判定）**：工具改讀 Director（`tacticTruthSim` 讀 `e.tk`、自有 `PHASE_EDGES`，否則 C3 改時期界線時量測分桶會悄悄錯位）；兩份 `TACTICAL_DIRECTOR_MODES`（`tacticalDirector.js:18`、`matchRuleset.js:16`）合一；量測與 runner 路徑要有 v21 規則集（目前跑 v20 規則集、標 v21 版本）；引擎內其他用途的 480／960 要用具名常數或放在別的模組（G-AC2 會紅）。
+
+## 2026-10-15 Phase 3a-C3 開工前置作業（不改模擬語意；owner: Claude，local commit，未 push／deploy／整合 main）
+
+計畫 `docs/superpowers/plans/2026-10-15-moba-phase3a-c3-prep.md`；SDD 帳 `.superpowers/sdd/2026-10-15-moba-phase3a-c3-prep/progress.md`。這一輪沒有改 `src/`，沒有開始 C3～C6 新戰術行為，沒有修紅方對調。
+
+**完成項**
+- 工具改讀 Director（`aa38625`）：`tools/lib/tacticTruthSim.mjs` 的時期分桶改問 `e.director.phase(t)`（刪掉重複的 `PHASE_EDGES`），分推路改問 `e.director.knobs(side)`；`check_tactical_identity_v17` B1 改用 `e.director?.hasIdentity()`。新舊量測程式 3 組對局逐項相同；identity_v17 22/22；獨立審查通過。引擎的 `this.tk`／`this.tid` 觀察欄位已無人讀，留給 C3 第一個 src 改動移除。
+- 真實性表重測（`e55fdc9`）：4,080 場、0 失敗，91 列與所有非 meta 區段逐位元相同（只有量測程式雜湊改變）。
+- CLAUDE.md 現役 gate 補上 Phase 3a 戰術層規範（`db47eb6`；備份 `_backup_20261015_CLAUDE.md`）：v21-A 黃金 131、v20 黃金 153、單一讀取來源 64 等；`regress`／`regress2` 不呼叫 `configureMatch`，不能當戰術層證據；真實性表重測規則；黃金出處釘死；v20 規則集不得改。
+- TD-3A-23 紅方路線對調修正方案（`e345060`，提案）：影響比原記錄大——Player Challenge 防守方固定紅方，m2／m4／m5 防守隊伍（含練習對手 drill_topheavy、drill_rotation）在正式對局中對調；證據列只有 m5「下路 Gank」受影響；凍結對調行為的黃金案例共 10 個。提案：Director 為唯一的「隊伍相對 → 世界」轉換點、規則集層 `laneFrame`（沒寫＝舊行為，只在新 v21 規則集開，沒寫時不得把鍵傳給引擎，否則 v20／v21-A 呼叫雜湊會變）、三類紅藍對稱 gate。`simulationVersion.js`：建議把登記資料搬到模擬不載入的檔（需 Owner 核准），核准前維持現狀，不豁免任何檔。
+- Owner 決策表（`3a2c4a2`）：D-1～D-20＋W-1～W-4，四種勝利條件先講；擋 C3 的是 D-13、D-15（含 D-7 旗標名）、D-19 的 C3 部分、D-20；D-1 擋 C5。C3 開工清單（同 commit）：前置條件 P-1～P-10、C3 第一個 src 改動要順手處理的技術債 7 項、C3 任務與事前登記指標、驗收 Gate（含具體數字）。
+- 每份文件都經獨立審查；TD-3A-23 方案與開工清單各修一輪。
+
+**驗證（HEAD `e55fdc9`，實跑）**：`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactical_director_3c` 64/64、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 40/40、`check_simulation_version_gate` 82/82（v21 候選指紋 `ed0daff971db2d7a` 未變）、`check_tactic_registry_3a` 31/31、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 131/131（C2 Director 等價）**、`verify --only=tactic24,runtime29`：tactic24 27/29（兩條紅與 v20 逐字相同）、runtime29 flat 35/35、`check_tactical_identity_v17` 22/22（`aa38625`）、`npm run build` ✓ built in 19.09s。
+
+**未完成項**：所有 Owner 決策（D-1～D-20、W-1～W-4、TD-3A-23 修正與否、`simulationVersion.js` 處理方式）；C3 實作。
+
+**過程事件**：上午子代理撞到 API 用量上限（14:10 重置後接續）；下午休眠時兩個子代理斷網中止，重新派工補完；重測跨越休眠，只是暫停，結果逐位元相同。
