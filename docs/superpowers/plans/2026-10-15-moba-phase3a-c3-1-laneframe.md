@@ -1,0 +1,25 @@
+# MOBA Phase 3a-C3-1 + laneFrame Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development.
+
+**Goal:** (1) E-1 technical cleanup; (2) C3-1 phase skeleton — Resolver emits three per-phase directives, Director `core.v1` selects by clock — behaviour-identical because no per-phase dimension is live yet; (3) laneFrame fix for TD-3A-23 under new v21 rulesets only, with old/new isolation and red/blue mirror gates registered BEFORE implementation.
+
+**Authority:** Owner 2026-10-15 19:40 approvals: D-1 = A (fix in the new v21 rulesets, old rulesets keep their behaviour); D-13 (Resolver pre-builds early/mid/late directives); D-15 (`career.v21`, `balanceTool.v21`, RS-1 extension); D-7 (mode `core.v1`, release flag `mobaTacticalDirectorV21`); D-19 (draft C3 seeds/verification; event counts may be summed across buckets, per-minute rates recomputed); D-20 (side bias worse ≥ 5 pp or z ≥ 3, or any new regression ⇒ STOP for Owner; worse ≥ 3 pp or median match length change > 10 % ⇒ warning); D-2/3/6/8/9/10/12/14 defaults; D-11 diagnostics are prerequisites of their stages; W-1 off; W-3 distinguishability gate added. **Not in scope:** C3-2..C6 measurements, challenge.v21 (D-16, 3a-B), push/deploy/main.
+
+**Design references:** `review/tactic-book-3a/C3_開工清單.md` (§2 tech debt, §3.1, §4 gates), `review/tactic-book-3a/C3-C6_行為契約草案.md` (§1.4, E-1, R-4/R-5), `review/tactic-book-3a/TD-3A-23_紅方路線對調修正方案.md` (whole), `review/tactic-book-3a/C3_Owner決策表.md`.
+
+## Global Constraints
+- v20 history is frozen: v20 rulesets untouched; `check_match_setup_3a` 153/153 (v20 golden) and `check_match_golden_v21a` 131/131 under EXISTING rulesets must hold at every commit. Golden fixtures are never re-recorded.
+- No coefficient changes to pass any gate. Pre-registered criteria are never rewritten after results; an unexpected result ⇒ keep checkpoint and STOP for the Owner.
+- New layer keys are OMITTED when absent (never `undefined` — it serialises as `null` and changes call hashes).
+- Production must stay unchanged until the Owner flips `mobaTacticalDirectorV21` (default off): Live keeps resolving `career.v20` unless the flag is on.
+- Each step: implementer leaves changes UNCOMMITTED → independent review of the working-tree diff → controller commits only after gates + review pass.
+- Every semantics-file change re-registers the `moba-sim.v21` candidate fingerprint; truth table re-measured once at the end (rows on v20 paths must be identical).
+- CS worktree isolation; never touch the 6 PNGs / `review/moba-combat-feedback/`; long runs single-line; Codex processes may be running — do not touch them.
+
+## Tasks
+1. **E-1 cleanup (behaviour-neutral):** remove engine observer fields `this.tk`/`this.tid` (no readers since aa38625); `check_tactical_director_3c` allow-list 2 → 0 and stale "why" strings; single `TACTICAL_DIRECTOR_MODES` (Director imports from `matchRuleset.js`); balance runner accepts a ruleset id (default `balanceTool.v20`, `balanceTool.v21` selectable). Gates: G-AC1 131, G-A2 153, director gate, simversion, ruleset, tactic24/runtime29 via verify.
+2. **C3-1 skeleton + v21 rulesets:** `career.v21` / `balanceTool.v21` with `tacticalDirector: "core.v1"` and RS-1 requirement `mobaTacticalDirectorV21` (flag default off; `resolveRulesetForMode` returns `career.v21` only when the flag is on); Resolver returns per-phase directives (three; same object reference when identical); Director `core.v1` selects by `phase(t)`; `static` unchanged. New gate (C3-1): deterministic boundary checks (479/480, 959/960; only declared fields change; same reference when nothing differs), G-AC1 ② (golden live + runner cases re-run under the v21 rulesets with no new dimension ⇒ digest/streamHash/resultHash identical), RS-1 cases. No laneFrame yet.
+3. **laneFrame pre-registration (before any implementation):** commit a registration file with the gates and pass criteria from the TD-3A-23 proposal §4 — (a) static: over the 186 template × lane-choice inputs, red per-seat world-lane reads under `teamRelative` equal blue's mirrored reads (0 differences) and under legacy reproduce today's 120 differences; enumerated lane-keyed field registry; single conversion point; (b) behavioural: STANDARD vs SWAPPED mirrored pairs, fresh seeds, metrics and tolerances exactly as the proposal states; (c) regression pins: existing rulesets bit-identical (131/153), the set of golden cases that change under the v21 rulesets equals the pre-listed 10 exactly; D-20 side-bias check (`career.v21` vs `career.v20`, STANDARD/SWAPPED, n = 1000, seeds 5001–6000) with the Owner thresholds.
+4. **laneFrame implementation:** layer `laneFrame` (`"teamRelative"` in the v21 rulesets only; absent ≡ legacy; key omitted when absent), conversion inside the Director only, identity-by-reference preserved, assembler capability check for cross-tree runs. Run the registered gates; any mismatch with the registration ⇒ STOP.
+5. **Acceptance + records:** truth re-measure (v20-path rows identical), full gate run, 05/08/SDD/design docs, final commits.
