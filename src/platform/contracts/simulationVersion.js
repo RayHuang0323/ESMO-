@@ -535,7 +535,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  LogicEngine 的每一個戰術讀取點（knobs／Tactical Identity／戰術階段）改經 battle/moba/tactics/tacticalDirector.js（新增進語意清單）；
   //  static 模式回傳設定的同一份物件，階段界線 480／960 原樣搬過去。v21-A golden 109 案與 v20 golden 39 案逐位元相同 ⇒ 不是語意變化。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 29140fe0cb5a4c86 未曾發布）。
-  "moba-sim.v21": "ed0daff971db2d7a",
+  //  2026-10-15（Phase 3a-C3-1 E-1）：C3-1 E-1: observer fields removed, mode list merged; behaviour unchanged.
+  //  LogicEngine.configureMatch 不再指派 this.tk／this.tid（aa38625 之後沒有讀者）；TACTICAL_DIRECTOR_MODES 只在 matchRuleset.js 定義一份，
+  //  tacticalDirector.js 改為 import／轉出同一個物件。不改任何輸入的解析結果與引擎行為：golden 逐位元相同 ⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 ed0daff971db2d7a 未曾發布）。
+  "moba-sim.v21": "eb0249883e225fc4",
 });
 
 export const isKnownSimulationVersion = (v) =>

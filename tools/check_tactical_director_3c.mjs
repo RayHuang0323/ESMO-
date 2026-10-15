@@ -5,9 +5,9 @@
 //  執行：node tools/check_tactical_director_3c.mjs（秒級）
 //
 //   S  原始碼（src/LogicEngine.js，**先剝註解**）：
-//      S1 不得直接讀 this.tk／this.tid（含 [ . ?. 、(this).tk、this["tk"]、點前換行、多行解構）——整份原始碼一次掃（可跨行）；
-//         唯一例外是明列的允許清單，而且是「恰好等於」：多一個讀取點、少一個允許項都紅。
-//      S1d 屬性記號計數（.tk／.tid／"tk"／"tid"，不論前面是誰）恰好＝允許清單筆數 ⇒ 自我別名、Reflect.get、this[k] 也抓得到。
+//      S1 引擎不得有任何 this.tk／this.tid 的讀或寫（含 [ . ?. 、(this).tk、this["tk"]、點前換行、多行解構）——整份原始碼一次掃（可跨行）；
+//         C3-1 E-1 起允許清單為 0 筆（舊的觀測欄位已移除，沒有任何讀者）：出現任何一處都紅。
+//      S1d 屬性記號計數（.tk／.tid／"tk"／"tid"，不論前面是誰）恰好＝0 ⇒ 自我別名、Reflect.get、this[k] 也抓得到。
 //         不涵蓋：執行期組出來的鍵（"t" + "k"）、Object.entries(this) 之類的整體反射。
 //      S2 Director 只在 configureMatch 建一次；建構子設 null；_tidOf／_tidPhase 是一行委派。
 //      S3 戰術階段界線 480／960（含 480.0、8 * 60、16 * 60、4.8e2、0x1e0 等等價寫法）只住在 Director。
@@ -16,7 +16,7 @@
 //      N  掃描器負向自檢（記憶體內植入 ⇒ 對應檢查轉紅；只在註解裡 ⇒ 不紅）。
 //   B  行為（Director 本身）：knobs 回傳同一個參照、identityOfKnobs 對應、identity 關閉 ⇒ null、phase 邊界、
 //      directive 通過 validateTacticalDirective 且深凍結、不與 knobs 共用參照、不改輸入；不擲骰、不碰全域（建兩次答案相同）。
-//   E  引擎接線：未 configureMatch ⇒ director 為 null；configureMatch 後 Director 的回答＝舊式在觀測欄位（e.tk／e.tid）上的值；
+//   E  引擎接線：未 configureMatch ⇒ director 為 null；configureMatch 後 Director 的回答＝舊式在「傳給 configureMatch 的那幾個物件」上的值（C3-1 E-1 起引擎不再有 e.tk／e.tid）；
 //      Director 呼叫不消耗 rng／rng2。
 // ============================================================================
 import fs from "node:fs";
@@ -37,11 +37,9 @@ const ENGINE_CODE = stripComments(read(ENGINE));
 const DIRECTOR_CODE = stripComments(read(DIRECTOR));
 
 // ════ S：原始碼 ════════════════════════════════════════════════════════════════
-//  允許清單（逐筆列舉；每筆附理由）。這兩行是「寫」，不是讀：引擎外部的觀測者還在讀這兩個欄位。
-const ALLOW = [
-  { text: "this.tk = { blue: kBlue, red: kRed };", why: "configureMatch 的觀測欄位指派：tools/lib/tacticTruthSim.mjs 讀 e.tk?.[side].splitLane（真實性量測）" },
-  { text: "this.tid = tid;", why: "configureMatch 的觀測欄位指派：tools/check_tactical_identity_v17.mjs B1 讀 !e.tid（規則關閉 ⇒ 不接線）" },
-];
+//  允許清單：C3-1 E-1 起為空。舊的觀測欄位 this.tk／this.tid 已從 configureMatch 移除（aa38625 之後引擎內外都沒有讀者；
+//  tools/ 與 src/ 皆已 grep 確認）。要再加例外，必須同時說明誰在讀它。
+const ALLOW = [];
 /**
  * 剝過註解的原始碼裡每一個 this.tk／this.tid 的出現處（回報所在行去頭尾空白）。
  * 整份原始碼一次掃（不是逐行）⇒ `\s` 與 `[^{}]*` 可以跨行：`this\n  .tk`、多行解構 `const {\n tk,\n} = this` 都抓得到。
@@ -65,21 +63,21 @@ function directHits(code) {
 /**
  * 屬性記號計數：剝註解後整份引擎裡 `.tk`／`.tid`（含 `?.`、點後換行）與字串 `"tk"`／`'tid'` 出現幾次。
  * 不看前面是不是 this ⇒ 自我別名（`const self = this; self.tk`）、`Reflect.get(this, "tk")`、`this[k]`（k＝"tid"）都會讓計數變多。
- * 必須恰好＝允許清單筆數（那兩行指派各一個 `.tk`／`.tid`）。
+ * 必須恰好＝0（允許清單為空）。
  */
 const tokenCount = (code) => (code.match(/\.\s*(?:tk|tid)\b|["'`](?:tk|tid)["'`]/g) ?? []).length;
 const singleSourceOk = (code) => J(directHits(code).map((h) => h.text).sort()) === J(ALLOW.map((a) => a.text).sort()) && tokenCount(code) === ALLOW.length;
 const hits = directHits(ENGINE_CODE);
 const hitTexts = hits.map((h) => h.text).sort();
-ck(`S1 剝註解後的引擎沒有直接讀 this.tk／this.tid（整份掃、可跨行、含 (this)／解構）：出現處恰好＝允許清單（${ALLOW.length} 筆：${ALLOW.map((a) => a.text).join("｜")}）`,
+ck(`S1 剝註解後的引擎沒有直接讀 this.tk／this.tid（整份掃、可跨行、含 (this)／解構）：出現處恰好＝允許清單（${ALLOW.length} 筆，即完全沒有）`,
   J(hitTexts) === J(ALLOW.map((a) => a.text).sort()), hits.map((h) => `${h.line}: ${h.text}`).join(" | "));
-ck(`S1d 屬性記號計數（.tk／.tid／"tk"／"tid"，不論前面是誰）恰好＝允許清單筆數 ${ALLOW.length}：抓自我別名與 Reflect.get`,
+ck(`S1d 屬性記號計數（.tk／.tid／"tk"／"tid"，不論前面是誰）恰好＝0（允許清單 ${ALLOW.length} 筆）：抓自我別名與 Reflect.get`,
   tokenCount(ENGINE_CODE) === ALLOW.length, `${tokenCount(ENGINE_CODE)}`);
 const BRIEF_PATTERNS = ["this.tk[", "this.tk.", "this.tk?.", "this.tid[", "this.tid.", "this.tid?."];
 ck(`S1b 逐字樣式 ${BRIEF_PATTERNS.join(" ")} 在剝註解後的引擎裡一次都沒有`, BRIEF_PATTERNS.every((p) => !ENGINE_CODE.includes(p)),
   BRIEF_PATTERNS.filter((p) => ENGINE_CODE.includes(p)).join(" "));
-ck("S1c 允許清單每一筆都是指派（`=` 不是 `==`），而且各只出現一次（不留死例外）",
-  ALLOW.every((a) => /^this\.(tk|tid) = [^=]/.test(a.text) && hits.filter((h) => h.text === a.text).length === 1));
+ck("S1c 允許清單為空（不留死例外），而且 configureMatch 沒有 this.tk／this.tid 的指派",
+  ALLOW.length === 0 && hits.length === 0 && !/this\.(?:tk|tid)\s*=[^=]/.test(ENGINE_CODE));
 ck("S2 Director 只建立一次（configureMatch 內）；this.director 只在建構子（null）與 configureMatch 被指派",
   (ENGINE_CODE.match(/createTacticalDirector\(/g) ?? []).length === 1
   && J((ENGINE_CODE.match(/this\.director = [^;]+;/g) ?? [])) === J(["this.director = null;", "this.director = createTacticalDirector({ blue: kBlue, red: kRed, identity: tid });"])
@@ -150,6 +148,7 @@ ck("S5 Director 本身不讀 ruleset（C2 只有 static）、不 import 引擎�
 const Dir = await imp(DIRECTOR);
 const TD = await imp("src/platform/contracts/tacticalDirective.js");
 const TC = await imp("src/platform/contracts/MobaTacticConfig.js");
+const RULESET = await imp("src/platform/contracts/matchRuleset.js");
 const tA = TC.mobaTacticById("m2"), tB = TC.STANDARD_OPP_TACTIC;
 const deepFrozen = (o) => !o || typeof o !== "object" || (Object.isFrozen(o) && Object.values(o).every(deepFrozen));
 const mk = (withId = true) => {
@@ -164,7 +163,7 @@ try {
   const inp = mk(true);
   const snapIn = J(inp);
   const d = Dir.createTacticalDirector(inp);
-  ck("B1 mode＝static；TACTICAL_DIRECTOR_MODES＝[static]；Director 物件凍結", d.mode === "static" && J(Dir.TACTICAL_DIRECTOR_MODES) === J(["static"]) && Object.isFrozen(d) && Object.isFrozen(Dir.TACTICAL_DIRECTOR_MODES));
+  ck("B1 mode＝static；TACTICAL_DIRECTOR_MODES＝[static]（Director 轉出的就是契約 matchRuleset.js 的同一個物件，不是第二份定義）；Director 物件凍結", d.mode === "static" && J(Dir.TACTICAL_DIRECTOR_MODES) === J(["static"]) && Object.isFrozen(d) && Object.isFrozen(Dir.TACTICAL_DIRECTOR_MODES) && Dir.TACTICAL_DIRECTOR_MODES === RULESET.TACTICAL_DIRECTOR_MODES);
   ck("B2 knobs(side) 回傳傳入的**同一個參照**（藍／紅分開，不互串）", d.knobs("blue") === inp.blue && d.knobs("red") === inp.red && d.knobs("blue") !== d.knobs("red"));
   ck("B2b knobs 物件不被凍結、不被改（static 不複製也不碰）", !Object.isFrozen(inp.blue) && !Object.isFrozen(inp.blue.laneOffset) && J(inp) === snapIn);
   ck("B3 identity(side) 回傳傳入的同一個參照", d.identity("blue") === inp.identity.blue && d.identity("red") === inp.identity.red && d.hasIdentity() === true);
@@ -201,9 +200,10 @@ const { LogicEngine } = await imp(ENGINE);
   e0.configureMatch({});
   ck("E1b configureMatch 沒有 blue／red（提前 return）⇒ director 仍是 null", e0.director === null && e0.tacticOn === false);
 
-  //  舊式（C2 之前）在觀測欄位上的值：拿來對照 Director 的回答。
-  const legacyIdOfKnobs = (e, K) => (e.tid && K ? (K === e.tk.blue ? e.tid.blue : K === e.tk.red ? e.tid.red : null) : null);
-  const legacyTidOf = (e, side) => e.tid?.[side] ?? null;
+  //  舊式（C2 之前）在觀測欄位上的值：拿來對照 Director 的回答。C3-1 E-1 起觀測欄位不存在，
+  //  改用「傳給 configureMatch 的物件」重建同樣的 tk／tid（tk＝兩側 knobs，紅方 null 補中性；tid＝規則開且有傳 identity 時的 { blue, red }）。
+  const legacyIdOfKnobs = (tk, tid, K) => (tid && K ? (K === tk.blue ? tid.blue : K === tk.red ? tid.red : null) : null);
+  const legacyTidOf = (tid, side) => tid?.[side] ?? null;
   const legacyPhase = (t) => (t < 480 ? 0 : t < 960 ? 1 : 2);
   const build = (idRule, { redNull = false, identity = true } = {}) => {
     const e = new LogicEngine(7);
@@ -215,13 +215,16 @@ const { LogicEngine } = await imp(ENGINE);
   for (const [label, idRule, opts] of [["規則開＋identity", true, {}], ["規則關", false, {}], ["規則開、沒傳 identity", true, { identity: false }], ["紅方 null（補中性）", true, { redNull: true }]]) {
     const { e, inp } = build(idRule, opts);
     const D = e.director;
+    const tk = { blue: inp.blue, red: opts.redNull ? D.knobs("red") : inp.red };
+    const tid = idRule && inp.identity ? { blue: inp.identity.blue ?? null, red: inp.identity.red ?? null } : null;
     const Ks = [D.knobs("blue"), D.knobs("red"), { ...D.knobs("blue") }, null];
-    ck(`E2 ${label}：knobs("blue") 是傳入的同一個物件；紅方＝${opts.redNull ? "中性 knobs（與 _neutralKnobs() 同值）" : "傳入的同一個物件"}；觀測欄位 e.tk 與 Director 同參照`,
+    ck(`E2 ${label}：knobs("blue") 是傳入的同一個物件；紅方＝${opts.redNull ? "中性 knobs（與 _neutralKnobs() 同值）" : "傳入的同一個物件"}；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）`,
       D.knobs("blue") === inp.blue && (opts.redNull ? J(D.knobs("red")) === J(e._neutralKnobs()) : D.knobs("red") === inp.red)
-      && e.tk.blue === D.knobs("blue") && e.tk.red === D.knobs("red"));
-    ck(`E3 ${label}：identityOfKnobs／_tidOf／hasIdentity＝舊式在 e.tk／e.tid 上的值（4 種 K × 2 側）`,
-      Ks.every((K) => D.identityOfKnobs(K) === legacyIdOfKnobs(e, K)) && ["blue", "red"].every((s) => e._tidOf(s) === legacyTidOf(e, s))
-      && D.hasIdentity() === !!e.tid && (idRule && opts.identity !== false ? !!e.tid : e.tid === null));
+      && tk.blue === D.knobs("blue") && tk.red === D.knobs("red"));
+    ck(`E3 ${label}：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）`,
+      Ks.every((K) => D.identityOfKnobs(K) === legacyIdOfKnobs(tk, tid, K)) && ["blue", "red"].every((s) => e._tidOf(s) === legacyTidOf(tid, s))
+      && D.hasIdentity() === !!tid && (idRule && opts.identity !== false ? !!tid : tid === null));
+    ck(`E3b ${label}：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）`, !("tk" in e) && !("tid" in e));
     if (D.hasIdentity()) {
       const ts = [0, 479.9, 480, 959.9, 960, 2000];
       ck(`E4 ${label}：_tidPhase()＝舊式（${ts.join("/")}）`, ts.every((t) => { e.t = t; return e._tidPhase() === legacyPhase(t); }));

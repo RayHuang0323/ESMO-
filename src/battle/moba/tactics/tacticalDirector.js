@@ -15,7 +15,10 @@
 // ============================================================================
 import { staticDirective } from "../../../platform/contracts/tacticalDirective.js";
 
-export const TACTICAL_DIRECTOR_MODES = Object.freeze(["static"]);
+import { TACTICAL_DIRECTOR_MODES } from "../../../platform/contracts/matchRuleset.js";
+
+//  模式清單的唯一定義在契約 matchRuleset.js（C3-1 E-1）；這裡只轉出同一個物件，不再另定義一份。
+export { TACTICAL_DIRECTOR_MODES };
 
 /**
  * @param {object} args

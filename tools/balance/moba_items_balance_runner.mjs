@@ -130,8 +130,12 @@ export function mirroredRoster(seed, M) {
  */
 //  Phase 3a T10：`tactic`（可省略）＝ { blue, red } 兩側的戰術輸入（`{kind:"std"}`／`{kind:"binding",binding}`…）。
 //  不傳 ⇒ 兩側 std（與 T6 起完全相同）。真實性 gate（check_tactic_truth_3a）用它把單一選擇綁在一側。
-export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic = null) {
-  const base = rulesetById("balanceTool.v20");
+//  C3-1 E-1：`rulesetId`（可省略）＝要用哪個 balanceTool 規則集。預設 "balanceTool.v20"（與原本逐字相同）；
+//  環境變數 `ESMO_BALANCE_RULESET` 在呼叫當下讀取（worker 繼承），同樣預設 v20。未知 id ⇒ 丟錯（不退回 v20）。
+//  balanceTool.v21 要等 C3-1 Task 2 才有；在那之前選它會丟 `balance_ruleset_unknown`。
+export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic = null, rulesetId = process.env.ESMO_BALANCE_RULESET || "balanceTool.v20") {
+  const base = rulesetById(rulesetId);
+  if (!base || base.kind !== "tool") throw new Error(`balance_ruleset_unknown: ${rulesetId}`);
   const skills = !!M.skills;
   const layoutOn = !!M.objectiveLayout;
   const ruleset = { ...base, layers: { ...base.layers,
@@ -172,9 +176,9 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic 
 //  ⚠ 與 v20 的兩個差異（沒有任何呼叫端會觸發；契約刻意不放寬）：rosterOverride 必須恰好是 b1–b5／r1–r5 十個席位
 //    （每席 { heroId, spells? }），否則丟 `MatchSetup rejected: roster_invalid…`（v20 會照跑）；config 若不是已知出裝策略
 //    （off／standard／early／scaling／counter／survival）丟 `build_strategy_unknown`（v20 會把未知名稱直接當策略送進 adapter）。
-export function configure(seed, config, M, incomeK = 1, rosterOverride = null, tactic = null) {
+export function configure(seed, config, M, incomeK = 1, rosterOverride = null, tactic = null, rulesetId = undefined) {
   const roster = rosterOverride ?? mirroredRoster(seed, M);
-  const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic);
+  const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic, rulesetId);
   //  英雄側 adapter：同樣全來自 M；M 沒有的明確給 undefined（對應層已關），不讓 core 的預設悄悄頂替。
   const adapters = {
     toEngineHeroSkills: M.skills?.toEngineHeroSkills, selectBattleTalents: M.talents?.selectBattleTalents,
