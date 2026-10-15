@@ -24674,3 +24674,25 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - `MatchSetup` 目前不認得 `tacticalDirector` 這個鍵（基準規則集沒有）：C2 的 Director 只走「沒寫＝static」，不需要；C3 要啟用新模式時必須另立 v21 規則集，不得改 v20 物件。
 - 黃金基準的 F8 證明紅方計畫有改變對局，但不是逐一證明 splitLane／protectRole 讀取點本身被執行（沒有逐讀取點計數器）。
 - 指紋每重新登記一次，`simulationVersion.js` 本身（量測時會載入）就讓真實性表過期一次 ⇒ C1、C2 各需整輪重測約 70 分鐘。
+
+## 2026-10-15 Phase 3a-C2：Tactical Director 核心（static）＋引擎戰術讀取點等價搬遷（模擬結果逐位元不變；owner: Claude，local commit，未 push／deploy／整合 main）
+
+**狀態：C2 驗收通過。引擎所有戰術讀取（旋鈕、戰術身分、時期）改由 `TacticalDirector` 提供；static 模式回傳的就是 `configureMatch` 收到的同一份物件，對局結果與 C1 的 v21-A 黃金基準、v20 黃金基準逐位元相同。沒有任何新戰術效果。**
+
+**完成項**
+- 盤點（Task 9，唯讀）：`src/LogicEngine.js` 約 75 個戰術讀取點（12 個旋鈕欄位、10 個戰術身分欄位、時期函式），並記下兩個不能弄錯的耦合：旋鈕物件「是不是 null」決定用哪條亂數流；`_joinChance` 靠物件同一性從旋鈕推出身分投影。
+- Task 10（`2746191`、gate 強化 `a67b302e`）：新增 `src/battle/moba/tactics/tacticalDirector.js`（`knobs(side)` 回傳同一個物件、`identity(side)`、`identityOfKnobs(K)`、`phase(t)`＝唯一一份 480／960 秒邊界、`directive(side, t)`＝`TacticalDirective.v1` 契約視圖；不抽亂數、不複製）。引擎 11 個運算式改為向 Director 取資料；`this.tk`／`this.tid` 只保留給兩支外部工具讀（`tacticTruthSim`、`check_tactical_identity_v17`），是 gate 裡唯一允許的兩處。Director 列入模擬語意檔；v21 候選指紋 `29140fe0cb5a4c86` → `ed0daff971db2d7a`（v1–v20 未動）。
+- 新 gate `check_tactical_director_3c`（G-AC2，64 項）：剝註解後整份掃描，引擎內不得再直接讀 `this.tk`／`this.tid`（含多行解構、別名、`(this).tk`、`Reflect.get`、字串鍵），`.tk`／`.tid` 記號總數必須剛好 2；480／960（含 `480.0`、`8*60` 等寫法）只能出現在 Director；引擎不得呼叫 `directive()`（否則契約檔必須加入語意檔清單）；並以行為測試確認 Director 與舊算式一致、不消耗亂數。C1 的 `check_tactical_directive_3c` B1 由「沒有程式載入契約」更新為「只有 Director 載入契約」（階段事實更新，獨立審查確認不是放寬）。
+
+**驗證**
+- 真實性表重測（`0f37847`；4,080 場、0 失敗、70.4 分鐘）：91 列與所有非 meta 區段逐位元相同。
+- C2 驗收關卡（2026-10-15 09:14–09:40 實跑，HEAD `0f37847`）全過：`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactical_director_3c` 64/64（G-AC2）、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 40/40、`check_simulation_version_gate` 82/82、`check_tactic_registry_3a` 31/31、`check_tactic_plan_3a` 219/219、`check_tactical_identity_v17` 22/22、`check_match_assembler_3a` 227/227、`check_live_setup_3a` 119/119、`check_challenge_setup_3a` 65/65、`check_balance_runner_setup_3a` 122/122、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 127/127（G-AC1，109 案逐位元相同）**、`regress` 15/15（平均 20.8 分）、`regress2` 8/8、`npm run build` ✓ built in 16.61s。
+- 獨立審查（opus）：Approved，0 Critical／0 Important；審查員另以「反向套用 diff 重建 C2 之前的引擎」做差分，12 種設定 × 2 seeds（含黃金基準沒走到的分支：舊版引擎狀態機＋身分層、身分層關閉、雙方共用同一份旋鈕、重複 configure）24／24 相同。gate 強化的兩個 Minor 已修並經範圍複審。
+- 過程事件：06:14–07:47 筆電電池耗盡進入睡眠（系統事件 Kernel-Power 42／107），只暫停了一支 gate，不影響結果；之後接上電源。
+
+**未完成項**：C3～C10 未開始（勝利條件與戰術行為契約待 Owner 核定）。
+
+**已知風險／留給 C3**
+- 工具仍讀 `e.tk`／`e.tid`，`tacticTruthSim` 另有一份 `PHASE_EDGES = [480, 960]`：C3 應改用 Director API 後拿掉這兩個觀察欄位。
+- G-AC2 仍無法偵測執行期組出來的鍵（`"t"+"k"`）、整個物件反射、或用其他算式得到 480／960（gate 檔頭已註明）。
+- 雙方傳入同一份旋鈕物件時，紅方會拿到藍方的身分投影（既有行為，已保留並由 gate 釘住）。
