@@ -24696,3 +24696,17 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 工具仍讀 `e.tk`／`e.tid`，`tacticTruthSim` 另有一份 `PHASE_EDGES = [480, 960]`：C3 應改用 Director API 後拿掉這兩個觀察欄位。
 - G-AC2 仍無法偵測執行期組出來的鍵（`"t"+"k"`）、整個物件反射、或用其他算式得到 480／960（gate 檔頭已註明）。
 - 雙方傳入同一份旋鈕物件時，紅方會拿到藍方的身分投影（既有行為，已保留並由 gate 釘住）。
+
+## 2026-10-15 Phase 3a-C0～C2 全分支最終審查與補正（owner: Claude，local commit，未 push／deploy／整合 main）
+
+**最終審查（opus，範圍 `96d86af..f5cb309`，18 個 commit）**：結論「修完再整合」，0 Critical。審查員自行補跑 6 支快速 gate，以及 legacy 指紋差分（`git archive ef560aa` 的 C2 前樹 vs HEAD，`moba_items_legacy_fingerprint` seeds 7／42／99 × bare／configured）→ 6 組 IDENTICAL。
+
+**補正 1：C2 驗收漏跑計畫要求的兩段（我的疏漏）。** 上一節 C2 驗收列的 `regress`／`regress2` 用的是裸 `LogicEngine`、從不呼叫 `configureMatch`，所以 Director 根本沒被建立，不能當 C2 的證據。補跑（HEAD `f5cb309`）：`node tools/verify.mjs --only=tactic24,runtime29` → **tactic24 27/29**（接線檢查 ✅；紅的兩條 m6／m4 gank ×0.97、BattleResult.v2 與 v20 基準逐字相同，數值與 C2 前相同）、**runtime29 flat 35/35**。計畫 Task 10 要求的驗證段至此全部有實跑結果：G-AC1（v21-A 黃金 127/127）、G-A2（v20 黃金 153/153）、G-AC2（64/64）、tactic24、runtime29、legacy 指紋差分（審查員實跑）、regress、regress2、真實性表重測。
+
+**補正 2：08 對 C0 效益的說法過頭。** 「量測時沒載入的語意檔改了不再讓表過期」技術上成立，但專案規定改任何語意檔都要重新登記 v21 指紋，而 `simulationVersion.js` 本身是量測時會載入的檔 ⇒ 照規矩走的流程仍會讓真實性表過期（審查員實測：只改指紋字串即判過期）。方向保守（只會誤判過期，不會誤判新鮮）。是否把 `simulationVersion.js` 比照三個例外檔處理，屬縮小安全 gate 涵蓋範圍，列為 Owner 決定，未做。
+
+**補正 3：** `check_simulation_version_gate` 由 81 → 82 項，是因為新增語意檔 `tacticalDirector.js`（每支語意檔一項檢查）。v21-A 黃金檢查約 7 分鐘（109 案實測約 400 秒）。
+
+**修正波（審查的 Important 3 與小項；只動工具與兩份 review 文件，不動 `src/`、量測工具與 fixture ⇒ 不需重新登記指紋或重測）**：`69a083a`——v21-A 黃金檢查改為「照 fixture 內存的參數重跑每一案」（不再從目前的戰術書提供清單推案例，提供清單日後合法改變不會誤報紅；提供清單差異改為資訊行），並把 fixture 的錄製 gitHead `0e3c0224…` 與指紋 `29140fe0cb5a4c86` 釘成檢查工具內的常數（重錄必須看得見地改這兩個常數），檢查項 127 → 131（P1、P2 與兩個負向自檢），`Match Golden v21-A：131/131 PASS`（109 案仍逐位元相同）；錄製工具的乾淨檢查加入 `tools/lib`；verify 註記改為約 7 分鐘。`8289e20`——C3～C6 草稿的 4 個一致性小項與 C7 兩處措辭。範圍複審：全部 ADDRESSED，無新問題。
+
+**留給 C3 的前提（審查判定）**：工具改讀 Director（`tacticTruthSim` 讀 `e.tk`、自有 `PHASE_EDGES`，否則 C3 改時期界線時量測分桶會悄悄錯位）；兩份 `TACTICAL_DIRECTOR_MODES`（`tacticalDirector.js:18`、`matchRuleset.js:16`）合一；量測與 runner 路徑要有 v21 規則集（目前跑 v20 規則集、標 v21 版本）；引擎內其他用途的 480／960 要用具名常數或放在別的模組（G-AC2 會紅）。
