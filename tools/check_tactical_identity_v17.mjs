@@ -95,7 +95,7 @@ const pair = (tacticId, opts = {}, seeds = SEEDS) => {
   const t = TC.mobaTacticById('m7');
   const offRule = play(5, t, { rules: { tacticIdentityV1: false } });
   const noId = play(5, t, { identity: false });
-  ck('B1 規則關閉 ⇒ 不接線、串流與沒傳 identity 逐位元相同', !offRule.e.tid && offRule.hash === noId.hash, `${offRule.hash} vs ${noId.hash}`);
+  ck('B1 規則關閉 ⇒ 不接線、串流與沒傳 identity 逐位元相同', !offRule.e.director?.hasIdentity() && offRule.hash === noId.hash, `${offRule.hash} vs ${noId.hash}`);
   const stdOn = play(5, TC.STANDARD_OPP_TACTIC), stdOff = play(5, TC.STANDARD_OPP_TACTIC, { identity: false });
   ck('B2 std 對 std（規則開）⇒ 與不接線逐位元相同（中性＝零影響）', stdOn.hash === stdOff.hash, `${stdOn.hash} vs ${stdOff.hash}`);
 }

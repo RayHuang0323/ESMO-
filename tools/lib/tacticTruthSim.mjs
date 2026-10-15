@@ -36,12 +36,10 @@ export const TRUTH_SIM_VERSION = "tacticTruthSim.v3";
 export const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DT = 0.5;
 const CAP_S = 3600;
-const PHASE_EDGES = [480, 960];                 // 與引擎 _tidPhase 相同
-const LANE_WINDOW = [60, 480];                  // 站位量測窗
+const LANE_WINDOW = [60, 480];                  // 站位量測窗（480 是此窗的結尾，與戰術階段邊界無關；階段一律問 e.director.phase）
 const OBJ_RADIUS = 20;                          // 「在物件坑附近」的半徑（事前登記；引擎自己的坑邊判定是 9–12，團戰集結點就是坑心）
 const LANE_ROLE = { top: "top", mid: "mid", bot: "adc", adc: "adc" };
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-const phaseOf = (t) => (t < PHASE_EDGES[0] ? 0 : t < PHASE_EDGES[1] ? 1 : 2);
 
 // ── 戰術輸入 ──────────────────────────────────────────────────────────────
 /** arm＝null 或 { templateId, choices }（choices 為巢狀物件）。std 且沒有選擇 ⇒ `{kind:"std"}`（與 balance runner 預設逐位元相同）。 */
@@ -85,7 +83,7 @@ export async function runTruthMatch(seed, spec = {}) {
   const phaseSecs = [0, 0, 0];
   for (let i = 1; i * DT <= CAP_S && !e.over; i++) {
     e.tick(DT);
-    const t = e.t, ph = phaseOf(t);
+    const t = e.t, ph = e.director.phase(t);
     phaseSecs[ph] += DT;
     for (const p of players) {
       const s = S[p.side], q = prev.get(p.id), seatN = Number(p.id.slice(1));
@@ -113,7 +111,7 @@ export async function runTruthMatch(seed, spec = {}) {
       if (F && F.initUntil !== initSeen[side]) { initSeen[side] = F.initUntil; if (F.initKind === "siege") S[side].siegeOpens++; }
     }
     for (const side of ["blue", "red"]) {
-      const T = e._tac?.[side], K = e.tk?.[side];
+      const T = e._tac?.[side], K = e.director?.knobs(side);
       if (!T || !K?.splitLane) continue;
       const lanePlayer = players.find((p) => p.side === side && p.lane === K.splitLane && p.role !== "jungle" && p.role !== "sup");
       if (T.splitEvalT !== splitSeen[side]) { splitSeen[side] = T.splitEvalT; S[side].splitRolls++; if (T.splitGo) S[side].splitRollsGo++; }
