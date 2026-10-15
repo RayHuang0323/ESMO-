@@ -1,0 +1,361 @@
+{
+  "schema": "esmo.laneframe-registration.v1",
+  "registeredAt": "2026-10-15",
+  "debt": "TD-3A-23",
+  "source": "review/tactic-book-3a/TD-3A-23_紅方路線對調修正方案.md (committed proposal, independently reviewed)",
+  "authority": {
+    "D-1": "A (Owner approved 2026-10-15): fix only in the new v21 rulesets; old rulesets keep behaviour",
+    "D-20": "Owner side-bias thresholds (see gates.sideBias)",
+    "challengeV21": "NOT created this round; Player Challenge stays mirrored (legacyMirror)"
+  },
+  "layer": {
+    "name": "laneFrame",
+    "values": [
+      "legacyMirror",
+      "teamRelative"
+    ],
+    "absent": "legacyMirror",
+    "rulesets": [
+      "career.v21",
+      "balanceTool.v21"
+    ],
+    "omitKeyWhenAbsent": true,
+    "note": "v20 rulesets must not be changed by a single character; when the ruleset has no laneFrame layer, the laneFrame key must NOT appear in configureMatch args (stableStringify would serialize undefined as null and change every golden hash)."
+  },
+  "laneKeyedKnobs": {
+    "registryName": "LANE_KEYED_KNOBS",
+    "section": "TD-3A-23 §2.2/§2.3",
+    "fields": {
+      "laneOffset": {
+        "keyType": "keys",
+        "valueType": "number-per-lane",
+        "transform": "swap top<->bot keys, mid unchanged, values unchanged"
+      },
+      "gankWeights": {
+        "keyType": "keys",
+        "valueType": "number-per-lane",
+        "transform": "swap top<->bot keys, mid unchanged, values unchanged"
+      },
+      "splitLane": {
+        "keyType": "value",
+        "valueType": "lane-name-or-null",
+        "transform": "swap top<->bot value; mid and null unchanged"
+      }
+    },
+    "rule": "every lane-keyed knob field must be declared here (keys vs value); an undeclared lane-keyed field fails A2",
+    "onlyConvertingFunctions": [
+      "worldLaneForSide",
+      "sideRelativeLane"
+    ],
+    "onlySourceModule": "gameData.js"
+  },
+  "gates": {
+    "static": {
+      "source": "TD-3A-23 §4-a (proposal, approved by D-1)",
+      "inputs": {
+        "templates": 21,
+        "lanesChoicesTotalInputs": 186,
+        "note": "21 templates x every provided lanes.* Registry choice; total 186"
+      },
+      "A1": {
+        "desc": "per-seat read of laneOffset/gankWeights/splitLane-equality for top/mid/adc seats, both teams, under teamRelative",
+        "pass": {
+          "redNotEqualBluePerSeatReads": 0,
+          "blueKnobsSameReferenceAsConfigExceptions": 0,
+          "symmetricRedConfigDiffersAfterRemap": 0,
+          "blueObjectChanged": 0
+        }
+      },
+      "A2": {
+        "desc": "LANE_KEYED_KNOBS registry complete (resolved-knob scan + explicit declaration)",
+        "pass": {
+          "missingRegistrations": 0,
+          "undeclaredFields": 0
+        }
+      },
+      "A3": {
+        "desc": "single conversion point; scan import identifiers with comments stripped",
+        "subConditions": [
+          "single conversion point lives in the Director",
+          "the Director imports the lane mapping (worldLaneForSide/sideRelativeLane) only from gameData.js",
+          "the engine reads knobs only via the Director"
+        ],
+        "pass": "all hold"
+      },
+      "A5": {
+        "desc": "reference/identity pins under teamRelative (TD-3A-23 §1.4-6, §2.4-1/2)",
+        "pass": [
+          "knobs(\"red\") returns the SAME reference on every call, and the converted object is frozen",
+          "red identity never becomes null when it was non-null",
+          "blue===red same-object case is listed: legacy behaviour pinned (red takes blue identity under legacyMirror); unreachable via the assembler (two teams are cloned separately), only direct configureMatch callers can hit it"
+        ]
+      },
+      "A4": {
+        "desc": "negative control: same inputs under legacyMirror must report mismatches",
+        "legacyExpectedRedNotEqualBluePerSeatCount": 120,
+        "teamRelativeExpected": 0,
+        "blueObjectsNeverChanged": true,
+        "pass": "legacyMirror reports exactly 120 (any change in templates/choices must be explainable)"
+      },
+      "expected": {
+        "legacyRedNotEqualBlue": 120,
+        "teamRelativeRedNotEqualBlue": 0,
+        "blueObjectChanged": 0,
+        "symmetricButRemappedDiffers": 0
+      },
+      "asymmetricTemplates": {
+        "desc": "the 8 of 21 templates whose top/bot read differently; only these may make red rows differ (C4)",
+        "ids": [
+          "classic.m2",
+          "classic.m4",
+          "classic.m5",
+          "v2.bot_duo_pressure",
+          "v2.support_roamer",
+          "v2.top_solo_split",
+          "v2.mid_solo_split",
+          "v2.protect_core_scaling"
+        ],
+        "source": "TD-3A-23 §1.5"
+      }
+    },
+    "behavioural": {
+      "source": "TD-3A-23 §4-b (proposal, approved by D-1)",
+      "ruleset": "balanceTool.v21",
+      "laneFrame": "teamRelative",
+      "plans": [
+        {
+          "name": "std+top-split",
+          "base": "std",
+          "registryChoice": "lanes.top.stance=split"
+        },
+        {
+          "name": "std+bot-aggressive",
+          "base": "std",
+          "registryChoice": "lanes.bot.stance=aggressive"
+        },
+        {
+          "name": "classic.m4",
+          "template": "classic.m4"
+        },
+        {
+          "name": "classic.m5",
+          "template": "classic.m5"
+        }
+      ],
+      "control": "std vs std",
+      "arms": "each plan P is run twice: P as blue (opponent std), P as red (opponent std)",
+      "layouts": "each seed runs STANDARD and SWAPPED once each (forced layout)",
+      "seeds": {
+        "range": "9001-9100",
+        "decidedBy": "controller ruling 2026-10-15",
+        "reason": "the proposal's example 6001-6100 overlaps draft §1.3 range 6001-7000 reserved for C8 family sampling, and 4601-5000 is reserved for Owner assignment; 9001-9100 is outside every registered range in the draft §1.3 table (ledger check done 2026-10-15 by the controller) and was never used by the tactic measurements (1-40, 1001-1400, 1401-1800, 2001-2060)"
+      },
+      "workers": 3,
+      "seedNote": "seed 9091 is used incidentally by two single-seed gates; this is not a range collision",
+      "statistics": {
+        "unit": "seed (paired)",
+        "effectSide": "effect_side(s,L) = m(P on that side vs std) - m(std vs std control, same side, same s, L); m measured team-relative",
+        "D": "D(s) = mean over the 2 layouts of [effect_red(s,L) - effect_blue(s,L)]",
+        "zDiff": "z_diff = mean(D) / (sd(D)/sqrt(n)), n = 100 seeds (9001-9100)",
+        "passB2B3": "|z_diff| < 2 AND |mean(D)| <= 0.05 for share-type metrics (shares in [0,1]); for non-share metrics |mean(D)| <= 0.05 * |mean(effect_blue)| (5 % of the blue effect)",
+        "sameSign": "sign(mean effect_blue) = sign(mean effect_red) for every plan x metric where |z| of the blue effect >= 2 (z of the effect vs control, same formula)",
+        "B1": "per match: share of split ticks done by the side's own-lane seat >= 0.99 in EVERY match (deterministic)",
+        "negativeControl": "under legacyMirror the same B1 check must FAIL for red on the top-split plan: legacy red own-lane share < 0.5 (falsifiable replacement of '~0')",
+        "fullN": "full n mandatory; any reduced run is diagnostic only"
+      },
+      "n": {
+        "perArmSeeds": 100,
+        "layoutsPerSeed": 2,
+        "approxTotalMatches": 1800,
+        "b1MinimalAlternative": "5-10 matches per arm suffice for B1 only"
+      },
+      "frame": "all metrics in team-relative frame; difference-in-differences vs same-side control (not raw red-vs-blue)",
+      "metrics": {
+        "B1": {
+          "desc": "share of lane-split ticks owned by the player whose team-relative lane = plan's lane",
+          "pass": "every match: own-lane seat share >= 0.99 (both teams)"
+        },
+        "B2": {
+          "desc": "gankShare.<lane> (team frame via execInTeamFrame helper) delta vs same-team control",
+          "pass": "see statistics: sameSign rule; |z_diff| < 2 AND |mean(D)| <= 0.05 (share metric)",
+          "toleranceSource": "TD-3A-23 §4-b, adopted by Owner D-1 = A (2026-10-15); 0.05 basis = control baseline gap 0.000/0.009 (§1.4-3)",
+          "toleranceNote": "residual world-order asymmetry was never measured; a failure is a STOP-for-Owner event, not a reason to change the tolerance"
+        },
+        "B3": {
+          "desc": "laneForward.<lane> delta vs same-team control",
+          "pass": "see statistics: sameSign rule; |z_diff| < 2 AND (share metric: |mean(D)| <= 0.05; non-share: |mean(D)| <= 0.05*|mean(effect_blue)|)",
+          "toleranceSource": "TD-3A-23 §4-b, adopted by Owner D-1 = A (2026-10-15)"
+        }
+      },
+      "negativeControl": "same design under laneFrame=legacyMirror: B1 must FAIL for red on the top-split plan (legacy red own-lane share < 0.5)"
+    },
+    "regression": {
+      "source": "TD-3A-23 §4-c, §3.7 (proposal, approved by D-1)",
+      "C1": {
+        "desc": "v20 rulesets and any ruleset without laneFrame: knobs(side) is the same reference as the config object, all templates x choices x both teams",
+        "pass": "0 exceptions"
+      },
+      "C2": {
+        "desc": "existing rulesets bit-identical, including per-configure-call arg hashes",
+        "check_match_setup_3a": "153/153",
+        "check_match_golden_v21a": "131/131"
+      },
+      "C3": {
+        "desc": "the gate keys cases by (fixture, id). Under the v21 rulesets only the v21-A fixture's live + runner cases are re-run. EXACTLY these 9 v21-A ids must change in at least one of digest/streamHash/resultHash; every other re-run v21-A live/runner case must be identical in all three.",
+        "keying": "(fixture, id)",
+        "comparedFields": [
+          "digest",
+          "streamHash",
+          "resultHash"
+        ],
+        "baseline": "the stored fixture values (captured under the old rulesets)",
+        "notCounted": "calls[configureMatch].h and setup hash change for EVERY case under the new ruleset (expected, not part of the changed set)",
+        "scope": "match_golden_v21a.json live + runner cases only; challenge cases are NOT re-run (challenge.v21 not created this round)",
+        "otherCasesMustBeBitIdentical": true,
+        "v20FixtureNote": "match_golden_v20.json live-m8-23 is the same input as v21-A v20:live-m8-23 and is counted by construction (the v20 fixture is not re-run)",
+        "changedSetMustEqualExactly": [
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "v20:live-m8-23",
+            "reason": "copy of v20 live-m8-23 (red tactic m4, top/bot asymmetric); v20 fixture's live-m8-23 counted by construction"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:red-top_solo_split:s7",
+            "reason": "red template v2.top_solo_split (asymmetric)"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:red-top_solo_split:s23",
+            "reason": "red template v2.top_solo_split (asymmetric)"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:red-mid_solo_split:s11",
+            "reason": "red template v2.mid_solo_split (asymmetric)"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:red-mid_solo_split:s29",
+            "reason": "red template v2.mid_solo_split (asymmetric)"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:red-protect_core_scaling:s19",
+            "reason": "red template v2.protect_core_scaling (asymmetric)"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:red-protect_core_scaling:s3",
+            "reason": "red template v2.protect_core_scaling (asymmetric)"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:both-bot_duo_vs_top_split:s3",
+            "reason": "red side is v2.top_solo_split (asymmetric)"
+          },
+          {
+            "fixture": "tools/fixtures/match_golden_v21a.json",
+            "id": "bind-red:both-bot_duo_vs_top_split:s19",
+            "reason": "red side is v2.top_solo_split (asymmetric)"
+          }
+        ],
+        "totalExpected": 9,
+        "breakdown": "v21-A fixture 9 (v20:live-m8-23 + 8 bind-red); plus v20-fixture live-m8-23 counted by construction (10 named cases in total)",
+        "fixtureIdNote": "the 8 bind-red ids carry the 'bind-red:' prefix in match_golden_v21a.json; verified present on 2026-10-15",
+        "notChanging": [
+          "bind-red:red-mid_jungle_sync",
+          "bind-red:red-std_mid.split",
+          "binding-template/binding-choice live cases (red is std)",
+          "runner cases (red std)"
+        ],
+        "notReRun": [
+          "12 challenge cases (defender m7/m3/m1, symmetric) - not re-run this round"
+        ]
+      },
+      "C4": {
+        "desc": "truth table under balanceTool.v21: blue rows (blue plan vs red std) identical value-by-value to the old table; red rows may change only where the red plan is top/bot asymmetric (see gates.static.asymmetricTemplates)",
+        "truthTableRowsOnV20PathsIdentical": 91,
+        "banOldTreeRuns": "ESMO_BALANCE_ROOT old-tree runs are forbidden for this measurement (old tree silently ignores laneFrame)",
+        "source": "TD-3A-23 §4-c C4"
+      },
+      "supportGates": {
+        "mustBeGreen": [
+          "check_tactical_director_3c (after its R-4 update)",
+          "check_match_ruleset_3a (v20 objects unchanged)",
+          "check_simulation_version_gate",
+          "npm run build"
+        ],
+        "implementationItemNotGate": "assembler capability check: teamRelative ruleset on an engine/Director that does not declare support => deps_missing before the match starts (cross-tree runs)"
+      }
+    },
+    "sideBias": {
+      "source": "Owner D-20; review/tactic-book-3a/C3_開工清單.md §4",
+      "comparison": "career.v21 vs career.v20",
+      "baselineNote": "career.v20 on current code IS the v21-A baseline by G-AC1; record both names",
+      "layouts": [
+        "STANDARD",
+        "SWAPPED"
+      ],
+      "n": 1000,
+      "nUnit": "seeds per layout per ruleset, same seeds for both rulesets",
+      "seeds": "5001-6000",
+      "seedLabel": "C3-1 laneFrame D-20 (shared balance-check row; later phases may reuse the same row for their own D-20 checks; draft §1.3 defines it as the balance row)",
+      "metric": "blue win rate; bias(ruleset, layout) = blueWinRate - 0.5",
+      "worse_pp": "(|bias21| - |bias20|) * 100, per layout",
+      "z": "paired per-seed outcome difference d in {-1,0,1}: mean(d)/(sd(d)/sqrt(n))",
+      "stop": {
+        "sideBiasWorseByAtLeastPp": 5,
+        "orAbsZAtLeastInWorseningDirection": 3,
+        "orAnyNewRegression": true,
+        "anyLayout": true,
+        "action": "STOP and ask Owner"
+      },
+      "warning": {
+        "sideBiasWorseByAtLeastPp": 3,
+        "orMedianDurationRatioChangeOver": 0.1,
+        "formula": "|median duration21 / median duration20 - 1| > 0.10"
+      },
+      "newRegression": "any gate in this registration or in CLAUDE.md's Phase 3a block that is red and was green at commit b3cbd1d; tactic24's two pre-existing reds excluded by name"
+    }
+  },
+  "stopRule": "any result outside this registration => keep the checkpoint, stop, Owner decides; the criteria in this file are never edited after results are seen",
+  "notCovered": [
+    "Player Challenge remains legacyMirror until challenge.v21 exists (no challenge ruleset injection this round)",
+    "behavioural symmetry is statistical, not exact: world-order tie-breaks (TD-3A-23 §1.4-8, §8), and large-object (dragon/baron pit) layout asymmetry",
+    "historical Challenge evidence display (§2.7 helper applied to old records) is an Owner decision (TD §7 item 3), not in this registration",
+    "Owner decision pending, not this round: TD §7 item 2 (v21 vs v22) - this round keeps the fix inside the unreleased v21 candidate under career.v21/balanceTool.v21",
+    "Owner decision pending, not this round: TD §7 item 4 (tower-destroyed event text lane names)",
+    "Owner decision pending, not this round: TD §7 item 5 (simulationVersion.js option a/b)",
+    "Owner decision pending, not this round: TD §7 item 6 (which of the 7 options to re-test) - no re-measurement this round"
+  ],
+  "undecided": [],
+  "clarifications": {
+    "addedBy": "controller before any implementation or run, 2026-10-15",
+    "metricTypes": {
+      "gankShare.<lane>": "share (0..1): pass |mean D| <= 0.05",
+      "B1 own-lane split share": "share, per match >= 0.99",
+      "laneForward.<lane>": "non-share: pass |mean D| <= 0.05 * |mean effect_blue|"
+    },
+    "sideBiasWorseningSign": "per layout, per seed s: d_s = (blueWin21_s - blueWin20_s) * sgn(bias20) where sgn(0) := sgn(bias21) (and 0 if both 0); positive d means the existing bias grew; STOP if mean(d)/(sd(d)/sqrt(n)) >= 3 or worse_pp >= 5",
+    "newRegressionGates": [
+      "check_match_golden_v21a",
+      "check_match_setup_3a",
+      "check_tactical_director_3c",
+      "check_tactical_directive_3c",
+      "check_match_ruleset_3a",
+      "check_simulation_version_gate",
+      "check_tactic_truth_3a",
+      "check_tactic_replication_3a",
+      "check_c3_phase_skeleton",
+      "verify tactic24",
+      "verify runtime29",
+      "npm run build"
+    ],
+    "preExistingRedsExcluded": [
+      "tactic24: m6 全圖游走 Gank 次數 > m4 龍堆運營",
+      "tactic24: BattleResult.v2 結構未變（schema/mode/winner/players 完整）"
+    ],
+    "enumerationSources": "templates/choices enumerated from the committed Registry + tacticTemplates at run time (186 inputs expected; a different count is a STOP); notChanging ids match by prefix + seed suffix :s<seed>; A2 lane-keyed detection = any knob field whose object keys are exactly {top,mid,bot} or whose value equals \"top\"/\"bot\" in any of the 186 resolved inputs"
+  }
+}
