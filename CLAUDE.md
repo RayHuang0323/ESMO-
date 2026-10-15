@@ -100,6 +100,26 @@ node tools/regress2.mjs # 一律跑（若存在）
   不要先動逾時值——`browser_check_player_challenge_slice3` 就是這樣紅了兩個
   Slice（辨識法寫在 `08_目前待辦與風險.md`）。
 
+- **Phase 3a 戰術層（2026-10-15 C0–C2；動到 `src/LogicEngine.js` 的戰術讀取、`tacticalDirector.js`、`tacticalDirective.js`、`matchRuleset.js`、戰術量測工具就必跑）**：
+  **`check_match_golden_v21a`（131，約 7 分鐘；G-AC1）** **`check_match_setup_3a`（153，含 v20 黃金 39 案；G-A2）**
+  **`check_tactical_director_3c`（64；G-AC2 單一讀取來源）** `check_tactical_directive_3c`（61）
+  `check_match_ruleset_3a`（40）`check_tactic_truth_3a`（33）`check_tactic_replication_3a`（31）
+  ＋**會呼叫 `configureMatch` 的** `node tools/verify.mjs --only=tactic24,runtime29`
+  （tactic24 27/29，紅的兩條與 v20 相同；runtime29 flat 35/35）
+  ⚠ `regress`／`regress2` 用裸 `LogicEngine`、**從不呼叫 `configureMatch`**，Director 根本不會被建立
+  ⇒ **不能**當戰術層改動的證據（C2 驗收踩過一次）。
+  ⚠ 引擎內**不得**直接讀 `this.tk`／`this.tid`；一律經 `this.director`（`knobs`／`identity`／`phase`）。
+  480／960 秒的時期邊界只能出現在 Director；引擎若呼叫 `directive()`，`tacticalDirective.js`
+  必須加入 `SIMULATION_SEMANTICS_FILES`（G-AC2 的 S6 會擋）。
+  ⚠ 真實性表的過期判定＝**量測時實際載入的檔案**（`meta.loadedFiles`；能力登記表、選擇對照表、
+  解析器三檔例外，改由行為雜湊涵蓋）。改語意檔必須重新登記 `moba-sim.v21` 候選指紋，而
+  `simulationVersion.js` 本身會被載入 ⇒ **每次都要整輪重測**
+  （`node tools/check_tactic_truth_3a.mjs --measure --workers=3 --dir=<repo 外新資料夾>`，約 70 分鐘），
+  且 91 列必須與前一版**逐位元相同**才算行為未變。**未經 Owner 核准不得**為了省時間把檔案排除在判定之外（是否調整 simulationVersion.js 的處理待 Owner 決定）。
+  ⚠ v21-A 黃金的 fixture 出處（gitHead／指紋）釘在 `check_match_golden_v21a` 的常數裡：
+  重錄＝必須看得見地改那兩個常數，且只能在 Owner 同意的語意變更之後。
+  ⚠ v20 規則集物件**一個欄位都不得改**（會改到 v20 黃金的設定雜湊）；新模式只能放在新的 v21 規則集。
+
 ⚠⚠ **寫「不得出現 X」這類斷言之前，先問一句：X 會不會正當地出現在註解或文案裡？**
 同一類假紅已經發生過三次（B1C 的空 `catch {}`、B1D 的 `service_role`、
 B1D.2 的 `mock`）—— 那些檔案的說明文字**正好在講「我們不做 X」**。
