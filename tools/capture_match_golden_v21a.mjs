@@ -42,8 +42,8 @@ const FINGERPRINT = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
 if (FINGERPRINT !== EXPECT_FINGERPRINT) die(`fingerprint is ${FINGERPRINT}, expected ${EXPECT_FINGERPRINT}`);
 const git = (cmd) => execSync(`git ${cmd}`, { cwd: L.ROOT, encoding: "utf8" }).trim();
 const GIT_HEAD = git("rev-parse HEAD");
-const SRC_DIRTY = git("status --porcelain -- src tools/balance").split("\n").filter(Boolean);
-if (SRC_DIRTY.length && !ONLY) die(`src/ (or tools/balance) is not clean — capture must run on committed code:\n${SRC_DIRTY.join("\n")}`);
+const SRC_DIRTY = git("status --porcelain -- src tools/balance tools/lib").split("\n").filter(Boolean);
+if (SRC_DIRTY.length && !ONLY) die(`src/ (or tools/balance, tools/lib) is not clean — capture must run on committed code:\n${SRC_DIRTY.join("\n")}`);
 if (!L.PROBE_SHARES_RUNNER_ENGINE) die("runner engine class differs from src/LogicEngine.js (probe would miss the runner path)");
 
 const v20 = JSON.parse(fs.readFileSync(L.V20_FIXTURE, "utf8"));

@@ -4,14 +4,20 @@
 //
 //  執行：node tools/check_match_golden_v21a.mjs          （109 案重跑，數分鐘；一律走 tools/verify.mjs 的 match_golden_v21a 段）
 //
+//  CHECK mode 的案例清單完全由 fixture 內存的 params 重建（L.specsFromFixture），不依賴戰術書現在的提供清單；
+//  capture 工具仍用 buildCaseList 推導（錄製時）。
 //  把 tools/fixtures/match_golden_v21a.json（在 C2 之前的最終樹上錄的）逐案重跑，要求 digest／streamHash／resultHash／
 //  configure 序列（方法＋引數雜湊）全部相同，而且案例清單沒有多也沒有少。C2（LogicEngine 改成經過 Tactical Director 讀戰術資料）
 //  之後再跑一次：全綠＝逐位元相同。
 //
-//   F   fixture 結構：schema、案例數（v20 39＋模板 42＋提供的選擇 16＋紅方 binding 12＝109）、21 模板各 2 案、提供清單＝戰術書目前的提供清單（8 個非本來選擇）
+//   P   出處釘死：fixture.gitHead 與 fixture.fingerprint 必須等於本檔的字面常數（PINNED_*）。重錄基準線是刻意行為，
+//       必須在 PR 中看得見地改這兩個常數（Owner 可見），不能只重跑 capture 就悄悄換掉基準。
+//   F   fixture 結構：schema、案例數（v20 39＋模板 42＋提供的選擇 16＋紅方 binding 12＝109）、21 模板各 2 案、fixture 內存的提供清單
+//       與其 binding-choice 案自洽（8 個非本來選擇各 2 案）。「戰術書現在的提供清單 vs 錄製時」只是資訊行（F4i），不計入通過數：
+//       戰術書日後正當地改了提供清單，不應讓這支 gate 假紅。
 //   N   負向自檢（合成資料）：竄改一案的雜湊／少一案／多一案／順序改變／calls 改變，比對函式都要報出來
 //   C   逐案重跑，與 fixture 逐欄相同（每案一條檢查）；案例清單（缺／多）一條
-//   I   資訊（不計入通過數）：simVersion／指紋與 fixture 的差異。C2 改到語意檔時指紋會變，那不是這支 gate 要判的事（版本 gate 另有）。
+//   I   資訊（不計入通過數）：F4i 提供清單差異、simVersion／指紋與 fixture 的差異。C2 改到語意檔時指紋會變，那不是這支 gate 要判的事（版本 gate 另有）。
 // ============================================================================
 import fs from "node:fs";
 
@@ -26,7 +32,18 @@ ck("P0 runner 載入的引擎類別＝src/LogicEngine.js 的同一個類別（�
 
 const fixture = JSON.parse(fs.readFileSync(L.FIXTURE_V21A, "utf8"));
 const v20 = JSON.parse(fs.readFileSync(L.V20_FIXTURE, "utf8"));
-const cases = L.buildCaseList(v20);
+const cases = L.specsFromFixture(fixture);
+
+// ── P：出處釘死（重錄基準線＝刻意行為，要改這兩個常數）────────────────────────────
+const PINNED_GIT_HEAD = "0e3c022426f8869f88668c73997a7dca719b4b08";
+const PINNED_FINGERPRINT = "29140fe0cb5a4c86";
+const provenanceProblems = (fx) => [
+  ...(fx.gitHead === PINNED_GIT_HEAD ? [] : [`gitHead ${fx.gitHead} != pinned ${PINNED_GIT_HEAD}`]),
+  ...(fx.fingerprint === PINNED_FINGERPRINT ? [] : [`fingerprint ${fx.fingerprint} != pinned ${PINNED_FINGERPRINT}`]),
+];
+const REREC = "重錄基準線是刻意行為：必須在 PR 中看得見地修改本檔的 PINNED_GIT_HEAD／PINNED_FINGERPRINT（Owner 可見）";
+ck("P1 fixture.gitHead＝本檔釘死的字面常數", fixture.gitHead === PINNED_GIT_HEAD, fixture.gitHead === PINNED_GIT_HEAD ? fixture.gitHead.slice(0, 8) : `${fixture.gitHead} ≠ ${PINNED_GIT_HEAD}。${REREC}`);
+ck("P2 fixture.fingerprint＝本檔釘死的字面常數", fixture.fingerprint === PINNED_FINGERPRINT, fixture.fingerprint === PINNED_FINGERPRINT ? fixture.fingerprint : `${fixture.fingerprint} ≠ ${PINNED_FINGERPRINT}。${REREC}`);
 
 // ── F：fixture 結構 ─────────────────────────────────────────────────────────
 const nOf = (g) => fixture.cases.filter((c) => c.group === g).length;
@@ -38,12 +55,11 @@ ck("F2 案例數：v20 39（live 9、challenge 12、runner 18）＋模板 42＋�
 const tplIds = [...new Set(fixture.cases.filter((c) => c.group === "binding-template").map((c) => c.params.templateId))];
 ck("F3 21 個模板（含 std）各有 2 個 seed 的案例", tplIds.length === 21 && tplIds.includes("std")
   && tplIds.every((t) => new Set(fixture.cases.filter((c) => c.group === "binding-template" && c.params.templateId === t).map((c) => c.seed)).size === 2));
-const offeredNow = L.offeredNonOwnOnStd();
-ck(`F4 提供的選擇＝戰術書目前的提供清單（std 上 ${L.EXPECT_OFFERED_ON_STD} 個非本來選擇），每個 2 個 seed`,
-  offeredNow.length === L.EXPECT_OFFERED_ON_STD
-  && JSON.stringify(fixture.offeredOnStd) === JSON.stringify(offeredNow)
-  && offeredNow.every((o) => fixture.cases.filter((c) => c.group === "binding-choice" && c.params.dimension === o.dimension && c.params.choice === o.choice).length === 2),
-  offeredNow.map((o) => `${o.dimension}=${o.choice}`).join(" "));
+const offeredFx = fixture.offeredOnStd ?? [];
+ck(`F4 fixture 內存的提供清單與其 binding-choice 案自洽（${L.EXPECT_OFFERED_ON_STD} 個非本來選擇，每個 2 個 seed；不比對戰術書現況）`,
+  offeredFx.length === L.EXPECT_OFFERED_ON_STD
+  && offeredFx.every((o) => fixture.cases.filter((c) => c.group === "binding-choice" && c.params.dimension === o.dimension && c.params.choice === o.choice).length === 2),
+  offeredFx.map((o) => `${o.dimension}=${o.choice}`).join(" "));
 ck("F5 binding 案都是 live 路徑、紅方＝標準對手；每案有 bindingHash", fixture.cases.filter((c) => c.group === "binding-template" || c.group === "binding-choice").every((c) => c.path === "live" && c.params.redTactic === "std" && /^[0-9a-f]{1,8}$/.test(c.bindingHash)));
 ck("F6 每案都有 digest／streamHash／resultHash／configure 序列", fixture.cases.every((c) => c.digest && /^[0-9a-f]{1,8}$/.test(c.streamHash) && /^[0-9a-f]{1,8}$/.test(c.resultHash) && c.calls.length > 0));
 ck("F8 紅方 binding 案（runner 路徑，紅方帶 splitLane/protectRole）的 streamHash 都與同 seed 紅方 std 的對照案（v20:runner-standard-<seed>）不同＝真的讀到了",
@@ -75,6 +91,10 @@ const asObserved = () => clone(fixture.cases);
   const t6 = asObserved(); [t6[1], t6[2]] = [t6[2], t6[1]];
   const r6 = L.compareToFixture(fixture, t6);
   ck("N6 案例順序改變 ⇒ 報 order", r6.problems.includes("case order differs"));
+  const fxBadHead = { ...fixture, gitHead: "1".repeat(40) };
+  ck("N8 fixture.gitHead 與釘死值不同 ⇒ provenance 檢查報出", provenanceProblems(fxBadHead).length === 1 && provenanceProblems(fxBadHead)[0].startsWith("gitHead") && provenanceProblems(fixture).length === 0);
+  const fxBadFp = { ...fixture, fingerprint: "0000000000000000" };
+  ck("N9 fixture.fingerprint 與釘死值不同 ⇒ provenance 檢查報出", provenanceProblems(fxBadFp).length === 1 && provenanceProblems(fxBadFp)[0].startsWith("fingerprint"));
   const t7 = asObserved(); t7[40].params = { ...t7[40].params, choices: { x: 1 } };
   ck("N7 案例輸入（params）改變 ⇒ 報出", L.compareToFixture(fixture, t7).problems.some((p) => p.includes("params differ")));
 }
@@ -97,6 +117,11 @@ for (const c of fixture.cases) {
 }
 
 // ── I：資訊 ─────────────────────────────────────────────────────────────────
+{
+  const offeredNow = L.offeredNonOwnOnStd();
+  const same = JSON.stringify(fixture.offeredOnStd) === JSON.stringify(offeredNow);
+  console.log(`ℹ F4i（資訊，不計入通過數）戰術書目前提供清單 ${same ? "＝錄製時" : "≠ 錄製時（正當變動不算紅；要把新選項納入基準需刻意重錄並改 PINNED_*）"}：現在 ${offeredNow.map((o) => `${o.dimension}=${o.choice}`).join(" ")}`);
+}
 const fpNow = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
 console.log(`ℹ 錄製時：${fixture.simVersion} ／ 指紋 ${fixture.fingerprint} ／ gitHead ${fixture.gitHead.slice(0, 8)}`);
 console.log(`ℹ 目前：${MOBA_SIMULATION_VERSION} ／ 指紋 ${fpNow}${fpNow === fixture.fingerprint && MOBA_SIMULATION_VERSION === fixture.simVersion ? "（同錄製時）" : "（與錄製時不同——C2 改到語意檔時預期如此，不計入判定）"}`);

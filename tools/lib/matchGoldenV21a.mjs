@@ -192,6 +192,12 @@ export const bindingHashOf = (spec) => spec.group === "binding-red"
   ? stableHash(stableStringify({ blue: tacticInputOf(spec.params.blue), red: tacticInputOf(spec.params.red) }))
   : stableHash(stableStringify(bindingOf(spec.params.templateId, spec.params.choices)));
 
+/**
+ * CHECK mode 用：完全由 fixture 內存的輸入重建案例清單（id／group／path／seed／params 原樣取自 fixture），
+ * 不看戰術書「現在」的提供清單 ⇒ 之後戰術書提供清單變動，不會改變重跑哪些案、也不會造成假紅。
+ */
+export const specsFromFixture = (fixture) => fixture.cases.map((c) => ({ id: c.id, group: c.group, path: c.path, seed: c.seed, params: c.params }));
+
 /** 一案的紀錄（寫進 fixture 的形狀）。 */
 export function recordOf(spec, v20) {
   const r = runCase(spec, v20);
