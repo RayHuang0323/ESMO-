@@ -132,8 +132,14 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
    * 解析一個戰術輸入 → 引擎旋鈕。
    * @param {{kind:"legacy",config:object}|{kind:"std"}|{kind:"binding",binding:object}} input
    * @param {object} [adapters]  { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION }（組裝器注入）
-   * @param {{identity?: boolean}} [opts]  identity:false ⇒ 不呼叫 toEngineTacticIdentity（identity 回 null）
-   * @returns {{ok:true, knobs, identity, config, meta, errors:[]} | {ok:false, errors:Array}}
+   * @param {{identity?: boolean, phases?: boolean}} [opts]  identity:false ⇒ 不呼叫 toEngineTacticIdentity（identity 回 null）；
+   *        phases:true ⇒ 多回 `phases`（C3-1，見下）。沒要求 ⇒ 結果**沒有** phases 這個鍵（與 C3-1 之前逐字相同）。
+   * @returns {{ok:true, knobs, identity, config, meta, errors:[], phases?} | {ok:false, errors:Array}}
+   *
+   *  ── 每時期方針（Phase 3a-C3-1，Owner D-13：Resolver 預先建好前／中／後期三份）──────────────
+   *   `phases` ＝ [early, mid, late]，每項 `{ knobs, identity }`。目前沒有任何依時期改值的維度 ⇒ 三份都**就是**整場的
+   *   `knobs`／`identity` 物件本身（同一個參照，不是複本；R-4：引擎以物件參照反查 identity，複本會改結果）。
+   *   之後的維度只在「該時期真的不同」時才另建一份物件（R-5：一次建好、比賽中只挑選）。挑選邏輯只住在 Director。
    */
   function resolveTactic(input, adapters = {}, opts = {}) {
     try {
@@ -167,7 +173,10 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       //  config 給呼叫端看（tacticMeta／replayConfig 讀 tacticId 與 name）；std 的 config 是副本，不會凍住注入的物件。
       //  ⚠ 只凍結 resolver 自己擁有的東西：投影函式（可能來自舊樹）回傳的物件不是我們的——它可能是共用常數，凍住它會影響同一個行程
       //    裡的其他比賽。所以先複製再凍結；v20 把投影的回傳值直接交給引擎，內容相同（組裝器之後再複製一次交給引擎）。
-      return deepFreeze({ ok: true, errors: [], knobs: structuredClone(knobs), identity: identity === null ? null : structuredClone(identity), config: input.kind === "std" ? structuredClone(source) : source, meta });
+      const out = { ok: true, errors: [], knobs: structuredClone(knobs), identity: identity === null ? null : structuredClone(identity), config: input.kind === "std" ? structuredClone(source) : source, meta };
+      //  只有要求時才加 phases 鍵（沒要求 ⇒ 輸出形狀與 C3-1 之前完全相同）。三份共用整場的物件參照（見上方 JSDoc）。
+      if (opts?.phases === true) out.phases = [0, 1, 2].map(() => ({ knobs: out.knobs, identity: out.identity }));
+      return deepFreeze(out);
     } catch (e) {
       return internal(e);
     }

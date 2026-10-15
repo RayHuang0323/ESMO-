@@ -46,7 +46,8 @@ ck("R14 resolveRulesetForMode 保留 assemblyOrder（旗標只關布林層）", 
   ck("R15b tacticalDirector=\"static\" ⇒ 通過", validateRuleset(withTd("static")).ok && tacticalDirectorModeOf(withTd("static")) === "static");
   for (const v of ["dynamic", "adaptive", "", "Static", null, undefined, 0, 1, true, false, {}, ["static"]])
     ck(`R15c tacticalDirector=${JSON.stringify(v) ?? "undefined"} ⇒ 拒絕（tacticalDirector）`, (() => { const r = validateRuleset(withTd(v)); return !r.ok && r.errors.includes("tacticalDirector"); })());
-  ck("R15d 只接受 static（模式清單凍結）", Object.isFrozen(TACTICAL_DIRECTOR_MODES) && TACTICAL_DIRECTOR_MODES.join(",") === "static");
+  //  C3-1（Owner D-7）：第二個模式 core.v1；正式規則集用它必須列正式旗標（RS-1 擴充，細項在 tools/check_c3_phase_skeleton.mjs R 段）。
+  ck("R15d 只接受 static 與 core.v1（模式清單凍結）", Object.isFrozen(TACTICAL_DIRECTOR_MODES) && TACTICAL_DIRECTOR_MODES.join(",") === "static,core.v1");
   //  v20 三份 ruleset 與 resolveRulesetForMode 的輸出，與變更前的值逐字相同（setup 雜湊／golden 依賴它們）
   const V20_BEFORE = {
     "career.v20": '{"kind":"production","layers":{"assemblyOrder":"live","battleTalents":true,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":true,"objectiveLayout":"bySeed","playerStatSides":"blue","redTactic":"styleTemplate","tacticIdentity":true},"releaseRequirements":["heroSkillsV1","heroBattleTalentsV1","itemsV1"],"rulesetId":"career.v20","simVersion":"moba-sim.v20","version":"MatchRuleset.v1"}',

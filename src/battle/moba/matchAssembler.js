@@ -51,7 +51,7 @@
 // ============================================================================
 import { BUILD_STRATEGIES } from "./items/buildPolicy.js";
 import { MATCH_SETUP_VERSION, fnv1a64Hex } from "../../platform/contracts/matchSetup.js";
-import { ASSEMBLY_ORDERS } from "../../platform/contracts/matchRuleset.js";
+import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf } from "../../platform/contracts/matchRuleset.js";
 import { stableStringify } from "../../platform/contracts/squadSnapshot.js";
 
 export const MATCH_ASSEMBLER_VERSION = "MatchAssembler.v1";
@@ -136,8 +136,13 @@ export function assembleMatch(setup, deps = {}) {
   const H = deps?.heroAdapters ?? {};
   const A = deps?.engineAdapters ?? {};
   const hasRoster = setup.roster !== null && setup.roster !== undefined;
+  //  Phase 3a-C3-1：Director 模式（ruleset 的 tacticalDirector 層；缺少 ≡ static）。只有 core.v1 會向 Resolver 要每時期方針、
+  //  並把它交給 configureMatch（新鍵 `phases`）；static ⇒ 不要求、不傳這個鍵（configureMatch 的引數與 C3-1 之前逐字相同）。
+  const directorMode = tacticalDirectorModeOf(ruleset);
+  const wantPhases = directorMode === "core.v1";
 
   // ── 驗證（全部在建構引擎之前；有任何錯誤就不建引擎、零 configure 呼叫）──────────
+  if (!TACTICAL_DIRECTOR_MODES.includes(directorMode)) err("tactical_director_unknown", "ruleset.layers.tacticalDirector", `unknown tactical director mode "${directorMode}" (known: ${TACTICAL_DIRECTOR_MODES.join("|")})`);
   if (!ASSEMBLY_ORDERS.includes(order)) err("assembly_order_unknown", "ruleset.layers.assemblyOrder", `unknown assembly order "${order}" (known: ${ASSEMBLY_ORDERS.join("|")})`);
   if (order === "challengeV20") {
     const unsupported = [E.layoutConfigured && "layout", E.heroSkills && "heroSkills", E.heroPassives && "heroPassives",
@@ -214,10 +219,19 @@ export function assembleMatch(setup, deps = {}) {
       //  不再碰 resolver 回傳的物件（match() 也只讀 resolved[side]）。ok 必須嚴格等於 true；讀不出來 ⇒ tactic_unreadable。
       let snap;
       try {
-        const r = A.resolveTactic(t, A, { identity: !!L.tacticIdentity });
+        //  static ⇒ opts 與 C3-1 之前逐字相同（不帶 phases 鍵）；core.v1 ⇒ 另要求每時期方針。
+        const r = wantPhases ? A.resolveTactic(t, A, { identity: !!L.tacticIdentity, phases: true }) : A.resolveTactic(t, A, { identity: !!L.tacticIdentity });
         if (r?.ok === true) {
           const config = structuredClone(r.config), knobs = structuredClone(r.knobs), identity = L.tacticIdentity ? structuredClone(r.identity) : null;
           snap = { ok: true, config, knobs, identity };
+          //  每時期方針的副本：與整場同一個物件的那幾份，指向**同一份**副本（knobs／identity），不另外複製——
+          //  物件參照是承重的（R-4），下面 match() 交給引擎時也以單次 structuredClone 保留這個共用關係。
+          if (wantPhases) snap.phases = Array.isArray(r.phases) && r.phases.length === 3
+            ? r.phases.map((p) => ({
+              knobs: p?.knobs === r.knobs ? knobs : structuredClone(p?.knobs),
+              identity: !L.tacticIdentity ? null : p?.identity === r.identity ? identity : structuredClone(p?.identity),
+            }))
+            : null;
         } else {
           const raw = Array.isArray(r?.errors) ? r.errors : [];
           snap = { ok: false, errors: raw.map((e) => ({ code: String(e?.code ?? "unknown"), field: String(e?.field ?? ""), message: String(e?.message ?? "") })) };
@@ -233,6 +247,10 @@ export function assembleMatch(setup, deps = {}) {
         //  注入的 resolver 說 ok 卻沒給齊 config／knobs（／identity）：開局前就拒絕，不讓 match() 在 8 次 configure 之後才丟 TypeError。
         //  （v20 沒有要求 config.tacticId：缺 tacticId 的手拼 legacy config，tacticMeta.tacticId 是 undefined、replayConfig 略過它——這裡維持原樣，不新增要求。）
         err("tactic_rejected", `tactic.${side}`, `[resolver_bad_shape] the injected resolveTactic returned ok without ${!isPlainObject(snap.config) ? "config" : !isPlainObject(snap.knobs) ? "knobs" : "identity"}`);
+      } else if (wantPhases && !(Array.isArray(snap.phases)
+        && snap.phases.every((p) => isPlainObject(p.knobs) && (!L.tacticIdentity || isPlainObject(p.identity))))) {
+        //  core.v1 需要三份每時期方針（[early, mid, late]，各 { knobs, identity }）；舊 resolver 或手拼的 resolver 沒給 ⇒ 開局前拒絕。
+        err("tactic_rejected", `tactic.${side}`, "[resolver_bad_shape] the tactical director core.v1 needs phases [early, mid, late] of { knobs, identity } from resolveTactic");
       } else resolved[side] = snap;
     }
   }
@@ -344,6 +362,17 @@ export function assembleMatch(setup, deps = {}) {
       const redCfg = resolved.red.config;
       tacticMeta = isTool ? null
         : { tacticId: blueCfg.tacticId, tacticName: blueCfg.name, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
+      if (wantPhases) {
+        //  C3-1 core.v1：整場 knobs／identity 與每時期方針**一次** structuredClone ⇒ 副本裡「同一個物件」的關係原樣保留
+        //  （三個時期沒有差異時，phases.<side>[i].knobs 就是 blue／red 那一份；Director 依參照反查 identity，R-4）。
+        const m = clone({
+          blue: resolved.blue.knobs, red: resolved.red.knobs,
+          identity: L.tacticIdentity ? { blue: resolved.blue.identity, red: resolved.red.identity } : null,
+          phases: { blue: resolved.blue.phases, red: resolved.red.phases },
+        });
+        call("configureMatch", { blue: m.blue, red: m.red, identity: m.identity, meta: tacticMeta, phases: m.phases });
+        return;
+      }
       call("configureMatch", {
         //  旋鈕由 resolver 投影好（凍結的結果）；交給引擎的是副本，引擎想改也不會碰到 resolver 的輸出。
         blue: clone(resolved.blue.knobs),

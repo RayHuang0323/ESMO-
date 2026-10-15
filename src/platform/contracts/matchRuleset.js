@@ -13,10 +13,18 @@ export const LAYER_RELEASE_FLAG = Object.freeze({
   battleTalents: "heroBattleTalentsV1",
   items: "itemsV1"
 });
-export const TACTICAL_DIRECTOR_MODES = Object.freeze(["static"]);
+//  Phase 3a-C3-1（Owner 2026-10-15 D-7）：第二個模式 "core.v1"＝依比賽時鐘挑選 Resolver 預先建好的每時期方針
+//  （src/battle/moba/tactics/tacticalDirector.js）。只出現在 v21 規則集；v20 三份永不加這個鍵。
+export const TACTICAL_DIRECTOR_MODES = Object.freeze(["static", "core.v1"]);
 export const DEFAULT_TACTICAL_DIRECTOR_MODE = "static";
 /** 讀取 ruleset 的 tacticalDirector 層；缺少 ≡ "static"。 */
 export const tacticalDirectorModeOf = (r) => r?.layers?.tacticalDirector ?? DEFAULT_TACTICAL_DIRECTOR_MODE;
+//  RS-1 擴充（D-15）：正式規則集的 tacticalDirector 只要不是 static，releaseRequirements 必須列對應的正式旗標。
+//  與 LAYER_RELEASE_FLAG 分開放：那張表的鍵是「布林層」，既有 gate 依它列舉旗標組合（check_match_setup_3a RS-1.x、
+//  check_live_setup_3a）；tacticalDirector 是字串層，混進去會讓那些組合多出一個從未發布的旗標。
+export const TACTICAL_DIRECTOR_RELEASE_FLAG = Object.freeze({ "core.v1": "mobaTacticalDirectorV21" });
+/** 正式規則集 releaseRequirements 只能列這些正式旗標（DEV 網址開關、未登錄的名字一律拒絕）。 */
+export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 export const MATCH_RULESETS = Object.freeze({
   "career.v20": R({ rulesetId: "career.v20", kind: "production", simVersion: "moba-sim.v20",
@@ -27,6 +35,15 @@ export const MATCH_RULESETS = Object.freeze({
     releaseRequirements: [] }),
   "balanceTool.v20": R({ rulesetId: "balanceTool.v20", kind: "tool", simVersion: "moba-sim.v20",
     layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live" },
+    releaseRequirements: [] }),
+  //  Phase 3a-C3-1（D-15）：v21 規則集＝v20 的層原樣＋tacticalDirector "core.v1"（v20 三份不動，見上）。
+  //  career.v21 只在旗標 mobaTacticalDirectorV21 開啟時由 resolveRulesetForMode 解析出來（旗標預設關 ⇒ 正式站照舊 career.v20）。
+  //  challenge.v21 不在本輪（D-16，3a-B）。
+  "career.v21": R({ rulesetId: "career.v21", kind: "production", simVersion: "moba-sim.v21",
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate", assemblyOrder: "live", tacticalDirector: "core.v1" },
+    releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1", "mobaTacticalDirectorV21"] }),
+  "balanceTool.v21": R({ rulesetId: "balanceTool.v21", kind: "tool", simVersion: "moba-sim.v21",
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1" },
     releaseRequirements: [] }),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
@@ -39,12 +56,17 @@ export const TACTIC_KINDS_BY_RULESET = Object.freeze({
   "career.v20": Object.freeze(["legacy", "std", "binding"]),
   "challenge.v20": Object.freeze(["legacy", "std"]),
   "balanceTool.v20": Object.freeze(["legacy", "std", "binding"]),
+  "career.v21": Object.freeze(["legacy", "std", "binding"]),
+  "balanceTool.v21": Object.freeze(["legacy", "std", "binding"]),
 });
 //  旗標關閉 ⇒ 對應層關閉（永不強制開啟）。
+//  C3-1：career 模式只有在 flags.mobaTacticalDirectorV21 === true 時改用 career.v21（其餘層的旗標處理完全相同，
+//  releaseRequirements 末尾多列 mobaTacticalDirectorV21）；旗標不是 true ⇒ 與 C3-1 之前逐字相同的 career.v20 輸出。
 export function resolveRulesetForMode({ mode, flags }) {
-  const base = mode === "challenge" ? MATCH_RULESETS["challenge.v20"] : MATCH_RULESETS["career.v20"];
-  if (base.rulesetId !== "career.v20") return base;
   const on = (f) => flags?.[f] === true;
+  const director = mode !== "challenge" && on("mobaTacticalDirectorV21");
+  const base = mode === "challenge" ? MATCH_RULESETS["challenge.v20"] : MATCH_RULESETS[director ? "career.v21" : "career.v20"];
+  if (base.rulesetId === "challenge.v20") return base;
   const skills = on("heroSkillsV1");
   const newLayers = { ...base.layers, heroSkills: skills, heroPassives: skills, heroPowerCurve: skills,
     battleTalents: skills && on("heroBattleTalentsV1"), items: on("itemsV1") };
@@ -54,6 +76,7 @@ export function resolveRulesetForMode({ mode, flags }) {
   if (newLayers.heroSkills) newReqs.push("heroSkillsV1");
   if (newLayers.battleTalents) newReqs.push("heroBattleTalentsV1");
   if (newLayers.items) newReqs.push("itemsV1");
+  if (director) newReqs.push(TACTICAL_DIRECTOR_RELEASE_FLAG[newLayers.tacticalDirector]);
 
   return R({ ...base, layers: newLayers, releaseRequirements: newReqs });
 }
@@ -65,7 +88,7 @@ export function validateRuleset(r) {
   if (!["bySeed", "standard", "explicit"].includes(r?.layers?.objectiveLayout)) errors.push("objectiveLayout");
   if (!ASSEMBLY_ORDERS.includes(r?.layers?.assemblyOrder)) errors.push("assemblyOrder");
   //  Phase 3a-C1：可選層 tacticalDirector——欄位不存在 ≡ "static"（Director 原樣回傳設定的 knobs＝今天的行為）。
-  //  C1／C2 只收 "static"；其他值一律拒絕，避免有人開啟尚未實作的行為（RS-1 精神）。
+  //  C1／C2 只收 "static"；C3-1 起另收 "core.v1"（TACTICAL_DIRECTOR_MODES）；其他值一律拒絕，避免有人開啟尚未實作的行為（RS-1 精神）。
   //  v20 三份 ruleset 不加此欄位（整份進 setup 雜湊，加欄位會改變每一份 setup 的身分）。
   if (r?.layers && "tacticalDirector" in r.layers && !TACTICAL_DIRECTOR_MODES.includes(r.layers.tacticalDirector)) errors.push("tacticalDirector");
 
@@ -75,6 +98,16 @@ export function validateRuleset(r) {
       if (r.layers?.[layer] === true && !r.releaseRequirements?.includes(flag)) {
         errors.push(`layer ${layer} requires ${flag}`);
       }
+    }
+    //  RS-1 擴充（C3-1，D-15）：非 static 的 Director 模式必須列它的正式旗標；
+    //  releaseRequirements 只能是正式旗標（DEV 網址開關不得出現在正式規則集）。
+    const mode = tacticalDirectorModeOf(r);
+    if (mode !== DEFAULT_TACTICAL_DIRECTOR_MODE && TACTICAL_DIRECTOR_MODES.includes(mode)) {
+      const flag = TACTICAL_DIRECTOR_RELEASE_FLAG[mode];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`tacticalDirector ${mode} requires ${flag ?? "a release flag"}`);
+    }
+    for (const f of Array.isArray(r.releaseRequirements) ? r.releaseRequirements : []) {
+      if (!RELEASE_FLAGS.includes(f)) errors.push(`releaseRequirements: ${String(f)} is not a release flag`);
     }
   }
 

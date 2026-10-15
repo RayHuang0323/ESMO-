@@ -132,7 +132,7 @@ export function mirroredRoster(seed, M) {
 //  不傳 ⇒ 兩側 std（與 T6 起完全相同）。真實性 gate（check_tactic_truth_3a）用它把單一選擇綁在一側。
 //  C3-1 E-1：`rulesetId`（可省略）＝要用哪個 balanceTool 規則集。預設 "balanceTool.v20"（與原本逐字相同）；
 //  環境變數 `ESMO_BALANCE_RULESET` 在呼叫當下讀取（worker 繼承），同樣預設 v20。未知 id ⇒ 丟錯（不退回 v20）。
-//  balanceTool.v21 要等 C3-1 Task 2 才有；在那之前選它會丟 `balance_ruleset_unknown`。
+//  balanceTool.v21（C3-1 Task 2 起）＝balanceTool.v20 的層＋tacticalDirector "core.v1"：組裝器向 Resolver 要每時期方針交給 Director。
 export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic = null, rulesetId = process.env.ESMO_BALANCE_RULESET || "balanceTool.v20") {
   const base = rulesetById(rulesetId);
   if (!base || base.kind !== "tool") throw new Error(`balance_ruleset_unknown: ${rulesetId}`);

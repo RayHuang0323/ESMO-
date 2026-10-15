@@ -80,7 +80,10 @@ ck("S1c 允許清單為空（不留死例外），而且 configureMatch 沒有 t
   ALLOW.length === 0 && hits.length === 0 && !/this\.(?:tk|tid)\s*=[^=]/.test(ENGINE_CODE));
 ck("S2 Director 只建立一次（configureMatch 內）；this.director 只在建構子（null）與 configureMatch 被指派",
   (ENGINE_CODE.match(/createTacticalDirector\(/g) ?? []).length === 1
-  && J((ENGINE_CODE.match(/this\.director = [^;]+;/g) ?? [])) === J(["this.director = null;", "this.director = createTacticalDirector({ blue: kBlue, red: kRed, identity: tid });"])
+  && J((ENGINE_CODE.match(/this\.director = [^;]+;/g) ?? [])) === J(["this.director = null;", "this.director = createTacticalDirector(directorArgs);"])
+  //  C3-1：引數物件固定是 { blue: kBlue, red: kRed, identity: tid }，只在有 phases 時多掛 phases＋clock（讀 this.t）。
+  && ENGINE_CODE.includes("const directorArgs = { blue: kBlue, red: kRed, identity: tid };")
+  && ENGINE_CODE.includes("if (phases) { directorArgs.phases = phases; directorArgs.clock = () => this.t; }")
   && /configureMatch\(\{[^)]*\} = \{\}\) \{[\s\S]*?this\.director = createTacticalDirector\(/.test(ENGINE_CODE.slice(ENGINE_CODE.indexOf("configureMatch({"), ENGINE_CODE.indexOf("_joinChance(K, hot"))));
 ck("S2b _tidOf／_tidPhase 是一行委派給 Director",
   ENGINE_CODE.includes("_tidOf(side) { return this.director ? this.director.identity(side) : null; }")
@@ -108,6 +111,19 @@ const CONTRACT = "src/platform/contracts/tacticalDirective.js";
 ck("S6 引擎（剝註解）不呼叫 Director 的 directive()——check_tactical_directive_3c B2（契約不在語意清單）的前提",
   directiveOk(ENGINE_CODE),
   directiveOk(ENGINE_CODE) ? "" : `引擎呼叫了 directive() ${directiveCalls(ENGINE_CODE)} 次：要在引擎呼叫它，必須同時把 ${CONTRACT} 加進 SIMULATION_SEMANTICS_FILES（並改 check_tactical_directive_3c B2、重新登記 v21 指紋）`);
+//  S7（C3-1 G-AC2 增補）：每時期方針的挑選邏輯只住在 Director。剝註解後的引擎：
+//   · 不得對 phases 做任何索引（`phases[`、`phases?.[`、`.phases[`、`.at(` 於 phases 上）；
+//   · `phases` 這個識別字只出現在 configureMatch 的「收下、原樣轉交 Director」那幾處（恰好 4 次）；
+//   · 呼叫 `.phase(` 的地方＝允許清單（只有 _tidPhase 的一行委派）。
+const PHASE_CALL_ALLOW = ["_tidPhase() { return this.director.phase(this.t); }"];
+const phasesIndexHits = (code) => (code.match(/\bphases\s*(?:\?\.)?\s*\[|\bphases\s*(?:\?\.|\.)\s*at\s*\(/g) ?? []).length;
+const phasesTokenCount = (code) => (code.match(/\bphases\b/g) ?? []).length;
+const phaseCallLines = (code) => code.split("\n").filter((l) => /\.\s*phase\s*\(/.test(l)).map((l) => l.trim());
+const phaseSelectOk = (code) => phasesIndexHits(code) === 0 && phasesTokenCount(code) === 4 && J(phaseCallLines(code)) === J(PHASE_CALL_ALLOW);
+ck("S7 每時期方針的挑選只住在 Director：剝註解後的引擎沒有 phases 索引、phases 只在 configureMatch 原樣轉交（4 次）、.phase( 呼叫點＝允許清單（_tidPhase 1 處）",
+  phaseSelectOk(ENGINE_CODE), `索引 ${phasesIndexHits(ENGINE_CODE)}、phases 記號 ${phasesTokenCount(ENGINE_CODE)}、.phase( [${phaseCallLines(ENGINE_CODE).join(" | ")}]`);
+ck("S7b Director 自己確實做每時期挑選（core.v1 以 phase(t) 查表；static 不看 phases）",
+  /table\[side\]\[phase\(t\)\]/.test(DIRECTOR_CODE) && /if \(phases\) return coreDirector\(/.test(DIRECTOR_CODE));
 const SV = await imp("src/platform/contracts/simulationVersion.js");
 ck("S4 引擎 import Director；Director 在 SIMULATION_SEMANTICS_FILES",
   /import\s*\{\s*createTacticalDirector\s*\}\s*from\s*["']\.\/battle\/moba\/tactics\/tacticalDirector\.js["']/.test(ENGINE_CODE) && SV.SIMULATION_SEMANTICS_FILES.includes(DIRECTOR));
@@ -141,6 +157,10 @@ ck("S5 Director 本身不讀 ruleset（C2 只有 static）、不 import 引擎�
     ck(`${label} 植回引擎 ⇒ 階段界線檢查（S3）轉紅`, !phaseOk(mutated(snippet)));
   ck("N21 引擎呼叫 `this.director.directive(\"blue\", this.t)` ⇒ S6 轉紅", !directiveOk(mutated('return this.director.directive("blue", this.t);')));
   ck("N22 引擎呼叫 `this.director[\"directive\"](…)` ⇒ S6 轉紅", !directiveOk(mutated('return this.director["directive"]("red", 0);')));
+  ck("N24 引擎植入 `const K = this._ph.blue[this.director.phase(this.t)].knobs;`（引擎自己依時期挑） ⇒ S7 轉紅", !phaseSelectOk(mutated("return this._ph.blue[this.director.phase(this.t)].knobs;")));
+  ck("N25 引擎植入 `return phases[1];` ⇒ S7 轉紅", !phaseSelectOk(mutated("const phases = this._p; return phases[1];")));
+  ck("N26 引擎植入 `return this._p.phases?.[2];` ⇒ S7 轉紅", !phaseSelectOk(mutated("return this._p.phases?.[2];")));
+  ck("N27 對照：只在註解裡的 `phases[1]`、`this.director.phase(t)` ⇒ S7 不紅", phaseSelectOk(mutated("// phases[1] this.director.phase(t)\n    /* phases?.[0] */ return 1;")));
   ck("N23 對照：只在註解裡的 `.directive(`、`480`、`self.tk` ⇒ 三個檢查都不紅", (() => { const c = mutated("// this.director.directive(\"blue\", 480); self.tk\n    /* Reflect.get(this, 'tk') */ return 1;"); return singleSourceOk(c) && phaseOk(c) && directiveOk(c); })());
 }
 
@@ -163,7 +183,7 @@ try {
   const inp = mk(true);
   const snapIn = J(inp);
   const d = Dir.createTacticalDirector(inp);
-  ck("B1 mode＝static；TACTICAL_DIRECTOR_MODES＝[static]（Director 轉出的就是契約 matchRuleset.js 的同一個物件，不是第二份定義）；Director 物件凍結", d.mode === "static" && J(Dir.TACTICAL_DIRECTOR_MODES) === J(["static"]) && Object.isFrozen(d) && Object.isFrozen(Dir.TACTICAL_DIRECTOR_MODES) && Dir.TACTICAL_DIRECTOR_MODES === RULESET.TACTICAL_DIRECTOR_MODES);
+  ck("B1 沒有 phases ⇒ mode＝static；TACTICAL_DIRECTOR_MODES＝[static, core.v1]（Director 轉出的就是契約 matchRuleset.js 的同一個物件，不是第二份定義）；Director 物件凍結", d.mode === "static" && J(Dir.TACTICAL_DIRECTOR_MODES) === J(["static", "core.v1"]) && Object.isFrozen(d) && Object.isFrozen(Dir.TACTICAL_DIRECTOR_MODES) && Dir.TACTICAL_DIRECTOR_MODES === RULESET.TACTICAL_DIRECTOR_MODES);
   ck("B2 knobs(side) 回傳傳入的**同一個參照**（藍／紅分開，不互串）", d.knobs("blue") === inp.blue && d.knobs("red") === inp.red && d.knobs("blue") !== d.knobs("red"));
   ck("B2b knobs 物件不被凍結、不被改（static 不複製也不碰）", !Object.isFrozen(inp.blue) && !Object.isFrozen(inp.blue.laneOffset) && J(inp) === snapIn);
   ck("B3 identity(side) 回傳傳入的同一個參照", d.identity("blue") === inp.identity.blue && d.identity("red") === inp.identity.red && d.hasIdentity() === true);

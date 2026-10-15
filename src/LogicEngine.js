@@ -364,7 +364,7 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
     this.tacticMeta = meta;
@@ -373,7 +373,11 @@ export class LogicEngine {
     //  規則集 tacticIdentityV1 關閉或沒有傳 ⇒ null ⇒ 下面每個讀取點都走原式（逐位元不變）。
     const tid = identity && this.rules.tacticIdentityV1 ? { blue: identity.blue ?? null, red: identity.red ?? null } : null;
     //  Phase 3a-C2：引擎內每一個戰術讀取點都經 this.director（static ⇒ 回傳的就是上面這兩份物件，參照相同）。
-    this.director = createTacticalDirector({ blue: kBlue, red: kRed, identity: tid });
+    //  C3-1：組裝器只在 ruleset 的 tacticalDirector 為 core.v1 時傳 phases（每時期方針）；有才交給 Director，連同讀比賽時間的 clock。
+    //  沒傳 ⇒ 引數與 C3-1 之前完全相同（static）。每時期的挑選只在 Director 裡做，引擎不看 phases 的內容。
+    const directorArgs = { blue: kBlue, red: kRed, identity: tid };
+    if (phases) { directorArgs.phases = phases; directorArgs.clock = () => this.t; }
+    this.director = createTacticalDirector(directorArgs);
     //  C3-1 E-1：舊的觀測欄位 this.tk／this.tid 已移除（aa38625 之後沒有任何讀者）；引擎內外都不得再有
     //  （tools/check_tactical_director_3c.mjs 掃原始碼，允許清單 0 筆）。要看設定值請問 this.director。
     if (this.director.hasIdentity()) this.tidObs = { blue: { protectCarry: 0, siegePreferred: 0 }, red: { protectCarry: 0, siegePreferred: 0 } };

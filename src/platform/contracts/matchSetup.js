@@ -158,6 +158,8 @@ export function createMatchSetup(input) {
         // production additionally pins the key set and every non-boolean layer to the registered value.
         const code = base.kind === "production" ? "production_layer_mismatch" : "ruleset_invalid";
         const before = errors.length;
+        //  C3-1：tacticalDirector 層只在登錄值有它的規則集（career.v21／balanceTool.v21）被接受——v20 規則集帶這個鍵
+        //  ⇒ 下面的「unknown layer key」；v21 規則集缺它 ⇒「missing layer key」。正式規則集的值被釘在登錄值（core.v1）。
         for (const k of Object.keys(candidate.layers)) if (!(k in base.layers)) err(code, `ruleset.layers.${k}`, "unknown layer key");
         for (const [k, b] of Object.entries(base.layers)) {
           const g = candidate.layers[k], f = `ruleset.layers.${k}`;

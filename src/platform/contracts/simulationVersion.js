@@ -539,7 +539,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  LogicEngine.configureMatch 不再指派 this.tk／this.tid（aa38625 之後沒有讀者）；TACTICAL_DIRECTOR_MODES 只在 matchRuleset.js 定義一份，
   //  tacticalDirector.js 改為 import／轉出同一個物件。不改任何輸入的解析結果與引擎行為：golden 逐位元相同 ⇒ 不是語意變化。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 ed0daff971db2d7a 未曾發布）。
-  "moba-sim.v21": "eb0249883e225fc4",
+  //  2026-10-15（Phase 3a-C3-1）：C3-1: phase skeleton core.v1 + career.v21/balanceTool.v21; behaviour unchanged.
+  //  matchRuleset.js 多了 career.v21／balanceTool.v21（tacticalDirector "core.v1"）與 RS-1 擴充；Resolver 只在要求時多回每時期方針
+  //  （三份共用整場物件）；組裝器只在 core.v1 時把 phases 交給 configureMatch；Director core.v1 依 phase(clock()) 挑選。
+  //  v20 規則集與既有輸入的解析結果、configureMatch 引數完全不變（golden 131／153 逐位元相同）；v21 規則集下引擎輸出亦逐位元相同
+  //  （tools/check_c3_phase_skeleton.mjs G-AC1 ②）⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 eb0249883e225fc4 未曾發布）。
+  "moba-sim.v21": "79436579b2f999cf",
 });
 
 export const isKnownSimulationVersion = (v) =>
