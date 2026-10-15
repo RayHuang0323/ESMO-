@@ -63,7 +63,8 @@ ck("N staticDirective 收到無效輸入 ⇒ 丟錯", (() => { try { D.staticDir
   ck("F4 嘗試改輸出無效", (() => { "use strict"; try { dir.knobs.joinFight = 0; return false; } catch { return dir.knobs.joinFight === toEngineTactic(MOBA_TACTICS[2]).joinFight; } })());
 }
 
-//  C1 邊界：沒有人 import 它，也不在語意清單
+//  邊界：C1 時沒有人 import 它；C2 起**恰好只有** Tactical Director import 它（directive() 契約視圖），
+//  而且仍不在語意清單（不在引擎熱路徑上；C3 接上動態模式時再評估）。
 {
   const walk = (dir, out = []) => { for (const n of readdirSync(dir)) { if (n === "node_modules") continue; const p = join(dir, n); statSync(p).isDirectory() ? walk(p, out) : /\.(js|jsx|mjs)$/.test(n) && out.push(p); } return out; };
   const self = join(ROOT, "src", "platform", "contracts", "tacticalDirective.js");
@@ -71,8 +72,10 @@ ck("N staticDirective 收到無效輸入 ⇒ 丟錯", (() => { try { D.staticDir
     const raw = readFileSync(p, "utf8");
     return raw.includes("tacticalDirective") && /tacticalDirective(\.js)?["']/.test(stripComments(raw));
   });
-  ck("B1 src 內沒有任何檔案 import tacticalDirective（C1 尚未接線）", users.length === 0, users.join(","));
-  ck("B2 不在 SIMULATION_SEMANTICS_FILES（還沒載入 ⇒ 不改指紋）", !SIMULATION_SEMANTICS_FILES.some((f) => /tacticalDirective/.test(f)));
+  const DIRECTOR = join(ROOT, "src", "battle", "moba", "tactics", "tacticalDirector.js");
+  ck("B1 src 內 import tacticalDirective 的恰好只有 battle/moba/tactics/tacticalDirector.js（C2 接線點；多一個、少一個都紅）",
+    users.length === 1 && users[0] === DIRECTOR, users.map((p) => p.slice(ROOT.length + 1)).join(","));
+  ck("B2 不在 SIMULATION_SEMANTICS_FILES（只供 directive() 契約視圖，不在引擎熱路徑上 ⇒ C2 不改指紋）", !SIMULATION_SEMANTICS_FILES.some((f) => /tacticalDirective/.test(f)));
 }
 
 console.log(`\nTactical Directive 3c：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`); process.exit(fail ? 1 : 0);

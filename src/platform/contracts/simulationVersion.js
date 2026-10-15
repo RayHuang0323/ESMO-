@@ -211,6 +211,11 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/platform/tactics/tacticPlan.js",
   //  · 能力登錄表：哪些維度是 live、每個維度允許哪些選擇（plan 與 resolver 的接受範圍）。
   "src/platform/tactics/capabilityRegistry.js",
+  //  ── 2026-10-15（Phase 3a-C2，moba-sim.v21 候選）：Tactical Director ────────────────────────────────
+  //  · LogicEngine 直接 import；引擎內每一個戰術讀取點（knobs／Tactical Identity／戰術階段界線 480／960 秒）都經它。
+  //    static 模式＝設定值原樣回傳，但改它（例如階段界線、identity 反查）就會改結果 ⇒ 必須在清單。
+  //    它 import 的 tacticalDirective.js 只供 directive() 契約視圖用，不在引擎熱路徑上 ⇒ C2 不收（C3 接上動態模式時再評估）。
+  "src/battle/moba/tactics/tacticalDirector.js",
 ]);
 
 /**
@@ -526,7 +531,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-15（Phase 3a-C1）：matchRuleset.js 多了可選層 tacticalDirector（缺少 ≡ "static"；validateRuleset 只收 "static"）與兩個讀取輔助。
   //  v20 三份 ruleset 與 resolveRulesetForMode 的輸出逐字不變（tools/check_match_ruleset_3a.mjs R16／R17）、沒有任何檢查點讀它 ⇒ 不是語意變化：
   //  golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 a7d5b68e24d1f313 未曾發布）。
-  "moba-sim.v21": "29140fe0cb5a4c86",
+  //  2026-10-15（Phase 3a-C2）：C2: engine tactic reads go through TacticalDirector (static); results bit-identical to the v21-A golden.
+  //  LogicEngine 的每一個戰術讀取點（knobs／Tactical Identity／戰術階段）改經 battle/moba/tactics/tacticalDirector.js（新增進語意清單）；
+  //  static 模式回傳設定的同一份物件，階段界線 480／960 原樣搬過去。v21-A golden 109 案與 v20 golden 39 案逐位元相同 ⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 29140fe0cb5a4c86 未曾發布）。
+  "moba-sim.v21": "ed0daff971db2d7a",
 });
 
 export const isKnownSimulationVersion = (v) =>
