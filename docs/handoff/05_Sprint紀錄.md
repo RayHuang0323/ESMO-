@@ -26140,3 +26140,9 @@ Dust2／Inferno原真保存樣本與另外各三組預先固定的戰術／seed�
 ## 2026-10-18 CS Major Upgrade v1.0 發布整合
 
 Owner 授權與串行 Release Gate 見 review/cs-major-upgrade/RELEASE_V1.md。保留 MOBA v20 與其他 worktree；四份追加文件衝突保留兩邊，產品無衝突，尚未發布。
+
+## 2026-10-18 CS Major Upgrade v1.0 RELEASED
+
+Owner人工驗收完成且明確授權正常main push／Pages／正式站Smoke。保存75044c9c，隔離整合最新main 1d0e219a，產品release a8438c9a正常fast-forward push，Pages39074829702 build/deploy success。MOBA／SeasonState來源保留main，其他worktree與未提交內容保留，未force push或刪鎖。
+
+三圖六場116回合45安包15拆彈、輸出與Owner版一致；12段CS CPU、五項H規則、4229幀全欄Replay與Result、Competition完成。新本機及線上桌機／390各63/63，正式站MOBA11/11、HTTP64/64匹配精確CI artifact。首輪缺report與本機缺省env比對失敗均保留；補工具參數與按CI三空env重build後有效PASS，沒有改產品或斷言。MOBA progress25 32/33、controls29b3 16/18為main已知工具債務，具名CSREL-1／2，未洗綠。詳細來源／native／風險／最新SHA見review/cs-major-upgrade/RELEASE_V1.md及本機final-closure.json。真手機、長時卡頓與長OT容量仍保留，不開始下一Sprint。

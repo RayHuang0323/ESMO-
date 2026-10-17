@@ -1,5 +1,11 @@
 # CS Major Upgrade — Owner Review 收件報告
 
+## 2026-10-18 最新：CS Major Upgrade v1.0 已正式發布
+
+Owner已完成人工驗收並授權發布。產品main commit `a8438c9a10cf24ad6191b1790bce81dc7607e484`，Pages Actions `39074829702` success；正式站 https://rayhuang0323.github.io/ESMO-/ 。線上CS桌機／390各63/63、MOBA11/11，64項資源與精確CI artifact逐byte相同。5183已換為同CI環境重現版、PID127716。
+
+完整驗證、首輪建置環境差異紅燈、MOBA基線債務、素材來源與保存方式見RELEASE_V1.md。真手機與長時風險保留，未改MOBA來源、未動其他worktree或force push；下方為歷史狀態，不覆蓋本節。
+
 ## 2026-10-18 最新狀態：Owner 人工驗收完成，授權 v1.0 正式發布
 
 本節取代下方歷史停點的「未完成／不得發布」狀態。Owner 已明確授權：先保存正式成果、整合最新 origin/main、完成 Release Gate，再正常 push main、GitHub Pages 部署及正式站 Smoke Test。其他 MOBA／SeasonState worktree、分支與未提交修改必須保留；不得強刪 Git lock 或 force push。

@@ -1,3 +1,5 @@
+> 2026-10-18 最新：Owner完成人工驗收並明確授權v1.0正式發布。產品main a8438c9a、Pages39074829702 success，正式站CS桌機／390各63/63、MOBA11/11。保留已通過美術、正式AI／五職16能力／C4／合法原創設計音效／真數據戰報／Replay相容；MOBA來源與最新main相同。完整結果與風險見review/cs-major-upgrade/RELEASE_V1.md。以下為設計及歷史驗收紀錄，不覆蓋最新發布授權。
+
 > 2026-10-11 Owner 最新指示：人物美術接受目前完成度，停止人體／手指完美化，不再以舊獨立 1／U findings 阻擋反覆追修；原審查分數與遮擋限制保留，不宣稱獨立藝術 PASS 或量測90分。只收必要 B 技術驗證後直接 C → D → E，完成停 Owner Review，不 push／deploy、不動 MOBA。升級完成後已授權清理本 CS 工作區淘汰 evidence／profile-builds，保留最終可用版、必要完整驗證紀錄、素材授權與唯一恢復點；執行前逐份核對明確清單、resolved path、連結及使用中程序。 最新技術結果與執行狀態見 review/cs-major-upgrade/RESUME_CHECKPOINT.md。
 
 > CS Major已完成必要實作與驗證，■ A／B／C／D／E，停Owner Review。指定B7 GPU45/45/95720ms未重跑，C37/42/34、D51與新增input15/Browser15、契約28/完成36、正式flow25+終局8、Worker12、雙尺寸三圖60s各18全依真native收件；完整成果與限制見review/cs-major-upgrade/OWNER_REVIEW.md。不push/deploy/commit、不動MOBA，真手機與視覺待Owner驗收。

@@ -1,4 +1,12 @@
-## 2026-10-18 v1.0 Release 執行中（最新授權）
+## 2026-10-18 最新：v1.0 正式發布完成
+
+產品release main `a8438c9a10cf24ad6191b1790bce81dc7607e484`，正常fast-forward push、Pages Actions39074829702 success；正式站 https://rayhuang0323.github.io/ESMO-/ 。正式站CS桌機／390各63/63、MOBA11/11；64份HTTP實際資源吻合精確CI artifact。三圖六場／116回合、完整Replay4229幀／Result、Competition與新build均完成。MOBA既有progress25 32/33、controls29b3 16/18具名保留，不冒充全綠。
+
+CI三空env與缺省本機造成首輪HTML比對失敗，原紅燈保留；同源按CI環境重build後HTML／JS／CSS12/12相同。5183採同CI建置、PID127716。真手機、長時尾端卡頓、長OT容量等保留。詳RELEASE_V1.md；全部新證據在隔離worktree `../cs-major-release-v1-20261018/review/cs-major-upgrade/evidence/release-v1-20261018/`。Owner已授權發布，歷史不push指示由最新明確授權取代。其他MOBA／SeasonState worktree完整保留。
+
+最後僅發布文件提交；最終main SHA／第二次Pages及同資源複核見該目錄final-closure.json與交付回報。停止在本輪發布完成，不開始下一Sprint。最新官方週剩95%，未達5%暫停門檻。
+
+## 以下為本輪發布準備歷史
 
 最新：CS 保存 75044c9c，隔離 worktree `../cs-major-release-v1-20261018` 從 origin/main 1d0e219a 整合；產品無衝突、四份追加文件保留兩邊。三圖六場、12段CPU、Replay全4229幀／Result、Competition、新production build、桌機／390各63/63完成。MOBA 5/7：progress25 32/33與controls29b3 16/18為main已有契約／來源斷言債務，完整證明與log保留。評估無新增CS／MOBA回歸，準備正常push與Pages／正式站Smoke；尚未發布。週額度剩97%。詳RELEASE_V1.md。
 
