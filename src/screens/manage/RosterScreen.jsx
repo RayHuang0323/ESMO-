@@ -8,6 +8,7 @@
 //  Adapter（不造假）：選手＝profileStore.players；能力/戰力/適配＝playerModel
 //    純函數；英雄圖＝HeroPortrait（唯一入口）。改名 / 換定位寫回 Store。
 // ============================================================================
+import {fpsRoleOf} from "../../battle/fps/fpsRoster.js";
 import React, { useMemo, useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import {
@@ -36,7 +37,7 @@ const GAME_FILTERS = ["全部", "MOBA", "CS"];
 
 const CS_ROLE_LABELS = Object.freeze({
   entry: "突破手",
-  rifler: "步槍手",
+  support: "輔助", rifler: "步槍手",
   awp: "狙擊手",
   lurker: "游走手",
   igl: "指揮",
@@ -44,6 +45,7 @@ const CS_ROLE_LABELS = Object.freeze({
 
 // 卡片只取 3～4 個能代表該 role 的既有能力；完整 16 項留在詳情檢視。
 const CS_REP_KEYS = Object.freeze({
+  support:["synergy","tacticalIQ","comms","mapAware"],
   entry: ["reflex", "apm", "courage", "accuracy"],
   rifler: ["accuracy", "reflex", "positioning", "focus"],
   awp: ["accuracy", "focus", "positioning", "clutch"],
@@ -53,7 +55,7 @@ const CS_REP_KEYS = Object.freeze({
 
 const MOBA_REP_KEYS = Object.freeze(["reflex", "positioning", "decision", "synergy"]);
 
-const csRoleOf = (p) => CS_ROLE_BY_MOBA_ROLE[p?.role] || "rifler";
+const csRoleOf = fpsRoleOf;
 
 function CsStatChips({ player, role }) {
   const keys = CS_REP_KEYS[role] || CS_REP_KEYS.rifler;
@@ -99,6 +101,7 @@ function CsIdentity({ player, positions }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
         <span style={{ color: GC.gray, fontSize: 8.5 }}>主要定位</span>
+        <span data-testid="cs-rifler-aptitude" style={{color:GC.gray,fontSize:8.5}}>步槍適性 {positions.fpsAll.find(item=>item.pos==="FPS步槍手")?.fit??'—'}</span>
         <span style={{ color: "#fb923c", fontSize: 11, fontWeight: 800 }}>{CS_ROLE_LABELS[role]}</span>
         <span title="角色代表選手擅長的打法，不限制隊伍組成。" aria-label="角色代表選手擅長的打法，不限制隊伍組成。" style={{ color: GC.gray, fontSize: 10, cursor: "help" }}>ⓘ</span>
       </div>

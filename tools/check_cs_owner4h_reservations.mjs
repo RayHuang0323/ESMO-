@@ -1,0 +1,16 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';
+import {planFpsPostPlant,fpsRouteCrossesTeamReservation as crosses} from '../src/battle/fps/fpsPostPlant.js';
+import {fpsNeedsObjectiveRouteRecovery as recovery} from '../src/battle/fps/fpsObjectiveDiscipline.js';
+const checks=[],ck=(name,fn)=>{try{fn();checks.push({name,pass:true});console.log('PASS '+name);}catch(e){checks.push({name,pass:false,error:e.stack});console.error(e.stack);}};
+const player={id:'moving',side:'t',role:'support',pos:{x:0,y:10}},mate={id:'holding',side:'t',postPlantPlan:{point:{x:10,y:10}}},route=[player.pos,{x:20,y:10}];
+ck('同隊架點阻止正式路徑穿過身體，沒有推走架槍者',()=>assert.equal(crosses(route,player,[mate]),true));
+ck('敵人隱藏架點不影響規劃',()=>assert.equal(crosses(route,player,[{...mate,side:'ct'}]),false));
+ck('陣亡／自己不構成佔位',()=>{assert.equal(crosses(route,player,[{...mate,dead:true}]),false);assert.equal(crosses(route,player,[{...mate,id:player.id}]),false);});
+ck('起點擁擠允許向外走，之後不可重新闖入',()=>{assert.equal(crosses([{x:10,y:10},{x:20,y:10}],player,[mate]),false);assert.equal(crosses([{x:10,y:10},{x:20,y:10},{x:10,y:10}],player,[mate]),true);});
+ck('真正繞行與CT拆彈掩護同源',()=>{assert.equal(crosses([{x:0,y:10},{x:0,y:20},{x:20,y:20}],player,[mate]),false);assert.equal(crosses(route,player,[{...mate,postPlantPlan:null,retakeCoverPlan:mate.postPlantPlan}]),true);});
+ck('正式守包選點拒絕穿過已預留架點的唯一走廊',()=>{const plan=planFpsPostPlant({player,players:[player,mate],nodes:{ctSpawn:{x:20,y:0},a:{x:20,y:10}},bombPos:{x:20,y:20},intel:[],roundSec:20,walls:[],blocked:()=>false,lineBlocked:()=>false,findRoute:(a,b)=>[a,b]});assert.equal(plan.reason,'hold-until-reachable-angle');assert.deepEqual(plan.point,player.pos);});
+const displaced={...player,pos:{x:14,y:10},route:[{x:0,y:10},{x:10,y:10}],routeIdx:1},intent={kind:'post-plant-hold',routeTarget:{x:10,y:10}};
+ck('完成路徑後被碰撞推離，正式守包仍重新走回已選位置',()=>assert.equal(recovery(displaced,intent),true));
+ck('抵達閾值／在途／普通戰鬥不反覆重建路徑',()=>{assert.equal(recovery({...displaced,pos:{x:10.1,y:10}},intent),false);assert.equal(recovery({...displaced,routeIdx:0},intent),false);assert.equal(recovery(displaced,{...intent,kind:'hold'}),false);});
+ck('CT拆彈掩護同樣可復位，主迴圈確實消費此規則',()=>{assert.equal(recovery(displaced,{...intent,kind:'defuse-cover'}),true);assert.ok(fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8').includes('||fpsNeedsObjectiveRouteRecovery(p,intent)'));});
+const out=process.argv[2];assert.ok(out&&!fs.existsSync(out));const report={pass:checks.filter(c=>c.pass).length,fail:checks.filter(c=>!c.pass).length,checks};fs.writeFileSync(out,JSON.stringify(report,null,2),{flag:'wx'});console.log(`CS Owner4H Reservations: ${report.pass}/${checks.length} PASS`);process.exitCode=report.fail?1:0;

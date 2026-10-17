@@ -1,0 +1,17 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';
+import {createFpsPovOverlayVisibility} from '../src/battle/fps/presentation/fpsPovOverlayVisibility.js';
+import {loadFpsMajorTestApi} from './lib/fpsMajorTestApi.mjs';
+const api=await loadFpsMajorTestApi(fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8')),checks=[];
+const ck=(name,fn)=>{try{fn();checks.push({name,pass:true});console.log('PASS '+name);}catch(error){checks.push({name,pass:false,error:error.stack});console.error('FAIL '+name+' '+error.message);}};
+let rays=0;const cache=createFpsPovOverlayVisibility({lineBlocked:(...a)=>{rays++;return api.lineBlocked(...a)},smokeBlocks:api.smokeBlocks});
+const observer={id:'self',side:'t',pos:{x:10,y:10}},hiddenEnemy={id:'enemy',side:'ct',pos:{x:20,y:10}},visibleEnemy={id:'clear',side:'ct',pos:{x:10,y:25}},mate={id:'mate',side:'t',pos:{x:21,y:10}};
+const frame={players:[observer,hiddenEnemy,visibleEnemy,mate],smokes:[]},walls=[{x:14,y:7,w:2,h:6}];
+const read=(patch={})=>cache.read({frame,observer,walls,...patch});
+ck('同正式solid LOS隱藏牆後敵方名牌與血條資格',()=>assert.deepEqual([...read()],['enemy']));
+ck('真正無牆無煙的敵人保留，己方標示不受敵方規則影響',()=>{const h=read();assert.ok(!h.has('clear'));assert.ok(!h.has('mate'));});
+ck('相同保存幀只計算一次，不在每個RAF重跑牆體射線',()=>{const count=rays,h=read();for(let i=0;i<1000;i++)assert.equal(read(),h);assert.equal(rays,count);});
+ck('新保存幀立刻使用真煙阻擋，煙過期恢復',()=>{const smoke={pos:{x:10,y:18},tl:1};assert.ok(read({frame:{...frame,smokes:[smoke]}}).has('clear'));assert.ok(!read({frame:{...frame,smokes:[{...smoke,tl:0}]}}).has('clear'));});
+ck('切換角色、地圖牆與rewind立即失效，無跨幀／跨人殘留',()=>{assert.ok(!read({walls:[]}).has('enemy'));assert.ok(read().has('enemy'));assert.ok(!read({observer:mate}).has('enemy'));assert.ok(read().has('enemy'));});
+ck('只讀保存狀態，不授予目標、傷害或情報，不改凍結frame',()=>{const input=structuredClone(frame),before=JSON.stringify(input);Object.freeze(input.players);Object.freeze(input);read({frame:input});assert.equal(JSON.stringify(input),before);});
+ck('缺失／死亡觀察者與未知座標安全處理',()=>{assert.equal(read({observer:null}).size,0);assert.equal(read({observer:{...observer,dead:true}}).size,0);assert.ok(read({frame:{players:[observer,{...hiddenEnemy,pos:null}],smokes:[]}}).has('enemy'));});
+const report={pass:checks.filter(c=>c.pass).length,fail:checks.filter(c=>!c.pass).length,checks};const out=process.argv[2];if(!out||fs.existsSync(out))throw Error('Unique report required');fs.writeFileSync(out,JSON.stringify(report,null,2),{flag:'wx'});console.log(`CS Owner4H POV Visibility: ${report.pass}/${checks.length} PASS`);process.exitCode=report.fail?1:0;

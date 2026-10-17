@@ -1,0 +1,12 @@
+import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';
+import {GC} from '../../../src/ui/theme.js';import {loadFpsMajorTestApi} from '../../../tools/lib/fpsMajorTestApi.mjs';
+const dir=path.resolve(process.argv[2]||'');if(!dir.includes('profile-builds')||!fs.existsSync(path.join(dir,'build-manifest.json')))throw Error('Existing bounded build required');
+const main=fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8'),before=fs.readFileSync('review/cs-major-upgrade/evidence/owner4g-review-20261016/before-source/src/battle/fps/EsportsFPS3D.jsx','utf8');
+const profiles=s=>Function('return ('+s.match(/const C5A1_AUDIO_PROFILES=Object.freeze\((\{[\s\S]*?\})\);/)[1]+')')();
+const handling=s=>Object.fromEntries(['weapon-empty','weapon-reload-start','weapon-reload-complete'].map(k=>{const line=s.split('\n').find(l=>l.includes('"'+k+'":'));const first=line.match(/\{[^\n]*?\}/)[0];return[k,Function('return ('+first+')')()]}));
+const api=await loadFpsMajorTestApi(main),guns=['glock','usp','p250','deagle','tec9'];
+const cfg={masterGain:Number(main.match(/master.gain.value=([0-9.]+)/)[1]),oldProfiles:profiles(before),oldHandling:handling(before),handling:handling(main),colors:{...GC,text:GC.blueL},intervals:Object.fromEntries(guns.map(g=>[g,api.weaponAuthority(g).intervalMs])),reloadMs:Object.fromEntries(guns.map(g=>[g,api.weaponAuthority(g).reloadMs||2500]))};
+// Reload duration comes from the authoritative weapon handling profile.
+const {fpsWeaponHandlingProfile}=await import('../../../src/battle/fps/fpsWeaponHandling.js');for(const g of guns)cfg.reloadMs[g]=fpsWeaponHandlingProfile(g).reloadMs;
+const files={'owner4g-audio-ab.html':fs.readFileSync('review/cs-major-upgrade/owner4g-audio-ab.html'),'owner4g-before-gun-audio.js':fs.readFileSync('review/cs-major-upgrade/evidence/owner4g-review-20261016/before-source/src/battle/fps/fpsGunAudio.js'),'owner4g-current-gun-audio.js':fs.readFileSync('src/battle/fps/fpsGunAudio.js'),'owner4g-audio-review.json':Buffer.from(JSON.stringify(cfg,null,2))};
+const proof={at:new Date().toISOString(),files:{}};for(const[name,bytes]of Object.entries(files)){fs.writeFileSync(path.join(dir,name),bytes,{flag:'wx'});proof.files[name]={bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')}}fs.writeFileSync(path.join(dir,'owner4g-audio-review-proof.json'),JSON.stringify(proof,null,2),{flag:'wx'});console.log(JSON.stringify(proof));

@@ -47,7 +47,7 @@ export const isEligible = (player) => ROSTER_TIERS[tierOf(player)].eligible;
 /** CS 席位（對齊 battle/fps/fpsRoster.js 的 MOBA2FPS 對位）。 */
 export const CS_SEATS = Object.freeze(["f1", "f2", "f3", "f4", "f5"]);
 export const CS_SEAT_ROLE = Object.freeze({
-  f1: "entry", f2: "lurker", f3: "rifler", f4: "awp", f5: "igl",
+  f1: "entry", f2: "lurker", f3: "support", f4: "awp", f5: "igl",
 });
 /** CS 席位期望的來源路線（＝ MOBA2FPS 的反查；位置符合度用）。 */
 export const CS_SEAT_LANE_ZH = Object.freeze({
@@ -117,7 +117,7 @@ export function validateSquad({ mode = "moba", seats = {}, players = [], strictR
     }
     filled++;
     //  位置符合度：預設只警告（讓玩家能刻意換位），strictRole 時升級為阻擋
-    const want = seatLaneOf(mode, seat);
+    const want = mode === "cs" ? null : seatLaneOf(mode, seat);
     if (want && me.role && me.role !== want) {
       const item = {
         code: "role_mismatch", seat, playerId: pid,
@@ -174,7 +174,7 @@ export function validateSquadSubmission(sub, players = []) {
 
 /** 席位顯示名（錯誤訊息用）。 */
 function seatLabel(mode, seat) {
-  if (mode === "cs") return `${CS_SEAT_LANE_ZH[seat] ?? seat}（${CS_SEAT_ROLE[seat] ?? "?"}）`;
+  if (mode === "cs") return `出賽選手 ${CS_SEATS.indexOf(seat) + 1}`;
   return SEAT_LANE_ZH[seat] ?? seat;
 }
 
@@ -210,7 +210,7 @@ export function autoFillSquad({ mode = "moba", seats = {}, players = [] } = {}) 
   const out = { ...base };
   for (const seat of required) {
     if (out[seat]) continue;
-    const want = seatLaneOf(mode, seat);
+    const want = mode === "cs" ? null : seatLaneOf(mode, seat);
     //  先找定位相符且分層較高的人，再退而求其次
     const pick = pool
       .filter((p) => !used.has(p.id))

@@ -3,7 +3,7 @@
 // 不建立第二份 player data，也不把缺少的 Lurker suitability 映射成其他 role。
 import fs from "node:fs";
 import { INITIAL_PLAYERS } from "../src/data/players.js";
-import { STAT_DEF, CS_FIT_ROLE_LABELS, bestPositions, csSuitabilityOf } from "../src/data/playerModel.js";
+import { STAT_DEF, POSITION_PROFILE, CS_FIT_ROLE_LABELS, bestPositions, csSuitabilityOf, posFit } from "../src/data/playerModel.js";
 import { withDerivedStats } from "../src/platform/talents/playerDerivedStats.js";
 
 const gate = (ok, code, detail = "") => {
@@ -16,14 +16,15 @@ const detailSource = read("../src/screens/manage/PlayerDetailScreen.jsx");
 
 function main() {
   gate(STAT_DEF.length === 16, "STAT_DEF_COUNT", String(STAT_DEF.length));
-  gate(Object.keys(CS_FIT_ROLE_LABELS).join(",") === "FPS突破手,FPS步槍手,FPS狙擊手,FPS指揮", "CS_FIT_LABELS");
+  gate(Object.keys(CS_FIT_ROLE_LABELS).join(",") === "FPS突破手,FPS游走手,FPS輔助,FPS狙擊手,FPS指揮", "CS_FIT_LABELS");
 
   const sample = withDerivedStats(INITIAL_PLAYERS[0]);
   const positions = bestPositions(sample);
   const suitability = csSuitabilityOf(positions);
   gate(suitability.length > 0, "CS_SUITABILITY_EMPTY");
-  gate(suitability.every((item) => ["Entry", "Rifler", "AWP", "IGL"].includes(item.label)), "CS_SUITABILITY_CANONICAL");
-  gate(!suitability.some((item) => item.label === "Lurker"), "NO_FABRICATED_LURKER");
+  gate(suitability.length===5&&suitability.every((item) => ["Entry", "Lurker", "Support", "AWP", "IGL"].includes(item.label)), "CS_SUITABILITY_CANONICAL");
+  gate(POSITION_PROFILE.FPS游走手.key.join(',')==='mapAware,decision,positioning,adaptability,clutch'&&suitability.find(p=>p.label==='Lurker').fit===posFit(sample,'FPS游走手'), "NO_FABRICATED_LURKER");
+  gate(rosterSource.includes('cs-rifler-aptitude')&&detailSource.includes('cs-rifler-aptitude'),"RIFLER_WEAPON_APTITUDE_SEPARATE");
 
   gate(rosterSource.includes('useProfileStore((s) => s.players) ?? []'), "ROSTER_SHARED_PROFILE_SOURCE");
   gate(rosterSource.includes("戰力 {isCsView ? fp : mp}"), "CURRENT_GAME_POWER");

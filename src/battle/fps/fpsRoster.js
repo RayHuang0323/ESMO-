@@ -26,13 +26,16 @@ export const toShortStats = (stats = {}) => { const o = {}; for (const k in STAT
 /** MOBA 路線 → FPS 定位（Legacy MOBA2FPS 逐字；與引擎內建德國海豹對位一致） */
 export const MOBA2FPS = CS_ROLE_BY_MOBA_ROLE;
 export const FPS_ROLE_ZH = { entry: "突破手", rifler: "步槍手", awp: "狙擊手", lurker: "游走手", igl: "指揮", support: "輔助" };
+export const FPS_TACTICAL_ROLES=Object.freeze(['entry','lurker','support','awp','igl']);
+// Compatibility at the new-match boundary only; saved Replay/Result keep raw roles.
+export const fpsTacticalRole=role=>role==='rifler'?'support':FPS_TACTICAL_ROLES.includes(role)?role:'support';
 
 const FPS_ROLE_ALIAS = Object.freeze({
   entry: "entry", rifler: "rifler", awp: "awp", lurker: "lurker", igl: "igl", support: "support",
   "突破手": "entry", "步槍手": "rifler", "狙擊手": "awp", "游走手": "lurker", "指揮": "igl", "輔助": "support",
 });
 const FPS_POSITION_ROLE = Object.freeze({
-  "FPS突破手": "entry", "FPS步槍手": "rifler", "FPS狙擊手": "awp", "FPS指揮": "igl", "FPS輔助": "support",
+  "FPS突破手": "entry", "FPS步槍手": "rifler", "FPS狙擊手": "awp", "FPS指揮": "igl", "FPS輔助": "support", "FPS游走手":"lurker",
 });
 
 /** Normalize an explicit player-level CS role; lineup seats never participate. */
@@ -45,21 +48,25 @@ export function normalizeFpsRole(value) {
 /** Return the player's own FPS role, with player-model specialty as the legacy fallback. */
 export function fpsRoleOf(player) {
   const explicit = normalizeFpsRole(player?.csRole ?? player?.fpsRoleKey ?? player?.fpsRole);
-  if (explicit) return explicit;
-  const inferred = FPS_POSITION_ROLE[bestPositions(player)?.fps?.pos];
-  return inferred ?? "rifler";
+  if (explicit) return fpsTacticalRole(explicit);
+  const best=bestPositions(player)?.fpsAll?.find(p=>p.pos!=='FPS步槍手');
+  return fpsTacticalRole(FPS_POSITION_ROLE[best?.pos]);
 }
 
 /** Presentation-only specialty and optional explicitly assigned match role. */
 export function fpsRolePresentation(player) {
-  const best = bestPositions(player)?.fps;
+  const fits = bestPositions(player)?.fpsAll?.filter(p=>p.pos!=='FPS步槍手') || [];
+  const best = fits[0], secondary = fits[1];
   const bestRole = FPS_POSITION_ROLE[best?.pos] ?? "rifler";
-  const assignedRole = normalizeFpsRole(player?.csRole ?? player?.fpsRoleKey ?? player?.fpsRole);
+  const explicitRole=normalizeFpsRole(player?.csRole ?? player?.fpsRoleKey ?? player?.fpsRole);
+  const assignedRole=explicitRole?fpsTacticalRole(explicitRole):null;
   const taskRole = assignedRole && assignedRole !== bestRole ? assignedRole : null;
   return {
     bestRole,
     bestLabel: FPS_ROLE_ZH[bestRole],
     bestFit: best?.fit ?? 0,
+    secondaryLabel: FPS_ROLE_ZH[FPS_POSITION_ROLE[secondary?.pos]] ?? null,
+    secondaryFit: secondary?.fit ?? null,
     taskRole,
     taskLabel: taskRole ? FPS_ROLE_ZH[taskRole] : null,
   };
@@ -104,6 +111,7 @@ export function toFpsRoster(players = [], csLineup = null) {
     const tired = Number.isFinite(Number(p.energy)) && Number(p.energy) < FATIGUE.freshAbove;
     return {
       id: "t" + (i + 1), name: p.name, side: "t", role, fpsRole: FPS_ROLE_ZH[role],
+      ...((normalizeFpsRole(p.csRole??p.fpsRoleKey??p.fpsRole)==='rifler'||bestPositions(p)?.fps?.pos==='FPS步槍手')?{weaponPreference:'rifler'}:{}),
       bestFpsRole: roleView.bestRole, taskFpsRole: roleView.taskRole,
       moba: ovr, fps: ovr, sta: tired ? FATIGUE.freshAbove : (p.energy ?? 82), ...(tired ? { energy: Number(p.energy) } : {}),
       personality: p.personality || "steady",

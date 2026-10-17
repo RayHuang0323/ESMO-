@@ -1,0 +1,40 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import {resolveFpsCoplanarSurfaces} from '../src/battle/fps/presentation/fpsCoplanarSurfaceOwnership.js';
+import {chooseFpsBombRecoverer,fpsObjectiveTimePressure,findFpsThreatCover,hasFpsDirectionalCover} from '../src/battle/fps/fpsObjectiveDiscipline.js';
+import {resolveFpsWeaponStance} from '../src/battle/fps/fpsWeaponHandling.js';
+import {fpsAttackStage} from '../src/battle/fps/fpsBombObjectivePlanning.js';
+import {deriveFpsActionPose} from '../src/battle/fps/presentation/fpsActionPose.js';
+import {fpsDeathClockPlayer} from '../src/battle/fps/presentation/fpsDeathClock.js';
+import {createFpsMajorSegmentCache} from '../src/battle/fps/fpsMajorNavigationCache.js';
+import {loadFpsMajorTestApi} from './lib/fpsMajorTestApi.mjs';
+if(process.env.ESMO_VERIFY_FLAT!=='1')throw Error('Use tools/verify.mjs');
+const checks=[],api=await loadFpsMajorTestApi(fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8'));
+const ck=(label,fn)=>{try{fn();checks.push({label,ok:true});console.log('PASS '+label);}catch(e){checks.push({label,ok:false,error:e.message});console.log('FAIL '+label+' '+e.message);}};
+const actor=(id,x=10,y=10)=>({id,side:'t',pos:{x,y},prevPos:{x,y},hp:100,dead:false,blindSec:0,route:[],routeIdx:0,state:'HOLD'}),route=(a,b)=>[a,b];
+ck('C4 chooses one reachable alive T with shortest real route',()=>{const p=[actor('dead'),actor('near',12),actor('far',30),{...actor('ct',11),side:'ct'}];p[0].dead=true;assert.equal(chooseFpsBombRecoverer({players:p,droppedBomb:{pos:{x:14,y:10}},findRoute:route}).playerId,'near');});
+ck('C4 reassigns after owner death and rejects unreachable path',()=>{const p=[actor('a'),actor('b',20)];p[0].dead=true;assert.equal(chooseFpsBombRecoverer({players:p,currentId:'a',droppedBomb:{pos:{x:22,y:10}},findRoute:route}).playerId,'b');assert.equal(chooseFpsBombRecoverer({players:p,droppedBomb:{pos:{x:22,y:10}},findRoute:()=>null}),null);});
+ck('C4 ownership persists instead of alternating nearby teammates',()=>assert.equal(chooseFpsBombRecoverer({players:[actor('a'),actor('b',20)],currentId:'b',droppedBomb:{pos:{x:12,y:10}},findRoute:route}).playerId,'b'));
+ck('round deadline accounts for remaining route and plant reserve',()=>{const p=actor('c');p.hasBomb=true;p.route=[p.pos,{x:10,y:75},{x:80,y:75}];assert.equal(fpsObjectiveTimePressure({player:p,site:{x:80,y:80},roundSec:60}),true);assert.equal(fpsObjectiveTimePressure({player:actor('n',78,78),site:{x:80,y:80},roundSec:20}),false);});
+ck('pick mode commits while there is still time to travel and plant',()=>{const p=actor('c');p.hasBomb=true;p.route=[p.pos,{x:10,y:75},{x:80,y:75}];const s=fpsAttackStage({player:p,players:[p,{...actor('ct'),side:'ct'}],mode:'pick',roundSec:60,planted:false,sites:{a:{x:80,y:80}},target:'a'});assert.equal(s.stage,'entry');assert.equal(s.reason,'round-time-pressure');});
+const walls=[{x:15,y:5,w:2,h:15}],threat={x:25,y:10},p=actor('cover',10,10),blocked=api.blocked,navLineBlocked=(a,b,w)=>api.lineBlocked(a,b,w);
+ck('directional cover requires real obstruction, not just crouch state',()=>{assert.equal(hasFpsDirectionalCover({player:actor('p',13,10),threat,walls,lineBlocked:api.lineBlocked}),true);assert.equal(hasFpsDirectionalCover({player:actor('p',13,25),threat,walls,lineBlocked:api.lineBlocked}),false);});
+ck('exposed stationary actor does not crouch; protected actor can crouch',()=>{const a=actor('a');assert.equal(resolveFpsWeaponStance(a),'standing');a.coverAssessment={protected:true};assert.equal(resolveFpsWeaponStance(a),'crouched');a.pos={x:11,y:10};assert.equal(resolveFpsWeaponStance(a),'standing');});
+ck('cover search produces legal reachable occluding point',()=>{const cover=findFpsThreatCover({player:p,threat,walls,blocked,navLineBlocked,lineBlocked:api.lineBlocked});assert.ok(cover);assert.ok(!blocked(cover.point,walls,1.35));assert.ok(api.lineBlocked(cover.point,threat,walls));assert.ok(!navLineBlocked(p.pos,cover.point,walls));});
+ck('planting reads real state/progress and owns held C4',()=>{const pose=deriveFpsActionPose({player:{...p,hasBomb:true,state:'安裝中',plantProgressSec:1.5},roundSec:30,frameRound:0});assert.equal(pose.kind,'plant');assert.equal(pose.object,'C4');assert.equal(pose.hideFirearm,true);});
+ck('death follows actual subframe kill time without changing saved authority',()=>{const alive=actor('v'),dead={...alive,dead:true,hp:0,state:'DEAD'},events=[{type:'kill',victimId:'v',roundSec:25.26}],before=JSON.stringify([alive,dead,events]);assert.equal(fpsDeathClockPlayer({player:dead,previousPlayer:alive,events,roundSec:25.259}).player.dead,false);assert.equal(fpsDeathClockPlayer({player:dead,previousPlayer:alive,events,roundSec:25.26}).player.dead,true);assert.equal(fpsDeathClockPlayer({player:dead,previousPlayer:alive,events,roundSec:25.1,sameRound:false}).player.dead,true);assert.equal(fpsDeathClockPlayer({player:dead,previousPlayer:alive,events:[],roundSec:25.1}).player.dead,true);assert.equal(JSON.stringify([alive,dead,events]),before);});
+ck('Major route memo never aliases nearby distinct continuous targets',()=>{const walls=[],memo=new Map(),cache=createFpsMajorSegmentCache(walls,api.PLAYER_R),from={x:10,y:10};for(const x of [20.001,20.004]){const path=api.buildNavigableRoute([from,{x,y:10}],walls,api.PLAYER_R,memo,cache);assert.ok(Math.abs(path.at(-1).x-x)<1e-9);}});
+const geo=(x,width,color)=>{const g=new THREE.PlaneGeometry(width,2);g.translate(x,1,0);g.setAttribute('color',new THREE.Float32BufferAttribute(Array.from({length:g.attributes.position.count},()=>color).flat(),3));return g;};
+ck('coplanar ownership preserves union, nearest ray and finite UV/normal/color',()=>{
+ const group=new THREE.Group(),mat=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide});const a=new THREE.Mesh(geo(0,2,[1,0,0]),mat),b=new THREE.Mesh(geo(1,2,[0,1,0]),mat);group.add(a,b);const samples=[];
+ for(let x=-.9;x<1.95;x+=.13)for(let y=.1;y<1.95;y+=.19){const ray=new THREE.Raycaster(new THREE.Vector3(x,y,3),new THREE.Vector3(0,0,-1));group.updateMatrixWorld(true);samples.push({ray,before:ray.intersectObjects(group.children).length>0});}
+ const result=resolveFpsCoplanarSurfaces(group);assert.ok(result.stats.clippedTriangles>0);assert.equal(group.children.length,2);group.updateMatrixWorld(true);
+ for(const s of samples){const hits=s.ray.intersectObjects(group.children);assert.equal(hits.length>0,s.before);assert.ok(new Set(hits.map(h=>h.object.uuid)).size<=1,'overlap still has two mesh owners');}
+ for(const m of group.children)for(const attr of Object.values(m.geometry.attributes))assert.ok([...attr.array].every(Number.isFinite));
+ for(const {old}of result.replaced)old.dispose();group.children.forEach(m=>m.geometry.dispose());mat.dispose();
+});
+ck('ownership is deterministic and leaves separated faces unchanged',()=>{const g=new THREE.Group(),m=new THREE.MeshStandardMaterial();g.add(new THREE.Mesh(geo(0,2,[1,0,0]),m),new THREE.Mesh(geo(4,2,[0,1,0]),m));assert.equal(resolveFpsCoplanarSurfaces(g).stats.replacedMeshes,0);g.children.forEach(o=>o.geometry.dispose());m.dispose();});
+const pass=checks.filter(c=>c.ok).length,report={schema:'cs-owner4d-cpu-closure.v1',checks,pass,total:checks.length,gpu:'NOT_RUN'};
+if(process.env.ESMO_CS_OWNER4D_REPORT)fs.writeFileSync(process.env.ESMO_CS_OWNER4D_REPORT,JSON.stringify(report,null,2),{flag:'wx'});
+console.log(`CS Owner4D Closure: ${pass}/${checks.length} PASS`);process.exitCode=pass===checks.length?0:1;

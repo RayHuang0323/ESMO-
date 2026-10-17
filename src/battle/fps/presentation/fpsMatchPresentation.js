@@ -1,6 +1,9 @@
 // C5C Match Presentation adapter
 // Authoritative frame/event -> read-only HUD/audio/camera intents.
 // This module never changes gameplay state and never infers a kill from HP.
+import { resolveFpsAudioEmitter } from "./fpsAudioPlayback.js";
+import { deriveFpsAnimationState, FPS_PRESENTATION_STATES } from "./fpsAnimationState.js";
+import {fpsBombBeepCues} from './fpsBombCadence.js';
 
 const WEAPON_LABELS = Object.freeze({
   pistol: "手槍",
@@ -36,6 +39,7 @@ const EVENT_SCORE = Object.freeze({
   "round-end": 98,
   clutch: 96,
   "bomb-planted": 92,
+  "bomb-plant-start": 90,
   multikill: 84,
   kill: 62,
   "defuse-start": 78,
@@ -62,6 +66,7 @@ const eventId = (event, frame, suffix = "event") => String(
 );
 
 const distance2 = (a, b) => Math.hypot((a?.x ?? 0) - (b?.x ?? 0), (a?.y ?? 0) - (b?.y ?? 0));
+const finiteAudioPosition = value => value && Number.isFinite(value.x) && Number.isFinite(value.y);
 
 export const C5C_PRESENTATION_EVENT_CONTRACT = Object.freeze({
   version: 1,
@@ -112,6 +117,8 @@ function emptyState() {
     resumeFrameIndex: 0,
     lastDirectorAt: -Infinity,
     lastFootstepFrame: new Map(),
+    footstepDistance: new Map(),
+    footstepRound: null,
     lastThrowableIds: new Set(),
   };
 }
@@ -134,7 +141,7 @@ function roundBanner(result) {
   };
 }
 
-export function createFpsMatchPresentation() {
+export function createFpsMatchPresentation({ major = false } = {}) {
   let state = emptyState();
 
   const reset = ({ resumeFrameIndex = 0 } = {}) => {
@@ -145,7 +152,7 @@ export function createFpsMatchPresentation() {
 
   const addAudio = (type, event, frame) => {
     const id = `${type}-${eventId(event, frame, type)}`;
-    state.audio.push({ type, id, eventId: id, distance: Number(event?.distance ?? 20), position: clone(event?.pos ?? event?.position ?? null) });
+    state.audio.push({ type, id, eventId: id, distance: Number(event?.distance ?? 20), position: major ? resolveFpsAudioEmitter(event, frame) : clone(event?.pos ?? event?.position ?? null), ...(major && Number.isFinite(event?.delaySec) ? { delaySec: event.delaySec } : {}),...(event?.variant?{variant:event.variant}:{}) });
     state.diagnostics.audioRequests += 1;
   };
 
@@ -208,6 +215,11 @@ export function createFpsMatchPresentation() {
       state.diagnostics.clutchEvents += 1;
       state.banner = { kind: "moment", title: event.label ?? "關鍵殘局", detail: event.player ?? "", at, until: at + 2.8 };
       addAudio("clutch", event, frame);
+    } else if (type === "bomb-plant-start") {
+      state.banner = {kind:"objective",title:"正在安裝 C4",detail:event.playerName??"掩護安包",at,until:at+3};
+      state.diagnostics.objectiveEvents += 1;
+      addAudio("bomb-plant-start",event,frame);
+      maybeDirect(event,frame);
     } else if (type === "bomb-planted") {
       state.banner = { kind: "objective", title: "炸彈已安放", detail: event.site ? `炸彈點 ${String(event.site).toUpperCase()}` : "進入倒數", at, until: at + 2.4 };
       state.diagnostics.objectiveEvents += 1;
@@ -243,7 +255,7 @@ export function createFpsMatchPresentation() {
     addAudio("round-start", startEvent, frame);
   };
 
-  const update = ({ frame, previousFrame = null, frameIndex = 0 }) => {
+  const update = ({ frame, previousFrame = null, nextFrame = null, frameIndex = 0 }) => {
     if (!frame) return getView();
     state.diagnostics.updateCalls += 1;
     if ((frame.events?.length ?? 0) > 0) state.diagnostics.framesWithEvents += 1;
@@ -258,6 +270,7 @@ export function createFpsMatchPresentation() {
       state.diagnostics.duplicateEvents += (frame.events?.length ?? 0) > 0 ? 1 : 0;
       state.diagnostics.sameFramePublishes += 1;
     } else if (rewound) {
+      if (major) state.footstepDistance.clear();
       // A manual seek can move the cursor backwards. Keep the dedup set and
       // current diagnostics so a seek cannot erase proof of already consumed
       // events; the explicit reset on a new simulation handles reload/map
@@ -291,14 +304,52 @@ export function createFpsMatchPresentation() {
       defuse: frame.players?.find((player) => player.objectiveState === "DEFUSE")?.name ?? null,
     };
     state.score = { t: Number(frame.tScore ?? 0), ct: Number(frame.ctScore ?? 0) };
+    const forwardAudio = !major || (!firstFrame && !sameFrame && !rewound);
     const previousIds = new Set((previousFrame?.throwables ?? []).map((throwable) => throwable.id));
+    if (forwardAudio) {
+    if(major&&!frame.buyP&&previousFrame?.rnd===frame.rnd)for(const player of frame.players??[]){
+      const previous=previousFrame.players?.find(p=>p.id===player.id);
+      if(!previous||player.dead||previous.dead||previous.gun!==player.gun)continue;
+      const cue=(type,stamp)=>addAudio(type,{id:`${frame.rnd}-${player.id}-${player.gun}-${stamp}`,playerId:player.id,pos:player.pos,delaySec:Math.max(0,(Number(stamp)-(Number(frame.roundSec)||0)*1000)/1000)},frame);
+      if(player.reloading&&player.reloadStartedAtMs!==previous.reloadStartedAtMs)cue('weapon-reload-start',player.reloadStartedAtMs);
+      if(previous.reloading&&!player.reloading&&player.ammo>previous.ammo)cue('weapon-reload-complete',previous.reloadEndsAtMs);
+      if(previous.ammo>0&&player.ammo===0&&player.reserveAmmo===0)cue('weapon-empty',Number.isFinite(player.handlingAtMs)?player.handlingAtMs:frame.roundSec*1000);
+    }
     (frame.throwables ?? []).forEach((throwable) => {
       if (!previousIds.has(throwable.id)) addAudio("utility-throw", throwable, frame);
       if (throwable.flying === false && previousFrame?.throwables?.some((item) => item.id === throwable.id && item.flying)) addAudio("utility-bounce", throwable, frame);
       if ((throwable.boom ?? 0) >= 3 && (previousFrame?.throwables?.find((item) => item.id === throwable.id)?.boom ?? 0) < 3) addAudio(`${throwable.type ?? "he"}-deploy`, throwable, frame);
     });
     const moving = (player) => player && !player.dead && (player.state === "ROTATE" || player.state === "EXECUTE") && distance2(player.pos, player.prevPos) >= 0.55;
-    if (!firstFrame && frameIndex % 2 === 0) {
+    if (major && !frame.buyP && previousFrame?.rnd === frame.rnd) {
+      if (state.footstepRound !== frame.rnd) {
+        state.footstepDistance.clear();state.footstepRound = frame.rnd;
+      }
+      const previousPlayers = new Map((previousFrame.players ?? []).map(player => [player.id, player]));
+      const outgoing = nextFrame?.rnd === frame.rnd && Number(nextFrame.roundSec) > Number(frame.roundSec);
+      const nextPlayers = new Map((nextFrame?.players ?? []).map(player => [player.id, player]));
+      for (const player of frame.players ?? []) {
+        const previous = previousPlayers.get(player.id);
+        const target = outgoing ? nextPlayers.get(player.id) : player;
+        const origin = outgoing ? player : previous;
+        const frameSec = outgoing ? nextFrame.roundSec-frame.roundSec : frame.roundSec-previousFrame.roundSec;
+        if (player.dead || origin?.dead || target?.dead || !finiteAudioPosition(origin?.pos) || !finiteAudioPosition(target?.pos) || !(frameSec>0)) continue;
+        const distance = distance2(origin.pos, target.pos), velocity = {x:(target.pos.x-origin.pos.x)/frameSec,y:(target.pos.y-origin.pos.y)/frameSec};
+        const animation = deriveFpsAnimationState({player,presentationVelocity:velocity});
+        if (!animation.moving) continue;
+        // 真 GLB 左右 foot excursion 平均：一個足部落點的位移，不是逐格播一次。
+        const stepLength = animation.crouched ? .7785020884346814 : animation.locomotion===FPS_PRESENTATION_STATES.RUN ? 1.098506718371743 : .6368358368924394;
+        const previousStep = state.footstepDistance.get(player.id);
+        const phase = previousStep ? previousStep.fraction*stepLength : 0;
+        const firstContact = stepLength-phase;
+        const crossings = Math.floor((phase+distance)/stepLength);
+        state.footstepDistance.set(player.id,{fraction:((phase+distance)%stepLength)/stepLength});
+        for(let step=0;step<crossings;step++){
+          const fraction=Math.max(0,Math.min(1,(firstContact+step*stepLength)/distance));
+          addAudio("footstep", { id: `${frame.rnd}-${frameIndex}-${player.id}-${step}`, pos:{x:origin.pos.x+(target.pos.x-origin.pos.x)*fraction,y:origin.pos.y+(target.pos.y-origin.pos.y)*fraction}, playerId:player.id, delaySec:fraction*frameSec }, frame);
+        }
+      }
+    } else if (!major && !firstFrame && frameIndex % 2 === 0) {
       (frame.players ?? []).forEach((player) => {
         if (!moving(player)) return;
         const last = state.lastFootstepFrame.get(player.id) ?? -Infinity;
@@ -307,8 +358,10 @@ export function createFpsMatchPresentation() {
         addAudio("footstep", { id: player.id, distance: 20, playerId: player.id }, frame);
       });
     }
-    if (frame.planted && previousFrame?.planted && Number(frame.c4t) !== Number(previousFrame.c4t) && Number(frame.c4t) > 0) {
-      addAudio("bomb-tick", { id: `tick-${frame.rnd}-${frame.c4t}`, distance: 20 }, frame);
+    if(major&&frame.planted){for(const beep of fpsBombBeepCues(frame))addAudio('bomb-tick',beep,frame);}
+    if (!major && frame.planted && previousFrame?.planted && Number(frame.c4t) !== Number(previousFrame.c4t) && Number(frame.c4t) > 0) {
+      addAudio("bomb-tick", { id: `tick-${frame.rnd}-${frame.c4t}`, distance: 20, ...(major ? { pos: frame.c4pos } : {}) }, frame);
+    }
     }
     state.audio = state.audio.slice(-24);
     state.feed = state.feed.filter((entry) => entry.expiresAt > time);

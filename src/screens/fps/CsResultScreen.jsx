@@ -12,10 +12,13 @@
 //    · 「再戰一場」屬 rematch 領域（需重置 seed/流程）→ 本 Sprint 不做，只回 Dashboard。
 // ============================================================================
 import React from "react";
+import { csMapByKey } from "../../battle/fps/csPrepData.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { makeTransactionId } from "../../platform/contracts/matchProgressTransaction.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
+import CsProfessionalReport from './CsProfessionalReport.jsx';
+import "../../battle/fps/fpsBattleHud.css";
 
 const K = { t: "#fb923c", tL: "#fed7aa", ct: "#38bdf8", ctL: "#a7e0ff" };
 const ratingCol = (r) => (r >= 1.2 ? GC.gold : r >= 1.0 ? GC.green : r >= 0.85 ? K.tL : GC.gray);
@@ -42,14 +45,16 @@ export default function CsResultScreen({ result, onDone }) {
   const mvp = r.mvp;
   const rounds = r.summaryEvents ?? [];
 
+  if(r.sceneVersion==='major.v1')return <CsProfessionalReport result={r} receipt={receipt} recorded={recorded} onDone={onDone}/>;
+
 
   return (
-    <div style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT }}>
+    <div className={r.sceneVersion === "major.v1" ? "fps-major-result" : undefined} style={{ height: "100%", overflow: "auto", background: GC.bg, fontFamily: FONT }}>
       <div style={{ maxWidth: 460, margin: "0 auto", padding: "12px 12px 28px", display: "flex", flexDirection: "column", gap: 10 }}>
 
         {/* 比分頭欄（Legacy） */}
         <div style={{ background: `linear-gradient(135deg,${GC.card2},${GC.card})`, borderRadius: 14, padding: "16px", border: `1px solid ${win ? K.t + "55" : GC.line}` }}>
-          <div style={{ textAlign: "center", color: "#5a606e", fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", marginBottom: 10 }}>{r.mapName ?? r.mapId} · {win ? "勝利" : "落敗"} · CS 訓練賽</div>
+          <div style={{ textAlign: "center", color: "#5a606e", fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", marginBottom: 10 }}>{csMapByKey(r.mapId)?.name ?? r.mapName ?? r.mapId} · {win ? "勝利" : "落敗"} · CS 訓練賽</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ textAlign: "center", flex: 1 }}>
               <div style={{ color: K.tL, fontSize: 13, fontWeight: 800 }}>{r.teamName ?? "德國海豹"}</div>
@@ -75,7 +80,7 @@ export default function CsResultScreen({ result, onDone }) {
         {/* S25：賽後結算收據（= applyMatchProgress 實際入帳值，MOBA/CS 共用元件，UI 不重算） */}
         <RewardReceiptPanel receipt={receipt} accent={K.t} />
         <div style={{ textAlign: "center", color: "#5a606e", fontSize: 8 }}>
-          {recorded ? "✅ 已寫入 CS 對戰紀錄（csHistory）· 已發收件匣通知" : "⏳ 寫入中…"}
+          {recorded ? "✅ 已儲存 CS 對戰紀錄 · 已發收件匣通知" : "⏳ 寫入中…"}
         </div>
 
         {/* 本隊 MVP（Legacy） */}
@@ -129,6 +134,15 @@ export default function CsResultScreen({ result, onDone }) {
             </div>
           </div>
         )}
+
+        {r.sceneVersion === "major.v1" && <details className="fps-major-round-details" style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: 12, color: GC.gray }}>
+          <summary style={{ color: GC.gold }}>道具與逐局表現</summary>
+          {sorted.map(p => <div className="fps-major-round-player" key={p.playerId ?? p.playerName}><span>{p.playerName}</span><span>道具傷害 {p.utilityDamage ?? "—"}</span></div>)}
+          {(r.roundDetails ?? []).map(rd => <details key={rd.round}>
+            <summary>第 {rd.round} 回合 · 十人表現</summary>
+            {rd.players.map(p => <div className="fps-major-round-player" key={p.id}><span>{p.name} · {p.k}/{p.d}/{p.a}{p.traded ? " · 已被補槍" : ""}{p.clutch ? " · 殘局獲勝" : ""}</span><span>傷害 {p.dmg} · ADR {p.adr}</span></div>)}
+          </details>)}
+        </details>}
 
         <button onClick={onDone} style={{ width: "100%", marginTop: 4, padding: "12px", borderRadius: 10, border: "none", background: `linear-gradient(135deg,${K.t},#f97316)`, color: "#1a1205", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>返回 Dashboard</button>
       </div>

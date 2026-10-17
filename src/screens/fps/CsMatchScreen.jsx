@@ -15,6 +15,8 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { installFpsSimWorker, lastFpsSimEstimateMs } from "../../battle/fps/fpsSimClient.js";
 import EsportsFPS3D from "../../battle/fps/EsportsFPS3D.jsx";
+// 樣式只由畫面載入；canonical 模組也被 Worker import，不能依賴 DOM。
+import "../../battle/fps/fpsBattleHud.css";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { toFpsRoster, CS_MAP_KEYS } from "../../battle/fps/fpsRoster.js";
 import { csMapByKey } from "../../battle/fps/csPrepData.js";
@@ -51,10 +53,12 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   const launch = useProfileStore((s) => s.matchmaking?.launch ?? null);
   const session = useProfileStore((s) => s.matchmaking?.session ?? null);
   const activeSnapshot = useProfileStore((s) => s.matchmaking?.session?.activeMatch?.simulation?.snapshot ?? null);
+  // 判定一次，避免第一次保存 snapshot 之後把新比賽切回 legacy。
+  const [sceneVersion] = useState(() => config?.sceneVersion ?? activeSnapshot?.sceneVersion ?? (activeSnapshot ? "legacy" : "major.v1"));
   // seed / 地圖：賽前流程有給就用（決定性重播鍵）；否則沿 Sprint22 掛載時決定一次
   const [seed] = useState(() => launch?.seed ?? config?.seed ?? ((Date.now() & 0xffff) | 1));
   const mapKey = config?.mapKey ?? CS_MAP_KEYS[seed % CS_MAP_KEYS.length];
-  const mapName = config?.mapName ?? csMapByKey(mapKey)?.name ?? mapKey;
+  const mapName = csMapByKey(mapKey)?.name ?? config?.mapName ?? mapKey;
   const matchLabel = session?.origin?.kind === "fixture"
     ? "CS 正式賽事"
     : session?.origin?.kind === "practice" ? "CS 快速練習" : "CS 一般對戰";
@@ -73,6 +77,13 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   const csLineup = useProfileStore((s) => s.csLineup);
   const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);
   const [result, setResult] = useState(null); // 引擎原生 MatchResult
+  const [replayMode, setReplayMode] = useState(false);
+  const [replayMetadata, setReplayMetadata] = useState(null);
+  const replayModeRef = useRef(false);
+  const handleReplayModeChange = useCallback((mode, metadata = null) => {
+    replayModeRef.current = Boolean(mode);
+    setReplayMode(Boolean(mode)); setReplayMetadata(metadata);
+  }, []);
   const progressRef = useRef({ frameIndex: Number(activeSnapshot?.frameIndex) || 0, totalFrames: 0, simulationTimeSec: Number(activeSnapshot?.simulationTimeSec) || 0, snapshot: activeSnapshot });
   // C6C：引擎初次 onProgress 會先回報 frame 0，再套用 persisted resume frame。
   // 只忽略這一筆 mount 初值，避免覆寫 MatchSession 權威游標；之後 seek 回 0 仍有效。
@@ -80,7 +91,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   const ignoredInitialResumeFrame = useRef(false);
   const lastProgressSave = useRef(0);
   const saveProgress = useCallback((progress, { paused = false, force = false } = {}) => {
-    if (config?.c5cReview) return;
+    if (config?.c5cReview || replayModeRef.current) return;
     if (progress) {
       const frameIndex = Number(progress.frameIndex);
       if (initialResumeFrame.current > 0 && !ignoredInitialResumeFrame.current && frameIndex === 0) {
@@ -99,11 +110,11 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
       snapshot: p.snapshot,
       simulationTimeSec: p.simulationTimeSec,
       phase: "battle",
-      config: { csConfig: { ...config, seed } },
+      config: { csConfig: { ...config, seed, sceneVersion } },
       status: paused ? "paused" : "active",
       now,
     });
-  }, [config, seed]);
+  }, [config, seed, sceneVersion]);
   const handleProgress = useCallback((progress) => saveProgress(progress), [saveProgress]);
   const handleBack = useCallback(() => {
     saveProgress(progressRef.current, { paused: true, force: true });
@@ -122,12 +133,12 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   return (
     <div style={{ position: "relative", height: "100%", overflow: "auto", background: "#070a10", fontFamily: FONT }}>
       {/* Match Header：返回 + 對戰卡 + 地圖/戰術（不遮引擎自己的比分列） */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", flexWrap: "wrap" }}>
-        <button onClick={handleBack} data-testid="leave-active-match" style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>← 暫停並離開</button>
-        <span style={{ color: "#e8ebf0", fontSize: 13, fontWeight: 800 }}>{team?.name ?? "德國海豹"} <span style={{ color: "#8a8f9c", fontWeight: 600 }}>vs</span> {session?.opponent?.name ?? "對手"}</span>
-        <span style={{ background: "rgba(251,146,60,0.14)", border: "1px solid rgba(251,146,60,0.4)", color: "#fdba74", fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>🗺 {mapName}</span>
-        {config?.tacticName && <span style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GC.line}`, color: "#c8cdd6", fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>戰術「{config.tacticName}」</span>}
-        <span style={{ marginLeft: "auto", color: "#8a8f9c", fontSize: 10 }}>{matchLabel}</span>
+      <div className="fps-cs-match-header" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", flexWrap: "wrap", background: GC.bg }}>
+        <button onClick={handleBack} data-testid="leave-active-match" style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 12px", color: GC.blueL, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{replayMode ? "← 離開重播" : "← 暫停並離開"}</button>
+        <span style={{ color: GC.blueL, fontSize: 13, fontWeight: 800, minWidth: 0, overflowWrap: "anywhere" }}>{replayMetadata?.teamName ?? team?.name ?? "德國海豹"} <span style={{ color: GC.gray, fontWeight: 600 }}>vs</span> {replayMetadata?.opponentName ?? session?.opponent?.name ?? "對手"}</span>
+        <span style={{ background: GC.card, border: `1px solid ${GC.line}`, color: GC.gold, fontSize: 10, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>🗺 {replayMetadata ? csMapByKey(replayMetadata.mapKey)?.name ?? replayMetadata.mapKey : mapName}</span>
+        {!replayMode && config?.tacticName && <span style={{ background: GC.card, border: `1px solid ${GC.line}`, color: GC.blueL, fontSize: 10, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>戰術「{config.tacticName}」</span>}
+        <span style={{ marginLeft: "auto", color: GC.gray, fontSize: 10 }}>{replayMode ? "保存重播" : matchLabel}</span>
       </div>
       {!roster && (
         <div style={{ margin: "0 10px 8px", padding: "6px 10px", borderRadius: 8, background: "rgba(251,146,60,0.12)", border: "1px solid rgba(251,146,60,0.4)", color: "#fed7aa", fontSize: 11 }}>
@@ -136,16 +147,16 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
       )}
 
       {/* C6C outer progress：只讀 MatchSession snapshot，不進入 C5C engine HUD。 */}
-      <CsLongMatchProgress session={session} snapshot={activeSnapshot} config={{ ...config, mapKey, mapName }} />
+      {!replayMode && <CsLongMatchProgress session={session} snapshot={activeSnapshot} config={{ ...config, mapKey, mapName }} />}
 
       {/* hotfix/cs-resume-worker：模擬在 Web Worker 算的期間，顯示回到比賽的進度（主執行緒不再凍結） */}
       <Suspense fallback={<CsSimulationProgress resuming={Number(activeSnapshot?.frameIndex) > 0} mapName={mapName} />}>
-        <EsportsFPS3D embedded asyncSimulation={workerReady} roster={roster ?? undefined} mapKey={mapKey} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
-          resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} />
+        <EsportsFPS3D embedded asyncSimulation={workerReady} roster={roster ?? undefined} mapKey={mapKey} sceneVersion={sceneVersion} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
+          resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} onReplayModeChange={handleReplayModeChange} />
       </Suspense>
 
       {/* 終局：引擎真實 MatchResult → CS 契約 → 賽後戰報（入史在 CsResultScreen） */}
-      {csResult && (
+      {!replayMode && csResult && (
         <div style={{ position: "sticky", bottom: 0, zIndex: 50, background: "rgba(7,10,16,0.96)", backdropFilter: "blur(8px)", borderTop: `1px solid ${GC.line}`, padding: "10px 14px" }}>
           <div style={{ maxWidth: 430, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -154,9 +165,9 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
               <span style={{ marginLeft: "auto", color: "#5a606e", fontSize: 9 }}>{mapName}{config?.tacticName ? ` · ${config.tacticName}` : ""}</span>
             </div>
             {onFinish ? (
-              <button onClick={() => onFinish(csResult)} style={{ width: "100%", background: "linear-gradient(135deg,#fb923c,#f97316)", border: "1px solid #fdba74", borderRadius: 10, padding: "9px", color: "#1a1205", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>📊 查看賽後戰報 · 領取獎勵</button>
+              <button onClick={() => onFinish(csResult)} style={{ width: "100%", minHeight: sceneVersion === "major.v1" ? 44 : undefined, background: "linear-gradient(135deg,#fb923c,#f97316)", border: "1px solid #fdba74", borderRadius: 10, padding: "9px", color: "#1a1205", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>📊 查看賽後戰報 · 領取獎勵</button>
             ) : (
-              <button onClick={onBack} style={{ width: "100%", background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>回到 Dashboard</button>
+              <button onClick={onBack} style={{ width: "100%", minHeight: sceneVersion === "major.v1" ? 44 : undefined, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>回到 Dashboard</button>
             )}
           </div>
         </div>

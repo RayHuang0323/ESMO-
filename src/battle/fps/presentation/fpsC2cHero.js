@@ -1,15 +1,22 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { createFpsTailoredClothing, TAILORED_PROXY } from "./fpsTailoredClothing.js";
+import { installFpsMajorWeaponAsset, borrowFpsMajorWeaponMaterials, FPS_MAJOR_WEAPON_SOCKETS } from "./fpsMajorWeaponAssets.js";
+import { applyMajorWovenTextiles } from './fpsTextileMaterials.js';
 
 export const C2C_HERO_ART_MANIFEST = Object.freeze({
   id: "esmo-c2c-vector-9-hero",
   displayName: "Vector-9 / Signalbreaker",
   artDirection: "ESMO original stylized-realistic esports tactical operator",
-  source: "Original ESMO procedural geometry and materials",
-  license: "Original ESMO code-generated presentation kit; no external mesh or texture dependency",
+  source: "Original ESMO operator kit; major CC0 weapons and anatomy ledger in public/assets/fps/major-weapons-v1/SOURCES.md",
+  license: "Original ESMO presentation kit; imported major weapon and anatomical hand meshes CC0",
   skeleton: "esmo-fps-character-c2a / 65 bones",
   maxAddedTriangles: 5200,
   maxMaterials: 8,
+  maxMajorAddedTriangles: 8500,
+  maxMajorMaterials: 10,
+  maxMajorVisibleTriangles: 22000,
   weaponModes: Object.freeze(["pistol", "smg", "rifle", "sniper", "shotgun"]),
   palette: Object.freeze({
     graphite: 0x63717a,
@@ -24,6 +31,69 @@ export const C2C_HERO_ART_MANIFEST = Object.freeze({
 });
 
 const OWNED = "esmoC2cOwned";
+let weaponEnvironment = null, weaponEnvironmentUsers = 0;
+function borrowWeaponEnvironment() {
+  if(!weaponEnvironment) {
+    const width=128,height=64,pixels=new Uint8Array(width*height*4);
+    for(let y=0;y<height;y++)for(let x=0;x<width;x++) {
+      const horizon=Math.exp(-Math.pow((y/height-.43)/.2,2));
+      const key=Math.exp(-Math.pow((x/width-.2)/.085,2))*Math.exp(-Math.pow((y/height-.3)/.19,2));
+      const fill=Math.exp(-Math.pow((x/width-.7)/.18,2))*Math.exp(-Math.pow((y/height-.4)/.3,2));
+      const value=Math.round(35+55*horizon+150*key+55*fill),at=(y*width+x)*4;
+      pixels[at]=value;pixels[at+1]=Math.min(255,value+5);pixels[at+2]=Math.min(255,value+11);pixels[at+3]=255;
+    }
+    weaponEnvironment=new THREE.DataTexture(pixels,width,height,THREE.RGBAFormat);
+    weaponEnvironment.mapping=THREE.EquirectangularReflectionMapping;weaponEnvironment.colorSpace=THREE.SRGBColorSpace;
+    weaponEnvironment.needsUpdate=true;weaponEnvironment.name='ESMO_Weapon_Neutral_Reflection';
+  }
+  weaponEnvironmentUsers++;return weaponEnvironment;
+}
+function releaseWeaponEnvironment(){if(--weaponEnvironmentUsers===0){weaponEnvironment.dispose();weaponEnvironment=null;}}
+
+// 原創槍械的原生軸為 +X；位置是模型中的握把中心與槍管前端，非命中資料。
+const WEAPON_SOCKET_OFFSETS = Object.freeze({
+  pistol: { grip: [-0.06, -0.18, 0], muzzle: [0.47, 0.07, 0], support: [-0.03, -0.16, -0.065] },
+  smg: { grip: [0.1, -0.12, 0], muzzle: [0.91, 0, 0], support: [0.46, -0.13, 0] },
+  rifle: { grip: [0.12, -0.1, 0], muzzle: [1.39, 0, 0], support: [0.63, -0.13, 0] },
+  sniper: { grip: [0.12, -0.1, 0], muzzle: [2.01, 0, 0], support: [0.72, -0.08, 0] },
+  shotgun: { grip: [0.16, -0.1, 0], muzzle: [1.37, 0.09, 0], support: [0.55, -0.1, 0] },
+});
+
+// 只合批同一剛性 mount 的固定配件；骨骼驅動的袖／褲／手套仍獨立更新。
+// 關鍵裝備及持槍定位保留真實 mesh，既有近鏡頭與方向驗證不改成假節點。
+const RIGID_PART_ANCHORS = /^(C2C_PlateCarrier|C2C_MagazinePouch_0|C2C_RadioUnit|C2C_HelmetShell|C2C_HeadsetL|C2C_CT_LowerFaceMask|C2C_CT_ServiceMark|C2C_T_FaceWrap|C2C_T_DiagonalSling|PistolSlide|RifleReceiver|RifleMuzzle)$/;
+const PROFILE_PART_ANCHORS = /C2C_(CT_(AssaultRailL|SupportEarBridge|MarksmanMonocular|LowHelmetBrim|UtilityCamera)|T_(BalaclavaBrow|HeavyHeadWrap|FieldCapBrim|HoodPeak|BandanaBand))$/;
+
+function batchRigidParts(parent, { mobile = false, continuousClothing = false } = {}) {
+  const buckets = new Map();
+  for (const mesh of parent.children.slice()) {
+    if (continuousClothing && TAILORED_PROXY.test(mesh.name)) continue;
+    if (!mesh.isMesh || !mesh.userData?.[OWNED] || RIGID_PART_ANCHORS.test(mesh.name) || PROFILE_PART_ANCHORS.test(mesh.name)) continue;
+    const list = buckets.get(mesh.material) || [];
+    list.push(mesh); buckets.set(mesh.material, list);
+  }
+  let removed = 0;
+  for (const [material, meshes] of buckets) {
+    if (meshes.length < 2) continue;
+    const sources = meshes.map(mesh => {
+      mesh.updateMatrix();
+      const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+      geometry.applyMatrix4(mesh.matrix);
+      return geometry;
+    });
+    const geometry = mergeGeometries(sources, false);
+    sources.forEach(g => g.dispose());
+    if (!geometry) throw new Error(`ESMO 人物固定配件合批失敗：${parent.name}`);
+    mark(geometry); geometry.computeBoundingBox(); geometry.computeBoundingSphere();
+    const batch = mark(new THREE.Mesh(geometry, material));
+    batch.name = `${parent.name}_RigidBatch_${buckets.size}_${removed}`;
+    batch.renderOrder = 1; batch.castShadow = !mobile; batch.receiveShadow = true;
+    batch.userData.parts = meshes.map(mesh => ({ name: mesh.name, matrix: mesh.matrix.toArray() }));
+    meshes.forEach(mesh => { parent.remove(mesh); mesh.geometry.dispose(); });
+    parent.add(batch); removed += meshes.length - 1;
+  }
+  return removed;
+}
 // Visual-only kit recipes.  They deliberately map existing roster identity / role
 // data to presentation variants; they do not create a gameplay class or state.
 const C2C_VARIATION_PROFILES = Object.freeze([
@@ -49,8 +119,8 @@ function mark(object) {
   return object;
 }
 
-function makeMaterial({ color, roughness = 0.7, metalness = 0, emissive = 0x000000, emissiveIntensity = 0 } = {}) {
-  return mark(new THREE.MeshStandardMaterial({
+function makeMaterial({ color, roughness = 0.7, metalness = 0, emissive = 0x000000, emissiveIntensity = 0, cloth = false } = {}) {
+  const parameters={
     color,
     roughness,
     metalness,
@@ -58,7 +128,10 @@ function makeMaterial({ color, roughness = 0.7, metalness = 0, emissive = 0x0000
     emissiveIntensity,
     depthTest: true,
     depthWrite: true,
-  }));
+  };
+  // Major woven garments use a soft fibre lobe, rather than the same hard
+  // dielectric highlight as gloves/armour. No transmission or extra pass.
+  return mark(cloth?new THREE.MeshPhysicalMaterial({...parameters,metalness:0,sheen:.65,sheenRoughness:.65,sheenColor:new THREE.Color(color).lerp(new THREE.Color(0xffffff),.35)}):new THREE.MeshStandardMaterial(parameters));
 }
 
 function makeAccentMaterial(side) {
@@ -74,7 +147,11 @@ function makeAccentMaterial(side) {
 function addBox(parent, name, size, position, material, rotation = [0, 0, 0]) {
   const [width, height, depth] = size;
   const radius = Math.max(0.004, Math.min(width, height, depth) * 0.26);
-  const mesh = mark(new THREE.Mesh(mark(new RoundedBoxGeometry(width, height, depth, radius, 1)), material));
+  // Preserve legacy geometry. Major fabric bags / padded hardware need an
+  // actual bevel: RoundedBoxGeometry takes segments before radius.
+  const padded=parent.userData.esmoMajorKit&&/^C2C_(MagazinePouch|RadioUnit|LightPack|LongPack|Pouch[LR]|Major_(AssaultShoulder_|SupportChestBag|MarksmanShoulderPad)|CT_(SupportPouch|LowerFaceMask)|T_(LooseUtilityBag|Satchel$|MarksmanMapPouch|FaceWrap))/.test(name);
+  const geometry=padded?makeMajorBeveledBox(width,height,depth,radius):new RoundedBoxGeometry(width,height,depth,radius,1);
+  const mesh = mark(new THREE.Mesh(mark(geometry), material));
   mesh.name = name;
   mesh.renderOrder = 1;
   mesh.position.set(...position);
@@ -83,6 +160,41 @@ function addBox(parent, name, size, position, material, rotation = [0, 0, 0]) {
   mesh.receiveShadow = true;
   parent.add(mesh);
   return mesh;
+}
+
+// One real chamfer per edge: 6 faces + 12 edge quads + 8 corner triangles.
+// The 44-triangle shell keeps role equipment inside the existing whole-body
+// budget, rather than paying for the rounded-box generator's 108 triangles.
+function makeMajorBeveledBox(width,height,depth,radius) {
+  const half=[width/2,height/2,depth/2],positions=[],uvs=[];
+  const vertex=(axis,sign,a,b,sa,sb)=>{
+    const v=half.map((h,i)=>i===axis?sign*h:(i===a?sa:sb)*(h-radius));
+    return v;
+  };
+  const face=(points,outward)=>{
+    const a=new THREE.Vector3(...points[0]),b=new THREE.Vector3(...points[1]),c=new THREE.Vector3(...points[2]);
+    if(new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a)).dot(new THREE.Vector3(...outward))<0)points.reverse();
+    for(let i=1;i<points.length-1;i++)for(const p of [points[0],points[i],points[i+1]]){
+      positions.push(...p);
+      const axis=outward.map(Math.abs).indexOf(Math.max(...outward.map(Math.abs))),others=[0,1,2].filter(v=>v!==axis);
+      uvs.push(p[others[0]]/(half[others[0]]*2)+.5,p[others[1]]/(half[others[1]]*2)+.5);
+    }
+  };
+  for(let axis=0;axis<3;axis++)for(const sign of [-1,1]){
+    const [a,b]=[0,1,2].filter(v=>v!==axis),normal=[0,0,0];normal[axis]=sign;
+    face([vertex(axis,sign,a,b,-1,-1),vertex(axis,sign,a,b,1,-1),vertex(axis,sign,a,b,1,1),vertex(axis,sign,a,b,-1,1)],normal);
+  }
+  for(let a=0;a<3;a++)for(let b=a+1;b<3;b++)for(const sa of [-1,1])for(const sb of [-1,1]){
+    const c=3-a-b,normal=[0,0,0];normal[a]=sa;normal[b]=sb;
+    face([vertex(a,sa,b,c,sb,-1),vertex(b,sb,a,c,sa,-1),vertex(b,sb,a,c,sa,1),vertex(a,sa,b,c,sb,1)],normal);
+  }
+  for(const sx of [-1,1])for(const sy of [-1,1])for(const sz of [-1,1])face([
+    vertex(0,sx,1,2,sy,sz),vertex(1,sy,0,2,sx,sz),vertex(2,sz,0,1,sx,sy)
+  ],[sx,sy,sz]);
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.computeVertexNormals();
+  return geometry;
 }
 
 function addSphere(parent, name, radius, position, scale, material, segments = 8) {
@@ -131,7 +243,7 @@ function resolveWeaponFamily(gun) {
   return WEAPON_FAMILY_BY_GUN[normalized] || "rifle";
 }
 
-function styleBaseCharacter(root, side = "t") {
+function styleBaseCharacter(root, side = "t", continuousClothing = false) {
   // C2A deliberately uses a neutral validation character whose sculpted
   // superhero anatomy remains visible after recolouring.  That mesh is still
   // the authoritative skeleton/mixer source, but it must not be the visible
@@ -141,6 +253,7 @@ function styleBaseCharacter(root, side = "t") {
   // remains untouched, while the clothing proxy built below owns rendering.
   const suitTone = side === "ct" ? 0x536e79 : 0x735b48;
   const faceTone = side === "ct" ? 0xc18d73 : 0xb9826a;
+  const body = continuousClothing ? root.getObjectByName("SuperHero_Male") : null;
   root.traverse((object) => {
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     const objectName = object.name || "";
@@ -170,11 +283,19 @@ function styleBaseCharacter(root, side = "t") {
         // The source validation mesh has highly saturated eye textures.  C2C
         // presents a visor/face shield instead; hiding those tiny source eye
         // meshes prevents a zombie-like glowing-eye read beneath the helmet.
-        object.visible = false;
+        object.visible = continuousClothing;
+        if (continuousClothing && object.isSkinnedMesh) {
+          // These CC0 facial meshes have the identical per-actor bone order
+          // and bind inverses. Share the body skeleton, not extra GPU palettes.
+          if (!body || !object.skeleton.bones.every((bone, i) => bone === body.skeleton.bones[i]) || !object.skeleton.boneInverses.every((inverse, i) => inverse.equals(body.skeleton.boneInverses[i]))) throw new Error("臉部與人體蒙皮骨架不相容");
+          object.bind(body.skeleton, object.bindMatrix);
+          object.castShadow = false; object.receiveShadow = true;
+          object.userData.esmoC2cBaseHidden = false;
+        }
         material.map = null;
-        material.color?.setHex(0x1d2b31);
-        material.roughness = 0.42;
-        material.metalness = 0.12;
+        material.color?.setHex(continuousClothing && /brow/i.test(objectName) ? 0x30271f : 0x1d2b31);
+        material.roughness = continuousClothing ? 0.9 : 0.42;
+        material.metalness = continuousClothing ? 0 : 0.12;
         material.emissive?.setHex(0x000000);
         material.emissiveIntensity = 0;
         material.needsUpdate = true;
@@ -314,7 +435,96 @@ function createShotgun(parent, materials) {
   return weapon;
 }
 
+// Major近拍輪廓：原生+X尺寸與socket不變，legacy仍用上方原始kit。
+// 薄側面extrusion讓槍托／機匣有真正切角；細節在既有材質桶合批。
+function refineMajorWeapon(weapon, family, materials) {
+  for(const mesh of weapon.children) {
+    if(!mesh.isMesh)continue;
+    mesh.material=/Signal|FrontSight/.test(mesh.name)?materials.weaponSteel:
+      /Barrel|Muzzle|Slide|Receiver|Scope|Bolt|Rail|Shell|Sight/.test(mesh.name)?materials.weaponSteel:materials.weaponPolymer;
+    if(mesh.geometry.type==='BoxGeometry') {
+      mesh.geometry.computeBoundingBox();const size=mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+      const radius=Math.min(size.x,size.y,size.z)*.12;
+      const geometry=mark(new RoundedBoxGeometry(size.x,size.y,size.z,1,radius));
+      mesh.geometry.dispose();mesh.geometry=geometry;
+    }
+  }
+  const profiles = {
+    RifleStock: [[-.5,-.5],[.05,-.45],[.5,-.15],[.5,.22],[.22,.42],[-.5,.5]],
+    RifleReceiver: [[-.5,-.5],[.18,-.5],[.5,-.25],[.5,.25],[.3,.5],[-.42,.5],[-.5,.25]],
+    RifleHandguard: [[-.5,-.3],[-.36,-.5],[.4,-.5],[.5,-.25],[.5,.3],[.35,.5],[-.5,.5]],
+    PistolSlide: [[-.5,-.35],[-.4,-.5],[.4,-.5],[.5,-.25],[.5,.25],[.35,.5],[-.5,.5]],
+    PistolGrip: [[-.5,-.5],[.32,-.5],[.5,-.25],[.42,.45],[-.28,.5],[-.5,.12]],
+    SmgReceiver: [[-.5,-.5],[.4,-.5],[.5,-.25],[.5,.3],[.28,.5],[-.5,.5]],
+    SmgHandguard: [[-.5,-.25],[-.3,-.5],[.4,-.5],[.5,.15],[.3,.5],[-.5,.5]],
+    SniperStock: [[-.5,-.5],[-.05,-.38],[.5,-.12],[.5,.25],[.17,.45],[-.5,.5]],
+    SniperReceiver: [[-.5,-.3],[-.32,-.5],[.36,-.5],[.5,-.15],[.5,.3],[.32,.5],[-.5,.5]],
+    ShotgunStock: [[-.5,-.5],[-.05,-.35],[.5,-.12],[.5,.2],[.18,.4],[-.5,.5]],
+    ShotgunReceiver: [[-.5,-.5],[.34,-.5],[.5,-.28],[.5,.28],[.3,.5],[-.5,.5]],
+    ShotgunPump: [[-.5,-.22],[-.3,-.5],[.35,-.5],[.5,-.25],[.5,.24],[.35,.5],[-.35,.5],[-.5,.25]],
+  };
+  let changed = 0;
+  for (const mesh of weapon.children) {
+    const outline = profiles[mesh.name];
+    if (!mesh.isMesh || !outline) continue;
+    mesh.geometry.computeBoundingBox();
+    const size = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+    const shape = new THREE.Shape(outline.map(([x,y]) => new THREE.Vector2(x*size.x,y*size.y)));
+    const bevel = Math.min(.009, size.z*.08);
+    const geometry = mark(new THREE.ExtrudeGeometry(shape, { depth: size.z-2*bevel, steps: 1,
+      bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 1 }));
+    geometry.translate(0,0,-size.z/2+bevel);
+    mesh.geometry.dispose(); mesh.geometry = geometry; changed++;
+  }
+  const dark = materials.weaponPolymer;
+  const hardware = materials.weaponSteel;
+  const prefix = { pistol:'Pistol',smg:'Smg',rifle:'Rifle',sniper:'Sniper',shotgun:'Shotgun' }[family];
+  const receiver = weapon.getObjectByName(`${prefix}${family==='pistol'?'Slide':'Receiver'}`);
+  if (receiver) {
+    const x=receiver.position.x,y=receiver.position.y;
+    // 側面拋殼窗與拉柄使用實際側面厚度，不讓大面積彩色方塊冒充細節。
+    receiver.geometry.computeBoundingBox(); const depth=receiver.geometry.boundingBox.max.z;
+    addBox(weapon, `${prefix}EjectionPort`, [.13,.038,.006], [x+.05,y+.025,depth+.003], dark);
+    addBox(weapon, `${prefix}ChargingHandle`, [.07,.025,.032], [x-.07,y+.02,depth+.025], hardware);
+  }
+  if(family==='pistol') {
+    for(let i=0;i<4;i++)addBox(weapon,`PistolSlideSerration_${i}`,[.012,.065,.008],[-.015+i*.025,.075,.077],dark,[0,0,.12]);
+  } else {
+    const guard=weapon.getObjectByName(`${prefix}${family==='shotgun'?'Pump':'Handguard'}`);
+    if(guard)for(let i=0;i<4;i++)addBox(weapon,`${prefix}Vent_${i}`,[.055,.022,.008],
+      [guard.position.x-.12+i*.08,guard.position.y+.035,.095],hardware);
+    addBox(weapon,`${prefix}PistolGrip`,[.115,.23,.12],[WEAPON_SOCKET_OFFSETS[family].grip[0],-.18,0],dark,[0,0,.22]);
+  }
+  for(const name of['RifleBarrel','SniperBarrel']) {
+    const barrel=weapon.getObjectByName(name);if(!barrel)continue;
+    barrel.geometry.computeBoundingBox();const size=barrel.geometry.boundingBox.getSize(new THREE.Vector3());
+    barrel.geometry.dispose();barrel.geometry=mark(new THREE.CylinderGeometry(size.y/2,size.y/2,size.x,12));
+    barrel.rotation.z=Math.PI/2;
+  }
+  const muzzle=WEAPON_SOCKET_OFFSETS[family].muzzle;
+  addCylinder(weapon,`${prefix}Bore`,family==='shotgun'?.043:.025,family==='shotgun'?.043:.025,.004,
+    [muzzle[0]+.003,muzzle[1],0],dark,[0,0,Math.PI/2],12);
+  if(family==='pistol') {
+    const guard=weapon.getObjectByName('PistolTriggerGuard');
+    if(guard) {
+      const outline=new THREE.Shape([new THREE.Vector2(-.075,-.048),new THREE.Vector2(.065,-.048),new THREE.Vector2(.075,.025),new THREE.Vector2(-.06,.025)]);
+      const hole=new THREE.Path([new THREE.Vector2(-.048,-.028),new THREE.Vector2(-.042,.009),new THREE.Vector2(.05,.009),new THREE.Vector2(.048,-.028)]);outline.holes.push(hole);
+      const geometry=mark(new THREE.ExtrudeGeometry(outline,{depth:.07,bevelEnabled:true,bevelSegments:1,bevelThickness:.004,bevelSize:.004,steps:1}));
+      geometry.translate(0,0,-.035);guard.geometry.dispose();guard.geometry=geometry;
+    }
+  }
+  weapon.userData.esmoAuthoredWeapon = { version:1, family, profileParts:changed, support:'source-socket' };
+}
+
 const SEGMENT_UP = new THREE.Vector3(0, 1, 0);
+const ACTIVE_ANCHOR_INVERSES = new WeakMap();
+
+function bonePositionInRoot(root, bone, target) {
+  const inverse = ACTIVE_ANCHOR_INVERSES.get(root);
+  if (inverse) return target.setFromMatrixPosition(bone.matrixWorld).applyMatrix4(inverse);
+  bone.getWorldPosition(target);
+  return root.worldToLocal(target);
+}
 
 function addTaperedShell(parent, name, { top = 0.4, bottom = 0.34, height = 1, depth = 0.56, y = 0 } = {}, material) {
   const geometry = mark(new THREE.CylinderGeometry(top, bottom, height, 10, 1, false));
@@ -328,7 +538,27 @@ function addTaperedShell(parent, name, { top = 0.4, bottom = 0.34, height = 1, d
   return mesh;
 }
 
-function addDynamicMount(root, updaters, name, startNames, endNames, { positionAtEnd = false, scale = 1, fixedScale = null } = {}) {
+function addTailoredCarrier(parent, recipe, material) {
+  // Original paired chest/back plates: shoulder cut-outs and a narrowed waist,
+  // instead of wrapping the entire torso in a barrel. Both reuse the kit role.
+  const outline = [[-.29,-.29],[-.37,-.10],[-.34,.18],[-.21,.32],[.21,.32],[.34,.18],[.37,-.10],[.29,-.29]];
+  const shape = new THREE.Shape(outline.map(([x,y]) => new THREE.Vector2(x,y)));
+  const geometry = mark(new THREE.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.018,bevelThickness:.012}));
+  geometry.scale(recipe.top / .45, recipe.height / .68, 1);
+  const front = mark(new THREE.Mesh(geometry, material));
+  front.name = "C2C_PlateCarrier"; front.position.set(0,recipe.y,.30);
+  front.castShadow = true; front.receiveShadow = true;
+  parent.add(front);
+  const back = mark(new THREE.Mesh(mark(geometry.clone()),material));
+  back.name = "C2C_TailoredBackPlate"; back.rotation.y = Math.PI;
+  back.position.set(0,recipe.y,-.37); back.castShadow = true; back.receiveShadow = true;
+  parent.add(back);
+  for(let row=0;row<3;row++)addBox(parent,`C2C_BackCarrierWebbing_${row}`,
+    [.52*recipe.top/.45,.025,.018],[0,recipe.y-.13+row*.105,-.426],material);
+  return front;
+}
+
+function addDynamicMount(root, updaters, name, startNames, endNames, { positionAtEnd = false, scale = 1, fixedScale = null, followEndRotation = false } = {}) {
   const startBone = findBone(root, startNames);
   const endBone = findBone(root, endNames);
   if (!startBone || !endBone) return null;
@@ -338,16 +568,30 @@ function addDynamicMount(root, updaters, name, startNames, endNames, { positionA
   const start = new THREE.Vector3();
   const end = new THREE.Vector3();
   const direction = new THREE.Vector3();
+  const rootRotation = new THREE.Quaternion(), endRotation = new THREE.Quaternion();
+  const bindRotation = new THREE.Quaternion(), authoredRotation = new THREE.Quaternion();
+  if (followEndRotation) {
+    root.getWorldQuaternion(rootRotation).invert();
+    endBone.getWorldQuaternion(endRotation);
+    bindRotation.multiplyQuaternions(rootRotation, endRotation).invert();
+    // Authored headgear is built in the model's +Y-up bind frame. The neck to
+    // Head segment already tilts 17 degrees in this rig's bind pose: using it
+    // as the authored frame pushes the crown forward and exposes the scalp.
+    authoredRotation.identity();
+  }
   const update = () => {
-    startBone.getWorldPosition(start);
-    endBone.getWorldPosition(end);
-    root.worldToLocal(start);
-    root.worldToLocal(end);
+    bonePositionInRoot(root, startBone, start);
+    bonePositionInRoot(root, endBone, end);
     direction.subVectors(end, start);
     const length = Math.max(0.001, direction.length());
     if (positionAtEnd) group.position.copy(end);
     else group.position.copy(start).lerp(end, 0.5);
     group.quaternion.setFromUnitVectors(SEGMENT_UP, direction.normalize());
+    if (followEndRotation) {
+      root.getWorldQuaternion(rootRotation).invert();
+      endBone.getWorldQuaternion(endRotation);
+      group.quaternion.multiplyQuaternions(rootRotation, endRotation).multiply(bindRotation).multiply(authoredRotation);
+    }
     group.scale.setScalar(Number.isFinite(fixedScale) ? fixedScale : length * scale);
   };
   updaters.push(update);
@@ -382,10 +626,8 @@ function addDynamicSegment(root, updaters, name, startNames, endNames, material,
   const from = new THREE.Vector3();
   const to = new THREE.Vector3();
   const update = () => {
-    startBone.getWorldPosition(start);
-    endBone.getWorldPosition(end);
-    root.worldToLocal(start);
-    root.worldToLocal(end);
+    bonePositionInRoot(root, startBone, start);
+    bonePositionInRoot(root, endBone, end);
     axis.subVectors(end, start);
     const baseLength = Math.max(0.001, axis.length());
     from.copy(start).addScaledVector(axis, tStart);
@@ -396,6 +638,7 @@ function addDynamicSegment(root, updaters, name, startNames, endNames, material,
     mesh.quaternion.setFromUnitVectors(SEGMENT_UP, axis.normalize());
     mesh.scale.set(baseLength * width, length * lengthScale, baseLength * depth);
   };
+  update.mesh = mesh;
   updaters.push(update);
   update();
   return mesh;
@@ -423,12 +666,9 @@ function addDynamicJoint(root, updaters, name, boneNames, referenceStartNames, r
   const end = new THREE.Vector3();
   const direction = new THREE.Vector3();
   const update = () => {
-    bone.getWorldPosition(point);
-    referenceStart.getWorldPosition(start);
-    referenceEnd.getWorldPosition(end);
-    root.worldToLocal(point);
-    root.worldToLocal(start);
-    root.worldToLocal(end);
+    bonePositionInRoot(root, bone, point);
+    bonePositionInRoot(root, referenceStart, start);
+    bonePositionInRoot(root, referenceEnd, end);
     direction.subVectors(end, start);
     const length = Math.max(0.001, direction.length());
     if (Number.isFinite(at)) point.copy(start).lerp(end, at);
@@ -438,6 +678,7 @@ function addDynamicJoint(root, updaters, name, boneNames, referenceStartNames, r
     mesh.quaternion.setFromUnitVectors(SEGMENT_UP, direction.normalize());
     mesh.scale.set(length * width, length * height, length * depth);
   };
+  update.mesh = mesh;
   updaters.push(update);
   update();
   return mesh;
@@ -445,7 +686,9 @@ function addDynamicJoint(root, updaters, name, boneNames, referenceStartNames, r
 
 function addHeadPresentation(head, materials, side, profile) {
   addSphere(head, "C2C_HeadBase", 1, [0, 0.08, 0], [0.62, 0.82, 0.65], materials.skin, 12);
-  const capGeometry = mark(new THREE.SphereGeometry(1, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.68));
+  // The source eyes sit below the crown centre. The legacy 68% sphere wraps
+  // across that eye line and hides the actual face beneath an oval shell.
+  const capGeometry = mark(new THREE.SphereGeometry(1, 12, head.userData.esmoMajorKit ? 6 : 8, 0, Math.PI * 2, 0, Math.PI * (head.userData.esmoMajorKit ? 0.5 : 0.68)));
   const cap = mark(new THREE.Mesh(capGeometry, materials.helmet));
   cap.name = "C2C_HelmetShell";
   cap.position.set(0, 0.39, -0.02);
@@ -483,7 +726,7 @@ function addHeadPresentation(head, materials, side, profile) {
       addBox(head, "C2C_CT_UtilityLight", [0.1, 0.1, 0.18], [-0.55, 0.43, 0.43], materials.accent);
     }
   } else {
-    addBox(head, "C2C_T_HoodBand", [0.82, 0.15, 0.14], [0, 0.21, 0.59], materials.pants);
+    addBox(head, "C2C_T_HoodBand", [0.82, 0.15, 0.14], [0, head.userData.esmoMajorKit ? 0.42 : 0.21, 0.59], materials.pants);
     addBox(head, "C2C_T_HoodRear", [0.72, 0.42, 0.15], [0, -0.02, -0.54], materials.fabric);
     addBox(head, "C2C_T_FaceWrap", [0.74, 0.33, 0.13], [0, -0.18, 0.62], materials.pants, [0, 0, -0.06]);
     addBox(head, "C2C_T_HeadWrapTail", [0.18, 0.46, 0.13], [0.48, -0.04, -0.52], materials.fabric, [0, 0, -0.28]);
@@ -510,7 +753,7 @@ function addHeadPresentation(head, materials, side, profile) {
   addCylinder(head, "C2C_CommsBoom", 0.03, 0.03, 0.54, [-0.43, -0.14, 0.5], materials.metal, [0.3, 0, -0.62], 6);
 }
 
-function addTorsoEquipment(torso, materials, profile, side) {
+function addTorsoEquipment(torso, materials, profile, side, continuousClothing = false) {
   const vestRecipe = side === "ct"
     ? {
         assault: { top: 0.45, bottom: 0.37, height: 0.68, depth: 0.62, y: 0.04 },
@@ -526,8 +769,8 @@ function addTorsoEquipment(torso, materials, profile, side) {
         lurker: { top: 0.38, bottom: 0.33, height: 0.4, depth: 0.58, y: 0.03 },
         utility: { top: 0.42, bottom: 0.35, height: 0.5, depth: 0.65, y: -0.02 },
       }[profile.id];
-  const vest = addTaperedShell(torso, "C2C_PlateCarrier", vestRecipe, materials.armor);
-  vest.position.z = side === "ct" ? 0.025 : 0.04;
+  const vest = continuousClothing ? addTailoredCarrier(torso, vestRecipe, materials.armor) : addTaperedShell(torso, "C2C_PlateCarrier", vestRecipe, materials.armor);
+  if (!continuousClothing) vest.position.z = side === "ct" ? 0.025 : 0.04;
 
   const pouchXs = side === "ct"
     ? [-0.19, 0, 0.19].slice(0, profile.pouches)
@@ -548,8 +791,15 @@ function addTorsoEquipment(torso, materials, profile, side) {
     addCylinder(torso, "C2C_RadioAntenna", 0.018, 0.018, 0.34, [side === "ct" ? -0.39 : 0.38, 0.28, -0.08], materials.metal, [0, 0, 0], 6);
   }
   if (profile.rear === "pack" || profile.rear === "long") {
-    const packHeight = profile.rear === "long" ? 0.5 : 0.36;
-    addBox(torso, profile.rear === "long" ? "C2C_LongPack" : "C2C_LightPack", [0.48, packHeight, 0.16], [0, -0.02, -0.28], materials.fabric);
+    const packHeight = continuousClothing ? (profile.rear==='long'?.72:.48) : (profile.rear === "long" ? 0.5 : 0.36);
+    const packWidth=continuousClothing&&profile.rear==='long'?.30:.48;
+    const packDepth=continuousClothing?(profile.rear==='long'?.21:.32):.16;
+    addBox(torso, profile.rear === "long" ? "C2C_LongPack" : "C2C_LightPack", [packWidth, packHeight, packDepth], [0, -0.02, -0.28], materials.fabric);
+    if(continuousClothing){
+      addBox(torso,'C2C_PackLid',[packWidth*.90,.07,.028],[0,packHeight*.28,-.30-packDepth*.5],materials.pants);
+      for(const x of[-packWidth*.30,packWidth*.30])addBox(torso,'C2C_PackCompressionStrap_'+x,
+        [.028,packHeight*.80,.018],[x,-.02,-.30-packDepth*.5],materials.pants);
+    }
     addBox(torso, "C2C_PackShoulderStrapL", [0.07, 0.58, 0.04], [-0.24, 0.03, -0.17], materials.polymer, [0, 0, -0.08]);
     addBox(torso, "C2C_PackShoulderStrapR", [0.07, 0.58, 0.04], [0.24, 0.03, -0.17], materials.polymer, [0, 0, 0.08]);
   }
@@ -596,9 +846,24 @@ function addTorsoEquipment(torso, materials, profile, side) {
       [-0.17, 0.02, 0.21].forEach((x, index) => addBox(torso, `C2C_T_UtilityPouch_${index}`, [0.14, 0.2, 0.1], [x, -0.13 - index * 0.025, 0.36], materials.polymer, [0, 0, index * -0.08]));
     }
   }
+  if (continuousClothing) {
+    if(profile.id==='assault')for(const sign of[-1,1]){
+      addBox(torso,'C2C_Major_AssaultShoulder_'+sign,[.34,.32,.21],[sign*.51,.27,.06],materials.polymer,[0,0,sign*-.22]);
+      addBox(torso,'C2C_Major_AssaultShoulderStrap_'+sign,[.045,.31,.025],[sign*.51,.27,.18],materials.pants,[0,0,sign*-.22]);
+    }
+    if(profile.id==='support'){
+      addBox(torso,'C2C_Major_SupportChestBag',[.44,.38,.20],[.17,.03,.42],materials.fabric,[0,0,-.08]);
+      addBox(torso,'C2C_Major_SupportChestFlap',[.45,.06,.025],[.17,.21,.53],materials.pants,[0,0,-.08]);
+    }
+    if(profile.id==='marksman')addBox(torso,'C2C_Major_MarksmanShoulderPad',[.13,.35,.05],[-.35,.24,.15],materials.fabric,[0,0,.24]);
+    for (const part of torso.children) {
+      if (/C2C_(CT_(VestStrap|UniformStrap|PoliceBadge|CommandTab|MolleStrip)|T_(DiagonalSling|ClothWrap|RifleSlingPad))/.test(part.name)) part.position.z += .085;
+      if (/C2C_(LightPack|LongPack|PackShoulderStrap|PackLid|PackCompressionStrap)/.test(part.name)) part.position.z -= .12;
+    }
+  }
 }
 
-function buildKit(root, player) {
+function buildKit(root, player, { optimized = true, mobile = false, handWeaponMount = false, continuousClothing = false, weaponAssets = null } = {}) {
   const side = player?.side === "ct" ? "ct" : "t";
   const profile = resolveVariation(player);
   const legacyAccent = root.getObjectByName("ESMO_FPS_TeamAccent");
@@ -610,20 +875,32 @@ function buildKit(root, player) {
   const teamPalette = side === "ct"
     ? { armor: 0x344750, polymer: 0x60747c, fabric: 0x244852, pants: 0x1d343c, helmet: 0x465f6a, skin: 0xb98567 }
     : { armor: 0x302e2b, polymer: 0x92785d, fabric: 0x76543c, pants: 0x38342f, helmet: 0x5b4433, skin: 0xaf7b5e };
+  // Separate cloth from flesh in the major skin; preserve legacy palette.
+  if (continuousClothing && side === "t") {
+    teamPalette.fabric = 0x65725c; teamPalette.pants = 0x283135;
+  }
+  // Major blue cloth needs diffuse headroom for compression folds in shade;
+  // retain dark plates/gloves so equipment and sewn fabric read separately.
+  if (continuousClothing && side === "ct") teamPalette.fabric = 0x536977;
   const materials = {
     armor: makeMaterial({ color: teamPalette.armor, roughness: 0.82, metalness: 0.04 }),
     polymer: makeMaterial({ color: teamPalette.polymer, roughness: 0.72, metalness: 0.04 }),
     metal: makeMaterial({ color: side === "ct" ? 0x84969b : 0x877763, roughness: 0.58, metalness: 0.34 }),
-    fabric: makeMaterial({ color: teamPalette.fabric, roughness: 0.92, metalness: 0.02, emissive: 0x000000, emissiveIntensity: 0 }),
+    fabric: makeMaterial({ color: teamPalette.fabric, roughness: 0.92, metalness: 0.02, emissive: 0x000000, emissiveIntensity: 0, cloth: continuousClothing }),
     pants: makeMaterial({ color: teamPalette.pants, roughness: 0.95, metalness: 0 }),
     helmet: makeMaterial({ color: teamPalette.helmet, roughness: 0.76, metalness: 0.06 }),
     skin: makeMaterial({ color: teamPalette.skin, roughness: 0.88, metalness: 0 }),
     accent: makeAccentMaterial(side),
   };
   const updaters = [];
-  const torso = addDynamicMount(root, updaters, "ESMO_C2C_TorsoClothingMount", ["pelvis", "spine_01"], ["neck_01", "spine_03"]);
-  const head = addDynamicMount(root, updaters, "ESMO_C2C_HeadClothingMount", ["neck_01", "spine_03"], ["Head"], { positionAtEnd: true, scale: 0.74 });
+  if(continuousClothing&&weaponAssets?.povTextiles){
+    const t=weaponAssets.povTextiles;
+    for(const material of[materials.fabric,materials.pants])applyMajorWovenTextiles(material,{colour:t.fabricColour,normal:t.fabricNormal});
+  }
+  const torso = addDynamicMount(root, updaters, "ESMO_C2C_TorsoClothingMount", ["pelvis", "spine_01"], continuousClothing ? ["neck_01"] : ["neck_01", "spine_03"]);
+  const head = addDynamicMount(root, updaters, "ESMO_C2C_HeadClothingMount", continuousClothing ? ["neck_01"] : ["neck_01", "spine_03"], ["Head"], { positionAtEnd: true, scale: 0.74, fixedScale: continuousClothing ? .15 : null, followEndRotation: continuousClothing });
   if (!torso || !head) throw new Error("C2C clothing skeleton anchors unavailable");
+  torso.userData.esmoMajorKit=continuousClothing;head.userData.esmoMajorKit=continuousClothing;
 
   addTaperedShell(torso, "C2C_CombatTopShell", side === "ct"
     ? { top: 0.48, bottom: 0.37, height: 1.05, depth: 0.5, y: 0 }
@@ -639,8 +916,22 @@ function buildKit(root, player) {
     tEnd: 0.72,
     lengthScale: 1.08,
   });
-  addTorsoEquipment(torso, materials, profile, side);
+  addTorsoEquipment(torso, materials, profile, side, continuousClothing);
   addHeadPresentation(head, materials, side, profile);
+  // Source Head is a skull-base pivot, not the centre of the old sphere proxy.
+  if (continuousClothing) {
+    // True source Head bounds: y=1.577..1.810, eyes=1.684..1.714,
+    // pivot y=1.600. This fits crown and brow, rather than the old sphere proxy.
+    head.children.forEach(part => { part.position.y += .48; });
+    // Folded, open neckline: an authored continuous ring, not a solid cylinder
+    // blocking the chin. It follows the same head pose and batches with cloth.
+    const profile = [[.90,-.76],[.94,-.63],[.69,-.25],[.59,-.22],[.56,-.30],[.73,-.63],[.90,-.76]];
+    const collar = mark(new THREE.Mesh(mark(new THREE.LatheGeometry(profile.map(([x,y]) => new THREE.Vector2(x,y)),12)), materials.pants));
+    collar.name = "C2C_TailoredFoldedCollar";
+    collar.position.z = -.26; collar.scale.z = .7;
+    collar.castShadow = !mobile; collar.receiveShadow = true;
+    head.add(collar);
+  }
 
   const limbs = [
     { sideName: "L", index: 0, upper: ["upperarm_l"], lower: ["lowerarm_l"], hand: ["hand_l"], thigh: ["thigh_l"], calf: ["calf_l"], foot: ["foot_l"], ball: ["ball_l", "toe_l"] },
@@ -779,15 +1070,77 @@ function buildKit(root, player) {
   shotgun.rotation.z = -0.02;
   shotgun.scale.setScalar(0.66);
   const weaponGroups = { pistol, smg, rifle, sniper, shotgun };
+  const weaponSockets = {};
+  // Legacy 姿態及純合批 fixture 不變；產品 major 由 Renderer 明確啟用。
+  const weaponHand = optimized && handWeaponMount ? findBone(root, ["hand_r"]) : null;
+  if (optimized && handWeaponMount && !weaponHand) throw new Error("ESMO 持槍缺少 hand_r 真實骨骼");
+  const weaponReflection=weaponHand?borrowWeaponEnvironment():null;
+  const weaponMaterialLease=weaponHand&&Object.keys(weaponGroups).some(family=>weaponAssets?.[family])?borrowFpsMajorWeaponMaterials(weaponReflection):null;
+  if(weaponHand && Object.keys(weaponGroups).some(family=>!weaponAssets?.[family])) {
+    materials.weaponSteel=makeMaterial({color:0x434b52,roughness:.38,metalness:.88});
+    materials.weaponPolymer=makeMaterial({color:0x171c22,roughness:.72,metalness:.02});
+    materials.weaponSteel.envMap=weaponReflection;materials.weaponSteel.envMapIntensity=.85;
+    materials.weaponPolymer.envMap=weaponReflection;materials.weaponPolymer.envMapIntensity=.35;
+  }
+  if (weaponHand) {
+    // 第三人稱狙擊槍原1.78m接近人物全高；縮至約1.23m。
+    // 原GLB／握把／管口／支撐握點不變；POV及legacy沿用其既有比例。
+    sniper.scale.setScalar(.40);
+    const gripInHand = new THREE.Vector3(0, 0.055, 0.015);
+    const gripOffset = new THREE.Vector3();
+    for (const [family, weapon] of Object.entries(weaponGroups)) {
+      const imported = weaponAssets?.[family];
+      const offsets = imported ? FPS_MAJOR_WEAPON_SOCKETS[family] : WEAPON_SOCKET_OFFSETS[family];
+      if (imported) installFpsMajorWeaponAsset(weapon, imported, weaponMaterialLease, family);
+      else refineMajorWeapon(weapon, family, materials);
+      // CC0 hand_r 的 +Y 往掌心／指根，+X 對應槍械的下方。
+      weapon.rotation.set(0, 0, Math.PI / 2);
+      gripOffset.fromArray(offsets.grip).multiply(weapon.scale).applyQuaternion(weapon.quaternion);
+      weapon.position.copy(gripInHand).sub(gripOffset);
+      const grip = new THREE.Object3D(), muzzle = new THREE.Object3D(), support = new THREE.Object3D();
+      grip.name = `ESMO_${family}_GripSocket`; grip.position.fromArray(offsets.grip);
+      muzzle.name = `ESMO_${family}_MuzzleSocket`; muzzle.position.fromArray(offsets.muzzle);
+      support.name = `ESMO_${family}_SupportGripSocket`; support.position.fromArray(offsets.support);
+      weapon.add(grip, muzzle, support);
+      weaponSockets[family] = { grip, muzzle, support };
+    }
+    const handInRoot = new THREE.Matrix4();
+    const handScale = new THREE.Vector3();
+    updaters.push(() => {
+      handInRoot.multiplyMatrices(ACTIVE_ANCHOR_INVERSES.get(root), weaponHand.matrixWorld);
+      handInRoot.decompose(weaponMount.position, weaponMount.quaternion, handScale);
+      // 槍械沿用原比例，不繼承動畫骨骼的非均勻縮放。
+      weaponMount.scale.setScalar(1);
+    });
+  }
+  const mergedParts = optimized ? [torso, head, ...Object.values(weaponGroups)].reduce((n, mount) => n + batchRigidParts(mount, { mobile, continuousClothing }), 0) : 0;
+  const tailored = continuousClothing ? createFpsTailoredClothing({ root, materials, mobile }) : null;
+  const removedClothingUpdaters = continuousClothing ? updaters.filter(update => update.mesh?.userData.esmoTailoredReplaced).length : 0;
+  if (removedClothingUpdaters) {
+    for (let i=updaters.length-1;i>=0;i--) if(updaters[i].mesh?.userData.esmoTailoredReplaced)updaters.splice(i,1);
+  }
+  if (optimized && mobile) root.traverse(object => { if (object.isMesh && object.userData?.[OWNED]) object.castShadow = false; });
   const initialWeaponFamily = resolveWeaponFamily(player?.gun);
   const setVisibleWeapon = (family) => Object.entries(weaponGroups).forEach(([key, group]) => { group.visible = key === family; });
+  const anchorInverse = new THREE.Matrix4();
 
   const state = {
     root,
+    tailored,
     mounts: [torso, head, weaponMount],
     clothingUpdaters: updaters,
+    removedClothingUpdaters,
     materials,
     weaponGroups,
+    povHandGeometries: weaponAssets?.povHands || null,
+    povTextiles: weaponAssets?.povTextiles || null,
+    weaponSourceTriangles: Object.fromEntries(Object.entries(weaponGroups).map(([family,group])=>{
+      let triangles=0;group.traverse(mesh=>{if(mesh.isMesh)triangles+=(mesh.geometry.index?.count||mesh.geometry.attributes.position?.count||0)/3;});return[family,triangles];
+    })),
+    weaponSockets,
+    weaponPose: weaponHand ? "hand_r" : "torso",
+    mergedParts,
+    quality: mobile ? "mobile" : "desktop",
     side,
     variationId: profile.id,
     variationLabel: profile.label,
@@ -818,9 +1171,37 @@ function buildKit(root, player) {
     syncAnchors() {
       if (state.disposed) return;
       root.updateWorldMatrix?.(true, true);
-      updaters.forEach((update) => update());
+      // 每個骨架每次只更新一次矩陣；不在每個袖口／關節重走父節點鏈。
+      anchorInverse.copy(root.matrixWorld).invert();
+      ACTIVE_ANCHOR_INVERSES.set(root, anchorInverse);
+      try { updaters.forEach((update) => update()); }
+      finally { ACTIVE_ANCHOR_INVERSES.delete(root); }
+      // 上方已更新骨架；只重算被重新定位的槍械子樹，resolver 不再走父鏈。
+      if (weaponHand) weaponMount.updateWorldMatrix(false, true);
+    },
+    getMuzzleWorldPosition(target, expectedFamily = state.weaponFamily) {
+      if (state.disposed || !weaponHand || !target?.isVector3 || expectedFamily !== state.weaponFamily) return null;
+      const socket = weaponSockets[expectedFamily]?.muzzle;
+      if (!socket) return null;
+      // 產品在 syncAnchors 後才套 authoritative yaw；僅補 socket 祖先鏈，
+      // 不重走模型／骨架子樹，也不讓特效使用上一幀朝向。
+      socket.updateWorldMatrix(true, false);
+      target.setFromMatrixPosition(socket.matrixWorld);
+      return Number.isFinite(target.x) && Number.isFinite(target.y) && Number.isFinite(target.z) ? target : null;
+    },
+    getMuzzleWorldDirection(target, expectedFamily = state.weaponFamily) {
+      if (state.disposed || !weaponHand || !target?.isVector3 || expectedFamily !== state.weaponFamily) return null;
+      const socket = weaponSockets[expectedFamily]?.muzzle;
+      if (!socket) return null;
+      socket.updateWorldMatrix(true, false);
+      target.set(1, 0, 0).transformDirection(socket.matrixWorld);
+      return Number.isFinite(target.x) && Number.isFinite(target.y) && Number.isFinite(target.z) ? target : null;
     },
     dispose() {
+      if (state.disposed) return;
+      tailored?.dispose();
+      weaponMaterialLease?.release();
+      if(weaponHand)releaseWeaponEnvironment();
       state.disposed = true;
     },
   };
@@ -837,6 +1218,9 @@ function buildKit(root, player) {
     triangles += Math.floor((index ? index.count : position?.count || 0) / 3);
   });
   state.triangleCount = triangles;
+  let visibleTriangles = 0;
+  root.traverseVisible(object => { if (object.isMesh && object.geometry) visibleTriangles += (object.geometry.index?.count || object.geometry.attributes.position?.count || 0) / 3; });
+  state.visibleTriangles = visibleTriangles;
   return state;
 }
 
@@ -849,8 +1233,8 @@ export function isC2cHeroRequested(player) {
   return request === player?.id;
 }
 
-export function createC2cHeroPresentation({ root, player } = {}) {
+export function createC2cHeroPresentation({ root, player, optimized = true, mobile = false, handWeaponMount = false, continuousClothing = false, weaponAssets = null } = {}) {
   if (!root) return null;
-  styleBaseCharacter(root, player?.side === "ct" ? "ct" : "t");
-  return buildKit(root, player);
+  styleBaseCharacter(root, player?.side === "ct" ? "ct" : "t", continuousClothing);
+  return buildKit(root, player, { optimized, mobile, handWeaponMount, continuousClothing, weaponAssets });
 }

@@ -53,7 +53,7 @@ export const CS_CALIBRATION_STAT_KEYS = Object.freeze([
 /** profileStore 的既有 MOBA 定位 → CS 五種主要定位；不改既有資料結構。 */
 export const CS_ROLE_BY_MOBA_ROLE = Object.freeze({
   "上路": "entry",
-  "中路": "rifler",
+  "中路": "support",
   "下路": "awp",
   "打野": "lurker",
   "輔助": "igl",
@@ -63,7 +63,8 @@ export const CS_ROLE_BY_MOBA_ROLE = Object.freeze({
 // legacy FPS輔助 數值硬映射成 Lurker，避免用錯 role 名稱製造假資料。
 export const CS_FIT_ROLE_LABELS = Object.freeze({
   "FPS突破手": "Entry",
-  "FPS步槍手": "Rifler",
+  "FPS游走手": "Lurker",
+  "FPS輔助": "Support",
   "FPS狙擊手": "AWP",
   "FPS指揮": "IGL",
 });
@@ -185,6 +186,7 @@ export const POSITION_PROFILE = {
   "FPS狙擊手":  { key: ["accuracy", "focus", "positioning", "clutch", "reflex"] },
   "FPS指揮":    { key: ["leadership", "comms", "decision", "tacticalIQ", "adaptability"] },
   "FPS輔助":    { key: ["synergy", "tacticalIQ", "comms", "positioning", "mapAware"] },
+  "FPS游走手":  { key: ["mapAware", "decision", "positioning", "adaptability", "clutch"] },
 };
 export const MOBA_ROLES = ["上路", "打野", "中路", "下路", "輔助"];
 

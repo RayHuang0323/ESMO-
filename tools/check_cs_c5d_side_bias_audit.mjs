@@ -25,13 +25,16 @@ const SEEDS = Object.freeze((process.env.CS_SIDE_AUDIT_SEEDS || "505001,505018,5
   .split(",").map((value) => Number(value.trim())).filter(Number.isFinite));
 const OUT_FILE = process.env.CS_SIDE_AUDIT_OUT ? path.resolve(process.env.CS_SIDE_AUDIT_OUT) : null;
 const source = fs.readFileSync(FPS_FILE, "utf8");
+const sourceSHA256=createHash('sha256').update(source).digest('hex');
+const progress=(stage,completedPairs=0,detail={})=>{if(OUT_FILE){fs.mkdirSync(path.dirname(OUT_FILE),{recursive:true});fs.writeFileSync(OUT_FILE+'.progress.json',JSON.stringify({stage,completedPairs,totalPairs:MAPS.length*SEEDS.length,sourceSHA256,at:new Date().toISOString(),...detail},null,2));}};
+progress('loading');
 const RETURN_MARKER = "return { EsportsFPS3D, buildMatchResult };";
 const EXPORT_MARKER = "export { EsportsFPS3D, buildMatchResult };";
 // The authoritative episode now carries round/side fields before its id.
 // Keep the transform anchored to the stable JSX object prefix rather than
 // assuming the id is the first field.
 const EPISODE_MARKER = "episode={id:";
-const PLANT_ATTEMPT_MARKER = "const canPlant=(ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18);";
+const PLANT_ATTEMPT_MARKER = 'const canPlant=sceneVersion==="legacy"?((ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18)):carrier.plantProgressSec>=3;';
 
 if (!source.includes(RETURN_MARKER) || !source.includes(EXPORT_MARKER)) {
   throw new Error("C5D transform marker drift: module export");
@@ -45,6 +48,7 @@ let transformCount = 0;
 const vite = await createServer({
   root: ROOT,
   configFile: false,
+  css: { postcss: { plugins: [] } },
   envFile: false,
   appType: "custom",
   logLevel: "error",
@@ -58,10 +62,11 @@ const vite = await createServer({
       if (path.resolve(id.split("?")[0]).toLowerCase() !== FPS_FILE.toLowerCase()) return null;
       transformCount += 1;
       const next = code
+        .replace('while(!ruleState.completed){',"while(!ruleState.completed){if(ruleState.roundsPlayed>=96)throw new Error('Side audit exceeded 96 legal rounds; no result fabricated');")
         .replace(EPISODE_MARKER, "episode={round:rnd+1,actorSide:actor.side,targetSide:target.side,id:")
         .replace(
           PLANT_ATTEMPT_MARKER,
-          "bombAudit.plantAttempts.push({round:rnd+1,roundSec:sec,site:target,carrierId:carrier.id,aliveT:aliveT.length,aliveCT:aliveCT.length,ctNear});const canPlant=(ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18);",
+          "bombAudit.plantAttempts.push({round:rnd+1,roundSec:sec,site:target,carrierId:carrier.id,aliveT:aliveT.length,aliveCT:aliveCT.length,ctNear});" + PLANT_ATTEMPT_MARKER,
         )
         .replace(
           "const bombAudit={plantEvents:[],timerSamples:",
@@ -349,10 +354,15 @@ try {
       const swappedAgain = summarize(mapKey, seed, "side-swap", api.simulateFps(mapKey, structuredClone(tactics.ct[0]), structuredClone(tactics.t[0]), seed, structuredClone(swapRoster)), swapRoster);
       const deterministic = digest(base) === digest(baseAgain) && digest(swapped) === digest(swappedAgain);
       deterministicChecks.push({ mapKey, seed, deterministic });
-      if (!deterministic) throw new Error(`C5D non-deterministic paired run: ${mapKey}/${seed}`);
+      if (!deterministic) {
+        const differences=[];const visit=(a,b,p)=>{if(differences.length>=16||Object.is(a,b))return;if(!a||!b||typeof a!=='object'||typeof b!=='object'){differences.push({path:p,before:a,after:b});return;}for(const k of new Set([...Object.keys(a),...Object.keys(b)]))visit(a[k],b[k],p+'.'+k);};visit(base,baseAgain,'base');visit(swapped,swappedAgain,'swapped');
+        if(OUT_FILE)fs.writeFileSync(OUT_FILE+'.mismatch.json',JSON.stringify({sourceSHA256,mapKey,seed,base,baseAgain,swapped,swappedAgain,differences},null,2));progress('non-deterministic',paired.length,{mapKey,seed,differences});
+        throw new Error(`C5D non-deterministic paired run: ${mapKey}/${seed}`);
+      }
       runs.push(base, swapped);
       const delta = pairedDelta(base, swapped);
       paired.push(delta);
+      progress('paired-complete',paired.length,{mapKey,seed,deterministic});
       console.log(`RUN ${mapKey} seed=${seed} base(T=${base.bySide.t.roundWins}/${base.bySide.t.rounds},CT=${base.bySide.ct.roundWins}/${base.bySide.ct.rounds},A=${base.teamWins.A}) swap(T=${swapped.bySide.t.roundWins}/${swapped.bySide.t.rounds},CT=${swapped.bySide.ct.roundWins}/${swapped.bySide.ct.rounds},A=${swapped.teamWins.A}) AΔ=${delta.teamAWinDeltaTMinusCT}`);
     }
   }
@@ -400,6 +410,7 @@ try {
   const sideBias = Boolean(Math.abs(sideRoundWinDelta) >= 0.08 && Math.abs(pairedSideEffect || 0) >= 0.75);
   const output = {
     schema: "CsSideBiasAudit.v1",
+    sourceSHA256,
     config: { maps: MAPS, seeds: SEEDS, pairs: paired.length, teamA: "original T roster", teamB: "original CT roster", sameSeed: true, sameRoster: true, sideSwap: true },
     verdict: sideBias ? "T_SIDE_SYSTEMIC_BIAS" : "NO_T_SIDE_SYSTEMIC_BIAS",
     transform: { transformedModules: transformCount, productSourceChanged: false },
@@ -415,6 +426,7 @@ try {
   }
   console.log(`SUMMARY ${JSON.stringify({ schema: output.schema, verdict: output.verdict, pairs: output.config.pairs, aggregate: output.aggregate, determinism: output.determinism })}`);
   if (!output.determinism.passed) process.exitCode = 1;
+  progress('complete',paired.length,{verdict:output.verdict,determinism:output.determinism});
 } finally {
   await vite.close();
   fs.rmSync(tempRoot, { recursive: true, force: true });

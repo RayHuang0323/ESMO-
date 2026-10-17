@@ -48,3 +48,14 @@ review/moba-combat/_backup_*
 .env.development
 .env.production
 !.env.example
+
+# CS Major：本機取證與瀏覽器暫存不提交；保留磁碟供續接與 Owner 查閱。
+review/browser-profiles/
+review/cs-major-upgrade/profile-builds/
+review/cs-major-upgrade/evidence/
+review/cs-major-upgrade/**/*.log
+# CS Release：原始音效／研究封存與暫存僅留本機，正式轉製素材位於 public/。
+/tmp/
+review/cs-major-upgrade/assets-source/
+review/cs-major-upgrade/tmp/
+tools/.cs-major-verifier-recovery/

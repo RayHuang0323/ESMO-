@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';
+import {fpsBombInteractionGeometry,FPS_C4_CASE,FPS_PLAYER_COLLISION_RADIUS} from '../src/battle/fps/fpsInteractionGeometry.js';
+import {advanceFpsDefuse,selectFpsDefuser} from '../src/battle/fps/fpsMajorUtilityRules.js';
+const rows=[];const ck=(name,test)=>{try{test();rows.push({name,pass:true});}catch(e){rows.push({name,pass:false,error:e.stack});}};
+const c4={x:20,y:20},actor=(extra={})=>({id:'ct',side:'ct',pos:{x:21.5,y:20},blindSec:0,dead:false,...extra});
+const args=(extra={})=>({previous:{defuserId:null,progress:0},players:[actor()],bombPos:c4,walls:[],lineBlocked:()=>false,timerSec:10,dtSec:.5,rateFor:()=>1,...extra});
+ck('visible C4 and navigation collider share exact world dimensions',()=>{assert.equal(FPS_PLAYER_COLLISION_RADIUS,1.35);assert.deepEqual(FPS_C4_CASE,{width:.95,height:.28,depth:.62});});
+ck('start requires capsule contact with actual C4 case footprint',()=>{assert.ok(selectFpsDefuser(args()));assert.equal(selectFpsDefuser(args({players:[actor({pos:{x:25.9,y:20}})]})),null);});
+ck('exact contact boundary passes; next representable meaningful gap fails',()=>{assert.ok(fpsBombInteractionGeometry(actor({pos:{x:20+.475+1.35,y:20}}),c4).eligible);assert.equal(fpsBombInteractionGeometry(actor({pos:{x:20+.475+1.350001,y:20}}),c4).eligible,false);});
+ck('continual validation resets progress after leaving the interaction envelope',()=>{const r=advanceFpsDefuse(args({previous:{defuserId:'ct',progress:3},players:[actor({pos:{x:23,y:20}})]}));assert.ok(r.interrupted);assert.equal(r.progress,0);assert.equal(r.completed,false);});
+ck('completion cannot consume stale progress at an invalid distance',()=>{assert.equal(advanceFpsDefuse(args({previous:{defuserId:'ct',progress:3.49},players:[actor({pos:{x:24,y:20}})]})).completed,false);});
+for(const [name,extra]of Object.entries({dead:{dead:true},blind:{blindSec:1},picking:{picking:1},disabled:{interactionDisabled:true},save:{tacticalIntent:{kind:'save'}},retreat:{tacticalIntent:{kind:'retreat'}}}))ck(name+' cannot continue or finish defuse',()=>{const r=advanceFpsDefuse(args({previous:{defuserId:'ct',progress:3.4},players:[actor(extra)]}));assert.equal(r.completed,false);assert.equal(r.defuserId,null);});
+ck('another elevation cannot begin or finish through a floor',()=>{const canInteract=(p,b)=>fpsBombInteractionGeometry(p,b,{groundHeightAt:q=>q.x>21?3:0}).eligible;assert.equal(selectFpsDefuser(args({canInteract})),null);assert.equal(advanceFpsDefuse(args({canInteract,previous:{defuserId:'ct',progress:3.4}})).completed,false);});
+ck('wall between case and actor blocks all phases',()=>{assert.equal(selectFpsDefuser(args({lineBlocked:()=>true})),null);assert.equal(advanceFpsDefuse(args({lineBlocked:()=>true,previous:{defuserId:'ct',progress:3.4}})).completed,false);});
+ck('safe reachable actor completes; insufficient time does not force a win',()=>{assert.ok(advanceFpsDefuse(args({previous:{defuserId:'ct',progress:3}})).completed);assert.equal(advanceFpsDefuse(args({timerSec:.1})).completed,false);});
+const report={pass:rows.filter(r=>r.pass).length,fail:rows.filter(r=>!r.pass).length,rows};
+const out='review/cs-major-upgrade/evidence/owner4g-review-20261016/interaction-r3.json';fs.writeFileSync(out,JSON.stringify(report,null,2),{flag:'wx'});console.log(JSON.stringify(report));process.exitCode=report.fail?1:0;

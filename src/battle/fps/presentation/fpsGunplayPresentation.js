@@ -1,6 +1,9 @@
 import * as THREE from "three";
+import { fpsMajorElevation } from "../fpsMajorTerrain.js";
 
 const AUTHORITATIVE_FRAME_MS = 500;
+const BEAM_AXIS = new THREE.Vector3(1, 0, 0);
+const beamDirection = new THREE.Vector3();
 
 // C5A is deliberately a presentation catalogue.  It never decides whether a
 // shot, hit, or death happened; those facts come from the authoritative frame.
@@ -79,14 +82,14 @@ function hidePool(pool) {
 }
 
 function setBeam(mesh, from, to, width) {
-  const direction = new THREE.Vector3().subVectors(to, from);
+  const direction = beamDirection.subVectors(to, from);
   const length = direction.length();
   if (length < 0.01) {
     mesh.visible = false;
     return false;
   }
   mesh.position.copy(from).add(to).multiplyScalar(0.5);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), direction.normalize());
+  mesh.quaternion.setFromUnitVectors(BEAM_AXIS, direction.normalize());
   mesh.scale.set(length, width, width);
   mesh.visible = true;
   return true;
@@ -161,7 +164,25 @@ function createWeaponShowcase(group, materials, geometries, beamGeometry) {
  * A small pooled visual layer driven only by frame snapshots.  The pools are
  * rebuilt with the map presentation lifecycle and never outlive their scene.
  */
-export function createGunplayPresentation({ group, scene, tex, beamGeometry, mapKey }) {
+export function createGunplayPresentation({ group, scene, tex, beamGeometry, mapKey, sceneVersion = "legacy" }) {
+  const major = sceneVersion !== "legacy";
+  // Presentation sockets never move an actor or alter an authoritative ray.
+  // Reuse scratch vectors for the bounded pools, including after replay seeks.
+  const origin = new THREE.Vector3(), forward = new THREE.Vector3();
+  const beamEnd = new THREE.Vector3(), start = new THREE.Vector3(), end = new THREE.Vector3();
+  const socket = new THREE.Vector3();
+  const validVector = (value) => value && Number.isFinite(value.x) && Number.isFinite(value.y) && Number.isFinite(value.z);
+  const elevationAt = (point, player) => major
+    ? Number.isFinite(player?.elevation) ? player.elevation : fpsMajorElevation(mapKey, point)
+    : 0;
+  const resolveSocket = (resolver, id, family, target) => {
+    if (!major || typeof resolver !== "function" || !id) return false;
+    socket.set(NaN, NaN, NaN);
+    const result = resolver(id, family, socket);
+    if (!validVector(result)) return false;
+    target.copy(result);
+    return true;
+  };
   const materials = {
     tracer: new THREE.MeshBasicMaterial({ color: 0xffe6a4, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
     flashBeam: new THREE.MeshBasicMaterial({ color: 0xffc46b, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
@@ -216,7 +237,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
   let lastFrameIndex = null;
   let evidence = { frameIndex: null, gunfire: 0, hits: 0, impacts: 0, deaths: 0, families: {}, surfaces: {} };
 
-  const update = ({ frame, previousFrame, time, W, frameIndex, sub = 0 }) => {
+  const update = ({ frame, previousFrame, time, W, frameIndex, sub = 0, resolveMuzzle, resolveMuzzleDirection }) => {
     Object.values(pools).forEach(hidePool);
     if (reviewRoot) {
       // Review mode is an isolated visual sample, positioned away from the
@@ -230,7 +251,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
     }
     const playerById = new Map((frame?.players || []).map((player) => [player.id, player]));
     const previousById = new Map((previousFrame?.players || []).map((player) => [player.id, player]));
-    const nextEvidence = { frameIndex, gunfire: 0, hits: 0, impacts: 0, deaths: 0, families: {}, surfaces: {} };
+    const nextEvidence = { frameIndex, gunfire: 0, hits: 0, impacts: 0, deaths: 0, families: {}, surfaces: {}, muzzleSockets: 0, muzzleFallbacks: 0, muzzleDirections: 0, tracerSockets: 0 };
     const fireEvents = frame?.muzzles || [];
     fireEvents.forEach((event, index) => {
       if (!finitePosition(event.pos)) return;
@@ -247,8 +268,16 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
       const facing = Number(event.va ?? attacker?.va ?? 0) * Math.PI / 180;
       const dx = Math.cos(facing);
       const dz = Math.sin(facing);
-      const origin = new THREE.Vector3(W.vx(event.pos.x + dx * 1.02), 1.18, W.vz(event.pos.y + dz * 1.02));
-      const forward = new THREE.Vector3(dx, 0, dz);
+      origin.set(W.vx(event.pos.x + dx * 1.02), elevationAt(event.pos, attacker) + 1.18, W.vz(event.pos.y + dz * 1.02));
+      forward.set(dx, 0, dz);
+      const hasSocket = resolveSocket(resolveMuzzle, event.attackerId, family, origin);
+      if (hasSocket) {
+        nextEvidence.muzzleSockets += 1;
+        if (resolveSocket(resolveMuzzleDirection, event.attackerId, family, forward) && forward.lengthSq() > 0.000001) {
+          forward.normalize();
+          nextEvidence.muzzleDirections += 1;
+        } else forward.set(dx, 0, dz);
+      } else if (major) nextEvidence.muzzleFallbacks += 1;
       const flash = pools.flash[index % pools.flash.length];
       const core = pools.flashCore[index % pools.flashCore.length];
       const beam = pools.flashBeam[index % pools.flashBeam.length];
@@ -263,13 +292,13 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
       core.material.color.setHex(family === "sniper" ? 0xffffff : profile.light);
       core.material.opacity = 0.9 * life;
       core.visible = true;
-      const beamEnd = origin.clone().addScaledVector(forward, profile.reach);
+      beamEnd.copy(origin).addScaledVector(forward, profile.reach);
       beam.material.color.setHex(profile.light);
       beam.material.opacity = (family === "shotgun" ? 0.76 : 0.64) * life;
       setBeam(beam, origin, beamEnd, profile.tracer * (family === "sniper" ? 1.25 : 1));
       const shell = pools.shell[index % pools.shell.length];
       const ejectSide = (seed & 1) === 0 ? 1 : -1;
-      shell.position.copy(origin).add(new THREE.Vector3(-dx * 0.1 + dz * ejectSide * 0.18, -0.1, -dz * 0.1 - dx * ejectSide * 0.18));
+      shell.position.set(origin.x - dx * 0.1 + dz * ejectSide * 0.18, origin.y - 0.1, origin.z - dz * 0.1 - dx * ejectSide * 0.18);
       shell.rotation.set(0.55 + (seed % 11) * 0.04, facing + 0.4, ejectSide * 0.9);
       shell.scale.setScalar(profile.shell);
       shell.material.color.setHex(profile.shellColor);
@@ -289,8 +318,9 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
       const eventElapsedMs = (Number(frame?.roundSec) || 0) * 1000 + Math.max(0, sub) * AUTHORITATIVE_FRAME_MS - (Number(event.shotAtMs) || 0);
       const life = eventElapsedMs < 0 ? 0 : clamp(1 - eventElapsedMs / Math.max(45,Number(event.visualLifetimeMs)||95),0,1);
       if (life <= 0) return;
-      const start = new THREE.Vector3(W.vx(event.from.x), 1.02, W.vz(event.from.y));
-      const end = new THREE.Vector3(W.vx(event.to.x), 1.02, W.vz(event.to.y));
+      start.set(W.vx(event.from.x), elevationAt(event.from, attacker) + 1.02, W.vz(event.from.y));
+      end.set(W.vx(event.to.x), elevationAt(event.to) + 1.02, W.vz(event.to.y));
+      if (resolveSocket(resolveMuzzle, event.attackerId, family, start)) nextEvidence.tracerSockets += 1;
       const tracer = pools.tracer[index % pools.tracer.length];
       tracer.material.color.setHex(event.color ? new THREE.Color(event.color).getHex() : profile.light);
       tracer.material.opacity = (event.hit ? (family === "sniper" ? 0.98 : 0.82) : 0.64) * life;
@@ -300,12 +330,12 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
         const surfaceProfile = C5A_SURFACE_FX[surface];
         const ring = pools.hitRing[index % pools.hitRing.length];
         ring.position.copy(end);
-        ring.position.y = surface === "player" ? 1.16 : 0.72;
+        ring.position.y = major ? end.y + (surface === "player" ? 0.14 : -0.3) : surface === "player" ? 1.16 : 0.72;
         ring.rotation.x = -Math.PI / 2;
         ring.scale.setScalar(family === "sniper" ? 1.2 : family === "shotgun" ? 1.08 : 0.92);
         ring.material.color.setHex(surfaceProfile.color);
         ring.material.opacity = (surface === "player" ? 0.86 : 0.72) * life;
-        ring.visible = true;
+        ring.visible = !major || surface !== 'player';
         const particleCount = surface === "player" ? 3 : 2;
         for (let particleIndex = 0; particleIndex < particleCount; particleIndex += 1) {
           const particle = pools.hitParticle[(index * 3 + particleIndex) % pools.hitParticle.length];
@@ -315,7 +345,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
           particle.scale.setScalar(surface === "metal" ? 0.3 : 0.22);
           particle.material.color.setHex(particleIndex === 0 ? surfaceProfile.color : surfaceProfile.secondary);
           particle.material.opacity = (surface === "player" ? 0.72 : 0.62) * life;
-          particle.visible = true;
+          particle.visible = !major || surface !== 'player';
         }
         nextEvidence.hits += 1;
         nextEvidence.impacts += 1;
@@ -328,7 +358,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
       if (!finitePosition(player.pos) || !previous) return;
       const tookDamage = !player.dead && Number.isFinite(previous.hp) && Number.isFinite(player.hp) && player.hp < previous.hp - 0.5;
       const died = player.dead === true && previous.dead !== true;
-      if (tookDamage) {
+      if (tookDamage && !major) {
         const ring = pools.hitRing[(index + fireEvents.length) % pools.hitRing.length];
         ring.position.set(W.vx(player.pos.x), 1.16, W.vz(player.pos.y));
         ring.rotation.x = -Math.PI / 2;
@@ -346,7 +376,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
         pulse.scale.setScalar(1.05);
         pulse.material.color.setHex(player.side === "ct" ? 0x74b9d8 : 0xe59a67);
         pulse.material.opacity = 0.82;
-        pulse.visible = true;
+        pulse.visible = !major;
         nextEvidence.deaths += 1;
       }
     });

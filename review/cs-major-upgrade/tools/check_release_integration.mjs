@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import assert from 'node:assert/strict';
+const git=args=>execFileSync('git',['-c','core.quotepath=false',...args],{encoding:'utf8',windowsHide:true});
+const base='1d0e219aae20a946bbc04d36349cb988e6e5ba7b',owner='75044c9c';
+const protectedPaths=['src/LogicEngine.js','src/battle/moba','src/battle/battleResult.js','src/platform/contracts/battleResultVersion.js','src/platform/profileStore.js','src/platform/progress','src/platform/contracts/simulationVersion.js','src/platform/router','src/AppShell.jsx'];
+assert.equal(git(['diff','--name-only',base,'--',...protectedPaths]).trim(),'','MOBA protected source changed');
+const csPaths=['src/battle/fps','src/screens/fps','src/platform/contracts/CsMatchResult.js','src/data/playerModel.js','src/platform/contracts/matchSquad.js','src/screens/manage/RosterScreen.jsx','src/screens/manage/PlayerDetailScreen.jsx','public/assets/fps','public/audio/cs'];
+assert.equal(git(['diff','--name-only',owner,'--',...csPaths]).trim(),'','Owner CS source changed');
+const ids=t=>[...t.matchAll(/id:\s*"([^"]+)"/g)].map(m=>m[1]);
+const before=ids(git(['show',base+':tools/verify.mjs'])),after=ids(fs.readFileSync('tools/verify.mjs','utf8'));
+assert.deepEqual(before.filter(id=>!after.includes(id)),[],'Missing main verifier segments');
+const result={schema:'cs-release-integration.v1',base,owner,protectedMobaUnchanged:true,ownerCsUnchanged:true,mainVerifierSegments:before.length,integratedVerifierSegments:after.length,missing:[]};
+console.log(JSON.stringify(result));

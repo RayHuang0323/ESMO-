@@ -19,7 +19,7 @@
 export const CS_RESULT_SCHEMA = "CsMatchResult.v1";
 
 /** 引擎回傳的我方/對手選手 → 契約選手列（欄位皆引擎真實統計） */
-function toContractPlayer(p, nameToId) {
+function toContractPlayer(p, nameToId, major = false) {
   return {
     playerId: nameToId[p.name] ?? null,   // null = 引擎內建示範陣容（非真實選手）
     playerName: p.name,
@@ -33,6 +33,7 @@ function toContractPlayer(p, nameToId) {
     clutches: p.clutches ?? 0,
     entryKills: p.entryKills ?? 0,
     mvpRounds: p.mvpRounds ?? 0,
+    ...(major && Number.isFinite(p.utilDmg) ? { utilityDamage: p.utilDmg } : {}),
   };
 }
 
@@ -44,10 +45,11 @@ function toContractPlayer(p, nameToId) {
  */
 export function toCsMatchResult(raw, ctx = {}) {
   if (!raw || raw.mode !== "CS") return null;
+  const major = raw.sceneVersion === "major.v1";
   const nameToId = {};
   (ctx.roster ?? []).forEach((r) => { if (r && r.name) nameToId[r.name] = r._gid ?? null; });
-  const ours = (raw.ourPlayers ?? []).map((p) => toContractPlayer(p, nameToId));
-  const opps = (raw.theirPlayers ?? []).map((p) => toContractPlayer(p, {}));
+  const ours = (raw.ourPlayers ?? []).map((p) => toContractPlayer(p, nameToId, major));
+  const opps = (raw.theirPlayers ?? []).map((p) => toContractPlayer(p, {}, major));
   const mvpRaw = raw.ourMvp ?? null;
   return {
     schema: CS_RESULT_SCHEMA,
@@ -75,6 +77,8 @@ export function toCsMatchResult(raw, ctx = {}) {
     summaryEvents: (raw.rounds ?? []).map((r, i) => ({ round: i + 1, winner: r.winner === "t" ? "us" : "enemy", how: r.how ?? null })),
     rewards: { money: null, fans: null, xp: null }, // 由 recordCsMatch（Legacy 公式）入帳時填入
     recordedAt: null,                      // 由 recordCsMatch 蓋章（= 已寫入 csHistory）
+    // Major 可選資料直接攜帶同一份引擎結果，不回算統計或獎勵。
+    ...(major ? { sceneVersion: raw.sceneVersion, roundDetails: (raw.rounds ?? []).map((r, i) => ({ round: i + 1, players: (r.roundStats ?? []).map((p) => ({ ...p })) })),...(raw.analytics?.version===1?{analytics:JSON.parse(JSON.stringify(raw.analytics))}:{}) } : {}),
   };
 }
 

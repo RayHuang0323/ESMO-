@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+const [gridPath,out]=process.argv.slice(2);
+const requestedRetraction=Number(process.argv[4]??.32),requestedCenter=Number(process.argv[5]??-.055);
+assert(out?.startsWith('review/cs-major-upgrade/evidence/')&&!fs.existsSync(out));
+const grid=JSON.parse(fs.readFileSync(gridPath));
+for(const [file,sha] of Object.entries(grid.sourceHashes))assert.equal(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),sha);
+const chosen=grid.results.find(r=>r.retraction===requestedRetraction&&(r.centerOffset??.045)===requestedCenter&&(r.verticalOffset??0)===0&&r.supportX===.9);
+assert(chosen?.diagnostics.applied&&chosen.support.method==='TRUE_WOOD_UNDERFACE_RAY'&&chosen.support.normal[1]<-.9);
+let code=fs.readFileSync('src/battle/fps/presentation/fpsSupportGripPose.js','utf8');
+assert(code.includes('sniper:.61')&&code.includes('centre+.045*p[8].y')&&code.includes('p[12].copy(socket.position)'));
+code=code.replace('sniper:.61',`sniper:${requestedRetraction}`).replace('centre+.045*p[8].y',`centre+(family==='sniper'?${requestedCenter}:.045)*p[8].y`);
+code=code.replace('const PALM =',`// 真 CC0 木護面 Cube001 三角${chosen.support.triangle}下緣的作者握點；原GLB socket仍保留。\nconst SNIPER_SOURCE_SUPPORT=new THREE.Vector3(...${JSON.stringify(chosen.originalSocket)});\nconst SNIPER_AUTHORED_SUPPORT=new THREE.Vector3(...${JSON.stringify(chosen.support.point)});\nconst PALM =`);
+code=code.replace('p[12].copy(socket.position)',"p[12].copy(family==='sniper'&&weapon.userData.esmoAuthoredWeapon?.imported&&socket.position.equals(SNIPER_SOURCE_SUPPORT)?SNIPER_AUTHORED_SUPPORT:socket.position)");
+code=code.replace('armLengthMetres:limit','armLengthMetres:limit,authoredSupport:!!(presentation.weaponFamily===\'sniper\'&&presentation.weaponGroups.sniper?.userData.esmoAuthoredWeapon?.imported&&presentation.weaponSockets.sniper.support.position.equals(SNIPER_SOURCE_SUPPORT)),supportLocal:(presentation.weaponFamily===\'sniper\'&&presentation.weaponGroups.sniper?.userData.esmoAuthoredWeapon?.imported&&presentation.weaponSockets.sniper.support.position.equals(SNIPER_SOURCE_SUPPORT)?SNIPER_AUTHORED_SUPPORT:presentation.weaponSockets[presentation.weaponFamily]?.support.position)?.toArray()');
+fs.writeFileSync(out,code,{flag:'wx'});console.log(JSON.stringify({status:'AUTHOR_POSE_MODULE_NOT_INTEGRATED',out,sha256:crypto.createHash('sha256').update(code).digest('hex'),chosen}));

@@ -1,0 +1,79 @@
+.fps-major-viewport-tools {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  min-width: 0;
+  border-bottom: 1px solid;
+}
+.fps-major-radio { flex: 1 1 0; min-width: 0; font-size: 11px; }
+.fps-major-radio summary {
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+}
+.fps-major-radio-latest { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.fps-major-radio ol { padding-left: 20px; margin: 8px 0; overflow-wrap: anywhere; }
+.fps-major-radio li { margin: 5px 0; }
+
+/* Battle-only scope: shared MOBA controls and Legacy styling stay independent. */
+.fps-major-battle { min-width: 0; padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+.fps-major-battle button, .fps-major-battle summary,
+.fps-cs-match-header button, .fps-major-replay-file {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+.fps-major-battle [data-testid="cs-playback-controls"] button { width: auto !important; height: 44px !important; min-width: 44px !important; }
+.fps-major-battle [data-testid="cs-playback-controls"] input[type="range"] { height: 44px !important; cursor: pointer; }
+.fps-major-battle [data-testid="cs-camera-presets"] button { min-height: 44px !important; white-space: normal !important; font-size: 10px !important; }
+.fps-major-battle [data-esmo-fps-team-roster] > div > div:first-child { flex-wrap: wrap; gap: 4px; overflow-wrap: anywhere; }
+.fps-major-battle [data-esmo-fps-player-card] { min-width: 0; }
+.fps-major-saved-hud { padding: 8px 0; min-width: 0; overflow-wrap: anywhere; }
+.fps-major-objective-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 11px; font-weight: 800; }
+.fps-major-moment { padding-top: 6px; font-size: 12px; animation: fpsMajorStateIn 400ms ease-out; }
+.fps-major-feed { display: flex; flex-direction: column; gap: 4px; margin-top: 5px; }
+.fps-major-feed-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, .8fr); gap: 5px; font-size: 10px; }
+.fps-major-feed-entry > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fps-major-casts { font-size: 10px; margin-top: 5px; }
+.fps-major-replay { margin-top: 8px; min-width: 0; font-size: 11px; }
+.fps-major-replay > summary { display: flex; align-items: center; cursor: pointer; }
+.fps-major-replay-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+.fps-major-replay-file { display: inline-flex; align-items: center; padding: 6px 12px; border: 1px solid; border-radius: 8px; cursor: pointer; }
+.fps-major-replay-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.fps-major-replay-file:focus-within { outline: 2px solid currentColor; outline-offset: 2px; }
+.fps-major-rounds { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; padding: 8px 0; }
+.fps-major-round-details { min-width: 0; font-size: 11px; margin-top: 6px; }
+.fps-major-round-player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 5px 0; overflow-wrap: anywhere; }
+.fps-cs-match-header { position: sticky; top: 0; z-index: 60; padding-top: max(8px, env(safe-area-inset-top)) !important; backdrop-filter: blur(8px); }
+.fps-major-result button, .fps-major-result summary { min-height: 44px; min-width: 44px; cursor: pointer; }
+.fps-major-result summary { display: flex; align-items: center; }
+.fps-major-result { min-width: 0; overflow-wrap: anywhere; padding-bottom: env(safe-area-inset-bottom); }
+@keyframes fpsMajorStateIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fps-major-battle *, .fps-major-battle *::before, .fps-major-battle *::after { animation: none !important; transition: none !important; }
+}
+
+/* White is the physical flash effect; semantic hit colour inherits the Battle token. */
+.fps-pov-feedback { position:absolute;inset:0;pointer-events:none;z-index:25;--fps-blind-opacity:0; }
+.fps-pov-flash { position:absolute;inset:0;background:#fff;opacity:var(--fps-blind-opacity); }
+.fps-pov-hit { display:none;position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%) rotate(45deg);border:2px solid currentColor;clip-path:polygon(0 0,35% 0,35% 35%,65% 35%,65% 0,100% 0,100% 35%,65% 35%,65% 65%,100% 65%,100% 100%,65% 100%,65% 65%,35% 65%,35% 100%,0 100%,0 65%,35% 65%,35% 35%,0 35%); }
+.fps-pov-feedback[data-hit="true"] .fps-pov-hit { display:block; }
+.fps-pov-blind-label { display:none;position:absolute;bottom:20%;left:50%;transform:translateX(-50%);color:#111;background:#ffffffb0;border-radius:6px;padding:4px 8px;font-size:12px; }
+.fps-pov-feedback[data-blind="true"] .fps-pov-blind-label { display:block; }
+@media (prefers-reduced-motion:reduce) { .fps-pov-feedback * { animation:none;transition:none; } }
+
+.fps-major-battle [data-testid="cs-pov-reticle"][data-cs-pov-shot-state="idle"] > span { background:#f8fafc !important;box-shadow:none !important; }
+.fps-major-battle [data-testid="cs-pov-reticle"][data-cs-pov-shot-state="idle"] [data-testid="cs-pov-shot-feedback"] { display:none; }
+.fps-sniper-scope { display:none; position:absolute; inset:0; z-index:23; pointer-events:none; background:radial-gradient(circle closest-side, transparent 94%, #000 96%); }
+.fps-sniper-scope[data-active="true"] { display:grid; place-items:center; }
+.fps-scope-lens { position:absolute; width:min(88cqw,88cqh); aspect-ratio:1; border:2px solid #111; border-radius:50%; box-shadow:0 0 0 100vmax #000; }
+.fps-scope-lens i,.fps-scope-lens b { position:absolute; display:block; background:#111; }
+.fps-scope-lens i { top:50%; left:0; width:100%; height:1px; }
+.fps-scope-lens b { top:0; left:50%; width:1px; height:100%; }
+.fps-scope-lens span { position:absolute; bottom:12%; left:53%; color:#111; font:700 11px ui-monospace,monospace; }
+.fps-major-battle [data-esmo-fps-stable-canvas-region] { container-type:size; }
