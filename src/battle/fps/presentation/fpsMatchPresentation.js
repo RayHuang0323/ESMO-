@@ -3,6 +3,7 @@
 // This module never changes gameplay state and never infers a kill from HP.
 import { resolveFpsAudioEmitter } from "./fpsAudioPlayback.js";
 import { deriveFpsAnimationState, FPS_PRESENTATION_STATES } from "./fpsAnimationState.js";
+import {fpsBombBeepCues} from './fpsBombCadence.js';
 
 const WEAPON_LABELS = Object.freeze({
   pistol: "手槍",
@@ -38,6 +39,7 @@ const EVENT_SCORE = Object.freeze({
   "round-end": 98,
   clutch: 96,
   "bomb-planted": 92,
+  "bomb-plant-start": 90,
   multikill: 84,
   kill: 62,
   "defuse-start": 78,
@@ -150,7 +152,7 @@ export function createFpsMatchPresentation({ major = false } = {}) {
 
   const addAudio = (type, event, frame) => {
     const id = `${type}-${eventId(event, frame, type)}`;
-    state.audio.push({ type, id, eventId: id, distance: Number(event?.distance ?? 20), position: major ? resolveFpsAudioEmitter(event, frame) : clone(event?.pos ?? event?.position ?? null), ...(major && Number.isFinite(event?.delaySec) ? { delaySec: event.delaySec } : {}) });
+    state.audio.push({ type, id, eventId: id, distance: Number(event?.distance ?? 20), position: major ? resolveFpsAudioEmitter(event, frame) : clone(event?.pos ?? event?.position ?? null), ...(major && Number.isFinite(event?.delaySec) ? { delaySec: event.delaySec } : {}),...(event?.variant?{variant:event.variant}:{}) });
     state.diagnostics.audioRequests += 1;
   };
 
@@ -213,6 +215,11 @@ export function createFpsMatchPresentation({ major = false } = {}) {
       state.diagnostics.clutchEvents += 1;
       state.banner = { kind: "moment", title: event.label ?? "關鍵殘局", detail: event.player ?? "", at, until: at + 2.8 };
       addAudio("clutch", event, frame);
+    } else if (type === "bomb-plant-start") {
+      state.banner = {kind:"objective",title:"正在安裝 C4",detail:event.playerName??"掩護安包",at,until:at+3};
+      state.diagnostics.objectiveEvents += 1;
+      addAudio("bomb-plant-start",event,frame);
+      maybeDirect(event,frame);
     } else if (type === "bomb-planted") {
       state.banner = { kind: "objective", title: "炸彈已安放", detail: event.site ? `炸彈點 ${String(event.site).toUpperCase()}` : "進入倒數", at, until: at + 2.4 };
       state.diagnostics.objectiveEvents += 1;
@@ -300,6 +307,14 @@ export function createFpsMatchPresentation({ major = false } = {}) {
     const forwardAudio = !major || (!firstFrame && !sameFrame && !rewound);
     const previousIds = new Set((previousFrame?.throwables ?? []).map((throwable) => throwable.id));
     if (forwardAudio) {
+    if(major&&!frame.buyP&&previousFrame?.rnd===frame.rnd)for(const player of frame.players??[]){
+      const previous=previousFrame.players?.find(p=>p.id===player.id);
+      if(!previous||player.dead||previous.dead||previous.gun!==player.gun)continue;
+      const cue=(type,stamp)=>addAudio(type,{id:`${frame.rnd}-${player.id}-${player.gun}-${stamp}`,playerId:player.id,pos:player.pos,delaySec:Math.max(0,(Number(stamp)-(Number(frame.roundSec)||0)*1000)/1000)},frame);
+      if(player.reloading&&player.reloadStartedAtMs!==previous.reloadStartedAtMs)cue('weapon-reload-start',player.reloadStartedAtMs);
+      if(previous.reloading&&!player.reloading&&player.ammo>previous.ammo)cue('weapon-reload-complete',previous.reloadEndsAtMs);
+      if(previous.ammo>0&&player.ammo===0&&player.reserveAmmo===0)cue('weapon-empty',Number.isFinite(player.handlingAtMs)?player.handlingAtMs:frame.roundSec*1000);
+    }
     (frame.throwables ?? []).forEach((throwable) => {
       if (!previousIds.has(throwable.id)) addAudio("utility-throw", throwable, frame);
       if (throwable.flying === false && previousFrame?.throwables?.some((item) => item.id === throwable.id && item.flying)) addAudio("utility-bounce", throwable, frame);
@@ -343,7 +358,8 @@ export function createFpsMatchPresentation({ major = false } = {}) {
         addAudio("footstep", { id: player.id, distance: 20, playerId: player.id }, frame);
       });
     }
-    if (frame.planted && previousFrame?.planted && Number(frame.c4t) !== Number(previousFrame.c4t) && Number(frame.c4t) > 0) {
+    if(major&&frame.planted){for(const beep of fpsBombBeepCues(frame))addAudio('bomb-tick',beep,frame);}
+    if (!major && frame.planted && previousFrame?.planted && Number(frame.c4t) !== Number(previousFrame.c4t) && Number(frame.c4t) > 0) {
       addAudio("bomb-tick", { id: `tick-${frame.rnd}-${frame.c4t}`, distance: 20, ...(major ? { pos: frame.c4pos } : {}) }, frame);
     }
     }

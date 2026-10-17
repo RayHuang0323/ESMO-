@@ -54,3 +54,8 @@ review/browser-profiles/
 review/cs-major-upgrade/profile-builds/
 review/cs-major-upgrade/evidence/
 review/cs-major-upgrade/**/*.log
+# CS Release：原始音效／研究封存與暫存僅留本機，正式轉製素材位於 public/。
+/tmp/
+review/cs-major-upgrade/assets-source/
+review/cs-major-upgrade/tmp/
+tools/.cs-major-verifier-recovery/

@@ -1,0 +1,68 @@
+.cs-pro-report { height:100%; overflow:auto; background:var(--bg); color:var(--text); padding-bottom:env(safe-area-inset-bottom); }
+.cs-report-wrap { max-width:1220px; margin:auto; padding:24px 20px 44px; min-width:0; }
+.cs-report-header { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.cs-report-header small { color:var(--muted); letter-spacing:.12em; font:10px var(--mono); }
+.cs-report-header h1 { font-size:28px; margin:6px 0; color:var(--us); }
+.cs-pro-report p { color:var(--muted); font-size:12px; line-height:1.7; }
+.cs-pro-report button,.cs-pro-report select { background:var(--card2); border:1px solid var(--line); color:var(--text); border-radius:7px; padding:8px 12px; font:inherit; font-size:12px; cursor:pointer; min-height:44px; max-width:100%; }
+.cs-pro-report button:hover,.cs-pro-report button[aria-pressed=true] { border-color:var(--us); color:var(--us); }
+.cs-pro-report button:focus-visible,.cs-pro-report select:focus-visible,.cs-pro-report summary:focus-visible { outline:2px solid var(--us); outline-offset:3px; }
+.cs-report-score { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; text-align:center; background:var(--card); border-block:1px solid var(--line); margin-top:20px; padding:22px 10px; }
+.cs-report-score strong { font-size:20px; overflow-wrap:anywhere; }
+.cs-report-score>div:first-child { color:var(--us); }
+.cs-report-score>div:last-child { color:var(--enemy); }
+.cs-report-score span { display:block; color:var(--muted); font-size:11px; margin-top:6px; }
+.cs-report-score>b { font:900 54px var(--mono); padding:0 26px; }
+.cs-report-score em { color:var(--muted); font-style:normal; padding:0 10px; }
+.cs-report-round-ribbon { display:flex; flex-wrap:wrap; gap:4px; padding:16px 0; }
+.cs-report-round-ribbon button { padding:3px 6px; min-width:32px; min-height:44px; border-radius:4px; display:grid; gap:2px; font-family:var(--mono); }
+.cs-report-round-ribbon button.us { border-bottom:3px solid var(--us); }
+.cs-report-round-ribbon button.enemy { border-bottom:3px solid var(--enemy); }
+.cs-report-round-ribbon span { font-size:9px; color:var(--muted); }
+.cs-report-tabs { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:2px 0 20px; }
+.cs-report-tabs button { border-bottom-width:3px; font-weight:800; }
+.cs-report-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.cs-report-panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; min-width:0; }
+.cs-report-panel h2 { margin:0 0 8px; font-size:15px; }
+.cs-report-panel h3 { font-size:12px; color:var(--us); }
+.cs-report-panel summary { color:var(--text); font-size:12px; font-weight:700; min-height:44px; display:flex; align-items:center; cursor:pointer; }
+.cs-report-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:16px; }
+.cs-report-metric { border-left:2px solid var(--us); background:var(--card2); padding:12px; min-width:0; }
+.cs-report-metric small { color:var(--muted); display:block; font-size:10px; }
+.cs-report-metric strong { font:800 22px var(--mono); display:block; margin:8px 0; overflow-wrap:anywhere; }
+.cs-report-metric span { font-size:10px; color:var(--muted); }
+.cs-report-filters { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:12px; margin-bottom:12px; }
+.cs-report-filters label { display:flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:100%; }
+.cs-report-table-scroll { overflow:auto; max-width:100%; }
+.cs-pro-report table { border-collapse:collapse; width:100%; font:12px var(--mono); min-width:530px; }
+.cs-pro-report th { text-align:right; color:var(--muted); font-size:10px; padding:10px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+.cs-pro-report th:first-child,.cs-pro-report td:first-child { text-align:left; }
+.cs-pro-report td { text-align:right; border-bottom:1px solid var(--line); padding:9px 8px; white-space:nowrap; }
+.cs-pro-report td button { text-align:left; border:0; background:none; padding:0 8px; font-weight:800; }
+.cs-pro-report td small { display:block; color:var(--muted); font-size:9px; margin-top:4px; }
+.cs-pro-report tr.us td:first-child { border-left:2px solid var(--us); }
+.cs-pro-report tr.enemy td:first-child { border-left:2px solid var(--enemy); }
+.cs-report-bar { display:grid; grid-template-columns:minmax(70px,1fr) 2fr 48px; align-items:center; gap:10px; font-size:11px; min-height:32px; }
+.cs-report-bar>div { height:7px; background:var(--card2); border-radius:3px; overflow:hidden; }
+.cs-report-bar i { height:100%; display:block; }
+.cs-report-bar b { text-align:right; font-family:var(--mono); }
+.cs-report-trend svg { width:100%; display:block; }
+.cs-report-trend text { fill:var(--muted); font:10px var(--mono); }
+.cs-report-legend { display:flex; gap:16px; font-size:10px; }
+.cs-report-legend span:first-child { color:var(--us); }
+.cs-report-legend span:last-child { color:var(--enemy); }
+.cs-report-data-list { display:flex; gap:8px; flex-wrap:wrap; font:10px var(--mono); }
+.cs-report-compare { padding:10px 0; }
+.cs-report-compare>div:first-child { display:flex; justify-content:space-between; gap:6px; font-size:11px; }
+.cs-report-compare b { font:700 13px var(--mono); }
+.cs-report-compare b:first-child { color:var(--us); }
+.cs-report-compare b:last-child { color:var(--enemy); }
+.cs-report-split { display:flex; height:6px; gap:3px; margin-top:8px; }
+.cs-report-split i:first-child { background:var(--us); }
+.cs-report-split i:last-child { background:var(--enemy); }
+.cs-report-map { max-height:260px; width:100%; display:block; }
+.cs-report-events { list-style:none; padding:0; margin:0; }
+.cs-report-events li { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:12px; }
+.cs-report-events time { color:var(--muted); font-family:var(--mono); }
+@media(max-width:650px) { .cs-report-wrap { padding:14px 10px 32px; } .cs-report-grid { grid-template-columns:1fr; gap:0; } .cs-report-score>b { font-size:32px; padding:0 8px; } .cs-report-score strong { font-size:13px; } .cs-report-score em { padding:0 4px; } .cs-report-panel { padding:12px; } .cs-report-header h1 { font-size:22px; } .cs-report-tabs { gap:3px; } .cs-report-tabs button { font-size:11px; padding:6px 3px; } .cs-report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(prefers-reduced-motion:reduce) { .cs-pro-report * { animation:none!important; transition:none!important; } }

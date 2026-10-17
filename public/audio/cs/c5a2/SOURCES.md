@@ -1,5 +1,17 @@
 # C5A.2 gunfire source ledger
 
+## 2026-10-16 Owner4G 追加
+
+原五份 `*-prepared.wav` 與 SHA 保留。新 Major 的五把手槍改讀 `../owner4g/` 個別設計，空彈／換彈改讀同目錄三份機構錄音；含 Sonniss GDC 授權素材，不能把所有新增成品稱為 CC0。詳細來源與授權見 [Owner4G 台帳](../owner4g/SOURCES.md)。下方 Owner4F／C5A.2 為原始使用紀錄，不代表新增檔案的授權。
+
+## 2026-10-16 Owner4F 使用方式
+
+五份原始 `*-prepared.wav` 錄音與下列 SHA-256 均未改動，授權仍為原作者的 CC0。新版以 `src/battle/fps/fpsGunAudio.js` 為22把正式槍提供各自的播放音高（0.8–1.32）、音量與尾音長度；消音槍縮短並降低聲量。每發仍只建立一個錄音聲源，連射由真 shotAtMs 排程，不疊加合成槍聲，不取用 Valve 素材。這些是同五份合法實錄的不同播放設計，並非22份獨立原槍錄音。
+
+換彈起止與彈藥耗盡使用本頁既有 CC0 `utility-click.wav`，讀真保存狀態與幀內毫秒時鐘，不重建另一套彈藥／時間。舊版「small pitch variation」敘述為 C5A.2 原始使用方式；本輪新增逐槍音色參數，隨機微變調仍維持原幅度。
+
+`esmo-c4-a.wav`、`esmo-c4-b.wav`、`esmo-c4-warning.wav` 是 Owner4E 以數學波形生成的 ESMO 原創 C4 素材，來源程序保存在 review/cs-major-upgrade/tools/create_owner4e_c4_audio.mjs；不是 Valve 錄音，也不是下列五份槍聲錄音的一部分。
+
 The five `*-prepared.wav` runtime files are direct prepared firearm recordings from **The Free Firearm Sound Library**
 by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney. The source library
 is released under CC0 1.0 / public-domain dedication and explicitly permits

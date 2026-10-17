@@ -25704,3 +25704,117 @@ Legacy完整JSON同c9，但原安包0仍2/3/native1 NOT_TRIGGERED；未改seed�
 續跑：先官方quota >5才新工作；用新diagnostic跑 tools/browser_check_cs_owner4c_he_pixels.mjs（supervisor -- 分隔args，maps=dust2,inferno；真surface/ray/暖contact onset+.03/.10/.25/.6實畫面）→真near-room移動POV牆面RGB→新pristine/正式flow/HTTP bytes→已核對own5183替換→文件。Mirage現有完整保存3854frames isolated HE NOT_TRIGGERED，不造場景/視線救測試。舊utility31/31的長flash2pair假設不再適用新.12s，需要更嚴格onset/expiry/無halo與真POVblind守門；不放鬆洗綠。原有效27/34/22ground、12contact、34tactical等無邏輯改動不重跑；B7/30/55/Legacy有效證據保留。
 
 完整停點/限制/streams索引：evidence/owner4c-review-20261014/quota-paused-checkpoint.json；新source snapshots與before reports不覆寫。其餘1709候選、全角度/全時間/專業CS體感/手機真機尚待驗。■ 根因與產品patch｜■ CPU/建置｜□ 新GPU/視覺｜□ 新Preview；剩約10–20分鐘（估算，額度恢復後，不含休眠/中斷）。尚未完成，不得宣稱已修好。
+
+
+## 2026-10-15 Owner4C 收件：新版 Preview 已更新，Owner Review
+
+桌機驗收：http://localhost:5183/ESMO-/ 。已由舊Owner4B換成無probe正式 `owner4c-pristine-20261015`；source `8692541d4cad0bd2117ad31c946a40d3bda806be973de1c9c7f6282ccaac522d`（109份）、bundle `71e334f71d8247322c5e27c0fb1eb0955a74218840bfdeabd9905d419d058b73`，HTML與全部10個JS HTTP200且逐byte吻合。Preview PID63640，僅保留該Review服務。
+
+本輪沿用checkpoint `4f168947`產品修正，未再改產品／MOBA。新GPU HE7/7、時序／無halo／真POV致盲25/25、第一人稱／投擲／安包／射擊／命中動作29/29、正式Dashboard→CS→Battle→Result桌機與390px各26/26，native皆0、Chrome cleanup/profileRemoved確認。Mirage泵房／中央主泵廊／調壓廊各12張新移動裁圖與全景已保存，真畫面抽查未見共面雜色。原牆面gate7/8及調壓廊1/2為取證前提缺失，完整保留；高台眼高／三角面observer修正後調壓廊4/4，不將原整支假稱PASS。
+
+精確反推108份舊source完全吻合Owner4B，只有HE／閃光呈現、既有sampleGroundHeight工廠接線、房間幾何及原創alpha貼圖差異；AI／移動／道具傷害／動畫／POV模型／contracts未變，原有效contact12/12、tactical34/34等沿用，不重跑B7／30／55。新版原31/31長worldflash假設由更嚴格短閃onset／.12s expiry／無halo／真blind驗證取代，未降低gate。新工具首輪誤把槍口共用貼圖算作道具光暈、Preview啟動前ECONNREFUSED等原失敗均保留。
+
+完整stdout／stderr／native／SHA索引：`review/cs-major-upgrade/evidence/owner4c-review-20261015/engineering-complete.json`；驗收說明：`review/cs-major-upgrade/OWNER4C_CLOSURE.md`。1709全圖幾何候選、全角度／全時間、間歇空白與專業CS體感仍保留限制；手機真機FPS／觸控／視覺未實測，cloudflared未找到，無手機HTTPS網址。本輪非60秒FPS基準。
+
+■ 停點核對｜■ 新GPU／必要回歸｜■ 新Preview／文件｜▣ Owner Review（待Owner驗收）。工程剩餘0分鐘；Owner驗收時間由Owner安排。官方每週剩97%，5%（含以下）停工規則保留。未commit／push／deploy，不開始下一Sprint。
+
+## 2026-10-15 Owner4D 五項追加收件：新版 5183，停 Owner Review
+
+桌機驗收：http://localhost:5183/ESMO-/ 。正式無 probe `owner4d-pristine-20261015`；source `fbc1591be020d0f95521dcba02b09cbb1227fed4fb10be0b50a602808378c399`（112份），bundle `584b93f36c2459e6dcfd1958ba4122ee2707132368062edb9c777da790fd0a30`；HTML及全部10個JS HTTP200且逐byte吻合，Preview PID68400。本輪三圖牆面共面處理、掉包責任／回收與安包時間壓力、真安包HUD／姿勢／音源、受擊死亡時鐘及方向掩體已送新版。
+
+CPU：完整戰術34/34、Owner4D13/13、最新反應12/12與接地34/34；lifecycle19/19、pose26/26、handling21/21、audio26/26、utility37/37。新GPU三圖C4／死亡34/34、三圖時序各15/15、Mirage三房間10/10、effects25/25、HE像素7/7；正式Dashboard→CS→Battle→Result桌機與390px各26/26，native皆0，Chrome cleanup確認。原始失敗完整保留：Major HUD缺進度已修；合併時序420樣本超16MiB為HARNESS_FAIL，逐圖同標準重驗才PASS。
+
+證據總索引：`review/cs-major-upgrade/evidence/owner4d-review-20261015/engineering-complete.json`；驗收／原失敗／工具校正：`review/cs-major-upgrade/OWNER4D_CLOSURE.md`與`OWNER4D_SCOPE.md`。三圖CPU垂直共面競爭皆0，已檢視新移動像素及Mirage36張近房間裁圖未見共面雜色；仍只代表取樣視角／時間，不宣稱全角度永無閃爍。專業CS整體體感、原間歇空白回報與手機真機FPS／觸控／視覺保留Owner驗收；非新60秒FPS基準。音效須點選開啟。cloudflared未找到，未安裝，沒有手機HTTPS網址。
+
+■ 修正｜■ 必要CPU與新GPU｜■ 正式Preview／文件｜▣ Owner Review。工程剩餘0分鐘，Owner驗收時間由Owner安排。未commit／push／deploy、不動MOBA、不開始下一Sprint。
+
+Verifier校正理由：baseline4f的隱藏rig／缺sampler、cached bind AABB、死亡未播完、固定步頻／未normalize quaternion oracle已對照保存；改讀真可見頂點／真clip.duration／真時鐘與GLB步頻，原精度不變。導航先改讀原route，後修產品memo公分alias才34/34。新事件音源守門25→26、Owner4D新增13項反例。未刪既有斷言、未改seed／baseline／勝負。完整子stdout＋stderr及state分批保存在*-child-logs；大型驗證全程序列。
+
+
+## 2026-10-15 Owner4E 六項收件：新版5183，停 Owner Review
+
+桌機驗收：http://localhost:5183/ESMO-/ 。正式無probe owner4e-pristine-20261015，source 8894ef32a557379b9e6a5b8895a67121753320aef4ed8c27af8d802a6a6d3618（121份），bundle fa42dbed171c796363c7e6ef7a34a1208756cfca23571c841b0e42bc03e908ca；HTML及全部10個JS HTTP200且逐byte吻合，Preview PID84740。攜包列獨立金色C4標籤／金框、真18°狙擊鏡與射擊時鐘、實際職業任務、原創加速C4滴聲、真煙閃效益與專業四分頁戰報已交新版。音效須點選開啟。
+
+驗證：三圖正式CPU36/36、五主職15組／15組、最新純規則20/20、音訊26/26＋pool22/22、handling21/21、Replay／Result51/51＋15/15。新播放GPU19/19、effects25/25、同GPU前後效能19/19、pristine正式流程桌機與390px各49/49（含四分頁320/360/390/430排版、十人／逐局對帳與冪等），native均0。Mirage完整sim移除新增唯讀觀測後，JSON SHA與Owner4D完全相等，不用UI／特效冒充AI效果。
+
+證據總索引：review/cs-major-upgrade/evidence/owner4e-review-20261015/engineering-complete.json；詳細來源／限制／原紅燈：OWNER4E_CLOSURE.md、OWNER4E_SCOPE.md。原創PCM目錄錯誤由HTTP PRODUCT_FAIL定位並修正；最初晚段窄窗口與跨回合計聲oracle錯誤完整保留，改為真保存時鐘完整脈衝對帳及實測間隔，未改seed／產品狀態或降低產品gate。五主職依CS_SEAT_ROLE為Entry/Lurker/Rifler/AWP/IGL，額外Support保留。
+
+同AMD GPU／桌機1366每段10秒：新版Mirage約57.5FPS、Dust2約58.8FPS、Inferno約56.8FPS，calls／triangles與Owner4D相同，短測未見相對退步；不是60秒或真手機效能承諾。所有圖表來自真結果／shot／roundStats／events，未知為—；ESMO評分非官方評級。煙霧為敵對交戰線×秒，非阻擋擊殺；閃光記真增量並分隊友，不包裝為勝率。手機真機FPS、觸控與聲音體感未實測，cloudflared未找到，未安裝。原間歇空白回報仍保留。
+
+■ 六項實作｜■ 分階段真CPU／GPU／流程｜■ 新Preview／交接｜▣ Owner Review。工程剩餘0分鐘，Owner驗收由Owner安排。未commit／push／deploy、不動MOBA、不重做已通過美術。
+
+工具／契約變更與原始失敗分類詳OWNER4E_CLOSURE.md；追加可選analytics而不改發獎，Replay守門51/15，全部原生流程／前置不成立不冒充PASS。大型測試全序列，完整子log已另存。
+
+
+## 2026-10-16 Owner4F 四項收件：新版5183，停 Owner Review
+
+桌機驗收：http://localhost:5183/ESMO-/ 。正式無probe owner4f-pristine-review-20261016；source 307c9e99a2a0884374bbee4b986ee3593841834a5358e3cf76e05c536099cd11（128份），bundle bc5de222a38f2fd8e70645a6a964c164a496e24ca8cae7cbeb47dc5330b5f25a，Preview PID96328。HTML、全部JS/CSS、五份CC0槍聲、三份原創C4及換彈click均HTTP200逐byte吻合。音效須按開啟。
+
+四項：真職業／地形／情報守包與穩定架槍、CT拆彈責任鎖／掩護及安全時間判斷、22槍各自音色與幀內換彈／空彈同步、五正式戰術職業＋Rifler武器適性／偏好與完整16能力接線。修正Lurker寫入共享戰術陣列造成後場路線污染。保留舊選手與保存Replay／Result，不重做美術。
+
+最新版三圖各兩seed六場完成；與起點六場真A/B並列。原三圖三seed換起始方／決定性共36場、9/9一致，側偏門檻通過（round delta=-0.011、paired effect=1）。定向規則17/17、完整戰術34/34；新GPU 23/23、相對FPS19/19，正式桌機／390px各57/57（含320/360/390/430戰報與角色檔案）。完整Mirage 5104幀／29回合Replay逐欄位往返與Result對帳，持續拆彈0移動／0開槍；實際Legacy完整SHA與Owner4E相等。
+
+原歷史未通過守門保留：Owner4F-H1舊C9、H2歷史R8/R11轉換工具、H3固定edge case無安包；before隔離已證實同樣存在，未刪斷言或降低標準。原始紅燈／stdout／stderr／native與新版證據總索引：review/cs-major-upgrade/evidence/owner4f-review-20261016/engineering-complete.json。詳OWNER4F_CLOSURE.md、OWNER4F_16_STATS.md。手機真機FPS／觸控／音色未實測；聲音偏好與長Replay上限仍由Owner驗收。
+
+■ 四項實作｜■ CPU／公平性／Replay／GPU／正式流程｜■ 新Preview／文件｜▣ Owner Review。工程剩餘0分鐘；Owner驗收由Owner安排。未commit／push／deploy，MOBA未修改。
+
+本輪工具變更／歷史未通過分類／全部原始紅燈詳OWNER4F_CLOSURE.md，未刪斷言或降門檻。
+
+
+## 2026-10-16 Owner4G 完成工程驗證：新版5183，停 Owner Review
+
+桌機：[ESMO Preview](http://localhost:5183/ESMO-/)；[手槍新舊A/B](http://localhost:5183/ESMO-/owner4g-audio-ab.html)。正式無probe owner4g-pristine-review-20261016；source cf3d243e7f0f386fcd4bc79e44f3810b70aeea61e673d8db8754dca7021559d0（141份）、bundle 308e87925520c98e740331ed664ff9dac38a6206515c5a5aded5712b44abf7db、Preview PID100532。所有JS／CSS、原族錄音、C4、五新手槍／三機械聲及A/B附件HTTP200逐byte吻合。
+
+四項：修正R6真煙與薄煙／僅前四煙可見的不一致，不強制AI開火，加入真停火原因；C4開始／持續／完成依角色既有碰撞半徑與外框、樓層、資格接觸；五人陣容自由同職、主副適性與16能力保留；合法五手槍及機械聲與正式事件同步，提供原版／新版試聽。
+
+驗證：六場原版與六場新版完整A/B；原側偏36場、9/9決定性，T49.57%／CT50.43%，原門檻PASS。最後版GPU32/32、煙霧22/22（Inferno8顆皆有核心）、同真保存POV5/5、同AMD含真8煙Replay壓力FPS43/43。正式桌機／390各63/63，含320／360／390／430賽前與戰報／檔案；A/B真WebAudio21/21。新原生完整Replay匯出匯入4/4；Legacy Mirage完整Simulation SHA一致；Replay／Result51/51、input15/15、utility37/37、handling21/21、pool22/22、playback26/26、規則17/17及10/10、Learning與Competition通過。
+
+風險：手機真機、長時間FPS及真人耳聽仍待Owner；五手槍中USP／P250／Tec9是合法錄音設計而非原槍錄音。Replay新wire壓縮無損、不提高原容量；超容量舊檔需離線重編碼，舊client不支援新encoding。Owner4F-H1／H2／H3歷史未過守門仍具名保留，不宣稱全歷史綠燈。完整證據與失敗紀錄見 OWNER4G_CLOSURE.md、OWNER4G_DESIGN.md、OWNER4G_AUDIO_AUDIT.md、evidence/owner4g-review-20261016/engineering-complete.json。
+
+■ 實作｜■ CPU／對局／公平性／Replay／GPU／正式流程｜■ 5183／文件｜▣ Owner Review。工程剩餘0分鐘；Owner驗收由Owner安排。HEAD維持4f168947，未commit／push／deploy、MOBA未改。
+
+
+## 正向開火實證與覆蓋界線
+
+完整新Mirage原生Replay第18回合130秒窗：當回合T方（穩定ID ct1、ct2，已換邊）對CT拆彈者t2開火。AK於130242ms未中，AWP於130287ms造成56傷害，目標HP56→0、拆彈取消；此前進度2.6416667。actual fov／lineOfSight／engagementPermission均true、彈藥正常扣除，沒有強制開火；詳saved-fire-mirage-r2.json。判定依當回合side，不以ID字首猜隊伍。
+
+Dust2／Inferno原真保存樣本與另外各三組預先固定的戰術／seed／換邊完整對局，沒有自然觸發T對既有拆彈者射擊；保留NOT_TRIGGERED，不能列作該正向情境PASS。各場已完成且unexplained=0，三圖的實際煙霧遮擋／接觸拆彈／正式射擊另有完整證據。此限制交Owner實戰驗收，不透過改seed、移人或強制開槍掩蓋。
+
+側偏36次模擬由18場獨立配對與18場決定性重跑組成；勝率只計獨立配對的351回合，重跑不重複計入。樣本不代表所有seed／戰術與設備的全域保證。
+
+## 額外HE工具舊假設修正
+
+原工具在精確Owner4F來源與新版皆24/27，三項相同失敗：漏傳正式detonatedAtRoundSec導致新HE／短flash不可見；仍期待舊單層.62透明度，未對齊已通過的三層.64／.54／.44；把永遠可見但沒有可見子物件的容器當殘留特效。更新fixture時間、驗三層精確alpha與實際祖先可見drawables，保留27項與完整dispose斷言，結果27/27。不修改已通過HE美術、不放寬產品門檻；before、首輪紅燈與修後雙stream／native均保留。
+
+正式流程首輪收件metadata以子字串比對Probe，將window.__ESMO_FPS_SCENE__===scene的清理比較誤認成賦值。實際bundle只有比較／delete，無scene賦值；修正檢查排除equality，另新增正式Battle全域scene／callback確實未掛載的瀏覽器斷言，桌機與390各重新63/63。首次finalize在文件寫入前因此拒絕收件，失敗log保留；未修改產品或放寬原斷言。
+本輪Replay保護性wire變更／工具斷言修正及全部原始紅燈詳 OWNER4G_CLOSURE.md，未刪verifier或降低門檻。
+
+
+## 2026-10-18 Owner4H 工程完成，停 Owner Review
+
+桌機驗收：http://localhost:5183/ESMO-/ 。正式無probe owner4h-pristine-review-20261018，source e8d9b1ebf3bd1244372647a44ea6ce616ec257f0d4c1b1de76a3de8ffdaa5af4（144檔）、bundle 1e3fa1b8391fbf610d3a30d34f9d37570a81f18f15b479a9161373ecde22f57c，PID 134304；HTTP逐byte吻合。HEAD仍4f168947；未commit／push／deploy，不改MOBA，既有D／E／F／G成果保留。
+
+五項：真命中血花／環境血跡、室內路線利用、觀戰平移／旋轉／縮放／聚焦與POV鎖定、正常隱藏死亡X及可選分析、正式AI因果感知／方向掩體／近距補槍／守包回防／拆彈。另修POV透牆名牌／血條；音效／五職16能力／已通過美術保留。
+
+固定三圖前後各六場：124→116回合，安包34→45，拆彈10→15，房間去重到訪70→158；不是勝率或戰術品質保證。公平性36次、9/9決定性；獨立350回合T51.43%／CT48.57%，原門檻通過、有限樣本不代表全域公平保證。
+
+最新版GPU／FPS／正式流程與完整log見 OWNER4H_CLOSURE.md、evidence/owner4h-review-20261018/engineering-complete.json。4229幀／20回合保存Replay逐欄與Result相同、原容量不提高。手機真機FPS／觸控與長時間壓力未測；部分房間或安靜狙擊守包若未自然觸發，具名保留NOT_TRIGGERED。
+
+■ 實作｜■ CPU／對局／公平性｜■ GPU／FPS｜■ 正式流程／5183／文件｜▣ Owner Review。工程剩餘0分鐘，Owner驗收由Owner安排。
+
+本輪工具擷取／oracle／拓樸前提／JSON undefined修正與產品紅燈均詳OWNER4H_CLOSURE.md；保留全部原斷言與紅燈log，不降低gate。
+
+### Owner4H verifier修正理由與最終界線
+
+- runtime保留34項；oracle改讀每個真觀察者及決策前已知死亡，避免最後觀察者覆蓋與用本tick決策後死亡回推情報。utility保留37項，只將正式呼叫擷取對齊isThreatened／中斷Set新參數。
+- 拓樸原任意外探點落相鄰實牆，改驗真正合法portal，仍用原1.35m半徑與每.2m碰撞；JSON undefined比較改完整JSON可序列化契約，不刪欄位。Replay runner首次fixture環境變數鍵錯，修正工具接線後重跑原51／15項。
+- H3守包9/10是實際產品失敗：同隊路徑穿架點及完成路徑不復位。H4補合作路徑預留／離位復位，9/9新增規則並重跑完整A/B、CPU、公平性、GPU。沒有放寬碰撞、勝負、時間或開槍資格。
+- Dust2固定505001沒有成功拆彈，原GPU前提失敗保留；另取已宣告公平性矩陣505018完整對局補正向情境，不替換原六場A/B或假造成功。補充工具首輪將235發誤比191次交戰首發，改對相同reaction欄位；紅燈保留。Mirage原505001安靜狙擊未觸發，原生505002真完整24回合補驗4/4通過。
+- 完整FPS70/70仍觀察到八煙尾端尖峰；同Chrome孤立7/8紅燈保留。profile顯示後段文件1→5、heap約0.8→1.65GB，比較條件不同。改每phase全新Chrome並驗Documents=1，三組AB／BA／AB皆通過同原median／p95／render門檻，無產品降畫質／門檻變更。此為比較環境修正，並不證明長時間永不掉幀；原失敗與profile／metrics均保存。
+- 最新版source e8d9b1eb…、144檔，5183 PID134304；完整證據索引engineering-complete.json。手機真機／長時尾端卡頓／長OT容量仍待Owner；停Owner Review，未commit／push／deploy、不改MOBA。
+
+## 最終工作樹與停點核對
+
+2026-10-18工程剩餘0分鐘，停Owner Review。HEAD仍4f168947，5183僅127.0.0.1、PID134304，pristine source e8d9b1eb…；未commit／push／deploy，不改MOBA。最新官方週額度剩10%，未達5%暫停門檻。git status與diff stat完整保存，既有未提交工作保留。原始git diff --check exit2是CRLF被當行尾空白，未刪改產品換行；以保留原blank-at-eol／blank-at-eof／space-before-tab並明確認可Windows cr-at-eol重查exit0、無實際空白錯誤；兩份原始結果均保留。這不改任何遊戲gate或repo設定。
+
+桌機 http://localhost:5183/ESMO-/ ，請重新整理後開新對局驗收。三圖最新真狙擊守包與持續拆彈正向GPU皆完成；室內三處未自然觸發仍具名保留。八煙原同程序尖峰及7/8紅燈保留，三組每phase全新Chrome同原門檻皆通過；長時尾端卡頓、真手機與長OT容量仍是Owner風險。

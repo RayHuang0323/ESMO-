@@ -12,7 +12,7 @@ import {
   csAiTeamByKey,
 } from "../src/data/csAiTeams.js";
 import { CS_SEATS } from "../src/platform/contracts/matchSquad.js";
-import { toFpsRoster } from "../src/battle/fps/fpsRoster.js";
+import { toFpsRoster, fpsTacticalRole } from "../src/battle/fps/fpsRoster.js";
 import { teamStrength } from "../src/platform/competition/teamStrength.js";
 import { csResultToTransaction } from "../src/platform/progress/adapters/csProgressAdapter.js";
 import { applyProgressToState } from "../src/platform/progress/applyMatchProgress.js";
@@ -89,7 +89,8 @@ function main() {
     gate(CS_SEATS.every((seat, index) => team.lineup[seat] === team.roster[index]?.id), "LINEUP_PLAYER_MAP", team.key);
     const fps = toFpsRoster(team.roster, team.lineup);
     gate(Array.isArray(fps) && fps.length === 5, "BATTLE_ADAPTER", team.key);
-    gate(fps.map((player) => player.role).join() === team.roster.map((player) => player.csRole).join(), "BATTLE_ROLE_IDENTITY", team.key);
+    gate(fps.map((player) => player.role).join() === team.roster.map((player) => fpsTacticalRole(player.csRole)).join(), "BATTLE_ROLE_IDENTITY", team.key);
+    gate(team.roster.filter(player=>player.csRole==='rifler').every(player=>fps.find(p=>p._gid===player.id)?.role==='support'),"LEGACY_RIFLER_NOT_LURKER",team.key);
     gate(new Set(fps.map((player) => player._gid)).size === 5, "BATTLE_PLAYER_IDS", team.key);
     gate(fps.every((player) => Object.keys(player.stats).length === 16), "BATTLE_STAT_SHAPE", team.key);
     gate(csAiTeamById(team.id)?.key === team.key && csAiTeamByKey(team.key)?.id === team.id, "TEAM_LOOKUP", team.key);

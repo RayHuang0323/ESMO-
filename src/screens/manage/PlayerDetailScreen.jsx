@@ -13,9 +13,11 @@
 //    · Legacy 每項能力各有一個「潛力值」→ 主幹模型只有單一潛力天花板，
 //      故「潛力」模式顯示各項的成長上限（同一天花板）與成長空間，不編造逐項潛力。
 // ============================================================================
+import {fpsRoleOf} from "../../battle/fps/fpsRoster.js";
+import {GC} from "../../ui/theme.js";
 import React, { useRef, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { STAT_DEF, calcPower, bestPositions, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf } from "../../data/playerModel.js";
+import { STAT_DEF, calcPower, bestPositions, posFit, personalityById, CS_ROLE_BY_MOBA_ROLE, csSuitabilityOf } from "../../data/playerModel.js";
 import { TIERS } from "../../data/recruitPool.js";
 import { calculateLevelProgress } from "../../platform/progress/playerLevel.js";
 import { getStatLayers } from "../../platform/talents/playerDerivedStats.js";
@@ -35,8 +37,8 @@ import ManageFrame from "./ManageFrame.jsx";
 import { usePlayerUiMotion } from "./usePlayerUiMotion.js";
 
 const HIGH = 74;
-const CS_ROLE_LABELS = Object.freeze({ entry: "突破手", rifler: "步槍手", awp: "狙擊手", lurker: "游走手", igl: "指揮" });
-const csRoleOf = (player) => CS_ROLE_BY_MOBA_ROLE[player?.role] || "rifler";
+const CS_ROLE_LABELS = Object.freeze({ entry: "突破手", support: "輔助", rifler: "步槍手", awp: "狙擊手", lurker: "游走手", igl: "指揮" });
+const csRoleOf = fpsRoleOf;
 const csHighlights = (player) => {
   const rows = STAT_DEF.map((def) => ({ def, value: Math.round(player.stats?.[def.key] ?? 50) })).sort((a, b) => b.value - a.value);
   return { strengths: rows.slice(0, 2), weaknesses: rows.slice(-2).reverse() };
@@ -301,6 +303,7 @@ export default function PlayerDetailScreen({ playerId, onBack, onTalent, onOpenT
                    </div>
                    <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 7 }}>
                      <span style={{ color: "#a1a1aa", fontSize: 9 }}>主要定位</span>
+                     <span data-testid="cs-rifler-aptitude" style={{color:GC.gray,fontSize:9}}>步槍適性 {bp.fpsAll.find(item=>item.pos==="FPS步槍手")?.fit??'—'}</span>
                      <span title="角色代表選手擅長的打法，不限制隊伍組成。" style={{ color: "#fed7aa", fontSize: 10, fontWeight: 800, cursor: "help" }}>{CS_ROLE_LABELS[csRole]} ⓘ</span>
                    </div>
                    {csOtherSuitability.length > 0 && <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}><span style={{ color: "#a1a1aa", fontSize: 9 }}>其他適配</span>{csOtherSuitability.map((item) => <span key={item.pos} style={{ color: "#d4d4d8", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 6px", fontSize: 9 }}>{item.label} {item.fit}</span>)}</div>}

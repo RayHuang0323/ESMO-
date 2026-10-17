@@ -1,0 +1,6 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';
+const report=JSON.parse(fs.readFileSync('review/cs-major-upgrade/evidence/owner4e-review-20261015/cpu-first.json','utf8')),roles=['entry','lurker','rifler','awp','igl'],rows=[];
+// Existing platform CS_SEAT_ROLE is Entry/Lurker/Rifler/AWP/IGL. Support is an
+// additional legacy/opponent role, not a sixth mandated main-team seat.
+for(const r of report.reports)for(const role of roles){const p=r.analysis.players.filter(p=>p.role===role);assert.ok(p.length);assert.ok(p.some(p=>Object.values(p.dutySamples).reduce((a,b)=>a+b,0)>0));rows.push({map:r.mapKey,role,players:p.map(p=>({id:p.id,team:p.teamId,shots:p.shots,duties:p.dutySamples,rounds:p.rounds.length}))});}
+const out='review/cs-major-upgrade/evidence/owner4e-review-20261015/five-role-audit.json';assert.ok(!fs.existsSync(out));fs.writeFileSync(out,JSON.stringify({result:'PASS',source:'Read-only genuine 3-map CPU report, no resimulation or fixture changes',seatSource:'src/platform/contracts/matchSquad.js CS_SEAT_ROLE',primaryRoles:roles,support:'Additional existing legacy/opponent role retained',rows},null,2),{flag:'wx'});console.log('Five actual platform roles: 15/15 PASS');

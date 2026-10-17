@@ -9,10 +9,12 @@ export function fpsTacticalPlanningTarget({ player, tactic, planted, target, sce
 export function collectFpsTeamIntel({ players, previous = [], roundSec, walls, canSee, ttlSec = 3 }) {
   const alive = players.filter(p => !p.dead);
   const memory = new Map(previous.filter(i => finite(i.pos) && roundSec >= i.observedAtSec && roundSec - i.observedAtSec <= ttlSec && alive.some(p => p.id === i.targetId && p.side !== i.side))
-    .map(i => [`${i.side}:${i.targetId}`, { ...i, pos: { ...i.pos }, ...(i.observerPos ? { observerPos: { ...i.observerPos } } : {}) }]));
+    .map(i => [`${i.side}:${i.targetId}`, { ...i, visibleTo: [], pos: { ...i.pos }, ...(i.observerPos ? { observerPos: { ...i.observerPos } } : {}) }]));
   for (const observer of alive) for (const target of alive) {
     if (!finite(observer.pos) || !finite(target.pos) || observer.side === target.side || !canSee(observer, target, walls)) continue;
-    memory.set(`${observer.side}:${target.id}`, { side: observer.side, targetId: target.id, pos: { ...target.pos }, observerPos: { ...observer.pos }, observedAtSec: roundSec, observerId: observer.id });
+    const key = `${observer.side}:${target.id}`;
+    const visibleTo = [...(memory.get(key)?.visibleTo || []), observer.id];
+    memory.set(key, { side: observer.side, targetId: target.id, pos: { ...target.pos }, observerPos: { ...observer.pos }, observedAtSec: roundSec, observerId: observer.id, visibleTo });
   }
   return [...memory.values()];
 }
@@ -20,10 +22,14 @@ export function collectFpsTeamIntel({ players, previous = [], roundSec, walls, c
 export function decideFpsTacticalIntent({ player, intel, roundSec, planted, sites, bombPos, bombTimeSec, spawn, defuseDurationSec = 10, travelDurationSec, recentKills = [] }) {
   const losses = recentKills.filter(k => k.victimSide === player.side && k.killerSide !== player.side && k.victimId !== player.id && roundSec >= k.roundSec && roundSec - k.roundSec <= 5);
   const validIntel = intel.filter(i => i.side === player.side && roundSec >= i.observedAtSec && roundSec - i.observedAtSec <= 3);
-  const tradeIntel = validIntel.find(i => losses.some(k => k.killerId === i.targetId));
-  const known = tradeIntel || validIntel
+  const visible = i => i.observedAtSec === roundSec && (i.visibleTo?.includes(player.id) || i.observerId === player.id);
+  // Trades are local opportunities. A death across the map must not pull an
+  // anchor away from its assignment; current direct contact wins over reports.
+  const tradeIntel = validIntel.find(i => dist(player.pos, i.pos) <= 26 && losses.some(k => k.killerId === i.targetId));
+  const known = validIntel.filter(visible).sort((a,b)=>dist(player.pos,a.pos)-dist(player.pos,b.pos))[0] || tradeIntel || validIntel
     .sort((a, b) => dist(player.pos, a.pos) - dist(player.pos, b.pos) || String(a.targetId).localeCompare(String(b.targetId)))[0];
-  const base = { kind: "hold", aim: known ? { ...known.pos } : null, routeTarget: null, source: known ? (known.observerId === player.id ? (known.observedAtSec === roundSec ? "visible" : "memory") : "team-intel") : "none", targetId: known?.targetId ?? null, observedAtSec: known?.observedAtSec ?? null, pace: 1 };
+  const cue=player.perceptionCue;
+  const base = { kind: "hold", aim: known ? { ...known.pos } : cue ? {...cue.pos} : null, routeTarget: null, source: known ? (visible(known) ? "visible" : known.observerId === player.id ? "memory" : "team-intel") : cue?.source || "none", targetId: known?.targetId ?? null, observedAtSec: known?.observedAtSec ?? cue?.observedAtSec ?? null, pace: 1 };
   if (player.dead) return { ...base, aim: null, targetId: null, source: "none", pace: 0 };
   // Travel lower bound plus this actor's authoritative defuse duration. Saving
   // follows a real navigation route; it never grants a survivor or a weapon.
@@ -37,7 +43,7 @@ export function decideFpsTacticalIntent({ player, intel, roundSec, planted, site
     if(pressured&&dist(player.pos,pressured[1])>16)return {...base,kind:'rotate',routeTarget:{...pressured[1]},pace:1};
   }
   // A bomb carrier supports the execute rather than chasing every reported kill.
-  if (tradeIntel && !player.hasBomb) return { ...base, kind: "trade", routeTarget: { ...tradeIntel.pos }, pace: 1 };
+  if (tradeIntel && !player.hasBomb && base.source !== 'visible') return { ...base, kind: "trade", routeTarget: { ...tradeIntel.pos }, pace: 1 };
   const inRange=known&&dist(player.pos,known.pos)<=(player.engagementRange||55);
   // Keep the remaining navigation cursor while firing. A carrier may cross a
   // distant reported angle; a visible opponent in range warrants a real stop.

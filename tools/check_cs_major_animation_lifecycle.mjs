@@ -6,7 +6,9 @@ const assets=await readFpsRigTestAssets();let passed=0,failed=0;
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-5,`${a} != ${b}`);
 function check(name,fn){try{fn();passed++;console.log(`PASS ${name}`);}catch(e){failed++;console.log(`FAIL ${name}: ${e.stack||e.message}`);}}
 function fixtureTest(options,fn){const f=assets.make(options);try{fn(f);}finally{f.dispose();}}
-const bounds=c=>{c.root.updateWorldMatrix(true,true);return new THREE.Box3().setFromObject(c.root);};
+// Sample the actually visible posed vertices; Box3's cached bind-pose bounds
+// include hidden clothes and are not an animated ground-contact oracle.
+const bounds=c=>{c.root.updateWorldMatrix(true,true);c.root.updateMatrixWorld(true);const box=new THREE.Box3(),v=new THREE.Vector3();c.root.traverse(o=>{if(!o.isMesh||!o.geometry?.attributes.position||o.userData.esmoPovBorrowed||o.userData.esmoMajorImportedWeapon||o.name?.startsWith('ESMO_')&&/Weapon|Muzzle|GripSocket/.test(o.name))return;for(let a=o;a;a=a.parent)if(!a.visible)return;if(o.isSkinnedMesh)o.skeleton.update();const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);if(o.isSkinnedMesh)o.applyBoneTransform(i,v);o.localToWorld(v);box.expandByPoint(v);}});return box;};
 function die(f,{edge=true,paused=false}={}){const dead={...f.player,dead:true,hp:0,state:'DEAD'};f.update({player:dead,previousPlayer:edge?f.player:dead,frameIndex:11,playbackActive:!paused});return dead;}
 
 try{
@@ -19,7 +21,7 @@ try{
     assert.equal(c.mixer.time,mixer);assert.equal(action.time,time);assert.equal(c.currentAction,name);assert.ok(c.model.getObjectByName('hand_r').quaternion.equals(hand));near(c.getMuzzleWorldPosition(new THREE.Vector3()).distanceTo(muzzle),0);near(c.fireTimer,.12);near(c.hitTimer,.2);
   }));
   for(const floor of [0,2.4,-1.2])check(`死亡在真parent地坪 ${floor}，不改權威X/Z`,()=>fixtureTest({floor},f=>{
-    const dead=die(f);for(let i=0;i<40;i++)f.update({player:dead,previousPlayer:dead,frameIndex:12});near(bounds(f.c).min.y,floor);near(f.c.deathGroundContactY,floor);assert.deepEqual(f.parent.position.toArray(),[17,floor,23]);
+    const dead=die(f),action=f.c.actions.get('Death01');for(let i=0;i<Math.ceil(action.getClip().duration/.05)+2;i++)f.update({player:dead,previousPlayer:dead,frameIndex:12});assert.equal(action.paused,true);near(bounds(f.c).min.y,floor);near(f.c.deathGroundContactY,floor);assert.deepEqual(f.parent.position.toArray(),[17,floor,23]);
   }));
   check('新回合還原死亡偏移與事件latch，不沿用地底model',()=>fixtureTest({floor:2.4},f=>{
     const dead=die(f);for(let i=0;i<12;i++)f.update({player:dead,previousPlayer:dead,frameIndex:12});assert.ok(f.c.model.position.distanceTo(f.c.baseModelPosition)>1e-4);f.c.resetForRound(2);assert.equal(f.c.deathTriggered,false);assert.ok(f.c.model.position.equals(f.c.baseModelPosition));assert.equal(f.c.lastFireSignature,null);assert.equal(f.c.lastHitSignature,null);
@@ -36,8 +38,8 @@ try{
   check('死亡edge暫停不推進fall clip或重複校正',()=>fixtureTest({floor:1.8},f=>{
     const dead=die(f,{paused:true}),action=f.c.actions.get(f.c.currentAction),time=action.time,position=f.c.model.position.clone();for(let i=0;i<12;i++)f.update({player:dead,previousPlayer:dead,frameIndex:11,playbackActive:false});assert.equal(action.time,time);assert.ok(f.c.model.position.equals(position));near(bounds(f.c).min.y,1.8);
   }));
-  check('每次major更新只sync一次cloth anchors，含死亡',()=>fixtureTest({},f=>{
-    let calls=0;const sync=f.c.c2c.syncAnchors;f.c.c2c.syncAnchors=()=>{calls++;sync();};f.update();assert.equal(calls,1);calls=0;die(f);assert.equal(calls,1);
+  check('major在接地取樣前後各sync一次cloth anchors，含死亡',()=>fixtureTest({},f=>{
+    let calls=0;const sync=f.c.c2c.syncAnchors;f.c.c2c.syncAnchors=()=>{calls++;sync();};f.update();assert.equal(calls,2);calls=0;die(f);assert.equal(calls,2);
   }));
   check('legacy暫停動畫仍按原dt，不套major凍結路徑',()=>fixtureTest({optimized:false},f=>{
     f.update();const before=f.c.mixer.time;f.update({playbackActive:false});assert.ok(f.c.mixer.time>before);assert.equal(f.c.getMuzzleWorldPosition(new THREE.Vector3()),null);

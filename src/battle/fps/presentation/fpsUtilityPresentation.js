@@ -1,12 +1,16 @@
 import { createHeVfx } from "./fpsHeVfx.js";
 import * as THREE from "three";
 import { createOriginalUtilityModelFactory } from "./fpsUtilityModels.js";
+import { FPS_SMOKE_RADIUS } from '../fpsSmokeGeometry.js';
 
 const SMOKE_LIFETIME_UNITS = 18;
 const SMOKE_GROW_UNITS = 0.45;
 const SMOKE_DISSIPATE_UNITS = 6;
 const SMOKE_CLOUDS_PER_EVENT = 8;
 const MAX_SMOKE_EVENTS = 4;
+// Ten players can each carry one smoke. Dense blockers must cover every live
+// authoritative cloud; decorative wisps keep their existing four-event cap.
+const MAX_SMOKE_CORES = 10;
 const MAX_THROWABLE_EVENTS = 12;
 const MAX_HE_BURSTS = 4;
 const MAX_FLASH_BURSTS = 8;
@@ -24,6 +28,7 @@ export const C5B_UTILITY_FX_CONTRACT = Object.freeze({
   smokeCloudsPerEvent: SMOKE_CLOUDS_PER_EVENT,
   caps: Object.freeze({
     smokeEvents: MAX_SMOKE_EVENTS,
+    smokeCores: MAX_SMOKE_CORES,
     throwableEvents: MAX_THROWABLE_EVENTS,
     heBursts: MAX_HE_BURSTS,
     flashBursts: MAX_FLASH_BURSTS,
@@ -156,6 +161,18 @@ function makeSmokeClouds(group, textures) {
   return createPool(group, MAX_SMOKE_EVENTS * SMOKE_CLOUDS_PER_EVENT, () => sprite(group, textures.smoke, UTILITY_COLORS.smoke));
 }
 
+function smokeDensityTexture(){
+  const size=64,data=new Uint8Array(size*size*4);
+  const random=(x,y)=>{const v=Math.sin((x%32)*127.1+(y%32)*311.7)*43758.5453;return v-Math.floor(v);};
+  const noise=(x,y)=>{const ix=Math.floor(x),iy=Math.floor(y),tx=x-ix,ty=y-iy,u=tx*tx*(3-2*tx),v=ty*ty*(3-2*ty);return lerp(lerp(random(ix,iy),random(ix+1,iy),u),lerp(random(ix,iy+1),random(ix+1,iy+1),u),v);};
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+    const cloud=noise(x/16,y/16)*.6+noise(x/8,y/8)*.25+noise(x/4,y/4)*.15;
+    const v=Math.round(140+cloud*115),i=(y*size+x)*4;
+    data[i]=data[i+1]=data[i+2]=v;data[i+3]=255;
+  }
+  const texture=new THREE.DataTexture(data,size,size,THREE.RGBAFormat);texture.magFilter=THREE.LinearFilter;texture.minFilter=THREE.LinearFilter;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(3,2);texture.needsUpdate=true;return texture;
+}
+
 /**
  * Bounded utility presentation for the formal Battle runtime.
  * No gameplay state, camera state, RAF, shader or post-processing is owned here.
@@ -164,13 +181,18 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
   const reducedMotion = typeof window !== "undefined"
     && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
   const geometries = {
+    smokeCore: new THREE.SphereGeometry(1,24,12),
     marker: new THREE.RingGeometry(0.9, 1.08, 28),
     blastRing: new THREE.RingGeometry(0.42, 0.62, 20),
     debris: new THREE.BoxGeometry(0.18, 0.12, 0.42),
   };
   const utilityModels = createOriginalUtilityModelFactory();
+  const densityTexture=smokeDensityTexture();
   const throwableModels = [];
   const pools = {
+    // The old alpha billboards are edge wisps. An opaque bounded world volume
+    // owns the same R6 active envelope as simulation, including the last tick.
+    smokeCore: createPool(group,MAX_SMOKE_CORES,()=>{const m=new THREE.Mesh(geometries.smokeCore,new THREE.MeshBasicMaterial({color:0x929b9f,map:densityTexture,depthTest:true,depthWrite:true,side:THREE.FrontSide,fog:true}));m.name='fps-smoke-core';m.renderOrder=12;return m;}),
     smokeCloud: makeSmokeClouds(group, textures),
     smokeMarker: createPool(group, MAX_SMOKE_EVENTS, () => mesh(group, geometries.marker, UTILITY_COLORS.smoke, { depthTest: true })),
     throwableTrail: createPool(group, MAX_THROWABLE_EVENTS * 3, () => new THREE.Mesh(sphereGeometry, new THREE.MeshBasicMaterial({ color: UTILITY_COLORS.smokeDeep, transparent: true, opacity: 0, depthTest: true, depthWrite: false }))),
@@ -207,6 +229,8 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
     evidence.frameIndex = frameIndex;
     evidence.utilityModels = utilityModels.diagnostics();
     evidence.activeSmoke = 0;
+    evidence.activeSmokeCores = 0;
+    evidence.smokeCoreOverflow = 0;
     evidence.smokeStages = { grow: 0, hold: 0, dissipate: 0 };
     evidence.activeThrowables = 0;
     evidence.trajectorySamples = 0;
@@ -224,6 +248,14 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
     const smokeClouds = pools.smokeCloud;
     let smokeCloudIndex = 0;
     let smokeMarkerIndex = 0;
+    if(major)for(const smoke of frame?.smokes||[]){
+      if(!(smoke.tl>0)||!finitePoint(smoke.pos))continue;
+      const core=pools.smokeCore[evidence.activeSmokeCores];
+      if(!core){evidence.smokeCoreOverflow++;continue;}
+      core.position.set(W.vx(smoke.pos.x),sampleGroundHeight(W.vx(smoke.pos.x),W.vz(smoke.pos.y))+1.56,W.vz(smoke.pos.y));
+      core.scale.set(FPS_SMOKE_RADIUS,3.3,FPS_SMOKE_RADIUS);core.visible=true;
+      evidence.activeSmokeCores++;
+    }
     (frame?.smokes || []).slice(0, MAX_SMOKE_EVENTS).forEach((savedSmoke) => {
       const next = nextSmokes.get(savedSmoke.id);
       const smoke = { ...savedSmoke,
@@ -376,6 +408,7 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
     }));
     heVfx.dispose();
     utilityModels.dispose();
+    densityTexture.dispose();
     Object.values(geometries).forEach((geometry) => geometry.dispose?.());
   };
 

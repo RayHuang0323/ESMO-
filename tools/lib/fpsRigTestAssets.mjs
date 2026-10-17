@@ -44,7 +44,10 @@ export async function readFpsRigTestAssets(){
       const c=createFpsCharacterRenderer({parent,player,enabled:false,optimized});
       const model=normalizedClone(character.gltf.scene);c.root.add(model);c.model=model;c.baseModelPosition=model.position.clone();
       c.c2c=createC2cHeroPresentation({root:model,player,optimized,handWeaponMount:optimized,continuousClothing,mobile,weaponAssets:optimized&&importedWeapons?(textiles?{...weaponAssets,povTextiles:textiles}:weaponAssets):null});c.mixer=new THREE.AnimationMixer(model);c.actions=new Map((optimized?library.gltf.animations.map(clip=>projectNonDeathPelvisWorldVertical(clip,model)):clips).map(clip=>[clip.name,c.mixer.clipAction(clip)]));c.mode='rigged';c.boundsSampler=optimized?createFpsBoundsSampler(c.root):null;
-      return{c,parent,player,update(overrides={}){const current=overrides.player||player;c.update({player:current,previousPlayer:current,nextPlayer:current,frameRound:1,frameIndex:10,seekNonce:0,dt:.05,playbackActive:true,...overrides});return c;},dispose(){c.dispose();c.mixer.uncacheRoot(model);}};
+      // This fixture has completed its real GLB load. Match the visible product
+      // rig and provide its terrain authority, rather than testing hidden meshes.
+      c.root.visible=true;
+      return{c,parent,player,update(overrides={}){const current=overrides.player||player;c.update({sampleGroundHeight:()=>floor,player:current,previousPlayer:current,nextPlayer:current,frameRound:1,frameIndex:10,seekNonce:0,dt:.05,playbackActive:true,...overrides});return c;},dispose(){c.dispose();c.mixer.uncacheRoot(model);}};
     },
     unchanged(){return[character,library,...imported].every(a=>fs.readFileSync(a.url).equals(a.original));},
     dispose(){const resources=new Set();for(const a of[character,library,...imported])a.gltf.scene.traverse(o=>{if(o.geometry)resources.add(o.geometry);for(const m of(Array.isArray(o.material)?o.material:[o.material]).filter(Boolean))resources.add(m);});resources.forEach(r=>r.dispose());},

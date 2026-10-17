@@ -3,7 +3,7 @@
 // 這支只驗證 UI 是否沿用同一份 profile player 與既有能力模型，
 // 不建立第二套 player data，也不把 CS role 當成固定席位。
 import fs from "node:fs";
-import { STAT_DEF, CS_ROLE_BY_MOBA_ROLE, bestPositions } from "../src/data/playerModel.js";
+import { STAT_DEF, CS_ROLE_BY_MOBA_ROLE, bestPositions, csSuitabilityOf } from "../src/data/playerModel.js";
 import { INITIAL_PLAYERS } from "../src/data/players.js";
 import { CS_AI_TEAMS } from "../src/data/csAiTeams.js";
 import { withDerivedStats } from "../src/platform/talents/playerDerivedStats.js";
@@ -25,7 +25,7 @@ function main() {
   gate(new Set(ids).size === ids.length, "PROFILE_PLAYER_ID_UNIQUE");
   gate(INITIAL_PLAYERS.every((player) => JSON.stringify(Object.keys(player.stats).sort()) === JSON.stringify(statKeys)), "PROFILE_STAT_COMPLETENESS");
   gate(INITIAL_PLAYERS.every((player) => Object.values(withDerivedStats(player).stats).every((value) => Number.isFinite(value) && value >= 1 && value <= 99)), "DERIVED_STAT_DOMAIN");
-  gate(INITIAL_PLAYERS.every((player) => bestPositions(withDerivedStats(player)).fpsAll.length === 5), "FPS_SUITABILITY_MODEL");
+  gate(INITIAL_PLAYERS.every((player) => {const p=bestPositions(withDerivedStats(player));return p.fpsAll.length===6&&csSuitabilityOf(p).length===5&&p.fpsAll.some(p=>p.pos==='FPS步槍手');}), "FPS_SUITABILITY_MODEL");
 
   gate(rosterSource.includes('const GAME_FILTERS = ["全部", "MOBA", "CS"]'), "GAME_FILTERS");
   gate(rosterSource.includes("useState(\"全部\")") && rosterSource.includes("useState(\"MOBA\")"), "FILTER_STATE");

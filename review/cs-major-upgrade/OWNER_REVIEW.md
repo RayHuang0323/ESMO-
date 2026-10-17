@@ -1,5 +1,13 @@
 # CS Major Upgrade — Owner Review 收件報告
 
+## 2026-10-18 最新狀態：Owner 人工驗收完成，授權 v1.0 正式發布
+
+本節取代下方歷史停點的「未完成／不得發布」狀態。Owner 已明確授權：先保存正式成果、整合最新 origin/main、完成 Release Gate，再正常 push main、GitHub Pages 部署及正式站 Smoke Test。其他 MOBA／SeasonState worktree、分支與未提交修改必須保留；不得強刪 Git lock 或 force push。
+
+已驗收產品 source：e8d9b1ebf3bd1244372647a44ea6ce616ec257f0d4c1b1de76a3de8ffdaa5af4（144 檔）；工程證據與限制見 OWNER4H_CLOSURE.md。新版整合後須重新驗證，不能以 Owner Preview 舊截圖代替 Release Gate。發布目前 PREPARING，尚未 push／deploy。
+
+已知風險保留：真手機 FPS／觸控未測、長時或多次導覽尾端卡頓、長 OT Replay 原容量上限、三處室內未自然觸發；八煙歷史效能紅燈及後續公平資源重驗均完整保留。詳細 Release 流程見 RELEASE_V1.md。
+
 ## Owner4C最新實際停點：2026-10-14，每週usage剩5%停工（本節最高優先）
 
 使用者確認 http://localhost:5183/ESMO-/，且無痕亦見牆閃/HE白閃；不是開錯網址，不能怪cache。上一輪只修Building6，不涵蓋Room/window其他共面，沒有做到視覺完成。本輪Owner4C未完成，停止新工作只安全保存；官方account/rateLimits/read於2026-10-13T19:22:19.607Z：used95、remaining5、pauseRequired=true。沿用使用者5%（含以下）門檻；目前goal=null，不創建/假稱paused goal。兩worker已完成並interrupt，沒有本任務背景測試在跑。

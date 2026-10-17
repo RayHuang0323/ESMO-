@@ -44,7 +44,7 @@ export function advanceFpsWeaponHandling(player, nowMs, dead = player.dead) {
 }
 
 export function fpsWeaponReadyAtMs(player, nowMs) {
-  if (player.dead || (player.ammo===0 && player.reserveAmmo===0)) return Infinity;
+  if (player.dead || player._objectiveLocked || (player.ammo===0 && player.reserveAmmo===0)) return Infinity;
   return player.reloading ? player.reloadEndsAtMs : nowMs;
 }
 
@@ -59,5 +59,5 @@ export function consumeFpsWeaponShot(player, shotAtMs) {
 export function resolveFpsWeaponStance(player) {
   if (player.dead) return 'standing';
   const moved = Math.hypot(player.pos.x-player.prevPos.x,player.pos.y-player.prevPos.y);
-  return moved<=.02 && ['HOLD','COVER','POST_PLANT','ENGAGE'].includes(player.state) ? 'crouched' : 'standing';
+  return moved<=.02 && player.coverAssessment?.protected===true && ['HOLD','COVER','POST_PLANT','ENGAGE','架槍'].includes(player.state) ? 'crouched' : 'standing';
 }

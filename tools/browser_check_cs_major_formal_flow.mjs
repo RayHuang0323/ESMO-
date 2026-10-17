@@ -9,6 +9,8 @@ import {createHash} from 'node:crypto';
 import {preview} from 'vite';
 import {runGate,finishGate,HarnessError} from './browser/harness.mjs';
 import {clickFpsDNative,clickFpsFormalButtonByText} from './browser/fpsReplayUiProbe.mjs';
+import {probeOwner4eReport} from './browser/owner4eReportProbe.mjs';
+import {probeOwner4fRoles} from './browser/owner4fRoleProbe.mjs';
 
 const started=Date.now(),args={},sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const within=(root,target)=>{const r=path.relative(root,target);return r&&!r.startsWith('..')&&!path.isAbsolute(r);};
@@ -32,7 +34,7 @@ try{
  const assetDir=path.join(buildDir,'assets'),scripts=fs.readdirSync(assetDir).filter(f=>f.endsWith('.js')).sort();
  if(!scripts.some(f=>f.startsWith('index-'))||!scripts.some(f=>f.startsWith('fpsSim.worker-')))throw new HarnessError('buildDir缺正式app與FPS worker JS');
  const h=createHash('sha256');let hasSceneProbe=false,hasCallbackProbe=false;
- for(const name of scripts){const bytes=fs.readFileSync(path.join(assetDir,name));h.update(name+'\0');h.update(bytes);hasSceneProbe ||= bytes.includes(Buffer.from('window.__ESMO_FPS_SCENE__='));hasCallbackProbe ||= bytes.includes(Buffer.from('__ESMO_CS_D_CALLBACK_PROBE__'));}
+ for(const name of scripts){const bytes=fs.readFileSync(path.join(assetDir,name));h.update(name+'\0');h.update(bytes);hasSceneProbe ||= /window\.__ESMO_FPS_SCENE__\s*=(?!=)/.test(bytes.toString('utf8'));hasCallbackProbe ||= bytes.includes(Buffer.from('__ESMO_CS_D_CALLBACK_PROBE__'));}
  const bundleSha256=h.digest('hex');if(args.bundleSha256&&args.bundleSha256!==bundleSha256)throw new HarnessError('正式bundle SHA與owner固定來源不同');
  const manifestPath=path.join(buildDir,'build-manifest.json'),manifest=fs.existsSync(manifestPath)?JSON.parse(fs.readFileSync(manifestPath,'utf8')):null;
  if(manifest?.bundleSha256&&manifest.bundleSha256!==bundleSha256)throw new HarnessError('archive manifest bundle SHA不符');
@@ -60,6 +62,12 @@ try{
   evidence.entryClick=await clickFpsDNative({chrome,sleep,selector:'[data-testid="home-mode-cs"]'});
   await poll(`document.querySelector('[data-testid="prep-primary-action"]')&&document.body.innerText.includes('CS 賽前準備')`,30000,'CS正式賽前');
   let prep=await snapshot('prep-initial');
+  check('CS五人席位為彈性陣容，定位不是強制分路',await chrome.evaluate(`const notice=document.querySelector('[data-testid="cs-flexible-lineup"]');return Boolean(notice&&notice.textContent.includes('職業不需各一人')&&[...document.querySelectorAll('[data-testid="squad-seat"]')].length===5&&!document.body.innerText.includes('期望路線'));`));
+  for(const prepWidth of [320,360,390,430]){
+    await chrome.send('Emulation.setDeviceMetricsOverride',{width:prepWidth,height:844,deviceScaleFactor:1,mobile:true});await sleep(150);
+    check('彈性賽前陣容 '+prepWidth+'px無水平溢出且五席與開賽操作存在',await chrome.evaluate(`return document.documentElement.scrollWidth<=innerWidth+1&&document.body.scrollWidth<=innerWidth+1&&document.querySelectorAll('[data-testid="squad-seat"]').length===5&&Boolean(document.querySelector('[data-testid="prep-primary-action"]'));`));
+  }
+  await chrome.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width===390});await sleep(150);
   if(!check('CS賽前為一般對戰、未走快速練習',prep.tier==='competitive'&&prep.tierText?.includes('一般對戰'),{tier:prep.tier,tierText:prep.tierText}))return;
   if(prep.prepAction?.action==='blocked'){
    await clickFpsFormalButtonByText({chrome,sleep,text:'自動填入',exact:false});
@@ -91,6 +99,7 @@ try{
   await poll(`document.querySelector('canvas')&&document.querySelector('[data-testid="cs-match-speed-controls"]')&&document.querySelector('[data-testid="cs-playback-controls"] input[type="range"]')`,180000,'正式Loading→Battle');
   const battle=await snapshot('battle');evidence.loadingToBattleMs=Date.now()-evidence.loadingStart;
   if(!check('正式Battle十選手、major HUD與非空canvas',new Set(battle.cards).size===10&&battle.majorHud&&battle.canvas?.width>0&&battle.canvas?.height>0,{cards:battle.cards,majorHud:battle.majorHud,canvas:battle.canvas}))return;
+  check('正式Battle未掛載診斷scene或callback全域入口',await chrome.evaluate(`return typeof window.__ESMO_FPS_SCENE__==='undefined'&&typeof window.__ESMO_CS_D_CALLBACK_PROBE__==='undefined';`));
   if(!check('真比賽已有保存幀、QuickFinish可用且未先結案',battle.range?.max>0&&battle.quickFinish&&!battle.quickFinish.disabled&&!battle.resultAction,{range:battle.range,quickFinish:battle.quickFinish,resultAction:battle.resultAction}))return;
   check('正式Battle非示範陣容且非保存重播',await chrome.evaluate(`return !document.body.innerText.includes('本場使用引擎內建示範陣容')&&!document.querySelector('[data-testid="cs-replay-mode"]')?.textContent.includes('重播');`));
   check('正式Battle無水平溢出',!battle.overflow,{overflow:battle.overflow});
@@ -106,9 +115,10 @@ try{
   // Result入口觸發真AppShell settlement；不patch onComplete或profile。
   await clickFpsFormalButtonByText({chrome,sleep,text:'查看賽後戰報',exact:false});
   await poll(`[...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='返回 Dashboard')`,20000,'CS正式Result');
+  if(await chrome.evaluate(`return Boolean(document.querySelector('[data-testid="cs-professional-report"]'));`))await probeOwner4eReport({chrome,check,sleep,capture:async stage=>{await chrome.evaluate(`const e=document.querySelector('[data-testid="cs-professional-report"]');if(e)e.scrollTop=0;return true;`);await sleep(100);const state=await snapshot(stage),shot=await chrome.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),bytes=Buffer.from(shot.data,'base64'),file=stage+'.png';fs.writeFileSync(path.join(out,file),bytes,{flag:'wx'});evidence.screenshots.push({file,sha256:sha(bytes),stage});return state;},width,height});
   await poll(`document.body.innerText.includes('已儲存 CS 對戰紀錄')&&(document.body.innerText.includes('已入帳')||document.body.innerText.includes('本場已結算（不重複發放）'))`,15000,'正式Result實際入帳與入史');
   const report=await snapshot('result');evidence.savedAfter=await saved();
-  check('正式Result回合數據戰報可見',report.returnAction&&await chrome.evaluate(`return document.body.innerText.includes('本隊數據')&&document.body.innerText.includes('回合走勢')&&document.body.innerText.includes('K/D/A');`));
+  check('正式Result回合數據戰報可見',report.returnAction&&await chrome.evaluate(`return document.querySelector('[data-testid="cs-professional-report"]')?document.querySelectorAll('[data-testid="cs-ten-player-table"] tbody tr').length===10&&document.body.innerText.includes('回合比分走勢'):document.body.innerText.includes('本隊數據')&&document.body.innerText.includes('回合走勢')&&document.body.innerText.includes('K/D/A');`));
   check('正式Result UI確認已入帳與入史、無結算錯誤',report.receiptApplied&&report.recorded&&!report.receiptError,{receiptApplied:report.receiptApplied,recorded:report.recorded,receiptError:report.receiptError});
   check('正式Result新增唯一真CS match紀錄',evidence.savedAfter.history.length===1&&evidence.savedAfter.history[0].mode==='cs'&&Boolean(evidence.savedAfter.history[0].matchId),evidence.savedAfter.history);
   const history=evidence.savedAfter.history[0];
@@ -118,6 +128,7 @@ try{
   await poll(`document.querySelector('[data-testid="home-mode-cs"]')`,20000,'正式Result返回Dashboard');
   const returned=await snapshot('dashboard-return'),afterReturn=await saved();
   check('返回Dashboard沿用同一CS紀錄與交易、無第二次完成',returned.homeCs&&JSON.stringify(afterReturn.history)===JSON.stringify(evidence.savedAfter.history)&&JSON.stringify(afterReturn.transactions)===JSON.stringify(evidence.savedAfter.transactions)&&evidence.completionRequests===1,{history:afterReturn.history,transactions:afterReturn.transactions,requests:evidence.completionRequests});
+  await probeOwner4fRoles({chrome,sleep,check,width,height,capture:async stage=>{const shot=await chrome.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),bytes=Buffer.from(shot.data,'base64'),file=stage+'.png';fs.writeFileSync(path.join(out,file),bytes,{flag:'wx'});evidence.screenshots.push({file,sha256:sha(bytes),stage});}});
   evidence.browserErrors={page:chrome.pageErrors,console:chrome.consoleLines.filter(l=>l.startsWith('[error]'))};
   check('正式flow console/page error零',!evidence.browserErrors.page.length&&!evidence.browserErrors.console.length,evidence.browserErrors);
   check('全流程無c5c捷徑、無fixture／LS清除或seed',evidence.stages.every(s=>!new URL(s.url).searchParams.has('c5c'))&&!evidence.fixtureInjected&&!evidence.localStorageCleared&&!evidence.localStorageSeeded);

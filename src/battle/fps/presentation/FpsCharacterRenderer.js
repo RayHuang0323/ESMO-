@@ -309,6 +309,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
     boundsSampler: null,
     deathGroundPoseTime: null,
     deathGroundRootY: null,
+    lastPresentedAlive: null,
     lastPresentationFrame: null,
     lastSeekNonce: null,
     setFacingDegrees(degrees) {
@@ -326,7 +327,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       return controller.actions.keys().next().value || null;
     },
     _switch(name, once = false, fade = 0.12) {
-      controller.poseLayers?.stop();
+      controller.poseLayers?.stop(optimized ? fade : 0);
       const resolvedName = controller.resolveClip(name);
       const action = resolvedName ? controller.actions.get(resolvedName) : null;
       if (!action) return;
@@ -339,6 +340,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       action.fadeIn(fade).play();
     },
     resetForRound(round) {
+      controller.lastPresentedAlive=null;
       controller.actionPose?.restore();
       controller.gripPose?.restore();
       controller.visibleGrounding?.restore();
@@ -387,6 +389,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       // 暫停只停時間，不把權威移動中的角色切回 idle／另一個持槍姿勢。
       const animationDt = optimized ? (!playbackActive ? 0 : Math.min(.25, Math.max(0, playbackDeltaSec))) : dt;
       const animation = deriveFpsAnimationState({ player: current, previousPlayer, nextPlayer, playbackActive: optimized ? true : playbackActive, roundTimeMs, presentationVelocity: optimized ? presentationVelocity : undefined });
+      const continuousDeathEdge=optimized&&current.dead&&controller.lastPresentedAlive===true&&playbackActive&&!explicitSeek&&!rewind;
       const gesture = optimized ? deriveFpsActionPose({player:current,roundSec:roundTimeMs/1000,frameRound,events,nextEvents,defuse}) : {active:false};
       controller.actionGesture = gesture;
       const eventFrame = Number.isFinite(Number(frameIndex)) ? Number(frameIndex) : "unknown";
@@ -418,7 +421,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
         controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.death, true, 0.08);
         // 直接進入已死的後續frame時，沒有死亡時間可重建落地進度。
         // 使用原clip的終態；不虛構死亡事件，也不從頭重播死亡。
-        if (optimized && !animation.deathEvent) {
+        if (optimized && !animation.deathEvent && !continuousDeathEdge) {
           const death = controller.actions.get(controller.currentAction);
           controller.actions.forEach(action => { if (action !== death) action.stop(); });
           if (death) { death.stopFading().setEffectiveWeight(1); death.time = death.getClip().duration; death.paused = true; }
@@ -432,11 +435,12 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
           // one trigger per hp edge; only the presentation window is tuned.
           // Keep the authored one-shot readable across review seeks and normal
           // RAF cadence; the 0.22s C5A window expired before a second sample.
-          controller.hitTimer = 0.42;
-          controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.hit, true, 0.055);
-        } else if (optimized && controller.poseLayers) {
+          controller.hitTimer = optimized ? .18 : .42;
+          if(!optimized||!controller.poseLayers)controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.hit, true, 0.055);
+        }
+        if (optimized && controller.poseLayers) {
           if (fireEvent) controller.fireTimer = 0.16;
-          if (controller.hitTimer <= 0) {
+          {
             const lower = (gesture.kind==='plant'||gesture.kind==='defuse')
               ? controller.resolveClip(FPS_CHARACTER_ASSET_MANIFEST.optionalClips.crouchIdle)
               : animation.crouched
@@ -448,13 +452,15 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
                 : FPS_CHARACTER_ASSET_MANIFEST.clips.walk;
             const upper = animation.reloading
               ? controller.resolveClip(FPS_CHARACTER_ASSET_MANIFEST.optionalClips.reload)
+              : controller.hitTimer > 0
+              ? FPS_CHARACTER_ASSET_MANIFEST.clips.hit
               : controller.fireTimer > 0
               ? FPS_CHARACTER_ASSET_MANIFEST.clips.fire
               : animation.aiming ? FPS_CHARACTER_ASSET_MANIFEST.clips.aim : "Pistol_Idle_Loop";
-            controller.poseLayers.update({ lower, upper, firing: !animation.reloading&&controller.fireTimer > 0, fireEvent: !animation.reloading&&fireEvent, paused: !playbackActive, upperProgress:animation.reloading?animation.reloadProgress:null, lowerTimeScale: fpsLocomotionTimeScale(lower, animation.speed, playbackSpeed) });
+            controller.poseLayers.update({ lower, upper, firing: !animation.reloading&&controller.fireTimer > 0, fireEvent: !animation.reloading&&fireEvent, upperOnce:!animation.reloading&&(controller.hitTimer>0||controller.fireTimer>0),upperRestart:hitEvent||(!animation.reloading&&fireEvent), paused: !playbackActive, upperProgress:animation.reloading?animation.reloadProgress:null, lowerTimeScale: fpsLocomotionTimeScale(lower, animation.speed, playbackSpeed) });
             controller.currentAction = controller.poseLayers.upperName;
           }
-        } else if (fireEvent) {
+        } else if (!hitEvent && fireEvent) {
           controller.fireTimer = 0.16;
           controller._switch(FPS_CHARACTER_ASSET_MANIFEST.clips.fire, true, 0.045);
         } else if (controller.hitTimer <= 0 && controller.fireTimer <= 0) {
@@ -496,7 +502,9 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
         if(signature===controller.groundSignature&&Number.isFinite(controller.groundOffset)) {
           controller.visibleGrounding.reapply({model:controller.model,offset:controller.groundOffset});
         } else {
-          const measured=controller.visibleGrounding.apply({model:controller.model,dead:controller.deathTriggered});
+          // A settled corpse is sampled once in full, then cached. This removes
+          // the last millimetre of support approximation without per-frame scans.
+          const measured=controller.visibleGrounding.apply({model:controller.model,dead:controller.deathTriggered,full:settledCorpse});
           controller.groundOffset=measured.applied?measured.offset:0;
           controller.groundSignature=signature;
           controller.groundSupportSamples=measured.samples;
@@ -538,6 +546,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       if (!optimized) controller.c2c?.syncAnchors?.();
       controller.boundsSampleFrame += 1;
       if (controller.boundsSampleFrame % 30 === 0) controller.currentBounds = measurePresentationBounds(riggedRoot,controller.boundsSampler);
+      controller.lastPresentedAlive=!current.dead;
       publishDiagnostic(controller);
     },
     setIdentityMiss() {

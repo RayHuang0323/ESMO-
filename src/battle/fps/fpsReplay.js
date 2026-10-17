@@ -1,4 +1,5 @@
 // Saved authoritative frames only. This module never runs a match.
+import {CS_PLAYER_POOL_ENCODING,packCsReplayPlayers,unpackCsReplayPlayers} from './fpsReplayPlayerPool.js';
 export const CS_REPLAY_SCHEMA = "CsReplay.v1";
 const MAPS = new Set(["mirage", "dust2", "inferno"]);
 const SCENES = new Set(["legacy", "major.v1"]);
@@ -24,7 +25,7 @@ export function validateCsReplay(replay) {
   const reject = message => { if (errors.length < 8) errors.push(message); };
   if (!replay || typeof replay !== "object") return { ok: false, errors: ["重播檔內容不完整"] };
   if (replay.schema !== CS_REPLAY_SCHEMA) reject("重播檔版本不支援");
-  if (replay.encoding != null && replay.encoding !== "round-prefix.v1") reject("重播檔編碼不支援");
+  if (replay.encoding != null && !["round-prefix.v1",CS_PLAYER_POOL_ENCODING].includes(replay.encoding)) reject("重播檔編碼不支援");
   const metadata = replay.metadata, sim = replay.simulation, result = replay.rawResult;
   if (!metadata || !MAPS.has(metadata.mapKey) || !SCENES.has(metadata.sceneVersion) || !Number.isSafeInteger(metadata.seed) || [metadata.teamName, metadata.opponentName].some(name => typeof name !== "string" || !name.length || name.length > 120)) reject("地圖、場景或比賽識別資料不完整");
   if (!sim || sim.mapKey !== metadata?.mapKey || sim.sceneVersion !== metadata?.sceneVersion) reject("重播場景資料不一致");
@@ -56,7 +57,11 @@ export function readCsReplay(input) {
   let replay;
   try { replay = typeof input === "string" ? JSON.parse(input) : structuredClone(input); }
   catch { fail(["檔案不是有效的重播資料"]); }
-  if (replay?.encoding === "round-prefix.v1" && Array.isArray(replay.simulation?.frames) && Array.isArray(replay.simulation.roundHist)) {
+  if(replay?.encoding===CS_PLAYER_POOL_ENCODING){
+    try{unpackCsReplayPlayers(replay.simulation,replay.playerValuePool);}catch(error){fail([error.message]);}
+    delete replay.playerValuePool;
+  }
+  if (["round-prefix.v1",CS_PLAYER_POOL_ENCODING].includes(replay?.encoding) && Array.isArray(replay.simulation?.frames) && Array.isArray(replay.simulation.roundHist)) {
     const history = replay.simulation.roundHist;
     for (const frame of replay.simulation.frames) {
       if (!frame || typeof frame !== "object" || Array.isArray(frame)) fail(["保存畫面資料不完整"]);
@@ -73,5 +78,6 @@ export function readCsReplay(input) {
 export function serializeCsReplay(replay) {
   const validation = validateCsReplay(replay);
   if (!validation.ok) fail(validation.errors);
-  return JSON.stringify({ ...replay, encoding: "round-prefix.v1", simulation: { ...replay.simulation, frames: replay.simulation.frames.map(({ roundHist, ...frame }) => ({ ...frame, roundHistCount: frame.roundHistCount ?? roundHist.length })) } });
+  const compact=packCsReplayPlayers(replay.simulation.frames);
+  return JSON.stringify({ ...replay, encoding: CS_PLAYER_POOL_ENCODING, playerValuePool:compact.pool, simulation: { ...replay.simulation, frames: compact.frames.map(({ roundHist, ...frame }) => ({ ...frame, roundHistCount: frame.roundHistCount ?? roundHist.length })) } });
 }

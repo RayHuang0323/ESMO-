@@ -51,8 +51,13 @@ const STATE = resolve(ROOT, "tools/.verify-state.json");
  * 順序＝由快到慢、由基礎到整合，讓失敗盡早出現。
  */
 const SEGMENTS = [
+  { id: "cs_owner4f_side_audit", script: "tools/check_cs_c5d_side_bias_audit.mjs", shape: /SUMMARY .*"schema":"CsSideBiasAudit.v1".*"verdict":"NO_T_SIDE_SYSTEMIC_BIAS".*"passed":true/, note: "原C5D三圖三seed換起始方與逐對決定性重跑；保留原側偏門檻" },
+  { id: "cs_owner4f_rules", script: "tools/check_cs_owner4f_rules.mjs", shape: /CS Owner4F Rules: 17\/17 PASS/, note: "Owner4F 安包後真開鏡／拆彈邊界／守角距離／共享戰術不變／五職與16能力／真Rifler武器profile及22槍／換彈空彈同步" },
+  { id: "cs_owner4e_pure", script: "tools/check_cs_owner4e_closure.mjs", args: ["--pure-only"], shape: /CS Owner4E Closure: 20\/20 PASS/, note: "Owner4E 最新呈現修正純規則；不取代三圖36項正式simulation驗證" },
+  { id: "cs_owner4e_closure", script: "tools/check_cs_owner4e_closure.mjs", shape: /CS Owner4E Closure: 36\/36 PASS/, note: "Owner4E 真鏡頭／原創C4排程／五職正式路線／三圖道具及真數據／Result相容／Owner4D完整sim等價" },
   { id: "cs_awareness_steering", script: "tools/check_cs_awareness_steering.mjs", shape: /CS Awareness Steering: 15\/15 PASS/, note: "Owner4真來源pure視線wrap／corner pace／TTL情報與公開地圖cover peek安全及禁用條件；非runtime或GPU" },
   { id: "cs_owner4_contact_runtime", script: "tools/check_cs_owner4_contact_runtime.mjs", shape: /CS Owner4 Contact Runtime: 12\/12 PASS/, note: "Owner4三圖同seed真5v5可視loaded reaction-ready actor timeline；>=1.5s等待守門與多射手/反擊OBSERVED或NOT_TRIGGERED" },
+  { id: "cs_owner4d_closure", script: "tools/check_cs_owner4d_closure.mjs", shape: /CS Owner4D Closure: 13\/13 PASS/, note: "Owner4D 共面表面擁有權／C4指定回收與deadline／真掩體蹲姿／幀內死亡時鐘／導航精度反例" },
   { id: "cs_utility_purchase_named30", script: "tools/check_cs_utility_purchase_plan_runtime.mjs", shape: /CS Utility Purchase Plan Runtime: 30\/30 PASS/, note: "原45列涉及30個具名舊canonical inputs，只驗受影響30場新版purpose/window/inventory因果" },
   { id: "cs_utility_purchase_plan_runtime", script: "tools/check_cs_utility_purchase_plan_runtime.mjs", shape: /CS Utility Purchase Plan Runtime: 4\/4 PASS/, note: "原Utility反覆購入零用四個具名真5v5案例；購入purpose／carry／真window／throw一對一" },
   { id: "cs_owner5_runtime", script: "tools/check_cs_owner5_runtime.mjs", shape: /CS Owner5 Runtime: 6\/6 PASS/, note: "Owner五項新問題：指定單圖／fresh陣容真對局與出生／道具起步／責任分工" },
@@ -79,7 +84,7 @@ const SEGMENTS = [
   { id: "cs_major_tailored_clothing", script: "tools/check_cs_major_tailored_clothing.mjs", shape: /CS Major Tailored Clothing B6: 37\/37 PASS/, note: "CS major真65骨連續服裝／領腰面積守恆／真腕口私有連續顏色／雙袖bind裁片與shader隔離／方向性肘皺與位移上限／裁片共面與包邊／真肩肘前臂袖口覆蓋／寬面肩裁片外肘袖口方向性／局部GLSL有界與非袖隔離／布料借用及skinned校色／來源不變／末一釋放／50套真GLB槍成本與legacy原上限" },
   { id: "cs_major_audio_pool", script: "tools/check_cs_major_audio_pool.mjs", shape: /CS Major Audio Pool B3: 22\/22 PASS/, note: "CS 原生Gain／Panner有界重用／排程取消／priority／stale callback／一次性source回收" },
   { id: "cs_major_ambient_audio", script: "tools/check_cs_major_ambient_audio.mjs", shape: /CS Major Ambient Audio B7: 14\/14 PASS/, note: "CS major CC0環境loop／來源SHA／單graph／frame時間定位／pause及seek清理／晚到取消" },
-  { id: "cs_major_audio_playback", script: "tools/check_cs_major_audio_playback.mjs", shape: /CS Major Audio Playback B3: 25\/25 PASS/, note: "CS major正向播放gate／真位置及鏡頭左右／腳步唯一事件／legacy與frame不變" },
+  { id: "cs_major_audio_playback", script: "tools/check_cs_major_audio_playback.mjs", shape: /CS Major Audio Playback B3: 26\/26 PASS/, note: "CS major正向播放gate／真位置及鏡頭左右／GLB腳程唯一事件／安包聲與導播／legacy與frame不變" },
   { id: "cs_major_simulation_v1", script: "tools/check_cs_major_simulation_v1.mjs", shape: /CS Major Simulation v1: 24\/24 PASS/, note: "CS Major 原創空間／廠房雙入口／路線／決定性／舊進行中比賽相容" },
   { id: "cs_major_utility_rules", script: "tools/check_cs_major_utility_rules.mjs", shape: /CS Major Utility Rules C1: 37\/37 PASS/, note: "CS Major 秒制致盲／真庫存飛行／煙火合計非空因果／拆彈中斷保槍轉交" },
   { id: "cs_major_tactical_coordinator", script: "tools/check_cs_major_tactical_coordinator.mjs", shape: /CS Major Tactical Coordinator: 42\/42 PASS/, note: "CS Major 不偷攻點／隊伍情報意圖／六點交叉站位／真trade與clutch純規則" },

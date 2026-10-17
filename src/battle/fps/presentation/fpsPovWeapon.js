@@ -240,7 +240,7 @@ diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.30,.31,.23),clamp(esmoCuffThread*.72
   const heldBomb=createFpsHandheldBomb();group.add(heldBomb.group);
   const state = {
     major: true, group, flash, family: null, gun: null, fireCount: 0,
-    update({ frame, nextFrame, feedbackRoot, chase, pov, live, family, dt, frameAgeSec = 0, weaponGroups = null, handGeometries = null, textiles = null, clothColor = null }) {
+    update({ frame, nextFrame, feedbackRoot, chase, pov, live, family, dt, scope=null, frameAgeSec = 0, weaponGroups = null, handGeometries = null, textiles = null, clothColor = null }) {
       if (disposed) return;
       if(!textileNormals&&textiles?.leatherNormal&&textiles?.fabricNormal){
         // Borrow the bounded app-cache textures. Only the POV material is private.
@@ -408,12 +408,14 @@ diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.30,.31,.23),clamp(esmoCuffThread*.72
         flash.position.copy(muzzlePosition);
       }
       const feedback=feedbackRoot?.querySelector('[data-fps-pov-feedback]');
+      const scopeElement=feedbackRoot?.querySelector('[data-testid="cs-sniper-scope"]');if(scopeElement){scopeElement.dataset.active=scope?.active?'true':'false';scopeElement.dataset.cycling=scope?.cycling?'true':'false';scopeElement.dataset.gun=chase?.gun||'';}
+      if(scope?.active){group.visible=false;flash.visible=false;}
       const blind=active?Math.max(0,(Number(chase.blindSec)||0)-Math.max(0,frameAgeSec)):0;
       const confirmedHit=Boolean(active&&latest?.hit&&latest.damage>0&&eventAgeSec<=.16);
-      const reticle=feedbackRoot?.querySelector('[data-testid="cs-pov-reticle"]');if(reticle)reticle.dataset.csPovShotState=active&&playback.activeShot&&!handling.reloading&&!gesture.active?'active':'idle';
+      const reticle=feedbackRoot?.querySelector('[data-testid="cs-pov-reticle"]');if(reticle){reticle.dataset.csPovShotState=active&&playback.activeShot&&!handling.reloading&&!gesture.active?'active':'idle';reticle.style.visibility=scope?.active?'hidden':'visible';}
       if(feedback){feedback.style.setProperty('--fps-blind-opacity',String(blind>0?Math.min(.96,.20+blind*.20):0));feedback.dataset.blind=blind>0?'true':'false';feedback.dataset.hit=confirmedHit?'true':'false';}
       state.diagnostics = {
-        action:gesture,blindSec:blind,confirmedHit,
+        action:gesture,blindSec:blind,confirmedHit,scope,
         visible: group.visible, ready: Boolean(current), gun: state.gun, family: state.family,
         weaponParts: current?.meshes ?? 0, ownedParts: 6, weaponTriangles: current?.triangles ?? 0,
         borrowedGeometry: true, fireCount: state.fireCount, lastAuthoritativeFire: playback.lastAuthoritativeFire,

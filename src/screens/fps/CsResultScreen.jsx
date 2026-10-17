@@ -17,6 +17,7 @@ import { useProfileStore } from "../../platform/profileStore.js";
 import { makeTransactionId } from "../../platform/contracts/matchProgressTransaction.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
+import CsProfessionalReport from './CsProfessionalReport.jsx';
 import "../../battle/fps/fpsBattleHud.css";
 
 const K = { t: "#fb923c", tL: "#fed7aa", ct: "#38bdf8", ctL: "#a7e0ff" };
@@ -43,6 +44,8 @@ export default function CsResultScreen({ result, onDone }) {
   const sorted = [...(r.players ?? [])].sort((a, b) => b.rating - a.rating || b.kills - a.kills);
   const mvp = r.mvp;
   const rounds = r.summaryEvents ?? [];
+
+  if(r.sceneVersion==='major.v1')return <CsProfessionalReport result={r} receipt={receipt} recorded={recorded} onDone={onDone}/>;
 
 
   return (

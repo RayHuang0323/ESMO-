@@ -78,7 +78,7 @@ export function toCsMatchResult(raw, ctx = {}) {
     rewards: { money: null, fans: null, xp: null }, // 由 recordCsMatch（Legacy 公式）入帳時填入
     recordedAt: null,                      // 由 recordCsMatch 蓋章（= 已寫入 csHistory）
     // Major 可選資料直接攜帶同一份引擎結果，不回算統計或獎勵。
-    ...(major ? { sceneVersion: raw.sceneVersion, roundDetails: (raw.rounds ?? []).map((r, i) => ({ round: i + 1, players: (r.roundStats ?? []).map((p) => ({ ...p })) })) } : {}),
+    ...(major ? { sceneVersion: raw.sceneVersion, roundDetails: (raw.rounds ?? []).map((r, i) => ({ round: i + 1, players: (r.roundStats ?? []).map((p) => ({ ...p })) })),...(raw.analytics?.version===1?{analytics:JSON.parse(JSON.stringify(raw.analytics))}:{}) } : {}),
   };
 }
 

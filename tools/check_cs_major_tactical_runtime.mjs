@@ -9,6 +9,8 @@ import {planFpsBombRoute, fpsAssignTacticalDuties} from '../src/battle/fps/fpsBo
 import {hashFpsSimulationJson,writeFpsSimulationGzip} from './lib/fpsSimulationJsonStream.mjs';
 import {inspectFpsMicroAwareness} from './lib/fpsMicroAwarenessAudit.mjs';
 import {inspectFpsFrontWallDwell} from './lib/fpsFrontWallDwellAudit.mjs';
+import {inspectFpsObjectiveDiscipline} from './lib/fpsObjectiveDisciplineAudit.mjs';
+import {fpsPerceptionCue} from '../src/battle/fps/fpsPerceptionCues.js';
 
 // C2–C4: canonical 真frame因果。固定三圖各一normal及一mirage fake；
 // 不重跑 legacy/same-seed，不改結果。D只保存一份完整mirage原始sim。
@@ -20,7 +22,7 @@ const finite = point => Number.isFinite(point?.x) && Number.isFinite(point?.y);
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const key = (round, id) => `${round}:${id}`;
 const source = fs.readFileSync("src/battle/fps/EsportsFPS3D.jsx", "utf8");
-const sourceHash = createHash("sha256").update(source).update(fs.readFileSync("src/battle/fps/fpsTacticalCoordinator.js")).update(fs.readFileSync("src/battle/fps/fpsMajorUtilityRules.js")).update(fs.readFileSync('src/battle/fps/fpsBombObjectivePlanning.js')).digest("hex");
+const sourceHash = createHash("sha256").update(source).update(fs.readFileSync("src/battle/fps/fpsTacticalCoordinator.js")).update(fs.readFileSync("src/battle/fps/fpsMajorUtilityRules.js")).update(fs.readFileSync('src/battle/fps/fpsBombObjectivePlanning.js')).update(fs.readFileSync('src/battle/fps/fpsObjectiveDiscipline.js')).update(fs.readFileSync('src/battle/fps/fpsPerceptionCues.js')).update(fs.readFileSync('src/battle/fps/fpsAwarenessSteering.js')).digest("hex");
 const api = await loadFpsMajorTestApi(source);
 const fixturePath = process.env.ESMO_CS_RUNTIME_FIXTURE || "review/cs-major-upgrade/evidence/retention-policy-20261011/c-runtime-simulation-new-source.json.gz";
 assert.ok(!fs.existsSync(fixturePath), `fixture已存在，不得覆寫：${fixturePath}`);
@@ -85,12 +87,17 @@ function inspect(result, mapKey, scenario) {
       if (age === 0) {
         stats.freshIntel++;
         if (api.lineBlocked(item.observerPos, item.pos, walls) || (prevPlayers.get(item.observerId)?.blindSec || 0) > 0) note("intel", { fi: frame.fi, issue: "新情報穿牆或致盲者觀測", item });
+        if(item.visibleTo){
+          if(new Set(item.visibleTo).size!==item.visibleTo.length||item.visibleTo.length>5)note('intel',{fi:frame.fi,issue:'目視觀察者清單重複或超額',item});
+          for(const id of item.visibleTo){const observer=prevPlayers.get(id),target=prevPlayers.get(item.targetId);if(!observer||!target||observer.side!==item.side||observer.dead||observer.blindSec>0||!api.canObserveFps(observer,target,walls,previous.smokes,Math.max(0,(frame.roundSec-12)/90)))note('intel',{fi:frame.fi,issue:'visibleTo缺真實本人目視資格',id,item});}
+        }
       } else {
         stats.memoryIntel++;
         const prior = sameRound && previous.teamIntel.find(i => i.side === item.side && i.targetId === item.targetId && i.observedAtSec === item.observedAtSec);
         if (!prior || prior.observerId !== item.observerId || distance(prior.pos, item.pos) > 1e-9) note("intel", { fi: frame.fi, issue: "memory沒有歷史觀測来源", item });
       }
     }
+    const observedDeaths=record.kills.slice(); // Planning precedes this frame's combat/utility kills.
     const aliveIds = new Set((sameRound ? previous.players : frame.players).filter(p => !p.dead).map(p => p.id));
     for (const event of frame.events || []) {
       if (event.type === "kill") {
@@ -123,9 +130,12 @@ function inspect(result, mapKey, scenario) {
         if (intent?.targetId) {
           stats.knownIntents++; if (intent.source === "team-intel") stats.teamIntents++;
           const item = intel.find(i => i.side === actor.side && i.targetId === intent.targetId && i.observedAtSec === intent.observedAtSec);
-          if (!item || !finite(intent.aim) || distance(intent.aim, item.pos) > 1e-9 || (intent.source === "visible" && (item.observerId !== actor.id || item.observedAtSec !== frame.roundSec))) note("intent", { fi: frame.fi, playerId: actor.id, issue: "決策使用無來源或未觀測對手", intent });
+          if (!item || !finite(intent.aim) || distance(intent.aim, item.pos) > 1e-9 || (intent.source === "visible" && (!(item.visibleTo?.includes(actor.id)||item.observerId===actor.id) || item.observedAtSec !== frame.roundSec))) note("intent", { fi: frame.fi, playerId: actor.id, issue: "決策使用無來源或未觀測對手", intent });
           if ((before?.blindSec || 0) > 0) { stats.blindIntents++; if (intent.source === "visible") note("intent", { fi: frame.fi, playerId: actor.id, issue: "致盲者讀取新自有視線" }); }
-        } else if (intent?.aim || intent?.source !== "none") note("intent", { fi: frame.fi, playerId: actor.id, issue: "無情報仍有瞄準", intent });
+        } else if (intent?.aim || intent?.source !== "none") {
+          const cue=fpsPerceptionCue({player:before||actor,gunshots:(sameRound?previous.muzzles:[]).filter(m=>m.tl>.25),deaths:observedDeaths,roundSec:frame.roundSec,walls,lineBlocked:api.lineBlocked});
+          if(!cue||!['gunshot-area','teammate-death-location'].includes(intent?.source)||intent.source!==cue.source||intent.observedAtSec!==cue.observedAtSec||!finite(intent.aim)||distance(intent.aim,cue.pos)>1e-9||intent.targetId!==null)note("intent", { fi: frame.fi, playerId: actor.id, issue: "無目視瞄準缺真實聲音／己方陣亡事件來源", intent,cue });
+        }
         if (intent?.kind === "trade") {
           stats.tradeIntents++;
           const loss = record.kills.find(k => k.victimSide === actor.side && k.victimId !== actor.id && k.killerId === intent.targetId && frame.roundSec >= k.roundSec && frame.roundSec - k.roundSec <= 5);
@@ -148,7 +158,7 @@ function inspect(result, mapKey, scenario) {
         if (plan.kind === "save") saved.add(key(frame.rnd, actor.id));
         if (plan.kind === "save" && samples.save.length < 12) samples.save.push({ fi: frame.fi, rnd: frame.rnd, playerId: actor.id, pos: actor.pos, bombPos: frame.c4pos, bombTimeRemainingSec: frame.bombTimeRemainingSec, focus: actor.stats?.foc, decision: actor.stats?.dec, gun: actor.gun, routePoints: actor.routePoints, intent });
         const end = actor.routePoints.at(-1);
-        const expectedEnd = finite(intent?.routeTarget) ? api.buildNavigableRoute([actor.routePoints[0], intent.routeTarget], walls, api.PLAYER_R, new Map()).at(-1) : null;
+        const expectedEnd = finite(intent?.routeTarget)&&finite(actor.route?.[0]) ? api.buildNavigableRoute([actor.route[0], intent.routeTarget], walls, api.PLAYER_R, new Map()).at(-1) : null;
         if (!expectedEnd || intent.kind !== plan.kind || Math.abs(end.x - expectedEnd.x) > .001 || Math.abs(end.y - expectedEnd.y) > .001 || plan.informationSource !== intent.source || plan.targetId !== intent.targetId || plan.observedAtSec !== intent.observedAtSec) note("route", { fi: frame.fi, playerId: actor.id, issue: "決策→canonical導航終點接點不一致", rawTarget: intent?.routeTarget, end, expectedEnd, intent, plan });
         if (plan.kind === "save" && distance(end, map.spawns.ct) > .01) note("route", { fi: frame.fi, playerId: actor.id, issue: "save不是向出生點真導航" });
       }
@@ -163,6 +173,11 @@ function inspect(result, mapKey, scenario) {
           if (!eligible || api.blocked(end, walls, api.PLAYER_R - .005) || !api.buildNavigableRoute([actor.pos, end], walls, api.PLAYER_R, new Map()).length) note("crossfire", { fi: frame.fi, playerId: actor.id, issue: "crossfire不是4<距包點<=32的正式合法可達節點", nodeKey: matchedEntry?.[0], site, end });
         }
         if (!actor.dead && distance(actor.pos, end) < 3 && !arrivedCrossfire.has(key(frame.rnd, actor.id))) { arrivedCrossfire.add(key(frame.rnd, actor.id)); stats.crossfireArrivals++; }
+      }
+      if(!actor.dead&&frame.planted&&actor.side==='t'&&actor.postPlantPlan?.key){
+        const selected=actor.postPlantPlan,end=selected.point,route=api.buildNavigableRoute([actor.pos,end],walls,api.PLAYER_R,new Map());
+        if(!finite(end)||!map.nodes[selected.key]||distance(end,frame.c4pos)<=4||distance(end,frame.c4pos)>32||api.blocked(end,walls,api.PLAYER_R-.005)||route.length<1||distance(route.at(-1),end)>.001)note('crossfire',{fi:frame.fi,playerId:actor.id,issue:'新守包預約點未符合真C4距離4..32／掩體導航',selected,bombPos:frame.c4pos});
+        if(distance(actor.pos,end)<3&&!arrivedCrossfire.has(key(frame.rnd,actor.id))){arrivedCrossfire.add(key(frame.rnd,actor.id));stats.crossfireArrivals++;}
       }
       if (actor.fakeStage === "approach") {
         stats.fakeApproaches++;
@@ -189,10 +204,10 @@ function inspect(result, mapKey, scenario) {
         if(!selected||!actualTargetTactic||!keys.length||keys.some(key=>!api.MAPS[mapKey].nodes[key])||duty?.attackDuty!==actor.tacticalDuty?.attackDuty)note('role',{fi:frame.fi,playerId:actor.id,issue:'真責任／正式戰術／合法node來源缺失',keys,actualPlan:actor._routePlan});
       }
     }
-    const cover = frame.players.filter(p => !p.dead && p.side === "t" && p._routePlan?.kind === "post-plant-cover");
+    const cover = frame.players.filter(p => !p.dead && p.side === "t" && (p.postPlantPlan?.key||p._routePlan?.kind === "post-plant-cover"));
     if (cover.length >= 2) {
       stats.crossfireGroups++;
-      const ends = cover.map(p => p.routePoints.at(-1));
+      const ends = cover.map(p => p.postPlantPlan?.point||p.routePoints.at(-1));
       for (let i = 0; i < ends.length; i++) for (let j = i + 1; j < ends.length; j++) if (distance(ends[i], ends[j]) < 1) note("crossfire", { fi: frame.fi, issue: "兩名crossfire共用anchor", actors: [cover[i].id, cover[j].id], ends: [ends[i], ends[j]] });
     }
     previous = frame;
@@ -232,7 +247,7 @@ for (const mapKey of Object.keys(api.MAPS)) {
     fixtureMeta = { path: fixturePath, sourceHash, jsonBytes, jsonSHA, fields, gzipBytes: fs.statSync(fixturePath).size, gzipSHA: createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex"), decompressedSHA, verified: jsonSHA === decompressedSHA };
     console.log(`FIXTURE ${JSON.stringify(fixtureMeta)}`);
   }
-  const report = inspect(result, mapKey, "normal"); reports.push(report);
+  const report = inspect(result, mapKey, "normal");report.objectiveDiscipline=inspectFpsObjectiveDiscipline(result);reports.push(report);
   ck(`${mapKey} 真完成且無穿牆/瞬移/非有限位置`, () => { assert.equal(result.completed, true); assert.ok(result.frames.length > 0); for (const field of ["blockedPositions", "wallSegmentCrossings", "nonFinitePositions", "teleportViolations"]) assert.equal(result.movementAudit[field], 0); });
   ck(`${mapKey} 非空teamIntel真LOS來源與TTL`, () => { assert.ok(report.stats.freshIntel > 0); assertNoErrors(report.errors.intel); });
   ck(`${mapKey} 非空決策只讀真intel，致盲不生新視線`, () => { assert.ok(report.stats.knownIntents > 0); assertNoErrors(report.errors.intent); });

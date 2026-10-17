@@ -9,17 +9,21 @@ import * as THREE from "three";
 import MatchSpeedControls from "../ui/MatchSpeedControls.jsx";
 import FpsTeamRadio from "./FpsTeamRadio.jsx";
 import { checkFpsRendererIdentity } from "./fpsIdentity.js";
-import { FPS_ROLE_ZH } from "./fpsRoster.js";
+import { FPS_ROLE_ZH, fpsTacticalRole } from "./fpsRoster.js";
 import { checkFpsRuntimeVisibility, evaluateFpsCameraRecovery, isFpsBodyScreenReadable, resolveFpsPresentationVisibility, summarizeFpsTeamVisibility } from "./fpsVisibilityDiagnostics.js";
 import { createFpsCharacterRenderer } from "./presentation/FpsCharacterRenderer.js";
 import { setFpsBoundsFromUpdatedObject } from "./presentation/fpsBoundsSampler.js";
 import { getRiggedCharacterLimit } from "./presentation/fpsCharacterAssets.js";
 import { createMajorMapEnvironment } from "./presentation/fpsMajorMapEnvironment.js";
 import { createFpsMajorRoofShaderWarmup } from "./presentation/fpsMajorShaderWarmup.js";
+import { FPS_SMOKE_RADIUS, fpsPointInSmoke } from './fpsSmokeGeometry.js';
+import { createFpsFireDecisionAudit } from './fpsFireDecisionAudit.js';
+import { FPS_PLAYER_COLLISION_RADIUS, FPS_C4_CASE, fpsBombInteractionGeometry } from './fpsInteractionGeometry.js';
 import { fpsMajorElevation } from "./fpsMajorTerrain.js";
 import { createFpsWeaponHandling, advanceFpsWeaponHandling, consumeFpsWeaponShot, fpsWeaponReadyAtMs, resolveFpsWeaponStance } from "./fpsWeaponHandling.js";
-import { fpsFlashDurationSec, fpsDecayBlind, chooseFpsUtilityThrow, advanceFpsDefuse } from "./fpsMajorUtilityRules.js";
+import { fpsFlashDurationSec, fpsDecayBlind, chooseFpsUtilityThrow, advanceFpsDefuse, selectFpsDefuser } from "./fpsMajorUtilityRules.js";
 import { collectFpsTeamIntel, decideFpsTacticalIntent, selectFpsCrossfireAnchor, getFpsRoundOutcomeMetrics, fpsTacticalPlanningTarget } from "./fpsTacticalCoordinator.js";
+import { fpsPerceptionCue, fpsKnownBombThreat } from "./fpsPerceptionCues.js";
 import { createCsReplay, readCsReplay } from "./fpsReplay.js";
 import { groupFpsTeams, getFpsFrameMessages, fmtFpsMoney } from "./fpsMatchUi.js";
 import { downloadCsReplay, loadCsReplayFile } from "./fpsReplayFiles.js";
@@ -27,6 +31,14 @@ import FpsSavedFrameHud from "./FpsSavedFrameHud.jsx";
 import { planFpsBombRoute, chooseFpsContextUtility, fpsAssignTacticalDuties, fpsAttackStage, planFpsUtilityLoadout } from "./fpsBombObjectivePlanning.js";
 import {createFpsDirectedShotQueue} from './fpsDirectedShotQueue.js';
 import {fpsAwarenessLook,planFpsCoverPeek} from './fpsAwarenessSteering.js';
+import {chooseFpsBombRecoverer,findFpsThreatCover,hasFpsDirectionalCover,fpsNeedsObjectiveRouteRecovery} from './fpsObjectiveDiscipline.js';
+import {fpsDeathClockPlayer} from './presentation/fpsDeathClock.js';
+import {resolveFpsSniperScope} from './presentation/fpsSniperScope.js';
+import {fpsBombBeepPulse} from './presentation/fpsBombCadence.js';
+import {fpsGunAudioProfile,FPS_GUN_AUDIO,FPS_GUN_RECORDINGS} from "./fpsGunAudio.js";
+import {planFpsPostPlant} from "./fpsPostPlant.js";
+import {fpsRoleDutyView} from './fpsRoleDuty.js';
+import {buildFpsMatchAnalytics} from './fpsMatchAnalytics.js';
 import { FPS_MAJOR_MAP_ART } from "./fpsMapIdentity.js";
 import { useIsMobile } from "../../ui/useViewport.js";
 import { GC } from "../../ui/theme.js";
@@ -35,6 +47,8 @@ import { FPS_MAJOR_AUTHORED_ROOMS, majorRoomWalls } from "./fpsMajorArchitecture
 import { createFpsMajorSegmentCache } from "./fpsMajorNavigationCache.js";
 import { fitFpsCombatCamera, fpsChaseMinimumRadius, fpsChaseForwardOffset } from "./fpsCameraFraming.js";
 import { createGunplayPresentation } from "./presentation/fpsGunplayPresentation.js";
+import { createFpsHitPresentation } from "./presentation/fpsHitPresentation.js";
+import { createFpsPovOverlayVisibility } from "./presentation/fpsPovOverlayVisibility.js";
 import { createUtilityPresentation } from "./presentation/fpsUtilityPresentation.js";
 import { createFpsMatchPresentation } from "./presentation/fpsMatchPresentation.js";
 import { createFpsAudioVoicePool } from "./presentation/fpsAudioVoicePool.js";
@@ -169,7 +183,7 @@ function segHitsRect(ax,az,bx,bz,r){
 function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
   const AC=typeof window!=="undefined"&&(window.AudioContext||window.webkitAudioContext);if(!AC)return null;
   const ctx=new AC();const master=ctx.createGain();master.gain.value=0.48;master.connect(ctx.destination);
-  // Gunfire uses only one direct recorded CC0 sample per authoritative shot.
+  // Gunfire uses only one credited recorded sample per authoritative shot.
   // Procedural helpers remain exclusively for non-gunfire match-state cues.
   const nb=ctx.createBuffer(1,Math.floor(ctx.sampleRate*0.5),ctx.sampleRate),nd=nb.getChannelData(0);let noiseSeed=0x7f4a7c15;
   for(let i=0;i<nd.length;i++){noiseSeed=(Math.imul(noiseSeed,1664525)+1013904223)>>>0;nd[i]=(noiseSeed/0xffffffff)*2-1;}
@@ -180,7 +194,8 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
     sniper:{label:"狙擊槍",sample:"sniper-prepared.wav",sourceRecording:"Mosin Nagant M_21P",offset:1.01,duration:2.2,gain:1.0},
     shotgun:{label:"霰彈槍",sample:"shotgun-prepared.wav",sourceRecording:"Benelli Nova O_21P",offset:0.408,duration:1.8,gain:1.0},
   });
-  // Utility presentation uses one clean CC0 recording per cue. These assets
+  const gunAssetProfiles=pooled?{...C5A1_AUDIO_PROFILES,...FPS_GUN_RECORDINGS}:C5A1_AUDIO_PROFILES;
+  // Utility presentation uses one clean credited recording per cue. These assets
   // stay separate from authoritative gunfire and never use synth fallback.
   const C5A2_UTILITY_AUDIO_PROFILES=Object.freeze({
     footstep:{sample:"utility-footstep.wav",source:"Spring Spring / OpenGameArt",gain:pooled?0.18:0.34,duration:0.72},
@@ -191,20 +206,26 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
     "he-deploy":{sample:"utility-he.wav",source:"Spring Spring / OpenGameArt",gain:0.56,duration:1.4},
     "bomb-exploded":{sample:"utility-he.wav",source:"Spring Spring / OpenGameArt",gain:0.62,duration:1.4},
     "bomb-planted":{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.42,duration:0.9},
+    "bomb-plant-start":{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.42,duration:0.9},
     "bomb-dropped":{sample:"utility-bounce.wav",source:"Spring Spring / OpenGameArt",gain:0.36,duration:0.9},
     "defuse-start":{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.42,duration:0.9},
     "bomb-defused":{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.42,duration:0.9},
-    "bomb-tick":{sample:"utility-tick.wav",source:"Spring Spring / OpenGameArt",gain:0.3,duration:0.35},
+    "weapon-empty":pooled?{sample:"../owner4g/handling-empty.wav",source:"Sonniss GDC2015 / Coll Anderson gun mechanism",gain:0.2,duration:0.12}:{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.2,duration:0.14},
+    "weapon-reload-start":pooled?{sample:"../owner4g/handling-reload-start.wav",source:"Sonniss GDC2015 / Coll Anderson magazine",gain:0.3,duration:0.64}:{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.3,duration:0.3},
+    "weapon-reload-complete":pooled?{sample:"../owner4g/handling-reload-complete.wav",source:"Sonniss GDC2015 / Coll Anderson gun mechanism",gain:0.36,duration:0.40}:{sample:"utility-click.wav",source:"Spring Spring / OpenGameArt",gain:0.36,duration:0.18},
+    "bomb-tick":{sample:"esmo-c4-a.wav",source:"ESMO original PCM",gain:0.48,duration:0.12},
+    "bomb-tick-b":{sample:"esmo-c4-b.wav",source:"ESMO original PCM",gain:0.48,duration:0.12},
+    "bomb-tick-warning":{sample:"esmo-c4-warning.wav",source:"ESMO original PCM",gain:0.52,duration:0.13},
   });
   const timers=new Set();let activeVoices=0,droppedVoices=0,disposed=false,voicePool=null,ambient=null;const firedEventIds=new Set(),cueEventIds=new Set();
   const audioBuffers=new Map(),presentationBuffers=new Map(),loadErrors={},presentationLoadErrors={};
   const audioBase=`${import.meta.env?.BASE_URL||"/"}audio/cs/c5a2/`;
-  const audioDiag={version:pooled?4:3,assetSource:"CC0 real firearm recordings",assetLicense:"CC0-1.0",assetBase:audioBase,gunfireSourcePolicy:"one-recorded-buffer-per-shot",presentationAssetSource:"CC0 recorded utility samples from OpenGameArt",presentationAssetLicense:"CC0-1.0",presentationSourcePolicy:"one-recorded-buffer-per-cue with stereo spatialisation",presentationProfiles:C5A2_UTILITY_AUDIO_PROFILES,synthesizedToneStarts:0,
+  const audioDiag={weaponSignatures:FPS_GUN_AUDIO,version:pooled?5:3,assetSource:"CC0 real firearm recordings",assetLicense:"CC0-1.0",assetBase:audioBase,gunfireSourcePolicy:"one-recorded-buffer-per-shot",presentationAssetSource:"CC0 recorded utility samples from OpenGameArt",presentationAssetLicense:"CC0-1.0",presentationSourcePolicy:"one-recorded-buffer-per-cue with stereo spatialisation",presentationProfiles:C5A2_UTILITY_AUDIO_PROFILES,synthesizedToneStarts:0,
     profiles:Object.fromEntries(Object.entries(C5A1_AUDIO_PROFILES).map(([key,p])=>[key,{label:p.label,sample:p.sample,source:"recorded-prepared-direct",sourceRecording:p.sourceRecording,layers:["prepared-direct"],offset:p.offset,duration:p.duration}])),
     loadedProfiles:0,loadingProfiles:5,loadErrors:{},events:[],playbackEvents:[],recordedSourceStarts:0,recordedSourceStartsByFamily:{},playedFamilies:[],activeVoices:0,droppedVoices:0,missedAssets:0,dispatchCalls:0,duplicateDispatches:0,shotCalls:0,throttledShots:0,
     contextState:ctx.state,contextStateBeforeResume:null,resumeCalls:0,destination:ctx.destination?.constructor?.name||"AudioDestinationNode",masterGain:master.gain.value,loadedPresentationProfiles:0,loadingPresentationProfiles:Object.keys(C5A2_UTILITY_AUDIO_PROFILES).length,presentationLoadErrors:{},recordedPresentationSourceStarts:0,missedPresentationAssets:0};
   audioDiag.presentationCueCalls=0;audioDiag.presentationCueStarts=0;audioDiag.duplicateCueDispatches=0;audioDiag.cueTypes={};
-  audioDiag.preloadStarts=0;audioDiag.preloadStartedAt=null;audioDiag.preloadReadyAt=null;audioDiag.unmuteRequestedAt=null;audioDiag.resumeResolvedAt=null;audioDiag.firstSourceStartAt=null;
+  audioDiag.assetLicenseScope="five-original-family-recordings";audioDiag.additionalAssetLicense=pooled?"Sonniss GDC v2.0 plus credited CC0 sources":null;audioDiag.weaponRecordings=pooled?FPS_GUN_RECORDINGS:{};audioDiag.preloadStarts=0;audioDiag.preloadStartedAt=null;audioDiag.preloadReadyAt=null;audioDiag.unmuteRequestedAt=null;audioDiag.resumeResolvedAt=null;audioDiag.firstSourceStartAt=null;
   const publish=()=>{if(pooled&&disposed)return;audioDiag.activeVoices=activeVoices;audioDiag.droppedVoices=droppedVoices;audioDiag.contextState=ctx.state;audioDiag.destination=ctx.destination?.constructor?.name||"AudioDestinationNode";audioDiag.masterGain=master.gain.value;if(voicePool)audioDiag.voicePool=voicePool.diagnostics();if(typeof window!=="undefined")window.__ESMO_FPS_AUDIO_DIAGNOSTICS__=audioDiag;};
   if(pooled)voicePool=createFpsAudioVoicePool({context:ctx,destination:master,limit:mobile?32:64,onChange:data=>{activeVoices=data.active;droppedVoices=data.dropped;publish();}});
   if(pooled)ambient=createFpsAmbientAudio({context:ctx,destination:master,url:`${import.meta.env?.BASE_URL||"/"}audio/cs/major-v1/wind-loop.ogg`,onChange:data=>{audioDiag.ambient=data;publish();}});
@@ -217,46 +238,46 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
   let preloadPromise=null;
   const preload=()=>{if(preloadPromise)return preloadPromise;
     audioDiag.preloadStarts+=1;audioDiag.preloadStartedAt=Date.now();publish();
-    const load=async({key,profile,target,utility=false})=>{try{const endFetch=csLoadSpan("audio:fetch");const res=await fetch(`${audioBase}${profile.sample}`,{cache:"force-cache"});if(!res.ok)throw new Error(`HTTP ${res.status}`);const bytes=await res.arrayBuffer();endFetch({sample:profile.sample,bytes:bytes.byteLength});if(pooled&&disposed)return false;const endDecode=csLoadSpan("audio:decode");const buffer=await ctx.decodeAudioData(bytes.slice(0));endDecode({sample:profile.sample,bytes:bytes.byteLength});if(pooled&&disposed)return false;target.set(utility?profile.sample:key,buffer);if(utility)audioDiag.loadedPresentationProfiles=target.size;else audioDiag.loadedProfiles=target.size;publish();return true;}
+    const load=async({key,profile,target,utility=false})=>{try{const endFetch=csLoadSpan("audio:fetch");const res=await fetch(`${audioBase}${profile.sample}`,{cache:"force-cache"});if(!res.ok)throw new Error(`HTTP ${res.status}`);const bytes=await res.arrayBuffer();endFetch({sample:profile.sample,bytes:bytes.byteLength});if(pooled&&disposed)return false;const endDecode=csLoadSpan("audio:decode");const buffer=await ctx.decodeAudioData(bytes.slice(0));endDecode({sample:profile.sample,bytes:bytes.byteLength});if(pooled&&disposed)return false;target.set(utility?profile.sample:key,buffer);if(utility)audioDiag.loadedPresentationProfiles=target.size;else{audioDiag.loadedProfiles=Object.keys(C5A1_AUDIO_PROFILES).filter(k=>target.has(k)).length;audioDiag.loadedWeaponRecordings=Object.keys(FPS_GUN_RECORDINGS).filter(k=>target.has(k)).length;audioDiag.loadedAudioBuffers=target.size;}publish();return true;}
       catch(error){if(utility){presentationLoadErrors[key]=String(error?.message||error);audioDiag.presentationLoadErrors={...presentationLoadErrors};}else{loadErrors[key]=String(error?.message||error);audioDiag.loadErrors={...loadErrors};}publish();return false;}};
-    const gunLoads=Object.entries(C5A1_AUDIO_PROFILES).map(([key,profile])=>load({key,profile,target:audioBuffers}));
+    const gunLoads=Object.entries(gunAssetProfiles).map(([key,profile])=>load({key,profile,target:audioBuffers}));
     const utilitySamples=[...new Map(Object.entries(C5A2_UTILITY_AUDIO_PROFILES).map(([key,profile])=>[profile.sample,{key,profile}])).values()];
     const utilityLoads=utilitySamples.map(({key,profile})=>load({key,profile,target:presentationBuffers,utility:true}));
     const endAudioAll=csLoadSpan("audio:preload-all");preloadPromise=Promise.all([...gunLoads,...utilityLoads]).then(results=>{endAudioAll({assets:results.length});audioDiag.preloadReadyAt=Date.now();publish();return results;});return preloadPromise;};
   function noise(dur,freq,q,gain,type,attenuation=1){voice(dur,()=>{const s=ctx.createBufferSource();s.buffer=nb;const f=ctx.createBiquadFilter();f.type=type||"lowpass";f.frequency.value=freq;f.Q.value=q||1;const g=ctx.createGain();const t=now();g.gain.setValueAtTime(gain*attenuation,t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+dur);});}
   function normalizeFamily(family){const key=String(family||"").toLowerCase();return C5A1_AUDIO_PROFILES[key]?key:key==="狙擊"?"sniper":key==="衝鋒"?"smg":key==="手槍"?"pistol":"rifle";}
-  function recordedOneShot(key,buffer,{delay,offset,duration,pitch,attenuation,gain,pan=0}){
+  function recordedOneShot(key,buffer,{delay,offset,duration,pitch,attenuation,gain,pan=0,sample=null}){
     if(voicePool){const played=voicePool.playBuffer({buffer,delay,offset,duration,pitch,gain:gain*attenuation,pan,priority:3});if(!played)return false;
       if(audioDiag.firstSourceStartAt==null)audioDiag.firstSourceStartAt=Date.now();audioDiag.recordedSourceStarts+=1;audioDiag.recordedSourceStartsByFamily[key]=(audioDiag.recordedSourceStartsByFamily[key]||0)+1;if(!audioDiag.playedFamilies.includes(key))audioDiag.playedFamilies.push(key);
-      audioDiag.playbackEvents.push({family:key,sample:C5A1_AUDIO_PROFILES[key]?.sample||null,layer:"prepared-direct",sourceNode:played.source.constructor?.name||"AudioBufferSourceNode",spatialNode:"StereoPannerNode",bufferDuration:Number(buffer.duration.toFixed(4)),offset:Number(offset.toFixed(4)),duration:Number(played.bufferDuration.toFixed(4)),playableDuration:Number(played.playableDuration.toFixed(4)),playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(pan.toFixed(3)),contextState:ctx.state,atContextTime:Number(played.atContextTime.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();return true;}
+      audioDiag.playbackEvents.push({family:key,sample:sample||C5A1_AUDIO_PROFILES[key]?.sample||null,layer:"prepared-direct",sourceNode:played.source.constructor?.name||"AudioBufferSourceNode",spatialNode:"StereoPannerNode",bufferDuration:Number(buffer.duration.toFixed(4)),offset:Number(offset.toFixed(4)),duration:Number(played.bufferDuration.toFixed(4)),playableDuration:Number(played.playableDuration.toFixed(4)),playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(pan.toFixed(3)),contextState:ctx.state,atContextTime:Number(played.atContextTime.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();return true;}
     const playable=Math.min(duration,Math.max(0.001,buffer.duration-offset));if(playable<=0)return;
     voice(delay+playable,()=>{if(audioDiag.firstSourceStartAt==null)audioDiag.firstSourceStartAt=Date.now();const s=ctx.createBufferSource();s.buffer=buffer;s.playbackRate.value=pitch;const g=ctx.createGain();const t=now()+delay;g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);s.connect(g);g.connect(master);s.start(t,offset,playable);s.stop(t+playable);
-      audioDiag.recordedSourceStarts+=1;audioDiag.recordedSourceStartsByFamily[key]=(audioDiag.recordedSourceStartsByFamily[key]||0)+1;if(!audioDiag.playedFamilies.includes(key))audioDiag.playedFamilies.push(key);audioDiag.playbackEvents.push({family:key,sample:C5A1_AUDIO_PROFILES[key]?.sample||null,layer:"prepared-direct",sourceNode:s.constructor?.name||"AudioBufferSourceNode",bufferDuration:Number(buffer.duration.toFixed(4)),offset:Number(offset.toFixed(4)),duration:Number(playable.toFixed(4)),playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),contextState:ctx.state,destination:ctx.destination?.constructor?.name||"AudioDestinationNode",masterGain:master.gain.value,atContextTime:Number(t.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();});
+      audioDiag.recordedSourceStarts+=1;audioDiag.recordedSourceStartsByFamily[key]=(audioDiag.recordedSourceStartsByFamily[key]||0)+1;if(!audioDiag.playedFamilies.includes(key))audioDiag.playedFamilies.push(key);audioDiag.playbackEvents.push({family:key,sample:sample||C5A1_AUDIO_PROFILES[key]?.sample||null,layer:"prepared-direct",sourceNode:s.constructor?.name||"AudioBufferSourceNode",bufferDuration:Number(buffer.duration.toFixed(4)),offset:Number(offset.toFixed(4)),duration:Number(playable.toFixed(4)),playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),contextState:ctx.state,destination:ctx.destination?.constructor?.name||"AudioDestinationNode",masterGain:master.gain.value,atContextTime:Number(t.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();});
   }
-  function recordedCue(type,buffer,{distance,eventId,delay=0,gain=0.4,duration=0.8,position=null}){
-    if(voicePool){const location=spatial(position,distance),attenuation=type==="footstep"?1/(1+Math.pow(Math.max(0,location.distance)/8,2)):distanceGain(location.distance),pitch=1+((hsh(eventId||type)%11)-5)*0.006;const played=voicePool.playBuffer({buffer,delay,duration,pitch,gain:gain*attenuation,pan:location.pan,fadeOut:true,priority:type==="footstep"?0:type==="bomb-exploded"?3:2});if(!played)return false;
-      audioDiag.recordedPresentationSourceStarts+=1;audioDiag.playbackEvents.push({type,sample:C5A2_UTILITY_AUDIO_PROFILES[type]?.sample||null,layer:"recorded-single",sourceNode:played.source.constructor?.name||"AudioBufferSourceNode",spatialNode:"StereoPannerNode",playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(location.pan.toFixed(3)),position:position?{x:position.x,y:position.y}:null,contextState:ctx.state,atContextTime:Number(played.atContextTime.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();return true;}
+  function recordedCue(type,buffer,{distance,eventId,delay=0,gain=0.4,duration=0.8,position=null,sample=null}){
+    if(voicePool){const location=spatial(position,distance),attenuation=type==="footstep"?1/(1+Math.pow(Math.max(0,location.distance)/8,2)):distanceGain(location.distance),pitch=type==="bomb-tick"?1:1+((hsh(eventId||type)%11)-5)*0.006;const played=voicePool.playBuffer({buffer,delay,duration,pitch,gain:gain*attenuation,pan:location.pan,fadeOut:true,priority:type==="footstep"?0:type==="bomb-exploded"?3:2});if(!played)return false;
+      audioDiag.recordedPresentationSourceStarts+=1;audioDiag.playbackEvents.push({type,sample:sample||C5A2_UTILITY_AUDIO_PROFILES[type]?.sample||null,layer:"recorded-single",sourceNode:played.source.constructor?.name||"AudioBufferSourceNode",spatialNode:"StereoPannerNode",playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(location.pan.toFixed(3)),position:position?{x:position.x,y:position.y}:null,contextState:ctx.state,atContextTime:Number(played.atContextTime.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();return true;}
     const playable=Math.min(duration,Math.max(0.001,buffer.duration));if(playable<=0)return;
-    const attenuation=distanceGain(distance),pitch=1+((hsh(eventId||type)%11)-5)*0.006,lateral=((hsh(`${eventId||type}:pan`)%101)/50)-1;
+    const attenuation=distanceGain(distance),pitch=type==="bomb-tick"?1:1+((hsh(eventId||type)%11)-5)*0.006,lateral=((hsh(`${eventId||type}:pan`)%101)/50)-1;
     voice(delay+playable,()=>{const s=ctx.createBufferSource();s.buffer=buffer;s.playbackRate.value=pitch;const g=ctx.createGain();const p=ctx.createStereoPanner();const t=now()+delay;g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);g.gain.exponentialRampToValueAtTime(0.0008,t+playable);p.pan.value=clamp(lateral*0.5,-0.5,0.5);s.connect(g);g.connect(p);p.connect(master);s.start(t,0,playable);s.stop(t+playable);
-      audioDiag.recordedPresentationSourceStarts+=1;audioDiag.playbackEvents.push({type,sample:C5A2_UTILITY_AUDIO_PROFILES[type]?.sample||null,layer:"recorded-single",sourceNode:s.constructor?.name||"AudioBufferSourceNode",spatialNode:p.constructor?.name||"StereoPannerNode",playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(p.pan.value.toFixed(3)),contextState:ctx.state,atContextTime:Number(t.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();});
+      audioDiag.recordedPresentationSourceStarts+=1;audioDiag.playbackEvents.push({type,sample:sample||C5A2_UTILITY_AUDIO_PROFILES[type]?.sample||null,layer:"recorded-single",sourceNode:s.constructor?.name||"AudioBufferSourceNode",spatialNode:p.constructor?.name||"StereoPannerNode",playbackRate:Number(pitch.toFixed(4)),attenuation:Number(attenuation.toFixed(3)),pan:Number(p.pan.value.toFixed(3)),contextState:ctx.state,atContextTime:Number(t.toFixed(4))});if(audioDiag.playbackEvents.length>48)audioDiag.playbackEvents.shift();publish();});
   }
-  function shot(family,kill=false,distance=20,eventId="",scheduleDelaySec=0,shotAtMs=null,position=null){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.dispatchCalls+=1;if(eventId&&firedEventIds.has(eventId)){audioDiag.duplicateDispatches+=1;publish();return;}if(eventId)remember(firedEventIds,eventId);audioDiag.shotCalls+=1;const key=normalizeFamily(family),p=C5A1_AUDIO_PROFILES[key],buffer=audioBuffers.get(key);
+  function shot(family,kill=false,distance=20,eventId="",scheduleDelaySec=0,shotAtMs=null,position=null,gun=null){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.dispatchCalls+=1;if(eventId&&firedEventIds.has(eventId)){audioDiag.duplicateDispatches+=1;publish();return;}if(eventId)remember(firedEventIds,eventId);audioDiag.shotCalls+=1;const signature=pooled?fpsGunAudioProfile(gun):null,key=signature?.family||normalizeFamily(family),assetKey=signature?.recording||key,p=gunAssetProfiles[assetKey],buffer=audioBuffers.get(assetKey);
     if(!buffer){audioDiag.missedAssets+=1;publish();return;}
-    const location=spatial(position,distance),attenuation=distanceGain(location.distance),pitch=1+((hsh(eventId||key)%9)-4)*0.004,baseDelay=Math.max(0,Number(scheduleDelaySec)||0);
-    recordedOneShot(key,buffer,{delay:baseDelay,offset:p.offset,duration:p.duration,pitch,attenuation,gain:p.gain,pan:location.pan});
-    audioDiag.events.push({eventId,family:key,source:"recorded-prepared-direct",sourceRecording:p.sourceRecording,sample:p.sample,layers:["prepared-direct"],shotAtMs:Number.isFinite(Number(shotAtMs))?Number(shotAtMs):null,scheduledDelaySec:Number(baseDelay.toFixed(4)),distance:Number(Number(distance).toFixed(2)),attenuation:Number(attenuation.toFixed(3)),kill:Boolean(kill)});if(audioDiag.events.length>96)audioDiag.events.shift();publish();
+    const location=spatial(position,distance),attenuation=distanceGain(location.distance),pitch=(signature?.pitch||1)*(1+((hsh(eventId||key)%9)-4)*0.004),baseDelay=Math.max(0,Number(scheduleDelaySec)||0);
+    recordedOneShot(key,buffer,{delay:baseDelay,offset:p.offset,duration:signature?.duration||p.duration,pitch,attenuation,gain:p.gain*(signature?.gain||1),pan:location.pan,sample:p.sample});
+    audioDiag.events.push({eventId,gun,signature:signature||null,family:key,source:"recorded-prepared-direct",sourceRecording:p.sourceRecording,sample:p.sample,layers:["prepared-direct"],shotAtMs:Number.isFinite(Number(shotAtMs))?Number(shotAtMs):null,scheduledDelaySec:Number(baseDelay.toFixed(4)),distance:Number(Number(distance).toFixed(2)),attenuation:Number(attenuation.toFixed(3)),kill:Boolean(kill)});if(audioDiag.events.length>96)audioDiag.events.shift();publish();
   }
   function tone(freq,dur,gain,attenuation=1){if(voicePool){if(voicePool.playTone({frequency:freq,duration:dur,gain:gain*attenuation,priority:1}))audioDiag.synthesizedToneStarts+=1;publish();return;}voice(dur,()=>{const o=ctx.createOscillator();o.type="triangle";o.frequency.value=freq;const g=ctx.createGain();const t=now();g.gain.setValueAtTime(Math.max(0.0001,gain*attenuation),t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur);audioDiag.synthesizedToneStarts+=1;publish();});}
-  function presentationCue(type,{eventId="",distance=20,position=null,scheduleDelaySec=0}={}){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.presentationCueCalls+=1;if(eventId&&cueEventIds.has(eventId)){audioDiag.duplicateCueDispatches+=1;publish();return;}if(eventId)remember(cueEventIds,eventId);audioDiag.presentationCueStarts+=1;audioDiag.cueTypes[type]=(audioDiag.cueTypes[type]||0)+1;const a=distanceGain(distance),profile=C5A2_UTILITY_AUDIO_PROFILES[type],buffer=profile&&presentationBuffers.get(profile.sample);
-    if(profile){if(buffer)recordedCue(type,buffer,{distance,eventId,gain:profile.gain,duration:profile.duration,position,delay:pooled?Math.max(0,Number(scheduleDelaySec)||0):0});else{audioDiag.missedPresentationAssets+=1;publish();}}
+  function presentationCue(type,{eventId="",distance=20,position=null,scheduleDelaySec=0,variant=null}={}){if(pooled&&(disposed||ctx.state!=="running"))return;audioDiag.presentationCueCalls+=1;if(eventId&&cueEventIds.has(eventId)){audioDiag.duplicateCueDispatches+=1;publish();return;}if(eventId)remember(cueEventIds,eventId);audioDiag.presentationCueStarts+=1;audioDiag.cueTypes[type]=(audioDiag.cueTypes[type]||0)+1;const a=distanceGain(distance),profile=C5A2_UTILITY_AUDIO_PROFILES[type==='bomb-tick'&&variant&&variant!=='a'?`bomb-tick-${variant}`:type],buffer=profile&&presentationBuffers.get(profile.sample);
+    if(profile){if(buffer)recordedCue(type,buffer,{distance,eventId,gain:profile.gain,duration:profile.duration,position,sample:profile.sample,delay:pooled?Math.max(0,Number(scheduleDelaySec)||0):0});else{audioDiag.missedPresentationAssets+=1;publish();}}
     else if(type==="round-start"){tone(420,0.16,0.1,a);tone(620,0.22,0.08,a);}
     else if(type==="round-end"||type==="clutch"||type==="multikill"){tone(type==="clutch"?760:type==="multikill"?680:520,0.14,0.1,a);tone(type==="round-end"?320:980,0.18,0.07,a);}
     else if(type==="kill"){tone(180,0.045,0.035,a);}
     publish();}
   const api={ctx,async resume(){audioDiag.resumeCalls+=1;audioDiag.resumeRequestedAt=Date.now();audioDiag.contextStateBeforeResume=ctx.state;if(ctx.state!=="running")await ctx.resume();audioDiag.resumeResolvedAt=Date.now();publish();return ctx.state;},markUnmuteRequest(){audioDiag.unmuteRequestedAt=Date.now();publish();},preload,ready:preload(),assetProfiles:C5A1_AUDIO_PROFILES,setVol(v){master.gain.value=v;publish();},shot,shoot(sniper){shot(sniper?"sniper":"rifle");},cue:presentationCue,
     // 一個 authoritative muzzle event = 一個聲音事件；連發差異由實際 frame 事件頻率表現。
-    burst(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position){shot(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position);},
+    burst(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position,gun){shot(family,kill,distance,eventId,scheduleDelaySec,shotAtMs,position,gun);},
     syncAmbient(state){ambient?.sync(state);},
     stopAll(){voicePool?.stopAll();ambient?.stop();},
     resetGunfireEvents(){firedEventIds.clear();if(voicePool){voicePool.stopAll();cueEventIds.clear();ambient?.stop();}},
@@ -268,7 +289,7 @@ function makeAudio({pooled=false,mobile=false,getListener=()=>null}={}){
 }
 
 // ─── 碰撞 / 視線（半徑感知滑動 + 穿透回推，杜絕穿牆）─────────────────────
-const PLAYER_R=1.35; // 選手碰撞半徑（地圖單位）
+const PLAYER_R=FPS_PLAYER_COLLISION_RADIUS; // 選手碰撞半徑（地圖單位）
 const PLAYER_MIN_SEPARATION=PLAYER_R*2; // 兩名存活選手的最小中心距離（等同兩個碰撞半徑）
 const inWall=(p,walls)=>{for(const w of walls){if(p.x>=w.x-1&&p.x<=w.x+w.w+1&&p.y>=w.y-1&&p.y<=w.y+w.h+1)return w;}return null;};
 function blocked(p,walls,R){for(const w of walls){if(p.x>w.x-R&&p.x<w.x+w.w+R&&p.y>w.y-R&&p.y<w.y+w.h+R)return true;}return false;}
@@ -316,6 +337,7 @@ function separateFpsPlayers(players,walls,audit){
       };
       let nextA=a.pos,nextB=b.pos,bestDistance=d,bestPenalty=overlapPenalty(a.pos,b.pos);
       const consider=(candidateA,candidateB)=>{
+        if(a._objectiveLocked&&dist(a.pos,candidateA)>1e-6||b._objectiveLocked&&dist(b.pos,candidateB)>1e-6)return;
         const candidateDistance=dist(candidateA,candidateB),candidatePenalty=overlapPenalty(candidateA,candidateB);
         if(candidatePenalty<bestPenalty-0.000001||(candidatePenalty<=bestPenalty+0.000001&&candidateDistance>bestDistance+0.0001)){
           nextA=candidateA;nextB=candidateB;bestDistance=candidateDistance;bestPenalty=candidatePenalty;
@@ -484,13 +506,16 @@ function buildNavigableRoute(points,walls,R,memo,segmentCache=null){
   // cover. Normalize waypoints to walkable space before path search; this
   // moves only the route target, never the authoritative player position.
   const base=(points||[]).filter(Boolean).map(p=>plannerSafePoint({x:Number(p.x),y:Number(p.y)},walls,R));if(base.length<2)return base;
-  const key=base.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)}`).join("|");if(memo?.has(key))return memo.get(key).map(p=>({...p}));
+  // Major continuous cover/retreat goals must not alias at centimetre precision.
+  // Preserve the legacy memo key; its historical simulation remains isolated.
+  const key=base.map(p=>segmentCache?`${p.x},${p.y}`:`${p.x.toFixed(2)},${p.y.toFixed(2)}`).join("|");if(memo?.has(key))return memo.get(key).map(p=>({...p}));
   const route=[base[0]];for(let i=1;i<base.length;i++){
     const start=route[route.length-1],goal=base[i];
     let segment=segmentCache?.getSegment(start,goal,walls,R);
     if(!segment){segment=navigableSegment(start,goal,walls,R);segmentCache?.setSegment(start,goal,segment,walls,R);}
     route.push(...segment.slice(1));
   }
+  if(segmentCache&&memo?.size>=2048)memo.delete(memo.keys().next().value);
   memo?.set(key,route.map(p=>({...p})));return route;
 }
 // 沿 a→方向(dir) 到第一道牆的距離（地圖單位）；找不到回傳 max
@@ -500,7 +525,7 @@ function rayWallDist(ax,ay,dx,dy,walls,max){
 }
 function segPtDist(ax,ay,bx,by,px,py){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(l2<1e-6)return Math.hypot(px-ax,py-ay);let t=((px-ax)*dx+(py-ay)*dy)/l2;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+dx*t),py-(ay+dy*t));}
 // 煙霧阻斷視線：對槍連線若穿過煙團則無法交火
-const SMOKE_R=6;
+const SMOKE_R=FPS_SMOKE_RADIUS;
 // R14 functional baseline only; balance calibration requires a separate Sprint.
 const HE_R=12,HE_MAX_DAMAGE=80,HE_ARMOR_SCALE=0.72;
 // R15 functional baseline only; balance calibration requires a separate Sprint.
@@ -581,6 +606,12 @@ const MAPS={
     nodes:{tSpawn:{x:12,y:86},tRamp:{x:26,y:56},banana:{x:26,y:43},car:{x:32,y:36},bSite:{x:30,y:23},bTop:{x:50,y:25},apps:{x:32,y:86},boiler:{x:52,y:76},mid:{x:48,y:65},sewer:{x:26,y:64},secondMid:{x:60,y:54},aConn:{x:72,y:63},aRamp:{x:82,y:62},aSite:{x:80,y:74},arch:{x:64,y:40},library:{x:80,y:42},libIn:{x:80,y:34},pit:{x:88,y:77},ctSpawn:{x:85,y:18}},
     callouts:[{x:12,y:89,l:"進攻貨梯"},{x:85,y:18,l:"防守勤務場"},{x:80,y:74,l:"A 壓機庭院"},{x:30,y:23,l:"B 冷卻站"},{x:26,y:43,l:"西側管廊"},{x:48,y:65,l:"輸送中道"},{x:80,y:42,l:"機控室"},{x:32,y:86,l:"外側貨道"}]},
 };
+// Authored playable interiors are public tactical positions too. The existing
+// navigation/collision solver validates every selected route; decorative
+// buildings remain solid. This only enriches Major's map, never Legacy's map.
+for(const map of Object.values(MAPS))for(const room of map.rooms.filter(room=>room.authored)){
+  map.nodes[`room-${room.id}`]={x:room.x+room.w/2,y:room.y+room.h/2};
+}
 // 選手 16 項素質（與 MOBA 共用的同一套；分四類）— 直接沿用遊戲的素質欄位
 const STAT_GROUPS=[
   ["操作",[["rxn","反應速度"],["acc","精準度"],["apm","操作速度"],["pos","走位"]]],
@@ -640,7 +671,7 @@ const POS_PROFILE={
 // FPS 全域素質權重（取自遊戲 FPS_WEIGHTS）
 const FPS_W={acc:1.4,rxn:1.3,str:1.3,pos:1.2,cou:1.1,vis:1.1,apm:1.0,tac:1.0,foc:1.0,dec:0.9,com:0.9,adp:0.8,res:0.8,coo:0.8,led:0.7,lrn:0.5};
 const _mechKeys=["acc","rxn","apm","pos","foc","str"],_mechW=_mechKeys.reduce((a,k)=>a+FPS_W[k],0);
-function posSkill(p,rawReflex=Number((p.stats||{}).rxn??50)){const prof=POS_PROFILE[p.role]||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(k==="rxn"?rawReflex:(s[k]||50))*(5-i));return t/15;} // role-fit / positioning aptitude；rxn 保留 rawReflex
+function posSkill(p,rawReflex=Number((p.stats||{}).rxn??50)){const prof=(p.weaponPreference==="rifler"&&GUNS[p.gun]?.cls==="步槍"?POS_PROFILE.rifler:POS_PROFILE[p.role])||POS_PROFILE.rifler;const s=p.stats||{};let t=0;prof.forEach((k,i)=>t+=(k==="rxn"?rawReflex:(s[k]||50))*(5-i));return t/15;} // role-fit / positioning aptitude；rxn 保留 rawReflex
 // 對槍實力：機械對槍核心（FPS 權重）+ 武器契合 + 角色定位契合（5 項關鍵素質）+ 情境（呼應 fpsRoles 戰術）
 function combatSkill(p,opts){const s=p.stats;if(!s)return 80;const cls=GUNS[p.gun]?.cls;
   const rawReflex=Number(s.rxn??50),effectiveReflex=persStat(p,"rxn");
@@ -669,6 +700,12 @@ function mapAwareCanReadVisibleCandidate(p,distance,visibleCandidate,auth=null){
   // weapon range remains the hard ceiling; non-sniper awareness is unchanged.
   const effectiveAwarenessRange=auth?.family==="sniper"?auth.range:awarenessRange;
   return distance<=effectiveAwarenessRange;
+}
+function canObserveFps(observer,target,walls,smokes,prog){
+  if(!observer||!target||observer.dead||target.dead||observer.blindSec>0||prog<=0)return false;
+  // Weapon range, pickup, reload and retreat suppress firing, not eyesight.
+  const d=dist(observer.pos,target.pos),auth=weaponAuthority(observer.gun);
+  return mapAwareCanReadVisibleCandidate(observer,d,true,auth)&&csTargetInFov(observer,target)&&!lineBlocked(observer.pos,target.pos,walls)&&!smokeBlocks(observer.pos,target.pos,smokes);
 }
 const ADAPT_ROUTE_THRESHOLD=80;
 function adaptiveRouteGoal(p,target,N){
@@ -856,7 +893,7 @@ const ECO_GUNS=["glock","usp","p250","tec9","deagle","mp9","mac10"];
 const shotgunSlot=["nova","xm1014","mag7","sawedoff"];
 const AWP_PRIMARY_RIFLE={t:"galil",ct:"famas"};
 function c5bFullBuyWeapon(player,{side,money,mapKey,round,tactic,target,scoreDiff=0}={}){
-  const legal=(ROLE_GUNS[player.role]||["ak"]).filter(g=>side==="t"?g!=="m4"&&g!=="m4a4":g!=="ak");
+  const legal=(ROLE_GUNS[player.weaponPreference||player.role]||["ak"]).filter(g=>side==="t"?g!=="m4"&&g!=="m4a4":g!=="ak");
   const closeMap=mapKey==="inferno"||target==="b"||tactic?.type==="rush";
   const focus=persStat(player,"foc"),accuracy=persStat(player,"acc"),positioning=persStat(player,"pos");
   const sniperScore=focus+accuracy+positioning+(player.role==="awp"?36:0)+(target==="mid"?10:0)+(scoreDiff<0?8:0);
@@ -1174,7 +1211,7 @@ function c5a2SolidObstacles(map){
 }
 
 function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=null,sceneVersion="major.v1"){
-  const RS=(roster||ROSTER).map(c=>({...c})); // 可注入即時名單（複製後套用每回合 currentSide，不回寫輸入）
+  const RS=(roster||ROSTER).map(c=>({...c,...(sceneVersion!=="legacy"?{role:fpsTacticalRole(c.role),specialtyRole:c.role,...(c.role==="rifler"?{weaponPreference:c.weaponPreference||"rifler"}:{})}:{} )})); // 可注入即時名單（複製後套用每回合 currentSide，不回寫輸入）
   const originalTacticCT=tacticCT;
   const map=(sceneVersion==="legacy"?FPS_LEGACY_MAPS:MAPS)[mapKey];const rand=mkRng(seed);
   const preMatchLayout=normalizeCsTacticalLayout(tacticalLayoutInput,TACTICS_DB[mapKey]?.t||[],tacticT);
@@ -1202,6 +1239,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
   // C5A.1：只記錄 authoritative simulation 已觀察到的反應鏈，不參與勝負、
   // 傷害或射速計算。每個 visibility episode 只產生一筆 first-shot sample，
   // 讓 target visible → acquired → permission → shot 可以用真實 sim time 對照。
+  const fireDecisionAudit=sceneVersion==='legacy'?null:createFpsFireDecisionAudit();
   const reactionTelemetry=[];
   const shotCadenceTelemetry=[];
   const obstacleCounts=walls.reduce((counts,wall)=>{counts[wall.kind||"building"]=(counts[wall.kind||"building"]||0)+1;return counts;},{});
@@ -1335,7 +1373,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       tacticBySide:{t:attackTactic?.id??attackTactic?.name??null,ct:defenseTactic?.id??defenseTactic?.name??null},tacticalTarget:target,
       preMatchLayout:{version:preMatchLayout.version,openness:preMatchLayout.openness,postPlantMode:preMatchLayout.postPlantMode,phaseSelections:tacticalAudit.preMatchLayout.phases}};
     let planted=false,c4t=null,c4pos=null,smokes=[],tracers=[],muzzles=[];
-    let mollys=[],throwables=[],droppedGuns=[],droppedBomb=null;
+    let mollys=[],throwables=[],droppedGuns=[],droppedBomb=null,bombRecoveryId=null;
     let roundEnd=null,firstKill=false,openKill=null,roundKills={},roundDmg={},roundUtilDmg={},roundDeaths={},roundAst={},throwerByNadeId={},doorStates={};
     // Weapon cooldown belongs to the shooter, not the current target.  Keeping
     // this target-scoped lets a semi-auto weapon bypass its cadence simply by
@@ -1433,7 +1471,8 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
     for(let sec=0;sec<115||(sceneVersion!=="legacy"&&planted&&c4t>0);sec+=C5A2_SIM_STEP_SEC){
       const telemetryStart=reactionTelemetry.length;
       const visibleReactionKeys=new Set();
-      const events=[],casts=[],comms=[],buyP=sec<12;const prog=buyP?0:clamp((sec-12)/90,0,1);
+      const defuseInterruptedActorIds=new Set();
+      const events=[],casts=[],comms=[],buyP=sec<12;const prog=buyP?0:clamp((sec-12)/90,0,1);const utilityImpact={smokeDeniedPairs:0};
       const utilityThrownIds=new Set();
       const throwMajorUtility=(player,type,land,intent,planId=null,purchasePurpose=null)=>{
         const index=player?.nades?.indexOf(type)??-1;
@@ -1446,7 +1485,12 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
         return true;
       };
       const aliveT=ps.filter(p=>p.side==="t"&&!p.dead),aliveCT=ps.filter(p=>p.side==="ct"&&!p.dead);
-      if(sceneVersion!=="legacy"&&!buyP)majorIntel=collectFpsTeamIntel({players:ps,previous:majorIntel,roundSec:sec,walls,canSee:(actor,target)=>!(actor.blindSec>0)&&canEngage(actor,target,walls,smokes,prog)});
+      if(sceneVersion!=="legacy"&&!buyP)majorIntel=collectFpsTeamIntel({players:ps,previous:majorIntel,roundSec:sec,walls,canSee:(actor,target)=>canObserveFps(actor,target,walls,smokes,prog)});
+      const knownBombThreat=actor=>fpsKnownBombThreat({player:actor,publicOpponentsRemain:ps.some(p=>p.side!==actor.side&&!p.dead),intel:majorIntel.filter(i=>ps.some(p=>p.id===i.targetId&&!p.dead)),bombPos:c4pos,roundSec:sec,walls,smokes,lineBlocked,smokeBlocks});
+      if(sceneVersion!=="legacy"&&!buyP&&droppedBomb&&!planted){
+        const recovery=chooseFpsBombRecoverer({players:ps,droppedBomb,currentId:bombRecoveryId,intel:majorIntel,roundSec:sec,findRoute:(from,to)=>{const route=navigableRoute([from,to]);return route.length>1&&route.every(p=>!blocked(p,walls,PLAYER_R))&&route.slice(1).every((p,i)=>!navLineBlocked(route[i],p,walls))?route:null;}});
+        if(recovery&&bombRecoveryId!==recovery.playerId){bombRecoveryId=recovery.playerId;events.push({id:`recover-c4-${rnd}-${fi}-${bombRecoveryId}`,type:'bomb-recovery-assigned',playerId:bombRecoveryId,round:rnd+1,roundSec:sec,pos:{...droppedBomb.pos},source:recovery.source});comms.push({side:'t',senderId:bombRecoveryId,name:ps.find(p=>p.id===bombRecoveryId)?.name,text:'我去撿包，幫我架住交叉。'});}
+      }else if(!droppedBomb)bombRecoveryId=null;
       const applyDamage=(at,df,damage,source="firearm",sourceId=null)=>{
         if(!df._hitters)df._hitters=[];if(!df._hitters.includes(at.id))df._hitters.push(at.id);
         const hpBefore=df.hp,effectiveDamage=Math.min(damage,hpBefore);
@@ -1461,7 +1505,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
           events.push({id:`kill-${rnd+1}-${shotSequence}-${at.id}-${df.id}`,type:"kill",killerId:at.id,killer:at.name,killerSide:at.side,victim:df.name,victimId:df.id,victimSide:df.side,roundSec:killAtSec,gun:weapon,weaponFamily:c5a1WeaponFamily(weapon),hs:isHS,pos:{...df.pos},firstKill:!firstKill});
           const loss=majorKills.find(k=>k.killerId===df.id&&k.victimSide===at.side&&killAtSec>k.roundSec&&killAtSec-k.roundSec<=5);
           if(loss)events.push({id:`trade-${rnd+1}-${at.id}-${df.id}`,type:"trade",round:rnd+1,roundSec:killAtSec,playerId:at.id,victimId:df.id,tradedPlayerId:loss.victimId,deathAtSec:loss.roundSec});
-          majorKills.push({roundSec:killAtSec,killerId:at.id,victimId:df.id,killerSide:at.side,victimSide:df.side});
+          majorKills.push({roundSec:killAtSec,killerId:at.id,victimId:df.id,killerSide:at.side,victimSide:df.side,pos:{...df.pos}});
           for(const side of ["t","ct"]){const survivors=ps.filter(p=>!p.dead&&p.side===side),opponents=ps.filter(p=>!p.dead&&p.side!==side);if(survivors.length===1&&opponents.length&&!clutchEpisodes.some(e=>e.playerId===survivors[0].id)){const episode={playerId:survivors[0].id,side,opponentCount:opponents.length,startedAtSec:killAtSec};clutchEpisodes.push(episode);events.push({id:`clutch-start-${rnd+1}-${episode.playerId}`,type:"clutch-start",round:rnd+1,roundSec:killAtSec,...episode});}}
         }
         const leadershipSecond=sceneVersion==="legacy"?leadershipFollowUpAfterKill(df,ps,target,N):{action:false};
@@ -1489,6 +1533,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       tracers=tracers.map(t=>({...t,tl:t.tl-C5A2_SIM_STEP_RATIO})).filter(t=>t.tl>0);
       muzzles=muzzles.map(m=>({...m,tl:m.tl-C5A2_SIM_STEP_RATIO})).filter(m=>m.tl>0);
       ps.forEach(p=>{
+        if(sceneVersion!=="legacy")p._objectiveLocked=false;
         if(sceneVersion!=="legacy")Object.assign(p,advanceFpsWeaponHandling(p,Math.round(sec*1000)));
         if(sceneVersion!=="legacy"){p.blindSec=fpsDecayBlind(p.blindSec,C5A2_SIM_STEP_SEC);p.flash=0;}else p.flash=Math.max(0,p.flash-C5A2_SIM_STEP_RATIO);
         p.shooting=Math.max(0,p.shooting-C5A2_SIM_STEP_RATIO);p.prevPos={...p.pos};p.picking=Math.max(0,p.picking-C5A2_SIM_STEP_RATIO);
@@ -1497,7 +1542,9 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
         if(buyP){const sp=SPAWN[p.side==="ct"?"ct":"t"];const h=hsh(p.id);
           if(!p._off)p._off={x:((h%5)-2)*1.7,y:(((h>>4)%5)-2)*1.7};
           p.pos=sceneVersion==="legacy"?collideResolve({x:sp.x+p._off.x+Math.sin(sec*0.55+h*0.11)*0.6,y:sp.y+p._off.y+Math.cos(sec*0.5+h*0.13)*0.6},walls,PLAYER_R):{...p._freezePos};p.state="BUY";return;}
+        if(sceneVersion!=="legacy")p.perceptionCue=fpsPerceptionCue({player:p,gunshots:muzzles,deaths:majorKills,roundSec:sec,walls,lineBlocked});
         const currentPhase=tacticalPhaseFor(sec,planted),control=tacticalControlSnapshot(ps,p.side,N);
+        if(sceneVersion!=="legacy"&&planted&&p.side==="ct"&&majorDefuse.defuserId===p.id&&majorDefuse.progress>0){const actor=selectFpsDefuser({previous:majorDefuse,players:ps,bombPos:c4pos,walls,lineBlocked,isThreatened:knownBombThreat,canInteract:(actor,bomb)=>fpsBombInteractionGeometry(actor,bomb,{groundHeightAt:point=>fpsMajorElevation(mapKey,point)}).eligible,timerSec:c4t*C5A2_LEGACY_SNAPSHOT_SEC,rateFor:q=>q.stats?(0.45+persStat(q,"foc")/250+persStat(q,"dec")/300)/C5A2_LEGACY_SNAPSHOT_SEC:0.35});if(actor?.id===p.id){p._objectiveLocked=true;p.tacticalIntent={kind:"defuse",aim:null,routeTarget:null,source:"none",targetId:null,observedAtSec:null,stopMovement:true,pace:0,roundSec:sec};p.state="拆彈中";p.objectiveState="DEFUSE";return;}defuseInterruptedActorIds.add(p.id);}
         if(sceneVersion!=="legacy"&&p.side==="t"&&!planted){
           const phaseTactic=tacticForSidePhase(p.side,currentPhase),selection=p.teamId===CS_TEAM_US?preMatchLayout.phases[currentPhase]?.selectionId:null;
           const mode=({f1:"default",f2:"rush",f3:"split",f4:"pick",f5:"execute",f6:"fake",f8:"default"})[selection]||phaseTactic.type;
@@ -1554,10 +1601,33 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
             travelDurationSec=pathLength/Math.max(0.1,movementPerSec);
           }
           p.engagementRange=weaponAuthority(p.gun).range;
-          const intent=decideFpsTacticalIntent({player:p,intel:majorIntel,recentKills:majorKills,roundSec:sec,planted,sites:{a:N.aSite,b:N.bSite},bombPos:c4pos,bombTimeSec:c4t*C5A2_LEGACY_SNAPSHOT_SEC,travelDurationSec,defuseDurationSec:3.5/((p.stats?(0.45+persStat(p,"foc")/250+persStat(p,"dec")/300):0.7)/C5A2_LEGACY_SNAPSHOT_SEC),spawn:spawnPointFor(p)});
+          let intent=decideFpsTacticalIntent({player:p,intel:majorIntel,recentKills:majorKills,roundSec:sec,planted,sites:{a:N.aSite,b:N.bSite},bombPos:c4pos,bombTimeSec:c4t*C5A2_LEGACY_SNAPSHOT_SEC,travelDurationSec,defuseDurationSec:(3.5-(majorDefuse.defuserId===p.id?majorDefuse.progress:0))/((p.stats?(0.45+persStat(p,"foc")/250+persStat(p,"dec")/300):0.7)/C5A2_LEGACY_SNAPSHOT_SEC),spawn:spawnPointFor(p)});
+          if(p.side==="ct"&&(!majorDefuse.defuserId||!ps.some(q=>q.id===majorDefuse.defuserId&&!q.dead)))p.retakeCoverPlan=null;
+          if(planted&&p.side==="ct"&&c4pos&&majorDefuse.defuserId&&majorDefuse.defuserId!==p.id&&ps.some(q=>q.id===majorDefuse.defuserId&&!q.dead)&&intent.kind!=="save"){
+            p.retakeCoverPlan=planFpsPostPlant({player:{...p,postPlantPlan:p.retakeCoverPlan},players:ps,nodes:{...N,ctSpawn:N.tSpawn},bombPos:c4pos,intel:majorIntel,roundSec:sec,walls,blocked,lineBlocked,findRoute:(a,b)=>navigableRoute([a,b]),radius:PLAYER_R});
+            const cover=p.retakeCoverPlan,arrived=dist(p.pos,cover.point)<.55;
+            if(arrived){p.routeIdx=Math.max(0,p.route.length-1);p.routeT=1;}
+            intent={...intent,kind:"defuse-cover",routeTarget:cover.point,stopMovement:arrived||intent.stopMovement,pace:arrived?0:1};
+          }
+          if(planted&&p.side==="t"&&c4pos){
+            p.postPlantPlan=planFpsPostPlant({player:p,players:ps,nodes:N,bombPos:c4pos,intel:majorIntel,roundSec:sec,walls,blocked,lineBlocked,findRoute:(a,b)=>navigableRoute([a,b]),radius:PLAYER_R});
+            const hold=p.postPlantPlan,arrived=dist(p.pos,hold.point)<.55;
+            if(arrived){p.routeIdx=Math.max(0,p.route.length-1);p.routeT=1;}
+            intent={...intent,kind:"post-plant-hold",routeTarget:hold.point,stopMovement:arrived||intent.stopMovement,pace:arrived?0:1};
+          }
+          if(droppedBomb&&p.id===bombRecoveryId)intent={...intent,kind:'recover-c4',routeTarget:{...droppedBomb.pos},pace:1,stopMovement:false,routeSource:'team-dropped-c4'};
+          const threat=intent.aim||p.postPlantPlan?.threat||(!planted&&p.side==='ct'?N.tSpawn:planted&&p.side==='t'?N.ctSpawn:null);
+          const protectedByCover=hasFpsDirectionalCover({player:p,threat,walls,lineBlocked});
+          p.coverAssessment={protected:protectedByCover,threat:threat?{...threat}:null,source:intent.aim?intent.source:'public-approach'};
+          const stationary=p.routeIdx>=p.route.length-1||intent.stopMovement;
+          if(protectedByCover&&p._coordinatorKind==='take-cover'&&((p.side==='ct'&&!planted)||(p.side==='t'&&planted))&&['hold','peek'].includes(intent.kind))intent={...intent,kind:'take-cover',routeTarget:p.route.at(-1)||{...p.pos},pace:0,stopMovement:true};
+          if(threat&&!protectedByCover&&!p.hasBomb&&p.id!==bombRecoveryId&&(stationary||intent.kind==='retreat')&&['hold','peek','retreat'].includes(intent.kind)){
+            const cover=findFpsThreatCover({player:p,threat,walls,players:ps,blocked,navLineBlocked,lineBlocked,radius:PLAYER_R});
+            if(cover)intent={...intent,kind:'take-cover',routeTarget:cover.point,pace:1,stopMovement:false,cover};
+          }
           p.tacticalIntent={...intent,roundSec:sec};
           p.awareness=fpsAwarenessLook({player:p,nodes:N,intel:majorIntel,roundSec:sec,dtSec:C5A2_SIM_STEP_SEC,walls,lineBlocked});p.va=p.awareness.va;
-          if(intent.routeTarget&&dist(p.pos,intent.routeTarget)>3&&p._coordinatorKind!==intent.kind){assignRoute(p,[p.pos,intent.routeTarget],{kind:intent.kind,phase:currentPhase,objective:intent.kind,roundSec:sec,routeSignature:intent.kind,informationSource:intent.source,targetId:intent.targetId,observedAtSec:intent.observedAtSec});p._coordinatorKind=intent.kind;}
+          if(intent.routeTarget&&dist(p.pos,intent.routeTarget)>(intent.kind==='take-cover'?.3:['post-plant-hold','defuse-cover'].includes(intent.kind)?.55:3)&&(p._coordinatorKind!==intent.kind||dist(p.route.at(-1)||p.pos,intent.routeTarget)>2||fpsNeedsObjectiveRouteRecovery(p,intent))){assignRoute(p,[p.pos,intent.routeTarget],{kind:intent.kind,phase:currentPhase,objective:intent.kind,roundSec:sec,routeSignature:intent.kind,informationSource:intent.source,targetId:intent.targetId,observedAtSec:intent.observedAtSec});p._coordinatorKind=intent.kind;}
           else if(!intent.routeTarget){if(p._coordinatorKind)p._tacticalPhase=null;p._coordinatorKind=null;}
         }
         if(sec%8===0&&tacticalAudit.mapControlSamples.length<1200)tacticalAudit.mapControlSamples.push({round:rnd+1,roundSec:sec,side:p.side,phase:currentPhase,controlRatio:Number(control.ratio.toFixed(3)),controlledKeys:control.controlledKeys,survival:control.survival,siteControl:control.siteControl});
@@ -1580,7 +1650,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
         // An entry may stop to fire briefly, but a distant contact cannot freeze
         // the entire execute indefinitely. Retreat/save still use their own route.
         if(sceneVersion!=="legacy"){if(contact){if(p._contactId!==contact.id){p._contactId=contact.id;p._contactSinceSec=sec;}}else{p._contactId=null;p._contactSinceSec=null;}}
-        const stopForContact=contact&&(sceneVersion==="legacy"||p.tacticalIntent?.stopMovement||dist(p.pos,contact.pos)<12||
+        const stopForContact=contact&&(sceneVersion==="legacy"||p.tacticalIntent?.stopMovement||(!['take-cover','recover-c4'].includes(p.tacticalIntent?.kind)&&dist(p.pos,contact.pos)<12)||
           (p.side==="ct"&&!planted&&p.routeIdx>=p.route.length-1)||sec-(p._contactSinceSec??sec)<1);
         if(sceneVersion!=="legacy"&&p.hasBomb&&(p.plantProgressSec||0)>0&&!stopForContact){p.state="安裝中";}else if(stopForContact){
           const routeActive=p.routeIdx<p.route.length-1;
@@ -1679,7 +1749,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
         }
         map.doors.forEach((d,i)=>{if(!doorStates[i]&&dist(p.pos,{x:d.x,y:d.y})<6){doorStates[i]=true;events.push({type:"door",idx:i,label:d.label});}});
         if(p.picking<=0&&["glock","usp"].includes(p.gun)){const near=droppedGuns.find(g=>dist(g.pos,p.pos)<5);if(near){p.gun=near.gun;if(sceneVersion!=="legacy"){Object.assign(p,createFpsWeaponHandling(near.gun,near));fireClockByActor.delete(p.id);}p.picking=20;droppedGuns=droppedGuns.filter(g=>g.id!==near.id);casts.push(`🔫 ${p.name} 撿起 ${GUNS[near.gun].name}`);}}
-        if(droppedBomb&&p.side==="t"&&dist(droppedBomb.pos,p.pos)<5){p.hasBomb=true;droppedBomb=null;casts.push(`💣 ${p.name} 撿起炸彈，繼續執行`);}
+        if(droppedBomb&&p.side==="t"&&dist(droppedBomb.pos,p.pos)<5&&(sceneVersion==="legacy"||!lineBlocked(p.pos,droppedBomb.pos,walls))){p.hasBomb=true;droppedBomb=null;bombRecoveryId=null;p._coordinatorKind=null;p._tacticalPhase=null;p._pushed=false;casts.push(`💣 ${p.name} 撿起炸彈，繼續執行`);if(sceneVersion!=="legacy")events.push({id:`c4-recovered-${rnd}-${fi}-${p.id}`,type:'bomb-recovered',playerId:p.id,round:rnd+1,roundSec:sec,pos:{...p.pos}});}
         if(sceneVersion==="legacy"&&p.state==="EXECUTE"&&p.nades?.length>0&&rand()<0.06){
           const nt=p.nades[0];if(sceneVersion==="legacy")p.nades=p.nades.slice(1);
           const enemy=sceneVersion==="legacy"?ps.find(e=>!e.dead&&e.side!==p.side&&dist(e.pos,p.pos)<30):majorIntel.filter(i=>i.side===p.side).map(i=>({id:i.targetId,pos:i.pos})).find(e=>dist(e.pos,p.pos)<30);
@@ -1742,7 +1812,10 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       // Buy phase is the only global combat lock. Once the round is live, route
       // execution is tactical intent and must never suppress legal acquisition.
       if(!buyP&&aliveT.length&&aliveCT.length){
+        const auditShotStart=shotCadenceTelemetry.length,fireAuditInputs=[];
         let pairs=[];aliveT.forEach(tp=>aliveCT.forEach(cp=>{const d=dist(tp.pos,cp.pos);const tAuth=weaponAuthority(tp.gun),cAuth=weaponAuthority(cp.gun);const rangeVisible=weaponInRange(d,tAuth)||weaponInRange(d,cAuth);const lineOfSight=!lineBlocked(tp.pos,cp.pos,walls);const smokeBlocked=smokeBlocks(tp.pos,cp.pos,smokes);const visibilityRange=Math.max(55,tAuth.range,cAuth.range);const visibleCandidate=d<visibilityRange&&rangeVisible&&lineOfSight&&!smokeBlocked;const fovT=csTargetInFov(tp,cp),fovCT=csTargetInFov(cp,tp);const flankT=csFlankGeometry(tp,cp),flankCT=csFlankGeometry(cp,tp);const mapAwareT=mapAwareCanReadVisibleCandidate(tp,d,visibleCandidate,tAuth)&&fovT;const mapAwareCT=mapAwareCanReadVisibleCandidate(cp,d,visibleCandidate,cAuth)&&fovCT;combatAudit.losChecks+=1;combatAudit.fovChecks+=2;if(flankT)combatAudit.flankCandidates+=1;if(flankCT)combatAudit.flankCandidates+=1;
+          if(sceneVersion!=="legacy"&&rangeVisible&&lineOfSight&&smokeBlocked&&(fovT||fovCT))utilityImpact.smokeDeniedPairs++;
+          if(fireDecisionAudit)for(const [actor,target,fov,mapAware]of [[tp,cp,fovT,mapAwareT],[cp,tp,fovCT,mapAwareCT]])fireAuditInputs.push({actor,target,actorId:actor.id,targetId:target.id,round:rnd,roundSec:sec,gun:actor.gun,state:actor.state,picking:actor.picking,distance:d,lineOfSight,smokeBlocked,fov,mapAware,inRange:weaponInRange(d,weaponAuthority(actor.gun)),blindSec:actor.blindSec||0,objectiveLocked:actor._objectiveLocked,planting:actor.hasBomb&&(actor.plantProgressSec||0)>0,ammo:actor.ammo,reserveAmmo:actor.reserveAmmo,defuser:target._objectiveLocked||target.objectiveState==='DEFUSE'});
           if(visibleCandidate&&(mapAwareT||mapAwareCT)){
             const freshPair=!activeReactionEpisodes.has(reactionKey(tp,cp))||!activeReactionEpisodes.has(reactionKey(cp,tp));
             if(mapAwareT){const episode=ensureReactionEpisode(tp,cp,sec,d,tp.gun,lineOfSight,mapAwareT,fovT,flankT);visibleReactionKeys.add(reactionKey(tp,cp));episode.distance=Math.round(d*100)/100;combatAudit.targetAcquisitions+=1;combatAudit.targetLocks+=1;}
@@ -1785,6 +1858,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
             if(episode.targetAcquiredAtMs==null){episode.targetAcquiredAtMs=contactNowMs;episode.reactionReadyAtMs=contactNowMs+episode.reactionDelayMs;if(episode.routeActiveAtAcquisition)combatAudit.routeInterruptAcquisitions+=1;}
             candidates.push({actor,target,pair,forcedTw,reactionReadyAtMs:episode.firstAuthoritativeShotAtMs==null?episode.reactionReadyAtMs:contactNowMs,distance:d,priority:actor._combatTargetId===target.id?1:0});
           }}
+          for(const input of fireAuditInputs){const e=activeReactionEpisodes.get(reactionKey(input.actor,input.target));input.reactionReadyAtMs=e?(e.firstAuthoritativeShotAtMs==null?e.reactionReadyAtMs:contactNowMs):null;input.weaponReadyAtMs=fpsWeaponReadyAtMs(input.actor,contactNowMs);input.cadenceReadyAtMs=Math.max(contactNowMs,fireClockByActor.get(input.actorId)||contactNowMs,(lastShotAtByActor.get(input.actorId)??-Infinity)+weaponAuthority(input.gun).intervalMs);}
           shotQueue=createFpsDirectedShotQueue({candidates,windowStartMs:contactNowMs,windowEndMs:combatWindowEndMs,
             getWeaponReadyAtMs:(actor,t)=>fpsWeaponReadyAtMs(actor,t),getIntervalMs:actor=>weaponAuthority(actor.gun).intervalMs,
             getCadenceReadyAtMs:actor=>Math.max(contactNowMs,fireClockByActor.get(actor.id)||contactNowMs,(lastShotAtByActor.get(actor.id)??-Infinity)+weaponAuthority(actor.gun).intervalMs),
@@ -1824,7 +1898,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
             if(tReady!==cReady)tw=tReady;
           }
           const at=tw?tp:cp,df=tw?cp:tp;
-          if(sceneVersion!=="legacy"&&at.hasBomb&&(at.plantProgressSec||0)>0)continue;
+          if(sceneVersion!=="legacy"&&(at.hasBomb&&(at.plantProgressSec||0)>0||at._objectiveLocked))continue;
           const attackerMapAware=tw?mapAwareT:mapAwareCT;if(!attackerMapAware)continue;
           const attackerFov=tw?pairMeta?.fovT:pairMeta?.fovCT;
           const attackerFlank=tw?pairMeta?.flankT:pairMeta?.flankCT;
@@ -1916,6 +1990,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
           else if(df.hp<35&&combatRand()<0.25){comms.push({side:df.side,name:df.name,text:"我殘血，先撤一下"});}
           }finally{if(queueOp)shotQueue.afterShot(queueOp,{fired:queueFired,shotAtMs:queueShotAtMs,nextReadyAtMs:queueFired?fpsWeaponReadyAtMs(queueOp.actor,queueShotAtMs):Math.max(fpsWeaponReadyAtMs(queueOp.actor,queueShotAtMs),queueShotAtMs+1)});}
         }
+        if(fireDecisionAudit){const shots=shotCadenceTelemetry.slice(auditShotStart);for(const input of fireAuditInputs)fireDecisionAudit.record(input,shots,combatWindowEndMs);}
       }
       if(!planted&&(sceneVersion==="legacy"?prog>0.4:!buyP)){
         const sitePos=N[target==="a"?"aSite":"bSite"];const carrier=ps.find(p=>p.side==="t"&&!p.dead&&p.hasBomb);
@@ -1923,10 +1998,14 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
           if(sceneVersion!=="legacy"&&dist(carrier.pos,sitePos)>=9)carrier.plantProgressSec=0;
           const endsNear=carrier.route.length&&dist(carrier.route[carrier.route.length-1],sitePos)<10;
           if(!endsNear&&dist(carrier.pos,sitePos)>8&&(sceneVersion==="legacy"||carrier.attackStage?.canAdvance)&&carrier.fakeStage!=="approach"){const ap=N[target==="a"?"aConn":"car"];assignRoute(carrier,ap?[carrier.pos,ap,sitePos]:[carrier.pos,sitePos],{kind:"site-execute",phase:tacticalPhaseFor(sec,planted),objective:"plant",roundSec:sec,routeSignature:ap?`${target}Approach>${target}Site`:`${target}Site`});}
-          if(dist(carrier.pos,sitePos)<9&&(sceneVersion==="legacy"||carrier.fakeStage!=="approach")){const ctNear=aliveCT.filter(cp=>dist(cp.pos,sitePos)<13&&!lineBlocked(carrier.pos,cp.pos,walls)).length;const safeToPlant=ctNear===0;
-            if(sceneVersion!=="legacy")carrier.plantProgressSec=safeToPlant?(carrier.plantProgressSec||0)+C5A2_SIM_STEP_SEC:0;
+          if(dist(carrier.pos,sitePos)<9&&(sceneVersion==="legacy"||carrier.fakeStage!=="approach")){const ctNear=aliveCT.filter(cp=>dist(cp.pos,sitePos)<13&&!lineBlocked(carrier.pos,cp.pos,walls)).length;const safeToPlant=sceneVersion==="legacy"?ctNear===0:!majorIntel.some(i=>i.side==='t'&&sec>=i.observedAtSec&&sec-i.observedAtSec<=3&&dist(i.pos,carrier.pos)<13&&!lineBlocked(carrier.pos,i.pos,walls));
+            if(sceneVersion!=="legacy"){
+              const priorProgress=carrier.plantProgressSec||0;carrier.plantProgressSec=safeToPlant?priorProgress+C5A2_SIM_STEP_SEC:0;
+              if(carrier.plantProgressSec>0){carrier.state="安裝中";carrier.objectiveState="PLANTING";}
+              if(carrier.plantProgressSec>0&&!priorProgress)events.push({id:`plant-start-${rnd}-${fi}-${carrier.id}`,type:'bomb-plant-start',playerId:carrier.id,playerName:carrier.name,round:rnd+1,roundSec:sec,site:target,pos:{...carrier.pos}});
+            }
             const canPlant=sceneVersion==="legacy"?((ctNear===0&&rand()<0.55)||(ctNear<=1&&aliveT.length>aliveCT.length&&rand()<0.18)):carrier.plantProgressSec>=3;
-            if(canPlant){planted=true;c4pos={...sitePos};c4t=20;carrier.hasBomb=false;carrier.state="安裝中";carrier.money+=300;casts.push(`💣 ${carrier.name} 安裝炸彈！`);highlights.push({fi,label:`R${rnd+1} 炸彈安裝`});
+            if(canPlant){planted=true;c4pos={...(sceneVersion==="legacy"?sitePos:carrier.pos)};c4t=20;carrier.hasBomb=false;carrier.state="安裝中";carrier.money+=300;casts.push(`💣 ${carrier.name} 安裝炸彈！`);highlights.push({fi,label:`R${rnd+1} 炸彈安裝`});
             bombAudit.plantEvents.push({round:rnd+1,roundSec:sec,site:target,position:{...c4pos},carrierId:carrier.id,carrierName:carrier.name,...(sceneVersion!=="legacy"?{carrierPosition:{...carrier.pos}}:{}),score:{t:tScore,ct:ctScore},aliveT:aliveT.length,aliveCT:aliveCT.length});
             bombAudit.objectiveTransitions.push({round:rnd+1,roundSec:sec,from:"PLANTING",to:"PLANTED",side:"t",site:target});
             aliveT.filter(p=>p.id!==carrier.id&&!p.dead&&!p.reassigned).forEach(p=>{const anchor=sceneVersion!=="legacy"&&preMatchLayout.postPlantMode==="crossfire"?selectFpsCrossfireAnchor({player:p,players:ps,nodes:N,target}):tacticalPostPlantAnchor(p,tacticForSidePhase("t",CS_TACTICAL_PHASES.POST_PLANT),N,target,preMatchLayout.postPlantMode);if(anchor){p._adaptivePostPlant=true;assignRoute(p,[p.pos,anchor],{kind:"post-plant-cover",phase:CS_TACTICAL_PHASES.POST_PLANT,objective:"post-plant-hold",roundSec:sec,routeSignature:`post-plant>${target}`});p.objectiveState="HOLD_ANGLE";p.state="POST_PLANT";}});
@@ -1947,13 +2026,13 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       if(planted&&!bombPlantEventEmitted&&c4pos){bombPlantEventEmitted=true;const plantEvent=bombAudit.plantEvents.at(-1);events.push({id:`bomb-planted-${rnd+1}`,type:"bomb-planted",round:rnd+1,roundSec:sec,site:target,playerId:plantEvent?.carrierId||null,playerName:plantEvent?.carrierName||null,position:{...c4pos},pos:{...c4pos}});}
       throwables=throwables.map(tw=>{if(tw.flying){if(sceneVersion!=="legacy"&&tw.thrownAtRoundSec===sec)return tw;tw.flightElapsedSec=(tw.flightElapsedSec||0)+C5A2_SIM_STEP_SEC;tw.t=clamp(tw.flightElapsedSec/Math.max(0.1,tw.flightDurationSec||C5A2_PROJECTILE_FLIGHT_SEC),0,1);if(tw.t>=1){tw.flying=false;tw.detonate=true;tw.boom=3;
         if(sceneVersion!=="legacy"){tw.detonatedAtRoundSec=sec;events.push({id:`utility-detonate-${tw.id}`,type:"utility-detonate",round:rnd+1,roundSec:sec,playerId:tw.throwerId,throwableId:tw.id,utility:tw.type,pos:{...tw.to}});}
-        if(tw.type==="flash"){ps.forEach(pl=>{if(sceneVersion!=="legacy"){pl.blindSec=Math.max(pl.blindSec||0,fpsFlashDurationSec({player:pl,throwable:tw,walls,lineBlocked}));return;}if(pl.dead)return;const d=dist(pl.pos,tw.to);if(d<24&&!lineBlocked(pl.pos,tw.to,walls)){const enemy=pl.side!==tw.side;pl.flash=Math.max(pl.flash,enemy?(d<12?6:4):(d<8?3:0));}});}
+        if(tw.type==="flash"){ps.forEach(pl=>{if(sceneVersion!=="legacy"){const prior=pl.blindSec||0;pl.blindSec=Math.max(prior,fpsFlashDurationSec({player:pl,throwable:tw,walls,lineBlocked}));if(pl.blindSec>prior)events.push({id:`flash-effect-${tw.id}-${pl.id}`,type:'flash-effect',round:rnd+1,roundSec:sec,playerId:tw.throwerId,targetId:pl.id,friendly:pl.side===tw.side,addedSec:pl.blindSec-prior,pos:{...pl.pos}});return;}if(pl.dead)return;const d=dist(pl.pos,tw.to);if(d<24&&!lineBlocked(pl.pos,tw.to,walls)){const enemy=pl.side!==tw.side;pl.flash=Math.max(pl.flash,enemy?(d<12?6:4):(d<8?3:0));}});}
         if(tw.type==="he"){const at=ps.find(pl=>pl.id===throwerByNadeId[tw.id]);if(at)ps.forEach(df=>{if(df.dead||df.side===tw.side)return;const d=dist(df.pos,tw.to);if(d>=HE_R||lineBlocked(tw.to,df.pos,walls))return;const rawDamage=Math.max(0,Math.round(HE_MAX_DAMAGE*(1-d/HE_R)));const damage=Math.round(rawDamage*(df.armor?HE_ARMOR_SCALE:1));if(damage<=0)return;const {killed}=applyDamage(at,df,damage,"he",tw.id);if(killed)finalizeKill(at,df,{weapon:"he",distance:d,sourceId:tw.id});});}
         if(tw.type==="smoke")smokes.push({id:`s${tw.id}`,pos:{...tw.to},tl:18,age:0});
         if(tw.type==="molly")mollys.push({id:`m${tw.id}`,pos:{...tw.to},tl:MOLLY_TL});
       }}else if(tw.detonate){tw.boom--;}return tw;}).filter(tw=>tw.flying||tw.boom>0);
       if(sceneVersion!=="legacy"&&planted&&c4t!==null){
-        majorDefuse=advanceFpsDefuse({previous:majorDefuse,players:ps,bombPos:c4pos,walls,lineBlocked,dtSec:C5A2_SIM_STEP_SEC,timerSec:c4t*C5A2_LEGACY_SNAPSHOT_SEC,rateFor:p=>p.stats?(0.45+persStat(p,"foc")/250+persStat(p,"dec")/300)/C5A2_LEGACY_SNAPSHOT_SEC:0.35});
+        majorDefuse=advanceFpsDefuse({previous:majorDefuse,players:ps,bombPos:c4pos,walls,lineBlocked,isThreatened:knownBombThreat,canInteract:(actor,bomb)=>!defuseInterruptedActorIds.has(actor.id)&&fpsBombInteractionGeometry(actor,bomb,{groundHeightAt:point=>fpsMajorElevation(mapKey,point)}).eligible,dtSec:C5A2_SIM_STEP_SEC,timerSec:c4t*C5A2_LEGACY_SNAPSHOT_SEC,rateFor:p=>p.stats?(0.45+persStat(p,"foc")/250+persStat(p,"dec")/300)/C5A2_LEGACY_SNAPSHOT_SEC:0.35});
         defuseProg=majorDefuse.progress;c4t-=C5A2_SIM_STEP_RATIO;bombAudit.timerSamples+=1;
         ps.filter(p=>!p.dead&&p.side==="ct").forEach(p=>{p.objectiveState=p.id===majorDefuse.defuserId?"DEFUSE":"COVER";if(p.id===majorDefuse.defuserId){p.state="拆彈中";p.va=Math.atan2(c4pos.y-p.pos.y,c4pos.x-p.pos.x)*180/Math.PI;}});
         for(const [type,id] of [["defuse-interrupt",majorDefuse.interrupted?majorDefuse.interruptedId:null],["defuse-start",majorDefuse.started?majorDefuse.defuserId:null]])if(id!==null)events.push({id:`${type}-${rnd+1}-${fi}`,type,round:rnd+1,roundSec:sec,playerId:id,pos:{...c4pos},position:{...c4pos}});
@@ -1988,13 +2067,13 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
       // record the visible prefix length instead of cloning the growing array
       // on every 0.5s snapshot. The old `[...roundHist]` made C5A.2 long maps
       // quadratic in both allocation and GC pressure (especially Inferno).
-      if(sceneVersion!=="legacy")ps.forEach(p=>{p.stance=resolveFpsWeaponStance(p);});
+      if(sceneVersion!=="legacy")ps.forEach(p=>{const threat=p.tacticalIntent?.aim||(p.side==='ct'&&!planted?N.tSpawn:p.side==='t'&&planted?N.ctSpawn:null);p.coverAssessment={protected:hasFpsDirectionalCover({player:p,threat,walls,lineBlocked}),threat:threat?{...threat}:null,source:p.tacticalIntent?.aim?p.tacticalIntent.source:'public-approach'};p.stance=resolveFpsWeaponStance(p);});
       frames.push({fi,ts:sceneVersion==="legacy"?rnd*120+sec:majorMatchTimeSec+sec,rnd,roundSec:sec,roundHistCount:rnd, target,planted,tacticalPhase:tacticalPhaseFor(sec,planted),bombState:planted?(sceneVersion!=="legacy"&&roundEnd?.how==="defuse"?"defused":c4t<=0?"exploded":"planted"):"carried",buyP,c4t:c4t!==null?Math.ceil(c4t):null,c4pos:c4pos?{...c4pos}:null,
         ...(sceneVersion!=="legacy"?{bombTimeRemainingSec:c4t===null?null:Math.max(0,c4t*C5A2_LEGACY_SNAPSHOT_SEC),teamIntel:majorIntel.map(i=>({...i,pos:{...i.pos}})),defuse:{defuserId:majorDefuse.defuserId,progress:majorDefuse.progress}}:{}),
         players:ps.map(p=>({...p,pos:{...p.pos},prevPos:{...p.prevPos},...(sceneVersion!=="legacy"?{...(p._hitters?{_hitters:[...p._hitters]}:{}),...(p._activeStuckEpisode?{_activeStuckEpisode:{...p._activeStuckEpisode}}:{})}:{}),routePoints:(p.route||[]).map(point=>({x:Number(point.x.toFixed(3)),y:Number(point.y.toFixed(3))}))})),
         smokes:smokes.map(s=>({...s})),mollys:mollys.map(m=>({...m})),tracers:tracers.map(t=>({...t})),muzzles:muzzles.map(m=>({...m})),
         throwables:throwables.map(tw=>({...tw,from:{...tw.from},to:{...tw.to}})),droppedGuns:droppedGuns.map(g=>({...g})),droppedBomb:droppedBomb?{...droppedBomb}:null,doorStates:{...doorStates},
-        events,casts,comms,reactionEvents:reactionTelemetry.slice(telemetryStart).map(episode=>({...episode})),ctScore,tScore,roundHist,ecoT,ecoCT,phase:roundPlan.phase,half:roundPlan.half,otGroup:roundPlan.otGroup,
+        events,casts,comms,...(sceneVersion!=="legacy"?{utilityImpact}:{}),reactionEvents:reactionTelemetry.slice(telemetryStart).map(episode=>({...episode})),ctScore,tScore,roundHist,ecoT,ecoCT,phase:roundPlan.phase,half:roundPlan.half,otGroup:roundPlan.otGroup,
         roundInPhase:roundPlan.roundInPhase,currentSideByTeam:cloneCsSides(sideByTeam),roundStart:fi===roundFrameStart?roundMeta:null});
       fi++;if(roundEnd)break;
     }
@@ -2088,7 +2167,7 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
   navigationAudit.unresolvedStuckEpisodes=navigationAudit.stuckEpisodes.filter(episode=>episode.status!=="resolved").length;
   buyAudit.purchaseRatios=Object.fromEntries(weaponFamilies.map(family=>[family,buyAudit.totalPurchases?Number((buyAudit.purchaseCounts[family]/buyAudit.totalPurchases).toFixed(4)):0]));
   return{frames,highlights,roundHist,ctScore,tScore,mapKey,sceneVersion,players,mvp,rounds:_R,reactionTelemetry,reactionSummary,
-       shotCadenceTelemetry,cadenceSummary,weaponAuthority:weaponAuthoritySummary,weaponMetrics,movementAudit,navigationAudit,combatAudit,tacticalAudit,buyAudit,bombAudit,
+       shotCadenceTelemetry,cadenceSummary,...(fireDecisionAudit?{fireDecisionAudit:fireDecisionAudit.snapshot()}:{}),weaponAuthority:weaponAuthoritySummary,weaponMetrics,movementAudit,navigationAudit,combatAudit,tacticalAudit,buyAudit,bombAudit,
     completed:ruleState.completed,winner:ruleState.winner,phase:ruleState.phase,regulationRounds:ruleState.regulationRounds,
     overtimeGroups:ruleState.otGroup,sideChanges:ruleState.sideChanges,economyEvents,halftime:ruleState.sideChanges.find(x=>x.reason==="halftime")??null,
     currentSideByTeam:cloneCsSides(ruleState.currentSideByTeam)};
@@ -2171,6 +2250,7 @@ function buildMatchResult(sim,opts={}){
     rounds:sim.roundHist,roundCount:sim.rounds,regulationRounds:sim.regulationRounds,overtimeGroups:sim.overtimeGroups,
     sideChanges:sim.sideChanges,economyEvents:sim.economyEvents,halftime:sim.halftime,
     fanGain:0,prizeGain:0,xpGain:0,
+    ...(sim.sceneVersion==='major.v1'?{analytics:buildFpsMatchAnalytics(sim)}:{}),
   };
 }
 
@@ -2255,7 +2335,7 @@ function updateFpsPovWeapon(st,frame,ch,pov,dt){
   if(weapon.major){const live=st.liveRef.current,actor=pov&&ch?.alive?st.players.find(player=>player.id===ch.id):null;
     // Camera chase data contains only framing fields; handling belongs to the saved player.
     const savedPlayer=frame.players?.find(player=>player.id===ch?.id);
-    weapon.update({feedbackRoot:st.renderer.domElement.closest(".fps-major-battle"),nextFrame:live.sim?.frames?.[live.fIdx+1],frame,chase:savedPlayer?{...ch,...savedPlayer}:ch,pov,live,family:c5a1WeaponFamily(ch?.gun),dt,weaponGroups:actor?.rigged?.c2c?.weaponGroups,handGeometries:actor?.rigged?.c2c?.povHandGeometries,textiles:actor?.rigged?.c2c?.povTextiles,clothColor:actor?.rigged?.c2c?.materials?.fabric?.color,frameAgeSec:Math.max(0,Number(st.subT)||0)*(Number(live.playbackFrameSec)||C5A2_PLAYBACK_FRAME_SEC)});st.povWeaponDiagnostics=weapon.diagnostics;return;}
+    weapon.update({scope:st.sniperScope,feedbackRoot:st.renderer.domElement.closest(".fps-major-battle"),nextFrame:live.sim?.frames?.[live.fIdx+1],frame,chase:savedPlayer?{...ch,...savedPlayer}:ch,pov,live,family:c5a1WeaponFamily(ch?.gun),dt,weaponGroups:actor?.rigged?.c2c?.weaponGroups,handGeometries:actor?.rigged?.c2c?.povHandGeometries,textiles:actor?.rigged?.c2c?.povTextiles,clothColor:actor?.rigged?.c2c?.materials?.fabric?.color,frameAgeSec:Math.max(0,Number(st.subT)||0)*(Number(live.playbackFrameSec)||C5A2_PLAYBACK_FRAME_SEC)});st.povWeaponDiagnostics=weapon.diagnostics;return;}
   weapon.group.visible=Boolean(pov&&ch?.alive);
   if(!weapon.group.visible){weapon.flash.visible=false;weapon.diagnostics={visible:false,gun:weapon.gun||null,family:weapon.family||null,weaponParts:12,fireCount:weapon.fireCount,authority:"frame.muzzles + player.shooting"};st.povWeaponDiagnostics=weapon.diagnostics;return;}
   const family=c5a1WeaponFamily(ch.gun),profile={pistol:{scale:0.86,x:0.02,y:0.04,z:0.02,color:0xb9c2cf},smg:{scale:0.96,x:0,y:0,z:0,color:0x9ca8b6},rifle:{scale:1.04,x:-0.01,y:0,z:0,color:0x7f8b98},sniper:{scale:1.18,x:-0.03,y:0.01,z:0.01,color:0x9dc4d4},shotgun:{scale:1.08,x:-0.01,y:-0.01,z:0,color:0xb68e72}}[family]||{scale:1,x:0,y:0,z:0,color:0x9ca8b6};
@@ -2366,23 +2446,26 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
     const el=renderer.domElement;let drag=null,pinch=null;
     const panBy=(dx,dy,s,th,tx,tz)=>{const sinT=Math.sin(th),cosT=Math.cos(th),rx=cosT,rz=-sinT,fx=-sinT,fz=-cosT;cam.dTgt.x=clamp(tx-dx*s*rx-dy*s*fx,-74,74);cam.dTgt.z=clamp(tz-dx*s*rz-dy*s*fz,-74,74);};
     const cancelPresetTransition=()=>{cam.presetTransition=null;};
-    const onDown=e=>{const p=e.touches?e.touches[0]:e;const wantPan=(!e.touches)&&(e.button===2||e.shiftKey);
+    const lockedPov=()=>sceneVersion!=="legacy"&&liveRef.current?.cameraMode==="pov";
+    const onDown=e=>{if(lockedPov())return;const p=e.touches?e.touches[0]:e;const wantPan=sceneVersion!=="legacy"?Boolean(e.touches||e.button===0&&!e.shiftKey):(!e.touches)&&(e.button===2||e.shiftKey);
       cancelPresetTransition();
       const chasing=!!(stateRef.current._chase&&stateRef.current._chase.alive);
-      if(!chasing){cam.autoFollow=false;cam.overview=false;cam.viewPreset=null;}
+      if(!chasing||sceneVersion!=="legacy"){cam.autoFollow=false;cam.overview=false;cam.viewPreset=null;}
       drag=wantPan?{pan:true,x:p.clientX,y:p.clientY,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta,r:cam.dRadius}:{pan:false,x:p.clientX,y:p.clientY,th:cam.dTheta,ph:cam.dPhi,chasing,cy:cam.chaseYaw||0,cp:cam.chasePitch||0};
       el.style.cursor=wantPan?"move":"grabbing";};
-    const onMove=e=>{if(!drag)return;const p=e.touches?e.touches[0]:e;
+    const onMove=e=>{if(!drag||lockedPov())return;const p=e.touches?e.touches[0]:e;
+      if(sceneVersion!=="legacy"&&Math.hypot(p.clientX-drag.x,p.clientY-drag.y)>6){drag.chasing=false;stateRef.current._chase=null;onSelectPlayer?.(null);}
       if(drag.pan)panBy(p.clientX-drag.x,p.clientY-drag.y,drag.r*0.0018,drag.th,drag.tx,drag.tz);
       else if(drag.chasing){if(stateRef.current.sceneVersion!=="legacy"&&liveRef.current?.cameraMode==="pov")return;cam.chaseYaw=drag.cy-(p.clientX-drag.x)*0.006;cam.chasePitch=clamp(drag.cp-(p.clientY-drag.y)*0.005,-0.55,0.78);} // 觀戰追焦環繞；Major POV由選手aim控制
       else{cam.dTheta=drag.th-(p.clientX-drag.x)*0.0055;cam.dPhi=clamp(drag.ph-(p.clientY-drag.y)*0.0055,0.1,1.5);}};
     const onUp=()=>{drag=null;pinch=null;el.style.cursor="grab";};
-    const onWheel=e=>{e.preventDefault();cancelPresetTransition();const chasing=!!(stateRef.current._chase&&stateRef.current._chase.alive);const pov=chasing&&liveRef.current?.cameraMode==="pov";cam.autoFollow=false;cam.viewPreset=null;
+    const onWheel=e=>{e.preventDefault();if(lockedPov())return;cancelPresetTransition();const chasing=!!(stateRef.current._chase&&stateRef.current._chase.alive);const pov=chasing&&liveRef.current?.cameraMode==="pov";cam.autoFollow=false;cam.viewPreset=null;
       if(pov){const legacy=stateRef.current.sceneVersion==="legacy";cam.povFov=clamp((cam.povFov||(legacy?42:72))+(e.deltaY>0?3:-3),legacy?36:50,legacy?72:92);camera.fov=cam.povFov;camera.updateProjectionMatrix();return;}
       const min=chasing?fpsChaseMinimumRadius(stateRef.current.sceneVersion):18,max=chasing?55:200;cam.manualRadius=clamp((cam.manualRadius??cam.dRadius)*(e.deltaY>0?1.1:0.9),min,max);cam.dRadius=cam.manualRadius;};
-    const onTouchStart=e=>{cancelPresetTransition();cam.autoFollow=false;cam.viewPreset=null;if(e.touches.length===2){drag=null;const[a,b]=e.touches;pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),r:cam.dRadius,cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta};}else onDown(e);};
+    const onTouchStart=e=>{if(lockedPov())return;cancelPresetTransition();cam.autoFollow=false;cam.viewPreset=null;if(e.touches.length===2){drag=null;const[a,b]=e.touches;pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),r:cam.dRadius,cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,tx:cam.dTgt.x,tz:cam.dTgt.z,th:cam.dTheta};}else onDown(e);};
     const onTouchMove=e=>{e.preventDefault();
-      if(e.touches.length===2&&pinch){const[a,b]=e.touches;const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);const pov=stateRef.current._chase?.alive&&liveRef.current?.cameraMode==="pov";
+      if(lockedPov())return;
+      if(e.touches.length===2&&pinch){if(sceneVersion!=="legacy"){stateRef.current._chase=null;onSelectPlayer?.(null);}const[a,b]=e.touches;const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);const pov=stateRef.current._chase?.alive&&liveRef.current?.cameraMode==="pov";
         if(pov){const legacy=stateRef.current.sceneVersion==="legacy";cam.povFov=clamp((cam.povFov||(legacy?42:72))*pinch.d/Math.max(1,d),legacy?36:50,legacy?72:92);camera.fov=cam.povFov;camera.updateProjectionMatrix();return;}
         const min=stateRef.current._chase?.alive?fpsChaseMinimumRadius(stateRef.current.sceneVersion):18;cam.dRadius=clamp(pinch.r*pinch.d/Math.max(1,d),min,200);cam.manualRadius=cam.dRadius;
         const cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2;panBy(cx-pinch.cx,cy-pinch.cy,cam.dRadius*0.0018,pinch.th,pinch.tx,pinch.tz);}
@@ -2394,7 +2477,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
     el.addEventListener("contextmenu",onContextMenu);
     // 點擊選取選手
     const ray=new THREE.Raycaster();const ndc=new THREE.Vector2();let downPt=null;let clickTarget=null;
-    const onClickDown=e=>{if(e.target!==el)return;const p=e.touches?e.touches[0]:e;clickTarget=el;downPt={x:p.clientX,y:p.clientY};};
+    const onClickDown=e=>{if(e.target!==el||lockedPov()||!e.touches&&e.button!==0)return;const p=e.touches?e.touches[0]:e;clickTarget=el;downPt={x:p.clientX,y:p.clientY};};
     const onClickUp=e=>{
       if(!downPt||e.target!==clickTarget){downPt=null;clickTarget=null;return;}const p=e.changedTouches?e.changedTouches[0]:e;
       if(Math.hypot(p.clientX-downPt.x,p.clientY-downPt.y)>6){downPt=null;clickTarget=null;return;}
@@ -2409,7 +2492,16 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
     const onMouseUp=e=>{onUp();onClickUp(e);};
     const onTouchStartAll=e=>{onTouchStart(e);onClickDown(e);};
     const onTouchEndAll=e=>{onUp();onClickUp(e);};
+    const focusPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0),focusPoint=new THREE.Vector3();
+    const onDoubleClick=e=>{if(sceneVersion==="legacy"||lockedPov())return;
+      const rect=el.getBoundingClientRect();ndc.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(ndc,camera);
+      const hit=ray.intersectObjects(stateRef.current.raycastTargets,true)[0];
+      if(hit)focusPoint.copy(hit.point);else if(!ray.ray.intersectPlane(focusPlane,focusPoint))return;
+      cancelPresetTransition();onSelectPlayer?.(null);stateRef.current._chase=null;cam.autoFollow=false;cam.overview=false;cam.viewPreset=null;
+      cam.dTgt.set(clamp(focusPoint.x,-48,48),clamp(focusPoint.y,0,8),clamp(focusPoint.z,-48,48));cam.dRadius=clamp(cam.dRadius,24,65);cam.manualRadius=cam.dRadius;
+    };
     el.addEventListener("mousedown",onMouseDown);
+    el.addEventListener("dblclick",onDoubleClick);
     window.addEventListener("mousemove",onMove);
     window.addEventListener("mouseup",onMouseUp);
     el.addEventListener("wheel",onWheel,{passive:false});
@@ -2422,6 +2514,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
       window.removeEventListener("mouseup",onMouseUp);
       el.removeEventListener("contextmenu",onContextMenu);
       el.removeEventListener("mousedown",onMouseDown);
+      el.removeEventListener("dblclick",onDoubleClick);
       el.removeEventListener("wheel",onWheel);
       el.removeEventListener("touchstart",onTouchStartAll);
       el.removeEventListener("touchmove",onTouchMove);
@@ -2473,6 +2566,11 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
         const listener=live.audioListener||(live.audioListener={x:0,y:0,rightX:1,rightY:0});
         const focus=live.cameraMode==="pov"&&st._chase?.alive?st.camera.position:st.cam.tgt;
         listener.x=focus.x+50;listener.y=focus.z+50;listener.rightX=right.x;listener.rightY=right.z;
+      }
+      if(frame&&st.sceneVersion!=='legacy'){
+        const observer=live.cameraMode==='pov'?frame.players.find(p=>p.id===live.selected&&!p.dead):null;
+        const inside=Boolean(observer&&fpsPointInSmoke(observer.pos,frame.smokes));
+        scene.fog.color.setHex(inside?0x929b9f:0x070b12);scene.fog.near=inside?.04:150;scene.fog.far=inside?.8:360;st.smokePovInside=inside;
       }
       if(frame)layoutFpsWorldLabels(st,frame,live);
       updateFpsPovWeapon(st,frame,st._chase,Boolean(live.cameraMode==="pov"),dt);
@@ -2531,6 +2629,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
       const st=stateRef.current;if(st)st.running=false;
       cancelAnimationFrame(st?.raf);
       st?.c5aGunplayFx?.dispose?.();
+      st?.hitFx?.dispose?.();
       st?.utilityFx?.dispose?.();
       st?.players?.forEach((player)=>player.rigged?.dispose?.());
       st?.roofShaderWarmup?.dispose?.();
@@ -2623,6 +2722,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
     };
     const clear=g=>{for(let i=g.children.length-1;i>=0;i--){const c=g.children[i];c.traverse(disp);g.remove(c);}};
     st.c5aGunplayFx?.dispose?.();
+    st.hitFx?.dispose?.();st.hitFx=null;
     st.c5aGunplayFx=null;
     st.utilityFx?.dispose?.();
     st.utilityFx=null;
@@ -2769,6 +2869,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
       spark:mkPool(24,()=>new THREE.Sprite(new THREE.SpriteMaterial({map:tex.glow,color:0xfff1c0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}))),
     };
     st.c5aGunplayFx=createGunplayPresentation({group:fxGroup,scene,tex,beamGeometry:st.beamGeo,mapKey,sceneVersion});
+    st.hitFx=sceneVersion!=="legacy"?createFpsHitPresentation({group:fxGroup,mapKey,walls:solidObstacles,sampleGroundHeight:st.sampleGroundHeight}):null;
     st.utilityFx=createUtilityPresentation({group:fxGroup,textures:tex,sphereGeometry:sphereGeo,sampleGroundHeight:st.sampleGroundHeight,major:sceneVersion!=="legacy"});
     // 槍口閃光點光（共用，循環）
     st.flashLights=[0,1,2].map(()=>{const l=new THREE.PointLight(0xffe6a0,0,14,2);l.visible=false;scene.add(l);return l;});
@@ -2776,7 +2877,7 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",roster=[],liveRef,onSelectPl
     // 炸彈信標
     const bombMat=new THREE.MeshStandardMaterial({color:0x252a33,emissive:0x4d1d1d,emissiveIntensity:1.2,roughness:0.4,metalness:0.22});bombMat.__keep=true;
     const bomb=new THREE.Group();
-    const bombCase=new THREE.Mesh(new THREE.BoxGeometry(0.95,0.28,0.62),bombMat);bombCase.position.y=0.28;bomb.add(bombCase);
+    const bombCase=new THREE.Mesh(new THREE.BoxGeometry(FPS_C4_CASE.width,FPS_C4_CASE.height,FPS_C4_CASE.depth),bombMat);bombCase.position.y=0.28;bomb.add(bombCase);
     const bombPanelMat=new THREE.MeshStandardMaterial({color:0x11151c,emissive:0x4f2600,emissiveIntensity:0.5,roughness:0.55,metalness:0.32});bombPanelMat.__keep=true;
     const bombPanel=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.035,0.38),bombPanelMat);bombPanel.position.set(0,0.44,0);bomb.add(bombPanel);
     const bombKeyMat=new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0x6b3f00,emissiveIntensity:0.75,roughness:0.38,metalness:0.25});bombKeyMat.__keep=true;
@@ -2975,7 +3076,11 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null,playbackDe
     if(import.meta.env?.DEV)console.warn("[FPS] renderer identity contract violation",identity);
   }
   st.players.forEach(P=>{
-    const p=fmap[P.id];
+    const savedPlayer=fmap[P.id];
+    const deathClock=st.sceneVersion!=="legacy"?fpsDeathClockPlayer({player:savedPlayer,previousPlayer:pmap[P.id],events:frame.events,roundSec:frame.roundSec+sub*(nf?.rnd===frame.rnd?C5A2_SIM_STEP_SEC:0),sameRound:pf?.rnd===frame.rnd}):{player:savedPlayer,pendingDeath:false};
+    const p=deathClock.player;
+    P.g.userData.pendingDeath=deathClock.pendingDeath;
+    P.g.userData.deathAtSec=deathClock.deathAtSec;
     if(!p){
       // Identity miss is not authoritative death. Keep the last presentation
       // state visible as a recoverable diagnostic instead of silently hiding it.
@@ -2991,12 +3096,14 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null,playbackDe
     const pp=pmap[P.id];
     const np=nmap[P.id];const sameRound=nf&&frame&&nf.rnd===frame.rnd;
     let x=p.pos.x,y=p.pos.y,va=p.va;
-    if(np&&sameRound&&!p.dead&&!np.dead){x=lerp(p.pos.x,np.pos.x,sub);y=lerp(p.pos.y,np.pos.y,sub);va=lerpAngle(p.va,np.va,sub);}
+    // Advance continuously to the saved death location; excluding next.dead
+    // froze the last living snapshot, then teleported the victim at the edge.
+    if(np&&sameRound&&!p.dead){x=lerp(p.pos.x,np.pos.x,sub);y=lerp(p.pos.y,np.pos.y,sub);va=lerpAngle(p.va,np.va,sub);}
     const elevation=np&&sameRound?lerp(p.elevation||0,np.elevation||0,sub):(p.elevation||0);
     P.g.position.set(W.vx(x),elevation,W.vz(y));
     st.c5a1AuthoritativeDriftMax=Math.max(st.c5a1AuthoritativeDriftMax,Math.hypot(P.g.position.x-W.vx(x),P.g.position.z-W.vz(y)));
     const outgoingSec=sameRound?Number(nf.roundSec)-Number(frame.roundSec):0;
-    const presentationVelocity=np&&sameRound&&!p.dead&&!np.dead&&outgoingSec>0?{x:(np.pos.x-p.pos.x)/outgoingSec,y:(np.pos.y-p.pos.y)/outgoingSec}:{x:0,y:0};
+    const presentationVelocity=np&&sameRound&&!p.dead&&outgoingSec>0?{x:(np.pos.x-p.pos.x)/outgoingSec,y:(np.pos.y-p.pos.y)/outgoingSec}:{x:0,y:0};
     P.rigged?.setFacingDegrees?.(va);
     P.rigged?.update?.({sampleGroundHeight:st.sampleGroundHeight,events:frame.events,nextEvents:sameRound?nf?.events:[],defuse:frame.defuse,player:p,previousPlayer:pp,nextPlayer:np,frameRound:frame.rnd,previousFrameRound:pf?.rnd,frameIndex,dt,playbackDeltaSec,playbackSpeed:live.speed,presentationVelocity:st.sceneVersion!=="legacy"?presentationVelocity:undefined,playbackActive:Boolean(live.playing),seekNonce:live.seekNonce,roundTimeMs:(frame.roundSec+(sameRound?sub*C5A2_SIM_STEP_SEC:0))*1000});
     if(P.rigged){st.c5a1HitDriftMax=Math.max(st.c5a1HitDriftMax,P.rigged.maxHitPositionDrift||0);st.c5a1HitDriftSamples=st.players.reduce((sum,player)=>sum+(player.rigged?.hitPositionDriftSamples||0),0);}
@@ -3038,6 +3145,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null,playbackDe
     }
     P.rigged?.setFacingDegrees?.(va);
     const sel=live.selected===P.id;
+    P.dead.visible=Boolean(p.dead&&(st.sceneVersion==="legacy"||live.showAnalysis&&live.cameraMode!=="pov"));
     if(p.dead){
       P.body.visible=primitiveBodyAllowed(st,P);P.bombBag.visible=false;P.hpGroup.visible=false;P.nameSpr.visible=false;P.selBeam.visible=false;
       P.deadMat.opacity=0.8;P.ringMat.opacity=0.0;P.ring.visible=false;P.disc.visible=false;
@@ -3133,6 +3241,7 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null,playbackDe
   if(st.c5aGunplayFx){
     st.c5aFxEvidence=st.c5aGunplayFx.update({frame,previousFrame:pf,time,W,frameIndex,sub,resolveMuzzle:st.resolveWeaponMuzzle,resolveMuzzleDirection:st.resolveWeaponMuzzleDirection});
   }
+  if(st.hitFx){st.hitReducedMotion??=window.matchMedia('(prefers-reduced-motion: reduce)').matches;st.hitFxEvidence=st.hitFx.update({sim:live.sim,frame,sub,camera:st.camera,reducedMotion:st.hitReducedMotion});}
 
   if(st.utilityFx){
     st.utilityFxEvidence=st.utilityFx.update({frame,nextFrame:nf,time,W,frameIndex,sub});
@@ -3144,10 +3253,10 @@ function updateDynamic(st,frame,nf,pf,sub,live,W,dt=0,frameIndex=null,playbackDe
 
   // 炸彈信標
   if(st.bomb){const B=st.bomb;
-    if(frame.planted&&frame.c4pos){B.grp.visible=true;B.grp.position.set(W.vx(frame.c4pos.x),st.sceneVersion==="legacy"?0:fpsMajorElevation(st.mapKey,frame.c4pos),W.vz(frame.c4pos.y));
-      const blink=0.5+0.5*Math.abs(Math.sin(time*(frame.c4t&&frame.c4t<5?12:5)));
+    if(frame.planted&&frame.c4pos){B.grp.visible=true;B.grp.position.set(W.vx(frame.c4pos.x),st.sceneVersion==="legacy"?0:st.sampleGroundHeight(W.vx(frame.c4pos.x),W.vz(frame.c4pos.y))-.14,W.vz(frame.c4pos.y));
+      const blink=st.sceneVersion==='legacy'?0.5+0.5*Math.abs(Math.sin(time*(frame.c4t&&frame.c4t<5?12:5))):.25+.75*fpsBombBeepPulse(Math.max(0,(frame.bombTimeRemainingSec??frame.c4t*2)-sub*C5A2_SIM_STEP_SEC));
       B.mat.emissiveIntensity=0.6+blink*1.4;B.label.material.opacity=0.82+blink*0.18;if(B.light)B.light.intensity=blink*4;
-    }else if(frame.droppedBomb){B.grp.visible=true;B.grp.position.set(W.vx(frame.droppedBomb.pos.x),st.sceneVersion==="legacy"?0:fpsMajorElevation(st.mapKey,frame.droppedBomb.pos),W.vz(frame.droppedBomb.pos.y));
+    }else if(frame.droppedBomb){B.grp.visible=true;B.grp.position.set(W.vx(frame.droppedBomb.pos.x),st.sceneVersion==="legacy"?0:st.sampleGroundHeight(W.vx(frame.droppedBomb.pos.x),W.vz(frame.droppedBomb.pos.y))-.14,W.vz(frame.droppedBomb.pos.y));
       B.mat.emissiveIntensity=0.5+0.4*Math.abs(Math.sin(time*4));B.label.material.opacity=0.94;if(B.light)B.light.intensity=1.2;
     }else B.grp.visible=false;
   }
@@ -3199,6 +3308,12 @@ function layoutFpsWorldLabels(st,frame,live){
   const canvas=st.renderer.domElement,w=canvas.clientWidth,h=canvas.clientHeight;
   const point=st._labelProjection||(st._labelProjection=new THREE.Vector3()),rects=[];
   const shooting=new Set((frame.muzzles||[]).map(e=>e.attackerId));
+  const observer=live.cameraMode==='pov'?frame.players.find(p=>p.id===live.selected&&!p.dead):null;
+  if(observer){
+    st.povOverlayVisibility??=createFpsPovOverlayVisibility({lineBlocked,smokeBlocks});
+    const hidden=st.povOverlayVisibility.read({frame,observer,walls:st.mapWalls});
+    for(const P of st.players)if(hidden.has(P.id)){P.nameSpr.visible=false;P.hpGroup.visible=false;}
+  }
   const actors=st.players.filter(P=>P.g.visible&&P.nameSpr.visible).map(P=>{
     const p=frame.players.find(a=>a.id===P.id);
     return{P,priority:(live.selected===P.id?100:0)+(shooting.has(P.id)?20:0)+(p?.hasBomb?10:0)};
@@ -3355,8 +3470,10 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
     const look=new THREE.Vector3(W.vx(ch.x+Math.cos(va)*12),eyeHeight+Math.sin(pitch)*4.5,W.vz(ch.y+Math.sin(va)*12));
     const k=1-Math.pow(0.0015,Math.max(0,dt));
     if(authoritativePov||cam.povPosition.lengthSq()===0){cam.povPosition.copy(eye);cam.povLookAt.copy(look);}else{cam.povPosition.lerp(eye,k);cam.povLookAt.lerp(look,k);}
-    st.camera.fov=cam.povFov||(st.sceneVersion==="legacy"?42:72);st.camera.updateProjectionMatrix();st.camera.position.copy(cam.povPosition);st.camera.lookAt(cam.povLookAt);
+    const scopePlayer=frame.players.find(p=>p.id===ch.id),scopeNext=st.liveRef.current.sim.frames[st.liveRef.current.fIdx+1],scope=st.sceneVersion==='legacy'?{active:false}:resolveFpsSniperScope({player:scopePlayer,pov,roundSec:frame.roundSec+sub*C5A2_SIM_STEP_SEC,events:frame.muzzles,nextEvents:scopeNext?.rnd===frame.rnd?scopeNext.muzzles:[]});st.sniperScope=scope;
+    st.camera.fov=scope.active?scope.fov:cam.povFov||(st.sceneVersion==="legacy"?42:72);st.camera.updateProjectionMatrix();st.camera.position.copy(cam.povPosition);st.camera.lookAt(cam.povLookAt);
   }else{
+    st.sniperScope={active:false};
     st.camera.fov=42;st.camera.updateProjectionMatrix();
     const k=1-Math.pow(0.0015,dt);
     const transition=cam.presetTransition;
@@ -3379,7 +3496,7 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
   // Presentation-only recoil：以 authoritative frame / shooting edge 建立
   // 一次事件，使用固定 hash + 衰減 envelope，不在 RAF 內抽亂數，避免
   // 後座變成週期性 camera jitter，也不建立第二套 camera authority。
-  if(chasing&&ch.shooting){
+  if(chasing&&ch.shooting&&!(pov&&st.sceneVersion!=='legacy'&&c5a1WeaponFamily(ch.gun)==='sniper')){
     const recoilToken=`${ch.id}:${frame?.fi??"?"}:${ch.shootingValue??1}`;
     if(st.lastRecoilToken!==recoilToken){st.lastRecoilToken=recoilToken;st.recoilStartedAt=st.time;st.recoilSeed=hsh(recoilToken);}
     const recoilAge=clamp((st.time-(st.recoilStartedAt??st.time))/0.14,0,1),envelope=1-recoilAge;
@@ -3390,6 +3507,7 @@ function updateCamera(st,frame,sub,dt,W,cameraMode="tactical"){
     st.camera.position.y+=Math.cos(seed*0.013)*kick*0.72;
     st.camera.position.z+=Math.sin(seed*0.011+1.2)*kick*0.82;
   }
+  if(pov&&st.sniperScope?.recoil>0){st.scopeReducedMotion??=window.matchMedia('(prefers-reduced-motion: reduce)').matches;if(!st.scopeReducedMotion)st.camera.rotateX(.014*st.sniperScope.recoil);}
   fadeOccluders(st,frame,W,pov);
   // An explicit camera preset owns its composition. Do not let the generic
   // all-alive recovery clear that preset when a deliberate hotspot framing
@@ -3569,15 +3687,17 @@ function PlayerRow({p,selected,onClick,major=false}){
   const nf=p.nades||[];const flashN=nf.filter(n=>n==="flash").length;
   const roleLabel=FPS_ROLE_ZH[p.bestFpsRole]||p.fpsRole||ROLE_ZH[p.role]||p.role;
   const weaponTitle=g.name||"武器";
+  const duty=fpsRoleDutyView(p),carrying=Boolean(!p.dead&&p.hasBomb);
   return(
-    <button data-esmo-fps-player-card={p.id} onClick={()=>onClick(p.id)} aria-label={`${p.name} ${roleLabel}`} style={{display:"flex",alignItems:"center",gap:6,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",textAlign:"left",
-      background:selected?`${col}1f`:"rgba(255,255,255,0.025)",border:`1px solid ${selected?col+"99":"transparent"}`,borderRadius:8,padding:"5px 7px",cursor:"pointer",opacity:p.dead?0.45:1,position:"relative",overflow:"visible"}}>
+    <button data-esmo-fps-player-card={p.id} data-cs-c4-carrier={carrying?'true':'false'} data-cs-task={duty.duty} onClick={()=>onClick(p.id)} aria-label={`${p.name} ${duty.label}${carrying?'，攜帶 C4':''}，${duty.duty}`} style={{display:"flex",alignItems:"center",gap:6,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",textAlign:"left",
+      background:carrying?`${GC.gold}22`:selected?`${col}1f`:"rgba(255,255,255,0.025)",border:`1px solid ${carrying?GC.gold:selected?col+"99":"transparent"}`,borderRadius:8,padding:"5px 7px",cursor:"pointer",opacity:p.dead?0.45:1,position:"relative",overflow:"visible"}}>
       <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:col}}/>
-      <div title={roleLabel} style={{width:30,height:18,borderRadius:5,background:`${col}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:900,flexShrink:0,color:"#edf2f7"}}>{p.dead?"陣亡":roleLabel}</div>
+      <div title={`${duty.label} · 專長：${roleLabel}`} style={{width:30,height:18,borderRadius:5,background:`${col}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:900,flexShrink:0,color:"#edf2f7"}}>{p.dead?"陣亡":duty.label}</div>
       <div style={{flex:1,minWidth:0,maxWidth:"100%"}}>
         <div style={{display:"flex",alignItems:"center",gap:4}}>
-          <span style={{color:"#e8ebf0",fontSize:10,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}{p.hasBomb&&<span style={{marginLeft:4}}><SemanticIcon type="c4" title="C4"/></span>}</span>
+          <span style={{color:"#e8ebf0",fontSize:10,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</span>{carrying&&<span data-testid="cs-c4-carrier-badge" style={{flexShrink:0,background:GC.gold,color:GC.bg,padding:'2px 5px',borderRadius:4,fontSize:9,fontWeight:900}}>▣ C4</span>}
         </div>
+        {major&&<div title={`${duty.label}：${duty.job}`} style={{color:GC.blueL,fontSize:8,marginTop:2}}>{duty.label} · {duty.duty}</div>}
         <div style={{display:"flex",alignItems:"center",gap:4,marginTop:1,minWidth:0,flexWrap:"wrap",rowGap:2,overflow:"visible"}}>
           <span title={weaponTitle} style={{color:p.dead?C.gray2:"#aeb4be",fontSize:8,fontWeight:700,display:"inline-flex",alignItems:"center",gap:3,flex:"1 1 72px",minWidth:0,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><SemanticIcon type="weapon" title={weaponTitle}/>{g.name}</span>
           <span style={{fontSize:8,opacity:p.dead?0.4:0.95,display:"inline-flex",alignItems:"center",gap:3,flex:"0 1 auto",minWidth:0,flexWrap:"wrap"}}>
@@ -3653,13 +3773,14 @@ function C5CPresentationHUD({view,frame=null,revision=0}){
   const feed=view.feed||[];
   const multi=view.multiKill;
   const carrier=frame?.players?.find(player=>player.side==="t"&&!player.dead&&player.hasBomb);
+  const planting=Boolean(carrier?.state==="安裝中"&&carrier.plantProgressSec>0);
   const dropped=Boolean(frame?.droppedBomb);
   const accent=objective.planted?C.gold:C.ctL;
   const timer=objective.timer==null?null:Math.max(0,Math.ceil(Number(objective.timer)*2));
   return(<>
     <div data-testid="cs-c5c-presentation-hud" data-c5c-presentation-revision={revision} style={{position:"absolute",inset:0,zIndex:22,pointerEvents:"none"}}>
-      <div data-testid="cs-c5c-bomb-status" data-cs-bomb-state={objective.planted?"planted":dropped?"dropped":carrier?"carried":"unassigned"} style={{position:"absolute",top:32,left:8,maxWidth:"58%",padding:"4px 7px",borderRadius:6,background:objective.planted?"rgba(73,48,5,0.9)":dropped?"rgba(57,31,20,0.9)":"rgba(6,9,15,0.72)",border:`1px solid ${objective.planted||dropped?C.gold:"rgba(255,255,255,0.12)"}`,color:objective.planted||dropped?C.gold:"rgba(255,255,255,0.72)",fontSize:9,fontWeight:800,boxShadow:objective.planted?`0 0 16px ${C.gold}33`:"none"}}>
-        {objective.planted?<>C4 已安裝{objective.position&&<span style={{marginLeft:5,color:"#fff"}}>· {objective.state==="defusing"?"拆除中":String(objective.state||"安裝")}</span>}{timer!=null&&<span style={{marginLeft:6,fontVariantNumeric:"tabular-nums"}}>{timer}s</span>}{objective.defuse&&<span style={{marginLeft:6,color:"#fff"}}>· {objective.defuse} 拆除中</span>}</>:dropped?<>C4 已掉落 · 可拾取</>:carrier?<>C4 由 {carrier.name} 攜帶</>:<>C4 未交付</>}
+      <div data-testid="cs-c5c-bomb-status" data-cs-bomb-state={objective.planted?"planted":planting?"planting":dropped?"dropped":carrier?"carried":"unassigned"} style={{position:"absolute",top:32,left:8,maxWidth:"58%",padding:"4px 7px",borderRadius:6,background:objective.planted?"rgba(73,48,5,0.9)":dropped?"rgba(57,31,20,0.9)":"rgba(6,9,15,0.72)",border:`1px solid ${objective.planted||dropped?C.gold:"rgba(255,255,255,0.12)"}`,color:objective.planted||dropped?C.gold:"rgba(255,255,255,0.72)",fontSize:9,fontWeight:800,boxShadow:objective.planted?`0 0 16px ${C.gold}33`:"none"}}>
+        {objective.planted?<>C4 已安裝{objective.position&&<span style={{marginLeft:5,color:"#fff"}}>· {objective.state==="defusing"?"拆除中":String(objective.state||"安裝")}</span>}{timer!=null&&<span style={{marginLeft:6,fontVariantNumeric:"tabular-nums"}}>{timer}s</span>}{objective.defuse&&<span style={{marginLeft:6,color:"#fff"}}>· {objective.defuse} 拆除中</span>}</>:planting?<><span>C4 安裝中 · {carrier.name}</span><progress aria-label="C4 安裝進度" value={carrier.plantProgressSec} max={3} style={{display:'block',width:'100%',height:5,accentColor:C.gold,marginTop:3}}/></>:dropped?<>C4 已掉落 · 可拾取</>:carrier?<>C4 由 {carrier.name} 攜帶</>:<>C4 未交付</>}
       </div>
       <div data-testid="cs-c5c-kill-feed" style={{position:"absolute",top:42,right:8,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3,maxWidth:"68%"}}>
         {feed.map((entry)=><div key={entry.id} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 7px",borderRadius:6,background:entry.critical?"rgba(61,45,5,0.92)":"rgba(0,0,0,0.82)",border:`1px solid ${entry.critical?C.gold:sideColor(entry.killerSide)}88`,fontSize:9,whiteSpace:"nowrap",animation:"slideL 0.25s"}}>
@@ -3787,6 +3908,7 @@ function EsportsFPS3D({
   const [cameraMode,setCameraMode]=useState("tactical");
   const [showLabels,setShowLabels]=useState(true);
   const [showRoutes,setShowRoutes]=useState(false);
+  const [showAnalysis,setShowAnalysis]=useState(false);
   const [showSetup,setShowSetup]=useState(false);
   const [casts,setCasts]=useState([]);
   const [comms,setComms]=useState([]);
@@ -3836,7 +3958,7 @@ function EsportsFPS3D({
     }
     publishFpsFrame(next,reason);
   };
-  liveRef.current={...liveRef.current,sim,fIdx:publishedFidx,playing,speed,playbackFrameSec:C5A2_PLAYBACK_FRAME_SEC,selected,cameraMode,cameraPreset,showLabels,showRoutes:FPS_DEBUG_ENABLED&&showRoutes,seekNonce:seekNonce.current,seekFrame:value=>{const next=clamp(Math.floor(Number(value)||0),0,total-1);beginFpsSeek(next,"diagnostic-seek");},
+  liveRef.current={...liveRef.current,sim,fIdx:publishedFidx,playing,speed,playbackFrameSec:C5A2_PLAYBACK_FRAME_SEC,selected,cameraMode,cameraPreset,showLabels,showAnalysis,showRoutes:FPS_DEBUG_ENABLED&&showRoutes,seekNonce:seekNonce.current,seekFrame:value=>{const next=clamp(Math.floor(Number(value)||0),0,total-1);beginFpsSeek(next,"diagnostic-seek");},
     advance:()=>{const from=liveRef.current.fIdx;if(from>=total-1){liveRef.current.playing=false;setPlaying(false);return from;}const next=from+1;publishFpsFrame(next,"playback");return next;}};
 
   // 切換比賽/地圖 → 重置
@@ -3886,11 +4008,11 @@ function EsportsFPS3D({
       const frameStartMs=(Number(frame.roundSec)||0)*1000,frameEndMs=frameStartMs+C5A2_SIM_STEP_MS,playbackRate=Math.max(0.1,Number(speed)||1);
       (frame.muzzles||[]).filter(mz=>Number(mz.shotAtMs)>=frameStartMs&&Number(mz.shotAtMs)<frameEndMs).forEach(mz=>{
         const delaySec=Math.max(0,(Number(mz.shotAtMs)-frameStartMs)/1000/playbackRate);
-        A.burst(mz.weaponFamily||mz.cls,mz.kill,mz.distance,mz.eventId||mz.id,delaySec,mz.shotAtMs,mz.pos);
+        A.burst(mz.weaponFamily||mz.cls,mz.kill,mz.distance,mz.eventId||mz.id,delaySec,mz.shotAtMs,mz.pos,mz.gun);
       });
     }
     const presentationAudio=presentation?.drainAudio?.()||[];
-    if(dispatchAudio&&A){presentationAudio.forEach(cue=>A.cue?.(cue.type,{eventId:cue.eventId,distance:cue.distance,position:cue.position,scheduleDelaySec:Math.max(0,Number(cue.delaySec)||0)/Math.max(.1,Number(speed)||1)}));if(frame.droppedBomb&&!previousFrame?.droppedBomb)A.cue?.("bomb-dropped",{eventId:`bomb-dropped-${frame.rnd}-${fIdx}`,distance:12,position:frame.c4pos});}
+    if(dispatchAudio&&A){presentationAudio.forEach(cue=>A.cue?.(cue.type,{eventId:cue.eventId,distance:cue.distance,position:cue.position,variant:cue.variant,scheduleDelaySec:Math.max(0,Number(cue.delaySec)||0)/Math.max(.1,Number(speed)||1)}));if(frame.droppedBomb&&!previousFrame?.droppedBomb)A.cue?.("bomb-dropped",{eventId:`bomb-dropped-${frame.rnd}-${fIdx}`,distance:12,position:frame.c4pos});}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[fIdx,sim]);
 
@@ -3989,6 +4111,7 @@ function EsportsFPS3D({
           {sceneVersion==="legacy"&&!replayMode&&<C5CPresentationHUD view={presentationView} frame={frame} revision={presentationRevision}/>}
 
           <div className="fps-pov-feedback" data-fps-pov-feedback aria-hidden="true"><div className="fps-pov-flash" /><div className="fps-pov-hit" /><span className="fps-pov-blind-label">視線受閃光影響</span></div>
+          <div className="fps-sniper-scope" data-testid="cs-sniper-scope" data-active="false" aria-label="狙擊鏡四倍視野"><div className="fps-scope-lens"><i/><b/><span>4×</span></div></div>
           {cameraMode==="pov"&&selP&&!selP.dead&&(
             <div data-testid="cs-pov-reticle" data-cs-pov-shot-state={povShotActive?"active":"idle"} aria-label="第一人稱瞄準準星" style={{position:"absolute",left:"50%",top:"50%",width:36,height:36,transform:"translate(-50%,-50%)",zIndex:24,pointerEvents:"none",filter:"drop-shadow(0 1px 2px rgba(0,0,0,0.9))"}}>
               <span style={{position:"absolute",left:"50%",top:0,width:2,height:10,transform:"translateX(-50%)",borderRadius:2,background:povShotActive?C.gold:"#f8fafc"}} />
@@ -4140,6 +4263,8 @@ function EsportsFPS3D({
         {/* 工具列（賽前戰術已設定；地名常駐顯示；地圖隨機進入） */}
         <div style={{display:"flex",gap:6,marginTop:7,minWidth:0,flexWrap:"wrap"}}>
           {FPS_DEBUG_ENABLED&&<button onClick={()=>setShowRoutes(r=>!r)} style={toolBtn(showRoutes)}>🧭 路線</button>}
+          {sceneVersion!=="legacy"&&<button data-testid="cs-analysis-layer" aria-pressed={showAnalysis} onClick={()=>setShowAnalysis(value=>!value)} style={toolBtn(showAnalysis)}>陣亡位置{showAnalysis?"：顯示":"：隱藏"}</button>}
+          {sceneVersion!=="legacy"&&<span style={{color:C.gray2,fontSize:8.5,alignSelf:"center"}}>{mobile?"單指平移 · 雙指縮放／平移":"左拖平移 · 右拖旋轉 · 滾輪縮放 · 雙擊聚焦"}</span>}
           <div style={{flex:"1 1 180px",minWidth:0,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",padding:"0 4px",color:C.gray2,fontSize:8.5,lineHeight:1.35}}>
             <span style={{color:C.t,fontWeight:800}}>{replayEnvelope?.rawResult.tactic?.ours||tacticT?.name}</span><span style={{opacity:0.5}}>vs</span><span style={{color:C.ct,fontWeight:800}}>{replayEnvelope?.rawResult.tactic?.theirs||lib.ct[ctIdx]?.name}</span>{!replayMode&&<span style={{opacity:0.55}}>· 四階段{preMatchLayout.openness==="open"?"開放布局":preMatchLayout.openness==="structured"?"固定布局":"自適應布局"}</span>}
           </div>

@@ -1,5 +1,6 @@
 // Major-only utility authority. Durations use seconds; defuse progress retains
 // the established 3.5-unit completion threshold. No RNG or presentation state.
+import {fpsBombInteractionGeometry} from './fpsInteractionGeometry.js';
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const finitePosition = p => Number.isFinite(p?.x) && Number.isFinite(p?.y);
 
@@ -20,14 +21,23 @@ export function chooseFpsUtilityThrow({ players, type, target, alreadyThrownIds 
     .sort((a, b) => distance(a.pos, target) - distance(b.pos, target) || String(a.id).localeCompare(String(b.id)))[0] || null;
 }
 
-export function advanceFpsDefuse({ previous, players, bombPos, walls, lineBlocked, dtSec, timerSec, rateFor }) {
+export function selectFpsDefuser({previous,players,bombPos,walls,lineBlocked,timerSec,rateFor,isThreatened,canInteract=(p,b)=>fpsBombInteractionGeometry(p,b).eligible}) {
+  if(!finitePosition(bombPos))return null;
+  const options=players.filter(p=>p.side==='ct'&&!p.dead&&!(p.blindSec>0)&&!(p.picking>0)&&!p.interactionDisabled&&!['save','retreat'].includes(p.tacticalIntent?.kind)&&canInteract(p,bombPos)&&!lineBlocked(p.pos,bombPos,walls));
+  options.sort((a,b)=>(a.id===previous?.defuserId?-1:0)-(b.id===previous?.defuserId?-1:0)||distance(a.pos,bombPos)-distance(b.pos,bombPos)||String(a.id).localeCompare(String(b.id)));
+  return options.find(candidate=>{
+    const progress=candidate.id===previous?.defuserId?Number(previous?.progress)||0:0;
+    const duration=(3.5-progress)/Math.max(1e-12,rateFor(candidate));
+    const threatened=typeof isThreatened==='function'?isThreatened(candidate):players.some(p=>p.side==='t'&&!p.dead&&distance(p.pos,bombPos)<9&&!lineBlocked(p.pos,candidate.pos,walls));
+    return !threatened&&duration<=timerSec+1e-12;
+  })||null;
+}
+
+export function advanceFpsDefuse({ previous, players, bombPos, walls, lineBlocked, dtSec, timerSec, rateFor,canInteract,isThreatened }) {
   const oldId = previous?.defuserId ?? null;
-  const ct = players.filter(p => p.side === "ct" && !p.dead && p.tacticalIntent?.kind !== "save" && distance(p.pos, bombPos) < 6);
-  const candidate = ct.find(p => p.id === oldId) || ct[0] || null;
-  const contested = candidate && players.some(p => p.side === "t" && !p.dead && distance(p.pos, bombPos) < 9 && !lineBlocked(p.pos, candidate.pos, walls));
-  const actor = contested ? null : candidate;
+  const actor = selectFpsDefuser({previous,players,bombPos,walls,lineBlocked,timerSec,rateFor,canInteract,isThreatened});
   const interrupted = oldId !== null && actor?.id !== oldId;
-  const progress = actor ? (actor.id === oldId ? Number(previous?.progress) || 0 : 0) + Math.max(0, rateFor(actor)) * dtSec : 0;
+  const progress = actor ? (actor.id === oldId ? Number(previous?.progress) || 0 : 0) + Math.max(0, rateFor(actor)) * Math.min(dtSec,Math.max(0,timerSec)) : 0;
   // Decimal rates can accumulate a few binary rounding bits below 3.5 at
   // the exact completion tick. This bound does not grant another time step.
   const completed = Boolean(actor && progress >= 3.5 - 1e-12);

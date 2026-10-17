@@ -1,5 +1,6 @@
 // Major-only intent. Authored nodes/navigation own geometry; combat owns outcomes.
 const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
+import {fpsObjectiveTimePressure} from './fpsObjectiveDiscipline.js';
 export function fpsAssignTacticalDuties({players}) {
   const result={};
   for(const side of ['t','ct']){
@@ -24,7 +25,8 @@ export function fpsAttackStage({player,players,mode,roundSec,planted,sites,targe
   if(player.tacticalStage==='entry')return{stage:'entry',canAdvance:true,reason:'committed-entry'};
   const team=players.filter(p=>!p.dead&&p.side===player.side),enemy=players.filter(p=>!p.dead&&p.side!==player.side);
   const site=sites?.[target],known=intel.filter(i=>i.side===player.side&&roundSec>=i.observedAtSec&&roundSec-i.observedAtSec<=3);
-  const pressure=roundSec>=85,advantage=players.some(p=>p.side!==player.side)&&team.length>enemy.length;
+  const carrier=team.find(p=>p.hasBomb)||player;
+  const pressure=roundSec>=85||fpsObjectiveTimePressure({player:carrier,site,roundSec}),advantage=players.some(p=>p.side!==player.side)&&team.length>enemy.length;
   const committed=['regroup','utility'].includes(player.tacticalStage);
   if(mode==='pick'&&!committed&&!pressure&&!advantage)return{stage:'pick',canAdvance:false,reason:known.length?'hold-reported-angle':'await-information-or-opening'};
   const controlled=team.filter(p=>Number.isFinite(p.controlledSinceSec)).length>=Math.min(3,team.length)&&roundSec>=30;
@@ -89,7 +91,9 @@ export function planFpsBombRoute({ player, players, tactic, library, target, pha
     keys = ['tSpawn', 'mid', nodes.connector ? 'connector' : nodes.shortA ? 'shortA' : 'aConn', `${target}Site`];
     kind = 'split-mid';
   } else if (role === 'lurker' && !player.hasBomb && phase === 'opening') {
-    keys = primary.routes?.lurker || control; kind = 'lurk';
+    // Entry commitment may append the site below. Never mutate an authored
+    // library lane shared by later rounds or matches.
+    keys = [...(primary.routes?.lurker || control)]; kind = 'lurk';
   }
   if(['regroup','utility'].includes(stage)&&kind!=='fake-approach'&&role!=='lurker'){
     keys=keys.filter(k=>k!==`${target}Site`);kind=stage==='utility'?'utility-stage':'regroup';

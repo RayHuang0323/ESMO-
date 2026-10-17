@@ -1,0 +1,13 @@
+import fs from 'node:fs';import {createHash} from 'node:crypto';
+import {loadFpsMajorTestApi} from '../../../tools/lib/fpsMajorTestApi.mjs';
+import {createCsReplay,serializeCsReplay} from '../../../src/battle/fps/fpsReplay.js';
+import {gzipSync} from 'node:zlib';
+const map=process.argv[2]||'inferno';if(!['dust2','inferno'].includes(map))throw Error('Explicit map');
+const root='review/cs-major-upgrade/evidence/owner4g-review-20261016/';
+const source=fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8');
+const api=await loadFpsMajorTestApi(source),sim=api.simulateFps(map,api.TACTICS_DB[map].t[0],api.TACTICS_DB[map].ct[0],505002,api.ROSTER,{postPlantMode:'crossfire'},'major.v1');
+const before=JSON.parse(fs.readFileSync(root+'after-'+map+'-505002.json'));if(!sim.completed||sim.frames.length!==before.frames||JSON.stringify([sim.tScore,sim.ctScore])!==JSON.stringify(before.score))throw Error('Before fixture mismatch');
+const file=root+'after-'+map+'-505002-v1.replay.json.gz',rawResult=api.buildMatchResult(sim,{seed:505002}),wire=serializeCsReplay(createCsReplay(sim,{seed:505002,rawResult})),gzip=gzipSync(wire);
+if(Buffer.byteLength(wire)>256*1024*1024||gzip.length>64*1024*1024)throw Error('Replay exceeds unchanged production bounds');fs.writeFileSync(file,gzip,{flag:'wx'});
+fs.writeFileSync(root+'after-'+map+'-fixture-v2.json',JSON.stringify({file,sha256:createHash('sha256').update(gzip).digest('hex'),wireBytes:Buffer.byteLength(wire),gzipBytes:gzip.length,sourceSHA:before.sourceSHA,completed:sim.completed,frames:sim.frames.length,score:before.score,seed:505002,noFrameMutation:true,usesProductionReplayContract:true},null,2),{flag:'wx'});
+console.log(JSON.stringify({file,frames:sim.frames.length,wireBytes:Buffer.byteLength(wire)}));

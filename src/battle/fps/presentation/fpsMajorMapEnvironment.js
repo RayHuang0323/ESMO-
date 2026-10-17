@@ -4,6 +4,7 @@ import { FPS_MAJOR_MAP_ART } from "../fpsMapIdentity.js";
 import { fpsMajorElevation, FPS_MAJOR_PLATFORMS } from "../fpsMajorTerrain.js";
 import { decodeFpsAuthoredGeometry } from "./fpsAuthoredKit.js";
 import { majorPlantKind, appendMajorPlantAssembly } from "./fpsMajorPlantAssemblies.js";
+import { resolveFpsCoplanarSurfaces } from "./fpsCoplanarSurfaceOwnership.js";
 export { FPS_MAJOR_MAP_ART } from "../fpsMapIdentity.js";
 
 // 原創美術套件；legacy map key 僅作存檔相容。所有實體外框來自同一份
@@ -1296,8 +1297,10 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
   for(let i=0;i<treeCount;i++){const edge=i%3,n=Math.floor(i/3),x=edge===0?-35-(i%2)*3:10+n*15+(i%2)*4,z=edge===0?13+n*19+(i%2)*4:edge===1?-30-(i%2)*4:140+(i%2)*3,s=.85+(i%3)*.14;foliage.setMatrixAt(i,transform(x,.03,z,s,s,s,i*.9));}
   foliage.computeBoundingSphere();environment.add(foliage);
 
+  const surfaceOwnership=resolveFpsCoplanarSurfaces(environment);
+  for(const {old,geometry}of surfaceOwnership.replaced){ownedGeometries.delete(old);old.dispose();ownedGeometries.add(geometry);}
   const summary = {
-    enabled: true, version: "cs-major-scene.v1", mapKey, fullMap: true,
+    enabled: true, version: "cs-major-scene.v1", mapKey, fullMap: true, surfaceOwnership:surfaceOwnership.stats,
     mapIdentity: { id: mapKey, name: art.name, style: art.style },
     colliderSource: "c5a2SolidObstacles", collisionMutation: false,
     buildingCount: map.walls.length, coverBounds, roomFixtureBounds, landmark: art.landmark,

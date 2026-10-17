@@ -19,7 +19,7 @@
 // ============================================================================
 import React, { useEffect, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
-import { CS_SEATS, CS_SEAT_LANE_ZH } from "../../platform/contracts/matchSquad.js";
+import { CS_SEATS } from "../../platform/contracts/matchSquad.js";
 import MatchPrepFrame, { SquadSeatRow } from "../common/MatchPrepFrame.jsx";
 import { calcPower, bestPositions, personalityById } from "../../data/playerModel.js";
 import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
@@ -34,18 +34,18 @@ const MONO = "'Courier New',monospace";
 
 //  五個 CS 席位的呈現差異（**只允許到這裡為止**：名稱、圖示、色彩）
 const SEAT_STYLE = {
-  f1: { code: "ENTRY", emoji: "⚔️", color: "#f97316" },
-  f2: { code: "LURKER", emoji: "🕶", color: "#22c55e" },
-  f3: { code: "RIFLER", emoji: "🔫", color: "#a855f7" },
-  f4: { code: "AWP", emoji: "🎯", color: "#eab308" },
-  f5: { code: "IGL", emoji: "🧠", color: "#14b8a6" },
+  f1: { code: "1", emoji: "👤", color: ACC },
+  f2: { code: "2", emoji: "👤", color: ACC },
+  f3: { code: "3", emoji: "👤", color: ACC },
+  f4: { code: "4", emoji: "👤", color: ACC },
+  f5: { code: "5", emoji: "👤", color: ACC },
 };
 
 /** 指派先發（與 MOBA 的 BenchSheet 同一個 store action，不另建流程）。 */
 function CsBenchSheet({ seat, players, lineup, onClose }) {
   const setCsSeat = useProfileStore((s) => s.setCsSeat);
   const list = (players ?? []).filter((p) => p && typeof p.id === "string");
-  const want = CS_SEAT_LANE_ZH[seat];
+  const want = "彈性配置，不限定位";
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 45 }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }} />
@@ -54,7 +54,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 18px 12px" }}>
           <div>
             <div style={{ color: "white", fontSize: 15, fontWeight: 900 }}>指派先發 · {SEAT_STYLE[seat]?.code}</div>
-            <div style={{ color: "#52525b", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", marginTop: 2 }}>{want} · 席位 {seat}</div>
+            <div style={{ color: "#52525b", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", marginTop: 2 }}>{want} · 出賽選手 {SEAT_STYLE[seat]?.code}</div>
           </div>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: GC.gray, fontSize: 13 }}>✕</button>
         </div>
@@ -136,7 +136,7 @@ export default function CsPrepScreen({ onNext, onBack }) {
     return (
       <SquadSeatRow
         key={seat}
-        code={st.code} label={`${st.code} · ${CS_SEAT_LANE_ZH[seat]}`} emoji={st.emoji} color={st.color}
+        code={st.code} label={`出賽選手 ${st.code}`} emoji={st.emoji} color={st.color}
         seated={!!p} playerName={p?.name} playerLv={p?.lv}
         onSwap={() => setBench(seat)}
         avatar={p ? (
@@ -147,6 +147,7 @@ export default function CsPrepScreen({ onNext, onBack }) {
             {(() => { const roleView = fpsRolePresentation(p); return <>
               <span style={{ background: `${ACC}22`, color: ACC, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>最擅長：{roleView.bestLabel}</span>
               <span style={{ color: GC.gray, fontSize: 8, whiteSpace: "nowrap" }}>適配 {roleView.bestFit}</span>
+              {roleView.secondaryLabel && <span data-testid="cs-secondary-role-fit" style={{ color: GC.gray, fontSize: 8 }}>次要：{roleView.secondaryLabel} {roleView.secondaryFit}</span>}
               {roleView.taskLabel && <span style={{ background: "rgba(251,191,36,0.14)", color: GC.gold, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>本場定位：{roleView.taskLabel}</span>}
             </>; })()}
             <span style={{ color: cc, fontSize: 8, whiteSpace: "nowrap" }}>{cond}</span>
@@ -207,9 +208,10 @@ export default function CsPrepScreen({ onNext, onBack }) {
               ))}
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6, minWidth: 0 }}>
-              <span style={{ color: GC.gray, fontSize: 11, fontWeight: 700 }}>出戰陣容（主力 5 人）</span>
+              <span style={{ color: GC.gray, fontSize: 11, fontWeight: 700 }}>出戰陣容（5 人）</span>
               <span style={{ color: ACC, fontSize: 13, fontWeight: 900, whiteSpace: "nowrap" }}>隊伍戰力 {myPow}</span>
             </div>
+            <div data-testid="cs-flexible-lineup" style={{ color: GC.gray, fontSize: 10, lineHeight: 1.6, marginBottom: 8 }}>自由搭配五人，職業不需各一人。主要／次要定位適性供戰術配置參考。</div>
             {fixtureId ? (
               <div data-testid="cs-official-veto-notice" style={{ marginBottom: 10, padding: "9px 10px", borderRadius: 10, background: `${ACC}12`, border: `1px solid ${ACC}44`, color: "#fed7aa", fontSize: 9.5, lineHeight: 1.6 }}>
                 <strong style={{ color: ACC }}>正式賽事 Map Veto</strong><br />

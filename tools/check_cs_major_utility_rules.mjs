@@ -55,7 +55,8 @@ ck("拆彈離位與半徑6邊界中斷", () => { const next = defuse({ previous:
 ck("拆彈敵方可見壓制中斷，牆後不壓制", () => {
   const players = [player(), player("t", { side: "t", pos: { x: 3, y: 0 } })], previous = { defuserId: "ct1", progress: 2.8 };
   const blocked = defuse({ players, previous }); assert.equal(blocked.interrupted, true); assert.equal(blocked.progress, 0); assert.equal(blocked.completed, false);
-  const safe = defuse({ players, previous, lineBlocked: () => true }); assert.equal(safe.defuserId, "ct1"); assert.equal(safe.progress, 3.5); assert.equal(safe.completed, true);
+  // Only the terrorist ray is occluded; the CT-to-C4 ray must remain clear.
+  const safe = defuse({ players, previous, lineBlocked: from => from.x===3 }); assert.equal(safe.defuserId, "ct1"); assert.equal(safe.progress, 3.5); assert.equal(safe.completed, true);
 });
 ck("拆彈與爆炸同tick明確由完成優先", () => { const next = defuse({ previous: { defuserId: "ct1", progress: 2.8 }, timerSec: .5 }); assert.equal(next.completed, true); assert.equal(next.exploded, false); });
 ck("未完成時bomb timer到期真爆炸", () => { const next = defuse({ timerSec: .5 }); assert.equal(next.completed, false); assert.equal(next.exploded, true); });
@@ -68,7 +69,7 @@ const constantValue = name => {
   assert.ok(match, `缺canonical常數 ${name}`); return Number(match[1]);
 };
 const productionStepSec = constantValue("C5A2_SIM_STEP_SEC"), productionLegacySec = constantValue("C5A2_LEGACY_SNAPSHOT_SEC");
-const productionCall = productionSource.match(/majorDefuse=advanceFpsDefuse\(\{previous:majorDefuse,players:ps,bombPos:c4pos,walls,lineBlocked,dtSec:([^,]+),timerSec:([^,]+),rateFor:([^\n]+)\}\);/);
+const productionCall = productionSource.match(/majorDefuse=advanceFpsDefuse\(\{previous:majorDefuse,players:ps,bombPos:c4pos,walls,lineBlocked,isThreatened:knownBombThreat,canInteract:\(actor,bomb\)=>!defuseInterruptedActorIds\.has\(actor\.id\)&&fpsBombInteractionGeometry\(actor,bomb,\{groundHeightAt:point=>fpsMajorElevation\(mapKey,point\)\}\)\.eligible,dtSec:([^,]+),timerSec:([^,]+),rateFor:([^\n]+)\}\);/);
 assert.ok(productionCall, "缺canonical Major拆彈接點");
 const evalProduction = (expression, timerUnits = 20) => Function("C5A2_SIM_STEP_SEC", "C5A2_LEGACY_SNAPSHOT_SEC", "c4t", `return (${expression});`)(productionStepSec, productionLegacySec, timerUnits);
 const actualStep = evalProduction(productionCall[1]), actualRateFor = evalProduction(productionCall[3]);

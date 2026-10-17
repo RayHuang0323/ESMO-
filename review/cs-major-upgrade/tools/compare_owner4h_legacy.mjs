@@ -1,0 +1,6 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
+import {loadFpsMajorTestApi} from '../../../tools/lib/fpsMajorTestApi.mjs';
+const dir='review/cs-major-upgrade/evidence/owner4h-review-20261018',source=fs.readFileSync(dir+'/before-source/src/battle/fps/EsportsFPS3D.jsx','utf8'),beforeApi=await loadFpsMajorTestApi(source,process.cwd(),{snapshotRoot:dir+'/before-source'}),afterApi=await loadFpsMajorTestApi(fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8'));
+const t=beforeApi.TACTICS_DB.mirage.t.find(x=>x.id==='t_apalace'),ct=beforeApi.TACTICS_DB.mirage.ct.find(x=>x.id==='c_std'),inputs=['mirage',t,ct,505001,beforeApi.ROSTER,null,'legacy'];
+const before=beforeApi.simulateFps(...inputs),after=afterApi.simulateFps(...inputs),hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
+const r={schema:'owner4h-actual-worktree-legacy.v1',before:hash(before),after:hash(after),beforeRounds:before.roundHist.length,afterRounds:after.roundHist.length,completed:before.completed&&after.completed,oldC9Gate:'Recorded separately; not relabelled PASS'};fs.writeFileSync(dir+'/actual-legacy-comparison-'+(process.argv[2]||'r1')+'.json',JSON.stringify(r,null,2),{flag:'wx'});assert.ok(r.completed);assert.equal(r.after,r.before);console.log('Owner4H actual baseline Legacy: PASS '+r.after);

@@ -39,7 +39,7 @@ ck('不可視對手不生成情報、同隊不當敵人',()=>assert.deepEqual(co
 ck('真可視對手保存來源與觀察當時位置',()=>{
   const input=freeze(structuredClone(players)),before=JSON.stringify(input);
   const result=collect({players:input,canSee:(observer,target)=>observer.id==='ct1'&&target.id==='t1'});
-  assert.deepEqual(result,[observation({observerId:'ct1',pos:{x:12,y:0},observerPos:{x:0,y:0},observedAtSec:12})]);
+  assert.deepEqual(result,[observation({observerId:'ct1',pos:{x:12,y:0},observerPos:{x:0,y:0},observedAtSec:12,visibleTo:['ct1']})]);
   assert.notEqual(result[0].pos,input[2].pos);assert.notEqual(result[0].observerPos,input[0].pos);
   result[0].pos.x=999;result[0].observerPos.x=999;
   assert.equal(JSON.stringify(input),before);

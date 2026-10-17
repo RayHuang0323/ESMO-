@@ -36,9 +36,10 @@ try {
     assert.ok([...upper.tracks, ...lower.tracks].every(t => source.tracks.includes(t)));
     assert.equal(upper.duration, source.duration); assert.equal(lower.duration, source.duration);
   }));
-  check('跨角色 masked clip 共用，但 action／mixer 不共用', () => fixture({}, f => fixture({}, g => {
+  check('跨角色 private world-up clip值相同，但 action／mixer 不共用', () => fixture({}, f => fixture({}, g => {
     f.update(); g.update();
-    assert.equal(f.c.poseLayers.upperAction.getClip(), g.c.poseLayers.upperAction.getClip());
+    const shape=clip=>clip.tracks.map(t=>({name:t.name,times:Array.from(t.times),values:Array.from(t.values)}));
+    assert.deepEqual(shape(f.c.poseLayers.upperAction.getClip()),shape(g.c.poseLayers.upperAction.getClip()));
     assert.notEqual(f.c.poseLayers.upperAction, g.c.poseLayers.upperAction);
     assert.notEqual(f.c.mixer, g.c.mixer);
     const time = g.c.poseLayers.upperAction.time;
@@ -67,11 +68,11 @@ try {
     reference.update({ player: r, previousPlayer: reference.player, frameIndex: 11 });
     assert.equal(f.c.poseLayers.lowerName, 'Sprint_Loop');
     assert.equal(f.c.poseLayers.upperName, 'Pistol_Shoot');
-    near(f.c.poseLayers.lowerAction.time, before + .05);
+    near(f.c.poseLayers.lowerAction.time, before + .05*f.c.poseLayers.lowerAction.getEffectiveTimeScale());
     for (const bone of ['pelvis', 'thigh_r', 'calf_l', 'foot_r']) {
       const actual = f.c.model.getObjectByName(bone), expected = reference.c.model.getObjectByName(bone);
       assert.ok(actual && expected, bone);
-      assert.ok(actual.quaternion.angleTo(expected.quaternion) < 1e-5, bone);
+      assert.ok(actual.quaternion.clone().normalize().angleTo(expected.quaternion.clone().normalize()) < 1e-5, bone);
       near(actual.position.distanceTo(expected.position), 0);
     }
     const origin = f.c.getMuzzleWorldPosition(new THREE.Vector3());
@@ -108,10 +109,11 @@ try {
     assert.equal(f.c.poseLayers.upperAction.getEffectiveWeight(), 1); assert.equal(f.c.poseLayers.lowerAction.getEffectiveWeight(), 1);
     near(f.c.poseLayers.upperAction.time, 0);
   }));
-  check('受擊使用原全身 Hit_Chest，結束後才恢復雙層', () => fixture({}, f => {
+  check('受擊使用原Hit_Chest上半身，腳步不中斷且結束後恢復瞄準', () => fixture({}, f => {
     f.update(); const hurt = { ...f.player, hp: 60 };
     f.update({ player: hurt, previousPlayer: f.player, frameIndex: 11 });
-    assert.equal(f.c.poseLayers.active, false); assert.equal(f.c.currentAction, 'Hit_Chest');
+    assert.equal(f.c.poseLayers.active, true); assert.equal(f.c.poseLayers.upperName, 'Hit_Chest');
+    assert.ok(f.c.poseLayers.upperAction.getClip().tracks.every(t=>f.c.poseLayers.mask.upperBones.has(THREE.PropertyBinding.parseTrackName(t.name).nodeName)));
     for (let i = 0; i < 12; i++) f.update({ player: hurt, previousPlayer: hurt, frameIndex: 12 });
     assert.equal(f.c.poseLayers.active, true); assert.equal(f.c.poseLayers.upperName, 'Pistol_Aim_Neutral');
   }));
@@ -142,12 +144,13 @@ try {
   }));
   check('不新增 Mesh／材質／geometry／燈光或改權威 frame', () => fixture({}, f => {
     const resources = () => { const list = []; f.c.root.traverse(o => { if (o.isMesh) list.push([o.uuid, o.geometry.uuid, Array.isArray(o.material) ? o.material.map(m => m.uuid) : o.material.uuid]); if (o.isLight) list.push(o.uuid); }); return JSON.stringify(list); };
+    f.update(); // Finish the same one-time held-item initialization as Battle.
     const before = resources(), frame = JSON.stringify(f.player); f.update(); f.update({ player: moving(f), previousPlayer: f.player });
     assert.equal(resources(), before); assert.equal(JSON.stringify(f.player), frame);
   }));
   check('共用 clip cache 僅用 major；不新增蹲下／換彈假事件', () => {
     const renderer = fs.readFileSync(new URL('../src/battle/fps/presentation/FpsCharacterRenderer.js', import.meta.url), 'utf8');
-    assert.match(renderer, /clipMap\(animationLibrary, optimized\)/);
+    assert.match(renderer, /clipMap\(animationLibrary, optimized, optimized \? model : null\)/);
     assert.match(renderer, /if \(optimized && !controller\.poseLayers\)/);
     // B7 now has authoritative handling fields. Preserve the original
     // no-fake-events guarantee with actual legacy/missing-authority fixtures.

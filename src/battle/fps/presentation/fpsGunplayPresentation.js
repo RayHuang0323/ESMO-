@@ -335,7 +335,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
         ring.scale.setScalar(family === "sniper" ? 1.2 : family === "shotgun" ? 1.08 : 0.92);
         ring.material.color.setHex(surfaceProfile.color);
         ring.material.opacity = (surface === "player" ? 0.86 : 0.72) * life;
-        ring.visible = true;
+        ring.visible = !major || surface !== 'player';
         const particleCount = surface === "player" ? 3 : 2;
         for (let particleIndex = 0; particleIndex < particleCount; particleIndex += 1) {
           const particle = pools.hitParticle[(index * 3 + particleIndex) % pools.hitParticle.length];
@@ -345,7 +345,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
           particle.scale.setScalar(surface === "metal" ? 0.3 : 0.22);
           particle.material.color.setHex(particleIndex === 0 ? surfaceProfile.color : surfaceProfile.secondary);
           particle.material.opacity = (surface === "player" ? 0.72 : 0.62) * life;
-          particle.visible = true;
+          particle.visible = !major || surface !== 'player';
         }
         nextEvidence.hits += 1;
         nextEvidence.impacts += 1;
@@ -358,7 +358,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
       if (!finitePosition(player.pos) || !previous) return;
       const tookDamage = !player.dead && Number.isFinite(previous.hp) && Number.isFinite(player.hp) && player.hp < previous.hp - 0.5;
       const died = player.dead === true && previous.dead !== true;
-      if (tookDamage) {
+      if (tookDamage && !major) {
         const ring = pools.hitRing[(index + fireEvents.length) % pools.hitRing.length];
         ring.position.set(W.vx(player.pos.x), 1.16, W.vz(player.pos.y));
         ring.rotation.x = -Math.PI / 2;
@@ -376,7 +376,7 @@ export function createGunplayPresentation({ group, scene, tex, beamGeometry, map
         pulse.scale.setScalar(1.05);
         pulse.material.color.setHex(player.side === "ct" ? 0x74b9d8 : 0xe59a67);
         pulse.material.opacity = 0.82;
-        pulse.visible = true;
+        pulse.visible = !major;
         nextEvidence.deaths += 1;
       }
     });

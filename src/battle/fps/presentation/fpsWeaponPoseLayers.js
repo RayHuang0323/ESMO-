@@ -68,7 +68,7 @@ export function createFpsWeaponPoseLayers({ model, mixer, actions }) {
     get currentAction() { return current[1]; },
     get upperName() { return names[1]; },
     get lowerName() { return names[0]; },
-    update({ lower, upper, firing = false, fireEvent = false, paused = false, upperProgress = null, lowerTimeScale = 1 }) {
+    update({ lower, upper, firing = false, fireEvent = false, upperOnce = firing, upperRestart = fireEvent, paused = false, upperProgress = null, lowerTimeScale = 1 }) {
       const first = !active;
       if (first) {
         actions.forEach(action => action.stop());
@@ -78,7 +78,7 @@ export function createFpsWeaponPoseLayers({ model, mixer, actions }) {
       if (paused && !first) return;
       select(lower, false, false, false, first || paused);
       if (current[0]) current[0].setEffectiveTimeScale(Number.isFinite(lowerTimeScale) && lowerTimeScale > 0 ? lowerTimeScale : 1);
-      select(upper, true, firing, fireEvent, first || paused);
+      select(upper, true, upperOnce, upperRestart, first || paused);
       if(Number.isFinite(upperProgress)&&current[1]){
         current[1].time=Math.max(0,Math.min(1,upperProgress))*current[1].getClip().duration;
         current[1].setEffectiveTimeScale(0);
@@ -89,9 +89,9 @@ export function createFpsWeaponPoseLayers({ model, mixer, actions }) {
         if (mixer.time >= end) { action.stop(); retiring.delete(action); }
       }
     },
-    stop() {
-      for (const bank of banks) bank.forEach(action => action?.stop());
-      retiring.clear(); current.fill(null); names.fill(null); active = false;
+    stop(fade = 0) {
+      for (const bank of banks) bank.forEach(action => {if(!action)return;if(fade>0&&action.getEffectiveWeight()>0){action.fadeOut(fade);retiring.set(action,mixer.time+fade);}else action.stop();});
+      if(!(fade>0))retiring.clear();current.fill(null);names.fill(null);active=false;
     },
     diagnostics() {
       return active ? {

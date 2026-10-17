@@ -9,7 +9,8 @@ export function fpsAwarenessLook({player,nodes,intel=[],roundSec,dtSec=.5,walls=
   const own=intel.filter(i=>i.side===player.side&&roundSec>=i.observedAtSec&&roundSec-i.observedAtSec<=3)
     .sort((a,b)=>(a.observerId===player.id?0:1)-(b.observerId===player.id?0:1)||distance(player.pos,a.pos)-distance(player.pos,b.pos));
   const next=player.route?.[player.routeIdx+1],following=player.route?.[player.routeIdx+2];
-  let target=own[0]?.pos,source=own.length?'team-intel':'route',scan=0,corner=false,targetKey=null,publicFallback=false,reason=null;
+  let target=player.tacticalIntent?.aim||own[0]?.pos||player.perceptionCue?.pos,source=player.tacticalIntent?.aim?player.tacticalIntent.source:own.length?'team-intel':player.perceptionCue?.source||'route',scan=0,corner=false,targetKey=null,publicFallback=false,reason=null;
+  if((player.postPlantPlan||player.retakeCoverPlan)&&!own.length){target=(player.postPlantPlan||player.retakeCoverPlan).threat;source='post-plant-reserved-angle';}
   if(!target&&next){target=next;if(following&&distance(player.pos,next)<5&&Math.abs(delta(angle(player.pos,next),angle(next,following)))>30){target=following;corner=true;source='corner-preaim';}}
   const probeDistance=4,probeAt=bearing=>({x:player.pos.x+Math.cos(bearing*Math.PI/180)*probeDistance,y:player.pos.y+Math.sin(bearing*Math.PI/180)*probeDistance});
   const rayClear=bearing=>{const probe=probeAt(bearing);return typeof lineBlocked==='function'&&probe.x>=2&&probe.x<=98&&probe.y>=2&&probe.y<=98&&!lineBlocked(player.pos,probe,walls);};
@@ -28,7 +29,7 @@ export function fpsAwarenessLook({player,nodes,intel=[],roundSec,dtSec=.5,walls=
       else return{va:normalize(Number(player.va)||0),desiredVa:Number(player.va)||0,source:'closed-space-hold',reason:'no-clear-public-node-or-local-ray',corner:false,scanDegrees:0,turnDegrees:0,pace:1,targetKey:null};
     }
   }
-  if(!own.length&&!player.buyP){const duty=player.tacticalDuty;scan=Math.sin((roundSec+idOffset(player.id))*.9)*(duty?.defenseDuty==='information'||['control','pick'].includes(player.tacticalStage)?28:12);}
+  if(!own.length&&!player.perceptionCue&&!player.tacticalIntent?.aim&&!player.buyP&&!player.postPlantPlan&&!player.retakeCoverPlan){const duty=player.tacticalDuty;scan=Math.sin((roundSec+idOffset(player.id))*.9)*(duty?.defenseDuty==='information'||['control','pick'].includes(player.tacticalStage)?28:12);}
   const base=target?angle(player.pos,target):Number(player.va)||0;
   if(publicFallback&&!rayClear(base+scan)){scan=0;reason+=';scan-clipped-by-near-wall';}
   const desired=base+scan,maxTurn=(180+Math.max(0,Math.min(100,player.stats?.apm??70))*1.4)*Math.max(0,dtSec);
