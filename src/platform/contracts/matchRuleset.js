@@ -23,6 +23,15 @@ export const tacticalDirectorModeOf = (r) => r?.layers?.tacticalDirector ?? DEFA
 //  與 LAYER_RELEASE_FLAG 分開放：那張表的鍵是「布林層」，既有 gate 依它列舉旗標組合（check_match_setup_3a RS-1.x、
 //  check_live_setup_3a）；tacticalDirector 是字串層，混進去會讓那些組合多出一個從未發布的旗標。
 export const TACTICAL_DIRECTOR_RELEASE_FLAG = Object.freeze({ "core.v1": "mobaTacticalDirectorV21" });
+//  laneFrame 層（TD-3A-23；Owner 2026-10-15 D-1 = A：只在新的 v21 規則集修正，舊規則集維持原行為）：
+//   · "legacyMirror"＝現狀：Director 原樣把己方視角的 knobs 交給引擎，紅方的上／下路因此對調（TD-3A-23 §1）。
+//   · "teamRelative"＝修正：Director 在建立時把紅方按路分的 knobs 轉成世界路名（tacticalDirector.js 的 LANE_KEYED_KNOBS）。
+//  欄位不存在 ≡ "legacyMirror"。v20 三份規則集永不加這個鍵（整份進 setup 雜湊；matchSetup 拒絕登錄值沒有的層鍵）。
+//  字串層（不是布林）：正式規則集被 matchSetup 鎖在登錄值，工具規則集可覆寫成 "legacyMirror" 做對照（TD-3A-23 §3.2）。
+export const LANE_FRAMES = Object.freeze(["legacyMirror", "teamRelative"]);
+export const DEFAULT_LANE_FRAME = "legacyMirror";
+/** 讀取 ruleset 的 laneFrame 層；缺少 ≡ "legacyMirror"。 */
+export const laneFrameOf = (r) => r?.layers?.laneFrame ?? DEFAULT_LANE_FRAME;
 /** 正式規則集 releaseRequirements 只能列這些正式旗標（DEV 網址開關、未登錄的名字一律拒絕）。 */
 export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
@@ -39,11 +48,13 @@ export const MATCH_RULESETS = Object.freeze({
   //  Phase 3a-C3-1（D-15）：v21 規則集＝v20 的層原樣＋tacticalDirector "core.v1"（v20 三份不動，見上）。
   //  career.v21 只在旗標 mobaTacticalDirectorV21 開啟時由 resolveRulesetForMode 解析出來（旗標預設關 ⇒ 正式站照舊 career.v20）。
   //  challenge.v21 不在本輪（D-16，3a-B）。
+  //  C3-1 laneFrame（TD-3A-23，D-1 = A）：兩份 v21 規則集另帶 laneFrame "teamRelative"（紅方按路分的 knobs 改成己方視角；
+  //  career.v21 是正式規則集 ⇒ 被 matchSetup 鎖在 teamRelative；balanceTool.v21 可覆寫成 legacyMirror 做負對照）。
   "career.v21": R({ rulesetId: "career.v21", kind: "production", simVersion: "moba-sim.v21",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate", assemblyOrder: "live", tacticalDirector: "core.v1" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
     releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1", "mobaTacticalDirectorV21"] }),
   "balanceTool.v21": R({ rulesetId: "balanceTool.v21", kind: "tool", simVersion: "moba-sim.v21",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
     releaseRequirements: [] }),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
@@ -91,6 +102,8 @@ export function validateRuleset(r) {
   //  C1／C2 只收 "static"；C3-1 起另收 "core.v1"（TACTICAL_DIRECTOR_MODES）；其他值一律拒絕，避免有人開啟尚未實作的行為（RS-1 精神）。
   //  v20 三份 ruleset 不加此欄位（整份進 setup 雜湊，加欄位會改變每一份 setup 的身分）。
   if (r?.layers && "tacticalDirector" in r.layers && !TACTICAL_DIRECTOR_MODES.includes(r.layers.tacticalDirector)) errors.push("tacticalDirector");
+  //  C3-1 laneFrame：可選層——有這個鍵就必須是 LANE_FRAMES 之一（缺少 ≡ "legacyMirror"）。
+  if (r?.layers && "laneFrame" in r.layers && !LANE_FRAMES.includes(r.layers.laneFrame)) errors.push("laneFrame");
 
   // RS-1: For production rulesets, every enabled layer must have its flag in releaseRequirements
   if (r?.kind === "production") {

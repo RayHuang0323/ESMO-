@@ -88,6 +88,9 @@ const OBJ_SKILL_ULT = new Set([
 ]);
 
 export class LogicEngine {
+  //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
+  //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
+  static SUPPORTS_LANE_FRAME = true;
   /**
    * @param {number} seed
    * @param {object|null} loadout   Hero Progress（英雄熟練 → power/tough 倍率）
@@ -364,7 +367,7 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
     this.tacticMeta = meta;
@@ -377,6 +380,9 @@ export class LogicEngine {
     //  沒傳 ⇒ 引數與 C3-1 之前完全相同（static）。每時期的挑選只在 Director 裡做，引擎不看 phases 的內容。
     const directorArgs = { blue: kBlue, red: kRed, identity: tid };
     if (phases) { directorArgs.phases = phases; directorArgs.clock = () => this.t; }
+    //  C3-1 laneFrame（TD-3A-23）：組裝器只在 ruleset 有 laneFrame 層時傳這個鍵；有才原樣交給 Director（轉換只在 Director 做）。
+    //  沒傳 ⇒ Director 的預設 legacyMirror（與之前逐參照相同）。
+    if (laneFrame !== null) directorArgs.laneFrame = laneFrame;
     this.director = createTacticalDirector(directorArgs);
     //  C3-1 E-1：舊的觀測欄位 this.tk／this.tid 已移除（aa38625 之後沒有任何讀者）；引擎內外都不得再有
     //  （tools/check_tactical_director_3c.mjs 掃原始碼，允許清單 0 筆）。要看設定值請問 this.director。

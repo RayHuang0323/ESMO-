@@ -145,6 +145,13 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic 
     battleTalents: skills && !!M.talents,
     tacticIdentity: !!M.tactic.toEngineTacticIdentity,
     objectiveLayout: layoutOn ? base.layers.objectiveLayout : "standard" } };
+  //  C3-1 laneFrame：`ESMO_BALANCE_LANEFRAME`（呼叫當下讀取）＝覆寫工具規則集的 laneFrame 層（負對照用 legacyMirror）。
+  //  只在規則集本來就有這一層時接受（v20 沒有 ⇒ 丟錯，不默默略過）；值由 createMatchSetup／validateRuleset 檢查。未設定 ⇒ 不動。
+  const laneFrameOverride = process.env.ESMO_BALANCE_LANEFRAME;
+  if (laneFrameOverride) {
+    if (!("laneFrame" in base.layers)) throw new Error(`balance_laneframe_unsupported: ${rulesetId} has no laneFrame layer`);
+    ruleset.layers.laneFrame = laneFrameOverride;
+  }
   const tool = {};
   if (RULE_OVERRIDES) tool.ruleOverrides = RULE_OVERRIDES;
   if (layoutOn) {

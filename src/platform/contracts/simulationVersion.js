@@ -544,7 +544,14 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  （三份共用整場物件）；組裝器只在 core.v1 時把 phases 交給 configureMatch；Director core.v1 依 phase(clock()) 挑選。
   //  v20 規則集與既有輸入的解析結果、configureMatch 引數完全不變（golden 131／153 逐位元相同）；v21 規則集下引擎輸出亦逐位元相同
   //  （tools/check_c3_phase_skeleton.mjs G-AC1 ②）⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 eb0249883e225fc4 未曾發布）。
-  "moba-sim.v21": "79436579b2f999cf",
+  //  2026-10-16（Phase 3a-C3-1 laneFrame）：C3-1 laneFrame: red lane-keyed knobs team-relative under career.v21/balanceTool.v21; legacy unchanged.
+  //  matchRuleset.js 多了 laneFrame 層（legacyMirror｜teamRelative；缺少 ≡ legacyMirror），career.v21／balanceTool.v21 帶 teamRelative；
+  //  組裝器只在層存在時把 laneFrame 交給 configureMatch（並對未宣告支援的引擎報 deps_missing）；LogicEngine 原樣轉交；
+  //  tacticalDirector.js 在 teamRelative 下把紅方按路分的 knobs（LANE_KEYED_KNOBS）以 gameData.js 的映射轉成世界路名（TD-3A-23，Owner D-1 = A）。
+  //  **這是 v21 規則集下的語意變化**（紅方上下路不對稱的案例改變：事前登記的 9 個 v21-A 案，tools/check_laneframe_c3.mjs C3）；
+  //  v20 規則集與既有輸入完全不變（golden 131／153 逐位元相同）。v21 仍是未發布候選 ⇒ 依 TD-3A-23 §3.6 選項 1 同版號重新登記
+  //  （舊值 79436579b2f999cf 未曾發布）。
+  "moba-sim.v21": "6c8db7e7cff3ae6a",
 });
 
 export const isKnownSimulationVersion = (v) =>

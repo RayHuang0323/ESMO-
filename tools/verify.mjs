@@ -175,6 +175,7 @@ const SEGMENTS = [
   { id: "tactical_director_3c", script: "tools/check_tactical_director_3c.mjs", shape: /Tactical Director 3c：(\d+)\/\1 PASS/, note: "Phase 3a-C2 G-AC2：引擎（剝註解）不直接讀 this.tk／this.tid（允許清單 0 筆：C3-1 E-1 已移除觀測欄位）、階段界線只在 Director、每時期挑選只在 Director（S7）、Director 行為（同參照、identity 反查、phase 邊界、directive 有效且凍結、不擲骰）；秒級" },
   { id: "match_golden_v21a", script: "tools/check_match_golden_v21a.mjs", shape: /Match Golden v21-A：(\d+)\/\1 PASS/, note: "Phase 3a-C1 G-AC1 參照：v20 的 39 案＋21 模板＋提供的選擇（binding）＋紅方 binding 共 109 案重跑，digest／streamHash／resultHash／configure 序列逐案相同（約 7 分鐘）" },
   { id: "c3_phase_skeleton", script: "tools/check_c3_phase_skeleton.mjs", shape: /C3 Phase Skeleton：(\d+)\/\1 PASS/, note: "Phase 3a-C3-1：Director core.v1 時期骨架（479.9/480、959.9/960 邊界只變宣告的欄位、三份相同 ⇒ 同參照）、Resolver／組裝器的 phases、RS-1 擴充（career.v21／balanceTool.v21、旗標關＝v20 逐字相同）、G-AC1 ②（golden live＋runner 案在 v21 規則集下 digest／streamHash／resultHash 逐案相同；約 6 分鐘）" },
+  { id: "laneframe_c3", script: "tools/check_laneframe_c3.mjs", shape: /LaneFrame C3：(\d+)\/\1 PASS/, note: "Phase 3a-C3-1 laneFrame（TD-3A-23，D-1 = A）：事前登記檔 laneframe_registration_c3.json 的 A1–A5（186 組輸入；teamRelative 0／legacy 120）、C1、規則集層與能力檢查、C3（v21 規則集下改變集合恰好＝登記的 9 個 v21-A 案；約 6 分鐘）" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

@@ -16,6 +16,9 @@
 //      N  掃描器負向自檢（記憶體內植入 ⇒ 對應檢查轉紅；只在註解裡 ⇒ 不紅）。
 //   B  行為（Director 本身）：knobs 回傳同一個參照、identityOfKnobs 對應、identity 關閉 ⇒ null、phase 邊界、
 //      directive 通過 validateTacticalDirective 且深凍結、不與 knobs 共用參照、不改輸入；不擲骰、不碰全域（建兩次答案相同）。
+//      B11–B15（C3-1 laneFrame 的 R-4 更新，TD-3A-23 §1.4-7）：legacyMirror／不傳 ⇒ 同參照；teamRelative ⇒ 藍方同參照、紅方轉換後
+//      每次同一參照且凍結、identity 不變成 null、directive 仍是己方視角；未知值丟錯。
+//      S2d（同批）：configureMatch 只在收到 laneFrame 時原樣轉交 Director（`if (laneFrame !== null) directorArgs.laneFrame = laneFrame;`）。
 //   E  引擎接線：未 configureMatch ⇒ director 為 null；configureMatch 後 Director 的回答＝舊式在「傳給 configureMatch 的那幾個物件」上的值（C3-1 E-1 起引擎不再有 e.tk／e.tid）；
 //      Director 呼叫不消耗 rng／rng2。
 // ============================================================================
@@ -85,6 +88,9 @@ ck("S2 Director 只建立一次（configureMatch 內）；this.director 只在�
   && ENGINE_CODE.includes("const directorArgs = { blue: kBlue, red: kRed, identity: tid };")
   && ENGINE_CODE.includes("if (phases) { directorArgs.phases = phases; directorArgs.clock = () => this.t; }")
   && /configureMatch\(\{[^)]*\} = \{\}\) \{[\s\S]*?this\.director = createTacticalDirector\(/.test(ENGINE_CODE.slice(ENGINE_CODE.indexOf("configureMatch({"), ENGINE_CODE.indexOf("_joinChance(K, hot"))));
+ck("S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在收到時原樣轉交 Director（轉換只在 Director 做）",
+  ENGINE_CODE.includes("phases = null, laneFrame = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
+  && (ENGINE_CODE.match(/\blaneFrame\b/g) ?? []).length === 4);
 ck("S2b _tidOf／_tidPhase 是一行委派給 Director",
   ENGINE_CODE.includes("_tidOf(side) { return this.director ? this.director.identity(side) : null; }")
   && ENGINE_CODE.includes("_tidPhase() { return this.director.phase(this.t); }"));
@@ -209,6 +215,29 @@ try {
   const answers = (D) => J([D.knobs("blue"), D.knobs("red"), D.identity("blue"), D.identity("red"), D.hasIdentity(), P.map(([t]) => D.phase(t)), D.directive("blue", 10), D.directive("red", 1000)]);
   const in2 = mk(true);
   ck("B9 同樣的輸入建兩次 ⇒ 回答完全相同（沒有模組層級狀態）", answers(Dir.createTacticalDirector(in2)) === answers(Dir.createTacticalDirector(in2)) && answers(d) === answers(Dir.createTacticalDirector(mk(true))));
+  //  ── R-4 更新（C3-1 laneFrame，TD-3A-23 §1.4-7；登記檔 supportGates「check_tactical_director_3c (after its R-4 update)」）──
+  //  「knobs(side) 與設定物件同參照」改成：legacyMirror（含不傳）⇒ 同參照（上面 B2 照舊）；teamRelative ⇒ 藍方同參照、
+  //  紅方等於轉換結果且每次呼叫同一參照（凍結），identity 反查不變成 null；directive 仍是設定的己方視角。
+  {
+    const tr = mk(true);
+    const snapTr = J(tr);
+    const dt = Dir.createTacticalDirector({ ...tr, laneFrame: "teamRelative" });
+    const lgIn = mk(true);
+    const dl = Dir.createTacticalDirector({ ...lgIn, laneFrame: "legacyMirror" });
+    const r1 = dt.knobs("red");
+    ck("B11 R-4（legacyMirror）：明寫 legacyMirror 與不傳相同——兩側都是傳入的同一個參照、不凍結；Director 的 laneFrame 欄位＝legacyMirror",
+      dl.laneFrame === "legacyMirror" && d.laneFrame === "legacyMirror" && dl.knobs("red") === lgIn.red && dl.knobs("blue") === lgIn.blue
+      && dl.identityOfKnobs(lgIn.red) === lgIn.identity.red && !Object.isFrozen(lgIn.red));
+    ck("B12 R-4（teamRelative）：藍方是傳入的同一個參照；紅方是另一個物件、每次呼叫同一參照、凍結；輸入不被凍結或改動",
+      dt.knobs("blue") === tr.blue && r1 !== tr.red && [0, 1, 2, 3].every(() => dt.knobs("red") === r1) && Object.isFrozen(r1) && !Object.isFrozen(tr.red) && J(tr) === snapTr);
+    ck("B13 R-4（teamRelative）：identity 照舊（identity(side)、identityOfKnobs(交給引擎的 knobs)）；複本 ⇒ null",
+      dt.identity("red") === tr.identity.red && dt.identityOfKnobs(r1) === tr.identity.red && dt.identityOfKnobs(tr.blue) === tr.identity.blue && dt.identityOfKnobs({ ...r1 }) === null);
+    ck("B14 R-4（teamRelative）：directive 仍是設定的己方視角（knobs 內容＝傳入的紅方設定，不是轉換後的世界路名）",
+      J(dt.directive("red", 0).knobs) === J(tr.red) && J(dt.directive("blue", 0).knobs) === J(tr.blue));
+    let threw = false;
+    try { Dir.createTacticalDirector({ ...mk(true), laneFrame: "worldFrame" }); } catch (e) { threw = e instanceof TypeError; }
+    ck("B15 未知的 laneFrame ⇒ 建立時丟 TypeError；laneFrame 值清單＝契約 matchRuleset.js 的同一個物件", threw && Dir.LANE_FRAMES === RULESET.LANE_FRAMES);
+  }
   ck("B10 Director 從建立到所有回答都沒有呼叫 Math.random", randomCalls === 0, `${randomCalls} 次`);
 } finally { Math.random = realRandom; }
 
