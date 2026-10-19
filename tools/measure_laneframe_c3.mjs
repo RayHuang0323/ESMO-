@@ -7,7 +7,7 @@
 //
 //  用法（長任務，一律單線；workers ≤ 3；批次寫在 repo 之外，可中斷續跑；建立 <dir>/<study>/STOP 檔即在下一場前停下）：
 //    node tools/measure_laneframe_c3.mjs --study=behavioural [--workers=3] [--dir=C:/Users/ifikn/esmo-measure/laneframe-c3]
-//    node tools/measure_laneframe_c3.mjs --study=sidebias    [--workers=3] [--dir=...]
+//    node tools/measure_laneframe_c3.mjs --study=sidebias    [--workers=3] [--dir=...]   （career；sidebias-twin＝補充診斷）
 //    node tools/measure_laneframe_c3.mjs --report            讀兩個 study 的批次 ⇒ 每個 gate 的判定、STOP／WARN 旗標，
 //                                                            寫 tools/fixtures/laneframe_result_c3.json（含 gitHead＋v21 指紋）
 //    node tools/measure_laneframe_c3.mjs --diagnostic --dir=<scratch>   ≤ 10 場的自我測試（**診斷用，結果丟棄**；不寫 result fixture）
@@ -21,9 +21,10 @@
 //    B3 laneForward.<lane>：對線期（60–480 秒）該路職業（top／mid／adc）與己方主堡的平均距離（tacticTruthSim 同一個定義）。
 //   差中差：effect_side(s,L) = m(P 在該側) − m(對照，同側、同 s、同 L)；D(s) = 兩個配置的 [effect_red − effect_blue] 平均；
 //   z_diff = mean(D)/(sd(D)/√n)。只計四個值（兩配置 × 兩臂）都有值的 seed（事前定的納入規則）。
-//  ── sidebias（登記 gates.sideBias；Owner D-20）──────────────────────────────────────
-//   seeds 5001–6000 × STANDARD／SWAPPED × 兩個規則集，同 seed 配對。worse_pp、配對 z（d_s 依 clarifications.sideBiasWorseningSign）、
-//   比賽時長中位數比。⚠ 規則集見 SIDEBIAS_DESIGN（正式規則集不能強制配置，matchSetup.js；用工具孿生，兩個名字都記下）。
+//  ── sidebias（Owner D-20；2026-10-20 修訂登記 tools/fixtures/laneframe_registration_c3_d20rev.json）──────────────
+//   正式：career.v20 vs career.v21，走 Live 組裝路徑（prepareLiveMatch），配置由 seed 推導（不覆寫）；seeds 依固定順序
+//   5001–6000 再接 9101 起，走到兩個配置都 ≥ 1000 個有效 seed 為止；同 seed 配對。整體與 m4 分層各套原登記的 STOP／WARN，
+//   非 m4 對手必須逐場相同。  --study=sidebias-twin＝舊的工具孿生（balanceTool.v20/v21 強制配置），**只當補充診斷**。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
@@ -47,10 +48,45 @@ const LANE_ROLE = { top: "top", mid: "mid", bot: "adc" };
 if (flag("lf-worker")) {
   process.env.ESMO_BALANCE_SKILLS = "on";
   process.env.ESMO_BALANCE_TALENTS = "on";
-  const { modules, configure } = await import("./balance/moba_items_balance_runner.mjs");
+  const { modules, configure, mirroredRoster } = await import("./balance/moba_items_balance_runner.mjs");
   const { tacticInputOf } = await import("./lib/tacticTruthSim.mjs");
   const M = await modules();
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  //  D-20 修訂（Owner 2026-10-20）：正式 career 規則集＝Live 的同一條組裝路徑（prepareLiveMatch），配置由 seed 推導、不覆寫。
+  //  輸入骨架＝v20 golden 的 Live 輸入（選手素質／陣容／熟練 loadout＝tools/fixtures/match_golden_v20.json 的 inputs，旗標＝它的 featureFlags；
+  //  v21 另開 mobaTacticalDirectorV21），名單＝runner 的 mirroredRoster(seed)（兩側同英雄），藍方＝戰術書 std binding、出裝 standard、無天賦選擇，
+  //  對手＝AI_TEAMS[seed % 7]（固定指派，與勝負無關）→ Live 的紅方來源 mobaTacticForTeamStyle。
+  let careerCtx = null;
+  const careerOne = async (t) => {
+    if (!careerCtx) {
+      const [{ prepareLiveMatch }, { resolveLiveRuleset }, { aiTeamById, AI_TEAMS }, { appRoster }, { createTacticPlan }, { bindTacticPlanToCurrentVersions }] = await Promise.all([
+        import("../src/useLocalServer.js"), import("../src/battle/moba/liveMatchSetup.js"),
+        import("../src/platform/competition/aiTeams.js"), import("./lib/liveGolden.mjs"),
+        import("../src/platform/tactics/tacticPlan.js"), import("../src/battle/moba/tactics/tacticResolver.js")]);
+      const G = JSON.parse(fs.readFileSync(path.join(ROOT, "tools", "fixtures", "match_golden_v20.json"), "utf8"));
+      //  藍方＝戰術書 std 模板的 binding（新開局的正式路徑）。⚠ 藍方完全不帶戰術時 Live 不呼叫 configureMatch，紅方風格也不會套用
+      //  （2026-10-20 實測）⇒ v20／v21 必然逐場相同，量了等於沒量。
+      const blueBinding = bindTacticPlanToCurrentVersions(createTacticPlan({ templateId: "std", choices: {} }).plan);
+      careerCtx = { prepareLiveMatch, resolveLiveRuleset, aiTeamById, AI_TEAMS, appRoster, G, blueBinding };
+    }
+    const C = careerCtx, G = C.G;
+    const flags = Object.freeze({ ...G.featureFlags, ...(t.ruleset === "career.v21" ? { mobaTacticalDirectorV21: true } : {}) });
+    const ruleset = C.resolveLiveRuleset({ flags, dev: null, allowTool: false }).ruleset;
+    if (ruleset?.rulesetId !== t.ruleset) throw new Error(`career: flags resolved ${ruleset?.rulesetId}, wanted ${t.ruleset}`);
+    const team = C.AI_TEAMS[t.seed % C.AI_TEAMS.length];
+    const opts = { seed: t.seed, roster: C.appRoster(M.mirrored(t.seed)), buildStrategy: "standard", opponentId: team.id, sessionId: `laneframe-d20-${t.seed}`, mode: "moba", tacticPlanBinding: C.blueBinding };
+    const out = C.prepareLiveMatch({ opts, seed: t.seed, seedSource: "session", ruleset,
+      profile: { players: G.inputs.players, lineup: G.inputs.lineup }, heroProgress: { loadout: G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
+    if (!out.ok) throw new Error(`career: prepareLiveMatch rejected (${out.stage}): ${JSON.stringify(out.errors).slice(0, 300)}`);
+    const e = out.engine;
+    //  開打前就檢查（不白跑 3600 秒）：沒有 Director ⇒ 紅方風格沒套上 ⇒ 該 seed 失敗。
+    if (!e.director) throw new Error("career: no tactical director (configureMatch not called) — the red style would not apply");
+    const redTacticId = e.director.knobs("red")?.tacticId ?? null;
+    for (let i = 1; i * DT <= CAP_S && !e.over; i++) e.tick(DT);
+    return { seed: t.seed, engineSeed: out.setup?.seed ?? null, layout: t.layout, layoutApplied: out.setup?.objectiveLayout ?? e.objectiveLayout ?? null, ruleset: out.setup?.rulesetId ?? null,
+      laneFrame: e.director.laneFrame ?? null, directorMode: e.director.mode ?? null, opponentId: team.id, opponentStyle: team.style, redTacticId,
+      duration: e.t, over: e.over ? 1 : 0, winner: e.winner ?? null };
+  };
   const runOne = (t) => {
     //  runner 在呼叫當下讀這三個環境變數（layout／規則集／laneFrame 覆寫）；每場重設，不殘留。
     process.env.ESMO_BALANCE_LAYOUT = t.layout;
@@ -74,9 +110,10 @@ if (flag("lf-worker")) {
     const side = (sd) => ({ ...S[sd], ganks: { top: ex[sd].topGanks, mid: ex[sd].midGanks, bot: ex[sd].botGanks } });
     return { seed: t.seed, layout: t.layout, layoutApplied, laneFrame: e.director?.laneFrame ?? null, duration: e.t, over: e.over ? 1 : 0, winner: e.winner ?? null, blue: side("blue"), red: side("red") };
   };
-  process.on("message", (t) => {
+  M.mirrored = (seed) => mirroredRoster(seed, M);
+  process.on("message", async (t) => {
     if (t?.type !== "run") return;
-    try { process.send({ type: "done", id: t.id, rec: runOne(t) }); } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
+    try { process.send({ type: "done", id: t.id, rec: t.career ? await careerOne(t) : runOne(t) }); } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
   process.send({ type: "ready" });
 } else {
@@ -143,6 +180,64 @@ async function main() {
   const redForSeed = (s) => ({ kind: "legacy", config: JSON.parse(JSON.stringify(mobaTacticForTeamStyle(AI_TEAMS[s % AI_TEAMS.length].style))) });
   const sidebiasArms = () => ["balanceTool.v20", "balanceTool.v21"].map((rid) => ({ key: rid, ruleset: rid, blue: STD, redOfSeed: true }));
 
+  //  ── D-20 修訂（Owner 2026-10-20；tools/fixtures/laneframe_registration_c3_d20rev.json）：正式 career 規則集 ──────────
+  //  上面的工具孿生（sidebias-twin）只當補充診斷，永遠不當 career 驗收。
+  const REV = JSON.parse(fs.readFileSync(path.join(ROOT, "tools", "fixtures", "laneframe_registration_c3_d20rev.json"), "utf8")).sideBias;
+  const { objectiveLayoutForSeed } = await import("../src/platform/contracts/objectiveLayout.js");
+  const { normalizeLiveSeed } = await import("../src/battle/moba/liveMatchSetup.js");
+  const SO = REV.seedOrder;
+  const CAREER_TARGET = SO.targetPerLayout, CAREER_SEED_LIMIT = SO.walkLimit;
+  const careerArms = () => ["career.v20", "career.v21"].map((rid) => ({ key: rid, ruleset: rid, career: true }));
+  //  計數單位＝Live 正規化後的 effectiveSeed（normalizeLiveSeed(s, "session") = (s>>>0)|1）。只走奇數 ⇒ effectiveSeed＝s，
+  //  每個樣本的引擎種子都不同；走 seed 時再驗一次（不是奇數、或 effectiveSeed 重複 ⇒ 工具直接丟錯，不默默計數）。
+  const effectiveSeedOf = (s) => normalizeLiveSeed(s, "session");
+  const layoutOf = (s) => objectiveLayoutForSeed(effectiveSeedOf(s));
+  const careerSequence = function* () {
+    const seen = new Set();
+    for (const [a, b] of SO.segments) for (let s = a; b === null ? s <= CAREER_SEED_LIMIT : s <= b; s += SO.step) {
+      const eff = effectiveSeedOf(s);
+      if (eff !== s || seen.has(eff)) throw new Error(`career seed order: seed ${s} -> effectiveSeed ${eff} is not unique/identity (registration requires odd seeds)`);
+      seen.add(eff);
+      yield s;
+    }
+  };
+  const tacticIdOfSeed = (s) => mobaTacticForTeamStyle(AI_TEAMS[s % AI_TEAMS.length].style).tacticId;
+  /** 依固定順序走 seed：已知無效的跳過但列出；兩個配置都 ≥ 目標個有效 seed 就停。 */
+  const careerPlan = (invalid) => {
+    const seeds = [], n = { STANDARD: 0, SWAPPED: 0 };
+    for (const s of careerSequence()) {
+      seeds.push(s);
+      if (!invalid.has(s)) n[layoutOf(s)]++;
+      if (n.STANDARD >= CAREER_TARGET && n.SWAPPED >= CAREER_TARGET) return { seeds, n, reached: true };
+    }
+    return { seeds, n, reached: false };
+  };
+  const readErrors = (dir, key) => { const f = fileOf(dir, `${key}.errors`); if (!fs.existsSync(f)) return new Map(); const m = new Map(); for (const l of fs.readFileSync(f, "utf8").split("\n")) { if (!l.trim()) continue; try { const o = JSON.parse(l); m.set(o.seed, o.error); } catch { /* 半行 */ } } return m; };
+  //  每筆紀錄的臂身分（登記 validSeed）：v20 ⇒ static／legacyMirror；v21 ⇒ core.v1／teamRelative；紅方戰術＝該 seed 指派的風格。
+  const ARM_IDENTITY = { "career.v20": { directorMode: "static", laneFrame: "legacyMirror" }, "career.v21": { directorMode: "core.v1", laneFrame: "teamRelative" } };
+  const recordProblem = (a, r) => {
+    const want = ARM_IDENTITY[a];
+    if (r.ruleset !== a) return `ran ruleset ${r.ruleset}`;
+    if (r.engineSeed !== effectiveSeedOf(r.seed)) return `engine seed ${r.engineSeed} ≠ effectiveSeed ${effectiveSeedOf(r.seed)}`;
+    if (r.layoutApplied !== layoutOf(r.seed)) return `ran layout ${r.layoutApplied} ≠ ${layoutOf(r.seed)}`;
+    if (r.directorMode !== want.directorMode || r.laneFrame !== want.laneFrame) return `director ${r.directorMode}/${r.laneFrame} ≠ ${want.directorMode}/${want.laneFrame}`;
+    if (r.redTacticId !== tacticIdOfSeed(r.seed)) return `red tactic ${r.redTacticId} ≠ ${tacticIdOfSeed(r.seed)}`;
+    return null;
+  };
+  const careerState = (dir) => {
+    const recs = Object.fromEntries(careerArms().map((a) => [a.key, readBatch(dir, a.key)]));
+    const errs = Object.fromEntries(careerArms().map((a) => [a.key, readErrors(dir, a.key)]));
+    const invalid = new Map();
+    for (const a of careerArms()) {
+      for (const [s, e] of errs[a.key]) invalid.set(s, `${a.key}: ${String(e).slice(0, 200)}`);
+      for (const r of recs[a.key].values()) { const p = recordProblem(a.key, r); if (p) invalid.set(r.seed, `${a.key}: ${p}`); }
+    }
+    return { recs, errs, invalid };
+  };
+  //  斷路器（登記 seedOrder.circuitBreaker）：無效 seed 超過上限 ⇒ 停止排程、STOP 交 Owner（不默默一路走到上限）。
+  const breakerTripped = (invalidCount, walked) => invalidCount > SO.circuitBreaker.maxInvalidSeeds
+    || (walked >= SO.circuitBreaker.minWalkedForShare && invalidCount / walked > SO.circuitBreaker.maxInvalidShare);
+
   // ── 批次檔 ──────────────────────────────────────────────────────────────
   const baseDir = path.resolve(val("dir", DEFAULT_DIR));
   if (baseDir.toLowerCase().startsWith(ROOT.toLowerCase())) { console.error(`--dir 必須在 repo 之外：${baseDir}`); process.exit(2); }
@@ -193,7 +288,11 @@ async function main() {
               const el = (Date.now() - t0) / 1000, per = el / finished, left = (tasks.length - finished) * per;
               console.log(`${bar(finished, tasks.length)} ${String(Math.round((finished / tasks.length) * 100)).padStart(3)}%  ${finished}/${tasks.length} 場  已 ${(el / 60).toFixed(1)} 分，預估剩 ${(left / 60).toFixed(1)} 分（${per.toFixed(2)} 秒/場，${workers} workers）`);
             }
-          } else if (m.type === "error") { failed++; console.log(`✗ ${m.id}: ${String(m.error).slice(0, 300)}`); }
+          } else if (m.type === "error") {
+            failed++; console.log(`✗ ${m.id}: ${String(m.error).slice(0, 300)}`);
+            //  career：失敗就是該 seed 無效（決定性，重跑也一樣）⇒ 記下來，走 seed 時跳過並列在結果裡。
+            if (t.career) fs.appendFileSync(fileOf(dir, `${t.key}.errors`), `${JSON.stringify({ seed: t.seed, error: String(m.error).slice(0, 2000) })}\n`);
+          }
           feed();
         });
         child.on("exit", () => { alive--; if (alive === 0) done(); });
@@ -205,6 +304,7 @@ async function main() {
     return { finished, failed, stopped };
   }
   const taskFor = (study, arm, seed, layout) => {
+    if (study === "sidebias-career") return { id: `${arm.key}#${seed}#${layout}`, key: arm.key, seed, layout, ruleset: arm.ruleset, career: true };
     if (study === "sidebias") return { id: `${arm.key}#${seed}#${layout}`, key: arm.key, seed, layout, ruleset: arm.ruleset, laneFrame: null, blue: arm.blue, redInput: redForSeed(seed) };
     return { id: `${arm.key}#${seed}#${layout}`, key: arm.key, seed, layout, ruleset: BEH.ruleset, laneFrame: arm.laneFrame, blue: arm.blue, red: arm.red };
   };
@@ -215,7 +315,8 @@ async function main() {
     if (!diagnostic && prov.dirtyFilesUnderSrcTools !== 0) { console.error(`src／tools 有 ${prov.dirtyFilesUnderSrcTools ?? "?"} 個未提交變更：正式研究必須在已 commit 的程式上跑（gitHead 才可追溯）。`); process.exit(2); }
     fs.mkdirSync(dir, { recursive: true });
     const metaFile = path.join(dir, "meta.json");
-    if (!fs.existsSync(metaFile)) fs.writeFileSync(metaFile, JSON.stringify({ study, startedAt: new Date().toISOString(), ...prov, design: study === "sidebias" ? SIDEBIAS_DESIGN : { plans: PLANS } }, null, 2));
+    if (!fs.existsSync(metaFile)) fs.writeFileSync(metaFile, JSON.stringify({ study, startedAt: new Date().toISOString(), ...prov,
+      design: study === "sidebias" ? { ...SIDEBIAS_DESIGN, role: "supplementary diagnostic only (Owner 2026-10-20)" } : study === "sidebias-career" ? REV : { plans: PLANS } }, null, 2));
     else {
       const m = JSON.parse(fs.readFileSync(metaFile, "utf8"));
       if (m.fingerprint !== prov.fingerprint || m.gitHead !== prov.gitHead) { console.error(`⚠ 這個資料夾的批次是在 ${m.gitHead}／指紋 ${m.fingerprint} 下開始的，目前是 ${prov.gitHead}／${prov.fingerprint}：不得混跑。換一個 --dir 或刪掉舊批次（由 Owner／controller 決定）。`); process.exit(2); }
@@ -223,9 +324,28 @@ async function main() {
     const tasks = [];
     for (const arm of arms) {
       const have = readBatch(dir, arm.key);
-      for (const s of seeds) for (const L of layouts) if (!have.has(`${s}|${L}`)) tasks.push(taskFor(study, arm, s, L));
+      const failedBefore = study === "sidebias-career" ? readErrors(dir, arm.key) : new Map();
+      for (const s of seeds) for (const L of layouts ?? [layoutOf(s)]) if (!have.has(`${s}|${L}`) && !failedBefore.has(s)) tasks.push(taskFor(study, arm, s, L));
     }
     return runTasks(dir, tasks, arms.length);
+  }
+  /** career：每個 seed 只跑它自己推導出的配置；依固定順序、每輪最多 SO.chunkSeeds 個 seed，補到兩個配置都 ≥ 目標個有效 seed；
+   *  每輪之間檢查斷路器（無效 seed 讓計畫走得更遠，但超過上限就停）。 */
+  async function runCareer(dir) {
+    let total = { finished: 0, failed: 0, stopped: false, breaker: false };
+    for (let round = 0; round < 1000; round++) {
+      fs.mkdirSync(dir, { recursive: true });
+      const st = careerState(dir), plan = careerPlan(st.invalid);
+      const walked = plan.seeds.filter((s) => careerArms().every((a) => st.recs[a.key].has(`${s}|${layoutOf(s)}`) || st.errs[a.key].has(s))).length;
+      if (breakerTripped(st.invalid.size, walked)) { console.error(`⛔ 斷路器：無效 seed ${st.invalid.size}／已走 ${walked}，超過登記上限 ⇒ 停止排程，STOP 交 Owner。`); return { ...total, breaker: true }; }
+      const todo = plan.seeds.filter((s) => careerArms().some((a) => !st.recs[a.key].has(`${s}|${layoutOf(s)}`) && !st.errs[a.key].has(s)));
+      console.log(`career 第 ${round + 1} 輪：計畫 ${plan.seeds.length} 個 seed（${plan.seeds[0]}…${plan.seeds.at(-1)}；有效 STANDARD ${plan.n.STANDARD}／SWAPPED ${plan.n.SWAPPED}${plan.reached ? "" : "，尚未達標"}；已知無效 ${st.invalid.size}），尚缺 ${todo.length} 個 seed`);
+      if (!todo.length) return total;
+      const r = await runStudy("sidebias-career", dir, { seeds: todo.slice(0, SO.chunkSeeds), layouts: null, arms: careerArms() });
+      total = { ...total, finished: total.finished + r.finished, failed: total.failed + r.failed, stopped: r.stopped };
+      if (r.stopped) return total;
+    }
+    return total;
   }
 
   // ── 統計（純函式）──────────────────────────────────────────────────────────
@@ -363,6 +483,70 @@ async function main() {
     return out;
   }
 
+  /** D-20 修訂的判定（登記 laneframe_registration_c3_d20rev.json）：整體依配置套原登記的 STOP／WARN；m4 分層只有配對 z ≥ 門檻才 STOP，
+   *  worse_pp ≥ 門檻標 OWNER_REVIEW（一定回報、不自動放行）；非 m4 必須逐場相同。門檻旗標只在資料完整時發（避免中途偷看）。 */
+  function careerVerdict(dir) {
+    const st = careerState(dir), plan = careerPlan(st.invalid);
+    const blueWin = (r) => (r.winner === "blue" ? 1 : r.winner === "red" ? 0 : 0.5);
+    const missing = plan.seeds.filter((s) => !st.invalid.has(s) && careerArms().some((a) => !st.recs[a.key].has(`${s}|${layoutOf(s)}`)));
+    const walked = plan.seeds.filter((s) => careerArms().every((a) => st.recs[a.key].has(`${s}|${layoutOf(s)}`) || st.errs[a.key].has(s))).length;
+    const breaker = breakerTripped(st.invalid.size, walked);
+    const complete = plan.reached && missing.length === 0 && !breaker;
+    const pairsOf = (L, pred) => plan.seeds.filter((s) => !st.invalid.has(s) && layoutOf(s) === L && pred(s))
+      .map((s) => [st.recs["career.v20"].get(`${s}|${L}`), st.recs["career.v21"].get(`${s}|${L}`)]).filter(([a, b]) => a && b);
+    const stat = (pairs) => {
+      if (!pairs.length) return { n: 0 };
+      const w20 = pairs.map(([a]) => blueWin(a)), w21 = pairs.map(([, b]) => blueWin(b));
+      const bias20 = mean(w20) - 0.5, bias21 = mean(w21) - 0.5;
+      const worsePp = (Math.abs(bias21) - Math.abs(bias20)) * 100;
+      const sgn = Math.sign(bias20) !== 0 ? Math.sign(bias20) : Math.sign(bias21);
+      const d = pairs.map((_, i) => (w21[i] - w20[i]) * sgn);
+      const z = zOf(d);
+      const med20 = median(pairs.map(([a]) => a.duration)), med21 = median(pairs.map(([, b]) => b.duration));
+      const durRatioChange = med20 ? med21 / med20 - 1 : null;
+      const stop = worsePp >= SB.stop.sideBiasWorseByAtLeastPp || (z !== null && z >= SB.stop.orAbsZAtLeastInWorseningDirection);
+      const warn = worsePp >= SB.warning.sideBiasWorseByAtLeastPp || (durRatioChange !== null && Math.abs(durRatioChange) > SB.warning.orMedianDurationRatioChangeOver);
+      return { n: pairs.length, blueWinRate20: r6(mean(w20)), blueWinRate21: r6(mean(w21)), bias20: r6(bias20), bias21: r6(bias21), worsePp: r6(worsePp),
+        meanD: r6(mean(d)), zWorsening: r6(z), pairsChangedOutcome: pairs.filter(([a, b]) => blueWin(a) !== blueWin(b)).length,
+        medianDuration20: r6(med20), medianDuration21: r6(med21), medianDurationRatioChange: r6(durRatioChange),
+        noWinnerPairs: pairs.filter(([a, b]) => !a.winner || !b.winner).length, stop, warn };
+    };
+    const isM4 = (s) => tacticIdOfSeed(s) === "m4";
+    const out = { overall: {}, m4: {}, nonM4Identity: {}, flags: [] };
+    let stop = false, warn = false, anomalies = 0;
+    for (const L of LAYOUTS) {
+      out.overall[L] = stat(pairsOf(L, () => true));
+      out.m4[L] = stat(pairsOf(L, isM4));
+      const sym = pairsOf(L, (s) => !isM4(s));
+      const diff = sym.filter(([a, b]) => a.winner !== b.winner || a.duration !== b.duration);
+      anomalies += diff.length;
+      out.nonM4Identity[L] = { n: sym.length, differing: diff.length, examples: diff.slice(0, 5).map(([a, b]) => ({ seed: a.seed, v20: [a.winner, a.duration], v21: [b.winner, b.duration] })) };
+      const o = out.overall[L], m = out.m4[L];
+      //  m4（Owner 2026-10-20）：STOP 只看配對 z；worse_pp 只當「需 Owner 判讀」的旗標；不套 WARN。
+      m.stop = m.zWorsening !== null && m.zWorsening >= SB.stop.orAbsZAtLeastInWorseningDirection;
+      m.ownerReview = m.worsePp !== null && m.worsePp >= SB.stop.sideBiasWorseByAtLeastPp;
+      delete m.warn;
+      if (complete) {
+        if (o.stop) { stop = true; out.flags.push(`STOP(overall, ${L}): worse_pp ${o.worsePp} / z ${o.zWorsening} — ask Owner`); }
+        if (o.warn) { warn = true; out.flags.push(`WARN(overall, ${L}): worse_pp ${o.worsePp} / median duration change ${o.medianDurationRatioChange}`); }
+        if (m.stop) { stop = true; out.flags.push(`STOP(m4, ${L}): paired z ${m.zWorsening} ≥ ${SB.stop.orAbsZAtLeastInWorseningDirection} — ask Owner`); }
+        if (m.ownerReview) out.flags.push(`OWNER_REVIEW(m4, ${L}): worse_pp ${m.worsePp} ≥ ${SB.stop.sideBiasWorseByAtLeastPp} (z ${m.zWorsening}) — reported for Owner judgement, not an automatic pass`);
+      }
+    }
+    //  ANOMALY 不受完整性限制：只要出現就是程式行為與預期不符。
+    if (anomalies) { stop = true; out.flags.push(`STOP(ANOMALY): ${anomalies} non-m4 pairs differ between career.v20 and career.v21 (expected identical) — ask Owner`); }
+    if (breaker) { stop = true; out.flags.push(`STOP(CIRCUIT_BREAKER): ${st.invalid.size} invalid seeds of ${walked} walked exceed the registered limit — ask Owner`); }
+    if (!complete && !breaker) out.flags.push(`INCOMPLETE: ${plan.reached ? `${missing.length} planned seeds not yet run` : `walk reached ${plan.seeds.at(-1)} without ${CAREER_TARGET} valid seeds per layout`}`);
+    out.flags.push("NEW_REGRESSION: not measured here — the controller checks clarifications.newRegressionGates separately (any newly red gate = STOP)");
+    out.sample = { seedOrder: { segments: SO.segments, step: SO.step, unit: "effectiveSeed = normalizeLiveSeed(seed, 'session')" }, firstSeed: plan.seeds[0], lastSeed: plan.seeds.at(-1),
+      seedsPlanned: plan.seeds.length, seedsWalked: walked, validPerLayout: plan.n, invalidSeeds: [...st.invalid].map(([seed, why]) => ({ seed, why })),
+      m4PerLayout: Object.fromEntries(LAYOUTS.map((L) => [L, out.m4[L].n])) };
+    out.ownerReview = LAYOUTS.some((L) => out.m4[L].ownerReview) && complete;
+    out.verdict = breaker || (anomalies > 0) ? "stop" : !complete ? "incomplete" : stop ? "stop" : warn ? "warn" : out.ownerReview ? "owner_review" : "pass";
+    out.interpretation = { draws: "no winner at 3600 s counts 0.5 (new rule registered in the addendum; the original d was in {-1,0,1})", strata: REV.strata, statisticalLimits: REV.statisticalLimits };
+    return out;
+  }
+
   // ── 指令 ────────────────────────────────────────────────────────────────
   if (flag("diagnostic")) {
     //  ≤ 10 場的自我測試：行為 7 場（seed 9001、STANDARD；對照＋top-split 兩臂＋負對照＋m4 兩臂＋bot-aggressive 紅）＋side bias 2 場（seed 5001、STANDARD）。
@@ -372,13 +556,15 @@ async function main() {
     const pick = new Set(["control", `${NEG_PLAN.name}@blue`, `${NEG_PLAN.name}@red`, `neg:${NEG_PLAN.name}@red`, "classic.m4@blue", "classic.m4@red", "std+bot-aggressive@red"]);
     console.log("⚠ DIAGNOSTIC（診斷用，≤ 10 場，結果丟棄、不是 gate 結果）");
     await runStudy("behavioural", dBeh, { seeds: [BEH_SEEDS[0]], layouts: ["STANDARD"], arms: behaviouralArms().filter((a) => pick.has(a.key)), diagnostic: true });
-    await runStudy("sidebias", dSb, { seeds: [SB_SEEDS[0]], layouts: ["STANDARD"], arms: sidebiasArms(), diagnostic: true });
+    //  career 診斷取順序上第一個 m4 對手的 seed（唯一會因 laneFrame 不同的風格），兩個規則集各一場。
+    await runStudy("sidebias-career", dSb, { seeds: [[...careerSequence()].find((s) => tacticIdOfSeed(s) === "m4")], layouts: null, arms: careerArms(), diagnostic: true });
     const recs = (d, k) => [...readBatch(d, k).values()];
     for (const k of pick) for (const r of recs(dBeh, k)) console.log(`  ${k.padEnd(28)} layout=${r.layout}/${r.layoutApplied} laneFrame=${r.laneFrame} winner=${r.winner} dur=${r.duration} split(blue)=${JSON.stringify(r.blue.split)} split(red)=${JSON.stringify(r.red.split)} ganks(red,world)=${JSON.stringify(r.red.ganks)} ganks(red,team)=${JSON.stringify(ganksInTeamFrame("red", r.red.ganks))}`);
-    for (const k of ["balanceTool.v20", "balanceTool.v21"]) for (const r of recs(dSb, k)) console.log(`  sidebias ${k} seed=${r.seed} layout=${r.layoutApplied} laneFrame=${r.laneFrame} winner=${r.winner} dur=${r.duration}`);
+    for (const k of ["career.v20", "career.v21"]) for (const r of recs(dSb, k)) console.log(`  sidebias(career) ${k} seed=${r.seed} layout=${r.layout}/${r.layoutApplied} ruleset=${r.ruleset} laneFrame=${r.laneFrame} opp=${r.opponentId}(${r.opponentStyle}) winner=${r.winner} dur=${r.duration}`);
     const tr = recs(dBeh, `${NEG_PLAN.name}@red`)[0], ng = recs(dBeh, `neg:${NEG_PLAN.name}@red`)[0], tb = recs(dBeh, `${NEG_PLAN.name}@blue`)[0];
     console.log(`  B1（診斷）top-split 藍方 own share=${JSON.stringify(b1Share(tb, "blue", NEG_PLAN.splitLane))}；紅方 teamRelative=${JSON.stringify(b1Share(tr, "red", NEG_PLAN.splitLane))}；紅方 legacyMirror（負對照）=${JSON.stringify(b1Share(ng, "red", NEG_PLAN.splitLane))}`);
-    console.log(`  統計管線（診斷，n=1，不是結果）：behavioural=${behaviouralVerdict(dBeh, [BEH_SEEDS[0]], { full: false }).verdict}、sidebias=${sidebiasVerdict(dSb, [SB_SEEDS[0]], { full: false }).verdict}`);
+    const cv = careerVerdict(dSb);
+    console.log(`  統計管線（診斷，n=1，不是結果）：behavioural=${behaviouralVerdict(dBeh, [BEH_SEEDS[0]], { full: false }).verdict}、sidebias(career)=${cv.verdict}（n STANDARD ${cv.overall.STANDARD.n}／SWAPPED ${cv.overall.SWAPPED.n}）`);
     console.log(`DIAGNOSTIC 資料夾（可刪）：${path.dirname(dBeh)}`);
     return;
   }
@@ -388,34 +574,51 @@ async function main() {
     process.exit(r.failed ? 1 : r.stopped ? 3 : 0);
   }
   if (study === "sidebias") {
-    const r = await runStudy("sidebias", path.join(baseDir, "sidebias"), { seeds: SB_SEEDS, layouts: SB.layouts, arms: sidebiasArms() });
+    //  正式 D-20（修訂登記）：career.v20 vs career.v21。無效 seed 是資料（列在結果裡），不是工具失敗 ⇒ 不以 exit 1 表示。
+    const r = await runCareer(path.join(baseDir, "sidebias-career"));
+    process.exit(r.breaker ? 4 : r.stopped ? 3 : 0);
+  }
+  if (study === "sidebias-twin") {
+    //  補充診斷（Owner 2026-10-20）：工具孿生，永遠不當 career 驗收、不決定 gate。
+    const r = await runStudy("sidebias", path.join(baseDir, "sidebias-twin"), { seeds: SB_SEEDS, layouts: SB.layouts, arms: sidebiasArms() });
     process.exit(r.failed ? 1 : r.stopped ? 3 : 0);
   }
   if (flag("report")) {
-    const dB = path.join(baseDir, "behavioural"), dS = path.join(baseDir, "sidebias");
+    const dB = path.join(baseDir, "behavioural"), dS = path.join(baseDir, "sidebias-career"), dT = path.join(baseDir, "sidebias-twin");
     const metaOf = (d) => { const f = path.join(d, "meta.json"); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : null; };
     const prov = provenance();
     const beh = behaviouralVerdict(dB, BEH_SEEDS, { full: true });
-    const sb = sidebiasVerdict(dS, SB_SEEDS, { full: true });
-    const stale = [metaOf(dB), metaOf(dS)].filter(Boolean).filter((m) => m.fingerprint !== prov.fingerprint || m.gitHead !== prov.gitHead).map((m) => `${m.study}@${m.gitHead}/${m.fingerprint}`);
+    const sb = careerVerdict(dS);
+    const twin = metaOf(dT) ? { role: "supplementary diagnostic only — not the career acceptance, never decides the gate (Owner 2026-10-20)", ...sidebiasVerdict(dT, SB_SEEDS, { full: true }) } : null;
+    //  過期判定：被量測的是 src（模擬語意）。批次開跑時的 gitHead 與目前 HEAD 之間 src 有任何差異、或 v21 指紋不同 ⇒ STALE。
+    //  只有 tools（量測工具本身）不同時不算過期，但把兩個 head 與期間改過的 tools 檔案照實列出（例：D-20 修訂登記的 commit 落在行為研究執行期間）。
+    const changedBetween = (from, scope) => { try { return execSync(`git diff --name-only ${from} HEAD -- ${scope}`, { cwd: ROOT }).toString().trim().split("\n").filter(Boolean); } catch (e) { return [`<git diff failed: ${String(e?.message ?? e).slice(0, 80)}>`]; } };
+    const headDelta = [metaOf(dB), metaOf(dS)].filter(Boolean).map((m) => ({ study: m.study, startedAt: m.gitHead, reportedAt: prov.gitHead,
+      srcChanged: m.gitHead === prov.gitHead ? [] : changedBetween(m.gitHead, "src"), toolsChanged: m.gitHead === prov.gitHead ? [] : changedBetween(m.gitHead, "tools"), fingerprint: m.fingerprint }));
+    const stale = headDelta.filter((d) => d.fingerprint !== prov.fingerprint || d.srcChanged.length).map((d) => `${d.study}@${d.startedAt}/${d.fingerprint} (src changed: ${d.srcChanged.length})`);
     const result = {
       schema: "esmo.laneframe-result.v1", registration: path.relative(ROOT, LF.REGISTRATION_FILE).replace(/\\/g, "/"), registeredAt: REG.registeredAt,
       reportedAt: new Date().toISOString(), ...prov, batchesStartedUnder: { behavioural: metaOf(dB), sidebias: metaOf(dS) },
       stale, behavioural: { ruleset: BEH.ruleset, laneFrame: BEH.laneFrame, seeds: BEH.seeds.range, layouts: LAYOUTS, plans: PLANS, ...beh },
-      sideBias: { seeds: SB.seeds, layouts: SB.layouts, ...sb },
+      sideBias: { registration: "tools/fixtures/laneframe_registration_c3_d20rev.json (amends gates.sideBias; Owner 2026-10-20)", comparison: REV.comparison, ...sb },
+      ...(twin ? { sideBiasTwinDiagnostic: twin } : {}),
       stop: beh.flags.some((f) => f.startsWith("STOP")) || sb.flags.some((f) => f.startsWith("STOP")),
       warn: sb.flags.some((f) => f.startsWith("WARN")),
+      ownerReview: sb.ownerReview === true,
+      sideBiasVerdictNote: "sideBias.verdict is the formal D-20 result (career); sideBiasTwinDiagnostic never decides it",
     };
-    if (stale.length) result.flags = [`STALE: batches were started under a different gitHead/fingerprint: ${stale.join(", ")}`];
+    result.headDelta = headDelta;
+    if (stale.length) result.flags = [`STALE: batches were started under different simulation code (src) or fingerprint: ${stale.join(", ")}`];
     fs.writeFileSync(RESULT_FIXTURE, `${JSON.stringify(result, null, 2)}\n`);
     console.log(`behavioural：${beh.verdict}（B1 ${beh.gates.B1}、負對照 ${beh.gates.negativeControl}、B2 ${beh.gates.B2}、B3 ${beh.gates.B3}）`);
     for (const f of beh.flags) console.log(`  ${f}`);
     console.log(`sideBias：${sb.verdict}`);
-    for (const [L, x] of Object.entries(sb.layouts)) console.log(`  ${L}: n=${x.n} bias20=${x.bias20} bias21=${x.bias21} worse_pp=${x.worsePp} z=${x.zWorsening} durRatio=${x.medianDurationRatioChange}`);
+    for (const g of ["overall", "m4"]) for (const [L, x] of Object.entries(sb[g])) console.log(`  ${g} ${L}: n=${x.n} bias20=${x.bias20} bias21=${x.bias21} worse_pp=${x.worsePp} z=${x.zWorsening} 勝負改變 ${x.pairsChangedOutcome} durRatio=${x.medianDurationRatioChange}`);
+    for (const [L, x] of Object.entries(sb.nonM4Identity)) console.log(`  非 m4 逐場相同 ${L}: n=${x.n} 不同 ${x.differing}`);
     for (const f of sb.flags) console.log(`  ${f}`);
     console.log(`寫入 ${path.relative(ROOT, RESULT_FIXTURE)}（gitHead ${prov.gitHead}、指紋 ${prov.fingerprint}${stale.length ? "、STALE" : ""}）`);
     return;
   }
-  console.error("用法：--study=behavioural|sidebias ｜ --report ｜ --diagnostic --dir=<scratch>");
+  console.error("用法：--study=behavioural|sidebias|sidebias-twin ｜ --report ｜ --diagnostic --dir=<scratch>");
   process.exit(2);
 }
