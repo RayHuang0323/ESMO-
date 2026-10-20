@@ -11,6 +11,12 @@
 //    node tools/measure_laneframe_c3.mjs --report            讀兩個 study 的批次 ⇒ 每個 gate 的判定、STOP／WARN 旗標，
 //                                                            寫 tools/fixtures/laneframe_result_c3.json（含 gitHead＋v21 指紋）
 //    node tools/measure_laneframe_c3.mjs --diagnostic --dir=<scratch>   ≤ 10 場的自我測試（**診斷用，結果丟棄**；不寫 result fixture）
+//    ── 行為研究修訂（Owner 2026-10-20；tools/fixtures/laneframe_registration_c3_behavrev.json）──
+//    node tools/measure_laneframe_c3.mjs --study=behavioural-rev [--workers=3]   新 seeds 16001–17200，每 200 個 seed 一輪，可續跑
+//    node tools/measure_laneframe_c3.mjs --report-behavrev      寫 tools/fixtures/laneframe_result_c3_behavrev.json（B1／B2／B3 各自判定）
+//    node tools/measure_laneframe_c3.mjs --selftest-behavrev    三態判定的純函式自檢（不跑模擬）
+//    node tools/measure_laneframe_c3.mjs --diagnostic-behavrev --dir=<scratch>   1 個舊 seed（9001）× 全部臂的管線自檢（結果丟棄）
+//   原本的 --report 結果檔（laneframe_result_c3.json，commit 21ab068）是原始證據：--report 不覆寫它（--allow-overwrite 才行）。
 //
 //  ── behavioural（登記 gates.behavioural）──────────────────────────────────────────
 //   規則集 balanceTool.v21（laneFrame teamRelative）；每個 seed（9001–9100）跑 STANDARD 與 SWAPPED（ESMO_BALANCE_LAYOUT 強制配置）。
@@ -38,6 +44,7 @@ const flag = (n) => argv.includes(`--${n}`);
 const val = (n, d = null) => { const h = argv.find((a) => a.startsWith(`--${n}=`)); return h ? h.slice(n.length + 3) : d; };
 const DEFAULT_DIR = "C:/Users/ifikn/esmo-measure/laneframe-c3";
 const RESULT_FIXTURE = path.join(ROOT, "tools", "fixtures", "laneframe_result_c3.json");
+const BEHAVREV_RESULT_FIXTURE = path.join(ROOT, "tools", "fixtures", "laneframe_result_c3_behavrev.json");
 const DT = 0.5, CAP_S = 3600, LANE_WINDOW = [60, 480];
 const LANES = ["top", "mid", "bot"];
 const LANE_ROLE = { top: "top", mid: "mid", bot: "adc" };
@@ -108,7 +115,8 @@ if (flag("lf-worker")) {
     }
     const ex = e.snapshot().tacticExec;
     const side = (sd) => ({ ...S[sd], ganks: { top: ex[sd].topGanks, mid: ex[sd].midGanks, bot: ex[sd].botGanks } });
-    return { seed: t.seed, layout: t.layout, layoutApplied, laneFrame: e.director?.laneFrame ?? null, duration: e.t, over: e.over ? 1 : 0, winner: e.winner ?? null, blue: side("blue"), red: side("red") };
+    //  directorMode：引擎不記 rulesetId；balanceTool.v21 ⇒ core.v1、v20 ⇒ static（修訂登記 design.instrument 用它驗規則集）。
+    return { seed: t.seed, layout: t.layout, layoutApplied, laneFrame: e.director?.laneFrame ?? null, directorMode: e.director?.mode ?? null, duration: e.t, over: e.over ? 1 : 0, winner: e.winner ?? null, blue: side("blue"), red: side("red") };
   };
   M.mirrored = (seed) => mirroredRoster(seed, M);
   process.on("message", async (t) => {
@@ -238,6 +246,13 @@ async function main() {
   const breakerTripped = (invalidCount, walked) => invalidCount > SO.circuitBreaker.maxInvalidSeeds
     || (walked >= SO.circuitBreaker.minWalkedForShare && invalidCount / walked > SO.circuitBreaker.maxInvalidShare);
 
+  //  ── 行為研究修訂（Owner 2026-10-20；tools/fixtures/laneframe_registration_c3_behavrev.json）──────────────
+  //  設計（計畫、臂、指標、差中差）與原登記相同；改的是 seeds、n、B1 與 B2／B3 的判定（三態＋等價容許範圍）、N/A 與停損。
+  const BREV = JSON.parse(fs.readFileSync(path.join(ROOT, "tools", "fixtures", "laneframe_registration_c3_behavrev.json"), "utf8"));
+  const BREV_SEEDS = range(BREV.seeds.range), BREV_NEG_SEEDS = range(BREV.seeds.negativeControlSeeds);
+  const B1P = BREV.B1.params, SLP = BREV.stopLoss.params, BC = BREV.constants;
+  const deltaOf = (id) => { const [name, lane] = id.split("."); return name === "gankShare" ? BREV.margins.gankShare.delta : BREV.margins.laneForward.delta[lane]; };
+
   // ── 批次檔 ──────────────────────────────────────────────────────────────
   const baseDir = path.resolve(val("dir", DEFAULT_DIR));
   if (baseDir.toLowerCase().startsWith(ROOT.toLowerCase())) { console.error(`--dir 必須在 repo 之外：${baseDir}`); process.exit(2); }
@@ -291,7 +306,8 @@ async function main() {
           } else if (m.type === "error") {
             failed++; console.log(`✗ ${m.id}: ${String(m.error).slice(0, 300)}`);
             //  career：失敗就是該 seed 無效（決定性，重跑也一樣）⇒ 記下來，走 seed 時跳過並列在結果裡。
-            if (t.career) fs.appendFileSync(fileOf(dir, `${t.key}.errors`), `${JSON.stringify({ seed: t.seed, error: String(m.error).slice(0, 2000) })}\n`);
+            //  behavioural-rev（修訂登記 stopLoss）：同樣記下來；該 seed 對所有列與 B1 都算 N/A（計數、不挑著重跑）。
+            if (t.career || t.logErrors) fs.appendFileSync(fileOf(dir, `${t.key}.errors`), `${JSON.stringify({ seed: t.seed, layout: t.layout, error: String(m.error).slice(0, 2000) })}\n`);
           }
           feed();
         });
@@ -306,7 +322,7 @@ async function main() {
   const taskFor = (study, arm, seed, layout) => {
     if (study === "sidebias-career") return { id: `${arm.key}#${seed}#${layout}`, key: arm.key, seed, layout, ruleset: arm.ruleset, career: true };
     if (study === "sidebias") return { id: `${arm.key}#${seed}#${layout}`, key: arm.key, seed, layout, ruleset: arm.ruleset, laneFrame: null, blue: arm.blue, redInput: redForSeed(seed) };
-    return { id: `${arm.key}#${seed}#${layout}`, key: arm.key, seed, layout, ruleset: BEH.ruleset, laneFrame: arm.laneFrame, blue: arm.blue, red: arm.red };
+    return { id: `${arm.key}#${seed}#${layout}`, key: arm.key, seed, layout, ruleset: BEH.ruleset, laneFrame: arm.laneFrame, blue: arm.blue, red: arm.red, logErrors: study === "behavioural-rev" };
   };
   async function runStudy(study, dir, { seeds, layouts, arms, diagnostic = false }) {
     const prov = provenance();
@@ -316,7 +332,7 @@ async function main() {
     fs.mkdirSync(dir, { recursive: true });
     const metaFile = path.join(dir, "meta.json");
     if (!fs.existsSync(metaFile)) fs.writeFileSync(metaFile, JSON.stringify({ study, startedAt: new Date().toISOString(), ...prov,
-      design: study === "sidebias" ? { ...SIDEBIAS_DESIGN, role: "supplementary diagnostic only (Owner 2026-10-20)" } : study === "sidebias-career" ? REV : { plans: PLANS } }, null, 2));
+      design: study === "sidebias" ? { ...SIDEBIAS_DESIGN, role: "supplementary diagnostic only (Owner 2026-10-20)" } : study === "sidebias-career" ? REV : study === "behavioural-rev" ? { plans: PLANS, registration: BREV } : { plans: PLANS } }, null, 2));
     else {
       const m = JSON.parse(fs.readFileSync(metaFile, "utf8"));
       if (m.fingerprint !== prov.fingerprint || m.gitHead !== prov.gitHead) { console.error(`⚠ 這個資料夾的批次是在 ${m.gitHead}／指紋 ${m.fingerprint} 下開始的，目前是 ${prov.gitHead}／${prov.fingerprint}：不得混跑。換一個 --dir 或刪掉舊批次（由 Owner／controller 決定）。`); process.exit(2); }
@@ -324,7 +340,7 @@ async function main() {
     const tasks = [];
     for (const arm of arms) {
       const have = readBatch(dir, arm.key);
-      const failedBefore = study === "sidebias-career" ? readErrors(dir, arm.key) : new Map();
+      const failedBefore = study === "sidebias-career" || study === "behavioural-rev" ? readErrors(dir, arm.key) : new Map();
       for (const s of seeds) for (const L of layouts ?? [layoutOf(s)]) if (!have.has(`${s}|${L}`) && !failedBefore.has(s)) tasks.push(taskFor(study, arm, s, L));
     }
     return runTasks(dir, tasks, arms.length);
@@ -346,6 +362,31 @@ async function main() {
       if (r.stopped) return total;
     }
     return total;
+  }
+  /** behavioural-rev：依序每輪 SLP.chunkSeeds 個 seed（負對照只跑 negativeControlSeeds）；每輪之前檢查 B1 違規與斷路器
+   *  （功能性／營運停止，不是統計偷看——B2／B3 的判定只在批次完整後才算）。 */
+  async function runBehavRev(dir) {
+    const arms = behaviouralArms(), normal = arms.filter((a) => !a.negative), neg = arms.filter((a) => a.negative);
+    const negSet = new Set(BREV_NEG_SEEDS);
+    const opsCheck = () => {
+      const st = behavRevVerdict(dir);
+      if (st.b1Violations > 0) { console.error(`⛔ B1 違規：${st.b1Violations} 場的己方帶線比例 < ${B1P.minShare} ⇒ 停止排程，B1 STOP 交 Owner。`); return "b1"; }
+      if (st.instrumentMismatch) { console.error(`⛔ 儀器不符：${st.instrumentMismatch} 筆紀錄的配置／laneFrame／Director 與臂不符 ⇒ 停止排程，STOP 交 Owner。`); return "instrument"; }
+      if (st.breaker) { console.error(`⛔ 斷路器：失敗場次 ${st.erroredMatches}（已完成 ${st.finishedMatches}）超過登記上限 ⇒ 停止排程，STOP 交 Owner。`); return "breaker"; }
+      return null;
+    };
+    for (let i = 0; i < BREV_SEEDS.length; i += SLP.chunkSeeds) {
+      const why = opsCheck();
+      if (why) return { stopped: false, halted: why };
+      const chunk = BREV_SEEDS.slice(i, i + SLP.chunkSeeds);
+      console.log(`behavioural-rev 第 ${i / SLP.chunkSeeds + 1}／${Math.ceil(BREV_SEEDS.length / SLP.chunkSeeds)} 輪：seeds ${chunk[0]}–${chunk.at(-1)}`);
+      const r1 = await runStudy("behavioural-rev", dir, { seeds: chunk, layouts: LAYOUTS, arms: normal });
+      if (r1.stopped) return { stopped: true };
+      const negChunk = chunk.filter((s) => negSet.has(s));
+      if (negChunk.length) { const r2 = await runStudy("behavioural-rev", dir, { seeds: negChunk, layouts: LAYOUTS, arms: neg }); if (r2.stopped) return { stopped: true }; }
+    }
+    const why = opsCheck();
+    return { stopped: false, halted: why };
   }
 
   // ── 統計（純函式）──────────────────────────────────────────────────────────
@@ -547,6 +588,128 @@ async function main() {
     return out;
   }
 
+  /** 修訂登記 B2B3 的單列三態判定（純函式；--selftest-behavrev 直接測它）。
+   *  PASS＝90 % CI 嚴格落在 (−Δ, Δ) 內（TOST）＋sameSign＋沒有發生率不對稱；STOP＝99.9 % CI 整段在 [−Δ, Δ] 外，或顯著的方向相反；
+   *  其餘 INCONCLUSIVE。z_diff 只報告，永遠不是 PASS 條件。 */
+  const MIN_NEFF = BREV.B2B3.params.minNEffForPass;
+  const classifyRow = ({ n, mD, sdD, delta, mB, zB, mR, zR, zOcc }) => {
+    if (!(n >= 2) || mD === null || sdD === null) return { verdict: "inconclusive", reason: "n_eff < 2", se: null, ci90: null, ciStop: null, sameSignApplies: false, sameSignOk: true, signReversal: false, occurrenceAsymmetry: false };
+    const se = sdD / Math.sqrt(n);
+    const ci90 = [mD - BC.z90 * se, mD + BC.z90 * se], ciStop = [mD - BC.zStop * se, mD + BC.zStop * se];
+    const sameSignApplies = zB !== null && Math.abs(zB) >= BC.zStop;
+    const sameSignOk = !sameSignApplies || Math.sign(mB) === Math.sign(mR);
+    const signReversal = sameSignApplies && Math.sign(mB) !== Math.sign(mR) && zR !== null && Math.abs(zR) >= BC.zStop;
+    const outside = ciStop[0] > delta || ciStop[1] < -delta;
+    const inside = ci90[0] > -delta && ci90[1] < delta;
+    const occurrenceAsymmetry = zOcc !== null && Math.abs(zOcc) >= BC.zStop;
+    const enough = n >= MIN_NEFF;
+    const verdict = outside || signReversal ? "stop" : inside && enough && sameSignOk && !occurrenceAsymmetry ? "pass" : "inconclusive";
+    const reason = outside ? "99.9 % CI entirely outside the margin" : signReversal ? "demonstrated sign reversal" : verdict === "pass" ? "90 % CI inside the margin"
+      : [!inside && "90 % CI not inside the margin", !enough && `n_eff < ${MIN_NEFF}`, !sameSignOk && "sameSign violated", occurrenceAsymmetry && "occurrence asymmetry"].filter(Boolean).join("; ");
+    return { verdict, reason, se, ci90, ciStop, sameSignApplies, sameSignOk, signReversal, occurrenceAsymmetry };
+  };
+  const gateOf3 = (xs) => (xs.some((x) => x.verdict === "stop") ? "stop" : xs.length && xs.every((x) => x.verdict === "pass") ? "pass" : "inconclusive");
+  /** gate 判定（純函式）：B1 違規與儀器不符不論完整與否都是 stop；其餘未完整 ⇒ incomplete（B2／B3 不在完整前判定）。 */
+  const gatesOf = ({ complete, instrumentMismatch, b1Violations, negativeVerdict, b1Rows, b2Rows, b3Rows }) => {
+    if (instrumentMismatch) return { B1: "stop", B2: "stop", B3: "stop" };
+    const B1 = b1Violations > 0 ? "stop" : !complete ? "incomplete" : negativeVerdict !== "fails-as-required" || b1Rows.some((x) => x.verdict === "stop") ? "stop" : b1Rows.length && b1Rows.every((x) => x.verdict === "pass") ? "pass" : "inconclusive";
+    return { B1, B2: complete ? gateOf3(b2Rows) : "incomplete", B3: complete ? gateOf3(b3Rows) : "incomplete" };
+  };
+  const countLines = (f) => (fs.existsSync(f) ? fs.readFileSync(f, "utf8").split("\n").filter((l) => l.trim()).length : 0);
+
+  /** 修訂登記（laneframe_registration_c3_behavrev.json）的判定。seeds／negSeeds 預設為登記值（診斷可給別的）。 */
+  function behavRevVerdict(dir, seeds = BREV_SEEDS, negSeeds = BREV_NEG_SEEDS) {
+    const arms = behaviouralArms(), normal = arms.filter((a) => !a.negative), negArm = arms.find((a) => a.negative);
+    const B = Object.fromEntries(arms.map((a) => [a.key, readBatch(dir, a.key)]));
+    const E = Object.fromEntries(arms.map((a) => [a.key, readErrors(dir, a.key)]));
+    const erroredMatches = arms.reduce((k, a) => k + countLines(fileOf(dir, `${a.key}.errors`)), 0);
+    const finishedMatches = Object.values(B).reduce((k, m) => k + m.size, 0);
+    const breaker = erroredMatches > SLP.maxErroredMatches || (finishedMatches + erroredMatches > 0 && erroredMatches / (finishedMatches + erroredMatches) > SLP.maxErroredShare);
+    const errSeeds = new Set(normal.flatMap((a) => [...E[a.key].keys()]));
+    const negErr = new Set(E[negArm.key].keys());
+    const missingNormal = normal.reduce((k, a) => k + seeds.filter((s) => !errSeeds.has(s) && LAYOUTS.some((L) => !B[a.key].has(`${s}|${L}`))).length, 0);
+    const missingNeg = negSeeds.filter((s) => !negErr.has(s) && LAYOUTS.some((L) => !B[negArm.key].has(`${s}|${L}`))).length;
+    const complete = missingNormal === 0 && missingNeg === 0 && !breaker;
+    const okSeeds = seeds.filter((s) => !errSeeds.has(s));
+    const flags = [];
+    //  儀器（登記 design.instrument）：配置必須等於強制值（null 也算不符）、laneFrame 等於該臂、Director 是 core.v1（balanceTool.v21）。
+    const allRecs = Object.entries(B).flatMap(([k, m]) => [...m.values()].map((r) => ({ k, r })));
+    const layoutMismatch = allRecs.filter(({ r }) => r.layoutApplied !== r.layout).length;
+    const frameMismatch = allRecs.filter(({ k, r }) => r.laneFrame !== (k.startsWith("neg:") ? "legacyMirror" : BEH.laneFrame)).length;
+    const directorMismatch = allRecs.filter(({ r }) => r.directorMode !== "core.v1").length;
+    const instrumentMismatch = layoutMismatch + frameMismatch + directorMismatch;
+
+    // ── B1（功能正確性；與 B2／B3 分開驗收）
+    let b1Violations = 0;
+    const b1 = [];
+    for (const p of PLANS.filter((x) => x.splitLane)) {
+      const sides = {};
+      for (const side of ["blue", "red"]) {
+        const m = B[`${p.name}@${side}`];
+        const shares = okSeeds.flatMap((s) => LAYOUTS.map((L) => m.get(`${s}|${L}`)).filter(Boolean)).map((r) => b1Share(r, side, p.splitLane));
+        const measured = shares.filter(Boolean), violators = measured.filter((x) => x.share < B1P.minShare);
+        b1Violations += violators.length;
+        sides[side] = { matches: shares.length, nonNA: measured.length, na: shares.length - measured.length, occurrenceRate: r6(shares.length ? measured.length / shares.length : null),
+          violations: violators.length, minShare: r6(measured.length ? Math.min(...measured.map((x) => x.share)) : null) };
+      }
+      //  發生率不對稱（配對、每 seed 兩配置平均）：紅臂紅方有帶線 − 藍臂藍方有帶線。
+      const o = okSeeds.map((s) => LAYOUTS.map((L) => { const rr = B[`${p.name}@red`].get(`${s}|${L}`), rb = B[`${p.name}@blue`].get(`${s}|${L}`); return rr && rb ? (b1Share(rr, "red", p.splitLane) ? 1 : 0) - (b1Share(rb, "blue", p.splitLane) ? 1 : 0) : null; }))
+        .filter((xs) => xs.every((x) => x !== null)).map((xs) => mean(xs));
+      const zOcc = zOf(o), occurrenceAsymmetry = zOcc !== null && Math.abs(zOcc) >= BC.zStop;
+      const enough = sides.blue.nonNA >= B1P.minMatchesPerSide && sides.red.nonNA >= B1P.minMatchesPerSide;
+      const verdict = sides.blue.violations + sides.red.violations > 0 ? "stop" : !complete ? "incomplete" : enough && !occurrenceAsymmetry ? "pass" : "inconclusive";
+      b1.push({ plan: p.name, splitLane: p.splitLane, ...Object.fromEntries(Object.entries(sides).map(([k, v]) => [k, v])), occurrenceDiffMean: r6(o.length ? mean(o) : null), zOccurrence: r6(zOcc), occurrenceAsymmetry, verdict });
+    }
+    const negM = negSeeds.filter((s) => !negErr.has(s)).flatMap((s) => LAYOUTS.map((L) => B[negArm.key].get(`${s}|${L}`)).filter(Boolean)).map((r) => b1Share(r, "red", NEG_PLAN.splitLane));
+    const negMeasured = negM.filter(Boolean);
+    const negOwn = negMeasured.reduce((a, x) => a + x.own, 0), negTot = negMeasured.reduce((a, x) => a + x.tot, 0);
+    const negPooled = negTot ? negOwn / negTot : null;
+    const negative = { arm: negArm.key, laneFrame: "legacyMirror", seeds: BREV.seeds.negativeControlSeeds, matches: negM.length, nonNA: negMeasured.length, pooledOwnLaneShare: r6(negPooled),
+      verdict: negPooled === null ? "unmeasurable" : negPooled < B1P.negativeMaxPooledShare ? "fails-as-required" : "did-not-fail" };
+
+    // ── B2／B3（行為對稱；等價檢定，三態）
+    const rows = [];
+    for (const p of PLANS) for (const id of [...B2_METRICS, ...B3_METRICS]) {
+      const D = [], effB = [], effR = [], occ = [];
+      const rate = { planBlue: [0, 0], planRed: [0, 0], controlBlue: [0, 0], controlRed: [0, 0] };
+      let nNA = 0;
+      for (const s of okSeeds) {
+        const per = LAYOUTS.map((L) => {
+          const c = B.control.get(`${s}|${L}`), pb = B[`${p.name}@blue`].get(`${s}|${L}`), pr = B[`${p.name}@red`].get(`${s}|${L}`);
+          if (!c || !pb || !pr) return undefined;
+          const v = [metricOf(pb, "blue", id), metricOf(c, "blue", id), metricOf(pr, "red", id), metricOf(c, "red", id)];
+          const has = v.map((x) => (x === null ? 0 : 1));
+          [["planBlue", 0], ["controlBlue", 1], ["planRed", 2], ["controlRed", 3]].forEach(([k, i]) => { rate[k][0] += has[i]; rate[k][1]++; });
+          return { v, has };
+        });
+        if (per.some((x) => x === undefined)) continue;   // 還沒跑完（不完整時才會發生）
+        occ.push(mean(per.map(({ has }) => (has[2] - has[3]) - (has[0] - has[1]))));
+        if (per.some(({ v }) => v.some((x) => x === null))) { nNA++; continue; }
+        const e = per.map(({ v }) => ({ eb: v[0] - v[1], er: v[2] - v[3] }));
+        effB.push(mean(e.map((x) => x.eb))); effR.push(mean(e.map((x) => x.er)));
+        D.push(mean(e.map((x) => x.er - x.eb)));
+      }
+      const n = D.length, delta = deltaOf(id);
+      const mD = n ? mean(D) : null, sdD = n > 1 ? sdOf(D) : null, mB = n ? mean(effB) : null, mR = n ? mean(effR) : null, zB = zOf(effB), zR = zOf(effR), zD = zOf(D), zOcc = zOf(occ);
+      const c = classifyRow({ n, mD, sdD, delta, mB, zB, mR, zR, zOcc });
+      rows.push({ gate: isShare(id) ? "B2" : "B3", plan: p.name, metric: id, nSeeds: seeds.length, nErroredSeeds: seeds.length - okSeeds.length, nEff: n, nNA,
+        occurrenceRates: Object.fromEntries(Object.entries(rate).map(([k, [h, t]]) => [k, r6(t ? h / t : null)])), occurrenceDiffInDiffMean: r6(occ.length ? mean(occ) : null), zOccurrence: r6(zOcc),
+        delta: r6(delta), meanEffectBlue: r6(mB), zEffectBlue: r6(zB), meanEffectRed: r6(mR), zEffectRed: r6(zR), meanD: r6(mD), sdD: r6(sdD), se: r6(c.se),
+        ci90: c.ci90 && c.ci90.map(r6), ci999: c.ciStop && c.ciStop.map(r6), zDiff: r6(zD),
+        sameSignApplies: c.sameSignApplies, sameSignOk: c.sameSignOk, sameSignOriginalRule: { applies: zB !== null && Math.abs(zB) >= 2, ok: !(zB !== null && Math.abs(zB) >= 2) || Math.sign(mB) === Math.sign(mR) },
+        signReversal: c.signReversal, occurrenceAsymmetry: c.occurrenceAsymmetry, verdict: complete ? c.verdict : "incomplete", reason: complete ? c.reason : "batch incomplete — no verdict before the batch is complete" });
+    }
+    const g = gatesOf({ complete, instrumentMismatch, b1Violations, negativeVerdict: negative.verdict, b1Rows: b1, b2Rows: rows.filter((r) => r.gate === "B2"), b3Rows: rows.filter((r) => r.gate === "B3") });
+    if (instrumentMismatch) flags.push(`STOP(INSTRUMENT): ${layoutMismatch} layout / ${frameMismatch} laneFrame / ${directorMismatch} director-mode mismatches`);
+    if (b1Violations) flags.push(`STOP(B1): ${b1Violations} non-N/A matches with own-lane split share < ${B1P.minShare}`);
+    if (breaker) flags.push(`STOP(CIRCUIT_BREAKER): ${erroredMatches} errored matches (finished ${finishedMatches}) exceed the registered limit — Owner decides`);
+    if (!complete && !breaker) flags.push(`INCOMPLETE: ${missingNormal} seed×arm and ${missingNeg} negative-control seeds missing — B2/B3 verdicts are not computed before completion`);
+    for (const [k, v] of Object.entries(g)) if (v === "stop" || v === "inconclusive") flags.push(`${v.toUpperCase()}(${k}) — evidence kept, Owner decides${v === "inconclusive" ? " (never a pass, no re-run)" : ""}`);
+    flags.push("NEW_REGRESSION: not measured here — the controller checks clarifications.newRegressionGates separately");
+    return { complete, gates: g, b1, b1Violations, instrumentMismatch, negative, rows, flags, breaker, erroredMatches, finishedMatches, erroredSeeds: [...errSeeds],
+      constants: BC, margins: BREV.margins, rules: { B1: BREV.B1, B2B3: BREV.B2B3 } };
+  }
+
   // ── 指令 ────────────────────────────────────────────────────────────────
   if (flag("diagnostic")) {
     //  ≤ 10 場的自我測試：行為 7 場（seed 9001、STANDARD；對照＋top-split 兩臂＋負對照＋m4 兩臂＋bot-aggressive 紅）＋side bias 2 場（seed 5001、STANDARD）。
@@ -568,7 +731,95 @@ async function main() {
     console.log(`DIAGNOSTIC 資料夾（可刪）：${path.dirname(dBeh)}`);
     return;
   }
+  if (flag("selftest-behavrev")) {
+    //  三態判定的純函式自檢（合成輸入，不跑模擬）：每個案例的預期判定由登記規則直接推得。
+    const base = { n: 1000, sdD: 0.3, delta: 0.05, mB: 0.1, zB: 1, mR: 0.1, zR: 1, zOcc: 0 };
+    const cases = [
+      ["PASS：CI90 在範圍內", { ...base, mD: 0.001 }, "pass"],
+      ["STOP：CI99.9 整段在 +Δ 之外", { ...base, mD: 0.2 }, "stop"],
+      ["STOP：CI99.9 整段在 −Δ 之外", { ...base, mD: -0.2 }, "stop"],
+      ["INCONCLUSIVE：CI90 跨過 Δ、CI99.9 也碰到範圍內", { ...base, mD: 0.04 }, "inconclusive"],
+      ["INCONCLUSIVE：|z_diff| < 2 但 CI 太寬（不顯著 ≠ 等價）", { ...base, n: 100, sdD: 3, mD: 0 }, "inconclusive"],
+      ["INCONCLUSIVE：sameSign 違反（藍效果 |z| ≥ zStop、紅相反但不顯著）", { ...base, mD: 0, mB: 1, zB: 5, mR: -0.1, zR: -1 }, "inconclusive"],
+      ["STOP：顯著的方向相反", { ...base, mD: 0, mB: 1, zB: 5, mR: -0.5, zR: -4 }, "stop"],
+      ["PASS：藍效果 |z| = 2.5（< zStop）時 sameSign 不適用", { ...base, mD: 0, mB: 0.02, zB: 2.5, mR: -0.01, zR: -0.5 }, "pass"],
+      ["INCONCLUSIVE：發生率不對稱", { ...base, mD: 0, zOcc: 4 }, "inconclusive"],
+      ["INCONCLUSIVE：CI90 上緣剛好等於 Δ（嚴格內含）", { ...base, n: 10000, sdD: 1, mD: 0.05 - BC.z90 * 0.01 }, "inconclusive"],
+      ["INCONCLUSIVE：n_eff < 2", { ...base, n: 1, mD: 0, sdD: null }, "inconclusive"],
+      ["INCONCLUSIVE：n_eff < 下限（CI 在範圍內也不得 PASS）", { ...base, n: MIN_NEFF - 1, sdD: 0.01, mD: 0 }, "inconclusive"],
+      ["PASS：n_eff ＝ 下限", { ...base, n: MIN_NEFF, sdD: 0.01, mD: 0 }, "pass"],
+    ];
+    let bad = 0;
+    for (const [name, x, want] of cases) { const got = classifyRow(x).verdict; if (got !== want) bad++; console.log(`${got === want ? "✅" : "❌"} ${name}　預期 ${want}、得到 ${got}`); }
+    const g = [["全部 pass ⇒ pass", ["pass", "pass"], "pass"], ["有 stop ⇒ stop", ["pass", "stop", "inconclusive"], "stop"], ["有 inconclusive 無 stop ⇒ inconclusive", ["pass", "inconclusive"], "inconclusive"]];
+    for (const [name, vs, want] of g) { const got = gateOf3(vs.map((v) => ({ verdict: v }))); if (got !== want) bad++; console.log(`${got === want ? "✅" : "❌"} gate：${name}　得到 ${got}`); }
+    //  gate 停止路徑（審查 I1）：B1 違規與儀器不符不論完整與否都是 stop。
+    const gb = { complete: false, instrumentMismatch: 0, b1Violations: 0, negativeVerdict: "fails-as-required", b1Rows: [{ verdict: "pass" }], b2Rows: [{ verdict: "pass" }], b3Rows: [{ verdict: "pass" }] };
+    const gc = [
+      ["未完整、B1 違規 ⇒ B1 stop", { ...gb, b1Violations: 1 }, { B1: "stop", B2: "incomplete", B3: "incomplete" }],
+      ["未完整、儀器不符 ⇒ 全部 stop", { ...gb, instrumentMismatch: 3 }, { B1: "stop", B2: "stop", B3: "stop" }],
+      ["未完整、無違規 ⇒ 全部 incomplete", gb, { B1: "incomplete", B2: "incomplete", B3: "incomplete" }],
+      ["完整、負對照沒失敗 ⇒ B1 stop", { ...gb, complete: true, negativeVerdict: "did-not-fail" }, { B1: "stop", B2: "pass", B3: "pass" }],
+      ["完整、全部 pass", { ...gb, complete: true }, { B1: "pass", B2: "pass", B3: "pass" }],
+    ];
+    for (const [name, x, want] of gc) { const got = gatesOf(x), ok = JSON.stringify(got) === JSON.stringify(want); if (!ok) bad++; console.log(`${ok ? "✅" : "❌"} gates：${name}　得到 ${JSON.stringify(got)}`); }
+    const M = BREV.margins;
+    const lf = 0.5 * M.laneForward.anchorValue, gs = Math.min(0.05, 0.5 * M.gankShare.anchorValue);
+    const dOk = deltaOf("gankShare.top") === 0.05 && Math.abs(gs - 0.05) < 1e-12 && LANES.every((L) => Math.abs(deltaOf(`laneForward.${L}`) - lf) <= 1e-6);
+    if (!dOk) bad++;
+    console.log(`${dOk ? "✅" : "❌"} 容許範圍：Δ＝0.5×最小既有姿態效果（gankShare min(0.05, ${0.5 * M.gankShare.anchorValue})＝${deltaOf("gankShare.top")}；laneForward ${lf}）`);
+    const seedsOk = BREV_SEEDS.length === BREV.seeds.n && BREV_SEEDS[0] === 16001 && BREV_SEEDS.at(-1) === 17600 && BREV_NEG_SEEDS.every((s) => BREV_SEEDS.includes(s));
+    if (!seedsOk) bad++;
+    console.log(`${seedsOk ? "✅" : "❌"} seeds：${BREV_SEEDS[0]}–${BREV_SEEDS.at(-1)}（${BREV_SEEDS.length}），負對照 ${BREV_NEG_SEEDS[0]}–${BREV_NEG_SEEDS.at(-1)}`);
+    console.log(bad ? `自檢失敗 ${bad} 項` : "自檢全部通過");
+    process.exit(bad ? 1 : 0);
+  }
+  if (flag("diagnostic-behavrev")) {
+    //  管線自檢：1 個已用過的 seed（9001，原研究區段）× 全部臂 × 兩配置＋負對照（20 場）；結果丟棄，不寫 result fixture。
+    if (!val("dir") || path.resolve(val("dir")).toLowerCase() === path.resolve(DEFAULT_DIR).toLowerCase()) { console.error("--diagnostic-behavrev 需要另給 --dir（不得用正式資料夾）"); process.exit(2); }
+    const d = path.join(baseDir, `diagnostic-behavrev-${Date.now()}`);
+    console.log("⚠ DIAGNOSTIC（診斷用，20 場，結果丟棄、不是 gate 結果）");
+    const arms = behaviouralArms();
+    await runStudy("behavioural-rev", d, { seeds: [9001], layouts: LAYOUTS, arms, diagnostic: true });
+    const v = behavRevVerdict(d, [9001], [9001]);
+    console.log(`  complete=${v.complete} gates=${JSON.stringify(v.gates)} b1Violations=${v.b1Violations} negative=${v.negative.verdict}(${v.negative.pooledOwnLaneShare}) errored=${v.erroredMatches}`);
+    for (const r of v.rows.slice(0, 6)) console.log(`  ${r.gate} ${r.plan} ${r.metric} nEff=${r.nEff} nNA=${r.nNA} occ=${JSON.stringify(r.occurrenceRates)} verdict=${r.verdict}`);
+    console.log(`  （n=1：B2／B3 的判定在 n=1 時必然 inconclusive，這裡只驗管線）DIAGNOSTIC 資料夾（可刪）：${d}`);
+    return;
+  }
   const study = val("study");
+  if (study === "behavioural-rev") {
+    const r = await runBehavRev(path.join(baseDir, "behavioural-rev"));
+    process.exit(r.halted === "b1" || r.halted === "instrument" ? 5 : r.halted === "breaker" ? 4 : r.stopped ? 3 : 0);
+  }
+  if (flag("report-behavrev")) {
+    const d = path.join(baseDir, "behavioural-rev");
+    const metaF = path.join(d, "meta.json"), meta = fs.existsSync(metaF) ? JSON.parse(fs.readFileSync(metaF, "utf8")) : null;
+    const prov = provenance();
+    const v = behavRevVerdict(d);
+    //  寫檔守門（登記 stopLoss.reportGuard）：結果檔只寫一次、只在批次完整或被 STOP 停下後寫，永不覆寫；中途報告用 --out 寫到 repo 外。
+    const halted = Object.values(v.gates).includes("stop") || v.breaker;
+    const out = val("out") ? path.resolve(val("out")) : BEHAVREV_RESULT_FIXTURE;
+    if (out === BEHAVREV_RESULT_FIXTURE) {
+      if (fs.existsSync(out)) { console.error(`${path.relative(ROOT, out)} 已存在：結果檔永不覆寫。`); process.exit(2); }
+      if (!v.complete && !halted) { console.error("批次未完整也沒有 STOP：不寫結果檔。中途報告請用 --out=<repo 外的路徑>。"); process.exit(2); }
+    } else if (out.toLowerCase().startsWith(ROOT.toLowerCase())) { console.error(`--out 必須在 repo 之外：${out}`); process.exit(2); }
+    const srcChanged = meta && meta.gitHead !== prov.gitHead ? execSync(`git diff --name-only ${meta.gitHead} HEAD -- src`, { cwd: ROOT }).toString().trim().split("\n").filter(Boolean) : [];
+    const stale = meta && (meta.fingerprint !== prov.fingerprint || srcChanged.length) ? [`behavioural-rev@${meta.gitHead}/${meta.fingerprint} (src changed: ${srcChanged.length})`] : [];
+    const result = { schema: "esmo.laneframe-result-behavrev.v1", registration: "tools/fixtures/laneframe_registration_c3_behavrev.json", registeredAt: BREV.registeredAt,
+      originalEvidence: BREV.originalEvidence, reportedAt: new Date().toISOString(), ...prov, batchStartedUnder: meta, stale, srcChangedSinceBatchStart: srcChanged,
+      seeds: BREV.seeds, design: BREV.design, ...v,
+      stop: halted, interim: out !== BEHAVREV_RESULT_FIXTURE, inconclusive: Object.values(v.gates).includes("inconclusive"),
+      note: "B1, B2, B3 are separate verdicts; INCONCLUSIVE is never a pass; z_diff is reported but never a PASS criterion" };
+    if (stale.length) result.flags = [...result.flags, `STALE: ${stale.join(", ")}`];
+    fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, `${JSON.stringify(result, null, 2)}\n`);
+    console.log(`behavioural-rev：B1 ${v.gates.B1}（負對照 ${v.negative.verdict}，pooled ${v.negative.pooledOwnLaneShare}）、B2 ${v.gates.B2}、B3 ${v.gates.B3}；完整 ${v.complete}；失敗場次 ${v.erroredMatches}`);
+    for (const x of v.b1) console.log(`  B1 ${x.plan}: blue nonNA ${x.blue.nonNA}/${x.blue.matches} 違規 ${x.blue.violations}；red nonNA ${x.red.nonNA}/${x.red.matches} 違規 ${x.red.violations}；發生率差 z ${x.zOccurrence} ⇒ ${x.verdict}`);
+    for (const r of v.rows) console.log(`  ${r.gate} ${r.plan.padEnd(18)} ${r.metric.padEnd(16)} nEff ${r.nEff}/${r.nSeeds} meanD ${r.meanD} CI90 [${r.ci90}] Δ ${r.delta} z_diff ${r.zDiff} sameSign ${r.sameSignOk} occZ ${r.zOccurrence} ⇒ ${r.verdict}`);
+    for (const f of result.flags) console.log(`  ${f}`);
+    console.log(`寫入 ${out}（gitHead ${prov.gitHead}、指紋 ${prov.fingerprint}${stale.length ? "、STALE" : ""}）`);
+    return;
+  }
   if (study === "behavioural") {
     const r = await runStudy("behavioural", path.join(baseDir, "behavioural"), { seeds: BEH_SEEDS, layouts: LAYOUTS, arms: behaviouralArms() });
     process.exit(r.failed ? 1 : r.stopped ? 3 : 0);
@@ -584,6 +835,8 @@ async function main() {
     process.exit(r.failed ? 1 : r.stopped ? 3 : 0);
   }
   if (flag("report")) {
+    //  原始證據保護（Owner 2026-10-20）：commit 21ab068 的結果檔不得被覆寫或重新解釋。
+    if (fs.existsSync(RESULT_FIXTURE) && !flag("allow-overwrite")) { console.error(`${path.relative(ROOT, RESULT_FIXTURE)} 已存在（原始證據，commit 21ab068）：不覆寫。行為研究修訂請用 --report-behavrev。`); process.exit(2); }
     const dB = path.join(baseDir, "behavioural"), dS = path.join(baseDir, "sidebias-career"), dT = path.join(baseDir, "sidebias-twin");
     const metaOf = (d) => { const f = path.join(d, "meta.json"); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : null; };
     const prov = provenance();
