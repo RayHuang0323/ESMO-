@@ -1,0 +1,612 @@
+{
+  "schema": "esmo.phase-stance-result.v1",
+  "registration": "tools/fixtures/phase_stance_registration_c3_2.json",
+  "reportedAt": "2026-10-21T14:45:42.925Z",
+  "gitHead": "b0c94b299a19cc2aa9c0886bf50ac0b3eae4eaa2",
+  "dirtyFilesUnderSrcTools": 0,
+  "simulationVersion": "moba-sim.v21",
+  "fingerprint": "49faf7d28aa9ebfb",
+  "batchStartedUnder": {
+    "study": "phase-stance-c3-2",
+    "startedAt": "2026-10-21T12:23:40.806Z",
+    "gitHead": "b0c94b299a19cc2aa9c0886bf50ac0b3eae4eaa2",
+    "dirtyFilesUnderSrcTools": 0,
+    "simulationVersion": "moba-sim.v21",
+    "fingerprint": "49faf7d28aa9ebfb",
+    "registration": "tools\\fixtures\\phase_stance_registration_c3_2.json"
+  },
+  "stale": [],
+  "seeds": "3001-3400",
+  "complete": true,
+  "halted": false,
+  "finishedMatches": 6800,
+  "erroredMatches": 0,
+  "erroredSeeds": [],
+  "instrumentMismatch": 0,
+  "rules": {
+    "perSidePerMetric": "paired over seeds: diff = mean(treatment - control); z = diff / (sd / sqrt(n)); rel = diff / mean(control). OK = sign(diff) matches the direction AND z in the direction >= 3 AND |rel| >= 0.05",
+    "sidePass": "both metrics OK on that side",
+    "verdicts": {
+      "confirmed": "both sides pass",
+      "duty_cycle_only": "the primary metric is OK on both sides but the start-only metric fails on at least one side",
+      "one_sided": "exactly one side passes",
+      "insufficient": "neither side passes and no reversal",
+      "reversed": "on either side and either metric, z in the direction <= -3 (overrides the others)",
+      "n_insufficient": "valid pairs < 200 on either side for either metric (overrides everything except STOP(INSTRUMENT)); no statistical verdict is emitted for that option"
+    },
+    "precedence": "the first matching verdict in this order: n_insufficient > reversed > confirmed > duty_cycle_only > one_sided > insufficient (so one side passing both metrics while the other passes only the primary metric is duty_cycle_only, not one_sided)",
+    "zeroVariance": "if sd of the paired differences is 0: z = 0 when diff = 0, otherwise z = sign(diff) x 99 (as tacticTruthSim.pairStats); rel = null when the control mean is 0 (then the |Δ| >= 5 % condition is not met)",
+    "noVerdictWhen": "the batch is incomplete, halted by STOP(INSTRUMENT) or STOP(CIRCUIT_BREAKER), or stale (src or fingerprint changed since the batch started, or meta.json missing): every verdict is null and the result fixture is not written",
+    "minValidPairs": 200,
+    "minValidPairsWhy": "D-19: late valid pairs n >= 200 (the original truth table had 23/40 late pairs); applied to every phase for uniformity (early/mid have 400 by construction unless a match ends before 9 minutes)",
+    "multiplicity": "an option is confirmed only when 4 one-sided tests (2 metrics x 2 sides) each reach z >= 3 (p ~ 0.00135 each); 8 options. The family-wise chance of a false 'confirmed' is negligible; false 'reversed' per option needs one of 4 tests at z <= -3 (about 0.5 % per option, about 4 % over 8 options) and is reported as such.",
+    "thresholdsFrom": "draft §1.3 (Owner mid-term ruling: fresh seeds, both sides, direction + paired z >= 3 + |Δ| >= 5 %, start-only version for duty-cycle metrics) and D-19 (n >= 200)"
+  },
+  "rows": [
+    {
+      "dimension": "phases.early.stance",
+      "choice": "aggressive",
+      "phase": "early",
+      "direction": "up",
+      "verdict": "confirmed",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.early",
+            "side": "blue",
+            "n": 400,
+            "meanA": 9.620959332638156,
+            "meanB": 11.673096976016689,
+            "diff": 2.05213764337852,
+            "sd": 2.2144641308709345,
+            "z": 18.533943402112612,
+            "rel": 0.21329865062591474,
+            "nNA": 0,
+            "zDir": 18.533943402112612,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.early",
+            "side": "blue",
+            "n": 400,
+            "meanA": 3.5446298227320123,
+            "meanB": 4.01230448383733,
+            "diff": 0.46767466110531786,
+            "sd": 0.8103427930851785,
+            "z": 11.542637636715765,
+            "rel": 0.13193892860294762,
+            "nNA": 0,
+            "zDir": 11.542637636715765,
+            "ok": true
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.early",
+            "side": "red",
+            "n": 400,
+            "meanA": 9.766736183524506,
+            "meanB": 11.68779979144943,
+            "diff": 1.9210636079249215,
+            "sd": 2.3682011555119846,
+            "z": 16.22382121935587,
+            "rel": 0.19669453252618424,
+            "nNA": 0,
+            "zDir": 16.22382121935587,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.early",
+            "side": "red",
+            "n": 400,
+            "meanA": 3.598435870698645,
+            "meanB": 4.027320125130342,
+            "diff": 0.4288842544316997,
+            "sd": 0.8590137759211225,
+            "z": 9.985503526338821,
+            "rel": 0.11918629922628877,
+            "nNA": 0,
+            "zDir": 9.985503526338821,
+            "ok": true
+          }
+        ]
+      }
+    },
+    {
+      "dimension": "phases.early.stance",
+      "choice": "defensive",
+      "phase": "early",
+      "direction": "down",
+      "verdict": "confirmed",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.early",
+            "side": "blue",
+            "n": 400,
+            "meanA": 9.620959332638156,
+            "meanB": 8.745672575599594,
+            "diff": -0.8752867570385827,
+            "sd": 2.1265792187501047,
+            "z": -8.231875392378111,
+            "rel": -0.09097707689806553,
+            "nNA": 0,
+            "zDir": 8.231875392378111,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.early",
+            "side": "blue",
+            "n": 400,
+            "meanA": 3.5446298227320123,
+            "meanB": 3.3453597497393126,
+            "diff": -0.19927007299270078,
+            "sd": 0.7872319277275825,
+            "z": -5.062550589580689,
+            "rel": -0.05621745653516902,
+            "nNA": 0,
+            "zDir": 5.062550589580689,
+            "ok": true
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.early",
+            "side": "red",
+            "n": 400,
+            "meanA": 9.766736183524506,
+            "meanB": 8.720333680917625,
+            "diff": -1.0464025026068822,
+            "sd": 2.131928038162428,
+            "z": -9.816489899056888,
+            "rel": -0.1071394253867589,
+            "nNA": 0,
+            "zDir": 9.816489899056888,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.early",
+            "side": "red",
+            "n": 400,
+            "meanA": 3.598435870698645,
+            "meanB": 3.3237747653806053,
+            "diff": -0.2746611053180396,
+            "sd": 0.769337732649164,
+            "z": -7.140195876582371,
+            "rel": -0.07632791445709813,
+            "nNA": 0,
+            "zDir": 7.140195876582371,
+            "ok": true
+          }
+        ]
+      }
+    },
+    {
+      "dimension": "phases.early.stance",
+      "choice": "scaling",
+      "phase": "early",
+      "direction": "down",
+      "verdict": "insufficient",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.early",
+            "side": "blue",
+            "n": 400,
+            "meanA": 9.620959332638156,
+            "meanB": 9.179562043795624,
+            "diff": -0.4413972888425448,
+            "sd": 1.954495035605614,
+            "z": -4.5167399333483065,
+            "rel": -0.04587871890749481,
+            "nNA": 0,
+            "zDir": 4.5167399333483065,
+            "ok": false
+          },
+          {
+            "metric": "engageStartsPerMin.early",
+            "side": "blue",
+            "n": 400,
+            "meanA": 3.5446298227320123,
+            "meanB": 3.4417101147028153,
+            "diff": -0.10291970802919707,
+            "sd": 0.7099586578448059,
+            "z": -2.8993155275161078,
+            "rel": -0.029035389639043334,
+            "nNA": 0,
+            "zDir": 2.8993155275161078,
+            "ok": false
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.early",
+            "side": "red",
+            "n": 400,
+            "meanA": 9.766736183524506,
+            "meanB": 9.130135557872787,
+            "diff": -0.6366006256517205,
+            "sd": 2.222529581620282,
+            "z": -5.728613296454952,
+            "rel": -0.06518048749239293,
+            "nNA": 0,
+            "zDir": 5.728613296454952,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.early",
+            "side": "red",
+            "n": 400,
+            "meanA": 3.598435870698645,
+            "meanB": 3.4326381647549544,
+            "diff": -0.16579770594369134,
+            "sd": 0.7658347130656739,
+            "z": -4.32985611947505,
+            "rel": -0.04607493697296357,
+            "nNA": 0,
+            "zDir": 4.32985611947505,
+            "ok": false
+          }
+        ]
+      }
+    },
+    {
+      "dimension": "phases.mid.stance",
+      "choice": "aggressive",
+      "phase": "mid",
+      "direction": "up",
+      "verdict": "confirmed",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.mid",
+            "side": "blue",
+            "n": 400,
+            "meanA": 7.357292111553713,
+            "meanB": 8.318452705189854,
+            "diff": 0.9611605936361398,
+            "sd": 1.7482319283393843,
+            "z": 10.995801850491654,
+            "rel": 0.13064053717899232,
+            "nNA": 0,
+            "zDir": 10.995801850491654,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.mid",
+            "side": "blue",
+            "n": 400,
+            "meanA": 4.301469755814018,
+            "meanB": 4.829135805294471,
+            "diff": 0.5276660494804548,
+            "sd": 0.8607673087449051,
+            "z": 12.260364540327418,
+            "rel": 0.12267110532795049,
+            "nNA": 0,
+            "zDir": 12.260364540327418,
+            "ok": true
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.mid",
+            "side": "red",
+            "n": 400,
+            "meanA": 7.449814616883052,
+            "meanB": 8.453173009074145,
+            "diff": 1.0033583921910958,
+            "sd": 1.7038146265944754,
+            "z": 11.777788223318321,
+            "rel": 0.1346823302041969,
+            "nNA": 0,
+            "zDir": 11.777788223318321,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.mid",
+            "side": "red",
+            "n": 400,
+            "meanA": 4.354555789605501,
+            "meanB": 4.856149102820283,
+            "diff": 0.5015933132147851,
+            "sd": 0.8994215684002613,
+            "z": 11.15368656562093,
+            "rel": 0.11518817014863109,
+            "nNA": 0,
+            "zDir": 11.15368656562093,
+            "ok": true
+          }
+        ]
+      }
+    },
+    {
+      "dimension": "phases.mid.stance",
+      "choice": "defensive",
+      "phase": "mid",
+      "direction": "down",
+      "verdict": "confirmed",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.mid",
+            "side": "blue",
+            "n": 400,
+            "meanA": 7.357292111553713,
+            "meanB": 6.408075588077472,
+            "diff": -0.9492165234762417,
+            "sd": 1.5283680688153494,
+            "z": -12.42130796689553,
+            "rel": -0.12901710426661123,
+            "nNA": 0,
+            "zDir": 12.42130796689553,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.mid",
+            "side": "blue",
+            "n": 400,
+            "meanA": 4.301469755814018,
+            "meanB": 3.87583505766102,
+            "diff": -0.4256346981529973,
+            "sd": 0.8669842548028683,
+            "z": -9.818741131573988,
+            "rel": -0.09895099171107609,
+            "nNA": 0,
+            "zDir": 9.818741131573988,
+            "ok": true
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.mid",
+            "side": "red",
+            "n": 400,
+            "meanA": 7.449814616883052,
+            "meanB": 6.477722496539376,
+            "diff": -0.972092120343675,
+            "sd": 1.5498555000544199,
+            "z": -12.544293584912168,
+            "rel": -0.13048541075648823,
+            "nNA": 0,
+            "zDir": 12.544293584912168,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.mid",
+            "side": "red",
+            "n": 400,
+            "meanA": 4.354555789605501,
+            "meanB": 3.8843634317943976,
+            "diff": -0.47019235781110197,
+            "sd": 0.8086772031968803,
+            "z": -11.628678438129016,
+            "rel": -0.1079771119096625,
+            "nNA": 0,
+            "zDir": 11.628678438129016,
+            "ok": true
+          }
+        ]
+      }
+    },
+    {
+      "dimension": "phases.mid.stance",
+      "choice": "scaling",
+      "phase": "mid",
+      "direction": "down",
+      "verdict": "duty_cycle_only",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.mid",
+            "side": "blue",
+            "n": 400,
+            "meanA": 7.357292111553713,
+            "meanB": 6.838605935631349,
+            "diff": -0.518686175922366,
+            "sd": 1.4281529084898132,
+            "z": -7.263734476035144,
+            "rel": -0.070499603394547,
+            "nNA": 0,
+            "zDir": 7.263734476035144,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.mid",
+            "side": "blue",
+            "n": 400,
+            "meanA": 4.301469755814018,
+            "meanB": 4.083750316918542,
+            "diff": -0.21771943889547496,
+            "sd": 0.829899658756865,
+            "z": -5.246885851757171,
+            "rel": -0.05061512721348272,
+            "nNA": 0,
+            "zDir": 5.246885851757171,
+            "ok": true
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.mid",
+            "side": "red",
+            "n": 400,
+            "meanA": 7.449814616883052,
+            "meanB": 6.987595413582289,
+            "diff": -0.4622192033007623,
+            "sd": 1.4072909743193753,
+            "z": -6.568921590992379,
+            "rel": -0.06204438997089453,
+            "nNA": 0,
+            "zDir": 6.568921590992379,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.mid",
+            "side": "red",
+            "n": 400,
+            "meanA": 4.354555789605501,
+            "meanB": 4.139963054648215,
+            "diff": -0.21459273495728637,
+            "sd": 0.7050853424994304,
+            "z": -6.087000311099495,
+            "rel": -0.04928005181826532,
+            "nNA": 0,
+            "zDir": 6.087000311099495,
+            "ok": false
+          }
+        ]
+      }
+    },
+    {
+      "dimension": "phases.late.stance",
+      "choice": "defensive",
+      "phase": "late",
+      "direction": "down",
+      "verdict": "confirmed",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.late",
+            "side": "blue",
+            "n": 303,
+            "meanA": 3.4237075398380425,
+            "meanB": 2.998643253532458,
+            "diff": -0.4250642863055867,
+            "sd": 0.8920287313288872,
+            "z": -8.294631348712837,
+            "rel": -0.12415321149939525,
+            "nNA": 97,
+            "zDir": 8.294631348712837,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.late",
+            "side": "blue",
+            "n": 303,
+            "meanA": 2.7963629472291336,
+            "meanB": 2.4766501710041866,
+            "diff": -0.3197127762249479,
+            "sd": 0.6632952139712187,
+            "z": -8.390241129440302,
+            "rel": -0.1143316451613499,
+            "nNA": 97,
+            "zDir": 8.390241129440302,
+            "ok": true
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.late",
+            "side": "red",
+            "n": 303,
+            "meanA": 3.4031037475318886,
+            "meanB": 2.885407477848498,
+            "diff": -0.5176962696833901,
+            "sd": 0.9268790159635477,
+            "z": -9.722395856540397,
+            "rel": -0.15212473908820762,
+            "nNA": 97,
+            "zDir": 9.722395856540397,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.late",
+            "side": "red",
+            "n": 303,
+            "meanA": 2.8548266523903787,
+            "meanB": 2.4245242712100596,
+            "diff": -0.4303023811803177,
+            "sd": 0.7415793568290394,
+            "z": -10.100373450681413,
+            "rel": -0.15072802435132818,
+            "nNA": 97,
+            "zDir": 10.100373450681413,
+            "ok": true
+          }
+        ]
+      }
+    },
+    {
+      "dimension": "phases.late.stance",
+      "choice": "scaling",
+      "phase": "late",
+      "direction": "up",
+      "verdict": "confirmed",
+      "cells": {
+        "blue": [
+          {
+            "metric": "engageDecisionsPerMin.late",
+            "side": "blue",
+            "n": 303,
+            "meanA": 3.4237075398380425,
+            "meanB": 3.752125216563798,
+            "diff": 0.328417676725756,
+            "sd": 0.9931671790342393,
+            "z": 5.756062218446676,
+            "rel": 0.09592457092327801,
+            "nNA": 97,
+            "zDir": 5.756062218446676,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.late",
+            "side": "blue",
+            "n": 303,
+            "meanA": 2.7963629472291336,
+            "meanB": 3.0881241818606866,
+            "diff": 0.29176123463155307,
+            "sd": 0.7747424027007853,
+            "z": 6.555284973079597,
+            "rel": 0.10433596787593474,
+            "nNA": 97,
+            "zDir": 6.555284973079597,
+            "ok": true
+          }
+        ],
+        "red": [
+          {
+            "metric": "engageDecisionsPerMin.late",
+            "side": "red",
+            "n": 303,
+            "meanA": 3.4031037475318886,
+            "meanB": 3.745753182678746,
+            "diff": 0.3426494351468583,
+            "sd": 1.0952065206840005,
+            "z": 5.445970865163499,
+            "rel": 0.10068733149712696,
+            "nNA": 97,
+            "zDir": 5.445970865163499,
+            "ok": true
+          },
+          {
+            "metric": "engageStartsPerMin.late",
+            "side": "red",
+            "n": 303,
+            "meanA": 2.8548266523903787,
+            "meanB": 3.1125483449045355,
+            "diff": 0.25772169251415955,
+            "sd": 0.8157413104791115,
+            "z": 5.499457280147197,
+            "rel": 0.09027577639376677,
+            "nNA": 97,
+            "zDir": 5.499457280147197,
+            "ok": true
+          }
+        ]
+      }
+    }
+  ],
+  "flags": [
+    "OWNER_DECISION: phases.early.stance=aggressive, phases.early.stance=defensive, phases.mid.stance=aggressive, phases.mid.stance=defensive, phases.late.stance=defensive, phases.late.stance=scaling confirmed — whether to offer them to players (MEASURED_EXCLUSIONS must equal the G-A7 truth table) is the Owner's decision; not changed in this round"
+  ],
+  "summary": {
+    "phases.early.stance=aggressive": "confirmed",
+    "phases.early.stance=defensive": "confirmed",
+    "phases.early.stance=scaling": "insufficient",
+    "phases.mid.stance=aggressive": "confirmed",
+    "phases.mid.stance=defensive": "confirmed",
+    "phases.mid.stance=scaling": "duty_cycle_only",
+    "phases.late.stance=defensive": "confirmed",
+    "phases.late.stance=scaling": "confirmed"
+  }
+}
