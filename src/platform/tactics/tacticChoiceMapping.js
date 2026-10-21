@@ -138,6 +138,86 @@ export const CHOICE_MAPPING = deepFreeze({
   },
 });
 
+/**
+ * 每時期的選擇（Phase 3a-C3-3／C4／C5；契約 C3-C6_行為契約草案.md §2–§4）→ 該時期的設定覆寫。
+ * 與 CHOICE_MAPPING 分開：這些選擇**不改整場設定**，只在 Resolver 建「那一個時期」的方針時套用（R-5：只有真的不同的時期才另建物件）。
+ * 數值規則同上：每個值都是某個既有模板在同一個欄位上的值（source＝模板 id＋欄位路徑，gate 逐格對照），不發明新量級。
+ *   kind "phaseConfig"：values[choice]＝{ 設定路徑: 值 }（空物件＝不覆寫）。
+ *   數值覆寫取「較高者」（applyPhasePatch）：已經比對照表高的模板不變。
+ *   kind "phaseGank"：values[choice]＝lanePlan 的鍵（top／mid／adc）或 null；只取「該路 lanePlan＝aggressive」投影出來的 gankWeights
+ *     （該路本來就是 aggressive 的模板 ⇒ 不變），
+ *     站位（laneOffset）不動（契約 C5-3：站位不是強邊的宣稱效果）。路名是**己方視角**；紅方轉世界路名只在 Director（laneFrame）。
+ * 目前這些維度在 Registry 都是 design：玩家計畫不能選（createTacticPlan 拒絕）；量測工具經 legacy 輸入的 phaseChoices 使用（只限工具規則集）。
+ */
+const PHASE_IDX = Object.freeze({ early: 0, mid: 1, late: 2 });
+const objRow = (phase) => ({
+  kind: "phaseConfig", phase,
+  //  只宣稱「排第一」的物件（契約 C4-2）；前期沒有巴龍（§1.1）⇒ 前期不提供 baron。
+  values: { dragon: { "objectives.dragonPriority": 0.95 }, towers: { "objectives.towerPriority": 0.9 }, ...(phase === "early" ? {} : { baron: { "objectives.baronPriority": 0.85 } }) },
+  source: { dragon: "classic.m4 objectives.dragonPriority", towers: "classic.m1 objectives.towerPriority", ...(phase === "early" ? {} : { baron: "classic.m4 objectives.baronPriority" }) },
+});
+const groupRow = (phase) => ({
+  kind: "phaseConfig", phase,
+  //  沒有「分散」：沒有任何既有模板的 macro.grouping 低於 std 的 0.5（同 teamfight.grouping）。
+  values: { standard: {}, group: { "macro.grouping": 0.9 } },
+  source: { standard: "std（不覆寫）", group: "classic.m3 macro.grouping" },
+});
+const focusRow = (phase) => ({
+  kind: "phaseGank", phase,
+  values: { none: null, top: "top", mid: "mid", bot: "adc" },
+  source: "MobaTacticConfig toEngineTactic：lanePlan.<lane>＝aggressive 的 gankWeights（LANE_PLAN_ENUM）",
+});
+export const PHASE_CHOICE_MAPPING = deepFreeze({
+  version: TACTIC_RESOLVER_VERSION,
+  rows: Object.fromEntries(["early", "mid", "late"].flatMap((p) => [
+    [`phases.${p}.objectiveOrder`, objRow(p)],
+    [`phases.${p}.grouping`, groupRow(p)],
+    [`phases.${p}.focusLane`, focusRow(p)],
+  ])),
+});
+export const PHASE_CHOICE_ERROR = Object.freeze({
+  PHASE_CHOICES_INVALID: "phase_choices_invalid",
+  PHASE_CHOICE_UNKNOWN_DIMENSION: "phase_choice_unknown_dimension",
+  PHASE_CHOICE_UNKNOWN_VALUE: "phase_choice_unknown_value",
+});
+/**
+ * { early?: { objectiveOrder?, grouping?, focusLane? }, mid?: …, late?: … } → { ok, overrides: [early, mid, late] } 或 { ok:false, errors }。
+ * overrides[i]＝null（該時期沒有覆寫）或 { patch: { 路徑: 值 }, gankLane: "top"|"mid"|"adc"|null }。純函式、不改輸入。
+ */
+export function phaseOverridesOf(phaseChoices, mapping = PHASE_CHOICE_MAPPING) {
+  const P = PHASE_CHOICE_ERROR;
+  const errors = [];
+  const out = [null, null, null];
+  if (phaseChoices == null) return { ok: true, overrides: out, errors };
+  if (!isPlainObject(phaseChoices)) return { ok: false, errors: [err(P.PHASE_CHOICES_INVALID, "phaseChoices", "phaseChoices 必須是 { early, mid, late } 物件")] };
+  for (const [p, dims] of Object.entries(phaseChoices)) {
+    if (!Object.hasOwn(PHASE_IDX, p) || !isPlainObject(dims)) { errors.push(err(P.PHASE_CHOICES_INVALID, `phaseChoices.${p}`, "時期必須是 early／mid／late，值是物件")); continue; }
+    for (const [d, v] of Object.entries(dims)) {
+      const key = `phases.${p}.${d}`, row = Object.hasOwn(mapping.rows, key) ? mapping.rows[key] : null;
+      if (!row) { errors.push(err(P.PHASE_CHOICE_UNKNOWN_DIMENSION, `phaseChoices.${p}.${d}`, `沒有每時期對照：${key}`)); continue; }
+      if (typeof v !== "string" || !Object.hasOwn(row.values, v)) { errors.push(err(P.PHASE_CHOICE_UNKNOWN_VALUE, `phaseChoices.${p}.${d}`, `${key} 不接受 ${String(v).slice(0, 30)}`)); continue; }
+      const i = PHASE_IDX[p];
+      const o = out[i] ?? { patch: {}, gankLane: null };
+      if (row.kind === "phaseConfig") Object.assign(o.patch, row.values[v]);
+      else if (row.kind === "phaseGank") o.gankLane = row.values[v];
+      out[i] = Object.keys(o.patch).length || o.gankLane ? o : null;
+    }
+  }
+  return errors.length ? { ok: false, errors } : { ok: true, overrides: out, errors };
+}
+/**
+ * 把每時期覆寫套到一份設定上（就地改；呼叫端給的必須是自己的副本）。
+ * 數值欄位取「較高者」：契約的語意是「該時期高於整場值」（C3-3、C4-1）——設定本來就 ≥ 對照表的值（例如 m4 的巨龍 0.95、
+ * m3 的集結 0.9）⇒ 不改（Resolver 因此不另建物件），也絕不把較高的值拉低。量測一律以 std 為底（登記檔寫明）。
+ */
+export function applyPhasePatch(config, patch) {
+  for (const [p, v] of Object.entries(patch ?? {})) {
+    const cur = getPath(config, p);
+    setPath(config, p, typeof v === "number" && typeof cur === "number" ? Math.max(cur, v) : v);
+  }
+  return config;
+}
+
 /** 一列對照可能碰到的所有欄位（主欄位在前）。 */
 export const touchedFieldsOf = (row) => [row.target, row.onLeaveInvade?.target, row.split?.target].filter(Boolean);
 

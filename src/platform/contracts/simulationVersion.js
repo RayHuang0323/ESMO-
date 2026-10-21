@@ -555,7 +555,14 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  tacticalDirector.js core.v1 的 identityOfKnobs 先查目前時期（不變），查不到才查建立時登記的「每份 knobs → 同時期 identity」。
   //  今天三個時期共用同一份物件 ⇒ 第一步永遠命中，回答與之前逐參照相同（tools/check_tactical_director_3c.mjs C4）；
   //  golden 131／153 與 v21 規則集下的引擎輸出逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 6c8db7e7cff3ae6a 未曾發布）。
-  "moba-sim.v21": "49faf7d28aa9ebfb",
+  //  2026-10-22（Phase 3a-C 每時期方針基礎建設）：C-infra: per-phase choices (objectiveOrder / grouping / focusLane) resolve to per-phase
+  //  objects; legacy phaseChoices only under tool rulesets; behaviour unchanged when no per-phase choice is given.
+  //  tacticChoiceMapping.js 多了 PHASE_CHOICE_MAPPING（每個值都是既有模板的值）；tacticResolver 在有每時期選擇時才另建該時期的物件，
+  //  沒有時三份仍共用整場物件（R-4）；matchSetup／matchAssembler 只在工具規則集接受 legacy 的 phaseChoices。
+  //  所有既有輸入都沒有每時期選擇 ⇒ golden 131／153 與 v21 規則集下的輸出逐位元相同 ⇒ 不是語意變化（新行為只在選了才出現）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 49faf7d28aa9ebfb 未曾發布）。
+  //  （同日審查後補強：static 收到每時期選擇改為拒絕、數值覆寫取較高者；仍只影響帶了每時期選擇的輸入。舊值 6a5ab2a437d9a28e 未曾發布。）
+  "moba-sim.v21": "6a57c36c98d8b7ee",
 });
 
 export const isKnownSimulationVersion = (v) =>

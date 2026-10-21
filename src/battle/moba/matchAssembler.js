@@ -228,7 +228,12 @@ export function assembleMatch(setup, deps = {}) {
       let snap;
       try {
         //  static ⇒ opts 與 C3-1 之前逐字相同（不帶 phases 鍵）；core.v1 ⇒ 另要求每時期方針。
-        const r = wantPhases ? A.resolveTactic(t, A, { identity: !!L.tacticIdentity, phases: true }) : A.resolveTactic(t, A, { identity: !!L.tacticIdentity });
+        //  Phase 3a-C：legacy 輸入的 phaseChoices 只在工具規則集允許（setup 已擋正式規則集；這裡再明確交代一次，不靠預設）。
+        //  沒帶 phaseChoices 的輸入 ⇒ opts 與之前逐字相同。
+        const extra = t.phaseChoices !== undefined ? { allowPhaseChoices: isTool } : {};
+        //  static 沒有每時期方針 ⇒ phaseChoices 會被默默忽略；開局前就拒絕，不讓量測以為量到了每時期行為。
+        if (t.phaseChoices !== undefined && !wantPhases) { err("tactic_rejected", `tactic.${side}.phaseChoices`, "[phase_choices_need_director] phaseChoices need the tactical director core.v1"); continue; }
+        const r = wantPhases ? A.resolveTactic(t, A, { identity: !!L.tacticIdentity, phases: true, ...extra }) : A.resolveTactic(t, A, { identity: !!L.tacticIdentity, ...extra });
         if (r?.ok === true) {
           const config = structuredClone(r.config), knobs = structuredClone(r.knobs), identity = L.tacticIdentity ? structuredClone(r.identity) : null;
           snap = { ok: true, config, knobs, identity };
