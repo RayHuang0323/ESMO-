@@ -1,0 +1,114 @@
+{
+  "schema": "esmo.c7-diag-registration.v1",
+  "studyId": "c7-diag-3c",
+  "registeredAt": "2026-10-22",
+  "status": "diagnostic (not a pass/fail registration): arms, metrics and the reading rules below are fixed before any run; results decide only which mechanism / metric the C3-3, C4 and C5 registrations may use",
+  "source": "review/tactic-book-3a/C7_未通過選項根因分類.md §4 (common conditions, §4-A, §4-B, §4-D) — metrics and reading rules are taken from there; this file adds only what C7 left open (exact arm list under the laneFrame fix, the instrument, the observation-only C4 counters)",
+  "authority": "Owner 2026-10-22 long-task instruction: C3-3 starts with the C7 §4-B diagnostic, C4 with the §4-D baron diagnostic, C5 with the §4-A positioning diagnostic",
+  "seeds": {
+    "range": "1401-1800",
+    "n": 400,
+    "seedSource": "tool (seed used as-is)",
+    "why": "draft §1.3 diagnostic range shared by the C7 §4 diagnostics (a diagnostic is not a registration and makes no pass/fail claim); never used by any measurement"
+  },
+  "design": {
+    "ruleset": "balanceTool.v21 (core.v1, laneFrame teamRelative). C7 §4-A said the red top-lane arm could not be judged before the red top/bot fix; under v21 the fix (D-1 A) is active, so both sides are measured",
+    "layers": "hero skills / passives / power curve on, battle talents off (G-A7 convention); every record carries layers and a mismatch is STOP(INSTRUMENT)",
+    "instrument": "tools/lib/c7DiagSim.mjs (c7DiagSim.v1), self-check gate tools/check_c7_diag_3c.mjs. Read-only; §4-B observes e._joinV3 through an instance-level wrapper that calls the original with the same arguments and returns its value (the gate proves wrapped and unwrapped matches are identical)",
+    "arms": [
+      {
+        "key": "ctrl",
+        "what": "std vs std (both sides read)"
+      },
+      {
+        "key": "tight",
+        "dimension": "teamfight.grouping",
+        "choice": "tight",
+        "sides": [
+          "blue",
+          "red"
+        ],
+        "section": "4-B"
+      },
+      {
+        "key": "baronHigh",
+        "dimension": "objectives.baron",
+        "choice": "high",
+        "sides": [
+          "blue",
+          "red"
+        ],
+        "section": "4-D"
+      },
+      {
+        "key": "topDef",
+        "dimension": "lanes.top.stance",
+        "choice": "defensive",
+        "sides": [
+          "blue",
+          "red"
+        ],
+        "section": "4-A"
+      },
+      {
+        "key": "midAggr",
+        "dimension": "lanes.mid.stance",
+        "choice": "aggressive",
+        "sides": [
+          "blue",
+          "red"
+        ],
+        "section": "4-A"
+      },
+      {
+        "key": "midAggrNoGank",
+        "dimension": "lanes.mid.stance",
+        "choice": "aggressive",
+        "sides": [
+          "blue"
+        ],
+        "neutralGank": true,
+        "section": "4-A",
+        "what": "diagnostic arm, not a candidate option: after configure the side's engine knobs get gankWeights {1,1,1} (same object, property replaced). Blue only: the red engine knobs are a frozen teamRelative conversion and cannot be modified without changing object identity (which would change the rng path)"
+      }
+    ],
+    "armBuild": "every option arm = std template + that single choice via the Resolver's mergeTacticConfig as a legacy input (the four options are in MEASURED_EXCLUSIONS, which createTacticPlan rejects); the opponent and both control sides use the std template without choices through the same legacy path",
+    "matches": "400 seeds x 10 arms (ctrl + 9 option-side arms) = 4000 matches"
+  },
+  "metrics": {
+    "4-A (60-480 s, the side's top / mid hero alive)": [
+      "laneForward.<top|mid> (original, replication)",
+      "relWave.<top|mid> (hero distance to own nexus minus own wave front distance to own nexus, 對線 ticks)",
+      "laneShare.<top|mid> (對線 ticks / alive ticks)",
+      "retreatRecall.<top|mid> (retreat starts + recall starts)",
+      "enemyGanks.<top|mid> (enemy jungler ganks into that hero's world lane)"
+    ],
+    "4-B (whole match, top / mid / adc heroes)": [
+      "joinGoStartsPerMin.general (READ: joinGo false->true at a roll, C7 definition; hot classified by reference like the engine, so under the engagement FSM every roll is a general hot spot)",
+      "joinRollGoPerMin.general (reported: every successful roll incl. true->true)",
+      "joinRollsPerMin.general (reported)",
+      "laneFightEntriesPerMin.general (READ: 團戰! entries of top / mid / adc heroes outside objective windows)",
+      "fightEntriesPerMin.general / .objective (all heroes; reported and used for the cross-instrument check)"
+    ],
+    "4-D (whole match, all heroes)": [
+      "objectiveFightEntriesPerMin.baron (original)",
+      "entryBaronDistMedian (C7: median distance to the baron pit over every fight entry, no filter)",
+      "baronPitFightSecsPerMin"
+    ],
+    "C4 observation only (no C7 reading)": [
+      "baronContestsPerMin",
+      "baronCaptures",
+      "dragonContestsPerMin",
+      "dragonCaptures"
+    ]
+  },
+  "statistics": "paired over seeds vs the control's same side; z = mean diff / (sd / sqrt(n)); rel = diff / control mean; a metric 'moves in a direction' when zDir >= 3 and |rel| >= 5 % (the replication rule); 'reversed' when zDir <= -3",
+  "readingRules": {
+    "4-A": "per option and side, design direction: topDef laneForward/relWave down, midAggr up. Checked in this order: relWave reversed (zDir <= -3) => behavioural_reversal (C5; fix needs Owner); else relWave moves in the design direction (zDir >= 3; z only, no |rel| condition because relWave is a signed offset whose control mean can be near 0) while laneForward is reversed => category4_state_composition (change metric); else laneForward not reversed => no_reversal_at_n400 (the original n=40 reversal did not replicate); else unresolved. Arm 4: midAggrNoGank (blue) laneForward not reversed while midAggr blue is reversed => gank weights are the main cause; midAggr blue not reversed => n/a",
+    "4-B": "tight, direction up, read metrics joinGoStartsPerMin.general and laneFightEntriesPerMin.general (moves = zDir >= 3 and |rel| >= 5 %): roll moves on both sides and entries move on both sides => original_family_works; roll moves on both sides but entries do not move on both sides (including one side only) => category4_roll_metric; roll moves on one side only => one_sided (not registrable); roll moves on neither side => category2_not_registrable (phases.*.grouping stays design). Power note: only about 3-11 general rolls per side per match, so the roll metric may sit near the threshold",
+    "4-D": "baronHigh, both sides: objectiveFightEntriesPerMin.baron not reversed (zDir > -3) on both sides => noise_original_reversal; on every side where it is still reversed, entryBaronDistMedian and baronPitFightSecsPerMin both up with zDir >= 3 (z only) => category4_metric_moment; otherwise unresolved"
+  },
+  "consequences": "Diagnostics make no live / pass claim and change no option status. A later registration may only choose metrics consistent with the reading here and must use its own fresh seeds (C3-3 18401-18800, C4 3401-3800, C5 3801-4200).",
+  "stopLoss": "4000 matches cap, single look after completion; STOP(INSTRUMENT) on a layers / ruleset / Director-mode mismatch (exit 5); breaker > 20 errored or (>= 1000 attempted and > 0.5 %) (exit 4); STOP file (exit 3); incomplete (exit 6); write-once result tools/fixtures/c7_diag_result_3c.json",
+  "reviewHistory": "2026-10-22 review before run: APPROVE WITH CHANGES. Fixed before commit: 4-B reads joinGo false->true (C7 definition) and lane-role entries; hot type by reference; 4-D median over every entry (C7, no filter); relWave and 4-D use z only; no_reversal_at_n400 outcome registered; neutral-gank arm asserts one shared phase object; report refuses to write the fixture with uncommitted study files."
+}
