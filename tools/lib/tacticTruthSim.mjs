@@ -25,6 +25,9 @@
 //   protectStarts      輔助新的決策是 SUPPORT，而且上一個決策不是 SUPPORT、或保護的對象換人了。
 //   coreProtectStarts  同上，任何隊友開始保護 role=某一路的隊友。
 //   siegeOpens  己方 fsm3 的主動權窗被（重新）設定、而且種類是 siege 的次數（initUntil 變了的那一 tick；窗多長不影響）。
+//   ── v4（2026-10-22，Phase 3a-C3-2 收尾；只**新增**欄位與指標，上面每一個計數的算法都沒動）──
+//   engagesPh[ph]／engageStartsPh[ph]  與 engages／engageStarts 同一個事件，依該 tick 的 e.director.phase(e.t) 記到時期桶。
+//   時期姿態的 G-A7 指標改成 phaseEngageDecisionsPerMin.<p>（C7 類別 4；C3-2 事前登記的主指標），每分鐘比率以該時期自己的秒數重算。
 //  純函式部分（metricValue／pairStats）不碰引擎，gate 的快速模式會用它重算 z。
 // ============================================================================
 import path from "node:path";
@@ -32,7 +35,7 @@ import { fileURLToPath } from "node:url";
 import { createTacticPlan } from "../../src/platform/tactics/tacticPlan.js";
 import { bindTacticPlanToCurrentVersions } from "../../src/battle/moba/tactics/tacticResolver.js";
 
-export const TRUTH_SIM_VERSION = "tacticTruthSim.v3";
+export const TRUTH_SIM_VERSION = "tacticTruthSim.v4";
 export const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DT = 0.5;
 const CAP_S = 3600;
@@ -74,6 +77,7 @@ export async function runTruthMatch(seed, spec = {}) {
     splitRolls: 0, splitRollsGo: 0, splitTicks: 0, splitLaneAliveTicks: 0,
     engages: 0, objFights: { dragon: 0, baron: 0 }, siegeOpens: 0,
     engageStarts: 0, protectStarts: 0, coreProtectStarts: { top: 0, mid: 0, adc: 0 },
+    engagesPh: [0, 0, 0], engageStartsPh: [0, 0, 0],
   });
   const S = { blue: zero(), red: zero() };
   const prev = new Map(players.map((p) => [p.id, { state: p.state, retreating: !!p.retreating, decisionAt: p.decisionAt, action: p.decisionAction ?? null, targetId: p.decisionTargetId ?? null }]));
@@ -93,7 +97,10 @@ export async function runTruthMatch(seed, spec = {}) {
       }
       if (p.state === "入侵" && q.state !== "入侵") s.invasions++;
       if (p.retreating && !q.retreating) s.retreats++;
-      if (p.decisionAt !== q.decisionAt && p.decisionAction === "ENGAGE") { s.engages++; if (q.action !== "ENGAGE") s.engageStarts++; }
+      if (p.decisionAt !== q.decisionAt && p.decisionAction === "ENGAGE") {
+        s.engages++; s.engagesPh[ph]++;
+        if (q.action !== "ENGAGE") { s.engageStarts++; s.engageStartsPh[ph]++; }
+      }
       if (p.decisionAt !== q.decisionAt && p.decisionAction === "SUPPORT") {
         const started = q.action !== "SUPPORT" || q.targetId !== (p.decisionTargetId ?? null);
         if (seatN === 5) { s.protects++; if (started) s.protectStarts++; }
@@ -143,6 +150,8 @@ export const METRICS = Object.freeze({
   objectiveFightEntriesPerMin: { params: ["dragon", "baron"], of: (s, r, key) => per(s.objFights[key], r.duration) },
   siegeWindowsPerMin: { params: [], of: (s, r) => per(s.siegeOpens, r.duration) },
   engageStartsPerMin: { params: [], of: (s, r) => per(s.engageStarts, r.duration) },
+  phaseEngageDecisionsPerMin: { params: ["early", "mid", "late"], of: (s, r, ph) => { const i = ["early", "mid", "late"].indexOf(ph); return per(s.engagesPh[i], r.phaseSecs[i]); } },
+  phaseEngageStartsPerMin: { params: ["early", "mid", "late"], of: (s, r, ph) => { const i = ["early", "mid", "late"].indexOf(ph); return per(s.engageStartsPh[i], r.phaseSecs[i]); } },
   supportProtectStartsPerMin: { params: [], of: (s, r) => per(s.protectStarts, r.duration) },
   coreProtectStartsPerMin: { params: ["top", "mid", "adc"], of: (s, r, role) => per(s.coreProtectStarts[role], r.duration) },
   laneForward: { params: ["top", "mid", "bot"], of: (s, r, lane) => { const role = LANE_ROLE[lane]; return s.laneFwdN[role] >= 20 ? s.laneFwdSum[role] / s.laneFwdN[role] : null; } },
