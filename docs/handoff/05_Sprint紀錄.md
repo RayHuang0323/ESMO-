@@ -24759,3 +24759,41 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 側偏代表性（D-20 已揭露接受）；斷路器數值由控制者訂定；laneForward 三路共用一個 Δ（最小錨點是下路效果）。
 
 **過程事件**：行為研究共 29,000 場，因使用者休眠以 STOP 檔安全暫停 2 次，因 Claude Code 記憶體保護被停掉 3 次（Chrome 佔用記憶體）；每次續跑都確認該輪（200 seeds × 18 場＝3,600 場）剩餘場數＝3600−該輪已完成、JSONL 沒有半行、HEAD 與工作樹未變。完整 gate 批次被記憶體保護停掉一次並留下重複的孤兒行程，已清除，golden_v21a 改在前景重跑。
+
+## 2026-10-21 Phase 3a-C3-2：時期姿態（前置條件＋分時期儀器＋事前登記研究）（行為不變；owner: Claude，local commit，未 push／deploy／整合 main）
+
+計畫 `docs/superpowers/plans/2026-10-21-moba-phase3a-c3-2-phase-stance.md`；SDD 帳 `.superpowers/sdd/2026-10-21-moba-phase3a-c3-2-phase-stance/progress.md`。Owner 2026-10-21 核准 C3-1 驗收後授權 C3-2；沒有開始 C3-3、C4～C6。姿態的作用欄位與係數（`PHASE_ENGAGE`）沒改，只換指標；v20／v21-A 黃金基準、量測排除表、真實性表的 G-A7 指標都沒動。
+
+**完成項（commit 依序）**
+- `036cee0` 前置條件：
+  - `identityOfKnobs` 先查目前時期，查不到改查建立時的「knobs → 同時期 identity」對照表，不再回 null。今天三個時期共用同一份物件，回答逐參照相同。
+  - `check_tactical_director_3c` 新增 C 段（整支增為 97 項）：引擎不得把 knobs／identity 存進跨 tick 的狀態（屬性、物件字面值、陣列、push／set／assign）；`this.t` 只在建構子與 tick 開頭寫；tick 在推進時間前不問 Director。
+  - `check_c3_phase_skeleton` D3b／D3c 是**刻意的契約變更**（別的時期的物件 null → 該時期的 identity），168/170 → 170/170。
+  - v21 候選指紋 `6c8db7e7cff3ae6a` → `49faf7d28aa9ebfb`。
+- `fa8d90d` 分時期儀器 `tools/lib/phaseBucketSim.mjs`＋自檢 gate `check_phase_bucket_c3`（21 項）：
+  - 時期一律問 Director；480／960 邊界、三桶相加＝整場值。
+  - 與未改動的 `tacticTruthSim` 跨儀器相同；每分鐘比率逐桶重算；legacy 路徑與 std 輸入對局相同；每個選項只動該時期的 `phaseEngage`。
+- `b0c94b2` 事前登記 `tools/fixtures/phase_stance_registration_c3_2.json`＋`review/tactic-book-3a/C3-2_時期姿態事前登記.md`＋量測工具 `tools/measure_phase_stance_c3.mjs`：
+  - seeds 3001–3400、balanceTool.v21、兩個指標（接戰決策／只數開始）、兩側 z ≥ 3 且 |Δ| ≥ 5 %、有效配對 ≥ 200。
+  - 獨立審查 APPROVE WITH CHANGES（斷路器、判定優先序、過期批次、未完整結束碼），修正後複審全部 ADDRESSED。
+- `f4a4ae9` 研究結果（6,800 場、失敗 0、儀器不符 0，單次判定）：
+
+| 選項 | 判定 | 藍方 決策／開始（相對差，z） | 紅方 決策／開始（相對差，z） |
+|---|---|---|---|
+| 前期 aggressive | **confirmed** | +21.3 % (18.5)／+13.2 % (11.5) | +19.7 % (16.2)／+11.9 % (10.0) |
+| 前期 defensive | **confirmed** | −9.1 % (−8.2)／−5.6 % (−5.1) | −10.7 % (−9.8)／−7.6 % (−7.1) |
+| 前期 scaling | insufficient | −4.6 % (−4.5)／−2.9 % (−2.9) | −6.5 % (−5.7)／−4.6 % (−4.3) |
+| 中期 aggressive | **confirmed** | +13.1 % (11.0)／+12.3 % (12.3) | +13.5 % (11.8)／+11.5 % (11.2) |
+| 中期 defensive | **confirmed** | −12.9 % (−12.4)／−9.9 % (−9.8) | −13.0 % (−12.5)／−10.8 % (−11.6) |
+| 中期 scaling | duty_cycle_only | −7.0 % (−7.3)／−5.1 % (−5.3) | −6.2 % (−6.6)／−4.9 % (−6.1) |
+| 後期 defensive | **confirmed** | −12.4 % (−8.3)／−11.4 % (−8.4) | −15.2 % (−9.7)／−15.1 % (−10.1) |
+| 後期 scaling | **confirmed** | +9.6 % (5.8)／+10.4 % (6.6) | +10.1 % (5.5)／+9.0 % (5.5) |
+
+  後期有效配對 303／400（每側）。兩個沒過的 scaling 選項方向都對。中期 scaling 只差 5 % 幅度（紅方只數開始 −4.9 %，z −6.1）；前期 scaling 四格裡有三格幅度不到 5 %，藍方只數開始的 z 也只有 −2.90（未達 3）。係數 −0.05 本來就比 defensive 的 −0.08 小；依登記維持排除（design），不放大係數。
+
+**驗證**：`0efb759` 真實性表在新指紋下重測：4,080 場、0 失敗，91 列逐位元相同（只有 `tacticalDirector.js`／`simulationVersion.js` 的 `loadedFiles` 雜湊改變），`check_tactic_truth_3a` 33/33；HEAD `0efb759` 實跑：`check_tactical_director_3c` 97/97、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 43/43、`check_simulation_version_gate` 82/82、`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_phase_bucket_c3` 21/21、`check_c3_phase_skeleton` 170/170、`check_laneframe_c3` 54/54、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 131/131**、`verify --only=tactic24,runtime29`：tactic24 27/29（紅的兩條＝既有紅燈 m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS；`npm run build` built in 17.64s。沒有新回歸
+
+**未完成項／待 Owner**
+- **OWNER_DECISION**：6 個 confirmed 選項要不要開放給玩家。量測排除表必須與真實性表（G-A7：`fightEntriesPerMin.<p>`、seeds 1–40）逐筆一致，要開放就得改這條 gate 規則或重新登記 G-A7 的指標。
+- **D-18**：前期／中期 scaling 要不要動用一次性重新設計（備用區段 7001–7400），或直接留 design。
+- 後期樣本是以比賽長度（處理後結果）篩選的，已揭露。
