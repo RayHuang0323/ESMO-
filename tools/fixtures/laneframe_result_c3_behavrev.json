@@ -1,0 +1,1409 @@
+{
+  "schema": "esmo.laneframe-result-behavrev.v1",
+  "registration": "tools/fixtures/laneframe_registration_c3_behavrev.json",
+  "registeredAt": "2026-10-20",
+  "originalEvidence": {
+    "result": "tools/fixtures/laneframe_result_c3.json (commit 21ab068): behavioural verdict fail, registered STOP (B1 n_reduced, B2 fail, B3 fail, negative control pass); seeds 9001-9100",
+    "rule": "preserved as-is and never overwritten; never re-analysed under the rules of this addendum and never re-labelled PASS. The measurement tool refuses to overwrite that file."
+  },
+  "reportedAt": "2026-10-21T04:34:43.648Z",
+  "gitHead": "7f1fee9701ac4075386617da3f265f90348d9f7b",
+  "dirtyFilesUnderSrcTools": 0,
+  "simulationVersion": "moba-sim.v21",
+  "fingerprint": "6c8db7e7cff3ae6a",
+  "batchStartedUnder": {
+    "study": "behavioural-rev",
+    "startedAt": "2026-10-20T02:46:56.429Z",
+    "gitHead": "7f1fee9701ac4075386617da3f265f90348d9f7b",
+    "dirtyFilesUnderSrcTools": 0,
+    "simulationVersion": "moba-sim.v21",
+    "fingerprint": "6c8db7e7cff3ae6a",
+    "design": {
+      "plans": [
+        {
+          "name": "std+top-split",
+          "arm": {
+            "templateId": "std",
+            "choices": {
+              "lanes": {
+                "top": {
+                  "stance": "split"
+                }
+              }
+            }
+          },
+          "splitLane": "top"
+        },
+        {
+          "name": "std+bot-aggressive",
+          "arm": {
+            "templateId": "std",
+            "choices": {
+              "lanes": {
+                "bot": {
+                  "stance": "aggressive"
+                }
+              }
+            }
+          },
+          "splitLane": null
+        },
+        {
+          "name": "classic.m4",
+          "arm": {
+            "templateId": "classic.m4",
+            "choices": {}
+          },
+          "splitLane": null
+        },
+        {
+          "name": "classic.m5",
+          "arm": {
+            "templateId": "classic.m5",
+            "choices": {}
+          },
+          "splitLane": null
+        }
+      ],
+      "registration": {
+        "schema": "esmo.laneframe-registration-addendum.v1",
+        "registeredAt": "2026-10-20",
+        "amends": {
+          "file": "tools/fixtures/laneframe_registration_c3.json",
+          "commit": "166ade7",
+          "section": "gates.behavioural (statistics, n, seeds, B1/B2/B3 pass rules, negativeControl sample)",
+          "unchanged": "the original file is not edited. Plans, arms, control, metrics, instrument (tools/measure_laneframe_c3.mjs worker runOne), ruleset balanceTool.v21 / laneFrame teamRelative, forced STANDARD+SWAPPED layouts and the diff-in-diff definition of effect and D are kept exactly. gates.sideBias stays as amended by laneframe_registration_c3_d20rev.json; static gates, regression pins and stopRule unchanged."
+        },
+        "originalEvidence": {
+          "result": "tools/fixtures/laneframe_result_c3.json (commit 21ab068): behavioural verdict fail, registered STOP (B1 n_reduced, B2 fail, B3 fail, negative control pass); seeds 9001-9100",
+          "rule": "preserved as-is and never overwritten; never re-analysed under the rules of this addendum and never re-labelled PASS. The measurement tool refuses to overwrite that file."
+        },
+        "authority": {
+          "owner2026-10-20": "Owner agreed in principle to revise the B2/B3 acceptance design and re-run on fresh seeds, without re-judging the seen results. Not accepted: |z| < 2 + sameSign as an equivalence PASS (non-significance is not equivalence). Required: (1) keep the STOP and all raw results; (2) accept B1 functional correctness separately from B2/B3 behavioural symmetry; (3) B2/B3 three states PASS/STOP/INCONCLUSIVE with equivalence margins and a confidence-interval rule derived from metric scale, existing baseline variability and game meaning, never from the observed differences; (4) report sameSign, z and raw effects but never claim equivalence from |z| < 2; (5) matches without the behaviour are N/A with occurrence rate and effective n reported; (6) handle multiplicity and sample size with an executable cap, no open-ended extension; (7) this addendum passes an independent review and is committed before running on pre-specified fresh seeds; (8) INCONCLUSIVE is never self-labelled a pass and is not re-run: evidence is kept and the Owner decides. v20 / v21-A goldens and side-bias thresholds unchanged; no tactic coefficient changes."
+        },
+        "whyRevised": [
+          "B3 tolerance |mean(D)| <= 5 % of |mean effect_blue| is a point-estimate rule whose width scales with the blue effect, which for most plan x lane cells is close to zero; for any cell whose blue effect is near zero the tolerance is near zero while sd(D) is of the order of the metric's match-to-match spread, so at n = 100 the rule cannot be met even when the true asymmetry is zero (a design property, independent of the observed differences).",
+          "A point estimate inside a tolerance is not an equivalence test: it ignores sampling error in both directions (passes noisy small samples, fails large precise ones).",
+          "The full-n requirement cannot be met for metrics that are undefined on matches without the behaviour (gankShare without ganks, B1 share without split ticks); excluding them silently is not acceptable either, so they become N/A with the occurrence rate reported."
+        ],
+        "disclosure": "The controller has seen the original study's results (21ab068). Margins in this addendum come only from the anchors listed under margins.*.anchor / margins.*.registered, all of which predate the original study; no observed difference, mean(D) or effect from the original study is used. The original study's sd(D) and effective-n share per row (nuisance parameters, not differences) are used only for the sample-size plan (sampleSize.assumptions). Fresh seeds make the decision data independent of what was seen. Review history (2026-10-20): a first draft of this addendum set the B3 margin at 0.025 x baseline (2.44 / 2.50 / 3.44); the independent review rejected it because (a) it would accept a red/blue gap as large as the known pre-fix asymmetry (tactic_followup_3a_replication.json: lanes.bot.stance=aggressive laneForward.bot blue +2.966, z 4.18, red +0.341) and (b) every original |mean(D)| fell inside it while the factor 0.5 x minRel had been chosen after the results were seen. The margin was replaced by one rule applied to both B2 and B3 (margins.rule). sameSign: no row of the original study violated sameSign under either the original (|z| >= 2) or the revised (|z| >= zStop) applicability, so the change of applicability is not tailored to the seen results.",
+        "seeds": {
+          "range": "16001-17600",
+          "n": 1600,
+          "seedSource": "tool (balance runner createMatchSetup with seedSource 'tool': the seed is used as-is, every seed is a distinct engine seed)",
+          "why": "outside every range of draft §1.3 (C3-C6_行為契約草案.md) and above the D-20 walkLimit 16000, so it can never overlap the side-bias continuation; never used by any measurement",
+          "negativeControlSeeds": "16001-16100"
+        },
+        "design": {
+          "ruleset": "balanceTool.v21",
+          "laneFrame": "teamRelative",
+          "layouts": [
+            "STANDARD",
+            "SWAPPED"
+          ],
+          "arms": "control (std vs std); each plan as blue vs std and as red vs std; plans std+top-split, std+bot-aggressive, classic.m4, classic.m5 (unchanged)",
+          "negativeControl": "neg:std+top-split@red with laneFrame legacyMirror, seeds 16001-16100 x 2 layouts only",
+          "matches": "1600 seeds x 18 (control 2 + 4 plans x 2 sides x 2 layouts) + 100 x 2 negative = 29000 matches",
+          "tick": "dt 0.5 s, stop at engine over or 3600 s (unchanged)",
+          "instrument": "every record must show layoutApplied = the forced layout (null counts as a mismatch), laneFrame = the arm (teamRelative; legacyMirror for the negative arm) and director mode core.v1 (balanceTool.v21; balanceTool.v20 would show static). Any mismatch => STOP(INSTRUMENT) for B1, B2 and B3 regardless of completeness"
+        },
+        "B1": {
+          "what": "functional correctness of the split-lane seat (separate acceptance from B2/B3)",
+          "perMatch": "own-lane split share = split ticks by the side's role for the plan's team-relative split lane / all split ticks of that side",
+          "na": "a match side with zero split ticks is N/A (counted; never a pass, never silently dropped)",
+          "violation": "any non-N/A match with share < 0.99 => B1 STOP (deterministic functional failure), regardless of completeness. Checked between chunks as well as at the end (not a statistical look)",
+          "pass": "no violation AND each side has >= 200 non-N/A matches (the originally registered per-arm sample, 100 seeds x 2 layouts) AND no OCCURRENCE_ASYMMETRY",
+          "occurrence": "per side: share of matches with >= 1 split tick; per seed o(s) = mean over layouts of [occ(red arm, red side) - occ(blue arm, blue side)], paired z; |z| >= zStop => OCCURRENCE_ASYMMETRY",
+          "inconclusive": "no violation but the pass conditions are not all met",
+          "negativeControl": "pooled own-lane share of the legacyMirror red arm must be < 0.5 (unchanged criterion); if it does not fail, the instrument cannot detect the bug => B1 STOP",
+          "params": {
+            "minShare": 0.99,
+            "minMatchesPerSide": 200,
+            "negativeMaxPooledShare": 0.5
+          }
+        },
+        "B2B3": {
+          "metrics": "B2 gankShare.<lane> (team frame), B3 laneForward.<lane> (role distance to own nexus, 60-480 s, alive, state 對線), lanes top/mid/bot; 4 plans x 6 metrics = 24 rows",
+          "D": "unchanged: D(s) = mean over the 2 layouts of [effect_red(s,L) - effect_blue(s,L)], effect_side = m(plan on that side vs std) - m(control, same side, same s, L)",
+          "na": "B2: a match side with zero ganks has no gankShare; B3: a role with < 20 lane samples has no laneForward. A seed is N/A for a row if any of its 8 values is N/A (same rule as fixed 2026-10-20). n_eff = non-N/A seeds",
+          "occurrence": "reported per row: n_eff, n_NA, occurrence rates of the 4 contributing match sides (plan@blue blue, plan@red red, control blue, control red); occurrence asymmetry o(s) = mean over layouts of [(occ(plan@red,red) - occ(control,red)) - (occ(plan@blue,blue) - occ(control,blue))], paired z; |z| >= zStop => OCCURRENCE_ASYMMETRY (the row cannot PASS; exclusion may be informative)",
+          "se": "SE = sd(D) / sqrt(n_eff); normal quantiles (n_eff in the hundreds)",
+          "pass": "the 90 % CI mean(D) +- z90 * SE lies strictly inside (-delta, +delta) (TOST, alpha 0.05 per row) AND n_eff >= 200 AND sameSign holds AND no OCCURRENCE_ASYMMETRY",
+          "stop": "the 99.9 % CI mean(D) +- zStop * SE lies entirely outside [-delta, +delta] (a meaningful asymmetry is demonstrated), OR a demonstrated sign reversal: |z_effect_blue| >= zStop AND sign(mean effect_red) != sign(mean effect_blue) AND |z_effect_red| >= zStop",
+          "inconclusive": "neither PASS nor STOP",
+          "sameSign": "applies where |z_effect_blue| >= zStop; requires sign(mean effect_red) = sign(mean effect_blue). The original applicability |z| >= 2 is still computed and reported (sameSignOriginalRule) but is not a PASS condition: with 24 rows and n = 1600 it would block PASS by chance alone in a large share of runs (about 2.3 % per row under no effect); a violation only yields INCONCLUSIVE, never a false PASS.",
+          "alsoReported": "mean effect blue/red with their z, mean(D), sd(D), SE, z_diff, CI90, CI99.9, delta, sameSign (both rules); z_diff is never a PASS criterion",
+          "gate": "per gate (B2, B3): STOP if any row is STOP; PASS if every row is PASS; otherwise INCONCLUSIVE",
+          "minNEff": "n_eff < 200 => the row cannot PASS (normal quantiles are only used where n_eff is in the hundreds)",
+          "params": {
+            "minNEffForPass": 200
+          }
+        },
+        "constants": {
+          "z90": 1.644854,
+          "zStop": 3.290527,
+          "zStopWhy": "two-sided 0.001 per test; Bonferroni over at most 50 STOP tests (24 margin tests + 24 sign-reversal tests + B1 occurrence) keeps the family-wise false STOP rate <= 0.05"
+        },
+        "margins": {
+          "rule": "delta(metric family) = 0.5 x the smallest statistically established (|z| >= 3) lane-stance effect on that metric family in the pre-existing fixtures (tactic_truth_3a.json at 21ab068, tactic_followup_3a_quickmode.json and tactic_followup_3a_replication.json, all committed 2026-10-14 or earlier, before the laneFrame fix and before the original behavioural study); where a margin was already registered before any behavioural data, the stricter of the two is used. Rationale: an asymmetry inside the margin is smaller than half of the smallest lane-stance effect the project has established on that metric, so it cannot hide that effect on one side. Template effects (tactic_followup_3a_templates.json) are not lane-stance effects and are not anchors.",
+          "gankShare": {
+            "delta": 0.05,
+            "unit": "share (0-1), absolute",
+            "anchor": "smallest established effect 0.104620 (quickmode, lanes.bot.stance=aggressive, blue, gankShare.bot, z 5.54; the others 0.118-0.129) => 0.5 x = 0.052310",
+            "registered": "0.05: the originally registered B2 tolerance (laneframe_registration_c3.json, 2026-10-15, before any behavioural data; basis TD-3A-23 §1.4-3 control baseline gap 0.000 / 0.009)",
+            "chosen": "0.05 = min(0.05, 0.052310)",
+            "anchorValue": 0.10462
+          },
+          "laneForward": {
+            "delta": {
+              "top": 1.483147,
+              "mid": 1.483147,
+              "bot": 1.483147
+            },
+            "unit": "world distance units (one margin for all lanes)",
+            "anchor": "smallest established effect 2.966293 (tactic_followup_3a_replication.json, lanes.bot.stance=aggressive, blue, laneForward.bot, z 4.18); the other established laneForward stance effects are 4.58-6.32 (tactic_truth_3a.json at 21ab068, std: lanes.top.stance=defensive blue +4.58 z 3.35, lanes.mid.stance=aggressive blue -5.28 z -3.23, red -6.32 z -4.22) => 0.5 x 2.966293 = 1.483147",
+            "knownAsymmetry": "the pre-fix red/blue gap on that same cell (blue +2.966 vs red +0.341, gap 2.625) is larger than delta, so a gap of that size cannot PASS",
+            "gameMeaning": "delta 1.48 is well below the shortest hero attack range 4 (src/LogicEngine.js towerRange comment: hero attack ranges 4-8.4)",
+            "limit": "one margin for the three lanes (the smallest anchor is a bot-lane effect); no lane-specific anchor exists for top/mid below 4.58",
+            "anchorValue": 2.966293
+          }
+        },
+        "sampleSize": {
+          "n": 1600,
+          "assumptions": "sd(D) and n_eff/n per row taken from the original study (nuisance parameters only); true D equal in every row (pessimistic for the joint figure); rows treated as independent",
+          "jointPassProbabilityIfTrueDIsZero": {
+            "B2": 0.996,
+            "B3": 0.918
+          },
+          "jointPassProbabilityIfTrueDIsQuarterDelta": {
+            "B2": 0.911,
+            "B3": 0.683
+          },
+          "jointPassProbabilityIfTrueDIsHalfDelta": {
+            "B2": 0.224,
+            "B3": 0.1
+          },
+          "anyStopProbabilityIfTrueDIs1.5Delta": {
+            "B2": 0.999,
+            "B3": 1
+          },
+          "falseStopIfTrueDIsZero": "< 0.001 per gate",
+          "alternativesConsidered": "n = 1200 (B3 joint pass 0.74 at D = 0 with the revised margin) is too likely to end INCONCLUSIVE; n = 2000 (0.975) costs 25 % more for a small gain; the metric itself is not changed (e.g. pooling ganks across layouts would cut variance but would change the registered metric)"
+        },
+        "stopLoss": {
+          "cap": "1600 seeds (29000 matches) is a hard cap: one decision look after the batch is complete, no interim decision look, no extension, no re-run. INCONCLUSIVE => evidence kept, Owner decides",
+          "chunks": "seeds run in ascending chunks of 200 with checkpoints (resume skips finished records)",
+          "operationalStops": "between chunks: any B1 violation => stop scheduling, B1 STOP immediately (a violation can only accumulate, so this is not optional stopping); B2/B3 are then reported incomplete — this couples the run (not the verdicts) of B1 and B2/B3 to avoid spending ~12 h on a functionally broken build; the Owner may order the remaining chunks to be run. Worker errors => the match is recorded in <arm>.errors.jsonl, its seed becomes N/A for every row and B1 (counted, never retried selectively); more than 20 errored matches, or more than 0.5 % of attempted matches (finished + errored) => stop scheduling, STOP(CIRCUIT_BREAKER), Owner decides",
+          "thresholdFlags": "B2/B3 verdicts are emitted only when the batch is complete (no optional stopping)",
+          "estimatedTime": "about 1.2-1.75 s per match with 2-3 workers => 10-14 h, single line",
+          "params": {
+            "chunkSeeds": 200,
+            "maxErroredMatches": 20,
+            "maxErroredShare": 0.005
+          },
+          "reportGuard": "--report-behavrev writes tools/fixtures/laneframe_result_c3_behavrev.json only once, only when the batch is complete (or halted by a STOP), and never overwrites it; interim reports go to --out=<path outside the repo>"
+        },
+        "verdictReporting": "B1, B2 and B3 are reported as separate verdicts (pass / stop / inconclusive) with the negative control; any STOP or INCONCLUSIVE => Owner decides. The result is written to tools/fixtures/laneframe_result_c3_behavrev.json (new file).",
+        "workers": 3,
+        "workersNote": "<= 3; fewer while CS jobs run (does not change results)"
+      }
+    }
+  },
+  "stale": [],
+  "srcChangedSinceBatchStart": [],
+  "seeds": {
+    "range": "16001-17600",
+    "n": 1600,
+    "seedSource": "tool (balance runner createMatchSetup with seedSource 'tool': the seed is used as-is, every seed is a distinct engine seed)",
+    "why": "outside every range of draft §1.3 (C3-C6_行為契約草案.md) and above the D-20 walkLimit 16000, so it can never overlap the side-bias continuation; never used by any measurement",
+    "negativeControlSeeds": "16001-16100"
+  },
+  "design": {
+    "ruleset": "balanceTool.v21",
+    "laneFrame": "teamRelative",
+    "layouts": [
+      "STANDARD",
+      "SWAPPED"
+    ],
+    "arms": "control (std vs std); each plan as blue vs std and as red vs std; plans std+top-split, std+bot-aggressive, classic.m4, classic.m5 (unchanged)",
+    "negativeControl": "neg:std+top-split@red with laneFrame legacyMirror, seeds 16001-16100 x 2 layouts only",
+    "matches": "1600 seeds x 18 (control 2 + 4 plans x 2 sides x 2 layouts) + 100 x 2 negative = 29000 matches",
+    "tick": "dt 0.5 s, stop at engine over or 3600 s (unchanged)",
+    "instrument": "every record must show layoutApplied = the forced layout (null counts as a mismatch), laneFrame = the arm (teamRelative; legacyMirror for the negative arm) and director mode core.v1 (balanceTool.v21; balanceTool.v20 would show static). Any mismatch => STOP(INSTRUMENT) for B1, B2 and B3 regardless of completeness"
+  },
+  "complete": true,
+  "gates": {
+    "B1": "pass",
+    "B2": "pass",
+    "B3": "pass"
+  },
+  "b1": [
+    {
+      "plan": "std+top-split",
+      "splitLane": "top",
+      "blue": {
+        "matches": 3200,
+        "nonNA": 3181,
+        "na": 19,
+        "occurrenceRate": 0.994062,
+        "violations": 0,
+        "minShare": 1
+      },
+      "red": {
+        "matches": 3200,
+        "nonNA": 3180,
+        "na": 20,
+        "occurrenceRate": 0.99375,
+        "violations": 0,
+        "minShare": 1
+      },
+      "occurrenceDiffMean": -0.000313,
+      "zOccurrence": -0.156126,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass"
+    }
+  ],
+  "b1Violations": 0,
+  "instrumentMismatch": 0,
+  "negative": {
+    "arm": "neg:std+top-split@red",
+    "laneFrame": "legacyMirror",
+    "seeds": "16001-16100",
+    "matches": 200,
+    "nonNA": 198,
+    "pooledOwnLaneShare": 0,
+    "verdict": "fails-as-required"
+  },
+  "rows": [
+    {
+      "gate": "B2",
+      "plan": "std+top-split",
+      "metric": "gankShare.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1479,
+      "nNA": 121,
+      "occurrenceRates": {
+        "planBlue": 0.989062,
+        "planRed": 0.991875,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.003125,
+      "zOccurrence": 0.870322,
+      "delta": 0.05,
+      "meanEffectBlue": -0.000717,
+      "zEffectBlue": -0.120442,
+      "meanEffectRed": -0.006783,
+      "zEffectRed": -1.118526,
+      "meanD": -0.006066,
+      "sdD": 0.324659,
+      "se": 0.008442,
+      "ci90": [
+        -0.019952,
+        0.00782
+      ],
+      "ci999": [
+        -0.033844,
+        0.021713
+      ],
+      "zDiff": -0.718536,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "std+top-split",
+      "metric": "gankShare.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1479,
+      "nNA": 121,
+      "occurrenceRates": {
+        "planBlue": 0.989062,
+        "planRed": 0.991875,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.003125,
+      "zOccurrence": 0.870322,
+      "delta": 0.05,
+      "meanEffectBlue": 0.002644,
+      "zEffectBlue": 0.542616,
+      "meanEffectRed": 0.007751,
+      "zEffectRed": 1.628015,
+      "meanD": 0.005108,
+      "sdD": 0.257914,
+      "se": 0.006706,
+      "ci90": [
+        -0.005923,
+        0.016139
+      ],
+      "ci999": [
+        -0.01696,
+        0.027175
+      ],
+      "zDiff": 0.761603,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "std+top-split",
+      "metric": "gankShare.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1479,
+      "nNA": 121,
+      "occurrenceRates": {
+        "planBlue": 0.989062,
+        "planRed": 0.991875,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.003125,
+      "zOccurrence": 0.870322,
+      "delta": 0.05,
+      "meanEffectBlue": -0.001927,
+      "zEffectBlue": -0.29814,
+      "meanEffectRed": -0.000969,
+      "zEffectRed": -0.145295,
+      "meanD": 0.000958,
+      "sdD": 0.359859,
+      "se": 0.009357,
+      "ci90": [
+        -0.014433,
+        0.01635
+      ],
+      "ci999": [
+        -0.029832,
+        0.031749
+      ],
+      "zDiff": 0.102405,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "std+top-split",
+      "metric": "laneForward.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -0.638632,
+      "zEffectBlue": -2.960122,
+      "meanEffectRed": -0.484035,
+      "zEffectRed": -2.291176,
+      "meanD": 0.154597,
+      "sdD": 11.013323,
+      "se": 0.275333,
+      "ci90": [
+        -0.298286,
+        0.607479
+      ],
+      "ci999": [
+        -0.751394,
+        1.060588
+      ],
+      "zDiff": 0.56149,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "std+top-split",
+      "metric": "laneForward.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": 0.02352,
+      "zEffectBlue": 0.182779,
+      "meanEffectRed": -0.16645,
+      "zEffectRed": -1.347509,
+      "meanD": -0.18997,
+      "sdD": 6.83173,
+      "se": 0.170793,
+      "ci90": [
+        -0.4709,
+        0.09096
+      ],
+      "ci999": [
+        -0.75197,
+        0.37203
+      ],
+      "zDiff": -1.11228,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "std+top-split",
+      "metric": "laneForward.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -0.039264,
+      "zEffectBlue": -0.170625,
+      "meanEffectRed": 0.232535,
+      "zEffectRed": 0.975185,
+      "meanD": 0.271799,
+      "sdD": 12.870063,
+      "se": 0.321752,
+      "ci90": [
+        -0.257435,
+        0.801034
+      ],
+      "ci999": [
+        -0.786933,
+        1.330532
+      ],
+      "zDiff": 0.844749,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "std+bot-aggressive",
+      "metric": "gankShare.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1424,
+      "nNA": 176,
+      "occurrenceRates": {
+        "planBlue": 0.977812,
+        "planRed": 0.98,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.0025,
+      "zOccurrence": 0.522858,
+      "delta": 0.05,
+      "meanEffectBlue": -0.075899,
+      "zEffectBlue": -12.944605,
+      "meanEffectRed": -0.074165,
+      "zEffectRed": -12.562914,
+      "meanD": 0.001734,
+      "sdD": 0.318121,
+      "se": 0.00843,
+      "ci90": [
+        -0.012133,
+        0.0156
+      ],
+      "ci999": [
+        -0.026006,
+        0.029474
+      ],
+      "zDiff": 0.205676,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "std+bot-aggressive",
+      "metric": "gankShare.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1424,
+      "nNA": 176,
+      "occurrenceRates": {
+        "planBlue": 0.977812,
+        "planRed": 0.98,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.0025,
+      "zOccurrence": 0.522858,
+      "delta": 0.05,
+      "meanEffectBlue": -0.030289,
+      "zEffectBlue": -6.102941,
+      "meanEffectRed": -0.025664,
+      "zEffectRed": -5.294625,
+      "meanD": 0.004626,
+      "sdD": 0.258219,
+      "se": 0.006843,
+      "ci90": [
+        -0.00663,
+        0.015881
+      ],
+      "ci999": [
+        -0.017891,
+        0.027142
+      ],
+      "zDiff": 0.67599,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "std+bot-aggressive",
+      "metric": "gankShare.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1424,
+      "nNA": 176,
+      "occurrenceRates": {
+        "planBlue": 0.977812,
+        "planRed": 0.98,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.0025,
+      "zOccurrence": 0.522858,
+      "delta": 0.05,
+      "meanEffectBlue": 0.106189,
+      "zEffectBlue": 15.575032,
+      "meanEffectRed": 0.099829,
+      "zEffectRed": 14.365855,
+      "meanD": -0.00636,
+      "sdD": 0.369208,
+      "se": 0.009784,
+      "ci90": [
+        -0.022453,
+        0.009734
+      ],
+      "ci999": [
+        -0.038554,
+        0.025835
+      ],
+      "zDiff": -0.649995,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "std+bot-aggressive",
+      "metric": "laneForward.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -0.013344,
+      "zEffectBlue": -0.073364,
+      "meanEffectRed": 0.111121,
+      "zEffectRed": 0.615229,
+      "meanD": 0.124465,
+      "sdD": 10.066709,
+      "se": 0.251668,
+      "ci90": [
+        -0.289492,
+        0.538422
+      ],
+      "ci999": [
+        -0.703654,
+        0.952585
+      ],
+      "zDiff": 0.494561,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "std+bot-aggressive",
+      "metric": "laneForward.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": 0.014453,
+      "zEffectBlue": 0.117958,
+      "meanEffectRed": -0.117501,
+      "zEffectRed": -0.951435,
+      "meanD": -0.131954,
+      "sdD": 6.611353,
+      "se": 0.165284,
+      "ci90": [
+        -0.403822,
+        0.139913
+      ],
+      "ci999": [
+        -0.675825,
+        0.411916
+      ],
+      "zDiff": -0.798351,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "std+bot-aggressive",
+      "metric": "laneForward.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": 2.442962,
+      "zEffectBlue": 8.519129,
+      "meanEffectRed": 2.637369,
+      "zEffectRed": 9.496782,
+      "meanD": 0.194407,
+      "sdD": 14.501809,
+      "se": 0.362545,
+      "ci90": [
+        -0.401927,
+        0.790741
+      ],
+      "ci999": [
+        -0.998558,
+        1.387372
+      ],
+      "zDiff": 0.536229,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "classic.m4",
+      "metric": "gankShare.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1496,
+      "nNA": 104,
+      "occurrenceRates": {
+        "planBlue": 0.992812,
+        "planRed": 0.994375,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.001875,
+      "zOccurrence": 0.547603,
+      "delta": 0.05,
+      "meanEffectBlue": 0.011926,
+      "zEffectBlue": 1.941434,
+      "meanEffectRed": 0.020362,
+      "zEffectRed": 3.404983,
+      "meanD": 0.008436,
+      "sdD": 0.334354,
+      "se": 0.008645,
+      "ci90": [
+        -0.005783,
+        0.022655
+      ],
+      "ci999": [
+        -0.020009,
+        0.036881
+      ],
+      "zDiff": 0.975864,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "classic.m4",
+      "metric": "gankShare.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1496,
+      "nNA": 104,
+      "occurrenceRates": {
+        "planBlue": 0.992812,
+        "planRed": 0.994375,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.001875,
+      "zOccurrence": 0.547603,
+      "delta": 0.05,
+      "meanEffectBlue": 0.011544,
+      "zEffectBlue": 2.266647,
+      "meanEffectRed": 0.019471,
+      "zEffectRed": 4.024795,
+      "meanD": 0.007927,
+      "sdD": 0.273399,
+      "se": 0.007069,
+      "ci90": [
+        -0.0037,
+        0.019553
+      ],
+      "ci999": [
+        -0.015333,
+        0.031186
+      ],
+      "zDiff": 1.121402,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "classic.m4",
+      "metric": "gankShare.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1496,
+      "nNA": 104,
+      "occurrenceRates": {
+        "planBlue": 0.992812,
+        "planRed": 0.994375,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.001875,
+      "zOccurrence": 0.547603,
+      "delta": 0.05,
+      "meanEffectBlue": -0.023471,
+      "zEffectBlue": -3.394759,
+      "meanEffectRed": -0.039833,
+      "zEffectRed": -5.961779,
+      "meanD": -0.016363,
+      "sdD": 0.372526,
+      "se": 0.009631,
+      "ci90": [
+        -0.032205,
+        -0.00052
+      ],
+      "ci999": [
+        -0.048055,
+        0.01533
+      ],
+      "zDiff": -1.698872,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "classic.m4",
+      "metric": "laneForward.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": 0.230604,
+      "zEffectBlue": 1.132281,
+      "meanEffectRed": 0.357668,
+      "zEffectRed": 1.77418,
+      "meanD": 0.127064,
+      "sdD": 10.892182,
+      "se": 0.272305,
+      "ci90": [
+        -0.320837,
+        0.574966
+      ],
+      "ci999": [
+        -0.768961,
+        1.02309
+      ],
+      "zDiff": 0.466626,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "classic.m4",
+      "metric": "laneForward.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -2.369218,
+      "zEffectBlue": -14.389568,
+      "meanEffectRed": -1.883734,
+      "zEffectRed": -12.306318,
+      "meanD": 0.485484,
+      "sdD": 8.346294,
+      "se": 0.208657,
+      "ci90": [
+        0.142274,
+        0.828695
+      ],
+      "ci999": [
+        -0.201108,
+        1.172077
+      ],
+      "zDiff": 2.326707,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "classic.m4",
+      "metric": "laneForward.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -3.506543,
+      "zEffectBlue": -13.813564,
+      "meanEffectRed": -2.63947,
+      "zEffectRed": -10.492303,
+      "meanD": 0.867072,
+      "sdD": 13.47429,
+      "se": 0.336857,
+      "ci90": [
+        0.312991,
+        1.421153
+      ],
+      "ci999": [
+        -0.241366,
+        1.97551
+      ],
+      "zDiff": 2.574005,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "classic.m5",
+      "metric": "gankShare.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1455,
+      "nNA": 145,
+      "occurrenceRates": {
+        "planBlue": 0.984688,
+        "planRed": 0.985625,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.00125,
+      "zOccurrence": 0.312259,
+      "delta": 0.05,
+      "meanEffectBlue": -0.066603,
+      "zEffectBlue": -10.816238,
+      "meanEffectRed": -0.066927,
+      "zEffectRed": -11.970802,
+      "meanD": -0.000324,
+      "sdD": 0.325476,
+      "se": 0.008533,
+      "ci90": [
+        -0.014359,
+        0.013711
+      ],
+      "ci999": [
+        -0.028401,
+        0.027753
+      ],
+      "zDiff": -0.037996,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "classic.m5",
+      "metric": "gankShare.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1455,
+      "nNA": 145,
+      "occurrenceRates": {
+        "planBlue": 0.984688,
+        "planRed": 0.985625,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.00125,
+      "zOccurrence": 0.312259,
+      "delta": 0.05,
+      "meanEffectBlue": -0.027011,
+      "zEffectBlue": -5.269302,
+      "meanEffectRed": -0.034767,
+      "zEffectRed": -7.330553,
+      "meanD": -0.007756,
+      "sdD": 0.2645,
+      "se": 0.006934,
+      "ci90": [
+        -0.019161,
+        0.00365
+      ],
+      "ci999": [
+        -0.030573,
+        0.015061
+      ],
+      "zDiff": -1.118463,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B2",
+      "plan": "classic.m5",
+      "metric": "gankShare.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1455,
+      "nNA": 145,
+      "occurrenceRates": {
+        "planBlue": 0.984688,
+        "planRed": 0.985625,
+        "controlBlue": 0.98875,
+        "controlRed": 0.988437
+      },
+      "occurrenceDiffInDiffMean": 0.00125,
+      "zOccurrence": 0.312259,
+      "delta": 0.05,
+      "meanEffectBlue": 0.093614,
+      "zEffectBlue": 13.524908,
+      "meanEffectRed": 0.101694,
+      "zEffectRed": 15.265051,
+      "meanD": 0.00808,
+      "sdD": 0.370833,
+      "se": 0.009722,
+      "ci90": [
+        -0.007911,
+        0.024071
+      ],
+      "ci999": [
+        -0.02391,
+        0.04007
+      ],
+      "zDiff": 0.831102,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "classic.m5",
+      "metric": "laneForward.top",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -0.325388,
+      "zEffectBlue": -1.612456,
+      "meanEffectRed": 0.036221,
+      "zEffectRed": 0.179374,
+      "meanD": 0.361609,
+      "sdD": 10.862225,
+      "se": 0.271556,
+      "ci90": [
+        -0.08506,
+        0.808279
+      ],
+      "ci999": [
+        -0.531952,
+        1.255171
+      ],
+      "zDiff": 1.331622,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": false,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "classic.m5",
+      "metric": "laneForward.mid",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -0.335499,
+      "zEffectBlue": -2.324469,
+      "meanEffectRed": -0.339242,
+      "zEffectRed": -2.395556,
+      "meanD": -0.003743,
+      "sdD": 7.533062,
+      "se": 0.188327,
+      "ci90": [
+        -0.313513,
+        0.306027
+      ],
+      "ci999": [
+        -0.623437,
+        0.615951
+      ],
+      "zDiff": -0.019875,
+      "sameSignApplies": false,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    },
+    {
+      "gate": "B3",
+      "plan": "classic.m5",
+      "metric": "laneForward.bot",
+      "nSeeds": 1600,
+      "nErroredSeeds": 0,
+      "nEff": 1600,
+      "nNA": 0,
+      "occurrenceRates": {
+        "planBlue": 1,
+        "planRed": 1,
+        "controlBlue": 1,
+        "controlRed": 1
+      },
+      "occurrenceDiffInDiffMean": 0,
+      "zOccurrence": 0,
+      "delta": 1.483147,
+      "meanEffectBlue": -1.622401,
+      "zEffectBlue": -5.702606,
+      "meanEffectRed": -1.555632,
+      "zEffectRed": -5.371791,
+      "meanD": 0.066769,
+      "sdD": 15.055604,
+      "se": 0.37639,
+      "ci90": [
+        -0.552338,
+        0.685875
+      ],
+      "ci999": [
+        -1.171753,
+        1.30529
+      ],
+      "zDiff": 0.177392,
+      "sameSignApplies": true,
+      "sameSignOk": true,
+      "sameSignOriginalRule": {
+        "applies": true,
+        "ok": true
+      },
+      "signReversal": false,
+      "occurrenceAsymmetry": false,
+      "verdict": "pass",
+      "reason": "90 % CI inside the margin"
+    }
+  ],
+  "flags": [
+    "NEW_REGRESSION: not measured here — the controller checks clarifications.newRegressionGates separately"
+  ],
+  "breaker": false,
+  "erroredMatches": 0,
+  "finishedMatches": 29000,
+  "erroredSeeds": [],
+  "constants": {
+    "z90": 1.644854,
+    "zStop": 3.290527,
+    "zStopWhy": "two-sided 0.001 per test; Bonferroni over at most 50 STOP tests (24 margin tests + 24 sign-reversal tests + B1 occurrence) keeps the family-wise false STOP rate <= 0.05"
+  },
+  "margins": {
+    "rule": "delta(metric family) = 0.5 x the smallest statistically established (|z| >= 3) lane-stance effect on that metric family in the pre-existing fixtures (tactic_truth_3a.json at 21ab068, tactic_followup_3a_quickmode.json and tactic_followup_3a_replication.json, all committed 2026-10-14 or earlier, before the laneFrame fix and before the original behavioural study); where a margin was already registered before any behavioural data, the stricter of the two is used. Rationale: an asymmetry inside the margin is smaller than half of the smallest lane-stance effect the project has established on that metric, so it cannot hide that effect on one side. Template effects (tactic_followup_3a_templates.json) are not lane-stance effects and are not anchors.",
+    "gankShare": {
+      "delta": 0.05,
+      "unit": "share (0-1), absolute",
+      "anchor": "smallest established effect 0.104620 (quickmode, lanes.bot.stance=aggressive, blue, gankShare.bot, z 5.54; the others 0.118-0.129) => 0.5 x = 0.052310",
+      "registered": "0.05: the originally registered B2 tolerance (laneframe_registration_c3.json, 2026-10-15, before any behavioural data; basis TD-3A-23 §1.4-3 control baseline gap 0.000 / 0.009)",
+      "chosen": "0.05 = min(0.05, 0.052310)",
+      "anchorValue": 0.10462
+    },
+    "laneForward": {
+      "delta": {
+        "top": 1.483147,
+        "mid": 1.483147,
+        "bot": 1.483147
+      },
+      "unit": "world distance units (one margin for all lanes)",
+      "anchor": "smallest established effect 2.966293 (tactic_followup_3a_replication.json, lanes.bot.stance=aggressive, blue, laneForward.bot, z 4.18); the other established laneForward stance effects are 4.58-6.32 (tactic_truth_3a.json at 21ab068, std: lanes.top.stance=defensive blue +4.58 z 3.35, lanes.mid.stance=aggressive blue -5.28 z -3.23, red -6.32 z -4.22) => 0.5 x 2.966293 = 1.483147",
+      "knownAsymmetry": "the pre-fix red/blue gap on that same cell (blue +2.966 vs red +0.341, gap 2.625) is larger than delta, so a gap of that size cannot PASS",
+      "gameMeaning": "delta 1.48 is well below the shortest hero attack range 4 (src/LogicEngine.js towerRange comment: hero attack ranges 4-8.4)",
+      "limit": "one margin for the three lanes (the smallest anchor is a bot-lane effect); no lane-specific anchor exists for top/mid below 4.58",
+      "anchorValue": 2.966293
+    }
+  },
+  "rules": {
+    "B1": {
+      "what": "functional correctness of the split-lane seat (separate acceptance from B2/B3)",
+      "perMatch": "own-lane split share = split ticks by the side's role for the plan's team-relative split lane / all split ticks of that side",
+      "na": "a match side with zero split ticks is N/A (counted; never a pass, never silently dropped)",
+      "violation": "any non-N/A match with share < 0.99 => B1 STOP (deterministic functional failure), regardless of completeness. Checked between chunks as well as at the end (not a statistical look)",
+      "pass": "no violation AND each side has >= 200 non-N/A matches (the originally registered per-arm sample, 100 seeds x 2 layouts) AND no OCCURRENCE_ASYMMETRY",
+      "occurrence": "per side: share of matches with >= 1 split tick; per seed o(s) = mean over layouts of [occ(red arm, red side) - occ(blue arm, blue side)], paired z; |z| >= zStop => OCCURRENCE_ASYMMETRY",
+      "inconclusive": "no violation but the pass conditions are not all met",
+      "negativeControl": "pooled own-lane share of the legacyMirror red arm must be < 0.5 (unchanged criterion); if it does not fail, the instrument cannot detect the bug => B1 STOP",
+      "params": {
+        "minShare": 0.99,
+        "minMatchesPerSide": 200,
+        "negativeMaxPooledShare": 0.5
+      }
+    },
+    "B2B3": {
+      "metrics": "B2 gankShare.<lane> (team frame), B3 laneForward.<lane> (role distance to own nexus, 60-480 s, alive, state 對線), lanes top/mid/bot; 4 plans x 6 metrics = 24 rows",
+      "D": "unchanged: D(s) = mean over the 2 layouts of [effect_red(s,L) - effect_blue(s,L)], effect_side = m(plan on that side vs std) - m(control, same side, same s, L)",
+      "na": "B2: a match side with zero ganks has no gankShare; B3: a role with < 20 lane samples has no laneForward. A seed is N/A for a row if any of its 8 values is N/A (same rule as fixed 2026-10-20). n_eff = non-N/A seeds",
+      "occurrence": "reported per row: n_eff, n_NA, occurrence rates of the 4 contributing match sides (plan@blue blue, plan@red red, control blue, control red); occurrence asymmetry o(s) = mean over layouts of [(occ(plan@red,red) - occ(control,red)) - (occ(plan@blue,blue) - occ(control,blue))], paired z; |z| >= zStop => OCCURRENCE_ASYMMETRY (the row cannot PASS; exclusion may be informative)",
+      "se": "SE = sd(D) / sqrt(n_eff); normal quantiles (n_eff in the hundreds)",
+      "pass": "the 90 % CI mean(D) +- z90 * SE lies strictly inside (-delta, +delta) (TOST, alpha 0.05 per row) AND n_eff >= 200 AND sameSign holds AND no OCCURRENCE_ASYMMETRY",
+      "stop": "the 99.9 % CI mean(D) +- zStop * SE lies entirely outside [-delta, +delta] (a meaningful asymmetry is demonstrated), OR a demonstrated sign reversal: |z_effect_blue| >= zStop AND sign(mean effect_red) != sign(mean effect_blue) AND |z_effect_red| >= zStop",
+      "inconclusive": "neither PASS nor STOP",
+      "sameSign": "applies where |z_effect_blue| >= zStop; requires sign(mean effect_red) = sign(mean effect_blue). The original applicability |z| >= 2 is still computed and reported (sameSignOriginalRule) but is not a PASS condition: with 24 rows and n = 1600 it would block PASS by chance alone in a large share of runs (about 2.3 % per row under no effect); a violation only yields INCONCLUSIVE, never a false PASS.",
+      "alsoReported": "mean effect blue/red with their z, mean(D), sd(D), SE, z_diff, CI90, CI99.9, delta, sameSign (both rules); z_diff is never a PASS criterion",
+      "gate": "per gate (B2, B3): STOP if any row is STOP; PASS if every row is PASS; otherwise INCONCLUSIVE",
+      "minNEff": "n_eff < 200 => the row cannot PASS (normal quantiles are only used where n_eff is in the hundreds)",
+      "params": {
+        "minNEffForPass": 200
+      }
+    }
+  },
+  "stop": false,
+  "interim": false,
+  "inconclusive": false,
+  "note": "B1, B2, B3 are separate verdicts; INCONCLUSIVE is never a pass; z_diff is reported but never a PASS criterion"
+}
