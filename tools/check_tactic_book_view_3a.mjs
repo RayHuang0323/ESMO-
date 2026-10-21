@@ -92,12 +92,15 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   const conflict = View.tacticBookView({ templateId: "std", choices: { jungle: { focus: "invade" }, teamfight: { posture: "passive" } } });
   ck("V8 互相打架的選擇 ⇒ 畫面拿得到矛盾提示（文案來自規則表）", conflict.ok && conflict.contradictions.length === 1 && conflict.contradictions[0].id === "invade_vs_passive_fights" && conflict.contradictions[0].text.length > 8);
   //  舊計畫（存檔只驗結構）可能帶著現在不提供的選擇：畫面載入前先拿掉，送出的計畫才會與看得到的選項一致。
-  const stale = { lanes: { mid: { stance: "aggressive" } }, jungle: { focus: "invade", tempo: "fast" }, risk: { tolerance: "cautious" }, seats: { b5: { mission: "roam" } }, phases: { early: { stance: "aggressive" } } };
+  //  （Phase 3a-C3-2 收尾起，前期主動已由 n=400 複驗核准提供；改用仍不提供的前期 scaling（owner_hold）當例子。）
+  const stale = { lanes: { mid: { stance: "aggressive" } }, jungle: { focus: "invade", tempo: "fast" }, risk: { tolerance: "cautious" }, seats: { b5: { mission: "roam" } }, phases: { early: { stance: "scaling" } } };
   const kept = View.offeredChoicesOnly("std", [], stale);
   const keptView = View.tacticBookView({ templateId: "std", choices: kept.choices });
-  ck("V10 offeredChoicesOnly：量測排除的選擇（中路進攻、打野節奏快、前期主動）與複驗撤下的選擇（謹慎）被拿掉並列出，仍提供的（入侵、輔助遊走）保留", J(kept.choices) === J({ jungle: { focus: "invade" }, seats: { b5: { mission: "roam" } } }) && J(kept.dropped.map((d) => d.dimension).sort()) === J(["jungle.tempo", "lanes.mid.stance", "phases.early.stance", "risk.tolerance"]), J(kept));
+  ck("V10 offeredChoicesOnly：量測排除的選擇（中路進攻、打野節奏快）與複驗撤下的選擇（謹慎；前期 scaling＝Owner 暫緩）被拿掉並列出，仍提供的（入侵、輔助遊走）保留", J(kept.choices) === J({ jungle: { focus: "invade" }, seats: { b5: { mission: "roam" } } }) && J(kept.dropped.map((d) => d.dimension).sort()) === J(["jungle.tempo", "lanes.mid.stance", "phases.early.stance", "risk.tolerance"]), J(kept));
   const explicitLeaves = keptView.ok ? keptView.dimensions.filter((d) => d.explicit).map((d) => `${d.dimension}=${d.value}`).sort() : null;
   ck("V10b 過濾之後：計畫裡的每個選擇都在畫面上顯示為已選（沒有「送出去但看不到」的選擇）", keptView.ok && J(explicitLeaves) === J(["jungle.focus=invade", "seats.b5.mission=roam"]) && J(keptView.plan.choices) === J(kept.choices), J(explicitLeaves));
+  const nowOffered = View.offeredChoicesOnly("std", [], { phases: { early: { stance: "aggressive" }, late: { stance: "scaling" } } });
+  ck("V10e n=400 複驗核准的時期姿態（前期主動、後期 scaling）留在計畫裡，不被拿掉", J(nowOffered.choices) === J({ phases: { early: { stance: "aggressive" }, late: { stance: "scaling" } } }) && nowOffered.dropped.length === 0, J(nowOffered));
   let leak = [];
   for (const id of TEMPLATE_IDS) for (const row of live) for (const c of row.choices) {
     const k = View.offeredChoicesOnly(id, [], View.withChoice({}, row.dimension, c));

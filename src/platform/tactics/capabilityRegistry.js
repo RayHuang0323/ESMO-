@@ -295,14 +295,8 @@ export const liveCapabilities = (simVersion = CAPABILITY_SIM_VERSION_3A) => live
 //    Owner 若要保留，另以 n≥400 的新 seeds 證明（見 task-10-report.md），不是放大係數。
 const ex = (template, dimension, choice, reason, metric, n, z) => ({ template, dimension, choice, reason, metric, n, z });
 export const MEASURED_EXCLUSIONS = deepFreeze([
-  ex("*", "phases.early.stance", "aggressive", "no_measured_effect", "fightEntriesPerMin.early", 40, 0.38),
-  ex("*", "phases.early.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.early", 40, -0.09),
-  ex("*", "phases.early.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.early", 40, -1.05),
-  ex("*", "phases.mid.stance", "aggressive", "no_measured_effect", "fightEntriesPerMin.mid", 40, 1.38),
-  ex("*", "phases.mid.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.mid", 40, 1.52),
-  ex("*", "phases.mid.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.mid", 40, 0.55),
-  ex("*", "phases.late.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.late", 23, 0.15),
-  ex("*", "phases.late.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.late", 23, -0.89),
+  //  時期姿態 8 列（fightEntriesPerMin.<p>，n=40）已由 n=400 紅藍複驗取代（REPLICATION_CONFIRMED／REPLICATION_WITHHELD；Phase 3a-C3-2 收尾）；
+  //  舊列與舊結果表保留在 git 歷史（commit 0efb759 的 tools/fixtures/tactic_truth_3a.json），不刪不改證據本身。
   ex("*", "jungle.tempo", "slow", "no_measured_effect", "ganksPerMin", 40, -0.85),
   ex("*", "jungle.tempo", "fast", "no_measured_effect", "ganksPerMin", 40, 0.42),
   ex("classic.m1", "jungle.focus", "farm", "no_measured_effect", "ganksPerMin", 40, -1.38),
