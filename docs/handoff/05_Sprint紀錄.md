@@ -24728,3 +24728,34 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **未完成項**：所有 Owner 決策（D-1～D-20、W-1～W-4、TD-3A-23 修正與否、`simulationVersion.js` 處理方式）；C3 實作。
 
 **過程事件**：上午子代理撞到 API 用量上限（14:10 重置後接續）；下午休眠時兩個子代理斷網中止，重新派工補完；重測跨越休眠，只是暫停，結果逐位元相同。
+
+## 2026-10-21 Phase 3a-C3-1：時期骨架（Director core.v1）＋紅方上下路對調修正（laneFrame，TD-3A-23 D-1=A）（改模擬語意，僅在 v21 規則集下；owner: Claude，local commit，未 push／deploy／整合 main）
+
+計畫 `docs/superpowers/plans/2026-10-15-moba-phase3a-c3-1-laneframe.md`；SDD 帳 `.superpowers/sdd/2026-10-15-moba-phase3a-c3-1-laneframe/progress.md`。沒有開始 C3-2～C6；v20 規則集、v20／v21-A 黃金基準、既有側偏門檻、戰術係數都沒改。
+
+**完成項（commit 依序）**
+- `f384939` 計畫與開工清單狀態（Owner 2026-10-15 核准 D-13、D-15＋旗標名 `mobaTacticalDirectorV21`、模式 `core.v1`）。
+- `b3cbd1d` E-1：移除引擎觀察欄位 `tk`／`tid`、`TACTICAL_DIRECTOR_MODES` 合併為一份、平衡 runner 可選規則集（行為不變）。
+- `166ade7` laneFrame 事前登記（實作前）：`tools/fixtures/laneframe_registration_c3.json`＋`review/tactic-book-3a/laneFrame_事前登記.md`。
+- `452c88d` C3-1 時期骨架：Director `core.v1`、Resolver 預先產出 early／mid／late 三份方針（目前三份相同、同一參考）、`career.v21`／`balanceTool.v21` 掛在旗標後（行為不變；新 gate `check_c3_phase_skeleton`）。
+- `fab35dd` laneFrame：`career.v21`／`balanceTool.v21` 下紅方以「隊伍相對」解讀路名（`laneOffset`／`splitLane`／`gankWeights`）；legacy 規則集不變；登記的 9 個 v21-A 案例改變，其餘逐位元相同（新 gate `check_laneframe_c3`）。模擬指紋 `6c8db7e7cff3ae6a`（`moba-sim.v21` 候選，未發布）。
+- `d31dbcd` D-20 側偏修訂登記（Owner 2026-10-20：career 規則集、seed 9101 起奇數、以 effectiveSeed 計、m4 分層只有 z≥3 才 STOP）。
+- `21ab068` 第一次量測結果（原始證據，永不覆寫）：career 側偏 **pass**；行為研究依登記 **STOP**（B3 容許值結構上達不到、B2 一列超出、樣本不足）⇒ 交 Owner。
+- `b6dcb3d` 行為研究修訂登記（Owner 2026-10-20 裁定：B1 與 B2／B3 分開驗收；B2／B3 改等價檢定 PASS／STOP／INCONCLUSIVE；全新 seeds；先審查再跑）：`tools/fixtures/laneframe_registration_c3_behavrev.json`＋`review/tactic-book-3a/laneFrame_行為研究修訂登記.md`。容許範圍 Δ＝既有 fixture 中最小已確立（|z|≥3）路線姿態效果的一半：gankShare 0.05、laneForward 1.483；TOST 90 % CI；STOP＝99.9 % CI 整段在 Δ 外或顯著反向（Bonferroni）；seeds 16001–17600（1600 個，29,000 場，單次判定、硬上限）。獨立審查第一輪 APPROVE WITH CHANGES（B3 初稿容許值過寬會接受修正前的已知不對稱等），修正後 APPROVE。
+- `7f1fee9` 真實性表重測：4,080 場，91 列逐位元相同，只有 6 個語意檔的 `loadedFiles` 雜湊改變；33/33。
+- `7b96c11` 修訂行為研究結果（單次判定）：29,000 場、失敗 0、儀器不符 0。
+  - **B1 PASS**：藍 3181/3200、紅 3180/3200 場有分推，違規 0，發生率差 z −0.16；負對照（legacyMirror）照預期失敗（pooled 0）。
+  - **B2 PASS**（12/12 列）：|meanD| ≤ 0.017，所有 CI90 在 ±0.05 內。
+  - **B3 PASS**（12/12 列）：所有 CI90 在 ±1.483 內。
+  - **揭露**：classic.m4（AI objective 風格）laneForward.mid z_diff 2.33（CI90 [0.14, 0.83]）、bot z_diff 2.57（CI90 [0.31, 1.42]）——依登記的等價判準 PASS，但若套被否決的 |z|<2 規則會不過；bot 上界接近 Δ。如實記錄，不重跑。
+- career 側偏（D-20，2,007 seeds）：整體 STANDARD worse −0.6 pp z −0.70、SWAPPED +0.6 pp z 0.77；m4 分層 −4.5 pp／+3.9 pp，z −0.70／0.77；非 m4 對局 v20 與 v21 逐場相同（866／855，差異 0）；整體中位時長變化 0.2 %／1.2 %（m4 分層 2.6 %／6.2 %，皆在 WARN ±10 % 內）⇒ pass。
+
+**驗證（HEAD `7b96c11`，實跑）**：`check_laneframe_c3` 54/54、`check_c3_phase_skeleton` 170/170、`check_tactical_director_3c` 80/80、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 43/43、`check_simulation_version_gate` 82/82、`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 131/131**、`verify --only=tactic24,runtime29`：tactic24 27/29（紅的兩條＝登記排除的既有紅燈：m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS、`npm run build` built in 18.28s。登記的新增回歸 gate（`clarifications.newRegressionGates`）沒有新紅燈。
+
+**未完成項／已知殘留**
+- Player Challenge 防守方（固定紅方）仍是對調行為：沒有建立 `challenge.v21`（D-16 屬 3a-B）。
+- TD-3A-23 §7 第 2／4／5／6 項待 Owner。
+- C3-2 前置條件（T2 審查）：`identityOfKnobs` 依目前時期查表＋建構時 Map 備援；Director gate 掃描禁止把 knobs 存在 state；必要時每 tick 鎖定時間。
+- 側偏代表性（D-20 已揭露接受）；斷路器數值由控制者訂定；laneForward 三路共用一個 Δ（最小錨點是下路效果）。
+
+**過程事件**：行為研究共 29,000 場，因使用者休眠以 STOP 檔安全暫停 2 次，因 Claude Code 記憶體保護被停掉 3 次（Chrome 佔用記憶體）；每次續跑都確認該輪（200 seeds × 18 場＝3,600 場）剩餘場數＝3600−該輪已完成、JSONL 沒有半行、HEAD 與工作樹未變。完整 gate 批次被記憶體保護停掉一次並留下重複的孤兒行程，已清除，golden_v21a 改在前景重跑。
