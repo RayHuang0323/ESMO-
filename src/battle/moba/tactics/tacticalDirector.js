@@ -17,7 +17,8 @@
 //     以及 clock＝回傳目前比賽時間（秒）的函式（引擎傳 `() => this.t`）。
 //   · knobs(side)／identity(side) 回傳 phase(clock()) 那一個時期的物件——**原樣**回傳預先建好的物件（不複製、不重算）。
 //     沒有任何維度依時期改值時，三份就是同一個物件 ⇒ 任意 t 都回傳 configureMatch 收到的同一個參照（R-4），結果與 static 逐位元相同。
-//   · identityOfKnobs(K)：在**目前時期**以參照反查（藍方優先，與 static 同序）。
+//   · identityOfKnobs(K)：在**目前時期**以參照反查（藍方優先，與 static 同序）；目前時期沒有 ⇒ 建立時的「knobs → 同時期 identity」
+//     對照表（C3-2 前置）。引擎不得把 knobs／identity 存進跨 tick 的狀態（check_tactical_director_3c C 段掃原始碼）。
 //   · 每時期的挑選邏輯與時期界線（480／960）只住在這支檔案；引擎不得自己依時期挑方針（check_tactical_director_3c S7）。
 //   · 本檔不讀 ruleset：模式由「有沒有 phases」決定，是否傳 phases 由組裝器依 ruleset 的 tacticalDirector 層決定。
 //
@@ -131,17 +132,24 @@ function coreDirector({ identity, phases, clock, phase, laneFrame, toEngineRed }
   const identityAt = (side, t) => (identity ? at(side, t).identity ?? null : null);
   const knobs = (side) => knobsAt(side, clock());
   const identityOf = (side) => identityAt(side, clock());
+  //  C3-2 前置（C3-1 T2 審查）：建立時登記「交給引擎的每一份 knobs → 與它同一時期的 identity」（藍方先、early→late，先登記者勝）。
+  //  identityOfKnobs 先在**目前時期**查（藍方優先）；查不到才回頭查這張表 ⇒ 若某處拿著跨過 480／960 之前取得的 knobs 來問，
+  //  拿到的是「建它的那個時期」的 identity，而不是 null（null 會讓 _joinChance 改走另一條擲骰路徑）。三個時期共用物件時永遠在第一步就命中。
+  const builtIdentity = new Map();
+  for (const side of SIDES) for (const p of table[side]) if (!builtIdentity.has(p.knobs)) builtIdentity.set(p.knobs, p.identity ?? null);
   return Object.freeze({
     mode: "core.v1",
     laneFrame,
     knobs,
     identity: identityOf,
     hasIdentity: () => !!identity,
-    /** 目前時期以參照反查（藍方優先，與 static 同序）；三個時期共用物件時＝static 的答案。 */
+    /** 目前時期以參照反查（藍方優先，與 static 同序）；目前時期沒有這個物件 ⇒ 建立時的對照表（其他時期的那一份）；都不是 ⇒ null。 */
     identityOfKnobs: (K) => {
       if (!identity || !K) return null;
       const t = clock();
-      return K === knobsAt("blue", t) ? identityAt("blue", t) : K === knobsAt("red", t) ? identityAt("red", t) : null;
+      if (K === knobsAt("blue", t)) return identityAt("blue", t);
+      if (K === knobsAt("red", t)) return identityAt("red", t);
+      return builtIdentity.has(K) ? builtIdentity.get(K) : null;
     },
     phase,
     /** 時間 t 那一個時期的契約視圖（深拷貝＋深凍結；設定的己方視角）。不在引擎熱路徑上。 */

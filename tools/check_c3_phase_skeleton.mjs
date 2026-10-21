@@ -155,10 +155,13 @@ try {
     const at = (t, fn) => { now = t; return fn(); };
     ck("D3 identityOfKnobs 依目前時期反查：本時期的 knobs ⇒ 本時期的 identity（兩側、三個時期）",
       [0, 500, 1000].every((t) => at(t, () => ["blue", "red"].every((s) => d.identityOfKnobs(d.knobs(s)) === d.identity(s)))));
-    ck("D3b 別的時期的（不同）物件 ⇒ null；複本 ⇒ null；null ⇒ null",
-      at(500, () => d.identityOfKnobs(S.phases.blue[0].knobs) === null && d.identityOfKnobs(S.phases.blue[2].knobs) === null && d.identityOfKnobs({ ...d.knobs("blue") }) === null && d.identityOfKnobs(null) === null));
-    ck("D3c 紅方第 1、2 時期共用同一個 knobs 物件 ⇒ t=1000 時以它反查得到紅方 identity；t=0 時第 1 時期物件 ⇒ null",
-      at(1000, () => d.identityOfKnobs(S.phases.red[1].knobs) === S.identity.red) && at(0, () => d.identityOfKnobs(S.phases.red[1].knobs) === null));
+    //  C3-2 前置（Owner 2026-10-21；C3-1 T2 審查）：別的時期的物件改為回「建立它的那個時期」的 identity（建立時的對照表），不再是 null。
+    //  原本的 D3b／D3c 釘的是 null；這是刻意的契約變更（tacticalDirector.js identityOfKnobs；check_tactical_director_3c C1–C4）。
+    ck("D3b 別的時期的（不同）物件 ⇒ 建立它的那個時期的 identity（C3-2 對照表）；複本 ⇒ null；null ⇒ null",
+      at(500, () => d.identityOfKnobs(S.phases.blue[0].knobs) === S.phases.blue[0].identity && d.identityOfKnobs(S.phases.blue[2].knobs) === S.phases.blue[2].identity
+        && d.identityOfKnobs({ ...d.knobs("blue") }) === null && d.identityOfKnobs(null) === null));
+    ck("D3c 紅方第 1、2 時期共用同一個 knobs 物件 ⇒ t=1000 時以它反查得到紅方 identity；t=0 時（目前時期沒有它）⇒ 對照表的紅方 identity",
+      at(1000, () => d.identityOfKnobs(S.phases.red[1].knobs) === S.identity.red) && at(0, () => d.identityOfKnobs(S.phases.red[1].knobs) === S.phases.red[1].identity));
     ck("D3d 藍方第 2 時期的 identity 是另一份物件（siegeBias 不同），第 0／1 時期共用整場那一份",
       at(1000, () => d.identity("blue") === S.phases.blue[2].identity && d.identity("blue") !== S.identity.blue) && at(500, () => d.identity("blue") === S.identity.blue));
   }

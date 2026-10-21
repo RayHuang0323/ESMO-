@@ -289,5 +289,99 @@ const { LogicEngine } = await imp(ENGINE);
   ck("E6 tidObs 在 identity 接線時建立（＝舊的 `if (this.tid)`）", !!a.tidObs && a.tidObs.blue.protectCarry === 0 && a.tidObs.red.siegePreferred === 0);
 }
 
+// ════ C：C3-2 前置（C3-1 T2 審查的兩項：identityOfKnobs 依目前時期查表＋建立時對照表；引擎不把 knobs／identity 快取進狀態）════
+{
+  //  C1–C4 行為：三個時期各自不同的物件（今天的 Resolver 還不會產生，這裡手工建）。clock 由測試控制。
+  let now = 0;
+  const kb = [0, 1, 2].map((i) => ({ tag: `kb${i}` })), kr = [0, 1, 2].map((i) => ({ tag: `kr${i}` }));
+  const ib = [0, 1, 2].map((i) => ({ tag: `ib${i}` })), ir = [0, 1, 2].map((i) => ({ tag: `ir${i}` }));
+  const ph = (ks, is) => ks.map((knobs, i) => ({ knobs, identity: is[i] }));
+  const core = (over = {}) => Dir.createTacticalDirector({ blue: kb[0], red: kr[0], identity: { blue: ib[0], red: ir[0] },
+    phases: { blue: ph(kb, ib), red: ph(kr, ir) }, clock: () => now, ...over });
+  const D = core();
+  const at = (t, K) => { now = t; return D.identityOfKnobs(K)?.tag ?? null; };
+  ck("C1 core.v1 各時期物件不同：目前時期命中 ⇒ 該時期 identity；其他時期的 knobs ⇒ 建立它的那個時期的 identity（不是 null）",
+    at(100, kb[0]) === "ib0" && at(100, kb[1]) === "ib1" && at(100, kb[2]) === "ib2" && at(500, kb[0]) === "ib0" && at(500, kb[1]) === "ib1"
+    && at(1500, kr[0]) === "ir0" && at(1500, kr[2]) === "ir2" && at(479.5, kb[1]) === "ib1" && at(480, kb[0]) === "ib0",
+    [100, 500, 1500].map((t) => [kb[0], kb[1], kr[2]].map((K) => at(t, K)).join("/")).join(" ｜ "));
+  ck("C1b 不是任何時期的物件（含內容相同的複本）、null ⇒ null", at(500, { ...kb[1] }) === null && at(500, null) === null && at(500, { tag: "x" }) === null);
+  //  目前時期優先於對照表：同一個物件 X 是藍方 early 與紅方 mid 的 knobs ⇒ 中期問 X 回紅方 mid（目前時期），前期問 X 回藍方 early。
+  const X = { tag: "X" };
+  const kb2 = [X, { tag: "b1" }, { tag: "b2" }], kr2 = [{ tag: "r0" }, X, { tag: "r2" }];
+  const D2 = core({ blue: kb2[0], red: kr2[0], phases: { blue: ph(kb2, ib), red: ph(kr2, ir) } });
+  const at2 = (t, K) => { now = t; return D2.identityOfKnobs(K)?.tag ?? null; };
+  ck("C2 目前時期優先：X＝藍 early＝紅 mid ⇒ t=500 回 ir1（目前時期的紅方），t=100 回 ib0（目前時期的藍方），t=1500 回 ib0（對照表，先登記的藍方 early）",
+    at2(500, X) === "ir1" && at2(100, X) === "ib0" && at2(1500, X) === "ib0", [100, 500, 1500].map((t) => at2(t, X)).join("/"));
+  const Doff = core({ identity: null });
+  ck("C3 identity 未接線 ⇒ 任何時期、任何物件都是 null（對照表不會繞過「未接線」）", [100, 500, 1500].every((t) => { now = t; return [...kb, ...kr].every((K) => Doff.identityOfKnobs(K) === null); }));
+  const Dtr = core({ laneFrame: "teamRelative" });
+  now = 100; const redEarly = Dtr.knobs("red");
+  now = 1500;
+  ck("C3b teamRelative：前期拿到的紅方（轉換後）knobs 在後期問 ⇒ 紅方 early identity；設定的原物件（未轉換）不在表內 ⇒ null",
+    redEarly !== kr[0] && Dtr.identityOfKnobs(redEarly)?.tag === "ir0" && Dtr.identityOfKnobs(kr[1]) === null);
+  //  R-4 不變：三個時期共用同一份 ⇒ 任何 t 的答案＝static（同參照）。
+  const kB = { tag: "B" }, kR = { tag: "R" };
+  const Dsh = core({ blue: kB, red: kR, phases: { blue: [0, 1, 2].map(() => ({ knobs: kB, identity: ib[0] })), red: [0, 1, 2].map(() => ({ knobs: kR, identity: ir[0] })) } });
+  const Dst = Dir.createTacticalDirector({ blue: kB, red: kR, identity: { blue: ib[0], red: ir[0] } });
+  ck("C4 R-4：三個時期共用同一份 ⇒ 任何 t 的 identityOfKnobs／knobs 與 static 逐參照相同",
+    [0, 479.5, 480, 959.5, 960, 3000].every((t) => { now = t; return [kB, kR, { ...kB }, null].every((K) => Dsh.identityOfKnobs(K) === Dst.identityOfKnobs(K)) && Dsh.knobs("blue") === kB && Dsh.knobs("red") === kR; }));
+  now = 0;
+
+  //  C5 原始碼：knobs／identity 只能放在區域常數裡用完即丟，不得存進跨 tick 的狀態（this.x／物件屬性／陣列）。
+  //   · knobs 的讀取點＝`const K = …this.director.knobs(…)…;` 一行一個（允許兩種形狀）；identity 只經 `const <名> = this._tidOf(…);`，
+  //     `this.director.identity(` 只在 _tidOf 的一行委派裡。
+  //   · 上面那些區域名稱：不得出現在指派的右邊、物件字面值的值、push／set 的引數裡。
+  //   不涵蓋：把 K 傳進某個函式、由那個函式存起來（目前接收 K 的只有 _joinChance 等純讀取）；執行期反射。
+  const knobsLineOk = (l) => /^const K = (?:this\.tacticOn \? )?this\.director\.knobs\((?:side|p\.side)\)(?: : null)?;$/.test(l);
+  const cacheProblems = (code) => {
+    const lines = code.split("\n").map((l) => l.trim());
+    const out = [];
+    for (const l of lines.filter((x) => /this\.director\.knobs\(/.test(x))) if (!knobsLineOk(l)) out.push(`knobs 讀取形狀：${l}`);
+    for (const l of lines.filter((x) => /this\.director\.identity\(/.test(x))) if (l !== "_tidOf(side) { return this.director ? this.director.identity(side) : null; }") out.push(`identity 讀取：${l}`);
+    const names = new Set(["K"]);
+    for (const l of lines) {
+      if (/this\._tidOf\(/.test(l) && !/^_tidOf\(side\)/.test(l)) { const m = /^const (\w+) = this\._tidOf\([^)]*\);/.exec(l); if (m) names.add(m[1]); else out.push(`_tidOf 結果不是區域常數：${l}`); }
+      //  identityOfKnobs 的結果（_joinChance 的 I）同樣只能是區域常數。
+      if (/\.identityOfKnobs\(/.test(l)) { const m = /^const (\w+) = .*\.identityOfKnobs\(/.exec(l); if (m) names.add(m[1]); else out.push(`identityOfKnobs 結果不是區域常數：${l}`); }
+    }
+    for (const n of names) {
+      const esc = `\\b${n}\\b`;
+      const res = [
+        new RegExp(`(?:\\.\\s*\\w+|\\])\\s*=\\s*${esc}\\s*[;,)]`),                       // this.x = K;／a[i] = K;
+        new RegExp(`(?:\\.\\s*\\w+|\\])\\s*=\\s*[^;=]*[?:]\\s*${esc}\\s*[;:,)]`),           // this.x = c ? K : null;
+        new RegExp(`\\w+\\s*:\\s*${esc}\\s*[,}]`),                                         // { k: K }
+        new RegExp(`=\\s*\\{(?:[^}]*,)?\\s*${esc}\\s*[,}]`),                               // x = { K }／x = { a, K }（被指派的物件簡寫；函式參數 `(a, K, b)` 不算）
+        new RegExp(`=\\s*\\[(?:[^\\]]*,)?\\s*${esc}\\s*[,\\]]`),                           // x = [K]／x = [a, K]
+        new RegExp(`\\.(?:push|set|unshift|assign)\\([^)]*${esc}`),                        // push／Map.set／Object.assign
+      ];
+      for (const l of lines) if (res.some((re) => re.test(l))) out.push(`${n} 被存進狀態：${l}`);
+    }
+    return out;
+  };
+  const probs = cacheProblems(ENGINE_CODE);
+  ck("C5 引擎不把 knobs／identity 快取進狀態：knobs 只在 `const K = …director.knobs(…)` 讀、identity 只經 `const <名> = this._tidOf(…)`，那些名稱不出現在屬性指派／物件值／push／set",
+    probs.length === 0, probs.slice(0, 4).join(" ｜ "));
+  //  C6 時間只在兩處寫：建構子 `this.t = 0` 與 tick 的 `this.t += dt`；tick 裡在 `this.t += dt` 之前不問 Director（同一 tick 內時期不會中途改變，
+  //  所以不需要每 tick 鎖定）。
+  const tWriters = (code) => code.split("\n").map((l) => l.trim()).filter((l) => /\bthis\.t\s*(?:[+\-*/]?=)(?!=)/.test(l));
+  const tickPrefixOk = (code) => { const i = code.indexOf("\n  tick(dt) {"); const j = code.indexOf("this.t += dt;", i); return i >= 0 && j > i && !/director|_tidOf|_tidPhase|_joinChance|tacticOn/.test(code.slice(i, j)); };
+  const tOk = (code) => { const w = tWriters(code); return w.length === 2 && w[0].startsWith("this.t = 0;") && w[1] === "this.t += dt;" && tickPrefixOk(code); };
+  ck("C6 this.t 只在建構子（= 0）與 tick（+= dt）寫入；tick 在 `this.t += dt` 之前不讀 Director ⇒ 同一 tick 內時期固定", tOk(ENGINE_CODE), tWriters(ENGINE_CODE).join(" ｜ "));
+  //  負向自檢（記憶體內植入）。
+  const plantAt = (snippet) => stripComments(read(ENGINE).replace("_tidPhase() {", `_c3probe() { ${snippet} }\n  _tidPhase() {`));
+  ck("CN1 植入 `this._kc = this.director.knobs(\"blue\");` ⇒ C5 轉紅", cacheProblems(plantAt('this._kc = this.director.knobs("blue");')).length > 0);
+  ck("CN2 植入 `const K = this.director.knobs(side); this._tac.blue.K = K;` ⇒ C5 轉紅", cacheProblems(plantAt("const K = this.director.knobs(side);\n    this._tac.blue.K = K;")).length > 0);
+  ck("CN3 植入 `const I = this._tidOf(side); this._memo = { id: I };` ⇒ C5 轉紅", cacheProblems(plantAt("const I = this._tidOf(side);\n    this._memo = { id: I };")).length > 0);
+  ck("CN3b 植入物件簡寫 `this._memo = { K };` ⇒ C5 轉紅", cacheProblems(plantAt("const K = this.director.knobs(side);\n    this._memo = { K };")).length > 0);
+  ck("CN3c 植入三元 `this._kk = side ? K : null;` ⇒ C5 轉紅", cacheProblems(plantAt("const K = this.director.knobs(side);\n    this._kk = side ? K : null;")).length > 0);
+  ck("CN3d 植入陣列 `this._ks = [K];`、`Object.assign(this._o, K)` ⇒ C5 轉紅",
+    cacheProblems(plantAt("const K = this.director.knobs(side);\n    this._ks = [K];")).length > 0 && cacheProblems(plantAt("const K = this.director.knobs(side);\n    Object.assign(this._o, K);")).length > 0);
+  ck("CN3e 植入 `const I = this.director.identityOfKnobs(K); this._m = I;` ⇒ C5 轉紅（identityOfKnobs 的結果也被追蹤）",
+    cacheProblems(plantAt("const K = this.director.knobs(side);\n    const I = this.director.identityOfKnobs(K);\n    this._m = I;")).length > 0);
+  ck("CN4 植入 `this.t = 5;` ⇒ C6 轉紅", !tOk(plantAt("this.t = 5;")));
+  ck("CN5 對照：只在註解裡的 `this._kc = this.director.knobs(\"blue\")`、`this.t = 5` ⇒ C5／C6 不紅",
+    (() => { const c = plantAt('// this._kc = this.director.knobs("blue"); this.t = 5;\n    /* this._tac.K = K; */ return 1;'); return cacheProblems(c).length === 0 && tOk(c); })());
+}
+
 console.log(`\nTactical Director 3c：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
 process.exit(fail ? 1 : 0);

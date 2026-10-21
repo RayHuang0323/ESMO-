@@ -551,7 +551,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  **這是 v21 規則集下的語意變化**（紅方上下路不對稱的案例改變：事前登記的 9 個 v21-A 案，tools/check_laneframe_c3.mjs C3）；
   //  v20 規則集與既有輸入完全不變（golden 131／153 逐位元相同）。v21 仍是未發布候選 ⇒ 依 TD-3A-23 §3.6 選項 1 同版號重新登記
   //  （舊值 79436579b2f999cf 未曾發布）。
-  "moba-sim.v21": "6c8db7e7cff3ae6a",
+  //  2026-10-21（Phase 3a-C3-2 前置）：C3-2 prereq: identityOfKnobs falls back to a construction-time knobs->identity map; behaviour unchanged.
+  //  tacticalDirector.js core.v1 的 identityOfKnobs 先查目前時期（不變），查不到才查建立時登記的「每份 knobs → 同時期 identity」。
+  //  今天三個時期共用同一份物件 ⇒ 第一步永遠命中，回答與之前逐參照相同（tools/check_tactical_director_3c.mjs C4）；
+  //  golden 131／153 與 v21 規則集下的引擎輸出逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 6c8db7e7cff3ae6a 未曾發布）。
+  "moba-sim.v21": "49faf7d28aa9ebfb",
 });
 
 export const isKnownSimulationVersion = (v) =>
