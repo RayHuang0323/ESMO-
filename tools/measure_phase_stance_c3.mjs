@@ -20,12 +20,18 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SELF = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(SELF), "..");
-const REG_FILE = path.join(ROOT, "tools", "fixtures", "phase_stance_registration_c3_2.json");
-const RESULT_FIXTURE = path.join(ROOT, "tools", "fixtures", "phase_stance_result_c3_2.json");
-const REG = JSON.parse(fs.readFileSync(REG_FILE, "utf8"));
 const args = process.argv.slice(2);
 const flag = (k) => args.includes(`--${k}`);
 const val = (k, d = null) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
+//  --reg＝登記檔（repo 內相對路徑）；預設是第一次的登記。修正複驗（rev1）另有登記檔，結果檔名由登記檔的 resultFixture 指定。
+const REG_FILE = path.join(ROOT, val("reg", "tools/fixtures/phase_stance_registration_c3_2.json"));
+const REG = JSON.parse(fs.readFileSync(REG_FILE, "utf8"));
+const RESULT_FIXTURE = path.join(ROOT, REG.resultFixture ?? "tools/fixtures/phase_stance_result_c3_2.json");
+const STUDY_ID = REG.studyId ?? "phase-stance-c3-2";
+//  儀器的層（G-A7／複驗慣例：英雄技能開、戰鬥天賦關）。每筆紀錄必須相符，否則 STOP(INSTRUMENT)。
+//  ⚠ 第一次研究（phase_stance_result_c3_2.json）沒有這一條、而且 worker 沒設 ESMO_BALANCE_SKILLS ⇒ 在技能關閉下跑完（rev1 登記揭露）。
+const LAYERS_OK = (L) => !!L && L.heroSkills === true && L.heroPassives === true && L.heroPowerCurve === true && L.battleTalents === false;
+const REG_REL = path.relative(ROOT, REG_FILE).replaceAll("\\", "/");
 const RULESET = "balanceTool.v21";
 const [S0, S1] = REG.seeds.range.split("-").map(Number);
 const SEEDS = Array.from({ length: S1 - S0 + 1 }, (_, i) => S0 + i);
@@ -37,6 +43,9 @@ const METRICS_OF = (o) => [`engageDecisionsPerMin.${o.phase}`, `engageStartsPerM
 
 // ── worker ──────────────────────────────────────────────────────────────────
 if (flag("ps-worker")) {
+  //  runner 在第一次 modules() 讀這兩個變數 ⇒ 必須在 import 儀器之前設好（G-A7 慣例：skills on、talents off）。
+  process.env.ESMO_BALANCE_SKILLS = "on";
+  delete process.env.ESMO_BALANCE_TALENTS;
   const PB = await import(pathToFileURL(path.join(ROOT, "tools", "lib", "phaseBucketSim.mjs")).href);
   process.on("message", async (t) => {
     try {
@@ -47,7 +56,7 @@ if (flag("ps-worker")) {
       const r = await PB.runPhaseMatch(t.seed, { ...spec, ruleset: RULESET });
       const problems = PB.selfCheck(r);
       const slim = (s) => ({ engages: s.engages, engageStarts: s.engageStarts });
-      process.send({ type: "done", id: t.id, rec: { seed: r.seed, ruleset: r.ruleset, directorMode: r.directorMode, duration: r.duration, winner: r.winner,
+      process.send({ type: "done", id: t.id, rec: { seed: r.seed, ruleset: r.ruleset, directorMode: r.directorMode, layers: r.layers, duration: r.duration, winner: r.winner,
         phaseSecs: r.phaseSecs, blue: slim(r.blue), red: slim(r.red), selfCheck: problems } });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
@@ -103,8 +112,10 @@ if (flag("selftest")) {
   ck("V9 z 剛好 3、|Δ| 剛好 5 % ⇒ 達標（門檻是 ≥）", metricOk(c(400, 0.05, 3, 0.05), "up").ok && !metricOk(c(400, 0.05, 2.999, 0.05), "up").ok);
   const st = pairStatsOf([[1, 2], [2, 3], [null, 5], [3, 5]]);
   ck("V10 配對統計只計兩邊都有值的 seed；rel＝diff／對照組平均", st.n === 3 && Math.abs(st.diff - 4 / 3) < 1e-12 && Math.abs(st.rel - (4 / 3) / 2) < 1e-12);
-  ck("V11 登記檔：8 個選項、seeds 3001–3400、n 400、最少有效配對 200、規則集 balanceTool.v21",
-    OPTIONS.length === 8 && SEEDS.length === 400 && SEEDS[0] === 3001 && MIN_N === 200 && /^balanceTool\.v21/.test(REG.design.ruleset));
+  ck(`V11 登記檔（${path.relative(ROOT, REG_FILE)}）：8 個選項、seeds ${REG.seeds.range}（n ${REG.seeds.n}）、最少有效配對 200、規則集 balanceTool.v21`,
+    OPTIONS.length === 8 && SEEDS.length === REG.seeds.n && SEEDS[0] === S0 && MIN_N === 200 && /^balanceTool\.v21/.test(REG.design.ruleset));
+  ck("V12 儀器層檢查：技能／被動／成長曲線開、天賦關才算相符；缺欄位（第一次研究的紀錄）＝不符",
+    LAYERS_OK({ heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: false }) && !LAYERS_OK({ heroSkills: false, heroPassives: false, heroPowerCurve: false, battleTalents: false }) && !LAYERS_OK({ heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true }) && !LAYERS_OK({ heroSkills: true, heroPassives: false, heroPowerCurve: true, battleTalents: false }) && !LAYERS_OK(undefined));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
 }
@@ -139,7 +150,7 @@ const provenance = () => ({ gitHead: gitHead(), dirtyFilesUnderSrcTools: gitDirt
 function opsState(dir) {
   let instrument = 0, finished = 0, errored = 0;
   for (const k of keysAll()) {
-    for (const r of readRecs(dir, k).values()) { finished++; if (r.ruleset !== RULESET || r.directorMode !== "core.v1" || (r.selfCheck?.length ?? 1) > 0) instrument++; }
+    for (const r of readRecs(dir, k).values()) { finished++; if (r.ruleset !== RULESET || r.directorMode !== "core.v1" || !LAYERS_OK(r.layers) || (r.selfCheck?.length ?? 1) > 0) instrument++; }
     errored += readErrors(dir, k).size;
   }
   const P = REG.stopLoss;
@@ -160,11 +171,14 @@ if (flag("run")) {
   fs.mkdirSync(dir, { recursive: true });
   const prov = provenance();
   if (prov.dirtyFilesUnderSrcTools !== 0) { console.error(`src／tools 有 ${prov.dirtyFilesUnderSrcTools ?? "?"} 個未提交變更：正式研究必須在已 commit 的程式上跑。`); process.exit(2); }
+  //  這份登記已經有結果檔 ⇒ 它的 seeds 已被觀察，不得再跑（換新 seeds 要另立登記）。
+  if (fs.existsSync(RESULT_FIXTURE)) { console.error(`${path.relative(ROOT, RESULT_FIXTURE)} 已存在：${REG_REL} 的 seeds 已觀察過，不得再跑。`); process.exit(2); }
   const metaFile = path.join(dir, "meta.json");
   if (fs.existsSync(metaFile)) {
     const m = JSON.parse(fs.readFileSync(metaFile, "utf8"));
+    if (m.study !== STUDY_ID || String(m.registration ?? "").replaceAll("\\", "/") !== REG_REL) { console.error(`⚠ 這個資料夾是 ${m.study}／${m.registration} 的批次，不是 ${STUDY_ID}／${REG_REL}：不得混跑。`); process.exit(2); }
     if (m.fingerprint !== prov.fingerprint || m.gitHead !== prov.gitHead) { console.error(`⚠ 這個資料夾的批次在 ${m.gitHead}／${m.fingerprint} 下開始，目前是 ${prov.gitHead}／${prov.fingerprint}：不得混跑。`); process.exit(2); }
-  } else fs.writeFileSync(metaFile, JSON.stringify({ study: "phase-stance-c3-2", startedAt: new Date().toISOString(), ...prov, registration: path.relative(ROOT, REG_FILE) }, null, 2));
+  } else fs.writeFileSync(metaFile, JSON.stringify({ study: STUDY_ID, startedAt: new Date().toISOString(), ...prov, registration: REG_REL }, null, 2));
   const pre = opsState(dir);
   if (pre.instrument) { console.error(`⛔ 儀器不符：已有 ${pre.instrument} 筆紀錄的規則集／Director／自檢不符 ⇒ STOP 交 Owner。`); process.exit(5); }
   if (pre.breaker) { console.error(`⛔ 斷路器：失敗 ${pre.errored} 場 ⇒ STOP 交 Owner。`); process.exit(4); }
@@ -197,7 +211,7 @@ if (flag("run")) {
         if (m.type === "done") {
           fs.appendFileSync(fileOf(dir, t.key), `${JSON.stringify({ seed: t.seed, rec: m.rec })}\n`);
           finished++;
-          if (m.rec.ruleset !== RULESET || m.rec.directorMode !== "core.v1" || m.rec.selfCheck.length) { instrumentBad++; halt = "instrument"; console.error(`⛔ 儀器不符 ${t.id}: ${m.rec.ruleset}/${m.rec.directorMode} ${m.rec.selfCheck.join(" ｜ ")}`); }
+          if (m.rec.ruleset !== RULESET || m.rec.directorMode !== "core.v1" || !LAYERS_OK(m.rec.layers) || m.rec.selfCheck.length) { instrumentBad++; halt = "instrument"; console.error(`⛔ 儀器不符 ${t.id}: ${m.rec.ruleset}/${m.rec.directorMode} layers ${JSON.stringify(m.rec.layers)} ${m.rec.selfCheck.join(" ｜ ")}`); }
           const pct = Math.floor((finished / tasks.length) * 20);
           if (pct !== lastPct) {
             lastPct = pct;
@@ -233,6 +247,7 @@ if (flag("report")) {
   const PB = await import(pathToFileURL(path.join(ROOT, "tools", "lib", "phaseBucketSim.mjs")).href);
   const prov = provenance();
   const metaF = path.join(dir, "meta.json"), meta = fs.existsSync(metaF) ? JSON.parse(fs.readFileSync(metaF, "utf8")) : null;
+  if (meta && (meta.study !== STUDY_ID || String(meta.registration ?? "").replaceAll("\\", "/") !== REG_REL)) { console.error(`⚠ 這個資料夾是 ${meta.study}／${meta.registration} 的批次，不是 ${STUDY_ID}／${REG_REL}：--reg 給錯了。`); process.exit(2); }
   const ops = opsState(dir);
   const recs = new Map(keysAll().map((k) => [k, readRecs(dir, k)]));
   const errSeeds = new Set(keysAll().flatMap((k) => [...readErrors(dir, k).keys()]));
@@ -241,7 +256,7 @@ if (flag("report")) {
   const ctrl = recs.get("ctrl");
   //  過期：批次開跑時的 gitHead 與目前之間 src 有差異、或指紋不同；meta 遺失也算（來源不可追溯）⇒ 不給判定、不寫結果檔。
   //  被量測的程式＝src（模擬語意）＋這個研究自己的儀器、工具與登記檔（結果檔本身除外）。
-  const STUDY_PATHS = "src tools/lib/phaseBucketSim.mjs tools/lib/tacticTruthSim.mjs tools/measure_phase_stance_c3.mjs tools/fixtures/phase_stance_registration_c3_2.json tools/balance/moba_items_balance_runner.mjs";
+  const STUDY_PATHS = `src tools/lib/phaseBucketSim.mjs tools/lib/tacticTruthSim.mjs tools/measure_phase_stance_c3.mjs ${path.relative(ROOT, REG_FILE).replaceAll("\\", "/")} tools/balance/moba_items_balance_runner.mjs`;
   const srcChanged = meta && meta.gitHead !== prov.gitHead ? execSync(`git diff --name-only ${meta.gitHead} HEAD -- ${STUDY_PATHS}`, { cwd: ROOT }).toString().trim().split("\n").filter(Boolean) : [];
   const stale = !meta ? ["meta.json missing (provenance unknown)"] : meta.fingerprint !== prov.fingerprint || srcChanged.length ? [`batch@${meta.gitHead}/${meta.fingerprint} (src changed: ${srcChanged.length})`] : [];
   const judgeable = complete && !halted && stale.length === 0;

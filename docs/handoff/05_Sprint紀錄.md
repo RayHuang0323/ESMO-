@@ -24797,3 +24797,8 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - **OWNER_DECISION**：6 個 confirmed 選項要不要開放給玩家。量測排除表必須與真實性表（G-A7：`fightEntriesPerMin.<p>`、seeds 1–40）逐筆一致，要開放就得改這條 gate 規則或重新登記 G-A7 的指標。
 - **D-18**：前期／中期 scaling 要不要動用一次性重新設計（備用區段 7001–7400），或直接留 design。
 - 後期樣本是以比賽長度（處理後結果）篩選的，已揭露。
+
+### 2026-10-22 更正：C3-2 研究的證據範圍是「英雄技能關閉」（上一節 `a6ea6e6` 的結果須以本更正閱讀）
+- 量測 worker 沒設 `ESMO_BALANCE_SKILLS` ⇒ runner 靜默關掉英雄技能／被動／成長曲線；`f4a4ae9` 的 6,800 場全在技能關閉下跑完。真實性表、複驗、laneFrame 研究都是技能開。儀器檔頭寫「skills on」不實；自檢 gate 兩個儀器都沒開技能，跨儀器比對抓不到；最終審查也沒抓到。2026-10-22 controller 讀 C7 §5（同一個坑）時發現。
+- 處理：原結果檔保留不動（＝技能關閉下的行為證據），**不**用來標記 live；以修正後的儀器在全新 seeds 18001–18400 做複驗（`tools/fixtures/phase_stance_registration_c3_2_rev1.json`，選項／指標／門檻原樣沿用），只有 rev1 再次 confirmed 的選項才進入 live 收尾。
+- 儀器修正：worker 在載入前設 skills on／talents off；每筆紀錄記錄實際載入的層，不符即 STOP(INSTRUMENT)；`check_phase_bucket_c3` 增為 23 項（L1／L2）。

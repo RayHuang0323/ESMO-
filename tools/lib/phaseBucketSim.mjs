@@ -1,7 +1,11 @@
 // ============================================================================
 //  tools/lib/phaseBucketSim.mjs — Phase 3a-C3-2：分時期分桶的量測儀器（C3 開工清單 §3.4；D-19「三桶相加＝整場值」）
 //
-//  身分：只讀。走 balance runner 的同一條組裝路徑（configure → assembleMatch，skills on；規則集由呼叫端指定，預設 balanceTool.v21），
+//  ⚠ 技能層：runner 在第一次 modules() 時讀 ESMO_BALANCE_SKILLS；沒設 ⇒ 英雄技能／被動／成長曲線**靜默關閉**。
+//    G-A7／複驗的慣例是 skills on、talents off；呼叫端必須在第一次呼叫前設好（measure_phase_stance_c3 的 worker、check_phase_bucket_c3）。
+//    每筆紀錄的 layers 欄位記下實際載入的層，量測工具據此做儀器檢查。（2026-10-21 C3-2 第一次研究漏設、在技能關閉下跑完：
+//    tools/fixtures/phase_stance_result_c3_2.json 的證據範圍因此是「無技能」，見 phase_stance_registration_c3_2_rev1.json。）
+//  身分：只讀。走 balance runner 的同一條組裝路徑（configure → assembleMatch；規則集由呼叫端指定，預設 balanceTool.v21），
 //  在 tick 迴圈外側**只讀**引擎狀態，不加計數器、不改任何引擎行為。每一場回傳一筆小紀錄。
 //  tools/lib/tacticTruthSim.mjs（真實性表的儀器）一個字都不改：它的檔案雜湊是真實性表過期判定的一部分。
 //
@@ -90,6 +94,7 @@ export async function runPhaseMatch(seed, spec = {}) {
   const sideOut = (side) => ({ ...S[side], execFinal: final[side] });
   return {
     tool: PHASE_BUCKET_SIM_VERSION, seed, ruleset, directorMode: e.director?.mode ?? null,
+    layers: { heroSkills: !!M.skills, heroPassives: !!M.passives, heroPowerCurve: !!M.curves, battleTalents: !!M.talents },
     duration: e.t, over: e.over ? 1 : 0, winner: e.winner ?? null, kills: e.bK + e.rK, phaseSecs, firstTick,
     blue: sideOut("blue"), red: sideOut("red"),
   };

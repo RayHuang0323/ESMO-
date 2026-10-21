@@ -13,6 +13,7 @@
 //      整場 engages／engageStarts＝本儀器三桶相加；fights 每一個時期逐桶相同（tacticTruthSim 本來就以 Director 分 fights）；
 //      比賽長度、勝方、擊殺數相同（兩個儀器都只讀，不影響對局）。
 //   R  比率重算：ratePerMin＝該桶事件數 ÷（該桶秒數 ÷ 60），不是整場比率；不足 60 秒 ⇒ null（人工紀錄）。
+//   L  層：每場紀錄 skills on／talents off（G-A7 慣例）；量測工具的 worker 在載入前設好環境變數（2026-10-21 補）。
 //   D  決定性：同一 seed 跑兩次 ⇒ 紀錄逐欄相同（對照組逐場可重算）；對照組的 legacy 路徑與 std 輸入的對局逐欄相同。
 //   A  臂：8 個時期姿態選擇各自的引擎輸入（toEngineTactic＋toEngineTacticIdentity）與對照組相比，**只有** identity.phaseEngage／phaseJoin
 //      在該時期的索引不同，值＝MobaTacticConfig 的表（不在這裡改任何係數）；對照組內容＝STANDARD_OPP_TACTIC。
@@ -34,6 +35,10 @@ const LIB = "tools/lib/phaseBucketSim.mjs";
 const RULESET = "balanceTool.v21";
 const SEEDS = [21, 22, 23];
 process.env.ESMO_BALANCE_RULESET = RULESET;          // tacticTruthSim 走 runner 的預設規則集（呼叫當下讀）⇒ 兩個儀器同一規則集
+//  G-A7／複驗慣例：英雄技能開、戰鬥天賦關（runner 在第一次 modules() 讀；與 check_tactic_truth_3a 的 worker 相同）。
+//  2026-10-21：第一次 C3-2 研究的 worker 與本 gate 都沒設 ⇒ 兩個儀器都在技能關閉下比對、X1 照樣全綠，沒抓到。L1／L2 補上。
+process.env.ESMO_BALANCE_SKILLS = "on";
+delete process.env.ESMO_BALANCE_TALENTS;
 
 // ── P 原始碼 ──
 const libCode = stripComments(read(LIB));
@@ -53,6 +58,14 @@ const armLate = await PB.phaseStanceArm("phases.late.stance", "scaling");
 recs.push(await PB.runPhaseMatch(SEEDS[0], { ruleset: RULESET, blue: armLate }));
 ck("B0 每場都是 balanceTool.v21／Director core.v1，且至少一場進入後期（≥ 960 秒）", recs.every((r) => r.ruleset === RULESET && r.directorMode === "core.v1") && recs.some((r) => r.duration >= 960),
   recs.map((r) => `${r.seed}:${r.duration}s`).join(" "));
+ck("L1 每場紀錄的層＝G-A7 慣例：英雄技能／被動／成長曲線開、戰鬥天賦關", recs.every((r) => r.layers?.heroSkills === true && r.layers.heroPassives === true && r.layers.heroPowerCurve === true && r.layers.battleTalents === false),
+  J(recs[0].layers));
+{
+  const tool = stripComments(read("tools/measure_phase_stance_c3.mjs"));
+  const w = tool.indexOf('flag("ps-worker")'), imp0 = tool.indexOf("phaseBucketSim.mjs", w);
+  ck("L2 量測工具的 worker 在載入儀器之前設 ESMO_BALANCE_SKILLS=on、清掉 ESMO_BALANCE_TALENTS，且儀器檢查要求 layers 相符",
+    w >= 0 && imp0 > w && /process\.env\.ESMO_BALANCE_SKILLS = "on"/.test(tool.slice(w, imp0)) && /delete process\.env\.ESMO_BALANCE_TALENTS/.test(tool.slice(w, imp0)) && (tool.match(/LAYERS_OK\(/g) ?? []).length >= 3);
+}
 {
   const D = (await imp("src/battle/moba/tactics/tacticalDirector.js")).createTacticalDirector({ blue: {}, red: {} });
   const P = [[0.5, 0], [479.5, 0], [480, 1], [959.5, 1], [960, 2], [3600, 2]];
