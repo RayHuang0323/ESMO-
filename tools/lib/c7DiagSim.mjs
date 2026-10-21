@@ -73,7 +73,10 @@ export async function runDiagMatch(seed, spec) {
   const zero = () => ({ lane: { top: zeroLane(), mid: zeroLane() },
     rolls: { dragon: 0, baron: 0, general: 0 }, rollGo: { dragon: 0, baron: 0, general: 0 }, goStarts: { dragon: 0, baron: 0, general: 0 },
     entries: { objective: 0, general: 0 }, laneEntries: { objective: 0, general: 0 },
-    baronEntries: 0, entryBaronDists: [], baronPitTicks: 0, captures: { dragon: 0, baron: 0 } });
+    baronEntries: 0, entryBaronDists: [], baronPitTicks: 0, captures: { dragon: 0, baron: 0 },
+    //  C4 觀測（依物件「出現」那一刻的時期分桶；契約 §3.3 的分桶規則）：每次出現有沒有被這一側爭奪、有沒有被這一側拿到。
+    objApps: { dragon: [0, 0, 0], baron: [0, 0, 0] }, objContested: { dragon: [0, 0, 0], baron: [0, 0, 0] }, objCaptured: { dragon: [0, 0, 0], baron: [0, 0, 0] },
+    siegePh: [0, 0, 0] });
   const S = { blue: zero(), red: zero() };
   //  §4-B 包裝：觀察、不改變（原方法、原引數、原回傳值）。
   if (spec.wrapJoin !== false) {
@@ -97,6 +100,15 @@ export async function runDiagMatch(seed, spec) {
   const heroes = { blue: { top: laneHero("blue", "top"), mid: laneHero("blue", "mid") }, red: { top: laneHero("red", "top"), mid: laneHero("red", "mid") } };
   const gk = (w) => `${w}Ganks`;
   let logSeq = e._objLogSeq ?? 0;
+  //  C4 觀測：物件的一次「出現」＝alive 由 false 變 true；那一次出現期間 exec.<key>Contests 增加 ⇒ 該側爭奪過（引擎每次重生最多加一）；
+  //  objectiveLog 出現該物件的擊殺 ⇒ 擊殺方取得。比賽結束時還活著的那一次照算出現、不算取得。
+  const life = { dragon: null, baron: null }, wasAlive = { dragon: !!e.dragon?.alive, baron: !!e.baron?.alive };
+  const initSeen = { blue: e.fsm3?.blue?.initUntil, red: e.fsm3?.red?.initUntil };
+  const closeLife = (key) => {
+    const L = life[key]; if (!L) return;
+    for (const side of SIDES) { S[side].objApps[key][L.ph]++; if (L.contested[side]) S[side].objContested[key][L.ph]++; if (L.captured === side) S[side].objCaptured[key][L.ph]++; }
+    life[key] = null;
+  };
   for (let i = 1; i * DT <= CAP_S && !e.over; i++) {
     const execBefore = Object.fromEntries(SIDES.map((s) => [s, { ...e.exec[s] }]));
     e.tick(DT);
@@ -140,11 +152,26 @@ export async function runDiagMatch(seed, spec) {
         if (h) S[side].lane[role].enemyGanks += (e.exec[foe][gk(h.lane)] ?? 0) - (execBefore[foe][gk(h.lane)] ?? 0);
       }
     }
+    const ph = e.director.phase(t);
+    for (const key of ["dragon", "baron"]) {
+      const alive = !!e[key]?.alive;
+      if (alive && !wasAlive[key]) life[key] = { ph, contested: { blue: false, red: false }, captured: null };
+      if (life[key]) for (const side of SIDES) if ((e.exec[side][`${key}Contests`] ?? 0) > (execBefore[side][`${key}Contests`] ?? 0)) life[key].contested[side] = true;
+    }
     if ((e._objLogSeq ?? 0) !== logSeq) {
-      for (const ev of e.objectiveLog) if (ev.seq > logSeq && S[ev.side] && (ev.key === "dragon" || ev.key === "baron")) S[ev.side].captures[ev.key]++;
+      for (const ev of e.objectiveLog) if (ev.seq > logSeq && S[ev.side] && (ev.key === "dragon" || ev.key === "baron")) {
+        S[ev.side].captures[ev.key]++;
+        if (life[ev.key] && life[ev.key].captured === null) life[ev.key].captured = ev.side;
+      }
       logSeq = e._objLogSeq;
     }
+    for (const key of ["dragon", "baron"]) { const alive = !!e[key]?.alive; if (!alive && wasAlive[key]) closeLife(key); wasAlive[key] = alive; }
+    for (const side of SIDES) {
+      const F = e.fsm3?.[side];
+      if (F && F.initUntil !== initSeen[side]) { initSeen[side] = F.initUntil; if (F.initKind === "siege") S[side].siegePh[ph]++; }
+    }
   }
+  closeLife("dragon"); closeLife("baron");
   const out = (side) => {
     const s = S[side];
     return { ...s, entryBaronDistMedian: median(s.entryBaronDists), entryN: s.entryBaronDists.length, entryBaronDists: undefined,
@@ -181,6 +208,13 @@ export const DIAG_METRICS = Object.freeze({
   "baronCaptures": (r, s) => r[s].captures.baron,
   "dragonContestsPerMin": (r, s) => perMin(r[s].contests.dragon, r.duration),
   "dragonCaptures": (r, s) => r[s].captures.dragon,
+  //  C4 觀測（只記錄，不屬於 C7 判讀；給 C4 事前登記的天花板檢查與基準）：每次出現的爭奪比例／取得比例，分母 0 ⇒ null。
+  ...Object.fromEntries(["dragon", "baron"].flatMap((k) => ["early", "mid", "late"].flatMap((p, i) => [
+    [`contestShare.${k}.${p}`, (r, s) => (r[s].objApps[k][i] ? r[s].objContested[k][i] / r[s].objApps[k][i] : null)],
+    [`captureShare.${k}.${p}`, (r, s) => (r[s].objApps[k][i] ? r[s].objCaptured[k][i] / r[s].objApps[k][i] : null)],
+    [`appearances.${k}.${p}`, (r, s) => r[s].objApps[k][i]],
+  ]))),
+  ...Object.fromEntries(["early", "mid", "late"].map((p, i) => [`siegeWindowsPhase.${p}`, (r, s) => r[s].siegePh[i]])),
 });
 export function diagMetricValue(rec, side, id) {
   const f = DIAG_METRICS[id];

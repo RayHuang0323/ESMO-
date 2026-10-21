@@ -99,7 +99,11 @@
       "baronContestsPerMin",
       "baronCaptures",
       "dragonContestsPerMin",
-      "dragonCaptures"
+      "dragonCaptures",
+      "contestShare.<dragon|baron>.<early|mid|late> (per appearance, bucketed by the phase of the appearance tick — contract §3.3 bucketing; contested = exec.<key>Contests increased during that life; denominator 0 => null)",
+      "captureShare.<dragon|baron>.<p> (per appearance, the side that killed it per objectiveLog)",
+      "appearances.<key>.<p>",
+      "siegeWindowsPhase.<p> (siege initiative windows opened in that phase)"
     ]
   },
   "statistics": "paired over seeds vs the control's same side; z = mean diff / (sd / sqrt(n)); rel = diff / control mean; a metric 'moves in a direction' when zDir >= 3 and |rel| >= 5 % (the replication rule); 'reversed' when zDir <= -3",
@@ -110,5 +114,6 @@
   },
   "consequences": "Diagnostics make no live / pass claim and change no option status. A later registration may only choose metrics consistent with the reading here and must use its own fresh seeds (C3-3 18401-18800, C4 3401-3800, C5 3801-4200).",
   "stopLoss": "4000 matches cap, single look after completion; STOP(INSTRUMENT) on a layers / ruleset / Director-mode mismatch (exit 5); breaker > 20 errored or (>= 1000 attempted and > 0.5 %) (exit 4); STOP file (exit 3); incomplete (exit 6); write-once result tools/fixtures/c7_diag_result_3c.json",
-  "reviewHistory": "2026-10-22 review before run: APPROVE WITH CHANGES. Fixed before commit: 4-B reads joinGo false->true (C7 definition) and lane-role entries; hot type by reference; 4-D median over every entry (C7, no filter); relWave and 4-D use z only; no_reversal_at_n400 outcome registered; neutral-gank arm asserts one shared phase object; report refuses to write the fixture with uncommitted study files."
+  "reviewHistory": "2026-10-22 review before run: APPROVE WITH CHANGES. Fixed before commit: 4-B reads joinGo false->true (C7 definition) and lane-role entries; hot type by reference; 4-D median over every entry (C7, no filter); relWave and 4-D use z only; no_reversal_at_n400 outcome registered; neutral-gank arm asserts one shared phase object; report refuses to write the fixture with uncommitted study files.",
+  "c4Use": "the control arm values of contestShare.* (both sides) are the baseline for the C4 ceiling check required by contract §3.3 (a bucket whose control share leaves < 5 % headroom is not registered). They are observations: no reading, no claim."
 }

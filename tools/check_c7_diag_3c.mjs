@@ -65,6 +65,10 @@ ck("X1 跨儀器（tacticTruthSim，未改動）：laneForward、巴龍坑邊進
   const log = e.objectiveLog, full = (e._objLogSeq ?? 0) === log.length;
   const cnt = (side, key) => log.filter((x) => x.side === side && x.key === key).length;
   const r = recs[1];
+  const sum3 = (a) => a[0] + a[1] + a[2];
+  ck("C2 C4 觀測：每次出現的爭奪三桶相加＝引擎 exec 爭奪總數（每次重生最多一次）；取得三桶相加＝取得數；每側出現次數相同",
+    recs.every((x) => ["blue", "red"].every((s) => ["dragon", "baron"].every((k) => sum3(x[s].objContested[k]) === x[s].contests[k] && sum3(x[s].objCaptured[k]) === x[s].captures[k]))
+      && J(x.blue.objApps) === J(x.red.objApps)), recs.map((x) => `${J(x.blue.objApps)} c${J(x.blue.contests)}`).join(" ｜ "));
   ck("C1 取得數＝objectiveLog 該側的巨龍／巴龍擊殺數（獨立重跑、讀完整紀錄）", full && ["blue", "red"].every((s) => r[s].captures.dragon === cnt(s, "dragon") && r[s].captures.baron === cnt(s, "baron")),
     `${J(r.blue.captures)} ${J(r.red.captures)}${full ? "" : "（紀錄超過 40 筆，無法比對）"}`);
 }
