@@ -9,6 +9,8 @@
 //  ── 每時期（依事件發生那一 tick 的時期分桶；物件類依「出現」那一刻的時期，契約 §3.3）──────────────────
 //   phaseSecs[p]          該時期經過的秒數
 //   C3-3 集結：joinGoStarts[p]（上／中／下路英雄的參團擲骰由 false 變 true，_joinV3 的觀察包裝，同 c7DiagSim）、
+//              joinGoGeneralStarts[p]（同上，只算一般熱點：hot 不是巨龍／巴龍坑的**參照**，與引擎 _joinChance、c7DiagSim 同判法；
+//              坑位擲骰讀 dragonJoin／baronJoin，不受 joinFight 影響 ⇒ C3-3 的宣稱指標用這個）、
 //              laneGeneralEntries[p]（上／中／下路英雄在物件窗以外進入「團戰!」）
 //   C4 物件：  objApps.<k>[p]、objContested.<k>[p]（那一次出現期間 exec.<k>Contests 增加）、objCaptured.<k>[p]（objectiveLog 擊殺方）、
 //              siegeOpens[p]（fsm3 主動權窗被設定且種類是 siege）
@@ -40,7 +42,7 @@ export async function runPhaseStudyMatch(seed, spec) {
   const { e } = configure(seed, "standard", M, 1, null, { blue: spec.blue ?? tacticInputOf(null), red: spec.red ?? tacticInputOf(null) }, ruleset);
   const players = e.players;
   const z3 = () => [0, 0, 0];
-  const zero = () => ({ engages: z3(), engageStarts: z3(), joinGoStarts: z3(), laneGeneralEntries: z3(), siegeOpens: z3(),
+  const zero = () => ({ engages: z3(), engageStarts: z3(), joinGoStarts: z3(), joinGoGeneralStarts: z3(), laneGeneralEntries: z3(), siegeOpens: z3(),
     objApps: { dragon: z3(), baron: z3() }, objContested: { dragon: z3(), baron: z3() }, objCaptured: { dragon: z3(), baron: z3() },
     ganksOwn: { top: z3(), mid: z3(), bot: z3() } });
   const S = { blue: zero(), red: zero() };
@@ -48,10 +50,11 @@ export async function runPhaseStudyMatch(seed, spec) {
   let ph = e.director.phase(e.t);
   //  C3-3：參團擲骰的觀察包裝（呼叫原方法、原樣回傳；check_phase_study_c3 驗證包裝前後對局逐欄相同）。
   const orig = e._joinV3;
+  const pitD = e._pitOf("dragon"), pitB = e._pitOf("baron");
   e._joinV3 = function (p, hot, ...rest) {
     const before = p.joinEvalT, goBefore = !!p.joinGo;
     const r = orig.call(this, p, hot, ...rest);
-    if (p.joinEvalT !== before && LANE_ROLES.includes(p.role) && p.joinGo && !goBefore) S[p.side].joinGoStarts[ph]++;
+    if (p.joinEvalT !== before && LANE_ROLES.includes(p.role) && p.joinGo && !goBefore) { S[p.side].joinGoStarts[ph]++; if (hot !== pitD && hot !== pitB) S[p.side].joinGoGeneralStarts[ph]++; }
     return r;
   };
   const prev = new Map(players.map((p) => [p.id, { state: p.state, decisionAt: p.decisionAt, action: p.decisionAction ?? null }]));
@@ -131,6 +134,7 @@ export function studyMetricValue(r, side, id) {
   }
   if (name === "siegeWindowsPerMin") return per(S.siegeOpens[pi(a)], r.phaseSecs[pi(a)]);
   if (name === "joinGoStartsPerMin") return per(S.joinGoStarts[pi(a)], r.phaseSecs[pi(a)]);
+  if (name === "joinGoGeneralStartsPerMin") return per(S.joinGoGeneralStarts[pi(a)], r.phaseSecs[pi(a)]);
   if (name === "laneGeneralEntriesPerMin") return per(S.laneGeneralEntries[pi(a)], r.phaseSecs[pi(a)]);
   if (name === "engageStartsPerMin") return per(S.engageStarts[pi(a)], r.phaseSecs[pi(a)]);
   if (name === "engageDecisionsPerMin") return per(S.engages[pi(a)], r.phaseSecs[pi(a)]);

@@ -1,0 +1,133 @@
+{
+  "schema": "esmo.phase-options-registration.v1",
+  "studyId": "phase-options-c3-3",
+  "stage": "Phase 3a-C3-3 per-phase grouping (phases.<p>.grouping = group)",
+  "registeredAt": "2026-10-22",
+  "status": "REGISTERED — fixed before any run; nothing changes after the run starts",
+  "authority": {
+    "owner2026_10_22": "Owner long-task instruction: C3-3 starts with the C7 §4-B diagnostic; if the mechanism is reliable, pre-register on new seeds, both sides; otherwise record the root cause and keep design; coefficients are never enlarged.",
+    "contract": "review/tactic-book-3a/C3-C6_行為契約草案.md §2.2 C3-3 / §2.3 (phases.<p>.grouping: metric decided by C7 §4-B)",
+    "diagnostic": "tools/fixtures/c7_diag_result_3c.json reading '4-B tight: category4_roll_metric' — teamfight.grouping=tight (same knob, macro.grouping 0.5 -> 0.9) moves joinGoStartsPerMin.general on both sides (blue +10.8 % z 5.19, red +18.9 % z 7.90) while laneFightEntriesPerMin.general moves on red only (blue +5.2 % z 2.55). Contract §2.3: 'roll moves on both sides, entries do not => use the roll metric'. The claim uses the SAME definition as C7 (general hot spots only: hot is not the dragon/baron pit by reference, as the engine's _joinChance decides; pit rolls read dragonJoin/baronJoin and are untouched by joinFight), bucketed per phase: joinGoGeneralStartsPerMin.<p>. check_phase_study_c3 X2 proves the three phase buckets sum exactly to c7DiagSim goStarts.general on the same match. All-hotspot starts and entries are reported only."
+  },
+  "seeds": {
+    "range": "18401-18800",
+    "n": 400,
+    "seedSource": "tool (balance runner, seed used as-is)",
+    "why": "C3-3 range in the long-task seed table; never used by any measurement or diagnostic"
+  },
+  "resultFixture": "tools/fixtures/phase_options_result_c3_3.json",
+  "design": {
+    "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative)",
+    "instrument": "tools/lib/phaseStudySim.mjs (phaseStudySim.v1), self-check tools/check_phase_study_c3.mjs; layers skills/passives/power curve on, talents off",
+    "arms": "control = std template, no per-phase choice, both sides. Each option is run twice: treatment on blue (red = control) and treatment on red (blue = control); pairs are the same seed.",
+    "mapping": "PHASE_CHOICE_MAPPING phases.<p>.grouping: group = { macro.grouping: 0.9 } (classic.m3 value, the same value as the whole-match teamfight.grouping=tight measured in the diagnostic); standard = no override. There is no 'spread' value (no template is below std 0.5), so only 'group' is registered. The override applies only in that phase (Resolver builds one config per phase)."
+  },
+  "options": [
+    {
+      "id": "groupEarly",
+      "dimension": "phases.early.grouping",
+      "choice": "group",
+      "phase": "early",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "grouping": "group"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "joinGoGeneralStartsPerMin.early",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "laneGeneralEntriesPerMin.early",
+        "joinGoStartsPerMin.early",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late"
+      ]
+    },
+    {
+      "id": "groupMid",
+      "dimension": "phases.mid.grouping",
+      "choice": "group",
+      "phase": "mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "mid": {
+            "grouping": "group"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "joinGoGeneralStartsPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "laneGeneralEntriesPerMin.mid",
+        "joinGoStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.early",
+        "joinGoGeneralStartsPerMin.late"
+      ]
+    },
+    {
+      "id": "groupLate",
+      "dimension": "phases.late.grouping",
+      "choice": "group",
+      "phase": "late",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "late": {
+            "grouping": "group"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "joinGoGeneralStartsPerMin.late",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "laneGeneralEntriesPerMin.late",
+        "joinGoStartsPerMin.late",
+        "joinGoGeneralStartsPerMin.early",
+        "joinGoGeneralStartsPerMin.mid"
+      ]
+    }
+  ],
+  "reportedMetrics": [
+    "laneGeneralEntriesPerMin.early",
+    "laneGeneralEntriesPerMin.mid",
+    "laneGeneralEntriesPerMin.late",
+    "joinGoStartsPerMin.early",
+    "joinGoStartsPerMin.mid",
+    "joinGoStartsPerMin.late",
+    "joinGoGeneralStartsPerMin.early",
+    "joinGoGeneralStartsPerMin.mid",
+    "joinGoGeneralStartsPerMin.late"
+  ],
+  "rules": {
+    "minZ": 3,
+    "minRel": 0.05,
+    "minValidPairs": 200,
+    "text": "per claim per side: paired over seeds (treatment arm vs control, same side). OK = sign matches direction AND z in the direction >= 3 AND |rel| >= 5 %. A phase rate is null when the phase lasted < 60 s (late phase in short matches). Valid pairs < 200 on either side => unmeasurable (no fallback registered: a rate cannot be merged across phases without mixing phases where the override is off). Precedence: unmeasurable > reversed > guard_failed > confirmed > one_sided > insufficient."
+  },
+  "power": "Whole-match tight reached z 5.19 (blue) / 7.90 (red) on general joinGo starts (C7 definition). Phases are not thirds: in the C7 control (median match 1100 s) early and mid each cover about 44 % of match time and late about 12 %; only 238 of 400 control matches have a late phase >= 60 s. Rough per-phase z if the effect is uniform: blue about 3.4 for early and mid, about 1.8 for late; red late about 2.7. Expected before the run: groupEarly/groupMid may sit near the blue threshold; groupLate is expected to be underpowered (insufficient) or unmeasurable (< 200 valid pairs). Late pairs only include seeds where both arms reach a late phase >= 60 s, and the treatment may change match length (selection after treatment) — another reason a late result is weak evidence either way. The threshold is not lowered and no seeds are added without a new range and Owner approval.",
+  "notClaimed": {
+    "entries": "laneGeneralEntriesPerMin.<p> (entries into 團戰! outside objective windows) and joinGoStartsPerMin.<p> (all hot spots incl. pits) are reported only (C7 §4-B category 4)",
+    "spillover": "the other two phases' general joinGo starts are reported to show the override stays inside its phase; no claim",
+    "spread": "no 'spread' choice exists"
+  },
+  "consequences": {
+    "confirmed": "that phase's grouping becomes offerable (Registry design -> live) in a separate commit with gates; evidence scope is balanceTool.v21, std template",
+    "notConfirmed": "stays design; coefficients are never enlarged; root cause recorded"
+  },
+  "reviewHistory": "Pre-run review 2026-10-22: APPROVE WITH CHANGES, no blockers. Fixed before commit: #1 claim metric is now the C7 general-only definition per phase (instrument counter joinGoGeneralStarts + check X2), #2 power note uses real phase shares and states groupLate is expected underpowered."
+}
