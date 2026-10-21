@@ -85,19 +85,24 @@ async function main() {
   const isOk = (v) => v === "pass" || v === "marginal";
   const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json"];
   const supersededKeys = new Set(SUPERSEDING.flatMap((rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")).rows.map((r) => `${r.dimension}=${r.choice}`)));
-  const superseded = (r) => supersededKeys.has(`${r.dimension}=${r.choice}`);
+  //  只有 std 的主要列會被取代（複驗量的是 std＋那一個時期選擇）。
+  const superseded = (r) => r.role === "primary" && r.template === "std" && supersededKeys.has(`${r.dimension}=${r.choice}`);
+  const SUPERSEDING_SHAPE = SUPERSEDING.map((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+    return `${rel}: complete=${f.complete} halted=${f.halted} stale=${JSON.stringify(f.stale)} errored=${f.erroredMatches} instrument=${f.instrumentMismatch} rows=${f.rows?.length}`; });
+  const supersedingOk = SUPERSEDING.every((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+    return f.complete === true && f.halted === false && Array.isArray(f.stale) && f.stale.length === 0 && f.erroredMatches === 0 && f.instrumentMismatch === 0 && Array.isArray(f.rows) && f.rows.length > 0; });
   const statsOfPairs = (pairs) => { const s = pairStats(pairs); return { n: s.n, meanA: r6(s.meanA), meanB: r6(s.meanB), diff: r6(s.diff), sd: r6(s.sd), z: s.z === null ? null : r6(s.z), dz: r6(s.dz), rel: r6(s.rel) }; };
   const rowKey = (b) => b.key;
   /** 結果表 → 應有的排除表（template, dimension, choice, reason）。規則見檔頭。 */
   function deriveExclusions(rows) {
     const out = [];
-    //  Phase 3a-C3-2 收尾：n=400 新 seeds 紅藍複驗涵蓋的選擇，排除與否由複驗決定（Registry.REPLICATION_CONFIRMED／REPLICATION_WITHHELD），
-    //  n=40 的列照常量測、照常記錄，但不再推出排除。涵蓋清單直接讀複驗結果檔，不讀 Registry（Registry 不能自己宣告被取代）。
+    //  Phase 3a-C3-2 收尾：n=400 新 seeds 紅藍複驗涵蓋的選擇，**std 上**排除與否由複驗決定（Registry.REPLICATION_CONFIRMED／REPLICATION_WITHHELD）：
+    //  n=40 的主要列照常量測、照常記錄，但不推出 "*" 排除。複驗只量了 std ⇒ 弱點模板的列照舊推出該模板的排除（審查 2026-10-22 #1）。
+    //  涵蓋清單直接讀複驗結果檔，不讀 Registry（Registry 不能自己宣告被取代）。
     const reasonOf = (v) => (v === "reversed" ? "reversed_effect" : v === "unmeasurable" ? "unmeasurable" : "no_measured_effect");
     const prim = rows.filter((r) => r.role === "primary");
     for (const p of prim) {
-      if (superseded(p)) continue;
-      if (!isOk(p.verdict)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)) });
+      if (!isOk(p.verdict) && !superseded(p)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)) });
       else {
         const w = rows.find((r) => r.role === "weak" && r.dimension === p.dimension && r.choice === p.choice);
         if (w && !isOk(w.verdict)) out.push({ template: w.template, dimension: w.dimension, choice: w.choice, reason: reasonOf(w.verdict), metric: w.metric, n: w.n, z: w.z === null ? null : Number(w.z.toFixed(2)) });
@@ -337,7 +342,7 @@ async function main() {
       prim.every((r) => isOk(r.verdict) || exStd.has(`${r.dimension}=${r.choice}`) || superseded(r)), prim.filter((r) => !isOk(r.verdict) && !exStd.has(`${r.dimension}=${r.choice}`) && !superseded(r)).map((r) => `${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
     const weak = fx.rows.filter((r) => r.role === "weak");
     const exTpl = (r) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template));
-    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除，或由 n=400 複驗取代", weak.every((r) => isOk(r.verdict) || exTpl(r) || superseded(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r) && !superseded(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
+    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除（n=400 複驗只涵蓋 std，不豁免弱點模板）", weak.every((r) => isOk(r.verdict) || exTpl(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
     const derived = deriveExclusions(fx.rows);
     const sameSet = (a, b) => J([...a].sort()) === J([...b].sort());
     ck("T9 MEASURED_EXCLUSIONS ＝ 結果表推出來的排除（逐筆相同，不多不少）", sameSet(derived.map(exKey), ctx.exclusions.map(exKey)), `${derived.length} 筆`);
@@ -362,9 +367,10 @@ async function main() {
       //  T13：被複驗取代的每個選擇，在 Registry 恰好落在一張表：REPLICATION_CONFIRMED（提供）或 REPLICATION_WITHHELD（不提供）；
       //  逐筆數字由 check_tactic_replication_3a.mjs 對結果檔驗。這裡只驗「沒有漏網、沒有兩邊都在」，以及它們不在 MEASURED_EXCLUSIONS。
       const inC = (k) => Registry.REPLICATION_CONFIRMED.some((x) => `${x.dimension}=${x.choice}` === k), inW = (k) => Registry.REPLICATION_WITHHELD.some((x) => `${x.dimension}=${x.choice}` === k);
-      const bad = [...supersededKeys].filter((k) => inC(k) === inW(k) || ctx.exclusions.some((x) => `${x.dimension}=${x.choice}` === k));
+      const bad = [...supersededKeys].filter((k) => inC(k) === inW(k) || ctx.exclusions.some((x) => x.template === "*" && `${x.dimension}=${x.choice}` === k));
+      if (!supersedingOk) bad.push(`複驗結果檔形狀不對：${SUPERSEDING_SHAPE.join("；")}`);
       const n40 = prim.filter(superseded).map((r) => `${r.dimension}=${r.choice}:${r.verdict}(z=${r.z})`);
-      ck("T13 被 n=400 複驗取代的選擇：每個恰好在 REPLICATION_CONFIRMED 或 REPLICATION_WITHHELD 其中一張，且不在 MEASURED_EXCLUSIONS", supersededKeys.size > 0 && bad.length === 0, bad.length ? bad.join(" ") : `${supersededKeys.size} 個；n=40 列照記：${n40.join("、")}`);
+      ck("T13 被 n=400 複驗取代的選擇：複驗結果檔完整、沒停、沒過期、0 失敗；每個恰好在 REPLICATION_CONFIRMED 或 REPLICATION_WITHHELD 其中一張，且沒有 \"*\" 排除（弱點模板的排除照舊）", supersededKeys.size > 0 && bad.length === 0, bad.length ? bad.join(" ") : `${supersededKeys.size} 個；n=40 列照記：${n40.join("、")}`);
     }
     const marg = fx.rows.filter((r) => r.verdict === "marginal");
     console.log(`　（資訊）邊際（2 ≤ z < 3）：${marg.length} 列${marg.length ? "：" + marg.map((r) => `${r.role}/${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join("、") : ""}`);

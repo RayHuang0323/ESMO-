@@ -110,9 +110,9 @@ const ROWS = [
       //  姿態的主作用點是接戰分數，舊指標數的是進入團戰）。舊指標的結果留在歷史（retiredClaims），不刪不改。
       claims: claimsOf(p === "late" ? STANCE_LATE : STANCE, `phaseEngageDecisionsPerMin.${p}`),
       retiredClaims: [{ metric: `fightEntriesPerMin.${p}`, retiredAt: "2026-10-22", reason: "C7 class 4: the stance moves engage decisions, the old metric counted fight entries",
-        evidence: "tools/fixtures/tactic_truth_3a.json at commit 0efb759 (rows and MEASURED_EXCLUSIONS under the old metric)" }],
+        evidence: "tools/fixtures/tactic_truth_3a_pre_c3_2_0efb759.json (verbatim copy of tools/fixtures/tactic_truth_3a.json at commit 0efb759; MEASURED_EXCLUSIONS rows under the old metric are in git at 0efb759)" }],
       deltaFields: [`identity.phaseEngage.${idx}`, `identity.phaseJoin.${idx}`],
-      why: "數的是己方英雄做出**新的接戰決策**（決策重新評估、結果是 ENGAGE）的次數，依引擎做決策當下 Director 回答的時期分桶，"
+      why: "數的是己方英雄做出**新的接戰決策**（決策重新評估、結果是 ENGAGE）的次數，依該 tick 結束時 Director 回答的時期分桶（480／960 邊界上至多差一個 tick），"
         + "除以該時期自己實際經過的分鐘數（不是整場比率拆開）；只有該時期自己的偏移在動。時期邊界一律問 Director。"
         + "新 seeds 紅藍複驗（含只數開始的版本）在 tools/fixtures/phase_stance_result_c3_2_rev1.json。",
     },
@@ -356,7 +356,8 @@ export const replicationWithheld = (template, dimension, choice) =>
  * 真實性結果表（seeds 1–40）仍照常量測、照常記錄；對**這份複驗涵蓋的選擇**，排除與否改由複驗判定（n=400 的證據取代 n=40 的煙霧測試），
  * 所以它們不會出現在 MEASURED_EXCLUSIONS；confirmed 且 Owner 核准的列在這張表，confirmed 但 Owner 暫緩的列在 REPLICATION_WITHHELD（owner_hold）。
  * tools/check_tactic_replication_3a.mjs 驗證：兩張表合起來恰好覆蓋結果檔的每一列，數字照抄；check_tactic_truth_3a.mjs 的推導讀同一個結果檔。
- * ⚠ 證據範圍是 balanceTool.v21（工具規則集）；Registry 的 live 狀態是全域的。
+ * ⚠ 證據範圍是 balanceTool.v21（工具規則集）、std 模板；Registry 的 live 狀態是全域的。其他模板仍由真實性表的弱點模板列決定是否對該模板排除。
+ * metric 是複驗儀器（phaseStudySim／phaseBucketSim）的名稱 engageDecisionsPerMin.<p>；與 G-A7 的 phaseEngageDecisionsPerMin.<p> 數同一件事（check_tactic_replication_3a V7 綁定）。
  */
 const rc = (dimension, choice, metric, blue, red) => ({ template: "*", dimension, choice, reason: "replicated", verdict: "confirmed", metric, blue, red });
 export const REPLICATION_CONFIRMED = deepFreeze([

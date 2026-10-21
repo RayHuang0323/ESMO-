@@ -566,8 +566,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  capabilityRegistry.js：時期姿態的 G-A7 指標改為 phaseEngageDecisionsPerMin.<p>（舊指標列入 retiredClaims）、新增 REPLICATION_CONFIRMED（6 筆）、
   //  REPLICATION_WITHHELD 多 2 筆 owner_hold（前期／中期 scaling）、MEASURED_EXCLUSIONS 拿掉被 n=400 複驗取代的 8 列時期姿態。
   //  只改「提供給玩家挑哪些」與量測登記；同一份輸入（含帶這些選擇的計畫）解析出的旋鈕與引擎輸出都不變 ⇒ 不是語意變化。
+  //  ⚠ 但畫面載入舊存檔時的 offeredChoicesOnly（TacticScreen）不再拿掉這 6 個選擇 ⇒ 同一份**存檔計畫**送進對局的選擇會不同（預期行為）。
+  //  tacticIndicators.ruleSuppressed 只看 not_replicated（owner_hold 的證據成立，不抑制規則）；今天沒有規則引用時期姿態。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 6a57c36c98d8b7ee 未曾發布）。
-  "moba-sim.v21": "2fc8cf8703647876",
+  //  （同日審查後補強：弱點模板照舊由真實性表判定、ruleSuppressed 只看 not_replicated（tacticIndicators.js）。舊值 2fc8cf8703647876 未曾發布。）
+  "moba-sim.v21": "a5ce0d283ead3e5c",
 });
 
 export const isKnownSimulationVersion = (v) =>

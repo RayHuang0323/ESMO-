@@ -234,6 +234,27 @@ ck(`V6 提供清單：核准的 6 個時期姿態在 std 及每個結構上可�
   const rows = clone(fxB.rows); rows[0].cells.red[0].z = 1;
   ck("NV 反向：核准表的數字被改、暫緩被改成「沒站住」、結果檔某格 z 被改 ⇒ V2／V3／V4 抓得到", !sameList(n, wantC) && !sameList(m, wantW) && rows.some((r) => revVerdict(r) !== r.verdict));
 }
+{
+  //  V7：複驗儀器的指標名（engageDecisionsPerMin.<p>）＝ Registry G-A7 宣稱的指標（phaseEngageDecisionsPerMin.<p>），同一個時期；方向與 Registry 宣稱相同。
+  const bad = [...C, ...WB].filter((x) => {
+    const p = x.dimension.split(".")[1], row = Registry.registryRow(x.dimension), claim = row?.gate?.claims?.find((c) => c.choice === x.choice);
+    const fxRow = fxB.rows.find((r) => keyOf(r) === keyOf(x));
+    return x.metric !== `engageDecisionsPerMin.${p}` || claim?.metric !== `phaseEngageDecisionsPerMin.${p}` || (claim?.direction === "rank" ? (row.gate.rank.indexOf(x.choice) > row.gate.rank.indexOf("standard") ? "up" : "down") : claim?.direction) !== fxRow?.direction;
+  }).map(keyOf);
+  ck("V7 指標綁定：複驗的 engageDecisionsPerMin.<p> ↔ Registry 宣稱的 phaseEngageDecisionsPerMin.<p>（同時期、同方向）", bad.length === 0, bad.join(" "));
+  //  V8：退休的舊宣稱指向的證據檔存在，且與 commit 0efb759 的真實性結果表逐位元相同（Owner：保留原始量測結果與歷史指標）。
+  const retired = Registry.liveRows().flatMap((r) => (r.gate?.retiredClaims ?? []).map((c) => ({ dim: r.dimension, ...c })));
+  const ARCH = "tools/fixtures/tactic_truth_3a_pre_c3_2_0efb759.json";
+  let archOk = false, archNote = "";
+  try {
+    const { execSync } = await import("node:child_process");
+    const atCommit = execSync("git show 0efb759:tools/fixtures/tactic_truth_3a.json", { cwd: ROOT, maxBuffer: 64 << 20 });
+    archOk = Buffer.compare(fs.readFileSync(path.join(ROOT, ARCH)), atCommit) === 0;
+    const old = readJson(ARCH);
+    archNote = `${old.rows.length} 列；舊時期姿態列 ${old.rows.filter((r) => r.metric?.startsWith("fightEntriesPerMin.")).length}`;
+  } catch (e) { archNote = String(e?.message ?? e); }
+  ck("V8 retiredClaims：每個時期姿態都有一筆舊宣稱（fightEntriesPerMin.<p>），證據檔存在且＝0efb759 的結果表（逐位元）", retired.length === 3 && retired.every((c) => c.metric === `fightEntriesPerMin.${c.dim.split(".")[1]}` && c.evidence.startsWith(ARCH)) && archOk, archNote);
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§N 反向測試（驗證器抓得到壞的清單）");
