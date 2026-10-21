@@ -306,12 +306,17 @@ export function createMatchSetup(input) {
     if (ruleset && !(TACTIC_KINDS_BY_RULESET[ruleset.rulesetId] ?? TACTIC_KINDS).includes(t.kind)) {
       err("tactic_kind_not_allowed", f, `ruleset ${ruleset.rulesetId} does not accept a "${t.kind}" tactic (accepts ${(TACTIC_KINDS_BY_RULESET[ruleset.rulesetId] ?? TACTIC_KINDS).join("|")})`); continue;
     }
-    const extra = Object.keys(t).filter((k) => k !== "kind" && k !== (t.kind === "legacy" ? "config" : t.kind === "binding" ? "binding" : ""));
+    //  Phase 3a-C：legacy 輸入可以帶 phaseChoices（每時期的選擇，量測 design 維度用）——**只限工具規則集**；正式規則集一律拒絕。
+    //  內容（時期／維度／值）由 Resolver 驗證（phaseOverridesOf）。沒帶 ⇒ 這個鍵不存在（setup 雜湊與之前逐字相同）。
+    const phaseOk = t.kind === "legacy" && t.phaseChoices !== undefined;
+    const extra = Object.keys(t).filter((k) => k !== "kind" && k !== (t.kind === "legacy" ? "config" : t.kind === "binding" ? "binding" : "") && !(phaseOk && k === "phaseChoices"));
     if (extra.length) { err("tactic_invalid", f, `unexpected field(s): ${extra.join(",")}`); continue; }
+    if (phaseOk && (!ruleset || ruleset.kind !== "tool")) { err("tactic_phase_choices_not_allowed", `${f}.phaseChoices`, "phaseChoices are accepted only by tool rulesets"); continue; }
+    if (phaseOk && !isPlainObject(t.phaseChoices)) { err("tactic_invalid", `${f}.phaseChoices`, "phaseChoices must be a plain object"); continue; }
     if (t.kind === "std") tactic[side] = { kind: "std" };
     else if (t.kind === "legacy") {
       if (!isLegacyTacticConfig(t.config)) err("tactic_invalid", f, `legacy tactic needs a config object with a tacticId and ${LEGACY_TACTIC_GROUPS.join("/")} groups`);
-      else tactic[side] = { kind: "legacy", config: clonePlain(t.config) };
+      else tactic[side] = { kind: "legacy", config: clonePlain(t.config), ...(phaseOk ? { phaseChoices: clonePlain(t.phaseChoices) } : {}) };
     } else if (!isPlainObject(t.binding)) err("tactic_invalid", f, "binding tactic needs a plain-object binding");
     else tactic[side] = { kind: "binding", binding: clonePlain(t.binding) };
   }

@@ -39,6 +39,7 @@ import {
 } from "../../../platform/tactics/tacticPlan.js";
 import {
   CHOICE_MAPPING, TACTIC_RESOLVER_VERSION, TACTIC_CHOICE_ERROR, makeChoiceEngine,
+  PHASE_CHOICE_MAPPING, PHASE_CHOICE_ERROR, phaseOverridesOf, applyPhasePatch, leavesOf, nestedOf,
 } from "../../../platform/tactics/tacticChoiceMapping.js";
 
 export { CHOICE_MAPPING, TACTIC_RESOLVER_VERSION, TACTIC_PLAN_VERSION };
@@ -58,7 +59,9 @@ export const TACTIC_RESOLVER_ERROR = Object.freeze({
   LEGACY_ID_MISMATCH: "legacy_id_mismatch",
   PROJECTION_FAILED: "projection_failed",
   INTERNAL_ERROR: "resolver_internal_error",
+  PHASE_CHOICES_NOT_ALLOWED: "phase_choices_not_allowed",
   ...TACTIC_CHOICE_ERROR,
+  ...PHASE_CHOICE_ERROR,
 });
 const E = TACTIC_RESOLVER_ERROR;
 
@@ -119,9 +122,12 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       const merged = engine.mergeConfig(tpl, plan.overlayIds, plan.choices);
       const overlayName = plan.overlayIds.length ? (variantById(plan.overlayIds[0])?.name ?? null) : null;
       const config = deepFreeze(merged);
+      //  每時期的選擇（PHASE_CHOICE_MAPPING 的維度）不進整場設定；另外交給 resolveTactic 建每時期方針。沒有就不帶這個鍵。
+      const phaseLeaves = leavesOf(plan.choices).filter(([dim]) => Object.hasOwn(PHASE_CHOICE_MAPPING.rows, dim));
       return deepFreeze({
         ok: true, errors: [], config,
         meta: { tacticId: config.tacticId, tacticName: config.name ?? null, playbookName: overlayName ?? tpl.name, templateId: plan.templateId, version: CANONICAL_TACTIC_VERSION },
+        ...(phaseLeaves.length ? { phaseChoices: nestedOf(phaseLeaves).phases } : {}),
       });
     } catch (e) {
       return internal(e);
@@ -150,6 +156,13 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       for (const k of Object.keys(A)) if (adapters && adapters[k] !== undefined) A[k] = adapters[k];
       const wantIdentity = opts?.identity !== false;
       if (!isPlainObject(input)) return fail(err(E.INVALID_INPUT, "", "戰術輸入必須是物件"));
+      //  legacy 輸入的 phaseChoices（量測工具用）：只在呼叫端明確允許時接受（組裝器只對工具規則集允許）；其他輸入種類不得帶。
+      let phaseChoices = null;
+      if (input.phaseChoices !== undefined) {
+        if (input.kind !== "legacy") return fail(err(E.PHASE_CHOICES_NOT_ALLOWED, "phaseChoices", "只有 legacy 輸入可以帶 phaseChoices"));
+        if (opts?.allowPhaseChoices !== true) return fail(err(E.PHASE_CHOICES_NOT_ALLOWED, "phaseChoices", "這個規則集不接受 phaseChoices（只限工具規則集）"));
+        phaseChoices = input.phaseChoices;
+      }
       let source, meta;                       // source＝交給投影的那一份設定
       if (input.kind === "legacy") {
         const c = input.config;
@@ -164,6 +177,7 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
         if (!r.ok) return r;
         source = structuredClone(r.config);
         meta = { ...r.meta, version: A.MOBA_TACTIC_VERSION };
+        if (r.phaseChoices) phaseChoices = r.phaseChoices;
       } else return fail(err(E.UNKNOWN_INPUT_KIND, "kind", `不認得的戰術輸入種類：${show(input.kind)}`));
       let knobs, identity = null;
       try {
@@ -174,8 +188,35 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       //  ⚠ 只凍結 resolver 自己擁有的東西：投影函式（可能來自舊樹）回傳的物件不是我們的——它可能是共用常數，凍住它會影響同一個行程
       //    裡的其他比賽。所以先複製再凍結；v20 把投影的回傳值直接交給引擎，內容相同（組裝器之後再複製一次交給引擎）。
       const out = { ok: true, errors: [], knobs: structuredClone(knobs), identity: identity === null ? null : structuredClone(identity), config: input.kind === "std" ? structuredClone(source) : source, meta };
-      //  只有要求時才加 phases 鍵（沒要求 ⇒ 輸出形狀與 C3-1 之前完全相同）。三份共用整場的物件參照（見上方 JSDoc）。
-      if (opts?.phases === true) out.phases = [0, 1, 2].map(() => ({ knobs: out.knobs, identity: out.identity }));
+      //  只有要求時才加 phases 鍵（沒要求 ⇒ 輸出形狀與 C3-1 之前完全相同）。沒有每時期選擇 ⇒ 三份共用整場的物件參照（見上方 JSDoc）。
+      //  沒有要求每時期方針（static Director）卻有每時期選擇 ⇒ 拒絕，不默默丟掉玩家／工具的選擇。
+      //  ⚠ binding 帶來的 phaseChoices 不受 allowPhaseChoices 管：它們只可能來自 createTacticPlan 接受的計畫，而 Registry 的 design
+      //    狀態才是唯一的關卡——某個每時期維度改成 live（R-10）的那一刻，就是它對玩家開放的那一刻。
+      if (phaseChoices != null && opts?.phases !== true) return fail(err(E.PHASE_CHOICES_NOT_ALLOWED, "phaseChoices", "每時期選擇需要 tacticalDirector core.v1（這次沒有要求每時期方針）"));
+      if (opts?.phases === true) {
+        const ov = phaseOverridesOf(phaseChoices);
+        if (!ov.ok) return fail(...ov.errors);
+        const same = (a, b) => stableStringify(a) === stableStringify(b);
+        out.phases = ov.overrides.map((o) => {
+          if (!o) return { knobs: out.knobs, identity: out.identity };
+          //  該時期的設定＝整場設定＋該時期的覆寫，再走**同一對**投影（數值只來自對照表與既有投影，不在這裡算）。
+          const cfg = applyPhasePatch(structuredClone(source), o.patch);
+          let k, id = null;
+          try {
+            k = structuredClone(A.toEngineTactic(cfg));
+            if (wantIdentity) id = structuredClone(A.toEngineTacticIdentity(cfg));
+            if (o.gankLane) {
+              //  強邊：只取「該路 lanePlan＝aggressive」投影出來的 gankWeights；站位（laneOffset）與其他旋鈕不動（契約 C5-3）。
+              const g = structuredClone(cfg);
+              g.lanePlan = { ...(g.lanePlan ?? {}), [o.gankLane]: "aggressive" };
+              k.gankWeights = structuredClone(A.toEngineTactic(g).gankWeights);
+            }
+          } catch { return { error: true }; }
+          //  與整場相同 ⇒ 用整場那一份（同一個參照，R-4）；不同 ⇒ 這個時期自己一份（R-5）。
+          return { knobs: same(k, out.knobs) ? out.knobs : k, identity: !wantIdentity ? null : same(id, out.identity) ? out.identity : id };
+        });
+        if (out.phases.some((p) => p.error)) return fail(err(E.PROJECTION_FAILED, "phaseChoices", "每時期設定無法投影成引擎旋鈕"));
+      }
       return deepFreeze(out);
     } catch (e) {
       return internal(e);

@@ -319,8 +319,9 @@ export function effectiveChoices(binding) {
  * 一條規則只要有任何一筆 evidence 的（維度, 選擇）在撤下清單裡，文案就會把「複驗沒站住的效果」當事實講，所以整條不回報。
  * @param {ReadonlyArray<{template:string,dimension:string,choice:string}>} withheld  預設＝Registry 的 REPLICATION_WITHHELD（測試可注入）
  */
+//  只看「沒站住」的撤下（reason not_replicated；測試注入的清單沒有 reason 時視同）：owner_hold 是複驗 confirmed、Owner 暫緩提供，證據本身成立。
 export const ruleSuppressed = (rule, templateId, withheld = REPLICATION_WITHHELD) =>
-  rule.evidence.some((e) => withheld.some((w) => w.dimension === e.dimension && w.choice === e.choice && (w.template === "*" || w.template === templateId)));
+  rule.evidence.some((e) => withheld.some((w) => (w.reason ?? "not_replicated") === "not_replicated" && w.dimension === e.dimension && w.choice === e.choice && (w.template === "*" || w.template === templateId)));
 /** 在這份撤下清單下被抑制的規則 id（規則表順序；gate 用它對 REPLICATION_WITHHELD 推導出的集合）。 */
 export const suppressedRuleIds = (templateId = "std", withheld = REPLICATION_WITHHELD) => CONTRADICTION_RULES.filter((r) => ruleSuppressed(r, templateId, withheld)).map((r) => r.id);
 

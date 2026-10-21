@@ -106,10 +106,15 @@ const ROWS = [
     gate: {
       //  名次＝該階段「接戰偏移 phaseEngage／參團偏移 phaseJoin」由低到高（後期 scaling 反而高於 standard：scaling 隊伍後期要打）。
       rank: p === "late" ? ["defensive", "standard", "scaling"] : ["defensive", "scaling", "standard", "aggressive"],
-      claims: claimsOf(p === "late" ? STANCE_LATE : STANCE, `fightEntriesPerMin.${p}`),
+      //  Phase 3a-C3-2（2026-10-22，Owner 核准）：指標由 fightEntriesPerMin.<p> 改為 phaseEngageDecisionsPerMin.<p>（C7 類別 4：
+      //  姿態的主作用點是接戰分數，舊指標數的是進入團戰）。舊指標的結果留在歷史（retiredClaims），不刪不改。
+      claims: claimsOf(p === "late" ? STANCE_LATE : STANCE, `phaseEngageDecisionsPerMin.${p}`),
+      retiredClaims: [{ metric: `fightEntriesPerMin.${p}`, retiredAt: "2026-10-22", reason: "C7 class 4: the stance moves engage decisions, the old metric counted fight entries",
+        evidence: "tools/fixtures/tactic_truth_3a_pre_c3_2_0efb759.json (verbatim copy of tools/fixtures/tactic_truth_3a.json at commit 0efb759; MEASURED_EXCLUSIONS rows under the old metric are in git at 0efb759)" }],
       deltaFields: [`identity.phaseEngage.${idx}`, `identity.phaseJoin.${idx}`],
-      why: "數的是己方英雄「進入團戰狀態」的次數（狀態從非團戰變成團戰，持續待在團戰裡只算一次），除以該階段實際經過的分鐘數；"
-        + "只有該階段自己的偏移在動，不是整場長度的函數。階段邊界與引擎相同（前期 < 480 秒、中期 < 960 秒）。",
+      why: "數的是己方英雄做出**新的接戰決策**（決策重新評估、結果是 ENGAGE）的次數，依該 tick 結束時 Director 回答的時期分桶（480／960 邊界上至多差一個 tick），"
+        + "除以該時期自己實際經過的分鐘數（不是整場比率拆開）；只有該時期自己的偏移在動。時期邊界一律問 Director。"
+        + "新 seeds 紅藍複驗（含只數開始的版本）在 tools/fixtures/phase_stance_result_c3_2_rev1.json。",
     },
   })),
   //  打野節奏：macro.tempo → toEngineTactic.gankInterval（與 invadeWithMid）
@@ -290,14 +295,8 @@ export const liveCapabilities = (simVersion = CAPABILITY_SIM_VERSION_3A) => live
 //    Owner 若要保留，另以 n≥400 的新 seeds 證明（見 task-10-report.md），不是放大係數。
 const ex = (template, dimension, choice, reason, metric, n, z) => ({ template, dimension, choice, reason, metric, n, z });
 export const MEASURED_EXCLUSIONS = deepFreeze([
-  ex("*", "phases.early.stance", "aggressive", "no_measured_effect", "fightEntriesPerMin.early", 40, 0.38),
-  ex("*", "phases.early.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.early", 40, -0.09),
-  ex("*", "phases.early.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.early", 40, -1.05),
-  ex("*", "phases.mid.stance", "aggressive", "no_measured_effect", "fightEntriesPerMin.mid", 40, 1.38),
-  ex("*", "phases.mid.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.mid", 40, 1.52),
-  ex("*", "phases.mid.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.mid", 40, 0.55),
-  ex("*", "phases.late.stance", "defensive", "no_measured_effect", "fightEntriesPerMin.late", 23, 0.15),
-  ex("*", "phases.late.stance", "scaling", "no_measured_effect", "fightEntriesPerMin.late", 23, -0.89),
+  //  時期姿態 8 列（fightEntriesPerMin.<p>，n=40）已由 n=400 紅藍複驗取代（REPLICATION_CONFIRMED／REPLICATION_WITHHELD；Phase 3a-C3-2 收尾）；
+  //  舊列與舊結果表保留在 git 歷史（commit 0efb759 的 tools/fixtures/tactic_truth_3a.json），不刪不改證據本身。
   ex("*", "jungle.tempo", "slow", "no_measured_effect", "ganksPerMin", 40, -0.85),
   ex("*", "jungle.tempo", "fast", "no_measured_effect", "ganksPerMin", 40, 0.42),
   ex("classic.m1", "jungle.focus", "farm", "no_measured_effect", "ganksPerMin", 40, -1.38),
@@ -332,14 +331,40 @@ export const measuredExclusion = (template, dimension, choice) =>
  * 資料：{ template:"*", dimension, choice, reason:"not_replicated", verdict, metric, blue:{n,rel,z}, red:{n,rel,z} }（rel、z 照抄結果檔，六位小數）。
  * 只影響「提供給玩家挑哪些」（offeredChoiceDetail 預設會套用；withMeasured:false 兩張表都不套）；模板自己的預設值不受影響，已存的計畫照常解析。
  * tools/check_tactic_replication_3a.mjs 驗證這張表與複驗結果檔完全一致。
+ * 第二個來源（Phase 3a-C3-2 收尾）：tools/fixtures/phase_stance_result_c3_2_rev1.json 的列——verdict ≠ confirmed ⇒ not_replicated；
+ * confirmed 但 Owner 暫緩 ⇒ reason "owner_hold"（verdict 仍記 confirmed）。核准的列在 REPLICATION_CONFIRMED。
  */
 const rw = (dimension, choice, verdict, metric, blue, red) => ({ template: "*", dimension, choice, reason: "not_replicated", verdict, metric, blue, red });
+const oh = (dimension, choice, metric, blue, red) => ({ template: "*", dimension, choice, reason: "owner_hold", verdict: "confirmed", metric, blue, red });
 export const REPLICATION_WITHHELD = deepFreeze([
   rw("lanes.top.stance", "split", "one_sided", "seatFightEntriesPerMin.b1", { n: 400, rel: -0.059062, z: -3.583404 }, { n: 400, rel: -0.015394, z: -0.935816 }),
   rw("lanes.bot.stance", "aggressive", "insufficient", "laneForward.bot", { n: 400, rel: 0.021285, z: 4.177613 }, { n: 400, rel: 0.002445, z: 0.560144 }),
   rw("seats.b1.priority", "core", "one_sided", "coreProtectsPerMin.top", { n: 400, rel: 0.038399, z: 4.140798 }, { n: 400, rel: 0.057683, z: 4.351134 }),
   rw("risk.tolerance", "cautious", "insufficient", "retreatStartsPerMin", { n: 400, rel: 0.025238, z: 3.904687 }, { n: 400, rel: 0.017559, z: 2.725016 }),
+  //  Phase 3a-C3-2 收尾（2026-10-22，Owner 裁示）：前期／中期 scaling 在修正儀器的複驗（tools/fixtures/phase_stance_result_c3_2_rev1.json，
+  //  seeds 18001–18400）紅藍雙方都 confirmed，但 Owner 指示「維持 design，不開放」⇒ 原因 owner_hold（數字照抄結果檔，不是沒站住）。
+  oh("phases.early.stance", "scaling", "engageDecisionsPerMin.early", { n: 400, rel: -0.059975, z: -6.217762 }, { n: 400, rel: -0.07647, z: -8.469172 }),
+  oh("phases.mid.stance", "scaling", "engageDecisionsPerMin.mid", { n: 400, rel: -0.063009, z: -5.997 }, { n: 400, rel: -0.072286, z: -7.002594 }),
 ]);
 /** 這個（模板, 維度, 選擇）被複驗撤下嗎？回傳該列或 null。 */
 export const replicationWithheld = (template, dimension, choice) =>
   REPLICATION_WITHHELD.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)) ?? null;
+
+/**
+ * 以 n=400 新 seeds 紅藍複驗**取代** n=40 真實性列的選擇（Phase 3a-C3-2 收尾，2026-10-22 Owner 核准六個時期姿態）。
+ * 來源：tools/fixtures/phase_stance_result_c3_2_rev1.json（seeds 18001–18400、技能層開、修正後的儀器）。
+ * 真實性結果表（seeds 1–40）仍照常量測、照常記錄；對**這份複驗涵蓋的選擇**，排除與否改由複驗判定（n=400 的證據取代 n=40 的煙霧測試），
+ * 所以它們不會出現在 MEASURED_EXCLUSIONS；confirmed 且 Owner 核准的列在這張表，confirmed 但 Owner 暫緩的列在 REPLICATION_WITHHELD（owner_hold）。
+ * tools/check_tactic_replication_3a.mjs 驗證：兩張表合起來恰好覆蓋結果檔的每一列，數字照抄；check_tactic_truth_3a.mjs 的推導讀同一個結果檔。
+ * ⚠ 證據範圍是 balanceTool.v21（工具規則集）、std 模板；Registry 的 live 狀態是全域的。其他模板仍由真實性表的弱點模板列決定是否對該模板排除。
+ * metric 是複驗儀器（phaseStudySim／phaseBucketSim）的名稱 engageDecisionsPerMin.<p>；與 G-A7 的 phaseEngageDecisionsPerMin.<p> 數同一件事（check_tactic_replication_3a V7 綁定）。
+ */
+const rc = (dimension, choice, metric, blue, red) => ({ template: "*", dimension, choice, reason: "replicated", verdict: "confirmed", metric, blue, red });
+export const REPLICATION_CONFIRMED = deepFreeze([
+  rc("phases.early.stance", "aggressive", "engageDecisionsPerMin.early", { n: 400, rel: 0.156587, z: 14.42979 }, { n: 400, rel: 0.11385, z: 11.028582 }),
+  rc("phases.early.stance", "defensive", "engageDecisionsPerMin.early", { n: 400, rel: -0.110551, z: -11.169319 }, { n: 400, rel: -0.11502, z: -11.357369 }),
+  rc("phases.mid.stance", "aggressive", "engageDecisionsPerMin.mid", { n: 400, rel: 0.116298, z: 10.209325 }, { n: 400, rel: 0.127255, z: 10.666868 }),
+  rc("phases.mid.stance", "defensive", "engageDecisionsPerMin.mid", { n: 400, rel: -0.117008, z: -9.94678 }, { n: 400, rel: -0.120886, z: -10.617464 }),
+  rc("phases.late.stance", "defensive", "engageDecisionsPerMin.late", { n: 243, rel: -0.12713, z: -7.062536 }, { n: 243, rel: -0.119231, z: -7.248935 }),
+  rc("phases.late.stance", "scaling", "engageDecisionsPerMin.late", { n: 243, rel: 0.077244, z: 4.210787 }, { n: 243, rel: 0.100371, z: 5.56091 }),
+]);

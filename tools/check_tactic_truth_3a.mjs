@@ -83,15 +83,26 @@ async function main() {
     return zd >= TRUTH_GATE.marginalBelowZ ? "pass" : zd >= TRUTH_GATE.minZ ? "marginal" : zd <= -TRUTH_GATE.minZ ? "reversed" : "fail";
   };
   const isOk = (v) => v === "pass" || v === "marginal";
+  const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json"];
+  const supersededKeys = new Set(SUPERSEDING.flatMap((rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")).rows.map((r) => `${r.dimension}=${r.choice}`)));
+  //  只有 std 的主要列會被取代（複驗量的是 std＋那一個時期選擇）。
+  const superseded = (r) => r.role === "primary" && r.template === "std" && supersededKeys.has(`${r.dimension}=${r.choice}`);
+  const SUPERSEDING_SHAPE = SUPERSEDING.map((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+    return `${rel}: complete=${f.complete} halted=${f.halted} stale=${JSON.stringify(f.stale)} errored=${f.erroredMatches} instrument=${f.instrumentMismatch} rows=${f.rows?.length}`; });
+  const supersedingOk = SUPERSEDING.every((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+    return f.complete === true && f.halted === false && Array.isArray(f.stale) && f.stale.length === 0 && f.erroredMatches === 0 && f.instrumentMismatch === 0 && Array.isArray(f.rows) && f.rows.length > 0; });
   const statsOfPairs = (pairs) => { const s = pairStats(pairs); return { n: s.n, meanA: r6(s.meanA), meanB: r6(s.meanB), diff: r6(s.diff), sd: r6(s.sd), z: s.z === null ? null : r6(s.z), dz: r6(s.dz), rel: r6(s.rel) }; };
   const rowKey = (b) => b.key;
   /** 結果表 → 應有的排除表（template, dimension, choice, reason）。規則見檔頭。 */
   function deriveExclusions(rows) {
     const out = [];
+    //  Phase 3a-C3-2 收尾：n=400 新 seeds 紅藍複驗涵蓋的選擇，**std 上**排除與否由複驗決定（Registry.REPLICATION_CONFIRMED／REPLICATION_WITHHELD）：
+    //  n=40 的主要列照常量測、照常記錄，但不推出 "*" 排除。複驗只量了 std ⇒ 弱點模板的列照舊推出該模板的排除（審查 2026-10-22 #1）。
+    //  涵蓋清單直接讀複驗結果檔，不讀 Registry（Registry 不能自己宣告被取代）。
     const reasonOf = (v) => (v === "reversed" ? "reversed_effect" : v === "unmeasurable" ? "unmeasurable" : "no_measured_effect");
     const prim = rows.filter((r) => r.role === "primary");
     for (const p of prim) {
-      if (!isOk(p.verdict)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)) });
+      if (!isOk(p.verdict) && !superseded(p)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)) });
       else {
         const w = rows.find((r) => r.role === "weak" && r.dimension === p.dimension && r.choice === p.choice);
         if (w && !isOk(w.verdict)) out.push({ template: w.template, dimension: w.dimension, choice: w.choice, reason: reasonOf(w.verdict), metric: w.metric, n: w.n, z: w.z === null ? null : Number(w.z.toFixed(2)) });
@@ -289,7 +300,7 @@ async function main() {
         for (const k of ["n", "meanA", "meanB", "diff", "sd", "z"]) if (st[k] !== r[k]) P("recompute", `${r.key}：${k} 與原始配對值重算不符（${r[k]} vs ${st[k]}）`);
         if (verdictOf(st, r.direction) !== r.verdict) P("verdict", `${r.key}：判定與重算不符`);
         //  有效配對不足的列只有在「該選擇已被排除」時才可接受（例如後期階段不足 60 秒的場次太多，而 std 上這個選擇本來就已排除）
-        if (r.verdict === "unmeasurable" && !ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template))) P("unmeasurable", `${r.key}：有效配對 ${r.n} 不足，且該選擇沒有被排除`);
+        if (r.verdict === "unmeasurable" && !superseded(r) && !ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template))) P("unmeasurable", `${r.key}：有效配對 ${r.n} 不足，且該選擇沒有被排除`);
       }
       //  每個選擇通過，或已被排除
       const exInTable = new Set(ctx.exclusions.map(exKey));
@@ -322,16 +333,16 @@ async function main() {
     ck("T4 事前登記：每一列的指標／方向／本來選擇／模板與 Registry 現在的 gate 相同，指標都是已知指標",
       fx.rows.every((r) => { const b = planRows.find((x) => x.key === r.key); return b && r.metric === b.metric && r.direction === b.direction && r.own === b.own && r.template === b.template && isKnownMetric(r.metric); }));
     const coveredByEx = (r) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template));
-    ck("T5 每一列都有 40 個配對；有效配對 ≥ 20（不足的列必須是已被排除的選擇）", fx.rows.every((r) => r.pairs?.length === SEEDS.length && (r.n >= 20 || coveredByEx(r))), fx.rows.filter((r) => r.n < 20).map((r) => `${r.key}:n=${r.n}${coveredByEx(r) ? "(已排除)" : ""}`).join(" "));
+    ck("T5 每一列都有 40 個配對；有效配對 ≥ 20（不足的列必須是已被排除或被 n=400 複驗取代的選擇）", fx.rows.every((r) => r.pairs?.length === SEEDS.length && (r.n >= 20 || coveredByEx(r) || superseded(r))), fx.rows.filter((r) => r.n < 20).map((r) => `${r.key}:n=${r.n}${coveredByEx(r) ? "(已排除)" : ""}`).join(" "));
     ck("T6 z、均值、差、sd、判定都能由原始配對值重算出來（表上的數字不是手填的）",
       fx.rows.every((r) => { const st = statsOfPairs(r.pairs); return ["n", "meanA", "meanB", "diff", "sd", "z"].every((k) => st[k] === r[k]) && verdictOf(st, r.direction) === r.verdict; }));
     const prim = fx.rows.filter((r) => r.role === "primary");
     const exStd = new Set(ctx.exclusions.filter((x) => x.template === "*").map((x) => `${x.dimension}=${x.choice}`));
-    ck("T7 std 上每個 live 選擇：方向與宣稱一致且配對 z ≥ 2，否則已被排除（template \"*\"）",
-      prim.every((r) => isOk(r.verdict) || exStd.has(`${r.dimension}=${r.choice}`)), prim.filter((r) => !isOk(r.verdict) && !exStd.has(`${r.dimension}=${r.choice}`)).map((r) => `${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
+    ck("T7 std 上每個 live 選擇：方向與宣稱一致且配對 z ≥ 2，否則已被排除（template \"*\"），或由 n=400 複驗取代（見 T13）",
+      prim.every((r) => isOk(r.verdict) || exStd.has(`${r.dimension}=${r.choice}`) || superseded(r)), prim.filter((r) => !isOk(r.verdict) && !exStd.has(`${r.dimension}=${r.choice}`) && !superseded(r)).map((r) => `${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
     const weak = fx.rows.filter((r) => r.role === "weak");
     const exTpl = (r) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template));
-    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除", weak.every((r) => isOk(r.verdict) || exTpl(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
+    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除（n=400 複驗只涵蓋 std，不豁免弱點模板）", weak.every((r) => isOk(r.verdict) || exTpl(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
     const derived = deriveExclusions(fx.rows);
     const sameSet = (a, b) => J([...a].sort()) === J([...b].sort());
     ck("T9 MEASURED_EXCLUSIONS ＝ 結果表推出來的排除（逐筆相同，不多不少）", sameSet(derived.map(exKey), ctx.exclusions.map(exKey)), `${derived.length} 筆`);
@@ -352,6 +363,15 @@ async function main() {
     ck("T11 紅方子集：每個不對稱都已記錄（藍方通過而紅方沒通過，或反過來）；結果表記的與重算相同", sameSet((fx.asymmetries ?? []).map((a) => `${a.dimension}=${a.choice}`), deriveAsymmetries(fx.rows).map((a) => `${a.dimension}=${a.choice}`)), `${deriveAsymmetries(fx.rows).length} 個不對稱`);
     const sp = (fx.splitStayOut ?? []).filter((s) => s.role === "primary" && s.side === "blue");
     ck("T12 帶線者實測：上、中路各有一筆，擲骰次數 ≥ 20，留在線上的比例是數字", ["lanes.top.stance", "lanes.mid.stance"].every((d) => sp.some((s) => s.dimension === d && s.rolls >= 20 && typeof s.stayRate === "number" && typeof s.stayTicksShare === "number")), sp.map((s) => `${s.dimension}: ${s.rollsGo}/${s.rolls}=${s.stayRate}`).join(" "));
+    {
+      //  T13：被複驗取代的每個選擇，在 Registry 恰好落在一張表：REPLICATION_CONFIRMED（提供）或 REPLICATION_WITHHELD（不提供）；
+      //  逐筆數字由 check_tactic_replication_3a.mjs 對結果檔驗。這裡只驗「沒有漏網、沒有兩邊都在」，以及它們不在 MEASURED_EXCLUSIONS。
+      const inC = (k) => Registry.REPLICATION_CONFIRMED.some((x) => `${x.dimension}=${x.choice}` === k), inW = (k) => Registry.REPLICATION_WITHHELD.some((x) => `${x.dimension}=${x.choice}` === k);
+      const bad = [...supersededKeys].filter((k) => inC(k) === inW(k) || ctx.exclusions.some((x) => x.template === "*" && `${x.dimension}=${x.choice}` === k));
+      if (!supersedingOk) bad.push(`複驗結果檔形狀不對：${SUPERSEDING_SHAPE.join("；")}`);
+      const n40 = prim.filter(superseded).map((r) => `${r.dimension}=${r.choice}:${r.verdict}(z=${r.z})`);
+      ck("T13 被 n=400 複驗取代的選擇：複驗結果檔完整、沒停、沒過期、0 失敗；每個恰好在 REPLICATION_CONFIRMED 或 REPLICATION_WITHHELD 其中一張，且沒有 \"*\" 排除（弱點模板的排除照舊）", supersededKeys.size > 0 && bad.length === 0, bad.length ? bad.join(" ") : `${supersededKeys.size} 個；n=40 列照記：${n40.join("、")}`);
+    }
     const marg = fx.rows.filter((r) => r.verdict === "marginal");
     console.log(`　（資訊）邊際（2 ≤ z < 3）：${marg.length} 列${marg.length ? "：" + marg.map((r) => `${r.role}/${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join("、") : ""}`);
 

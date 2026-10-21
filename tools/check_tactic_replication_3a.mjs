@@ -11,6 +11,9 @@
 //  § O  21 模板：被撤下的選擇（不是模板自己的預設值）不在提供清單，原因代碼正確；confirmed 的仍在 std 的提供清單
 //  § S  結構清單（withMeasured:false）不受影響；已存計畫照常 createTacticPlan／解析，旋鈕與撤下前（直接投影）相同
 //  § N  反向測試：清單多一筆（拿 confirmed 冒充）、少一筆、數字被改、判定被改 ⇒ 都抓得到
+//  § V  第二個來源（Phase 3a-C3-2 收尾）：tools/fixtures/phase_stance_result_c3_2_rev1.json（seeds 18001–18400，技能層開）。
+//       判定能由數字重算；REPLICATION_CONFIRMED ＝ confirmed 且 Owner 沒有暫緩的列；REPLICATION_WITHHELD 裡屬於它的 ＝ 沒站住（not_replicated）
+//       ＋ confirmed 但 Owner 暫緩（owner_hold：前期／中期 scaling，2026-10-22 Owner 裁示）。兩張表合起來恰好覆蓋結果檔每一列，數字照抄主指標。
 //
 //  不重測、不改結果檔；真實性結果表（tactic_truth_3a.json）仍由 check_tactic_truth_3a.mjs 驗，這支不碰它的排除表。
 // ============================================================================
@@ -35,6 +38,9 @@ const ck = (l, ok, n = "") => { ok ? pass++ : fail++; console.log(`${ok ? "✅" 
 const J = JSON.stringify;
 const fx = readJson("tools/fixtures/tactic_followup_3a_replication.json");
 const truth = readJson("tools/fixtures/tactic_truth_3a.json");
+const fxB = readJson("tools/fixtures/phase_stance_result_c3_2_rev1.json");
+//  Owner 2026-10-22：「前期 scaling、中期 scaling 維持 design，不開放，不放大係數」（即使複驗 confirmed）。
+const OWNER_HOLD = ["phases.early.stance=scaling", "phases.mid.stance=scaling"];
 const TEMPLATE_IDS = Object.keys(Templates.TACTIC_TEMPLATES);
 const nested = (dim, v) => { const o = {}; dim.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? v : {}, n[k]), o); return o; };
 const keyOf = (x) => `${x.dimension}=${x.choice}`;
@@ -100,9 +106,11 @@ function verifyList(list, rows) {
   return problems;
 }
 const W = Registry.REPLICATION_WITHHELD;
-const baseProblems = verifyList(W, fx.rows);
-ck("W1 REPLICATION_WITHHELD ＝ 結果檔推出的撤下清單（逐筆相同、不多不少；判定、指標、紅藍 n／rel／z 一致）", baseProblems.length === 0 && W.length === deriveWithheld(fx.rows).length, baseProblems.slice(0, 3).join(" | "));
-ck("W2 預期的 4 筆（上路帶線、下路進攻、b1 核心、謹慎）", J(W.map(keyOf).sort()) === J(["lanes.bot.stance=aggressive", "lanes.top.stance=split", "risk.tolerance=cautious", "seats.b1.priority=core"]), W.map(keyOf).join(" "));
+const origKeys = new Set(fx.rows.map(keyOf)), revKeys = new Set(fxB.rows.map(keyOf));
+const WA = W.filter((x) => origKeys.has(keyOf(x)));
+const baseProblems = verifyList(WA, fx.rows);
+ck("W1 REPLICATION_WITHHELD 屬於第一份複驗的部分 ＝ 結果檔推出的撤下清單（逐筆相同、不多不少；判定、指標、紅藍 n／rel／z 一致）", baseProblems.length === 0 && WA.length === deriveWithheld(fx.rows).length, baseProblems.slice(0, 3).join(" | "));
+ck("W2 預期的 6 筆（上路帶線、下路進攻、b1 核心、謹慎；前期／中期 scaling 為 Owner 暫緩），每一筆都恰好來自兩份結果檔之一", J(W.map(keyOf).sort()) === J(["lanes.bot.stance=aggressive", "lanes.top.stance=split", "phases.early.stance=scaling", "phases.mid.stance=scaling", "risk.tolerance=cautious", "seats.b1.priority=core"]) && W.every((x) => origKeys.has(keyOf(x)) !== revKeys.has(keyOf(x))), W.map(keyOf).join(" "));
 ck("W3 與量測排除表分開：沒有一筆同時（模板, 維度, 選擇）都在 MEASURED_EXCLUSIONS 裡，MEASURED_EXCLUSIONS 本身沒有原因代碼 not_replicated", W.every((x) => !Registry.MEASURED_EXCLUSIONS.some((m) => m.template === x.template && m.dimension === x.dimension && m.choice === x.choice)) && Registry.MEASURED_EXCLUSIONS.every((m) => m.reason !== "not_replicated"));
 ck("W4 清單是凍結的資料；replicationWithheld(t, d, c) 命中回傳該列、沒命中回傳 null", Object.isFrozen(W) && W.every(Object.isFrozen)
   && W.every((x) => Registry.replicationWithheld("std", x.dimension, x.choice) === x) && Registry.replicationWithheld("std", "lanes.mid.stance", "split") === null && Registry.replicationWithheld("std", "lanes.top.stance", "defensive") === null);
@@ -124,12 +132,12 @@ for (const t of TEMPLATE_IDS) for (const x of W) {
   }
   pairs++;
   const w = d.withheld.find((e) => e.choice === x.choice);
-  const expect = Registry.measuredExclusion(t, x.dimension, x.choice) ? "no_measured_effect" : "not_replicated";
+  const expect = Registry.measuredExclusion(t, x.dimension, x.choice) ? "no_measured_effect" : x.reason;
   if (d.offered.includes(x.choice)) orderBad.push(`${t}/${keyOf(x)}:仍在提供清單`);
   if (!w || w.reason !== expect) reasonBad.push(`${t}/${keyOf(x)}:reason=${w?.reason} 應為 ${expect}`);
 }
-ck(`O1 ${TEMPLATE_IDS.length} 模板 × 4 筆：不是模板自己的預設值 ⇒ 不在 offered（${pairs} 組）`, TEMPLATE_IDS.length === 21 && pairs > 60 && orderBad.length === 0, orderBad.slice(0, 4).join(" "));
-ck("O2 withheld 的原因：量測排除也命中 ⇒ no_measured_effect（先查量測排除），否則 not_replicated", reasonBad.length === 0, reasonBad.slice(0, 4).join(" "));
+ck(`O1 ${TEMPLATE_IDS.length} 模板 × ${W.length} 筆：不是模板自己的預設值 ⇒ 不在 offered（${pairs} 組）`, TEMPLATE_IDS.length === 21 && pairs > 60 && orderBad.length === 0, orderBad.slice(0, 4).join(" "));
+ck("O2 withheld 的原因：量測排除也命中 ⇒ no_measured_effect（先查量測排除），否則清單上的原因（not_replicated／owner_hold）", reasonBad.length === 0, reasonBad.slice(0, 4).join(" "));
 ck(`O3 模板自己的預設值不受影響：仍在 offered、不在 withheld（${ownKept} 組）`, ownBad.length === 0 && ownKept > 0, ownBad.slice(0, 4).join(" "));
 const confirmed = fx.rows.filter((r) => r.verdict === "confirmed");
 const stdBad = confirmed.filter((r) => { const d = Mapping.offeredChoiceDetail("std", r.dimension); return !d || (d.own !== r.choice && !d.offered.includes(r.choice)); }).map(keyOf);
@@ -176,31 +184,103 @@ const stdPlan = createTacticPlan({ templateId: "std", choices: { lanes: { top: {
 ck("S4 std 上同時帶三個被撤下的選擇的計畫：仍合法、可解析", stdPlan.ok && resolveTactic(tacticInputOf({ templateId: "std", choices: stdPlan.plan.choices })).ok === true, stdPlan.ok ? "" : stdPlan.errors.map((e) => e.code).join(","));
 
 // ════════════════════════════════════════════════════════════════════════════
-console.log("\n§N 反向測試（驗證器抓得到壞的清單）");
+// ════════════════════════════════════════════════════════════════════════════
 const clone = (o) => structuredClone(o);
+console.log("\n§V 第二個來源：時期姿態修正儀器複驗（seeds 18001–18400）");
+const MIN_Z = 3, MIN_REL = 0.05, MIN_N = 200;
+ck("V1 結果檔形狀：完整、沒停、沒過期、0 失敗、0 儀器不符；seeds 18001–18400；8 列；simulationVersion＝目前版本", fxB.schema === "esmo.phase-stance-result.v1" && fxB.complete === true && fxB.halted === false
+  && J(fxB.stale) === "[]" && fxB.erroredMatches === 0 && fxB.instrumentMismatch === 0 && fxB.registration === "tools/fixtures/phase_stance_registration_c3_2_rev1.json"
+  && fxB.seeds === "18001-18400" && fxB.rows.length === 8 && fxB.simulationVersion === MOBA_SIMULATION_VERSION, `${fxB.rows.length} 列，${fxB.finishedMatches} 場，指紋 ${fxB.fingerprint}（量測時）`);
+/** 依事前登記的規則重算一列的判定（每側兩個指標都 OK ⇒ 該側通過；任一 z 反向 ≤ −3 ⇒ reversed；n < 200 ⇒ n_insufficient）。 */
+const okCell = (c, sg) => Math.sign(c.diff) === sg && c.z * sg >= MIN_Z && Math.abs(c.rel) >= MIN_REL;
+const revVerdict = (row) => {
+  const sg = row.direction === "up" ? 1 : -1, cells = [...row.cells.blue, ...row.cells.red];
+  if (cells.some((c) => c.n < MIN_N)) return "n_insufficient";
+  if (cells.some((c) => c.z * sg <= -MIN_Z)) return "reversed";
+  const side = (s) => row.cells[s].every((c) => okCell(c, sg)), primBoth = okCell(row.cells.blue[0], sg) && okCell(row.cells.red[0], sg);
+  return side("blue") && side("red") ? "confirmed" : primBoth ? "duty_cycle_only" : side("blue") || side("red") ? "one_sided" : "insufficient";
+};
+const vBad = fxB.rows.filter((r) => revVerdict(r) !== r.verdict || [...r.cells.blue, ...r.cells.red].some((c) => c.ok !== okCell(c, r.direction === "up" ? 1 : -1)))
+  .map((r) => `${keyOf(r)} ${r.verdict}≠${revVerdict(r)}`);
+ck("V2 每列的 ok 與判定能由數字依事前登記規則重算（z ≥ 3、|rel| ≥ 5%、n ≥ 200、兩個指標、紅藍兩側）", vBad.length === 0, vBad.join(" | "));
+const prim = (r, s) => ({ n: r.cells[s][0].n, rel: r6(r.cells[s][0].rel), z: r6(r.cells[s][0].z) });
+const wantC = fxB.rows.filter((r) => r.verdict === "confirmed" && !OWNER_HOLD.includes(keyOf(r))).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.cells.blue[0].metric, blue: prim(r, "blue"), red: prim(r, "red") }));
+const wantW = fxB.rows.filter((r) => r.verdict !== "confirmed" || OWNER_HOLD.includes(keyOf(r))).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: r.verdict === "confirmed" ? "owner_hold" : "not_replicated", verdict: r.verdict, metric: r.cells.blue[0].metric, blue: prim(r, "blue"), red: prim(r, "red") }));
+const C = Registry.REPLICATION_CONFIRMED, WB = W.filter((x) => revKeys.has(keyOf(x)));
+const sameList = (a, b) => J([...a].map((x) => J(x)).sort()) === J([...b].map((x) => J(x)).sort());
+ck("V3 REPLICATION_CONFIRMED ＝ 結果檔 confirmed 且非 Owner 暫緩的列（逐欄相同：指標、判定、紅藍 n／rel／z 照抄主指標）", sameList(C, wantC), `${C.length} 筆：${C.map(keyOf).join(" ")}`);
+ck("V4 REPLICATION_WITHHELD 屬於這份結果檔的部分 ＝ 沒站住的列（not_replicated）＋ Owner 暫緩的 confirmed 列（owner_hold）", sameList(WB, wantW), WB.map((x) => `${keyOf(x)}:${x.reason}`).join(" "));
+ck("V5 兩張表合起來恰好覆蓋結果檔每一列、沒有重疊；Owner 暫緩的兩列在結果檔裡確實是 confirmed（暫緩是 Owner 決定，不是證據不足）；清單凍結",
+  C.length + WB.length === fxB.rows.length && C.every((x) => !WB.some((y) => keyOf(y) === keyOf(x))) && [...C, ...WB].every((x) => revKeys.has(keyOf(x)))
+  && OWNER_HOLD.every((k) => fxB.rows.find((r) => keyOf(r) === k)?.verdict === "confirmed") && Object.isFrozen(C) && C.every(Object.isFrozen));
+const offerBad = [];
+let offerChecked = 0;
+for (const t of TEMPLATE_IDS) for (const x of [...C, ...WB]) {
+  const d = Mapping.offeredChoiceDetail(t, x.dimension);
+  if (!d || d.own === x.choice) continue;
+  const d0 = Mapping.offeredChoiceDetail(t, x.dimension, [], {}, { withMeasured: false });
+  if (!d0.offered.includes(x.choice)) continue;                   // 結構上本來就不提供（撞旋鈕等）
+  offerChecked++;
+  const gone = Registry.measuredExclusion(t, x.dimension, x.choice) !== null;
+  if (x.reason === "replicated" && d.offered.includes(x.choice) === gone) offerBad.push(`${t}/${keyOf(x)}:confirmed 卻不提供`);
+  if (x.reason !== "replicated" && d.offered.includes(x.choice)) offerBad.push(`${t}/${keyOf(x)}:${x.reason} 卻仍提供`);
+}
+const stdC = C.every((x) => Mapping.offeredChoiceDetail("std", x.dimension).offered.includes(x.choice));
+const stdHold = OWNER_HOLD.every((k) => { const [d, c] = k.split("="); return Mapping.offeredChoiceDetail("std", d).withheld.find((e) => e.choice === c)?.reason === "owner_hold"; });
+ck(`V6 提供清單：核准的 6 個時期姿態在 std 及每個結構上可選的模板都提供；前期／中期 scaling 不提供（owner_hold）（${offerChecked} 組）`, stdC && stdHold && offerBad.length === 0 && offerChecked > 100, offerBad.slice(0, 4).join(" "));
+{
+  const n = clone(C); n[0].blue.z = 99;
+  const m = clone(WB); m[0].reason = "not_replicated";
+  const rows = clone(fxB.rows); rows[0].cells.red[0].z = 1;
+  ck("NV 反向：核准表的數字被改、暫緩被改成「沒站住」、結果檔某格 z 被改 ⇒ V2／V3／V4 抓得到", !sameList(n, wantC) && !sameList(m, wantW) && rows.some((r) => revVerdict(r) !== r.verdict));
+}
+{
+  //  V7：複驗儀器的指標名（engageDecisionsPerMin.<p>）＝ Registry G-A7 宣稱的指標（phaseEngageDecisionsPerMin.<p>），同一個時期；方向與 Registry 宣稱相同。
+  const bad = [...C, ...WB].filter((x) => {
+    const p = x.dimension.split(".")[1], row = Registry.registryRow(x.dimension), claim = row?.gate?.claims?.find((c) => c.choice === x.choice);
+    const fxRow = fxB.rows.find((r) => keyOf(r) === keyOf(x));
+    return x.metric !== `engageDecisionsPerMin.${p}` || claim?.metric !== `phaseEngageDecisionsPerMin.${p}` || (claim?.direction === "rank" ? (row.gate.rank.indexOf(x.choice) > row.gate.rank.indexOf("standard") ? "up" : "down") : claim?.direction) !== fxRow?.direction;
+  }).map(keyOf);
+  ck("V7 指標綁定：複驗的 engageDecisionsPerMin.<p> ↔ Registry 宣稱的 phaseEngageDecisionsPerMin.<p>（同時期、同方向）", bad.length === 0, bad.join(" "));
+  //  V8：退休的舊宣稱指向的證據檔存在，且與 commit 0efb759 的真實性結果表逐位元相同（Owner：保留原始量測結果與歷史指標）。
+  const retired = Registry.liveRows().flatMap((r) => (r.gate?.retiredClaims ?? []).map((c) => ({ dim: r.dimension, ...c })));
+  const ARCH = "tools/fixtures/tactic_truth_3a_pre_c3_2_0efb759.json";
+  let archOk = false, archNote = "";
+  try {
+    const { execSync } = await import("node:child_process");
+    const atCommit = execSync("git show 0efb759:tools/fixtures/tactic_truth_3a.json", { cwd: ROOT, maxBuffer: 64 << 20 });
+    archOk = Buffer.compare(fs.readFileSync(path.join(ROOT, ARCH)), atCommit) === 0;
+    const old = readJson(ARCH);
+    archNote = `${old.rows.length} 列；舊時期姿態列 ${old.rows.filter((r) => r.metric?.startsWith("fightEntriesPerMin.")).length}`;
+  } catch (e) { archNote = String(e?.message ?? e); }
+  ck("V8 retiredClaims：每個時期姿態都有一筆舊宣稱（fightEntriesPerMin.<p>），證據檔存在且＝0efb759 的結果表（逐位元）", retired.length === 3 && retired.every((c) => c.metric === `fightEntriesPerMin.${c.dim.split(".")[1]}` && c.evidence.startsWith(ARCH)) && archOk, archNote);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+console.log("\n§N 反向測試（驗證器抓得到壞的清單）");
 const conf = fx.rows.find((r) => r.verdict === "confirmed" && r.dimension === "lanes.mid.stance");
-const fake = { ...clone(W[0]), dimension: conf.dimension, choice: conf.choice, verdict: "one_sided", metric: conf.metric };
-ck("N0 基線：對真實清單沒有問題", verifyList(clone(W), fx.rows).length === 0);
-ck("N1 清單多一筆（拿 confirmed 的冒充）⇒ 抓到", verifyList([...clone(W), fake], fx.rows).some((p) => p.startsWith("多出")));
-ck("N2 清單少一筆 ⇒ 抓到", verifyList(clone(W).slice(1), fx.rows).some((p) => p.startsWith("缺少")));
-const n3 = clone(W); n3[1].blue.z = 9.99;
+const fake = { ...clone(WA[0]), dimension: conf.dimension, choice: conf.choice, verdict: "one_sided", metric: conf.metric };
+ck("N0 基線：對真實清單沒有問題", verifyList(clone(WA), fx.rows).length === 0);
+ck("N1 清單多一筆（拿 confirmed 的冒充）⇒ 抓到", verifyList([...clone(WA), fake], fx.rows).some((p) => p.startsWith("多出")));
+ck("N2 清單少一筆 ⇒ 抓到", verifyList(clone(WA).slice(1), fx.rows).some((p) => p.startsWith("缺少")));
+const n3 = clone(WA); n3[1].blue.z = 9.99;
 ck("N3 某一筆的 z 被改 ⇒ 抓到", verifyList(n3, fx.rows).some((p) => p.startsWith("數字不符")));
-const n3b = clone(W); n3b[2].red.rel = 0.5;
+const n3b = clone(WA); n3b[2].red.rel = 0.5;
 ck("N3b 某一筆的 rel 被改 ⇒ 抓到", verifyList(n3b, fx.rows).some((p) => p.startsWith("數字不符")));
-const n3c = clone(W); n3c[0].blue.n = 40;
+const n3c = clone(WA); n3c[0].blue.n = 40;
 ck("N3c 某一筆的 n 被改（拿舊的 n=40）⇒ 抓到", verifyList(n3c, fx.rows).some((p) => p.startsWith("數字不符")));
-const n4 = clone(W); n4[0].verdict = "insufficient";
+const n4 = clone(WA); n4[0].verdict = "insufficient";
 ck("N4 判定被改 ⇒ 抓到", verifyList(n4, fx.rows).some((p) => p.startsWith("欄位不符")));
-const n5 = clone(W); n5[3].reason = "no_measured_effect";
+const n5 = clone(WA); n5[3].reason = "no_measured_effect";
 ck("N5 原因代碼被改 ⇒ 抓到", verifyList(n5, fx.rows).some((p) => p.startsWith("欄位不符")));
 const rows6 = clone(fx.rows); rows6.find((r) => r.verdict === "confirmed" && r.dimension === "lanes.mid.stance").verdict = "one_sided";
-ck("N6 結果檔改了判定（confirmed → one_sided）而清單沒跟 ⇒ 抓到（清單與結果檔必須一起動）", verifyList(clone(W), rows6).some((p) => p.startsWith("缺少")));
+ck("N6 結果檔改了判定（confirmed → one_sided）而清單沒跟 ⇒ 抓到（清單與結果檔必須一起動）", verifyList(clone(WA), rows6).some((p) => p.startsWith("缺少")));
 const rows8 = clone(fx.rows), tgt = rows8.find((r) => r.verdict === "confirmed" && r.dimension === "lanes.mid.stance"); tgt.verdict = "one_sided";
-const synced = [...clone(W), { ...clone(W[0]), dimension: tgt.dimension, choice: tgt.choice, verdict: "one_sided", metric: tgt.metric, blue: { n: tgt.blue.n, rel: r6(tgt.blue.rel), z: r6(tgt.blue.z) }, red: { n: tgt.red.n, rel: r6(tgt.red.rel), z: r6(tgt.red.z) } }];
+const synced = [...clone(WA), { ...clone(WA[0]), dimension: tgt.dimension, choice: tgt.choice, verdict: "one_sided", metric: tgt.metric, blue: { n: tgt.blue.n, rel: r6(tgt.blue.rel), z: r6(tgt.blue.z) }, red: { n: tgt.red.n, rel: r6(tgt.red.rel), z: r6(tgt.red.z) } }];
 ck("N8 改掉一列 verdict 且同步改清單（清單與結果檔互相一致）⇒ 仍被 R4 的重算抓到（verdict 與 meets 對不上）", verifyList(synced, rows8).length === 0 && rowsProblems(rows8).some((p) => p.includes("verdict")));
 const rows9 = clone(fx.rows); rows9.find((r) => r.verdict === "insufficient").blue.meets = true;
 ck("N9 某一邊的 meets 被手改 ⇒ 抓到", rowsProblems(rows9).length > 0);
-const dup = [...clone(W), clone(W[0])];
+const dup = [...clone(WA), clone(WA[0])];
 ck("N7 重複一筆 ⇒ 抓到", verifyList(dup, fx.rows).some((p) => p.startsWith("重複")));
 
 console.log(`\nTactic Replication 3a：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
