@@ -29,6 +29,7 @@ const fixture = JSON.parse(read("tools/fixtures/tactic_variant_outputs_a7adeb9.j
 //  這支 gate 要測的新模組。載入失敗（尚未實作）＝整支紅，而不是靜默跳過。
 let Plan, Templates, Registry, Overlays;
 const Resolver = await import("../src/battle/moba/tactics/tacticResolver.js");   // Task 9：選擇 → 欄位的唯一對照表
+const PhaseMap = await import("../src/platform/tactics/tacticChoiceMapping.js");   // Phase 3a-C：每時期對照（PHASE_CHOICE_MAPPING）
 try {
   Registry = await import("../src/platform/tactics/capabilityRegistry.js");
   Overlays = await import("../src/platform/tactics/tacticOverlays.js");
@@ -93,8 +94,23 @@ console.log("\n§R Capability Registry 資料列");
   };
   const baseCfg = () => clone(STANDARD_OPP_TACTIC);
   let probed = 0, unprobed = [], dupSig = [], badCfg = [];
+  //  每時期維度（Phase 3a-C）：選擇不改整場設定，只改「那一個時期」的投影（Resolver 與選擇引擎共用的 phaseProjectionOf）。
+  const phaseSig = (dim, c) => {
+    const [, p, f] = dim.split(".");
+    const ov = PhaseMap.phaseOverridesOf({ [p]: { [f]: c } });
+    if (!ov.ok) return null;
+    const out = PhaseMap.phaseProjectionOf(baseCfg(), ov.overrides[["early", "mid", "late"].indexOf(p)], { toEngineTactic, toEngineTacticIdentity });
+    delete out.knobs.tacticId; delete out.identity.tacticId;
+    return J(out);
+  };
   for (const r of live) {
     const sigs = new Set();
+    if (Object.hasOwn(PhaseMap.PHASE_CHOICE_MAPPING.rows, r.dimension)) {
+      for (const c of r.choices) { const sg = phaseSig(r.dimension, c); if (sg === null) { unprobed.push(r.dimension); break; } sigs.add(sg); }
+      probed++;
+      if (sigs.size !== r.choices.length) dupSig.push(r.dimension);
+      continue;
+    }
     for (const c of r.choices) {
       const cfg = baseCfg();
       if (!probe(cfg, r.dimension, c)) { unprobed.push(r.dimension); break; }
@@ -119,11 +135,15 @@ console.log("\n§R Capability Registry 資料列");
       "phases.early.stance", "phases.mid.stance", "phases.late.stance", "jungle.tempo", "jungle.focus",
       "lanes.top.stance", "lanes.mid.stance", "lanes.bot.stance", "seats.b5.mission",
       "seats.b1.priority", "seats.b3.priority", "seats.b4.priority", "risk.tolerance",
-      "teamfight.posture", "teamfight.grouping", "objectives.dragon", "objectives.baron", "objectives.tower"]));
+      "teamfight.posture", "teamfight.grouping", "objectives.dragon", "objectives.baron", "objectives.tower",
+      //  Phase 3a-C3-3／C4（2026-10-22）：每時期型，只在 v21 規則集（Director core.v1）可用（Registry requires）。
+      "phases.early.grouping", "phases.mid.grouping", "phases.late.grouping",
+      "phases.early.objectiveOrder", "phases.mid.objectiveOrder", "phases.late.objectiveOrder"]));
   const SPEC_DESIGN = ["winCondition", "teamfight.style", "teamfight.engager", "teamfight.focusTarget", "teamfight.peelFor", "risk.comeback",
     "comms.shotcaller", "comms.secondCaller", "jungle.route", "lanes.top.wave", "lanes.mid.wave", "lanes.bot.wave",
     "phases.early.tradePolicy", "phases.mid.tradePolicy", "phases.late.tradePolicy",
-    "phases.early.focusLane", "phases.early.grouping", "phases.early.objectiveOrder"];
+    //  每時期的集結／物件優先在 Phase 3a-C3-3／C4 由 n=400 紅藍複驗升級 live（R-10）；強邊（focusLane）仍待 C5。
+    "phases.early.focusLane", "phases.mid.focusLane", "phases.late.focusLane"];
   ck("R5 規格 §4.1 標 * 或無旋鈕的鍵都是 design（不被提供）", SPEC_DESIGN.every((k) => Registry.registryRow(k)?.status === "design" && !Registry.isLiveChoice(k, "aggressive")));
   ck("R6 查詢 API：未知鍵／原型鍵／非字串 ⇒ null／false",
     Registry.registryRow("nope") === null && Registry.registryRow("__proto__") === null && Registry.registryRow("constructor") === null && Registry.registryRow(null) === null
