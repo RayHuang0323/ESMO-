@@ -297,6 +297,11 @@ const ex = (template, dimension, choice, reason, metric, n, z) => ({ template, d
 export const MEASURED_EXCLUSIONS = deepFreeze([
   //  時期姿態 8 列（fightEntriesPerMin.<p>，n=40）已由 n=400 紅藍複驗取代（REPLICATION_CONFIRMED／REPLICATION_WITHHELD；Phase 3a-C3-2 收尾）；
   //  舊列與舊結果表保留在 git 歷史（commit 0efb759 的 tools/fixtures/tactic_truth_3a.json），不刪不改證據本身。
+  //  n=400 複驗只涵蓋 std ⇒ 弱點模板仍由新指標 phaseEngageDecisionsPerMin.<p> 的 n=40 列決定（2026-10-22 重測，只對該模板不提供）：
+  ex("classic.m4", "phases.early.stance", "scaling", "no_measured_effect", "phaseEngageDecisionsPerMin.early", 40, 1.9),
+  ex("v2.defensive_hold", "phases.mid.stance", "scaling", "no_measured_effect", "phaseEngageDecisionsPerMin.mid", 40, 0.3),
+  ex("classic.m1", "phases.late.stance", "defensive", "unmeasurable", "phaseEngageDecisionsPerMin.late", 19, -2.85),
+  ex("classic.m1", "phases.late.stance", "scaling", "unmeasurable", "phaseEngageDecisionsPerMin.late", 19, 2.2),
   ex("*", "jungle.tempo", "slow", "no_measured_effect", "ganksPerMin", 40, -0.85),
   ex("*", "jungle.tempo", "fast", "no_measured_effect", "ganksPerMin", 40, 0.42),
   ex("classic.m1", "jungle.focus", "farm", "no_measured_effect", "ganksPerMin", 40, -1.38),

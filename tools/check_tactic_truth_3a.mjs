@@ -428,7 +428,8 @@ export const __edited_by_test__ = 1;` : fs.readFileSync(path.join(ROOT, rel), "u
     ck("N4 少一列 ⇒ 被抓到", verifyFixture(t3, ctx).some((p) => p.startsWith("missing")));
     const t4 = clone(fx); t4.rows[0].direction = t4.rows[0].direction === "up" ? "down" : "up";
     ck("N5 改掉事前登記的方向 ⇒ 被抓到", verifyFixture(t4, ctx).some((p) => p.startsWith("prereg")));
-    const t5 = clone(fx), pr = t5.rows.find((r) => r.role === "primary" && isOk(r.verdict)); pr.pairs = pr.pairs.map(([a]) => [a, a]);
+    //  被 n=400 複驗取代的 std 列（時期姿態）依設計不推出 "*" 排除 ⇒ 負向對照要挑沒被取代的列（2026-10-22 重測後第一個通過列變成時期姿態）。
+    const t5 = clone(fx), pr = t5.rows.find((r) => r.role === "primary" && isOk(r.verdict) && !superseded(r)); pr.pairs = pr.pairs.map(([a]) => [a, a]);
     const stub = statsOfPairs(pr.pairs); Object.assign(pr, stub, { verdict: verdictOf(stub, pr.direction) });
     ck("N6 一個選擇完全沒效果（配對全相等）但沒進排除表 ⇒ 被抓到", verifyFixture(t5, ctx).some((p) => p.startsWith("exclusion")));
     const okRow = prim.find((r) => isOk(r.verdict));

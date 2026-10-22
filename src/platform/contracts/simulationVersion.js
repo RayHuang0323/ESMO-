@@ -570,7 +570,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  tacticIndicators.ruleSuppressed 只看 not_replicated（owner_hold 的證據成立，不抑制規則）；今天沒有規則引用時期姿態。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 6a57c36c98d8b7ee 未曾發布）。
   //  （同日審查後補強：弱點模板照舊由真實性表判定、ruleSuppressed 只看 not_replicated（tacticIndicators.js）。舊值 2fc8cf8703647876 未曾發布。）
-  "moba-sim.v21": "a5ce0d283ead3e5c",
+  //  2026-10-22（真實性表以新指標整輪重測後）：MEASURED_EXCLUSIONS 加 4 筆弱點模板的時期姿態排除（classic.m4 前期 scaling、
+  //  v2.defensive_hold 中期 scaling、classic.m1 後期 defensive／scaling；n=40 的 phaseEngageDecisionsPerMin.<p>）。只改提供哪些選擇；
+  //  非時期的 72 列與前一版逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 a5ce0d283ead3e5c 未曾發布）。
+  "moba-sim.v21": "21a219764652fd1d",
 });
 
 export const isKnownSimulationVersion = (v) =>
