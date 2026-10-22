@@ -17,7 +17,8 @@
 //
 //  § P  第三、四個來源（Phase 3a-C3-3／C4）：tools/fixtures/phase_options_result_c3_3.json（seeds 18401–18800）、
 //       phase_options_result_c4.json（seeds 3401–3800）。判定能由數字重算；confirmed ⇒ REPLICATION_CONFIRMED、其他 ⇒ REPLICATION_WITHHELD
-//       （not_replicated）；指標與方向＝Registry 的宣稱；整場巨龍／巴龍的舊指標退休（retiredClaims），證據檔＝9c88d3d0 的真實性結果表。
+//       （not_replicated）；每時期型的指標與方向＝Registry 的宣稱；整場巨龍／巴龍（REPLICATION_V21_SCOPE_ONLY，只留證據）的 v20 宣稱
+//       維持 objectiveFightEntriesPerMin（Owner 2026-10-22 裁定：v20 的能力與排除表完全依 v20 既有證據）。
 //
 //  不重測、不改結果檔；真實性結果表（tactic_truth_3a.json）仍由 check_tactic_truth_3a.mjs 驗，這支不碰它的排除表。
 // ============================================================================
@@ -311,28 +312,22 @@ console.log("\n§P 第三、四個來源：每時期選擇複驗（C3-3 seeds 18
   ck("P4 REPLICATION_WITHHELD 屬於這兩份的部分 ＝ 沒站住的列（not_replicated；後期巴龍 one_sided、後期推塔 insufficient）", sameList(WP, wantWP), WP.map((x) => `${keyOf(x)}:${x.verdict}`).join(" "));
   ck("P5 三張表（核准、撤下、只在 v21）合起來恰好覆蓋兩份結果檔的每一列、沒有重疊、也不與前兩份來源重疊", CP.length + WP.length + V21.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
     && [...optKeys].every((k) => !origKeys.has(k) && !revKeys.has(k)));
-  const bindBad = allRows.filter((r) => {
+  const bindBad = allRows.filter((r) => phaseDim(r.dimension)).filter((r) => {
     const row = Registry.registryRow(r.dimension), claim = row?.gate?.claims?.find((c) => c.choice === r.choice);
     const dir = claim?.direction === "rank" ? (row.gate.rank.indexOf(r.choice) > row.gate.rank.indexOf("standard") ? "up" : "down") : claim?.direction;
     return claim?.metric !== r.claims[0].metric || dir !== r.claims[0].direction;
   }).map(keyOf);
-  ck("P6 指標綁定：Registry 宣稱的指標與方向＝複驗的主宣稱（同一個指標 id、同方向）", bindBad.length === 0, bindBad.join(" "));
+  ck("P6 指標綁定：每時期型的 Registry 宣稱指標與方向＝複驗的主宣稱（同一個指標 id、同方向）", bindBad.length === 0, bindBad.join(" "));
   const offerBadP = [];
   for (const x of CP) { const d = Mapping.offeredChoiceDetail("std", x.dimension); if (!d?.offered.includes(x.choice)) offerBadP.push(`std/${keyOf(x)}:confirmed 卻不提供`); }
   for (const x of WP) for (const t of TEMPLATE_IDS) { const d = Mapping.offeredChoiceDetail(t, x.dimension); if (d && d.own !== x.choice && d.offered.includes(x.choice)) offerBadP.push(`${t}/${keyOf(x)}:沒站住卻仍提供`); }
   ck("P7 提供清單：confirmed 的在 std 提供；沒站住的在 21 個模板都不提供", offerBadP.length === 0, offerBadP.slice(0, 4).join(" "));
-  //  P8：整場巨龍／巴龍的舊宣稱（objectiveFightEntriesPerMin.<k>）退休；證據檔＝9c88d3d0 的真實性結果表逐位元副本（Owner：保留原始量測結果與歷史指標）。
-  const ARCH2 = "tools/fixtures/tactic_truth_3a_pre_c4_9c88d3d0.json";
-  const retired2 = ["objectives.dragon", "objectives.baron"].flatMap((d) => (Registry.registryRow(d)?.gate?.retiredClaims ?? []).map((c) => ({ dim: d, ...c })));
-  let arch2Ok = false, arch2Note = "";
-  try {
-    const { execSync } = await import("node:child_process");
-    arch2Ok = Buffer.compare(fs.readFileSync(path.join(ROOT, ARCH2)), execSync("git show 9c88d3d0:tools/fixtures/tactic_truth_3a.json", { cwd: ROOT, maxBuffer: 64 << 20 })) === 0;
-    const old = readJson(ARCH2);
-    arch2Note = `${old.rows.length} 列；舊物件列 ${old.rows.filter((r) => r.metric?.startsWith("objectiveFightEntriesPerMin.")).length}`;
-  } catch (e) { arch2Note = String(e?.message ?? e); }
-  ck("P8 retiredClaims：整場巨龍／巴龍各一筆舊宣稱（objectiveFightEntriesPerMin.<k>），證據檔存在且＝9c88d3d0 的真實性結果表（逐位元）",
-    retired2.length === 2 && retired2.every((c) => c.metric === `objectiveFightEntriesPerMin.${c.dim.split(".")[1]}` && c.evidence.startsWith(ARCH2)) && arch2Ok, arch2Note);
+  //  P8：Owner 2026-10-22 裁定——v20 的整場巨龍／巴龍宣稱維持 v20 原本的指標，不以 v21 證據換指標；四筆 `*` 排除照舊（v20 既有證據）。
+  const objRows = ["objectives.dragon", "objectives.baron"].map((d) => Registry.registryRow(d));
+  ck("P8 整場巨龍／巴龍：Registry 宣稱維持 objectiveFightEntriesPerMin.<k>、沒有 retiredClaims；std 上 low／high 的四筆排除照舊（v21 證據不開放 v20）",
+    objRows.every((row) => row && !row.gate.retiredClaims && row.gate.claims.every((c) => c.metric === `objectiveFightEntriesPerMin.${row.dimension.split(".")[1]}`))
+    && ["objectives.dragon=low", "objectives.dragon=high", "objectives.baron=low", "objectives.baron=high"].every((k) => { const [d, c] = k.split("="); return Registry.measuredExclusion("std", d, c)?.template === "*"; }),
+    objRows.map((r) => r?.gate?.claims?.[0]?.metric).join(" "));
   const n = clone(CP); n[0].red.z = 1;
   const rowsN = clone(allRows); rowsN[0].claims[0].blue.z = 1;
   ck("NP 反向：核准表的數字被改、結果檔某格 z 被改 ⇒ P3／P2 抓得到", !sameList(n, wantCP) && rowsN.some((r) => verdictP(r) !== r.verdict));

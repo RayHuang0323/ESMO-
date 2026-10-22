@@ -221,15 +221,12 @@ const ROWS = [
     live(`objectives.${key}`, ["low", "standard", "high"], `objectives.${key}Priority`, [], {
       resolverFields: [`knobs.${knob}`], engineReads: [knob],
       gate: {
-        rank: ["low", "standard", "high"],
-        //  Phase 3a-C4（2026-10-22）：指標由 objectiveFightEntriesPerMin.<k> 改為 contestShare.<k>.early+mid+late（C7 §4-D：舊指標是雜訊；
-        //  C4 事前登記的主張指標，n=400 紅藍複驗在 tools/fixtures/phase_options_result_c4.json）。舊指標的結果留在歷史，不刪不改。
-        claims: claimsOf(["low", "standard", "high"], `contestShare.${key}.early+mid+late`),
-        retiredClaims: [{ metric: `objectiveFightEntriesPerMin.${key}`, retiredAt: "2026-10-22", reason: "C7 §4-D: fight entries near the pit were noise; C4 registered per-appearance contest share",
-          evidence: "tools/fixtures/tactic_truth_3a_pre_c4_9c88d3d0.json (verbatim copy of tools/fixtures/tactic_truth_3a.json at commit 9c88d3d0; MEASURED_EXCLUSIONS rows under the old metric are in git at 9c88d3d0)" }],
+        //  Owner 裁定（2026-10-22 晚）：v20 的能力與排除表完全依 v20 既有證據 ⇒ 整場巨龍／巴龍的 G-A7 指標維持 v20 原本的
+        //  objectiveFightEntriesPerMin.<k>（不改成 C4 的 contestShare）；C4 在 v21 量到的整場證據只留在 REPLICATION_V21_SCOPE_ONLY。
+        rank: ["low", "standard", "high"], claims: claimsOf(["low", "standard", "high"], `objectiveFightEntriesPerMin.${key}`),
         deltaFields: [`knobs.${knob}`],
-        why: "數的是這個物件每次出現（存活期間）己方有任何存活英雄進入坑位 9 單位內的比例＝有出現在坑邊，路過也算；"
-          + "不是拿到物件的比例（那是結果，只報告不宣稱）。分母是物件出現次數，不是分鐘數。",
+        why: "數的是己方英雄在這個物件的坑附近「進入團戰狀態」的次數（坑的位置讀引擎當場的物件位置，佈局對調也跟著走），除以分鐘數；"
+          + "量的是人真的去了坑邊集結，不是物件窗的擲骰結果。",
       },
     })),
   live("objectives.tower", ["low", "standard", "high"], "objectives.towerPriority", [], {
@@ -366,6 +363,16 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("*", "objectives.baron", "high", "reversed_effect", "objectiveFightEntriesPerMin.baron", 40, -2.03),
   ex("*", "objectives.tower", "low", "no_measured_effect", "siegeWindowsPerMin", 40, 0.87),
   ex("classic.m3", "objectives.tower", "high", "no_measured_effect", "siegeWindowsPerMin", 40, 1.97),
+  //  Phase 3a-C3-3／C4 每時期型（2026-10-23 真實性表重測，balanceTool.v21，n=40）：n=400 複驗只涵蓋 std ⇒ 弱點模板由 n=40 列決定，只對該模板不提供。
+  ex("classic.m8", "phases.mid.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.mid", 40, 0.7),
+  ex("classic.m8", "phases.late.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.late", 27, 1.13),
+  ex("classic.m2", "phases.early.objectiveOrder", "dragon", "no_measured_effect", "contestShare.dragon.early", 40, 1.78),
+  ex("classic.m2", "phases.mid.objectiveOrder", "dragon", "no_measured_effect", "contestShare.dragon.mid", 40, 1.75),
+  ex("classic.m8", "phases.mid.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.mid", 40, 0),
+  ex("classic.m2", "phases.mid.objectiveOrder", "towers", "no_measured_effect", "siegeWindowsPerMin.mid", 40, 1.11),
+  ex("classic.m2", "phases.late.objectiveOrder", "dragon", "no_measured_effect", "contestShare.dragon.late", 27, 0.57),
+  ex("classic.m8", "phases.late.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.late", 22, 0),
+  ex("classic.m2", "phases.late.objectiveOrder", "towers", "no_measured_effect", "siegeWindowsPerMin.late", 27, 0.6),
 ]);
 /** 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。 */
 export const measuredExclusion = (template, dimension, choice) =>
