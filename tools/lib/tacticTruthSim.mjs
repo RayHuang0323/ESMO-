@@ -35,6 +35,7 @@
 //                              交戰狀態機下熱點都是新物件 ⇒ 實際上＝全部參團擲骰，同 phaseStudySim 的揭露）。
 //   objApps／objContested.<k>[ph]  物件每次出現（依出現那一刻的時期）＋那次出現期間 exec.<k>Contests 有沒有增加（＝有英雄進坑 9 單位內）。
 //   siegeOpensPh[ph]           同 siegeOpens，依時期分桶。
+//   ganksOwnPh.<top|mid|bot>[ph]  打野出發抓人（exec.<world>Ganks 的增量）換成**己方路名**（gameData.sideRelativeLane），依時期分桶（C5）。
 //   規則集：spec.ruleset（缺少 ⇒ balance runner 預設 balanceTool.v20，與 v4 逐字相同）；需要 Director core.v1 的維度由量測計畫指定 balanceTool.v21。
 //  純函式部分（metricValue／pairStats）不碰引擎，gate 的快速模式會用它重算 z。
 // ============================================================================
@@ -74,6 +75,7 @@ export function tacticInputOf(arm) {
 export async function runTruthMatch(seed, spec = {}) {
   //  動態載入：快速模式（只重算統計）不需要把整個引擎載進來。
   const { modules, configure } = await import("../balance/moba_items_balance_runner.mjs");
+  const { sideRelativeLane } = await import("../../src/gameData.js");
   const M = await modules();
   const tactic ={ blue: tacticInputOf(spec.blue), red: tacticInputOf(spec.red) };
   const { e } = configure(seed, spec.items ?? "standard", M, 1, null, tactic, spec.ruleset);
@@ -86,7 +88,7 @@ export async function runTruthMatch(seed, spec = {}) {
     engages: 0, objFights: { dragon: 0, baron: 0 }, siegeOpens: 0,
     engageStarts: 0, protectStarts: 0, coreProtectStarts: { top: 0, mid: 0, adc: 0 },
     engagesPh: [0, 0, 0], engageStartsPh: [0, 0, 0],
-    joinGoGeneralStartsPh: [0, 0, 0], siegeOpensPh: [0, 0, 0],
+    joinGoGeneralStartsPh: [0, 0, 0], siegeOpensPh: [0, 0, 0], ganksOwnPh: { top: [0, 0, 0], mid: [0, 0, 0], bot: [0, 0, 0] },
     objApps: { dragon: [0, 0, 0], baron: [0, 0, 0] }, objContested: { dragon: [0, 0, 0], baron: [0, 0, 0] },
   });
   const S = { blue: zero(), red: zero() };
@@ -145,6 +147,10 @@ export async function runTruthMatch(seed, spec = {}) {
       const F = e.fsm3?.[side];
       if (F && F.initUntil !== initSeen[side]) { initSeen[side] = F.initUntil; if (F.initKind === "siege") { S[side].siegeOpens++; S[side].siegeOpensPh[ph]++; } }
     }
+    for (const side of ["blue", "red"]) for (const w of ["top", "mid", "bot"]) {
+      const d = (e.exec[side][`${w}Ganks`] ?? 0) - (execBefore[side][`${w}Ganks`] ?? 0);
+      if (d) S[side].ganksOwnPh[sideRelativeLane(side, w)][ph] += d;
+    }
     for (const key of ["dragon", "baron"]) {
       const alive = !!e[key]?.alive;
       if (alive && !objWasAlive[key]) objLife[key] = { ph, contested: { blue: false, red: false } };
@@ -195,6 +201,12 @@ export const METRICS = Object.freeze({
   //  v5（Phase 3a-C3-3／C4）：與 phaseStudySim.studyMetricValue 同定義（每分鐘比率要該時期 ≥ 60 秒；占比的分母是物件出現次數）。
   joinGoGeneralStartsPerMin: { params: PHASE_PARAMS, of: (s, r, ph) => { const i = PHASE_PARAMS.indexOf(ph); return per(s.joinGoGeneralStartsPh[i], r.phaseSecs[i]); } },
   siegeWindowsPerMinPh: { params: PHASE_PARAMS, alias: "siegeWindowsPerMin", of: (s, r, ph) => { const i = PHASE_PARAMS.indexOf(ph); return per(s.siegeOpensPh[i], r.phaseSecs[i]); } },
+  //  gankShare.<己方路>.<時期>：該時期抓人裡去這一路的比例（沒有抓人 ⇒ null）；ganksPerMinPh＝該時期每分鐘抓人次數（C5 的守門指標，名字沿用 ganksPerMin.<p>）。
+  gankShare: { params: ["top", "mid", "bot"].flatMap((l) => PHASE_PARAMS.map((p) => `${l}.${p}`)), of: (s, r, lp) => {
+    const [l, p] = lp.split("."), i = PHASE_PARAMS.indexOf(p), tot = s.ganksOwnPh.top[i] + s.ganksOwnPh.mid[i] + s.ganksOwnPh.bot[i];
+    return tot ? s.ganksOwnPh[l][i] / tot : null;
+  } },
+  ganksPerMinPh: { params: PHASE_PARAMS, alias: "ganksPerMin", of: (s, r, p) => { const i = PHASE_PARAMS.indexOf(p); return per(s.ganksOwnPh.top[i] + s.ganksOwnPh.mid[i] + s.ganksOwnPh.bot[i], r.phaseSecs[i]); } },
   contestShare: { params: ["dragon.early", "dragon.mid", "dragon.late", "dragon.early+mid+late", "baron.mid", "baron.late", "baron.early+mid+late"], of: (s, r, kp) => {
     const [k, ps] = kp.split("."), idx = ps.split("+").map((p) => PHASE_PARAMS.indexOf(p));
     const apps = idx.reduce((n, i) => n + s.objApps[k][i], 0);
@@ -206,6 +218,7 @@ const parseMetric = (id) => {
   const str = String(id), dot = str.indexOf(".");
   const name = dot < 0 ? str : str.slice(0, dot), param = dot < 0 ? undefined : str.slice(dot + 1);
   if (name === "siegeWindowsPerMin" && param !== undefined) return PHASE_PARAMS.includes(param) ? { m: METRICS.siegeWindowsPerMinPh, param } : null;
+  if (name === "ganksPerMin" && param !== undefined) return PHASE_PARAMS.includes(param) ? { m: METRICS.ganksPerMinPh, param } : null;
   const m = METRICS[name];
   if (!m || m.alias) return null;
   return (m.params.length ? m.params.includes(param) : param === undefined) ? { m, param } : null;
