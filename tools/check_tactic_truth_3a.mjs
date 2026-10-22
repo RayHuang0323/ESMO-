@@ -52,7 +52,7 @@ if (stopRecording) {
   process.on("message", async (t) => {
     if (t?.type !== "run") return;
     try {
-      const rec = await runTruthMatch(t.seed, { blue: t.blue, red: t.red, items: "standard" });
+      const rec = await runTruthMatch(t.seed, { blue: t.blue, red: t.red, items: "standard", ...(t.ruleset ? { ruleset: t.ruleset } : {}) });
       process.send({ type: "done", id: t.id, rec, files: loaded() });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
@@ -83,7 +83,8 @@ async function main() {
     return zd >= TRUTH_GATE.marginalBelowZ ? "pass" : zd >= TRUTH_GATE.minZ ? "marginal" : zd <= -TRUTH_GATE.minZ ? "reversed" : "fail";
   };
   const isOk = (v) => v === "pass" || v === "marginal";
-  const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json"];
+  //  Phase 3a-C3-3／C4：每時期集結、物件優先與整場巨龍／巴龍的 n=400 紅藍複驗（同一條取代規則：只取代 std 主要列）。
+  const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json", "tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json"];
   const supersededKeys = new Set(SUPERSEDING.flatMap((rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")).rows.map((r) => `${r.dimension}=${r.choice}`)));
   //  只有 std 的主要列會被取代（複驗量的是 std＋那一個時期選擇）。
   const superseded = (r) => r.role === "primary" && r.template === "std" && supersededKeys.has(`${r.dimension}=${r.choice}`);
@@ -153,7 +154,7 @@ async function main() {
     for (const b of batches) {
       const have = readBatch(wdir, b.key);
       if (seeds.every((s) => have.has(s))) { doneBatches++; continue; }
-      for (const s of seeds) if (!have.has(s)) tasks.push({ id: `${b.key}#${s}`, key: b.key, seed: s, blue: b.blue, red: b.red });
+      for (const s of seeds) if (!have.has(s)) tasks.push({ id: `${b.key}#${s}`, key: b.key, seed: s, blue: b.blue, red: b.red, ...(b.ruleset ? { ruleset: b.ruleset } : {}) });
     }
     const sidecar = Prov.loadedFilesSidecar(wdir);
     console.log(`量測：${total} 批（已完成 ${doneBatches}），待跑 ${tasks.length} 場，workers=${Math.min(MAX_WORKERS, Number(val("workers", MAX_WORKERS)))}，資料夾 ${wdir}`);
@@ -214,7 +215,7 @@ async function main() {
       const side = b.armSide;
       const pairs = SEEDS.map((s) => [r6(metricValue(ctl.get(s), side, b.metric)), r6(metricValue(trt.get(s), side, b.metric))]);
       const st = statsOfPairs(pairs);
-      const row = { key: b.key, role: b.role, template: b.template, dimension: b.dimension, choice: b.choice, own: b.own, side, metric: b.metric, direction: b.direction, ...st, verdict: verdictOf(st, b.direction), pairs };
+      const row = { key: b.key, role: b.role, template: b.template, dimension: b.dimension, choice: b.choice, own: b.own, side, metric: b.metric, direction: b.direction, ...st, verdict: verdictOf(st, b.direction), pairs, ...(b.ruleset ? { ruleset: b.ruleset } : {}) };
       //  同一維度的其他階段（只描述，不判定）：階段姿態「不應在別的階段有宣稱」
       const m = /^fightEntriesPerMin\.(early|mid|late)$/.exec(b.metric);
       if (m) {

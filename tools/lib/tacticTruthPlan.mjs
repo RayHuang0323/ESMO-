@@ -10,10 +10,12 @@
 //    weak     旋鈕差距最小的非 std 模板（見 gate.deltaFields），選擇綁在藍方，對照組是該模板本身
 //    red      std 模板、選擇綁在紅方（子集：每個維度第一個非本來的選擇＋上路 split；規則事前固定，不看結果）
 //  配對＝同 seed、同名單（鏡像名單）、只有「那一個選擇」在一側不同，另一側永遠是 std。
+//  規則集（Phase 3a-C）：需要 Director core.v1 的列（Registry requires，每時期型）在 balanceTool.v21 量，連同它們自己的對照組
+//  （鍵尾加 "|v21"）；其他列照舊在 balance runner 預設（balanceTool.v20），批次物件不帶 ruleset 欄位＝與之前逐字相同。
 // ============================================================================
-import { liveRows, registryRow } from "../../src/platform/tactics/capabilityRegistry.js";
+import { liveRows, registryRow, PHASE_DIRECTOR } from "../../src/platform/tactics/capabilityRegistry.js";
 import { TACTIC_TEMPLATES, templateById } from "../../src/platform/tactics/tacticTemplates.js";
-import { offeredChoiceDetail, nestedOf, mergeTacticConfig } from "../../src/platform/tactics/tacticChoiceMapping.js";
+import { offeredChoiceDetail, nestedOf, mergeTacticConfig, PHASE_CHOICE_MAPPING, phaseOverridesOf, phaseProjectionOf } from "../../src/platform/tactics/tacticChoiceMapping.js";
 import { toEngineTactic, toEngineTacticIdentity } from "../../src/platform/contracts/MobaTacticConfig.js";
 
 const get = (o, p) => p.split(".").reduce((x, k) => x?.[k], o);
@@ -38,9 +40,12 @@ export function offeredOf(templateId, dimension) {
 /** 旋鈕差距的尺度（讓不同單位的欄位可以相加）：抓人間隔以標準的 45 秒為 1、站位偏移以一階姿態的 0.05 為 1，其餘本來就是 0–1 的比例。 */
 export const unitOf = (path) => (path === "knobs.gankInterval" ? 45 : /^knobs\.laneOffset\./.test(path) ? 0.05 : 1);
 //  不經 createTacticPlan／resolveTactic（它們會套用量測排除表，被排除的選擇會被拒絕）；直接合併再投影，與 resolver 的投影同一對函式。
+//  每時期維度（Phase 3a-C）：另外帶 resolver 輸出的 phases[i]（同一個 phaseProjectionOf），deltaFields 是 phases.<i>.… 的路徑。
 const projected = (templateId, choices) => {
   const cfg = mergeTacticConfig(templateById(templateId), [], choices);
-  return { knobs: toEngineTactic(cfg), identity: toEngineTacticIdentity(cfg) };
+  const ov = phaseOverridesOf(Object.fromEntries(Object.entries(choices?.phases ?? {}).map(([p, d]) => [p, Object.fromEntries(Object.entries(d).filter(([k]) => Object.hasOwn(PHASE_CHOICE_MAPPING.rows, `phases.${p}.${k}`)))])));
+  const phases = ov.ok ? ov.overrides.map((o) => phaseProjectionOf(cfg, o, { toEngineTactic, toEngineTacticIdentity })) : null;
+  return { knobs: toEngineTactic(cfg), identity: toEngineTacticIdentity(cfg), phases };
 };
 /** 這個選擇在這個模板上的旋鈕差距（各 deltaFields 的 |Δ|/unit 總和）。 */
 export function knobDelta(row, templateId, choice) {
@@ -50,20 +55,24 @@ export function knobDelta(row, templateId, choice) {
   return row.gate.deltaFields.reduce((s, path) => s + diff(get(next, path), get(base, path)) / unitOf(path), 0);
 }
 
-const keyOf = (role, template, dimension, choice, side) => `${role}|${template}|${dimension ?? "-"}|${choice ?? "-"}|${side}`;
+/** 這一列要在哪個規則集量（null＝balance runner 預設 balanceTool.v20）。 */
+export const rulesetOfRow = (row) => (row?.requires === PHASE_DIRECTOR ? "balanceTool.v21" : null);
+const RS_SUFFIX = { "balanceTool.v21": "|v21" };
+const keyOf = (role, template, dimension, choice, side, ruleset = null) => `${role}|${template}|${dimension ?? "-"}|${choice ?? "-"}|${side}${ruleset ? RS_SUFFIX[ruleset] : ""}`;
+const withRs = (b, ruleset) => (ruleset ? { ...b, ruleset } : b);
 const armOf = (template, dimension, choice) => ({ templateId: template, choices: dimension ? nestedOf([[dimension, choice]]) : {} });
 
 /** 整份計畫。 */
 export function buildPlan() {
   const batches = [];
   const controls = new Set();
-  const addControl = (template) => {
-    const key = template === "std" ? "control|std|-|-|both" : keyOf("control", template, null, null, "blue");
+  const addControl = (template, ruleset = null) => {
+    const key = template === "std" ? `control|std|-|-|both${ruleset ? RS_SUFFIX[ruleset] : ""}` : keyOf("control", template, null, null, "blue", ruleset);
     if (!controls.has(key)) {
       controls.add(key);
-      batches.push(template === "std"
+      batches.push(withRs(template === "std"
         ? { key, role: "control", template, armSide: "both", blue: null, red: null }
-        : { key, role: "control", template, armSide: "blue", blue: armOf(template, null, null), red: null });
+        : { key, role: "control", template, armSide: "blue", blue: armOf(template, null, null), red: null }, ruleset));
     }
     return key;
   };
@@ -75,7 +84,8 @@ export function buildPlan() {
       if (!std || choice === std.own || !std.offered.includes(choice)) continue;
       const claim = claimFor(row, choice, std.own);
       if (!claim) continue;
-      const b = { key: keyOf("primary", "std", row.dimension, choice, "blue"), role: "primary", template: "std", dimension: row.dimension, choice, own: std.own, armSide: "blue", control: addControl("std"), ...claim, blue: armOf("std", row.dimension, choice), red: null };
+      const rs = rulesetOfRow(row);
+      const b = withRs({ key: keyOf("primary", "std", row.dimension, choice, "blue", rs), role: "primary", template: "std", dimension: row.dimension, choice, own: std.own, armSide: "blue", control: addControl("std", rs), ...claim, blue: armOf("std", row.dimension, choice), red: null }, rs);
       primaries.push(b); batches.push(b);
     }
   }
@@ -92,14 +102,16 @@ export function buildPlan() {
       const delta = knobDelta(row, t, p.choice);
       if (!best || delta < best.delta - 1e-12) best = { t, delta, own: o.own, claim };
     }
-    if (best) batches.push({ key: keyOf("weak", best.t, p.dimension, p.choice, "blue"), role: "weak", template: best.t, dimension: p.dimension, choice: p.choice, own: best.own, armSide: "blue", control: addControl(best.t), delta: best.delta, ...best.claim, blue: armOf(best.t, p.dimension, p.choice), red: null });
+    const rs = rulesetOfRow(row);
+    if (best) batches.push(withRs({ key: keyOf("weak", best.t, p.dimension, p.choice, "blue", rs), role: "weak", template: best.t, dimension: p.dimension, choice: p.choice, own: best.own, armSide: "blue", control: addControl(best.t, rs), delta: best.delta, ...best.claim, blue: armOf(best.t, p.dimension, p.choice), red: null }, rs));
   }
   //  red：每個維度第一個（registry 順序）非本來的 primary 選擇＋上路 split
   const seenDim = new Set();
   for (const p of primaries) {
     const pick = !seenDim.has(p.dimension) || (p.dimension === "lanes.top.stance" && p.choice === "split");
     seenDim.add(p.dimension);
-    if (pick) batches.push({ key: keyOf("red", "std", p.dimension, p.choice, "red"), role: "red", template: "std", dimension: p.dimension, choice: p.choice, own: p.own, armSide: "red", control: p.control, metric: p.metric, direction: p.direction, blue: null, red: armOf("std", p.dimension, p.choice) });
+    const rs = p.ruleset ?? null;
+    if (pick) batches.push(withRs({ key: keyOf("red", "std", p.dimension, p.choice, "red", rs), role: "red", template: "std", dimension: p.dimension, choice: p.choice, own: p.own, armSide: "red", control: p.control, metric: p.metric, direction: p.direction, blue: null, red: armOf("std", p.dimension, p.choice) }, rs));
   }
   return { batches, controls: [...controls] };
 }
