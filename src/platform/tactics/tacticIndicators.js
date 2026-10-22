@@ -308,7 +308,8 @@ export function effectiveChoices(binding) {
   if (!r) return null;
   const explicit = Object.fromEntries(leavesOf(r.plan.choices));
   const out = {};
-  for (const row of tacticBookOptions(r.plan.templateId, r.plan.overlayIds, r.plan.choices)) {
+  //  描述的是計畫本身（與規則集無關）⇒ 每時期維度（只在 Director core.v1 可選）也列出；沒選就是不覆寫的本來值。
+  for (const row of tacticBookOptions(r.plan.templateId, r.plan.overlayIds, r.plan.choices, { tacticalDirector: "core.v1" })) {
     out[row.dimension] = Object.hasOwn(explicit, row.dimension) ? explicit[row.dimension] : row.own;
   }
   return Object.freeze(out);

@@ -90,8 +90,11 @@ async function main() {
   const superseded = (r) => r.role === "primary" && r.template === "std" && supersededKeys.has(`${r.dimension}=${r.choice}`);
   const SUPERSEDING_SHAPE = SUPERSEDING.map((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
     return `${rel}: complete=${f.complete} halted=${f.halted} stale=${JSON.stringify(f.stale)} errored=${f.erroredMatches} instrument=${f.instrumentMismatch} rows=${f.rows?.length}`; });
+  //  每時期選擇的結果檔（esmo.phase-options-result.v1）沒有 halted 欄位：未完整的批次不寫結果檔；斷路器／儀器不符時寫出的結果檔
+  //  一定帶非零的 erroredMatches／instrumentMismatch（同一行條件會擋下）。
+  const notHalted = (f) => f.halted === false || (f.schema === "esmo.phase-options-result.v1" && !Object.hasOwn(f, "halted"));
   const supersedingOk = SUPERSEDING.every((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
-    return f.complete === true && f.halted === false && Array.isArray(f.stale) && f.stale.length === 0 && f.erroredMatches === 0 && f.instrumentMismatch === 0 && Array.isArray(f.rows) && f.rows.length > 0; });
+    return f.complete === true && notHalted(f) && Array.isArray(f.stale) && f.stale.length === 0 && f.erroredMatches === 0 && f.instrumentMismatch === 0 && Array.isArray(f.rows) && f.rows.length > 0; });
   const statsOfPairs = (pairs) => { const s = pairStats(pairs); return { n: s.n, meanA: r6(s.meanA), meanB: r6(s.meanB), diff: r6(s.diff), sd: r6(s.sd), z: s.z === null ? null : r6(s.z), dz: r6(s.dz), rel: r6(s.rel) }; };
   const rowKey = (b) => b.key;
   /** 結果表 → 應有的排除表（template, dimension, choice, reason）。規則見檔頭。 */
