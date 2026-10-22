@@ -131,6 +131,38 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   const screen = read("src/screens/moba/TacticScreen.jsx"), shell = read("src/AppShell.jsx");
   ck("W4 TacticScreen：選項與指標來自 tacticBookView；送出時第四個參數是 binding；換模板會清掉選擇與變體", screen.includes("tacticBookView({") && /onNext\(applied, prep \? buildStrategy : null, talentSelections, binding\)/.test(screen) && /setTemplateId\(id\); setChoices\(\{\}\); setVariantSel\(null\)/.test(screen) && !/CAPABILITY_ROWS|liveRows|MEASURED_EXCLUSIONS/.test(screen));
   ck("W5 TacticScreen：存／刪戰術書只呼叫 store 的公開動作（它們自己存檔）", screen.includes("saveTacticPlan(bookView.plan") && screen.includes("deleteTacticPlan(entry.id)") && !screen.includes("localStorage"));
+  //  V11（Phase 3a-C）：每時期的集結／物件優先只在 v21（Director core.v1）畫出；點下去的計畫要用每時期方針解析（phases:true），
+  //  v20（static）下不畫、舊計畫先拿掉；TacticScreen 用開局同一個解析函式決定模式，兩個呼叫點都帶它。
+  const reqDims = liveRows().filter((r) => r.requires).map((r) => r.dimension);
+  let shownP = 0, clickedP = 0; const badP = [];
+  for (const id of TEMPLATE_IDS) {
+    const vOff = View.tacticBookView({ templateId: id }), vOn = View.tacticBookView({ templateId: id, tacticalDirector: "core.v1" });
+    if (!vOff.ok || !vOn.ok) { badP.push(`${id}: view 失敗`); continue; }
+    if (vOff.dimensions.some((d) => reqDims.includes(d.dimension))) badP.push(`${id} static 下畫出了每時期維度`);
+    const optsOn = Object.fromEntries(tacticBookOptions(id, [], {}, { tacticalDirector: "core.v1" }).map((r) => [r.dimension, r]));
+    for (const d of vOn.dimensions.filter((x) => reqDims.includes(x.dimension))) {
+      shownP++;
+      if (J(d.choices.map((c) => c.id)) !== J(optsOn[d.dimension].offered)) badP.push(`${id} ${d.dimension} 選項與 tacticBookOptions(core.v1) 不同`);
+      for (const c of d.choices) {
+        if (c.id === d.own) continue;
+        if (replicationWithheld(id, d.dimension, c.id) || measuredExclusion(id, d.dimension, c.id)) badP.push(`${id} ${d.dimension}=${c.id} 是撤下的選擇`);
+        const chosen = View.withChoice({}, d.dimension, c.id, d.own);
+        const next = View.tacticBookView({ templateId: id, choices: chosen, tacticalDirector: "core.v1" });
+        clickedP++;
+        const r = next.ok ? resolveTactic({ kind: "binding", binding: next.binding }, {}, { phases: true }) : null;
+        const idx = ["early", "mid", "late"].indexOf(d.dimension.split(".")[1]);
+        if (!r?.ok || r.phases[idx].knobs === r.knobs && r.phases[idx].identity === r.identity) badP.push(`${id} ${d.dimension}=${c.id} 點了沒有該時期的方針`);
+        const stripped = View.offeredChoicesOnly(id, [], chosen);
+        if (J(stripped.choices) !== "{}" || stripped.dropped.length !== 1) badP.push(`${id} ${d.dimension}=${c.id} static 下沒有被拿掉`);
+      }
+    }
+  }
+  const screenSrc = fs.readFileSync(path.join(ROOT, "src/screens/moba/TacticScreen.jsx"), "utf8");
+  const screenWired = /tacticalDirectorModeOf\(resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\)\)/.test(screenSrc)
+    && /offeredChoicesOnly\([^)]*\{ tacticalDirector \}\)/.test(screenSrc) && (screenSrc.match(/tacticBookView\(\{[^\n]*tacticalDirector \}\)/g) ?? []).length === 2;
+  ck(`V11 每時期維度（${reqDims.length} 個）：static 下不畫；core.v1 下畫出的（共 ${shownP}）＝tacticBookOptions(core.v1)；每個非預設選項（共 ${clickedP}）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式並傳給兩個呼叫點`,
+    badP.length === 0 && reqDims.length === 6 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
+
   ck("W6 AppShell：戰術頁交出的 binding 進 state 與本場設定（重新整理後接得回來），再交給 GameView", shell.includes("setTacticPlanBinding(binding ?? null)") && shell.includes("tacticPlanBinding: binding ?? null") && shell.includes("tacticPlanBinding={tacticPlanBinding}") && shell.includes("setTacticPlanBinding(config.tacticPlanBinding ?? null)"));
 }
 
