@@ -72,7 +72,6 @@ const PHASES = ["early", "mid", "late"];
 const PHASE_BASIS = { early: "macro.earlyGame", mid: "macro.midGame", late: "macro.lateGame" };
 const LANES = ["top", "mid", "bot"];
 const SEATS_WITH_LANE_CORE = { b1: "top", b3: "mid", b4: "adc" };   // 引擎 carryPriority 只認得 top／mid／adc
-const WHOLE_MATCH = "引擎的對應旋鈕是整場共用的單一值，無法依此鍵（每個時期各自）細分；要 live 需要引擎先支援";
 
 //  路姿態列。lane＝top／mid／bot（引擎的路位叫 adc，metric id 與 knob 路徑用 bot，座位 b1／b3／b4）。
 function laneRow(lane, seat, choices, extra) {
@@ -189,8 +188,8 @@ const ROWS = [
       why: "數的是己方英雄「開始撤退」的次數（從沒在撤退變成撤退），除以分鐘數；撤退中的時間長短不影響這個數。",
     },
   }),
-  //  ── 整場型（T10 Phase 2）：引擎旋鈕是整場共用的單一值 ⇒ 鍵也是整場一個。規格裡依時期細分的鍵
-  //     （phases.*.grouping／objectiveOrder）仍是 design：那要引擎先支援分時期的旋鈕。
+  //  ── 整場型（T10 Phase 2）：引擎旋鈕是整場共用的單一值 ⇒ 鍵也是整場一個。依時期細分的鍵（phases.*.grouping／objectiveOrder）
+  //     在 Phase 3a-C 由 Director 的每時期方針支援後另列（見下方「每時期型」）。
   //  團戰姿態：macro.aggression → identity.engageBias（接戰分數偏移）；同一個欄位也平移三路站位（toEngineTactic 的 aggro 項）。
   live("teamfight.posture", ["passive", "standard", "aggressive"], "macro.aggression", [], {
     resolverFields: ["identity.engageBias", "knobs.laneOffset.top", "knobs.laneOffset.mid", "knobs.laneOffset.bot"],
@@ -215,10 +214,15 @@ const ROWS = [
     live(`objectives.${key}`, ["low", "standard", "high"], `objectives.${key}Priority`, [], {
       resolverFields: [`knobs.${knob}`], engineReads: [knob],
       gate: {
-        rank: ["low", "standard", "high"], claims: claimsOf(["low", "standard", "high"], `objectiveFightEntriesPerMin.${key}`),
+        rank: ["low", "standard", "high"],
+        //  Phase 3a-C4（2026-10-22）：指標由 objectiveFightEntriesPerMin.<k> 改為 contestShare.<k>.early+mid+late（C7 §4-D：舊指標是雜訊；
+        //  C4 事前登記的主張指標，n=400 紅藍複驗在 tools/fixtures/phase_options_result_c4.json）。舊指標的結果留在歷史，不刪不改。
+        claims: claimsOf(["low", "standard", "high"], `contestShare.${key}.early+mid+late`),
+        retiredClaims: [{ metric: `objectiveFightEntriesPerMin.${key}`, retiredAt: "2026-10-22", reason: "C7 §4-D: fight entries near the pit were noise; C4 registered per-appearance contest share",
+          evidence: "tools/fixtures/tactic_truth_3a.json at commit 9c88d3d0 (MEASURED_EXCLUSIONS rows under the old metric are in git at 9c88d3d0)" }],
         deltaFields: [`knobs.${knob}`],
-        why: "數的是己方英雄在這個物件的坑附近「進入團戰狀態」的次數（坑的位置讀引擎當場的物件位置，佈局對調也跟著走），除以分鐘數；"
-          + "量的是人真的去了坑邊集結，不是物件窗的擲骰結果。",
+        why: "數的是這個物件每次出現（存活期間）己方有任何存活英雄進入坑位 9 單位內的比例＝有出現在坑邊，路過也算；"
+          + "不是拿到物件的比例（那是結果，只報告不宣稱）。分母是物件出現次數，不是分鐘數。",
       },
     })),
   live("objectives.tower", ["low", "standard", "high"], "objectives.towerPriority", [], {
@@ -231,12 +235,41 @@ const ROWS = [
     },
   }),
 
+  //  ── 每時期型（Phase 3a-C3-3／C4，2026-10-22 升級 live）：選擇只覆寫「那一個時期」的設定（PHASE_CHOICE_MAPPING），
+  //     Director 在該時期改讀那一份方針；其他時期不變。resolverFields 是 resolver 輸出 phases[i] 底下的欄位。
+  //     證據：n=400 新 seeds 紅藍複驗（C3-3 tools/fixtures/phase_options_result_c3_3.json、C4 phase_options_result_c4.json）＋G-A7 冒煙。
+  //     沒站住的選擇（後期巴龍、後期推塔）在 REPLICATION_WITHHELD；前期沒有巴龍（對照表不提供）。
+  ...PHASES.map((p, idx) => live(`phases.${p}.grouping`, ["standard", "group"], "macro.grouping", [], {
+    resolverFields: [`phases.${idx}.knobs.joinFight`], engineReads: ["joinFight"],
+    gate: {
+      claims: [{ choice: "group", metric: `joinGoGeneralStartsPerMin.${p}`, direction: "up" }],
+      deltaFields: [`phases.${idx}.knobs.joinFight`],
+      why: "數的是上／中／下路英雄在這個時期「決定去參團」的次數（參團擲骰由否變成是；重擲仍為是不算），除以該時期自己的分鐘數。"
+        + "交戰狀態機下熱點都是新物件，『一般熱點』與全部熱點相同；龍／巴龍坑的集結走另一條路（_objJoinV3），不在這個數裡。",
+    },
+  })),
+  ...PHASES.map((p, idx) => live(`phases.${p}.objectiveOrder`, p === "early" ? ["none", "dragon", "towers"] : ["none", "dragon", "baron", "towers"],
+    "objectives.dragonPriority", p === "early" ? ["objectives.towerPriority"] : ["objectives.baronPriority", "objectives.towerPriority"], {
+      //  推塔的連帶：towerPriority 在投影時也讓三路 laneOffset 前移（與整場 objectives.tower 相同）；宣稱只有圍塔窗口，站位連帶要在文案揭露。
+      resolverFields: [`phases.${idx}.knobs.dragonJoin`, ...(p === "early" ? [] : [`phases.${idx}.knobs.baronJoin`]), `phases.${idx}.identity.siegeBias`,
+        `phases.${idx}.knobs.laneOffset.top`, `phases.${idx}.knobs.laneOffset.mid`, `phases.${idx}.knobs.laneOffset.bot`],
+      engineReads: ["dragonJoin", ...(p === "early" ? [] : ["baronJoin"]), "siegeBias", "laneOffset"],
+      gate: {
+        claims: [
+          { choice: "dragon", metric: `contestShare.dragon.${p}`, direction: "up" },
+          ...(p === "early" ? [] : [{ choice: "baron", metric: `contestShare.baron.${p}`, direction: "up" }]),
+          { choice: "towers", metric: `siegeWindowsPerMin.${p}`, direction: "up" },
+        ],
+        deltaFields: [`phases.${idx}.knobs.dragonJoin`, ...(p === "early" ? [] : [`phases.${idx}.knobs.baronJoin`]), `phases.${idx}.identity.siegeBias`],
+        why: "龍／巴龍優先：這個時期每次物件出現，己方有英雄進入坑位 9 單位內的比例（出現在坑邊，不是拿到）；"
+          + "推塔優先：這個時期己方攻城主動權窗開啟的次數 ÷ 該時期分鐘數。只宣稱「排第一」的物件，不宣稱其他物件變不重要。",
+      },
+    })),
+
   //  ── design：規格列了，但現行引擎沒有可解析的旋鈕 ────────────────────────────
   design("winCondition", "勝利路徑沒有對應的引擎旋鈕，列舉內容規格尚未定稿"),
   ...PHASES.flatMap((p) => [
     design(`phases.${p}.focusLane`, "引擎沒有「依時期指定主攻路」的旋鈕（Gank 路線權重由路姿態推導，整場共用）"),
-    design(`phases.${p}.grouping`, WHOLE_MATCH + "（macro.grouping）"),
-    design(`phases.${p}.objectiveOrder`, WHOLE_MATCH + "（objectives.dragon／baron／towerPriority）"),
     design(`phases.${p}.tradePolicy`, "資源交換屬 3b（規格標 *）；引擎沒有對應旋鈕"),
   ]),
   ...LANES.map((l) => design(`lanes.${l}.wave`, "兵線處理屬 3b（規格標 *）；引擎沒有對應旋鈕")),
@@ -318,10 +351,9 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("classic.m2", "risk.tolerance", "cautious", "no_measured_effect", "retreatStartsPerMin", 40, 0.79),
   ex("*", "risk.tolerance", "bold", "no_measured_effect", "retreatStartsPerMin", 40, -1.64),
   ex("*", "teamfight.grouping", "tight", "no_measured_effect", "fightEntriesPerMinAll", 40, 0.73),
-  ex("*", "objectives.dragon", "low", "no_measured_effect", "objectiveFightEntriesPerMin.dragon", 40, -0.74),
-  ex("*", "objectives.dragon", "high", "no_measured_effect", "objectiveFightEntriesPerMin.dragon", 40, -0.13),
+  //  整場巨龍 low／high、巴龍 high（objectiveFightEntriesPerMin.<k>，n=40）已由 C4 n=400 紅藍複驗取代（REPLICATION_CONFIRMED；Phase 3a-C4）；
+  //  舊列保留在 git 歷史（commit 9c88d3d0 的本檔與 tools/fixtures/tactic_truth_3a.json）。巴龍 low 沒有複驗，仍由真實性表判定。
   ex("*", "objectives.baron", "low", "no_measured_effect", "objectiveFightEntriesPerMin.baron", 40, -0.88),
-  ex("*", "objectives.baron", "high", "reversed_effect", "objectiveFightEntriesPerMin.baron", 40, -2.03),
   ex("*", "objectives.tower", "low", "no_measured_effect", "siegeWindowsPerMin", 40, 0.87),
   ex("classic.m3", "objectives.tower", "high", "no_measured_effect", "siegeWindowsPerMin", 40, 1.97),
 ]);
@@ -338,6 +370,7 @@ export const measuredExclusion = (template, dimension, choice) =>
  * tools/check_tactic_replication_3a.mjs 驗證這張表與複驗結果檔完全一致。
  * 第二個來源（Phase 3a-C3-2 收尾）：tools/fixtures/phase_stance_result_c3_2_rev1.json 的列——verdict ≠ confirmed ⇒ not_replicated；
  * confirmed 但 Owner 暫緩 ⇒ reason "owner_hold"（verdict 仍記 confirmed）。核准的列在 REPLICATION_CONFIRMED。
+ * 第三、四個來源（Phase 3a-C3-3／C4）：tools/fixtures/phase_options_result_c3_3.json、phase_options_result_c4.json，規則同上。
  */
 const rw = (dimension, choice, verdict, metric, blue, red) => ({ template: "*", dimension, choice, reason: "not_replicated", verdict, metric, blue, red });
 const oh = (dimension, choice, metric, blue, red) => ({ template: "*", dimension, choice, reason: "owner_hold", verdict: "confirmed", metric, blue, red });
@@ -350,6 +383,10 @@ export const REPLICATION_WITHHELD = deepFreeze([
   //  seeds 18001–18400）紅藍雙方都 confirmed，但 Owner 指示「維持 design，不開放」⇒ 原因 owner_hold（數字照抄結果檔，不是沒站住）。
   oh("phases.early.stance", "scaling", "engageDecisionsPerMin.early", { n: 400, rel: -0.059975, z: -6.217762 }, { n: 400, rel: -0.07647, z: -8.469172 }),
   oh("phases.mid.stance", "scaling", "engageDecisionsPerMin.mid", { n: 400, rel: -0.063009, z: -5.997 }, { n: 400, rel: -0.072286, z: -7.002594 }),
+  //  Phase 3a-C4（tools/fixtures/phase_options_result_c4.json，seeds 3401–3800）：後期巴龍優先 one_sided（藍方 z 2.29）、
+  //  後期推塔優先 insufficient（幅度過 5 % 但 z 未達 3）⇒ 不提供；不放大係數（原因假設見 review/tactic-book-3a/C4_物件優先_結果解讀.md）。
+  rw("phases.late.objectiveOrder", "baron", "one_sided", "contestShare.baron.late", { n: 209, rel: 0.096459, z: 2.293164 }, { n: 209, rel: 0.142357, z: 3.902204 }),
+  rw("phases.late.objectiveOrder", "towers", "insufficient", "siegeWindowsPerMin.late", { n: 236, rel: 0.057889, z: 1.717821 }, { n: 236, rel: 0.073891, z: 2.864628 }),
 ]);
 /** 這個（模板, 維度, 選擇）被複驗撤下嗎？回傳該列或 null。 */
 export const replicationWithheld = (template, dimension, choice) =>
@@ -357,7 +394,8 @@ export const replicationWithheld = (template, dimension, choice) =>
 
 /**
  * 以 n=400 新 seeds 紅藍複驗**取代** n=40 真實性列的選擇（Phase 3a-C3-2 收尾，2026-10-22 Owner 核准六個時期姿態）。
- * 來源：tools/fixtures/phase_stance_result_c3_2_rev1.json（seeds 18001–18400、技能層開、修正後的儀器）。
+ * 來源：tools/fixtures/phase_stance_result_c3_2_rev1.json（seeds 18001–18400、技能層開、修正後的儀器）；
+ *       Phase 3a-C3-3／C4 起另有 phase_options_result_c3_3.json（seeds 18401–18800）、phase_options_result_c4.json（seeds 3401–3800）。
  * 真實性結果表（seeds 1–40）仍照常量測、照常記錄；對**這份複驗涵蓋的選擇**，排除與否改由複驗判定（n=400 的證據取代 n=40 的煙霧測試），
  * 所以它們不會出現在 MEASURED_EXCLUSIONS；confirmed 且 Owner 核准的列在這張表，confirmed 但 Owner 暫緩的列在 REPLICATION_WITHHELD（owner_hold）。
  * tools/check_tactic_replication_3a.mjs 驗證：兩張表合起來恰好覆蓋結果檔的每一列，數字照抄；check_tactic_truth_3a.mjs 的推導讀同一個結果檔。
@@ -372,4 +410,19 @@ export const REPLICATION_CONFIRMED = deepFreeze([
   rc("phases.mid.stance", "defensive", "engageDecisionsPerMin.mid", { n: 400, rel: -0.117008, z: -9.94678 }, { n: 400, rel: -0.120886, z: -10.617464 }),
   rc("phases.late.stance", "defensive", "engageDecisionsPerMin.late", { n: 243, rel: -0.12713, z: -7.062536 }, { n: 243, rel: -0.119231, z: -7.248935 }),
   rc("phases.late.stance", "scaling", "engageDecisionsPerMin.late", { n: 243, rel: 0.077244, z: 4.210787 }, { n: 243, rel: 0.100371, z: 5.56091 }),
+  //  Phase 3a-C3-3（tools/fixtures/phase_options_result_c3_3.json，seeds 18401–18800）：每時期成團，紅藍兩側 confirmed。
+  rc("phases.early.grouping", "group", "joinGoGeneralStartsPerMin.early", { n: 400, rel: 0.107018, z: 4.676797 }, { n: 400, rel: 0.16, z: 6.689111 }),
+  rc("phases.mid.grouping", "group", "joinGoGeneralStartsPerMin.mid", { n: 400, rel: 0.249005, z: 7.951875 }, { n: 400, rel: 0.168016, z: 5.706359 }),
+  rc("phases.late.grouping", "group", "joinGoGeneralStartsPerMin.late", { n: 237, rel: 0.26139, z: 3.901966 }, { n: 237, rel: 0.292017, z: 4.166681 }),
+  //  Phase 3a-C4（tools/fixtures/phase_options_result_c4.json，seeds 3401–3800）：每時期物件優先＋整場龍／巴龍，紅藍兩側 confirmed。
+  //  主張是「出現在坑邊」（contestShare），不是拿到物件；推塔優先連帶三路 laneOffset 前移（文案揭露）。
+  rc("phases.early.objectiveOrder", "dragon", "contestShare.dragon.early", { n: 400, rel: 0.093023, z: 6.215495 }, { n: 400, rel: 0.125, z: 7.439383 }),
+  rc("phases.mid.objectiveOrder", "dragon", "contestShare.dragon.mid", { n: 400, rel: 0.172732, z: 8.148497 }, { n: 400, rel: 0.172471, z: 7.177891 }),
+  rc("phases.late.objectiveOrder", "dragon", "contestShare.dragon.late", { n: 228, rel: 0.267101, z: 5.397529 }, { n: 230, rel: 0.346789, z: 7.393996 }),
+  rc("phases.mid.objectiveOrder", "baron", "contestShare.baron.mid", { n: 400, rel: 0.062927, z: 5.542482 }, { n: 400, rel: 0.07438, z: 6.157781 }),
+  rc("phases.early.objectiveOrder", "towers", "siegeWindowsPerMin.early", { n: 400, rel: 0.766467, z: 5.387618 }, { n: 400, rel: 0.702247, z: 5.314 }),
+  rc("phases.mid.objectiveOrder", "towers", "siegeWindowsPerMin.mid", { n: 400, rel: 0.28016, z: 5.441881 }, { n: 400, rel: 0.210547, z: 3.909199 }),
+  rc("objectives.dragon", "high", "contestShare.dragon.early+mid+late", { n: 400, rel: 0.148519, z: 10.514663 }, { n: 400, rel: 0.193406, z: 12.537589 }),
+  rc("objectives.dragon", "low", "contestShare.dragon.early+mid+late", { n: 400, rel: -0.097228, z: -6.305574 }, { n: 400, rel: -0.100074, z: -6.3118 }),
+  rc("objectives.baron", "high", "contestShare.baron.early+mid+late", { n: 400, rel: 0.092886, z: 6.549204 }, { n: 400, rel: 0.089905, z: 6.379305 }),
 ]);

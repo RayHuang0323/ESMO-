@@ -150,11 +150,14 @@ export const CHOICE_MAPPING = deepFreeze({
  * 目前這些維度在 Registry 都是 design：玩家計畫不能選（createTacticPlan 拒絕）；量測工具經 legacy 輸入的 phaseChoices 使用（只限工具規則集）。
  */
 const PHASE_IDX = Object.freeze({ early: 0, mid: 1, late: 2 });
+/** 每時期維度的「不覆寫」選擇（objectiveOrder／focusLane 的 none、grouping 的 standard）；沒有 ⇒ null。 */
+export const noOverrideChoiceOf = (row) => Object.keys(row.values).find((c) => row.values[c] === null || (isPlainObject(row.values[c]) && Object.keys(row.values[c]).length === 0)) ?? null;
 const objRow = (phase) => ({
   kind: "phaseConfig", phase,
   //  只宣稱「排第一」的物件（契約 C4-2）；前期沒有巴龍（§1.1）⇒ 前期不提供 baron。
-  values: { dragon: { "objectives.dragonPriority": 0.95 }, towers: { "objectives.towerPriority": 0.9 }, ...(phase === "early" ? {} : { baron: { "objectives.baronPriority": 0.85 } }) },
-  source: { dragon: "classic.m4 objectives.dragonPriority", towers: "classic.m1 objectives.towerPriority", ...(phase === "early" ? {} : { baron: "classic.m4 objectives.baronPriority" }) },
+  //  none＝不覆寫（Phase 3a-C 升級 live 時加入，讓這個維度有「本來的選擇」，同 grouping 的 standard）；不改任何既有行為。
+  values: { none: {}, dragon: { "objectives.dragonPriority": 0.95 }, towers: { "objectives.towerPriority": 0.9 }, ...(phase === "early" ? {} : { baron: { "objectives.baronPriority": 0.85 } }) },
+  source: { none: "std（不覆寫）", dragon: "classic.m4 objectives.dragonPriority", towers: "classic.m1 objectives.towerPriority", ...(phase === "early" ? {} : { baron: "classic.m4 objectives.baronPriority" }) },
 });
 const groupRow = (phase) => ({
   kind: "phaseConfig", phase,
@@ -217,6 +220,22 @@ export function applyPhasePatch(config, patch) {
   }
   return config;
 }
+/**
+ * 一個時期的投影（Resolver 與選擇引擎共用的唯一一份）：整場設定＋該時期覆寫 → { knobs, identity }。
+ * project＝{ toEngineTactic, toEngineTacticIdentity }（Resolver 傳入它注入的投影函式）；wantIdentity=false ⇒ identity 為 null。
+ * 強邊只取「該路 lanePlan＝aggressive」投影出來的 gankWeights；站位與其他旋鈕不動（契約 C5-3）。不改輸入；投影失敗會丟例外。
+ */
+export function phaseProjectionOf(config, override, project, wantIdentity = true) {
+  const cfg = applyPhasePatch(structuredClone(config), override?.patch);
+  const knobs = structuredClone(project.toEngineTactic(cfg));
+  const identity = wantIdentity ? structuredClone(project.toEngineTacticIdentity(cfg)) : null;
+  if (override?.gankLane) {
+    const g = structuredClone(cfg);
+    g.lanePlan = { ...(g.lanePlan ?? {}), [override.gankLane]: "aggressive" };
+    knobs.gankWeights = structuredClone(project.toEngineTactic(g).gankWeights);
+  }
+  return { knobs, identity };
+}
 
 /** 一列對照可能碰到的所有欄位（主欄位在前）。 */
 export const touchedFieldsOf = (row) => [row.target, row.onLeaveInvade?.target, row.split?.target].filter(Boolean);
@@ -225,8 +244,11 @@ const LANE_POS = { top: "top", mid: "mid", bot: "adc" };
 const splitLanesOf = (cfg) => ["top", "mid", "adc"].filter((p) => cfg.lanePlan?.[p] === "split");
 
 /** 建一個選擇引擎實例。`mapping` 可換（gate 植入有問題的對照表做對照組）。 */
-export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
+export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHASE_CHOICE_MAPPING } = {}) {
   const rowOf = (dim) => (typeof dim === "string" && Object.hasOwn(mapping.rows ?? {}, dim) ? mapping.rows[dim] : null);
+  const phasePhaseRows = phaseMapping.rows ?? {};
+  const phaseRowOf = (dim) => (typeof dim === "string" && Object.hasOwn(phasePhaseRows, dim) ? phasePhaseRows[dim] : null);
+  const PROJECT = { toEngineTactic, toEngineTacticIdentity };
   const tplConfig = (id) => TACTIC_TEMPLATES[id].config;
 
   /** 把一個選擇套到 config 上，回傳新 config；這個維度或選擇沒有對照 ⇒ null。 */
@@ -265,6 +287,9 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
 
   /** 這個維度目前（模板＋覆蓋層＋其他選擇之後）的有效選擇；對不到任何選擇 ⇒ null。 */
   function ownChoiceOf(cfg, dim) {
+    //  每時期維度：整場設定上永遠是「不覆寫」（standard／none）。
+    const pr = phaseRowOf(dim);
+    if (pr) return noOverrideChoiceOf(pr);
     const row = rowOf(dim);
     if (!row) return null;
     if (row.kind === "carry") return getPath(cfg, row.target) === row.values.core ? "core" : "normal";
@@ -283,6 +308,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
     //  opts.withMeasured:false ⇒ 不套用「量測排除表」與「複驗撤下清單」（G-A7 的量測計畫要看到所有候選，包括已經被排除的）。
     const useMeasured = opts?.withMeasured !== false;
     const tpl = templateById(templateId), live = registryRow(dim);
+    if (tpl && live && live.status === CAPABILITY_STATUS.LIVE && phaseRowOf(dim)) return phaseOfferedDetail(tpl, dim, live, overlayIds, otherChoices, useMeasured);
     if (!tpl || !live || live.status !== CAPABILITY_STATUS.LIVE || !rowOf(dim)) return null;
     const base = mergeConfig(tpl, overlayIds, otherChoices);
     const baseSig = sigOf(base), own = ownChoiceOf(base, dim);
@@ -300,6 +326,41 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING } = {}) {
       const next = applyChoice(base, dim, c);
       if (!next) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
       const s = sigOf(next);
+      if (s === baseSig) { withheld.push({ choice: c, reason: "no_effect" }); continue; }
+      if (seen.has(s)) { withheld.push({ choice: c, reason: "collides", with: seen.get(s) }); continue; }
+      seen.set(s, c); kept.add(c);
+    }
+    return { offered: live.choices.filter((c) => kept.has(c)), withheld, own };
+  }
+
+  /**
+   * 每時期維度（PHASE_CHOICE_MAPPING，Phase 3a-C 升級 live）的提供清單。規則與整場維度相同，差別只在「效果」怎麼算：
+   *   本來的選擇＝不覆寫的值（standard／none）；選擇的效果＝把同一時期的所有每時期選擇套到「模板＋覆蓋層＋整場選擇」之上，
+   *   用 Resolver 的同一個投影（phaseProjectionOf）算出該時期的 knobs／identity；與本來相同 ⇒ no_effect（覆寫取較高者，
+   *   已經比對照表高的模板不變），與同維度其他選擇相同 ⇒ collides。量測排除表與複驗撤下照常套用。
+   */
+  function phaseOfferedDetail(tpl, dim, live, overlayIds, otherChoices, useMeasured) {
+    const row = phaseRowOf(dim);
+    const [, phase, field] = dim.split(".");
+    const base = mergeConfig(tpl, overlayIds, otherChoices);
+    const samePhase = { ...(otherChoices?.phases?.[phase] ?? {}) };
+    delete samePhase[field];
+    const own = noOverrideChoiceOf(row);
+    const sigWith = (c) => {
+      const ov = phaseOverridesOf({ [phase]: { ...samePhase, [field]: c } }, { rows: phasePhaseRows });
+      if (!ov.ok) return null;
+      return stableStringify(phaseProjectionOf(base, ov.overrides[PHASE_IDX[phase]], PROJECT));
+    };
+    const baseSig = sigWith(own);
+    const order = own && live.choices.includes(own) ? [own, ...live.choices.filter((c) => c !== own)] : [...live.choices];
+    const seen = new Map(), kept = new Set(), withheld = [];
+    for (const c of order) {
+      if (c === own) { seen.set(baseSig, c); kept.add(c); continue; }
+      if (useMeasured && measuredExclusion(tpl.templateId, dim, c)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      if (useMeasured) { const rw = replicationWithheld(tpl.templateId, dim, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
+      if (!Object.hasOwn(row.values, c)) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
+      const s = sigWith(c);
+      if (s === null) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
       if (s === baseSig) { withheld.push({ choice: c, reason: "no_effect" }); continue; }
       if (seen.has(s)) { withheld.push({ choice: c, reason: "collides", with: seen.get(s) }); continue; }
       seen.set(s, c); kept.add(c);
