@@ -1,0 +1,444 @@
+{
+  "schema": "esmo.phase-options-result.v1",
+  "registration": "tools/fixtures/phase_options_registration_c3_3.json",
+  "studyId": "phase-options-c3-3",
+  "reportedAt": "2026-10-22T02:45:56.825Z",
+  "gitHead": "9c88d3d03ea48b179c37744be6170dbf4c64c2c1",
+  "dirtyFilesUnderSrcTools": 0,
+  "simulationVersion": "moba-sim.v21",
+  "fingerprint": "21a219764652fd1d",
+  "batchStartedUnder": {
+    "study": "phase-options-c3-3",
+    "registration": "tools/fixtures/phase_options_registration_c3_3.json",
+    "startedAt": "2026-10-22T01:47:10.795Z",
+    "gitHead": "9c88d3d03ea48b179c37744be6170dbf4c64c2c1",
+    "dirtyFilesUnderSrcTools": 0,
+    "simulationVersion": "moba-sim.v21",
+    "fingerprint": "21a219764652fd1d"
+  },
+  "stale": [],
+  "complete": true,
+  "finishedMatches": 2800,
+  "erroredMatches": 0,
+  "erroredSeeds": [],
+  "instrumentMismatch": 0,
+  "rules": {
+    "minZ": 3,
+    "minRel": 0.05,
+    "minValidPairs": 200,
+    "text": "per claim per side: paired over seeds (treatment arm vs control, same side). OK = sign matches direction AND z in the direction >= 3 AND |rel| >= 5 %. A phase rate is null when the phase lasted < 60 s (late phase in short matches). Valid pairs < 200 on either side => unmeasurable (no fallback registered: a rate cannot be merged across phases without mixing phases where the override is off). Precedence: unmeasurable > reversed > guard_failed > confirmed > one_sided > insufficient."
+  },
+  "rows": [
+    {
+      "id": "groupEarly",
+      "dimension": "phases.early.grouping",
+      "choice": "group",
+      "phase": "early",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "joinGoGeneralStartsPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.1783107403545362,
+            "meanB": 0.19739311783107433,
+            "diff": 0.01908237747653805,
+            "sd": 0.08160446336394633,
+            "z": 4.6767974911942956,
+            "rel": 0.10701754385964893
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.17205422314911384,
+            "meanB": 0.19958289885297195,
+            "diff": 0.027528675703858193,
+            "sd": 0.0823089202814718,
+            "z": 6.68911112178811,
+            "rel": 0.15999999999999986
+          },
+          "direction": "up",
+          "registeredMetric": "joinGoGeneralStartsPerMin.early",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 4.6767974911942956,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 6.68911112178811,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [],
+      "reported": [
+        {
+          "metric": "laneGeneralEntriesPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.16016684045881152,
+            "meanB": 0.17236704900938501,
+            "diff": 0.012200208550573513,
+            "sd": 0.0879684406112346,
+            "z": 2.773769425899179,
+            "rel": 0.07617187499999986
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.1476538060479669,
+            "meanB": 0.1708029197080295,
+            "diff": 0.02314911366006257,
+            "sd": 0.08078586376171908,
+            "z": 5.730981283641837,
+            "rel": 0.1567796610169489
+          }
+        },
+        {
+          "metric": "joinGoStartsPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.1783107403545362,
+            "meanB": 0.19739311783107433,
+            "diff": 0.01908237747653805,
+            "sd": 0.08160446336394633,
+            "z": 4.6767974911942956,
+            "rel": 0.10701754385964893
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.17205422314911384,
+            "meanB": 0.19958289885297195,
+            "diff": 0.027528675703858193,
+            "sd": 0.0823089202814718,
+            "z": 6.68911112178811,
+            "rel": 0.15999999999999986
+          }
+        },
+        {
+          "metric": "joinGoGeneralStartsPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.19525524049511675,
+            "meanB": 0.20169962476455472,
+            "diff": 0.006444384269437933,
+            "sd": 0.10297822046645078,
+            "z": 1.251601404694587,
+            "rel": 0.03300492346887409
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.19202443924456794,
+            "meanB": 0.1952358626255339,
+            "diff": 0.003211423380965974,
+            "sd": 0.10352700509320906,
+            "z": 0.6204030297359834,
+            "rel": 0.01672403467808497
+          }
+        },
+        {
+          "metric": "joinGoGeneralStartsPerMin.late",
+          "blue": {
+            "n": 224,
+            "meanA": 0.10969425046592843,
+            "meanB": 0.1187362993374083,
+            "diff": 0.009042048871479873,
+            "sd": 0.16068074601031093,
+            "z": 0.8422228497588037,
+            "rel": 0.08242956064765106
+          },
+          "red": {
+            "n": 212,
+            "meanA": 0.0998405353616542,
+            "meanB": 0.10094383554670198,
+            "diff": 0.0011033001850477937,
+            "sd": 0.11600656178539212,
+            "z": 0.13847745273014203,
+            "rel": 0.011050623687576285
+          }
+        }
+      ]
+    },
+    {
+      "id": "groupMid",
+      "dimension": "phases.mid.grouping",
+      "choice": "group",
+      "phase": "mid",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "joinGoGeneralStartsPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.19525524049511675,
+            "meanB": 0.2438748124207898,
+            "diff": 0.04861957192567304,
+            "sd": 0.12228454702670037,
+            "z": 7.95187505009233,
+            "rel": 0.2490052087840838
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.19202443924456794,
+            "meanB": 0.22428765581740215,
+            "diff": 0.0322632165728342,
+            "sd": 0.11307811656857432,
+            "z": 5.7063590289406205,
+            "rel": 0.1680161999157973
+          },
+          "direction": "up",
+          "registeredMetric": "joinGoGeneralStartsPerMin.mid",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 7.95187505009233,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 5.7063590289406205,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [],
+      "reported": [
+        {
+          "metric": "laneGeneralEntriesPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.17053505565656216,
+            "meanB": 0.19102447762230795,
+            "diff": 0.02048942196574582,
+            "sd": 0.10207300214444771,
+            "z": 4.014660397026511,
+            "rel": 0.12014785984536307
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.17626219772366183,
+            "meanB": 0.19524449912520633,
+            "diff": 0.01898230140154458,
+            "sd": 0.12766585324235288,
+            "z": 2.9737476262364004,
+            "rel": 0.10769354771863458
+          }
+        },
+        {
+          "metric": "joinGoStartsPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.19525524049511675,
+            "meanB": 0.2438748124207898,
+            "diff": 0.04861957192567304,
+            "sd": 0.12228454702670037,
+            "z": 7.95187505009233,
+            "rel": 0.2490052087840838
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.19202443924456794,
+            "meanB": 0.22428765581740215,
+            "diff": 0.0322632165728342,
+            "sd": 0.11307811656857432,
+            "z": 5.7063590289406205,
+            "rel": 0.1680161999157973
+          }
+        },
+        {
+          "metric": "joinGoGeneralStartsPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.1783107403545362,
+            "meanB": 0.1783107403545362,
+            "diff": 0,
+            "sd": 0,
+            "z": 0,
+            "rel": 0
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.17205422314911384,
+            "meanB": 0.17205422314911384,
+            "diff": 0,
+            "sd": 0,
+            "z": 0,
+            "rel": 0
+          }
+        },
+        {
+          "metric": "joinGoGeneralStartsPerMin.late",
+          "blue": {
+            "n": 218,
+            "meanA": 0.10366701396322422,
+            "meanB": 0.10234835891639918,
+            "diff": -0.0013186550468250171,
+            "sd": 0.1320493047866839,
+            "z": -0.14744271827335306,
+            "rel": -0.012720102532255908
+          },
+          "red": {
+            "n": 229,
+            "meanA": 0.10093604835362588,
+            "meanB": 0.09473332632775334,
+            "diff": -0.006202722025872532,
+            "sd": 0.12363987372657186,
+            "z": -0.7591743164199017,
+            "rel": -0.0614519998260831
+          }
+        }
+      ]
+    },
+    {
+      "id": "groupLate",
+      "dimension": "phases.late.grouping",
+      "choice": "group",
+      "phase": "late",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "joinGoGeneralStartsPerMin.late",
+          "blue": {
+            "n": 237,
+            "meanA": 0.10686834538231765,
+            "meanB": 0.1348026374302174,
+            "diff": 0.027934292047899753,
+            "sd": 0.11021185885104315,
+            "z": 3.901966306820219,
+            "rel": 0.261389768391808
+          },
+          "red": {
+            "n": 237,
+            "meanA": 0.10247534860804017,
+            "meanB": 0.13239985647063274,
+            "diff": 0.02992450786259258,
+            "sd": 0.11056327388193872,
+            "z": 4.166681454812769,
+            "rel": 0.2920166485800539
+          },
+          "direction": "up",
+          "registeredMetric": "joinGoGeneralStartsPerMin.late",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 3.901966306820219,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 4.166681454812769,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [],
+      "reported": [
+        {
+          "metric": "laneGeneralEntriesPerMin.late",
+          "blue": {
+            "n": 237,
+            "meanA": 0.11949453125433257,
+            "meanB": 0.133389565667064,
+            "diff": 0.013895034412731393,
+            "sd": 0.08309677305126721,
+            "z": 2.5742435948581894,
+            "rel": 0.11628176006780724
+          },
+          "red": {
+            "n": 237,
+            "meanA": 0.1022475095440379,
+            "meanB": 0.12905911178673332,
+            "diff": 0.026811602242695395,
+            "sd": 0.12732531782718765,
+            "z": 3.2417697990567507,
+            "rel": 0.26222254568604103
+          }
+        },
+        {
+          "metric": "joinGoStartsPerMin.late",
+          "blue": {
+            "n": 237,
+            "meanA": 0.10686834538231765,
+            "meanB": 0.1348026374302174,
+            "diff": 0.027934292047899753,
+            "sd": 0.11021185885104315,
+            "z": 3.901966306820219,
+            "rel": 0.261389768391808
+          },
+          "red": {
+            "n": 237,
+            "meanA": 0.10247534860804017,
+            "meanB": 0.13239985647063274,
+            "diff": 0.02992450786259258,
+            "sd": 0.11056327388193872,
+            "z": 4.166681454812769,
+            "rel": 0.2920166485800539
+          }
+        },
+        {
+          "metric": "joinGoGeneralStartsPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.1783107403545362,
+            "meanB": 0.1783107403545362,
+            "diff": 0,
+            "sd": 0,
+            "z": 0,
+            "rel": 0
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.17205422314911384,
+            "meanB": 0.17205422314911384,
+            "diff": 0,
+            "sd": 0,
+            "z": 0,
+            "rel": 0
+          }
+        },
+        {
+          "metric": "joinGoGeneralStartsPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.19525524049511675,
+            "meanB": 0.19525524049511675,
+            "diff": 0,
+            "sd": 0,
+            "z": 0,
+            "rel": 0
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.19202443924456794,
+            "meanB": 0.19202443924456794,
+            "diff": 0,
+            "sd": 0,
+            "z": 0,
+            "rel": 0
+          }
+        }
+      ]
+    }
+  ],
+  "controlSymmetry": [],
+  "flags": [
+    "OWNER_DECISION: confirmed groupEarly, groupMid, groupLate — promotion to live follows the Registry/truth-table rules, Owner decides"
+  ],
+  "summary": {
+    "groupEarly": "confirmed",
+    "groupMid": "confirmed",
+    "groupLate": "confirmed"
+  }
+}
