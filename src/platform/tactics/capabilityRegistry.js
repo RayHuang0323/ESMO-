@@ -60,15 +60,22 @@ const live = (dimension, choices, basis, extraTouches = [], ext = {}) => Object.
   resolverFields: deepFreeze([...(ext.resolverFields ?? [])]),
   engineReads: deepFreeze([...(ext.engineReads ?? [])]),
   gate: deepFreeze(ext.gate ?? null),
+  //  requires：這一列只在某個規則集層存在時才可用（null＝任何規則集）。每時期型＝"tacticalDirector:core.v1"：
+  //  v20 規則集（static Director）沒有每時期方針，組裝器會拒絕帶每時期選擇的計畫 ⇒ 戰術書在那些規則集下不顯示、舊計畫先拿掉。
+  requires: ext.requires ?? null,
 });
 const claimsOf = (choices, metric, direction = "rank") => choices.map((choice) => ({ choice, metric, direction }));
 const design = (dimension, note, choices = []) => Object.freeze({
   dimension, choices: Object.freeze([...choices]), status: CAPABILITY_STATUS.DESIGN,
   minSimVersion: null, basis: null, note,
-  resolverFields: Object.freeze([]), engineReads: Object.freeze([]), gate: null,
+  resolverFields: Object.freeze([]), engineReads: Object.freeze([]), gate: null, requires: null,
 });
 
 const PHASES = ["early", "mid", "late"];
+/** 每時期型的列需要的規則集層（matchRuleset 的 layers.tacticalDirector）；格式 "<層>:<值>"。 */
+export const PHASE_DIRECTOR = "tacticalDirector:core.v1";
+/** 這一列在「Director 模式＝mode」的規則集下可用嗎（requires 為 null ⇒ 永遠可用；mode 缺少 ≡ "static"）。 */
+export const rowAvailableUnder = (row, directorMode = "static") => row?.requires == null || row.requires === `tacticalDirector:${directorMode}`;
 const PHASE_BASIS = { early: "macro.earlyGame", mid: "macro.midGame", late: "macro.lateGame" };
 const LANES = ["top", "mid", "bot"];
 const SEATS_WITH_LANE_CORE = { b1: "top", b3: "mid", b4: "adc" };   // 引擎 carryPriority 只認得 top／mid／adc
@@ -240,6 +247,7 @@ const ROWS = [
   //     證據：n=400 新 seeds 紅藍複驗（C3-3 tools/fixtures/phase_options_result_c3_3.json、C4 phase_options_result_c4.json）＋G-A7 冒煙。
   //     沒站住的選擇（後期巴龍、後期推塔）在 REPLICATION_WITHHELD；前期沒有巴龍（對照表不提供）。
   ...PHASES.map((p, idx) => live(`phases.${p}.grouping`, ["standard", "group"], "macro.grouping", [], {
+    requires: PHASE_DIRECTOR,
     resolverFields: [`phases.${idx}.knobs.joinFight`], engineReads: ["joinFight"],
     gate: {
       claims: [{ choice: "group", metric: `joinGoGeneralStartsPerMin.${p}`, direction: "up" }],
@@ -250,6 +258,7 @@ const ROWS = [
   })),
   ...PHASES.map((p, idx) => live(`phases.${p}.objectiveOrder`, p === "early" ? ["none", "dragon", "towers"] : ["none", "dragon", "baron", "towers"],
     "objectives.dragonPriority", p === "early" ? ["objectives.towerPriority"] : ["objectives.baronPriority", "objectives.towerPriority"], {
+      requires: PHASE_DIRECTOR,
       //  推塔的連帶：towerPriority 在投影時也讓三路 laneOffset 前移（與整場 objectives.tower 相同）；宣稱只有圍塔窗口，站位連帶要在文案揭露。
       resolverFields: [`phases.${idx}.knobs.dragonJoin`, ...(p === "early" ? [] : [`phases.${idx}.knobs.baronJoin`]), `phases.${idx}.identity.siegeBias`,
         `phases.${idx}.knobs.laneOffset.top`, `phases.${idx}.knobs.laneOffset.mid`, `phases.${idx}.knobs.laneOffset.bot`],

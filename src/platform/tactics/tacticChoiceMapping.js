@@ -29,7 +29,7 @@ import {
 } from "../contracts/MobaTacticConfig.js";
 import { applyVariant, variantById } from "../mastery/tacticVariant.js";
 import { stableStringify } from "../contracts/squadSnapshot.js";
-import { CAPABILITY_STATUS, registryRow, liveRows, measuredExclusion, replicationWithheld } from "./capabilityRegistry.js";
+import { CAPABILITY_STATUS, registryRow, liveRows, measuredExclusion, replicationWithheld, rowAvailableUnder } from "./capabilityRegistry.js";
 import { TACTIC_TEMPLATES, templateById } from "./tacticTemplates.js";
 import { overlayById } from "./tacticOverlays.js";
 
@@ -419,9 +419,10 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
    * 回傳 [{ dimension, own, offered }]（Registry 順序）；offered 空 ⇒ 該維度在這個模板上沒有可選的（UI 不該顯示）。
    * ⚠ Task 13 的瀏覽器 gate 必須拿 DOM 對照這個函式（不是另寫一份清單）。
    */
-  function tacticBookOptions(templateId, overlayIds = [], choices = {}) {
+  function tacticBookOptions(templateId, overlayIds = [], choices = {}, opts = {}) {
+    //  opts.tacticalDirector＝目前規則集的 Director 模式（缺少 ≡ "static"，即 v20）；需要每時期方針的列在 static 下不列出。
     const leaves = leavesOf(choices);
-    return liveRows().map((r) => {
+    return liveRows().filter((r) => rowAvailableUnder(r, opts?.tacticalDirector ?? "static")).map((r) => {
       const d = offeredDetail(templateId, r.dimension, overlayIds, nestedOf(leaves.filter(([k]) => k !== r.dimension)));
       return { dimension: r.dimension, own: d?.own ?? null, offered: d?.offered ?? [] };
     });
