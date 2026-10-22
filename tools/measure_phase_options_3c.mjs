@@ -11,7 +11,8 @@
 //  ── 判定（登記檔 rules；這裡是實作）────────────────────────────────────────────
 //   每個宣稱、每一側：同 seed 配對（對照組同側），兩側都要有效配對 ≥ minValidPairs；不足 ⇒ 改用登記的 fallbackMetric（合併桶）；
 //   仍不足 ⇒ 該選項 unmeasurable。OK＝方向相符、依方向 z ≥ minZ、|rel| ≥ minRel。
-//   守門（guards）：依方向反向且 z ≤ −minZ 而且 |rel| ≥ minRel（任一側）⇒ guard_failed（例：強邊不得靠少抓別路湊出來）。
+//   守門（guards）：依方向反向且 z ≤ −minZ 而且 |rel| ≥ minRel（任一側）⇒ guard_failed（例：強邊的比例上升不得來自抓人總數下降）；
+//   守門有效配對不足 minValidPairs ⇒ 該選項 unmeasurable（不默默放行）。controlSymmetry（選用）：對照組藍紅平均差超過容許值 ⇒ 標記。
 //   優先序：unmeasurable ＞ reversed（任一宣稱任一側依方向 z ≤ −minZ）＞ guard_failed ＞ confirmed（每個宣稱兩側都 OK）
 //          ＞ one_sided（恰好一側的每個宣稱都 OK）＞ insufficient。
 // ============================================================================
@@ -85,7 +86,7 @@ if (flag("selftest")) {
     process.env.ESMO_BALANCE_SKILLS = "on";
     const PS = await import(pathToFileURL(path.join(ROOT, "tools", "lib", "phaseStudySim.mjs")).href);
     const fake = { phaseSecs: [480, 480, 480], blue: { objApps: { dragon: [1, 1, 1], baron: [1, 1, 1] }, objContested: { dragon: [0, 0, 0], baron: [0, 0, 0] }, objCaptured: { dragon: [0, 0, 0], baron: [0, 0, 0] },
-      siegeOpens: [0, 0, 0], joinGoStarts: [0, 0, 0], laneGeneralEntries: [0, 0, 0], engages: [0, 0, 0], engageStarts: [0, 0, 0], ganksOwn: { top: [1, 1, 1], mid: [1, 1, 1], bot: [1, 1, 1] } } };
+      siegeOpens: [0, 0, 0], joinGoStarts: [0, 0, 0], joinGoGeneralStarts: [0, 0, 0], laneGeneralEntries: [0, 0, 0], engages: [0, 0, 0], engageStarts: [0, 0, 0], ganksOwn: { top: [1, 1, 1], mid: [1, 1, 1], bot: [1, 1, 1] } } };
     try { for (const o of REG.options) { if (!o.claims?.length) return false; for (const c of [...o.claims, ...(o.guards ?? [])]) { PS.studyMetricValue(fake, "blue", c.metric); if (c.fallbackMetric) PS.studyMetricValue(fake, "blue", c.fallbackMetric); } } return true; } catch { return false; }
   })()));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
@@ -105,7 +106,7 @@ if (flag("po-worker")) {
   process.env.ESMO_BALANCE_SKILLS = "on";
   delete process.env.ESMO_BALANCE_TALENTS;
   const PS = await import(pathToFileURL(path.join(ROOT, "tools", "lib", "phaseStudySim.mjs")).href);
-  const metricIds = [...new Set(OPTIONS.flatMap((o) => [...o.claims, ...(o.guards ?? [])].flatMap((c) => [c.metric, c.fallbackMetric].filter(Boolean))).concat(REG.reportedMetrics ?? []))];
+  const metricIds = [...new Set(OPTIONS.flatMap((o) => [...o.claims, ...(o.guards ?? [])].flatMap((c) => [c.metric, c.fallbackMetric].filter(Boolean))).concat(REG.reportedMetrics ?? [], REG.controlSymmetry?.metrics ?? []))];
   process.on("message", async (t) => {
     try {
       const ctrl = await PS.studyInput();
@@ -222,6 +223,8 @@ if (flag("report")) {
       return { ...x, direction: c.direction, registeredMetric: c.metric, usedFallback, ok: { blue: cellOk(x.blue, c.direction, RULES), red: cellOk(x.red, c.direction, RULES) } };
     });
     const guards = (o.guards ?? []).map((c) => { const x = { metric: c.metric, blue: statsFor(`${o.id}@blue`, "blue", c.metric), red: statsFor(`${o.id}@red`, "red", c.metric) }; return { ...x, direction: c.direction, ok: { blue: cellOk(x.blue, c.direction, RULES), red: cellOk(x.red, c.direction, RULES) } }; });
+    //  守門也要有足夠配對：量不到的守門不能默默放行（審查 2026-10-22 #5）。
+    if (guards.some((g) => g.blue.n < RULES.minValidPairs || g.red.n < RULES.minValidPairs)) measurable = false;
     const reported = (REG.reportedMetrics ?? []).filter((m) => (o.report ?? []).includes(m)).map((m) => ({ metric: m, blue: statsFor(`${o.id}@blue`, "blue", m), red: statsFor(`${o.id}@red`, "red", m) }));
     return { id: o.id, dimension: o.dimension, choice: o.choice, phase: o.phase ?? null, verdict: judgeable ? verdictOf({ measurable, claims, guards }, RULES) : null, claims, guards, reported };
   });
@@ -229,10 +232,19 @@ if (flag("report")) {
   if (ops.instrument) flags.push(`STOP(INSTRUMENT): ${ops.instrument}`);
   if (ops.breaker) flags.push(`STOP(CIRCUIT_BREAKER): ${ops.errored}`);
   if (stale.length) flags.push(`STALE: ${stale.join(", ")}`);
+  //  對照組兩側對稱（登記檔 controlSymmetry，選用）：己方視角的計數，對照組藍紅平均差超過容許值 ⇒ 計數可能有錯，標記；判定照算，登記檔寫明晉升前要先查儀器。
+  const controlSymmetry = (REG.controlSymmetry?.metrics ?? []).map((m) => {
+    const v = (s) => SEEDS.filter((x) => !errSeeds.has(x) && ctrl.has(x)).map((x) => ctrl.get(x).vals[s][m]).filter((x) => x !== null);
+    const mean = (a) => (a.length ? a.reduce((n, x) => n + x, 0) / a.length : null), b = mean(v("blue")), r = mean(v("red"));
+    const diff = b === null || r === null ? null : r - b;
+    return { metric: m, blue: b, red: r, diff, ok: diff !== null && Math.abs(diff) <= REG.controlSymmetry.maxAbsDiff };
+  });
+  const asym = controlSymmetry.filter((x) => !x.ok);
+  if (asym.length) flags.push(`CONTROL_ASYMMETRY (> ${REG.controlSymmetry.maxAbsDiff}): ${asym.map((x) => `${x.metric} ${x.blue?.toFixed(3)}/${x.red?.toFixed(3)}`).join(", ")} — instrument check required before any promotion`);
   const conf = rows.filter((r) => r.verdict === "confirmed").map((r) => r.id);
   if (conf.length) flags.push(`OWNER_DECISION: confirmed ${conf.join(", ")} — promotion to live follows the Registry/truth-table rules, Owner decides`);
   const result = { schema: "esmo.phase-options-result.v1", registration: REG_REL, studyId: REG.studyId, reportedAt: new Date().toISOString(), ...prov, batchStartedUnder: meta, stale, complete,
-    finishedMatches: ops.finished, erroredMatches: ops.errored, erroredSeeds: [...errSeeds], instrumentMismatch: ops.instrument, rules: RULES, rows, flags,
+    finishedMatches: ops.finished, erroredMatches: ops.errored, erroredSeeds: [...errSeeds], instrumentMismatch: ops.instrument, rules: RULES, rows, controlSymmetry, flags,
     summary: Object.fromEntries(rows.map((r) => [r.id, r.verdict])) };
   const f = (x, d = 3) => (x == null ? "—" : Number(x).toFixed(d));
   console.log(`${REG.studyId}：完整 ${complete}、完成 ${ops.finished}、失敗 ${ops.errored}、儀器不符 ${ops.instrument}${stale.length ? "、STALE" : ""}`);

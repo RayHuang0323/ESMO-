@@ -4,6 +4,7 @@
 //   L  層：skills／passives／curves 開、talents 關；balanceTool.v21、core.v1、teamRelative。
 //   W  _joinV3 的觀察包裝不改對局：同一場「包裝」與 runner 原樣跑（phaseBucketSim）的長度、勝方、擊殺、每時期接戰數逐欄相同。
 //   X  跨儀器：每時期 engages／engageStarts＝phaseBucketSim（已驗證的分時期儀器）；秒數相同。
+//      X2：每時期「一般熱點」參團擲骰成功（joinGoGeneralStarts）三桶相加＝c7DiagSim 的 goStarts.general（C7 §4-B 判讀用的同一定義），且每桶 ≤ joinGoStarts。
 //   S  自檢：爭奪三桶相加＝引擎 exec；抓人（己方路名）三路三桶相加＝引擎世界路總數；兩側物件出現次數相同；秒數＝長度。
 //   G  己方路名：紅方的抓人以 sideRelativeLane 換算（紅方世界上路＝己方下路）——用一場紅方「中期強邊＝上路」的輸入，
 //      引擎交給紅方的權重在世界下路，而儀器記到的是紅方**己方上路**比例上升的那一路（單場方向檢查，不是統計）。
@@ -39,6 +40,23 @@ for (const r of recs) {
   if (J(r.phaseSecs) !== J(b.phaseSecs)) bad.push(`${r.seed} phaseSecs`);
 }
 ck("W1／X1 包裝不改對局；每時期接戰數與秒數＝phaseBucketSim（未包裝）", bad.length === 0, bad.slice(0, 3).join(" ｜ "));
+{
+  const CD = await imp("tools/lib/c7DiagSim.mjs");
+  const arm = await CD.diagArm("teamfight.grouping", null);
+  const bad2 = [];
+  let generalTotal = 0;
+  for (const r of recs) {
+    const d = await CD.runDiagMatch(r.seed, { blue: arm, red: arm, ruleset: RULESET });
+    if (d.duration !== r.duration || d.winner !== r.winner) bad2.push(`${r.seed} match differs`);
+    for (const s of ["blue", "red"]) {
+      const g = r[s].joinGoGeneralStarts, a = r[s].joinGoStarts, sum = g[0] + g[1] + g[2];
+      generalTotal += sum;
+      if (sum !== d[s].goStarts.general) bad2.push(`${r.seed}.${s} general ${sum}≠${d[s].goStarts.general}`);
+      if (g.some((x, i) => x > a[i])) bad2.push(`${r.seed}.${s} general>all`);
+    }
+  }
+  ck("X2 一般熱點擲骰成功：三桶相加＝c7DiagSim goStarts.general（同場、同定義），每桶 ≤ 全部", bad2.length === 0 && generalTotal > 0, bad2.length ? bad2.slice(0, 3).join(" ｜ ") : `general 總數 ${generalTotal}`);
+}
 const sc = recs.flatMap((r) => PS.selfCheck(r).map((x) => `${r.seed}: ${x}`));
 ck("S1 爭奪／抓人三桶相加＝引擎整場值；兩側出現次數相同；秒數＝長度", sc.length === 0, sc.slice(0, 3).join(" ｜ "));
 ck("S2 有東西可數：每場都有巨龍出現、兩側都有抓人、有一般熱點的參團擲骰成功", recs.every((r) => r.blue.objApps.dragon.some((x) => x > 0) && ["blue", "red"].every((s) => PS.studyMetricValue(r, s, "ganksPerMin.early") !== null) && (r.blue.joinGoStarts.some((x) => x > 0) || r.red.joinGoStarts.some((x) => x > 0))));

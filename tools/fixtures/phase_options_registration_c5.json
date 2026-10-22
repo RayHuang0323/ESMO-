@@ -1,0 +1,458 @@
+{
+  "schema": "esmo.phase-options-registration.v1",
+  "studyId": "phase-options-c5",
+  "stage": "Phase 3a-C5 strong side (phases.<p>.focusLane = jungle gank tilt; quick-mode strong side = early + mid)",
+  "registeredAt": "2026-10-22",
+  "status": "REGISTERED — fixed before any run; nothing changes after the run starts",
+  "authority": {
+    "owner2026_10_22": "Owner long-task instruction: C5 builds on laneFrame; covers main-attack lane, resource tilt and jungle gank weight; C7 §4-A first, then handle the known reversal; quick-mode strong side defaults to early + mid; no unverified support protection or other hidden behaviour; every capability needs a new red/blue validation, one side alone cannot go live.",
+    "contract": "review/tactic-book-3a/C3-C6_行為契約草案.md §4 (C5-1 gank tilt is the only claimed effect; C5-2 protectRole not done; C5-3 laneOffset not claimed; C5-4 reversal handling; §4.3 metrics)",
+    "diagnostic": "tools/fixtures/c7_diag_result_3c.json: '4-A topDef / midAggr (both sides): behavioural_reversal' and 'gankWeights main cause (blue): no'. Contract C5-4 step 3: a behavioural reversal is an engine behaviour fix that needs an Owner decision (new ruleset layer + fingerprint); lanes.top.stance=defensive and lanes.mid.stance=aggressive stay excluded. Strong side does not depend on them (C5-4 step 4): the focusLane mapping takes only the gankWeights of the lane-aggressive projection and leaves laneOffset untouched (C5-3)."
+  },
+  "seeds": {
+    "range": "3801-4200",
+    "n": 400,
+    "seedSource": "tool (balance runner, seed used as-is)",
+    "why": "C5 range in the contract §4.3 / seed table; never used by any measurement"
+  },
+  "resultFixture": "tools/fixtures/phase_options_result_c5.json",
+  "design": {
+    "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative: own-lane names are converted to world lanes in the Director, so red top/bot are measurable — contract §4.6 option A is active)",
+    "instrument": "tools/lib/phaseStudySim.mjs (phaseStudySim.v1), self-check tools/check_phase_study_c3.mjs; layers skills/passives/power curve on, talents off. gankShare is counted in OWN-lane names (exec.<world>Ganks increments converted with gameData.sideRelativeLane)",
+    "arms": "control = std template, no per-phase choice, both sides. Each option is run twice: treatment on blue (red = control) and treatment on red (blue = control); pairs are the same seed.",
+    "mapping": "PHASE_CHOICE_MAPPING phases.<p>.focusLane (kind phaseGank): top/mid/bot -> the gankWeights projected by lanePlan.<top|mid|adc> = aggressive (MobaTacticConfig LANE_PLAN_ENUM), only in that phase; laneOffset and every other knob unchanged; none = no override. Quick-mode strong side writes the same lane into early and mid (Owner D-4); late stays none."
+  },
+  "options": [
+    {
+      "id": "focusTopEarly",
+      "dimension": "phases.early.focusLane",
+      "choice": "top",
+      "phase": "early",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "focusLane": "top"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.top.early",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.early"
+      ]
+    },
+    {
+      "id": "focusMidEarly",
+      "dimension": "phases.early.focusLane",
+      "choice": "mid",
+      "phase": "early",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "focusLane": "mid"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.mid.early",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.early"
+      ]
+    },
+    {
+      "id": "focusBotEarly",
+      "dimension": "phases.early.focusLane",
+      "choice": "bot",
+      "phase": "early",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "focusLane": "bot"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.bot.early",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.early"
+      ]
+    },
+    {
+      "id": "focusTopMid",
+      "dimension": "phases.mid.focusLane",
+      "choice": "top",
+      "phase": "mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "mid": {
+            "focusLane": "top"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.top.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.mid"
+      ]
+    },
+    {
+      "id": "focusMidMid",
+      "dimension": "phases.mid.focusLane",
+      "choice": "mid",
+      "phase": "mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "mid": {
+            "focusLane": "mid"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.mid.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.mid"
+      ]
+    },
+    {
+      "id": "focusBotMid",
+      "dimension": "phases.mid.focusLane",
+      "choice": "bot",
+      "phase": "mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "mid": {
+            "focusLane": "bot"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.bot.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.mid"
+      ]
+    },
+    {
+      "id": "focusTopLate",
+      "dimension": "phases.late.focusLane",
+      "choice": "top",
+      "phase": "late",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "late": {
+            "focusLane": "top"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.top.late",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.late",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.late"
+      ]
+    },
+    {
+      "id": "focusMidLate",
+      "dimension": "phases.late.focusLane",
+      "choice": "mid",
+      "phase": "late",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "late": {
+            "focusLane": "mid"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.mid.late",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.late",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.late"
+      ]
+    },
+    {
+      "id": "focusBotLate",
+      "dimension": "phases.late.focusLane",
+      "choice": "bot",
+      "phase": "late",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "late": {
+            "focusLane": "bot"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.bot.late",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.late",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.late"
+      ]
+    },
+    {
+      "id": "strongSideTop",
+      "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+      "choice": "top",
+      "phase": "early+mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "focusLane": "top"
+          },
+          "mid": {
+            "focusLane": "top"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.top.early",
+          "direction": "up"
+        },
+        {
+          "metric": "gankShare.top.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "direction": "up"
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "gankShare.top.late"
+      ]
+    },
+    {
+      "id": "strongSideMid",
+      "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+      "choice": "mid",
+      "phase": "early+mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "focusLane": "mid"
+          },
+          "mid": {
+            "focusLane": "mid"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.mid.early",
+          "direction": "up"
+        },
+        {
+          "metric": "gankShare.mid.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "direction": "up"
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "gankShare.mid.late"
+      ]
+    },
+    {
+      "id": "strongSideBot",
+      "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+      "choice": "bot",
+      "phase": "early+mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "focusLane": "bot"
+          },
+          "mid": {
+            "focusLane": "bot"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "gankShare.bot.early",
+          "direction": "up"
+        },
+        {
+          "metric": "gankShare.bot.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "direction": "up"
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "gankShare.bot.late"
+      ]
+    }
+  ],
+  "reportedMetrics": [
+    "ganksPerMin.early",
+    "ganksPerMin.mid",
+    "ganksPerMin.late",
+    "gankShare.top.late",
+    "gankShare.mid.late",
+    "gankShare.bot.late"
+  ],
+  "rules": {
+    "minZ": 3,
+    "minRel": 0.05,
+    "minValidPairs": 200,
+    "text": "per claim per side: paired over seeds (treatment arm vs control, same side). OK = sign matches direction AND z in the direction >= 3 AND |rel| >= 5 %. gankShare is null when the side made no gank in that phase; valid pairs < 200 on either side => unmeasurable (no fallback registered). Guard: ganksPerMin.<p> of the same side must not fall (z <= -3 AND |rel| >= 5 % on either side => guard_failed); a guard with < 200 valid pairs on either side makes the option unmeasurable (it never passes silently). A share rise with total ganks flat is the intended tilt (fewer ganks elsewhere); the guard catches a share rise produced by total ganks falling. A strong-side option needs BOTH phase claims on BOTH sides. Precedence: unmeasurable > reversed > guard_failed > confirmed > one_sided > insufficient."
+  },
+  "notClaimed": {
+    "laneOffset": "positioning (laneOffset) is not a strong-side effect (C5-3) and is not changed by focusLane",
+    "protectRole": "C5-2 (core protection tilt) is not implemented and not measured (Owner: no hidden support behaviour)",
+    "resourceTilt": "resource / gold tilt has no engine system (contract §4.2 '不做'); it stays design, nothing is registered",
+    "weakSide": "no separate weak-side behaviour",
+    "laneStances": "the lanes.top.stance=defensive / lanes.mid.stance=aggressive behavioural reversal (C7 §4-A) is an Owner decision; this study neither uses nor fixes it"
+  },
+  "consequences": {
+    "confirmed": "the per-phase focusLane value (and the quick-mode strong side for that lane, if its own option is confirmed) becomes offerable in a separate commit with gates; evidence scope is balanceTool.v21, std template; a lane confirmed on one side only stays design",
+    "notConfirmed": "stays design; coefficients are never enlarged; root cause recorded"
+  },
+  "controlSymmetry": {
+    "metrics": [
+      "gankShare.top.early",
+      "gankShare.mid.early",
+      "gankShare.bot.early",
+      "gankShare.top.mid",
+      "gankShare.mid.mid",
+      "gankShare.bot.mid"
+    ],
+    "maxAbsDiff": 0.1,
+    "rule": "contract §4.4: gankShare is counted in own-lane names, so the control arm's blue and red means should be close. |red - blue| > 0.10 on any listed metric => flag CONTROL_ASYMMETRY in the result; verdicts are still computed and recorded, but no C5 option is promoted until the instrument is checked and the check is documented. Tolerance fixed before the run without looking at C5 data."
+  },
+  "ownerItems": {
+    "mainAttackLane": "= jungle gank tilt only (phases.<p>.focusLane -> gankWeights). No push, positioning, or lane-assignment behaviour is attached.",
+    "resourceTilt": "not done: the engine has no gold/resource distribution system (contract §4.2). Stays design; nothing registered.",
+    "jungleGankWeight": "claimed: gankShare.<lane>.<p> up (own-lane names), guarded by ganksPerMin.<p>."
+  },
+  "power": "Late gankShare buckets need a gank by the side in the late phase in both arms; with about 238/400 matches reaching a late phase >= 60 s, focus*Late options may be unmeasurable. Late pairs only include seeds where both arms reach late (selection after treatment). Stated before the run.",
+  "reviewHistory": "Pre-run review 2026-10-22: APPROVE WITH CHANGES, no blockers. Fixed before commit: #5 guard wording corrected and guards now need >= 200 valid pairs (tool change), #6 control symmetry stop/flag with fixed tolerance 0.10 (tool change), #7 Owner's three items mapped explicitly, late-bucket expectation stated."
+}
