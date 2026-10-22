@@ -55,9 +55,9 @@ export const DIMENSION_LABELS = Object.freeze({
 
 const STANCE = { aggressive: "進攻", standard: "標準", defensive: "防守", split: "帶線", scaling: "發育" };
 const LEVEL = { low: "低", standard: "標準", high: "高" };
-//  每時期：成團＝更常決定去參團；物件優先＝更常出現在那個物件的坑邊（不是保證拿到）；推塔優先連帶三路站位前壓（文案揭露）。
+//  每時期：成團＝更常決定去參團；物件優先＝更常出現在那個物件的坑邊（文案寫「多去」，不寫「拿到」）；推塔優先連帶三路站位前壓（文案揭露）。
 const GROUPING = { standard: "標準", group: "成團" };
-const OBJECTIVE_ORDER = { none: "不指定", dragon: "巨龍優先", baron: "巴龍優先", towers: "推塔優先（站位前壓）" };
+const OBJECTIVE_ORDER = { none: "不指定", dragon: "多去龍坑", baron: "多去巴龍坑", towers: "推塔優先（站位前壓）" };
 /** 選擇 id → 中文（依維度；找不到就用共用表）。 */
 export const CHOICE_LABELS = Object.freeze({
   "teamfight.posture": { passive: "保守", standard: "標準", aggressive: "積極" },

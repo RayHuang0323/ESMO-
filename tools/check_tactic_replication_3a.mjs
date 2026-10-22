@@ -297,12 +297,19 @@ console.log("\n§P 第三、四個來源：每時期選擇複驗（C3-3 seeds 18
   const vBadP = allRows.filter((r) => verdictP(r) !== r.verdict).map((r) => `${keyOf(r)} ${r.verdict}≠${verdictP(r)}`);
   ck(`P2 每列的判定能由數字依事前登記規則重算（${allRows.length} 列）`, vBadP.length === 0 && allRows.length === 14, vBadP.join(" | "));
   const primP = (r, s) => ({ n: r.claims[0][s].n, rel: r6(r.claims[0][s].rel), z: r6(r.claims[0][s].z) });
-  const wantCP = allRows.filter((r) => r.verdict === "confirmed").map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
+  //  只在 v21 量的證據只核准需要 Director 的每時期型；整場選項的 confirmed 列在 REPLICATION_V21_SCOPE_ONLY（不取代 v20 的真實性列）。
+  const phaseDim = (d) => Registry.registryRow(d)?.requires === Registry.PHASE_DIRECTOR;
+  const wantV21 = allRows.filter((r) => r.verdict === "confirmed" && !phaseDim(r.dimension)).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
+  const wantCP = allRows.filter((r) => r.verdict === "confirmed" && phaseDim(r.dimension)).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
   const wantWP = allRows.filter((r) => r.verdict !== "confirmed").map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "not_replicated", verdict: r.verdict, metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
   const CP = Registry.REPLICATION_CONFIRMED.filter((x) => optKeys.has(keyOf(x))), WP = W.filter((x) => optKeys.has(keyOf(x)));
-  ck("P3 REPLICATION_CONFIRMED 屬於這兩份的部分 ＝ confirmed 的列（逐欄相同：指標、判定、紅藍 n／rel／z 照抄主宣稱）", sameList(CP, wantCP), `${CP.length} 筆`);
+  ck("P3 REPLICATION_CONFIRMED 屬於這兩份的部分 ＝ confirmed 的每時期型列（逐欄相同：指標、判定、紅藍 n／rel／z 照抄主宣稱）", sameList(CP, wantCP), `${CP.length} 筆`);
+  const V21 = Registry.REPLICATION_V21_SCOPE_ONLY;
+  ck("P3b REPLICATION_V21_SCOPE_ONLY ＝ confirmed 的整場選項列（整場巨龍 high／low、巴龍 high；只留證據）；它們不在 REPLICATION_CONFIRMED，v20 的量測排除表照舊決定提供",
+    sameList(V21, wantV21) && V21.length === 3 && V21.every((x) => !CP.some((y) => keyOf(y) === keyOf(x))) && Object.isFrozen(V21)
+    && V21.every((x) => Registry.measuredExclusion("std", x.dimension, x.choice) !== null), V21.map(keyOf).join(" "));
   ck("P4 REPLICATION_WITHHELD 屬於這兩份的部分 ＝ 沒站住的列（not_replicated；後期巴龍 one_sided、後期推塔 insufficient）", sameList(WP, wantWP), WP.map((x) => `${keyOf(x)}:${x.verdict}`).join(" "));
-  ck("P5 兩張表合起來恰好覆蓋兩份結果檔的每一列、沒有重疊、也不與前兩份來源重疊", CP.length + WP.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
+  ck("P5 三張表（核准、撤下、只在 v21）合起來恰好覆蓋兩份結果檔的每一列、沒有重疊、也不與前兩份來源重疊", CP.length + WP.length + V21.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
     && [...optKeys].every((k) => !origKeys.has(k) && !revKeys.has(k)));
   const bindBad = allRows.filter((r) => {
     const row = Registry.registryRow(r.dimension), claim = row?.gate?.claims?.find((c) => c.choice === r.choice);

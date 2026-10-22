@@ -360,9 +360,10 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("classic.m2", "risk.tolerance", "cautious", "no_measured_effect", "retreatStartsPerMin", 40, 0.79),
   ex("*", "risk.tolerance", "bold", "no_measured_effect", "retreatStartsPerMin", 40, -1.64),
   ex("*", "teamfight.grouping", "tight", "no_measured_effect", "fightEntriesPerMinAll", 40, 0.73),
-  //  整場巨龍 low／high、巴龍 high（objectiveFightEntriesPerMin.<k>，n=40）已由 C4 n=400 紅藍複驗取代（REPLICATION_CONFIRMED；Phase 3a-C4）；
-  //  舊列保留在 git 歷史（commit 9c88d3d0 的本檔與 tools/fixtures/tactic_truth_3a.json）。巴龍 low 沒有複驗，仍由真實性表判定。
+  ex("*", "objectives.dragon", "low", "no_measured_effect", "objectiveFightEntriesPerMin.dragon", 40, -0.74),
+  ex("*", "objectives.dragon", "high", "no_measured_effect", "objectiveFightEntriesPerMin.dragon", 40, -0.13),
   ex("*", "objectives.baron", "low", "no_measured_effect", "objectiveFightEntriesPerMin.baron", 40, -0.88),
+  ex("*", "objectives.baron", "high", "reversed_effect", "objectiveFightEntriesPerMin.baron", 40, -2.03),
   ex("*", "objectives.tower", "low", "no_measured_effect", "siegeWindowsPerMin", 40, 0.87),
   ex("classic.m3", "objectives.tower", "high", "no_measured_effect", "siegeWindowsPerMin", 40, 1.97),
 ]);
@@ -423,7 +424,7 @@ export const REPLICATION_CONFIRMED = deepFreeze([
   rc("phases.early.grouping", "group", "joinGoGeneralStartsPerMin.early", { n: 400, rel: 0.107018, z: 4.676797 }, { n: 400, rel: 0.16, z: 6.689111 }),
   rc("phases.mid.grouping", "group", "joinGoGeneralStartsPerMin.mid", { n: 400, rel: 0.249005, z: 7.951875 }, { n: 400, rel: 0.168016, z: 5.706359 }),
   rc("phases.late.grouping", "group", "joinGoGeneralStartsPerMin.late", { n: 237, rel: 0.26139, z: 3.901966 }, { n: 237, rel: 0.292017, z: 4.166681 }),
-  //  Phase 3a-C4（tools/fixtures/phase_options_result_c4.json，seeds 3401–3800）：每時期物件優先＋整場龍／巴龍，紅藍兩側 confirmed。
+  //  Phase 3a-C4（tools/fixtures/phase_options_result_c4.json，seeds 3401–3800）：每時期物件優先，紅藍兩側 confirmed（整場龍／巴龍見 REPLICATION_V21_SCOPE_ONLY）。
   //  主張是「出現在坑邊」（contestShare），不是拿到物件；推塔優先連帶三路 laneOffset 前移（文案揭露）。
   rc("phases.early.objectiveOrder", "dragon", "contestShare.dragon.early", { n: 400, rel: 0.093023, z: 6.215495 }, { n: 400, rel: 0.125, z: 7.439383 }),
   rc("phases.mid.objectiveOrder", "dragon", "contestShare.dragon.mid", { n: 400, rel: 0.172732, z: 8.148497 }, { n: 400, rel: 0.172471, z: 7.177891 }),
@@ -431,6 +432,14 @@ export const REPLICATION_CONFIRMED = deepFreeze([
   rc("phases.mid.objectiveOrder", "baron", "contestShare.baron.mid", { n: 400, rel: 0.062927, z: 5.542482 }, { n: 400, rel: 0.07438, z: 6.157781 }),
   rc("phases.early.objectiveOrder", "towers", "siegeWindowsPerMin.early", { n: 400, rel: 0.766467, z: 5.387618 }, { n: 400, rel: 0.702247, z: 5.314 }),
   rc("phases.mid.objectiveOrder", "towers", "siegeWindowsPerMin.mid", { n: 400, rel: 0.28016, z: 5.441881 }, { n: 400, rel: 0.210547, z: 3.909199 }),
+]);
+/**
+ * 只在 v21 規則集量到的複驗（Phase 3a-C4，2026-10-22 審查後）：整場巨龍 high／low、巴龍 high 在 balanceTool.v21（Director core.v1、laneFrame
+ * teamRelative）紅藍兩側 confirmed，但這三個選擇在 v20 規則集（正式站現況）也可選，而 v21 的證據不能直接代表 v20（laneFrame 改變紅方路名）。
+ * ⇒ **不**取代真實性表、**不**影響提供清單：v20 是否提供仍由真實性表（seeds 1–40）決定；這張表只留證據，是否以 v21 證據開放到 v20 由 Owner 決定。
+ * 形狀同 REPLICATION_CONFIRMED；tools/check_tactic_replication_3a.mjs 驗證它＝C4 結果檔裡整場選項的 confirmed 列。
+ */
+export const REPLICATION_V21_SCOPE_ONLY = deepFreeze([
   rc("objectives.dragon", "high", "contestShare.dragon.early+mid+late", { n: 400, rel: 0.148519, z: 10.514663 }, { n: 400, rel: 0.193406, z: 12.537589 }),
   rc("objectives.dragon", "low", "contestShare.dragon.early+mid+late", { n: 400, rel: -0.097228, z: -6.305574 }, { n: 400, rel: -0.100074, z: -6.3118 }),
   rc("objectives.baron", "high", "contestShare.baron.early+mid+late", { n: 400, rel: 0.092886, z: 6.549204 }, { n: 400, rel: 0.089905, z: 6.379305 }),
