@@ -24802,3 +24802,42 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 量測 worker 沒設 `ESMO_BALANCE_SKILLS` ⇒ runner 靜默關掉英雄技能／被動／成長曲線；`f4a4ae9` 的 6,800 場全在技能關閉下跑完。真實性表、複驗、laneFrame 研究都是技能開。儀器檔頭寫「skills on」不實；自檢 gate 兩個儀器都沒開技能，跨儀器比對抓不到；最終審查也沒抓到。2026-10-22 controller 讀 C7 §5（同一個坑）時發現。
 - 處理：原結果檔保留不動（＝技能關閉下的行為證據），**不**用來標記 live；以修正後的儀器在全新 seeds 18001–18400 做複驗（`tools/fixtures/phase_stance_registration_c3_2_rev1.json`，選項／指標／門檻原樣沿用），只有 rev1 再次 confirmed 的選項才進入 live 收尾。
 - 儀器修正：worker 在載入前設 skills on／talents off；每筆紀錄記錄實際載入的層，不符即 STOP(INSTRUMENT)；`check_phase_bucket_c3` 增為 23 項（L1／L2）。
+
+## 2026-10-22 Phase 3a-C3-2 收尾（6 個時期姿態開放）＋ C7 診斷＋ C3-3／C4／C5 事前登記（owner: Claude，local commit，未 push／deploy／整合 main）
+
+**C3-2 rev1 複驗（技能開，修正後儀器）**
+- `bb1f4cc` seeds 18001–18400：6,800 場、0 失敗；8 個時期姿態紅藍兩側全部 confirmed（前期／中期 scaling 也 confirmed）。
+- 依 Owner 裁示：前期 aggressive／defensive、中期 aggressive／defensive、後期 defensive／scaling 共 6 項標記 live（`REPLICATION_CONFIRMED`）；前期／中期 scaling 維持 design（`owner_hold`），不放大係數，D-18 未動用。
+- 原始 `f4a4ae9`（技能關）結果檔與歷史指標全部保留不動；主張指標改為 `phaseEngageDecisionsPerMin.<p>`，舊主張以 retired 保留。
+
+**收尾實作（`3302d60`、`1220939`，合併 `4b1b414`）**
+- 真實性表推導：n=400 複驗只取代 **std primary** 列；弱點模板仍由真實性表判定。
+- 審查修正：T13 檢查複驗檔形狀；`ruleSuppressed` 忽略 owner_hold；V7 指標綁定；V8 封存 C3-2 前真實性表（與 `0efb759` 逐位元相同）。
+
+**真實性表重測（`69a5109`，之後二次重測確認）**
+- 第一次：4,080 場、0 失敗；72 列非時期列與前版逐位元相同，19 列時期列依新指標改變。
+- 新增 4 筆**只限單一模板**的排除（n=40 量不到 ⇒ 只在該模板不提供）：classic.m4 前期 scaling、v2.defensive_hold 中期 scaling、classic.m1 後期 defensive／scaling。std 與其他模板照常提供 6 項。
+- N6 負向對照改挑「沒被複驗取代」的列（重測後第一個通過列變成被取代的時期列），嚴格程度不變。
+- 改排除表 ⇒ 重新登記指紋 `21a219764652fd1d`（前值 `a5ce0d283ead3e5c` 未發布）；`simulationVersion.js` 會被載入 ⇒ 依規範整輪二次重測：4,080 場、0 失敗，**91 列與 `69a5109` 逐位元相同**，`check_tactic_truth_3a` 34/34。
+
+**C7 診斷（`d97c5ff`，seeds 1401–1800，4,000 場、0 失敗）**
+- §4-A 路線姿態（topDef／midAggr）：兩側都是**行為反轉**，原因不是 gank 權重（midAggr 中路回城 +33–40 %）⇒ 依契約 C5-4 第 3 步，引擎修正需 Owner 決定；路線姿態維持排除，強邊不依賴它。
+- §4-B tight：joinGo 一般開始兩側都動（藍 +10.8 % z5.19、紅 +18.9 % z7.90），進路線只有紅方 ⇒ C3-3 改用 roll 指標（一般 joinGo 開始）。
+- §4-D baronHigh：原指標未反轉（雜訊）；巴龍坑戰鬥秒數 +22.7 %／+26.6 %、中期爭奪占比 z5.03／z3.15 ⇒ 巴龍選項可登記。
+
+**事前登記（`9e5bd77`，合併 `b22b008`；任何量測之前）**
+- C3-3 seeds 18401–18800（groupEarly／Mid／Late，主張 `joinGoGeneralStartsPerMin.<p>`，後期預期檢定力不足已揭露）。
+- C4 seeds 3401–3800（dragon／baron／towers first 分時期、dragonHigh／Low、baronHigh；主張爭奪占比，取得占比只報告；前期不能選巴龍；天花板檢查與 towers laneOffset 已揭露）。
+- C5 seeds 3801–4200（focus 三路×三時期＋快速模式強邊三路〔前期＋中期〕；主張 gankShare，守門 ganksPerMin；對照組紅藍對稱檢查 0.10；資源傾斜與輔助保護**不做**）。
+- 儀器：新計數 `joinGoGeneralStarts`（排除龍／巴龍坑）＋ X2 與 C7 儀器同場相等（`check_phase_study_c3` 9/9）；`check_phase_options_arms_3c` 決定性探針：每個選項只動自己的時期／欄位／側。獨立審查 APPROVE WITH CHANGES 9 項，全部修正後提交。
+
+**驗證（HEAD `b22b008`，2026-10-22 實跑）**
+- `check_tactic_truth_3a` 34/34；`check_match_golden_v21a` 131/131；`check_match_setup_3a` 153/153（v20 黃金 39 案）。
+- `verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條紅燈，與 v20 相同）、runtime29 PASS。
+- 快速 gate：複驗 40、指標 59、戰術書 21、Registry 31、計畫 219、解析器 136、Director 97、規則集 43、directive 61、權限 15、時期選擇 22、量測儀器 9、版本 82，全綠。
+
+**未完成／待 Owner**
+- §4-A 路線姿態行為反轉的引擎修正（要不要修）。
+- 前期／中期 scaling：rev1 已 confirmed 但依裁示 hold，要不要開放。
+- `simulationVersion.js` 參與真實性表過期判定：每改一次 Registry 資料就要多一輪約 72 分鐘重測，是否調整待 Owner 決定。
+- 證據範圍：以上皆為 balanceTool.v21 量測，不等於正式 career.v21 驗證。
