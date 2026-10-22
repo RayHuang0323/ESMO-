@@ -226,7 +226,7 @@ const ROWS = [
         //  C4 事前登記的主張指標，n=400 紅藍複驗在 tools/fixtures/phase_options_result_c4.json）。舊指標的結果留在歷史，不刪不改。
         claims: claimsOf(["low", "standard", "high"], `contestShare.${key}.early+mid+late`),
         retiredClaims: [{ metric: `objectiveFightEntriesPerMin.${key}`, retiredAt: "2026-10-22", reason: "C7 §4-D: fight entries near the pit were noise; C4 registered per-appearance contest share",
-          evidence: "tools/fixtures/tactic_truth_3a.json at commit 9c88d3d0 (MEASURED_EXCLUSIONS rows under the old metric are in git at 9c88d3d0)" }],
+          evidence: "tools/fixtures/tactic_truth_3a_pre_c4_9c88d3d0.json (verbatim copy of tools/fixtures/tactic_truth_3a.json at commit 9c88d3d0; MEASURED_EXCLUSIONS rows under the old metric are in git at 9c88d3d0)" }],
         deltaFields: [`knobs.${knob}`],
         why: "數的是這個物件每次出現（存活期間）己方有任何存活英雄進入坑位 9 單位內的比例＝有出現在坑邊，路過也算；"
           + "不是拿到物件的比例（那是結果，只報告不宣稱）。分母是物件出現次數，不是分鐘數。",
