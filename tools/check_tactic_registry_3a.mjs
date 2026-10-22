@@ -42,12 +42,28 @@ function leaves(o, prefix = "", out = {}) {
   return out;
 }
 const nested = (dim, v) => { const o = {}; dim.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? v : {}, n[k]), o); return o; };
-/** 模板（可加一個選擇）→ 不經驗證直接投影的旋鈕（排除表不影響這裡）。 */
+const PHASE_ROWS = Mapping.PHASE_CHOICE_MAPPING.rows;
+const isPhaseDim = (dim) => typeof dim === "string" && Object.hasOwn(PHASE_ROWS, dim);
+const PROJECT = { toEngineTactic, toEngineTacticIdentity };
+/**
+ * 模板（可加一個選擇）→ 不經驗證直接投影的旋鈕（排除表不影響這裡）。
+ * 整場維度：{ knobs, identity } 的葉子。每時期維度（Phase 3a-C）：resolver 輸出 phases[i] 的葉子（同一個 phaseProjectionOf）。
+ */
 function projectedOf(templateId, dim = null, choice = null) {
-  const cfg = Mapping.mergeTacticConfig(Templates.templateById(templateId), [], dim ? nested(dim, choice) : {});
-  return leaves({ knobs: toEngineTactic(cfg), identity: toEngineTacticIdentity(cfg) });
+  const cfg = Mapping.mergeTacticConfig(Templates.templateById(templateId), [], dim && !isPhaseDim(dim) ? nested(dim, choice) : {});
+  if (!isPhaseDim(dim)) return leaves({ knobs: toEngineTactic(cfg), identity: toEngineTacticIdentity(cfg) });
+  return phaseLeavesOf(cfg, dim, choice);
 }
+function phaseLeavesOf(cfg, dim, choice) {
+  const ov = Mapping.phaseOverridesOf(choice === null ? {} : nested(dim, choice).phases);
+  return leaves({ phases: ov.overrides.map((o) => Mapping.phaseProjectionOf(cfg, o, PROJECT)) });
+}
+/** 每時期維度的「本來」（不覆寫）投影。 */
+const phaseBaseOf = (templateId, dim) => phaseLeavesOf(Mapping.mergeTacticConfig(Templates.templateById(templateId), [], {}), dim, null);
+const baseOf = (templateId, dim) => (isPhaseDim(dim) ? phaseBaseOf(templateId, dim) : projectedOf(templateId));
 const stdOut = resolveTactic({ kind: "std" });
+const stdOutPhases = resolveTactic({ kind: "std" }, {}, { phases: true });
+const stdLeaves = () => leaves({ knobs: stdOutPhases.knobs, identity: stdOutPhases.identity, phases: stdOutPhases.phases });
 
 /** 引擎有沒有讀這個屬性：剝註解後找 `.name`（屬性讀取），且不是純指派。 */
 function engineReads(src, name) {
@@ -59,7 +75,12 @@ const ENGINE_SRC = fs.readFileSync(path.join(ROOT, "src/LogicEngine.js"), "utf8"
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§S 列的形狀");
-ck("S1 有 18 個 live 維度（早／中／後期姿態、打野節奏、打野重心、三路姿態、輔助任務、三席核心、風險＋整場型：團戰姿態、集結、巨龍／巴龍／推塔重心）", live.length === 18, `${live.length}`);
+ck("S1 有 24 個 live 維度（早／中／後期姿態、打野節奏、打野重心、三路姿態、輔助任務、三席核心、風險＋整場型：團戰姿態、集結、巨龍／巴龍／推塔重心＋每時期型：三個時期的集結、物件優先）", live.length === 24, `${live.length}`);
+const PHASE_LIVE = ["early", "mid", "late"].flatMap((p) => [`phases.${p}.grouping`, `phases.${p}.objectiveOrder`]);
+ck("S6 requires：恰好每時期型 6 列需要 Director core.v1（其他 live 列與所有 design 列為 null）；rowAvailableUnder：static 下不可用、core.v1 下可用",
+  J(live.filter((r) => r.requires !== null).map((r) => r.dimension).sort()) === J([...PHASE_LIVE].sort()) && live.every((r) => r.requires === null || r.requires === Registry.PHASE_DIRECTOR)
+  && design.every((r) => r.requires === null) && PHASE_LIVE.every((d) => !Registry.rowAvailableUnder(Registry.registryRow(d)) && !Registry.rowAvailableUnder(Registry.registryRow(d), "static") && Registry.rowAvailableUnder(Registry.registryRow(d), "core.v1"))
+  && Registry.rowAvailableUnder(Registry.registryRow("risk.tolerance"), "static"));
 ck("S2 每個 live 列：resolverFields、engineReads 是非空字串陣列且 frozen；gate 有 claims、why", live.every((r) =>
   Array.isArray(r.resolverFields) && r.resolverFields.length > 0 && r.resolverFields.every((x) => typeof x === "string") && Object.isFrozen(r.resolverFields)
   && Array.isArray(r.engineReads) && r.engineReads.length > 0 && r.engineReads.every((x) => typeof x === "string") && Object.isFrozen(r.engineReads)
@@ -73,16 +94,16 @@ ck("S5 live 列的 minSimVersion 是 moba-sim.v21；design 列是 null", live.ev
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§F resolverFields");
-ck("F1 每個 resolverFields 的欄位都出現在 resolver 的輸出裡（std 輸出有這個鍵；值可以是 null）", stdOut.ok && live.every((r) => {
-  const L = leaves({ knobs: stdOut.knobs, identity: stdOut.identity });
+ck("F1 每個 resolverFields 的欄位都出現在 resolver 的輸出裡（std 輸出有這個鍵；值可以是 null；每時期型看 phases:true 的輸出）", stdOut.ok && stdOutPhases.ok && live.every((r) => {
+  const L = stdLeaves();
   return r.resolverFields.every((f) => Object.hasOwn(L, f));
-}), live.flatMap((r) => r.resolverFields.filter((f) => !Object.hasOwn(leaves({ knobs: stdOut.knobs, identity: stdOut.identity }), f)).map((f) => `${r.dimension}:${f}`)).join(" "));
+}), live.flatMap((r) => r.resolverFields.filter((f) => !Object.hasOwn(stdLeaves(), f)).map((f) => `${r.dimension}:${f}`)).join(" "));
 let pairsChecked = 0;
 const noChange = [], outside = [], usedFields = new Map(live.map((r) => [r.dimension, new Set()]));
 for (const r of live) for (const t of TEMPLATE_IDS) {
   const d = Mapping.offeredChoiceDetail(t, r.dimension);
   if (!d) continue;
-  const base = projectedOf(t);
+  const base = baseOf(t, r.dimension);
   for (const c of d.offered) {
     if (c === d.own) continue;
     pairsChecked++;
@@ -92,12 +113,28 @@ for (const r of live) for (const t of TEMPLATE_IDS) {
     for (const k of changed) { if (!r.resolverFields.includes(k)) outside.push(`${t}/${r.dimension}=${c}:${k}`); else usedFields.get(r.dimension).add(k); }
   }
 }
-ck("F2 每個提供的選擇（21 模板 × 13 維度）都改到至少一個 resolver 欄位", noChange.length === 0 && pairsChecked > 200, `${pairsChecked} 組${noChange.length ? "；沒變：" + noChange.slice(0, 5).join(" ") : ""}`);
+//  F5（Phase 3a-C）：每時期選擇只動自己那個時期，不動其他時期（R-5）；整場的 knobs／identity 不在每時期投影裡，另由 phase choices gate 驗 R-4。
+const phaseLeak = [];
+for (const r of live.filter((x) => isPhaseDim(x.dimension))) for (const t of TEMPLATE_IDS) {
+  const d = Mapping.offeredChoiceDetail(t, r.dimension, [], {}, { withMeasured: false });
+  const idx = ["early", "mid", "late"].indexOf(r.dimension.split(".")[1]);
+  const b0 = phaseBaseOf(t, r.dimension);
+  for (const c of d?.offered ?? []) {
+    const next = projectedOf(t, r.dimension, c);
+    const other = Object.keys(next).filter((k) => !k.startsWith(`phases.${idx}.`) && J(next[k]) !== J(b0[k]));
+    if (other.length) phaseLeak.push(`${t}/${r.dimension}=${c}:${other[0]}`);
+  }
+}
+ck("F5 每時期選擇只改到自己那個時期的欄位（其他時期不動）", phaseLeak.length === 0, phaseLeak.slice(0, 4).join(" "));
+ck("F2 每個提供的選擇（21 模板 × 每個 live 維度）都改到至少一個 resolver 欄位", noChange.length === 0 && pairsChecked > 200, `${pairsChecked} 組${noChange.length ? "；沒變：" + noChange.slice(0, 5).join(" ") : ""}`);
 ck("F3 選擇改到的 resolver 欄位全都在該列的 resolverFields 裡（沒有沒登記的連帶效果）", outside.length === 0, outside.slice(0, 5).join(" "));
 //  F4（可見清單下的死欄位）：複驗撤下讓 seats.b1.priority 在 21 模板上都沒有可見的非預設選項（它唯一的選擇 core 被撤下），
 //  所以 identity.protectRole 在這一列上沒有可見的選擇會動它；同一欄位仍由 seats.b3／b4.priority 的可見選項改動（見 F4d），欄位本身沒死。
 //  明確例外（逐筆列舉；多一個、少一個都紅）：{ dimension, field }。
-const F4_EXCEPTIONS = [{ dimension: "seats.b1.priority", field: "identity.protectRole", why: "唯一會動它的選擇 core 被複驗撤下（REPLICATION_WITHHELD）" }];
+const F4_EXCEPTIONS = [{ dimension: "seats.b1.priority", field: "identity.protectRole", why: "唯一會動它的選擇 core 被複驗撤下（REPLICATION_WITHHELD）" },
+  //  Phase 3a-C4：後期巴龍優先（one_sided）、後期推塔優先（insufficient）被複驗撤下 ⇒ 後期物件優先只剩巨龍可見，這幾個欄位在可見清單下沒人動。
+  ...["phases.2.knobs.baronJoin", "phases.2.identity.siegeBias", "phases.2.knobs.laneOffset.top", "phases.2.knobs.laneOffset.mid", "phases.2.knobs.laneOffset.bot"]
+    .map((field) => ({ dimension: "phases.late.objectiveOrder", field, why: "後期巴龍／推塔優先被複驗撤下（REPLICATION_WITHHELD）" }))];
 const deadVisible = live.flatMap((r) => r.resolverFields.filter((f) => !usedFields.get(r.dimension).has(f)).map((f) => ({ dimension: r.dimension, field: f })));
 const eKey = (x) => `${x.dimension}:${x.field}`;
 ck(`F4 resolverFields 沒有死欄位（可見清單下）：除了明確例外 ${F4_EXCEPTIONS.map(eKey).join(",")}（${F4_EXCEPTIONS[0].why}）之外，每個欄位都被至少一個可見的（模板, 選擇）真的改到；找到的死欄位集合恰好等於例外集合`,
@@ -105,7 +142,7 @@ ck(`F4 resolverFields 沒有死欄位（可見清單下）：除了明確例外 
 const structuralChanges = (dim, field) => TEMPLATE_IDS.some((t) => {
   const d = Mapping.offeredChoiceDetail(t, dim, [], {}, { withMeasured: false });
   if (!d) return false;
-  const base = projectedOf(t);
+  const base = baseOf(t, dim);
   return d.offered.some((c) => c !== d.own && J(projectedOf(t, dim, c)[field]) !== J(base[field]));
 });
 ck("F4b 例外裡的每個欄位在結構清單（withMeasured:false）下確實會被改到，且屬於該列的 resolverFields（例外不是假的）", F4_EXCEPTIONS.every((x) => Registry.registryRow(x.dimension).resolverFields.includes(x.field) && structuralChanges(x.dimension, x.field)), F4_EXCEPTIONS.map(eKey).join(","));
@@ -121,7 +158,8 @@ ck("E1 每個 engineReads 欄位在引擎裡都被讀取", missing.length === 0,
 ck("E2 對照組：植入一個沒人讀的欄位 ⇒ 掃描器拒絕", !engineReads(ENGINE_SRC, "neverReadKnobXyz") && !engineReads(ENGINE_SRC, "phaseEngageTypo"));
 ck("E3 對照組：只在註解裡出現的欄位 ⇒ 拒絕；在程式碼裡讀取 ⇒ 接受；純指派不算讀取",
   !engineReads("// K.ghostKnob 在註解裡\n/* I.ghostKnob */ const a = 1;", "ghostKnob") && engineReads("const a = K.realKnob + 1;", "realKnob") && !engineReads("K.writeOnly = 3;", "writeOnly") && engineReads("if (K.cmp == 3) {}", "cmp"));
-const firstSeg = (f) => f.split(".")[1];
+//  每時期型的欄位是 phases.<i>.knobs.X ⇒ 去掉 "phases.<i>." 再取。
+const firstSeg = (f) => f.replace(/^phases\.\d\./, "").split(".")[1];
 ck("E4 engineReads 與 resolverFields 互相對得上（每個欄位的第一段在 engineReads 裡；engineReads 沒有無關的名字）",
   live.every((r) => r.resolverFields.every((f) => r.engineReads.includes(firstSeg(f))) && r.engineReads.every((n) => r.resolverFields.some((f) => firstSeg(f) === n))),
   live.filter((r) => !(r.resolverFields.every((f) => r.engineReads.includes(firstSeg(f))) && r.engineReads.every((n) => r.resolverFields.some((f) => firstSeg(f) === n)))).map((r) => r.dimension).join(","));
@@ -129,9 +167,14 @@ ck("E4 engineReads 與 resolverFields 互相對得上（每個欄位的第一段
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§M 列 ↔ 對照表 ↔ touches");
 const MAP = Mapping.CHOICE_MAPPING.rows;
-ck("M1 對照表的列＝live 列（維度集合相同）", J(Object.keys(MAP).sort()) === J(live.map((r) => r.dimension).sort()));
-ck("M2 每列的 touches 的第一個＝對照表的主欄位，且整個清單＝對照表這一列可能碰到的欄位", live.every((r) => r.touches[0] === MAP[r.dimension].target && J(r.touches) === J(Mapping.touchedFieldsOf(MAP[r.dimension]))));
-ck("M3 每列的 choices＝對照表這一列的選擇（不多不少）", live.every((r) => J([...r.choices].sort()) === J(Object.keys(MAP[r.dimension].values).sort())));
+//  每時期對照（PHASE_CHOICE_MAPPING）：touches＝各選擇覆寫的設定路徑聯集；強邊（phaseGank）仍是 design。
+const phaseTouches = (row) => [...new Set(Object.values(row.values).flatMap((v) => (v && typeof v === "object" ? Object.keys(v) : [])))];
+const mapRowOf = (dim) => MAP[dim] ?? PHASE_ROWS[dim] ?? null;
+const touchesOf = (dim) => (MAP[dim] ? Mapping.touchedFieldsOf(MAP[dim]) : phaseTouches(PHASE_ROWS[dim]));
+ck("M1 對照表的列（整場＋每時期 live 的）＝live 列（維度集合相同）；每時期對照中沒 live 的列在 Registry 是 design", J([...Object.keys(MAP), ...Object.keys(PHASE_ROWS).filter((d) => Registry.registryRow(d)?.status === "live")].sort()) === J(live.map((r) => r.dimension).sort())
+  && Object.keys(PHASE_ROWS).every((d) => ["live", "design"].includes(Registry.registryRow(d)?.status)));
+ck("M2 每列的 touches 的第一個＝對照表的主欄位，且整個清單＝對照表這一列可能碰到的欄位", live.every((r) => r.touches[0] === touchesOf(r.dimension)[0] && J([...r.touches].sort()) === J([...touchesOf(r.dimension)].sort())));
+ck("M3 每列的 choices＝對照表這一列的選擇（不多不少）", live.every((r) => J([...r.choices].sort()) === J(Object.keys(mapRowOf(r.dimension).values).sort())));
 ck("M4 live 列的 basis 開頭＝touches 的主欄位（資訊欄位沒有跟資料脫節）", live.every((r) => r.basis.startsWith(r.touches[0])));
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -162,7 +205,7 @@ ck("G6 事前登記門檻：seeds 1–40、z ≥ 2、邊緣 < 3", Registry.TRUTH
 console.log("\n§U UI 選項清單與別名");
 let uiOk = true, uiBad = [];
 for (const t of TEMPLATE_IDS) {
-  const opts = tacticBookOptions(t);
+  const opts = tacticBookOptions(t, [], {}, { tacticalDirector: "core.v1" });
   const dims = opts.map((o) => o.dimension);
   if (J(dims) !== J(live.map((r) => r.dimension))) { uiOk = false; uiBad.push(`${t}:維度順序`); continue; }
   for (const o of opts) {
@@ -182,8 +225,11 @@ for (const t of TEMPLATE_IDS) {
   }
 }
 ck("U1 tacticBookOptions(模板) ＝ 每個 live 維度的 offeredChoices ⊆ Registry choices；＝（結構上提供 ∖ 量測排除表 ∖ 複驗撤下清單）；結構上提供的選擇 createTacticPlan 接受、沒提供的拒絕（21 模板）", uiOk, uiBad.slice(0, 4).join(" "));
-ck("U2 UI 清單只含 live 維度（design 維度永遠不會出現）", TEMPLATE_IDS.every((t) => tacticBookOptions(t).every((o) => Registry.registryRow(o.dimension)?.status === "live")));
-ck("U3 CAPABILITIES 是同一份列（別名）；liveCapabilities() ＝ liveRows()；v20 上沒有任何 live 列", Registry.CAPABILITIES === Registry.CAPABILITY_ROWS && J(Registry.liveCapabilities()) === J(Registry.liveRows()) && Registry.liveCapabilities("moba-sim.v20").length === 0 && Registry.liveCapabilities("moba-sim.v21").length === 18);
+ck("U2 UI 清單只含 live 維度（design 維度永遠不會出現）", TEMPLATE_IDS.every((t) => tacticBookOptions(t, [], {}, { tacticalDirector: "core.v1" }).every((o) => Registry.registryRow(o.dimension)?.status === "live")));
+ck("U5 v20（static，預設）下 UI 清單＝live 列扣掉需要 Director 的每時期型（旗標關閉時看不到、也送不出每時期選擇）",
+  TEMPLATE_IDS.every((t) => J(tacticBookOptions(t).map((o) => o.dimension)) === J(live.filter((r) => r.requires === null).map((r) => r.dimension))
+    && J(tacticBookOptions(t, [], {}, { tacticalDirector: "static" }).map((o) => o.dimension)) === J(tacticBookOptions(t).map((o) => o.dimension))));
+ck("U3 CAPABILITIES 是同一份列（別名）；liveCapabilities() ＝ liveRows()；v20 上沒有任何 live 列", Registry.CAPABILITIES === Registry.CAPABILITY_ROWS && J(Registry.liveCapabilities()) === J(Registry.liveRows()) && Registry.liveCapabilities("moba-sim.v20").length === 0 && Registry.liveCapabilities("moba-sim.v21").length === 24);
 ck("U4 isLiveChoice 三參數：v21 ⇒ 可用；v20、亂字串 ⇒ 不可用；兩參數的舊行為不變",
   Registry.isLiveChoice("risk.tolerance", "bold", "moba-sim.v21") && !Registry.isLiveChoice("risk.tolerance", "bold", "moba-sim.v20") && !Registry.isLiveChoice("risk.tolerance", "bold", "garbage")
   && Registry.isLiveChoice("risk.tolerance", "bold") && !Registry.isLiveChoice("risk.tolerance", 0.8) && !Registry.isLiveChoice("winCondition", "x", "moba-sim.v21"));

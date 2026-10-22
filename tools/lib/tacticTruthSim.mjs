@@ -28,6 +28,14 @@
 //   ── v4（2026-10-22，Phase 3a-C3-2 收尾；只**新增**欄位與指標，上面每一個計數的算法都沒動）──
 //   engagesPh[ph]／engageStartsPh[ph]  與 engages／engageStarts 同一個事件，依該 tick 的 e.director.phase(e.t) 記到時期桶。
 //   時期姿態的 G-A7 指標改成 phaseEngageDecisionsPerMin.<p>（C7 類別 4；C3-2 事前登記的主指標），每分鐘比率以該時期自己的秒數重算。
+//   ── v5（2026-10-22，Phase 3a-C3-3／C4 升級 live；只**新增**欄位與指標，上面每一個計數的算法都沒動）──
+//   新 live 的每時期維度要進 G-A7 冒煙層，宣稱指標與 n=400 複驗儀器（phaseStudySim.v1）**逐字同定義**（check_tactic_truth_3a 的 X 段
+//   用同一 seed、同一輸入比對兩個儀器的值）：
+//   joinGoGeneralStartsPh[ph]  上／中／下路英雄的參團擲骰由否變是（_joinV3 的觀察包裝：原方法、原引數、原回傳值，不改行為；
+//                              交戰狀態機下熱點都是新物件 ⇒ 實際上＝全部參團擲骰，同 phaseStudySim 的揭露）。
+//   objApps／objContested.<k>[ph]  物件每次出現（依出現那一刻的時期）＋那次出現期間 exec.<k>Contests 有沒有增加（＝有英雄進坑 9 單位內）。
+//   siegeOpensPh[ph]           同 siegeOpens，依時期分桶。
+//   規則集：spec.ruleset（缺少 ⇒ balance runner 預設 balanceTool.v20，與 v4 逐字相同）；需要 Director core.v1 的維度由量測計畫指定 balanceTool.v21。
 //  純函式部分（metricValue／pairStats）不碰引擎，gate 的快速模式會用它重算 z。
 // ============================================================================
 import path from "node:path";
@@ -35,7 +43,7 @@ import { fileURLToPath } from "node:url";
 import { createTacticPlan } from "../../src/platform/tactics/tacticPlan.js";
 import { bindTacticPlanToCurrentVersions } from "../../src/battle/moba/tactics/tacticResolver.js";
 
-export const TRUTH_SIM_VERSION = "tacticTruthSim.v4";
+export const TRUTH_SIM_VERSION = "tacticTruthSim.v5";
 export const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DT = 0.5;
 const CAP_S = 3600;
@@ -68,7 +76,7 @@ export async function runTruthMatch(seed, spec = {}) {
   const { modules, configure } = await import("../balance/moba_items_balance_runner.mjs");
   const M = await modules();
   const tactic ={ blue: tacticInputOf(spec.blue), red: tacticInputOf(spec.red) };
-  const { e } = configure(seed, spec.items ?? "standard", M, 1, null, tactic);
+  const { e } = configure(seed, spec.items ?? "standard", M, 1, null, tactic, spec.ruleset);
   const players = e.players;
   const nexus = { blue: e.towers.blue_nexus.pos, red: e.towers.red_nexus.pos };
   const zero = () => ({
@@ -78,16 +86,36 @@ export async function runTruthMatch(seed, spec = {}) {
     engages: 0, objFights: { dragon: 0, baron: 0 }, siegeOpens: 0,
     engageStarts: 0, protectStarts: 0, coreProtectStarts: { top: 0, mid: 0, adc: 0 },
     engagesPh: [0, 0, 0], engageStartsPh: [0, 0, 0],
+    joinGoGeneralStartsPh: [0, 0, 0], siegeOpensPh: [0, 0, 0],
+    objApps: { dragon: [0, 0, 0], baron: [0, 0, 0] }, objContested: { dragon: [0, 0, 0], baron: [0, 0, 0] },
   });
   const S = { blue: zero(), red: zero() };
+  //  v5：參團擲骰的觀察包裝（與 phaseStudySim 同一段邏輯；呼叫原方法、原樣回傳）。時期＝這一 tick 結束時刻的時期。
+  let phNow = e.director.phase(e.t);
+  const origJoin = e._joinV3, pitD = e._pitOf("dragon"), pitB = e._pitOf("baron");
+  e._joinV3 = function (p, hot, ...rest) {
+    const before = p.joinEvalT, goBefore = !!p.joinGo;
+    const r = origJoin.call(this, p, hot, ...rest);
+    if (p.joinEvalT !== before && ["top", "mid", "adc"].includes(p.role) && p.joinGo && !goBefore && hot !== pitD && hot !== pitB) S[p.side].joinGoGeneralStartsPh[phNow]++;
+    return r;
+  };
+  const objLife = { dragon: null, baron: null }, objWasAlive = { dragon: !!e.dragon?.alive, baron: !!e.baron?.alive };
+  const closeObj = (key) => {
+    const L = objLife[key]; if (!L) return;
+    for (const side of ["blue", "red"]) { S[side].objApps[key][L.ph]++; if (L.contested[side]) S[side].objContested[key][L.ph]++; }
+    objLife[key] = null;
+  };
   const prev = new Map(players.map((p) => [p.id, { state: p.state, retreating: !!p.retreating, decisionAt: p.decisionAt, action: p.decisionAction ?? null, targetId: p.decisionTargetId ?? null }]));
   const initSeen = { blue: e.fsm3?.blue?.initUntil, red: e.fsm3?.red?.initUntil };
   const splitSeen = { blue: e._tac?.blue?.splitEvalT, red: e._tac?.red?.splitEvalT };
   const byId = new Map(players.map((p) => [p.id, p]));
   const phaseSecs = [0, 0, 0];
   for (let i = 1; i * DT <= CAP_S && !e.over; i++) {
+    const execBefore = { blue: { ...e.exec.blue }, red: { ...e.exec.red } };
+    phNow = e.director.phase(e.t + DT);
     e.tick(DT);
     const t = e.t, ph = e.director.phase(t);
+    phNow = ph;
     phaseSecs[ph] += DT;
     for (const p of players) {
       const s = S[p.side], q = prev.get(p.id), seatN = Number(p.id.slice(1));
@@ -115,7 +143,14 @@ export async function runTruthMatch(seed, spec = {}) {
     }
     for (const side of ["blue", "red"]) {
       const F = e.fsm3?.[side];
-      if (F && F.initUntil !== initSeen[side]) { initSeen[side] = F.initUntil; if (F.initKind === "siege") S[side].siegeOpens++; }
+      if (F && F.initUntil !== initSeen[side]) { initSeen[side] = F.initUntil; if (F.initKind === "siege") { S[side].siegeOpens++; S[side].siegeOpensPh[ph]++; } }
+    }
+    for (const key of ["dragon", "baron"]) {
+      const alive = !!e[key]?.alive;
+      if (alive && !objWasAlive[key]) objLife[key] = { ph, contested: { blue: false, red: false } };
+      if (objLife[key]) for (const side of ["blue", "red"]) if ((e.exec[side][`${key}Contests`] ?? 0) > (execBefore[side][`${key}Contests`] ?? 0)) objLife[key].contested[side] = true;
+      if (!alive && objWasAlive[key]) closeObj(key);
+      objWasAlive[key] = alive;
     }
     for (const side of ["blue", "red"]) {
       const T = e._tac?.[side], K = e.director?.knobs(side);
@@ -125,6 +160,7 @@ export async function runTruthMatch(seed, spec = {}) {
       if (lanePlayer && !lanePlayer.dead) { S[side].splitLaneAliveTicks++; if (lanePlayer.state === "帶線") S[side].splitTicks++; }
     }
   }
+  closeObj("dragon"); closeObj("baron");
   const snap = e.snapshot();
   const sideOut = (side) => ({ ...S[side], exec: { ...snap.tacticExec[side] } });
   return {
@@ -135,6 +171,7 @@ export async function runTruthMatch(seed, spec = {}) {
 
 // ── 指標 ──────────────────────────────────────────────────────────────────
 const per = (n, secs) => (secs >= 60 ? n / (secs / 60) : null);
+const PHASE_PARAMS = ["early", "mid", "late"];
 /** 指標表：id（或 id 前綴＋參數）→ (side 紀錄, 整場紀錄) → 數字或 null（不適用）。 */
 export const METRICS = Object.freeze({
   fightEntriesPerMin: { params: ["early", "mid", "late"], of: (s, r, ph) => { const i = ["early", "mid", "late"].indexOf(ph); return per(s.fights[i], r.phaseSecs[i]); } },
@@ -155,8 +192,24 @@ export const METRICS = Object.freeze({
   supportProtectStartsPerMin: { params: [], of: (s, r) => per(s.protectStarts, r.duration) },
   coreProtectStartsPerMin: { params: ["top", "mid", "adc"], of: (s, r, role) => per(s.coreProtectStarts[role], r.duration) },
   laneForward: { params: ["top", "mid", "bot"], of: (s, r, lane) => { const role = LANE_ROLE[lane]; return s.laneFwdN[role] >= 20 ? s.laneFwdSum[role] / s.laneFwdN[role] : null; } },
+  //  v5（Phase 3a-C3-3／C4）：與 phaseStudySim.studyMetricValue 同定義（每分鐘比率要該時期 ≥ 60 秒；占比的分母是物件出現次數）。
+  joinGoGeneralStartsPerMin: { params: PHASE_PARAMS, of: (s, r, ph) => { const i = PHASE_PARAMS.indexOf(ph); return per(s.joinGoGeneralStartsPh[i], r.phaseSecs[i]); } },
+  siegeWindowsPerMinPh: { params: PHASE_PARAMS, alias: "siegeWindowsPerMin", of: (s, r, ph) => { const i = PHASE_PARAMS.indexOf(ph); return per(s.siegeOpensPh[i], r.phaseSecs[i]); } },
+  contestShare: { params: ["dragon.early", "dragon.mid", "dragon.late", "dragon.early+mid+late", "baron.mid", "baron.late", "baron.early+mid+late"], of: (s, r, kp) => {
+    const [k, ps] = kp.split("."), idx = ps.split("+").map((p) => PHASE_PARAMS.indexOf(p));
+    const apps = idx.reduce((n, i) => n + s.objApps[k][i], 0);
+    return apps ? idx.reduce((n, i) => n + s.objContested[k][i], 0) / apps : null;
+  } },
 });
-const parseMetric = (id) => { const [name, param] = String(id).split("."); const m = METRICS[name]; return m && (m.params.length ? m.params.includes(param) : param === undefined) ? { m, param } : null; };
+//  每時期的推塔窗口沿用 siegeWindowsPerMin 這個名字（與複驗儀器同名）：siegeWindowsPerMin＝整場；siegeWindowsPerMin.<p>＝該時期。
+const parseMetric = (id) => {
+  const str = String(id), dot = str.indexOf(".");
+  const name = dot < 0 ? str : str.slice(0, dot), param = dot < 0 ? undefined : str.slice(dot + 1);
+  if (name === "siegeWindowsPerMin" && param !== undefined) return PHASE_PARAMS.includes(param) ? { m: METRICS.siegeWindowsPerMinPh, param } : null;
+  const m = METRICS[name];
+  if (!m || m.alias) return null;
+  return (m.params.length ? m.params.includes(param) : param === undefined) ? { m, param } : null;
+};
 export const isKnownMetric = (id) => !!parseMetric(id);
 /** 一場紀錄在某一側的指標值；不適用（該階段不足 60 秒、站位樣本太少…）⇒ null。 */
 export function metricValue(rec, side, id) {
