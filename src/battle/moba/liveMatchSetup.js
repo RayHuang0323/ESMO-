@@ -28,12 +28,35 @@
 //   而且只在它真的打開了旗標沒開的層時才改用 kind:"tool" 規則集——正式規則集永遠只由旗標決定。
 // ============================================================================
 import { createMatchSetup } from "../../platform/contracts/matchSetup.js";
-import { resolveRulesetForMode, rulesetById } from "../../platform/contracts/matchRuleset.js";
+import { resolveRulesetForMode, rulesetById, tacticalDirectorModeOf } from "../../platform/contracts/matchRuleset.js";
+import { registryRow, rowAvailableUnder } from "../../platform/tactics/capabilityRegistry.js";
+import { createTacticPlan } from "../../platform/tactics/tacticPlan.js";
+import { leavesOf, nestedOf } from "../../platform/tactics/tacticChoiceMapping.js";
+import { bindTacticPlanToCurrentVersions } from "./tactics/tacticResolver.js";
 import { OBJECTIVE_LAYOUTS } from "../../platform/contracts/objectiveLayout.js";
 import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle } from "../../platform/contracts/MobaTacticConfig.js";
 import { applyFatigueToLoadout, buildPlayerStatSlots } from "./mobaRosterAdapter.js";
 import { normalizeBuildStrategy } from "./items/buildStrategyPrep.js";
 import { battleTalentOptions } from "./talents/heroBattleTalents.js";
+
+/**
+ * 本場用不到的戰術選擇（Phase 3a-C，Owner 2026-10-22）：計畫裡需要某個規則集層（Registry requires，例如每時期型需要 Director core.v1）
+ * 但**這一場**的規則集沒有 ⇒ 只從這一場的 binding 拿掉（重新綁定），玩家存在戰術書裡的計畫不動。
+ * 擋住兩條旁路：DEV 網址開關改用 balanceTool.v20（static）、恢復進行中場次時旗標已關（沿用落盤 binding）。
+ * 沒有要拿掉的 ⇒ 原樣回傳同一個物件（既有輸入逐位元不變）。拿掉後重新建立失敗 ⇒ 原樣回傳（交給組裝器照實拒絕）。
+ * @returns {{ binding: object, dropped: Array<{dimension:string, choice:string}> }}
+ */
+export function bindingForRuleset(binding, ruleset) {
+  const mode = tacticalDirectorModeOf(ruleset);
+  let leaves;
+  try { leaves = leavesOf(binding?.plan?.choices ?? {}); } catch { return { binding, dropped: [] }; }
+  const dropped = leaves.filter(([dim]) => { const row = registryRow(dim); return row !== null && !rowAvailableUnder(row, mode); }).map(([dimension, choice]) => ({ dimension, choice: String(choice) }));
+  if (!dropped.length) return { binding, dropped: [] };
+  const kept = leaves.filter(([dim]) => !dropped.some((d) => d.dimension === dim));
+  const created = createTacticPlan({ templateId: binding.plan.templateId, overlayIds: binding.plan.overlayIds ?? [], choices: nestedOf(kept) });
+  const rebound = created.ok ? bindTacticPlanToCurrentVersions(created.plan) : null;
+  return rebound ? { binding: rebound, dropped } : { binding, dropped: [] };
+}
 
 /** Live 一律用生涯規則集（opts.mode 是遊戲模式 "moba"，不是規則集模式；Challenge 不經過 Live hook）。 */
 export const LIVE_RULESET_MODE = "career";
@@ -153,6 +176,9 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
   const buildStrategy = L.items === true && roster ? normalizeBuildStrategy(opts.buildStrategy) : null;
   const redTactic = opponentTeam ? mobaTacticForTeamStyle(opponentTeam.style) : STANDARD_OPP_TACTIC;
   const explicitLayout = OBJECTIVE_LAYOUTS.includes(opts.objectiveLayout) ? opts.objectiveLayout : null;
+  //  本場規則集用不到的戰術選擇只從本場拿掉（見 bindingForRuleset）；記在 notes，存檔的戰術書不動。
+  const blueBinding = opts.tacticPlanBinding ? bindingForRuleset(toPlainData(opts.tacticPlanBinding), rs) : null;
+  if (blueBinding?.dropped.length) notes.push(`tactic.blue: dropped ${blueBinding.dropped.map((d) => `${d.dimension}=${d.choice}`).join(", ")} (needs a ruleset layer this match does not have; saved plan unchanged)`);
 
   const input = {
     ruleset: rs,
@@ -165,7 +191,7 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
     tactic: {
       //  Phase 3a T12：戰術書的 binding 優先；沒有 binding 才走 v1 戰術物件（舊進行中場次的恢復路徑，結果＝v20）。
       //  binding 不合法 ⇒ 組裝器照實拒絕，不退回 legacy 戰術偷偷開打。
-      blue: opts.tacticPlanBinding ? { kind: "binding", binding: toPlainData(opts.tacticPlanBinding) }
+      blue: blueBinding ? { kind: "binding", binding: blueBinding.binding }
         : opts.tactic?.tacticId ? { kind: "legacy", config: toPlainData(opts.tactic) } : null,
       red: { kind: "legacy", config: toPlainData(redTactic) },
     },

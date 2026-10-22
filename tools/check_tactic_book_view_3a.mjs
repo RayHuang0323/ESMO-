@@ -163,6 +163,41 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   ck(`V11 每時期維度（${reqDims.length} 個）：static 下不畫；core.v1 下畫出的（共 ${shownP}）＝tacticBookOptions(core.v1)；每個非預設選項（共 ${clickedP}）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式並傳給兩個呼叫點`,
     badP.length === 0 && reqDims.length === 6 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
 
+  //  V12（Owner 2026-10-22 檢查 1）：旗標關閉時只過濾本場，不得永久刪掉玩家存的戰術書。
+  {
+    const TB = await import("../src/platform/tactics/tacticBook.js");
+    const phasePlan = createTacticPlan({ templateId: "std", choices: { jungle: { focus: "invade" }, phases: { mid: { grouping: "group" }, early: { objectiveOrder: "dragon" } } } }).plan;
+    const saved = TB.addTacticPlan(TB.normalizeTacticBook(null), { plan: phasePlan, name: "v21 計畫" });
+    const reloaded = TB.normalizeTacticBook(JSON.parse(JSON.stringify(saved.book)));
+    const stripped = View.offeredChoicesOnly("std", [], phasePlan.choices);
+    const view = View.tacticBookView({ templateId: "std", choices: stripped.choices });
+    const resaved = view.ok ? TB.addTacticPlan(reloaded, { plan: view.plan, name: "v21 計畫" }) : { ok: false };
+    const screen = fs.readFileSync(path.join(ROOT, "src/screens/moba/TacticScreen.jsx"), "utf8");
+    ck("V12 存檔的戰術書不會因旗標關閉而被刪改：帶每時期選擇的計畫存檔／重新讀取後原樣保留（結構驗證與規則集無關）；static 下畫面只是拿掉本場用不到的選擇，就算玩家再按一次存檔也是**另一筆**（計畫雜湊不同），原本那筆不被覆蓋；載入戰術書只讀不寫",
+      saved.ok && reloaded.plans.length === 1 && J(reloaded.plans[0].plan) === J(saved.entry.plan) && stripped.dropped.length === 2
+      && resaved.ok && !resaved.replaced && resaved.book.plans.length === 2 && J(resaved.book.plans[0].plan) === J(saved.entry.plan)
+      && /setChoices\(entry\.plan\.choices \?\? \{\}\)/.test(screen) && !/saveTacticPlan\([^)]*kept/.test(screen),
+      J({ reloaded: reloaded.plans.length, dropped: stripped.dropped.length, resaved: resaved.book?.plans?.length }));
+  }
+  //  V13（Owner 2026-10-22 檢查 2）：DEV 網址開關與恢復進行中場次的旁路——開局時只從**本場**的 binding 拿掉這一場規則集用不到的選擇。
+  {
+    const Live = await import("../src/battle/moba/liveMatchSetup.js");
+    const RS = await import("../src/platform/contracts/matchRuleset.js");
+    const b = bindTacticPlanToCurrentVersions(createTacticPlan({ templateId: "std", choices: { risk: { tolerance: "bold" }, phases: { mid: { grouping: "group" } } } }).plan);
+    const plain = bindTacticPlanToCurrentVersions(createTacticPlan({ templateId: "std", choices: { risk: { tolerance: "bold" } } }).plan);
+    const frozenCopy = J(b);
+    const run = (id) => Live.buildLiveMatchSetup({ opts: { tacticPlanBinding: b }, ruleset: RS.rulesetById(id), seed: 7, seedSource: "local" });
+    const v20 = run("career.v20"), v21 = run("career.v21"), dev = run("balanceTool.v20");
+    const v20Plain = Live.buildLiveMatchSetup({ opts: { tacticPlanBinding: plain }, ruleset: RS.rulesetById("career.v20"), seed: 7, seedSource: "local" });
+    const choicesOf = (r) => J(r.setup?.tactic?.blue?.binding?.plan?.choices);
+    ck("V13 本場過濾：career.v20／DEV 的 balanceTool.v20（static）⇒ 開局成功、本場 binding 拿掉每時期選擇並記在 notes、其他選擇保留；career.v21 ⇒ 原樣；沒有每時期選擇 ⇒ 同一個 binding（逐字不變）；傳入的 binding 物件沒被改",
+      v20.ok && choicesOf(v20) === J({ risk: { tolerance: "bold" } }) && v20.notes.some((n) => n.includes("phases.mid.grouping=group"))
+      && dev.ok && choicesOf(dev) === J({ risk: { tolerance: "bold" } }) && v21.ok && choicesOf(v21) === J(b.plan.choices) && v21.notes.length === 0
+      && v20Plain.ok && J(v20Plain.setup.tactic.blue.binding) === J(plain) && v20Plain.notes.length === 0 && J(b) === frozenCopy
+      && Live.bindingForRuleset(plain, RS.rulesetById("career.v20")).binding === plain,
+      J({ v20: choicesOf(v20), dev: choicesOf(dev), v21: choicesOf(v21) }));
+  }
+
   ck("W6 AppShell：戰術頁交出的 binding 進 state 與本場設定（重新整理後接得回來），再交給 GameView", shell.includes("setTacticPlanBinding(binding ?? null)") && shell.includes("tacticPlanBinding: binding ?? null") && shell.includes("tacticPlanBinding={tacticPlanBinding}") && shell.includes("setTacticPlanBinding(config.tacticPlanBinding ?? null)"));
 }
 
