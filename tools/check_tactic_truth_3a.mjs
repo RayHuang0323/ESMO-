@@ -52,7 +52,7 @@ if (stopRecording) {
   process.on("message", async (t) => {
     if (t?.type !== "run") return;
     try {
-      const rec = await runTruthMatch(t.seed, { blue: t.blue, red: t.red, items: "standard" });
+      const rec = await runTruthMatch(t.seed, { blue: t.blue, red: t.red, items: "standard", ...(t.ruleset ? { ruleset: t.ruleset } : {}) });
       process.send({ type: "done", id: t.id, rec, files: loaded() });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
@@ -83,14 +83,23 @@ async function main() {
     return zd >= TRUTH_GATE.marginalBelowZ ? "pass" : zd >= TRUTH_GATE.minZ ? "marginal" : zd <= -TRUTH_GATE.minZ ? "reversed" : "fail";
   };
   const isOk = (v) => v === "pass" || v === "marginal";
-  const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json"];
-  const supersededKeys = new Set(SUPERSEDING.flatMap((rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")).rows.map((r) => `${r.dimension}=${r.choice}`)));
+  //  Phase 3a-C3-3／C4：每時期集結、物件優先的 n=400 紅藍複驗（同一條取代規則：只取代 std 主要列）。
+  //  這兩份是在 balanceTool.v21 量的 ⇒ 只取代同樣在 v21 量的列（需要 Director 的每時期型）；C4 裡的整場巨龍／巴龍在 v20 也可選，
+  //  v21 的證據不取代 v20 的真實性列（審查 2026-10-22 #2；證據留在 Registry.REPLICATION_V21_SCOPE_ONLY，待 Owner 決定）。
+  //  （C3-2 的時期姿態複驗也是 v21 量的，取代 v20 的 std 列是 Owner 2026-10-22 明確核准的，維持原狀。）
+  const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json", "tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json"];
+  const V21_ONLY_SOURCES = new Set(["tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json"]);
+  const supersededKeys = new Set(SUPERSEDING.flatMap((rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")).rows
+    .filter((r) => !V21_ONLY_SOURCES.has(rel) || Plan.rulesetOfRow(Registry.registryRow(r.dimension)) === "balanceTool.v21").map((r) => `${r.dimension}=${r.choice}`)));
   //  只有 std 的主要列會被取代（複驗量的是 std＋那一個時期選擇）。
   const superseded = (r) => r.role === "primary" && r.template === "std" && supersededKeys.has(`${r.dimension}=${r.choice}`);
   const SUPERSEDING_SHAPE = SUPERSEDING.map((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
     return `${rel}: complete=${f.complete} halted=${f.halted} stale=${JSON.stringify(f.stale)} errored=${f.erroredMatches} instrument=${f.instrumentMismatch} rows=${f.rows?.length}`; });
+  //  每時期選擇的結果檔（esmo.phase-options-result.v1）沒有 halted 欄位：未完整的批次不寫結果檔；斷路器／儀器不符時寫出的結果檔
+  //  一定帶非零的 erroredMatches／instrumentMismatch（同一行條件會擋下）。
+  const notHalted = (f) => f.halted === false || (f.schema === "esmo.phase-options-result.v1" && !Object.hasOwn(f, "halted"));
   const supersedingOk = SUPERSEDING.every((rel) => { const f = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
-    return f.complete === true && f.halted === false && Array.isArray(f.stale) && f.stale.length === 0 && f.erroredMatches === 0 && f.instrumentMismatch === 0 && Array.isArray(f.rows) && f.rows.length > 0; });
+    return f.complete === true && notHalted(f) && Array.isArray(f.stale) && f.stale.length === 0 && f.erroredMatches === 0 && f.instrumentMismatch === 0 && Array.isArray(f.rows) && f.rows.length > 0; });
   const statsOfPairs = (pairs) => { const s = pairStats(pairs); return { n: s.n, meanA: r6(s.meanA), meanB: r6(s.meanB), diff: r6(s.diff), sd: r6(s.sd), z: s.z === null ? null : r6(s.z), dz: r6(s.dz), rel: r6(s.rel) }; };
   const rowKey = (b) => b.key;
   /** 結果表 → 應有的排除表（template, dimension, choice, reason）。規則見檔頭。 */
@@ -153,7 +162,7 @@ async function main() {
     for (const b of batches) {
       const have = readBatch(wdir, b.key);
       if (seeds.every((s) => have.has(s))) { doneBatches++; continue; }
-      for (const s of seeds) if (!have.has(s)) tasks.push({ id: `${b.key}#${s}`, key: b.key, seed: s, blue: b.blue, red: b.red });
+      for (const s of seeds) if (!have.has(s)) tasks.push({ id: `${b.key}#${s}`, key: b.key, seed: s, blue: b.blue, red: b.red, ...(b.ruleset ? { ruleset: b.ruleset } : {}) });
     }
     const sidecar = Prov.loadedFilesSidecar(wdir);
     console.log(`量測：${total} 批（已完成 ${doneBatches}），待跑 ${tasks.length} 場，workers=${Math.min(MAX_WORKERS, Number(val("workers", MAX_WORKERS)))}，資料夾 ${wdir}`);
@@ -214,7 +223,7 @@ async function main() {
       const side = b.armSide;
       const pairs = SEEDS.map((s) => [r6(metricValue(ctl.get(s), side, b.metric)), r6(metricValue(trt.get(s), side, b.metric))]);
       const st = statsOfPairs(pairs);
-      const row = { key: b.key, role: b.role, template: b.template, dimension: b.dimension, choice: b.choice, own: b.own, side, metric: b.metric, direction: b.direction, ...st, verdict: verdictOf(st, b.direction), pairs };
+      const row = { key: b.key, role: b.role, template: b.template, dimension: b.dimension, choice: b.choice, own: b.own, side, metric: b.metric, direction: b.direction, ...st, verdict: verdictOf(st, b.direction), pairs, ...(b.ruleset ? { ruleset: b.ruleset } : {}) };
       //  同一維度的其他階段（只描述，不判定）：階段姿態「不應在別的階段有宣稱」
       const m = /^fightEntriesPerMin\.(early|mid|late)$/.exec(b.metric);
       if (m) {
@@ -314,14 +323,19 @@ async function main() {
     //  探針：跑一場最小的對局（對照組、固定 seed），看它載入了哪些 repo 檔案；不在 meta.loadedFiles 裡的就是新依賴。
     let probeFiles = null, probeErr = "";
     const tProbe = Date.now();
-    try { probeFiles = await Prov.probeLoadedFiles({ workerEntry: WORKER_ENTRY, seed: PROBE_SEED }); } catch (e) { probeErr = String(e?.message ?? e); }
+    //  Phase 3a-C：計畫裡有 balanceTool.v21 的批次 ⇒ 兩個規則集各探一場對照組，載入檔取聯集（只在 v21 載入的依賴也要算新依賴）。
+    try {
+      const v20 = await Prov.probeLoadedFiles({ workerEntry: WORKER_ENTRY, seed: PROBE_SEED });
+      const v21 = planRows.some((b) => b.ruleset) ? await Prov.probeLoadedFiles({ workerEntry: WORKER_ENTRY, seed: PROBE_SEED, ruleset: "balanceTool.v21" }) : [];
+      probeFiles = [...new Set([...v20, ...v21])].sort();
+    } catch (e) { probeErr = String(e?.message ?? e); }
     const ctx = { hashes: await currentHashes(), probeFiles, planRows, exclusions: Registry.MEASURED_EXCLUSIONS };
     let fx = null;
     try { fx = JSON.parse(fs.readFileSync(FIXTURE, "utf8")); } catch { /* 下面的檢查會報 */ }
     ck("T1 結果表存在、格式 TacticTruth.v1", !!fx && fx.schema === "TacticTruth.v1" && Array.isArray(fx.rows), fx ? `${fx.rows?.length} 列` : "tools/fixtures/tactic_truth_3a.json 不存在或讀不出來（執行 --measure）");
     if (!fx) { console.log(`\nTactic Truth 3a：${pass}/${pass + fail} FAIL`); process.exit(1); }
 
-    ck("T1b 探針場次跑得起來（一場對照組，看它載入了哪些 repo 檔案）", !!probeFiles && probeFiles.length > 0, probeFiles ? `${probeFiles.length} 個檔案，${((Date.now() - tProbe) / 1000).toFixed(1)} 秒` : probeErr);
+    ck("T1b 探針場次跑得起來（對照組；計畫有 v21 批次時 v20／v21 各一場，看它們載入了哪些 repo 檔案）", !!probeFiles && probeFiles.length > 0, probeFiles ? `${probeFiles.length} 個檔案，${((Date.now() - tProbe) / 1000).toFixed(1)} 秒` : probeErr);
     const stale = Prov.stalenessReasons(fx.meta, ctx);
     ck("T2 結果表沒有過期：模擬版本、Registry live 列、對照表、解析結果、模板版本、量測程式的雜湊相同；記錄的載入檔都在且內容相同；探針沒載入新檔案",
       stale.length === 0, stale.length ? `過期：${stale.slice(0, 6).join("；")}${stale.length > 6 ? `…（共 ${stale.length} 條）` : ""}` : `${ctx.hashes.simVersion} 載入檔 ${Object.keys(fx.meta.loadedFiles).length} mapping ${ctx.hashes.mappingHash}`);

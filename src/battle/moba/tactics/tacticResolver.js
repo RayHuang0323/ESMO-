@@ -39,7 +39,7 @@ import {
 } from "../../../platform/tactics/tacticPlan.js";
 import {
   CHOICE_MAPPING, TACTIC_RESOLVER_VERSION, TACTIC_CHOICE_ERROR, makeChoiceEngine,
-  PHASE_CHOICE_MAPPING, PHASE_CHOICE_ERROR, phaseOverridesOf, applyPhasePatch, leavesOf, nestedOf,
+  PHASE_CHOICE_MAPPING, PHASE_CHOICE_ERROR, phaseOverridesOf, phaseProjectionOf, leavesOf, nestedOf,
 } from "../../../platform/tactics/tacticChoiceMapping.js";
 
 export { CHOICE_MAPPING, TACTIC_RESOLVER_VERSION, TACTIC_PLAN_VERSION };
@@ -200,17 +200,10 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
         out.phases = ov.overrides.map((o) => {
           if (!o) return { knobs: out.knobs, identity: out.identity };
           //  該時期的設定＝整場設定＋該時期的覆寫，再走**同一對**投影（數值只來自對照表與既有投影，不在這裡算）。
-          const cfg = applyPhasePatch(structuredClone(source), o.patch);
+          //  投影本身在 phaseProjectionOf（與選擇引擎的「提供清單」共用同一份，強邊只取 gankWeights，契約 C5-3）。
           let k, id = null;
           try {
-            k = structuredClone(A.toEngineTactic(cfg));
-            if (wantIdentity) id = structuredClone(A.toEngineTacticIdentity(cfg));
-            if (o.gankLane) {
-              //  強邊：只取「該路 lanePlan＝aggressive」投影出來的 gankWeights；站位（laneOffset）與其他旋鈕不動（契約 C5-3）。
-              const g = structuredClone(cfg);
-              g.lanePlan = { ...(g.lanePlan ?? {}), [o.gankLane]: "aggressive" };
-              k.gankWeights = structuredClone(A.toEngineTactic(g).gankWeights);
-            }
+            ({ knobs: k, identity: id } = phaseProjectionOf(source, o, A, wantIdentity));
           } catch { return { error: true }; }
           //  與整場相同 ⇒ 用整場那一份（同一個參照，R-4）；不同 ⇒ 這個時期自己一份（R-5）。
           return { knobs: same(k, out.knobs) ? out.knobs : k, identity: !wantIdentity ? null : same(id, out.identity) ? out.identity : id };

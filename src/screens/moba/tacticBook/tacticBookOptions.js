@@ -44,10 +44,20 @@ export const DIMENSION_LABELS = Object.freeze({
   "phases.early.stance": { group: "phases", label: "前期" },
   "phases.mid.stance": { group: "phases", label: "中期" },
   "phases.late.stance": { group: "phases", label: "後期" },
+  //  Phase 3a-C：每時期的選擇（只在 v21 規則集顯示）
+  "phases.early.grouping": { group: "phases", label: "前期集結" },
+  "phases.mid.grouping": { group: "phases", label: "中期集結" },
+  "phases.late.grouping": { group: "phases", label: "後期集結" },
+  "phases.early.objectiveOrder": { group: "phases", label: "前期物件優先" },
+  "phases.mid.objectiveOrder": { group: "phases", label: "中期物件優先" },
+  "phases.late.objectiveOrder": { group: "phases", label: "後期物件優先" },
 });
 
 const STANCE = { aggressive: "進攻", standard: "標準", defensive: "防守", split: "帶線", scaling: "發育" };
 const LEVEL = { low: "低", standard: "標準", high: "高" };
+//  每時期：成團＝更常決定去參團；物件優先＝更常出現在那個物件的坑邊（文案寫「多去」，不寫「拿到」）；推塔優先連帶三路站位前壓（文案揭露）。
+const GROUPING = { standard: "標準", group: "成團" };
+const OBJECTIVE_ORDER = { none: "不指定", dragon: "多去龍坑", baron: "多去巴龍坑", towers: "推塔優先（站位前壓）" };
 /** 選擇 id → 中文（依維度；找不到就用共用表）。 */
 export const CHOICE_LABELS = Object.freeze({
   "teamfight.posture": { passive: "保守", standard: "標準", aggressive: "積極" },
@@ -62,6 +72,8 @@ export const CHOICE_LABELS = Object.freeze({
   "seats.b3.priority": { core: "核心", normal: "一般" },
   "seats.b4.priority": { core: "核心", normal: "一般" },
   "phases.early.stance": STANCE, "phases.mid.stance": STANCE, "phases.late.stance": STANCE,
+  "phases.early.grouping": GROUPING, "phases.mid.grouping": GROUPING, "phases.late.grouping": GROUPING,
+  "phases.early.objectiveOrder": OBJECTIVE_ORDER, "phases.mid.objectiveOrder": OBJECTIVE_ORDER, "phases.late.objectiveOrder": OBJECTIVE_ORDER,
 });
 export const dimensionLabel = (dim) => DIMENSION_LABELS[dim]?.label ?? dim;
 export const choiceLabel = (dim, choice) => CHOICE_LABELS[dim]?.[choice] ?? choice;
@@ -95,18 +107,18 @@ export function withChoice(choices, dimension, value, own = null) {
 
 /**
  * 把「目前不提供」的選擇拿掉（量測排除的、design 的、與模板／變體不相容的）。
- * 存檔裡的計畫只驗結構，所以可能帶著後來被排除的選擇；畫面載入時一律先過這一關，
+ * 存檔裡的計畫只驗結構，所以可能帶著後來被排除的選擇（或在 v20 規則集下用不到的每時期選擇，opts.tacticalDirector）；畫面載入時一律先過這一關，
  * 送出的計畫才會與畫面上看得到的選項一致。逐一檢查：每個選擇都要在「其他選擇已套用」的前提下仍被提供。
  * @returns {{ choices: object, dropped: Array<{dimension:string, choice:string}> }}
  */
-export function offeredChoicesOnly(templateId, overlayIds = [], choices = {}) {
+export function offeredChoicesOnly(templateId, overlayIds = [], choices = {}, opts = {}) {
   let leaves;
   try { leaves = leavesOf(choices ?? {}); } catch { return { choices: {}, dropped: [] }; }
   const dropped = [];
   for (let changed = true; changed;) {
     changed = false;
     let rows;
-    try { rows = Object.fromEntries(tacticBookOptions(templateId, overlayIds, nestedOf(leaves)).map((r) => [r.dimension, r])); } catch { rows = {}; }
+    try { rows = Object.fromEntries(tacticBookOptions(templateId, overlayIds, nestedOf(leaves), opts).map((r) => [r.dimension, r])); } catch { rows = {}; }
     for (const [dim, v] of leaves) {
       const row = rows[dim];
       //  要畫得出來才留：這個維度至少有兩個選項，而且這個值在裡面。
@@ -129,9 +141,10 @@ export function offeredChoicesOnly(templateId, overlayIds = [], choices = {}) {
  * @param {object} [o.choices]        巢狀選擇
  * @param {Array|object} [o.seatPlayers]  buildPlayerStatSlots 的輸出
  * @param {Function|object} [o.heroLookup]  (seat) → 英雄戰鬥原型
+ * @param {string} [o.tacticalDirector]  目前規則集的 Director 模式（缺少 ≡ "static"＝v20：不畫需要每時期方針的維度）
  * @returns {{ok:true, plan, binding, config, dimensions, groups, profile, seats, load, contradictions} | {ok:false, errors}}
  */
-export function tacticBookView({ templateId, overlayIds = [], choices = {}, seatPlayers = null, heroLookup = null } = {}) {
+export function tacticBookView({ templateId, overlayIds = [], choices = {}, seatPlayers = null, heroLookup = null, tacticalDirector = "static" } = {}) {
   const created = createTacticPlan({ templateId, overlayIds, choices });
   if (!created.ok) return { ok: false, errors: created.errors };
   const plan = created.plan;
@@ -140,7 +153,7 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
   const tpl = templateById(plan.templateId);
   const config = mergeTacticConfig(tpl, plan.overlayIds, plan.choices);
   const explicit = Object.fromEntries(leavesOf(plan.choices));
-  const dimensions = tacticBookOptions(plan.templateId, plan.overlayIds, plan.choices)
+  const dimensions = tacticBookOptions(plan.templateId, plan.overlayIds, plan.choices, { tacticalDirector })
     //  只有一個可選（＝模板自己的值）的維度不畫：沒有東西可以選。
     .filter((row) => row.offered.length >= 2)
     .map((row) => {

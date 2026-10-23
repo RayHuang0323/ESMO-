@@ -56,9 +56,11 @@ export async function resolvedHash() {
     out.push([t, "-", "-", base.knobs, base.identity]);
     for (const row of Registry.liveRows()) {
       const d = Mapping.offeredChoiceDetail(t, row.dimension, [], {}, { withMeasured: false });
+      //  需要 Director core.v1 的列（每時期型，Phase 3a-C）：以每時期方針解析，雜湊進三個時期的方針（沒要求時會被拒絕＝常數，等於沒保護）。
+      const phased = Plan.rulesetOfRow(row) !== null;
       for (const c of d.offered.filter((x) => x !== d.own)) {
-        const r = resolveTactic(tacticInputOf({ templateId: t, choices: Mapping.nestedOf([[row.dimension, c]]) }));
-        out.push([t, row.dimension, c, r.knobs, r.identity]);
+        const r = resolveTactic(tacticInputOf({ templateId: t, choices: Mapping.nestedOf([[row.dimension, c]]) }), {}, phased ? { phases: true } : {});
+        out.push(phased ? [t, row.dimension, c, r.ok ? r.phases.map((ph) => [ph.knobs, ph.identity]) : r.errors] : [t, row.dimension, c, r.knobs, r.identity]);
       }
     }
   }
@@ -72,7 +74,8 @@ export async function registryHash() {
 export async function mappingHash() {
   const Mapping = await import("../../src/platform/tactics/tacticChoiceMapping.js");
   const Snap = await import("../../src/platform/contracts/squadSnapshot.js");
-  return Snap.stableHash(Snap.stableStringify(Mapping.CHOICE_MAPPING));
+  //  Phase 3a-C：每時期對照（PHASE_CHOICE_MAPPING）也是量測輸入的一部分（集結 0.9、巨龍 0.95…）。
+  return Snap.stableHash(Snap.stableStringify([Mapping.CHOICE_MAPPING, Mapping.PHASE_CHOICE_MAPPING]));
 }
 export async function templatesVersion() {
   return (await import("../../src/platform/tactics/tacticTemplates.js")).TACTIC_TEMPLATES_VERSION;
@@ -121,13 +124,14 @@ export function hashLoadedFiles(rels, readFn = read) {
 
 // ── 探針：用一個 worker 跑一場最小的對局，回傳它載入的 repo 檔案 ─────────────────
 /** workerEntry＝有 --truth-worker 模式的入口（check_tactic_truth_3a.mjs）。對照組（雙方 std）、固定 seed，訊息格式與 --measure 送的相同。 */
-export function probeLoadedFiles({ workerEntry, seed, timeoutMs = 180000 }) {
+//  ruleset（可省略）：探針場次的規則集；預設＝balance runner 的預設（balanceTool.v20）。真實性表有 v21 批次 ⇒ 呼叫端兩個都探。
+export function probeLoadedFiles({ workerEntry, seed, timeoutMs = 180000, ruleset = null }) {
   return new Promise((resolve, reject) => {
     const child = fork(workerEntry, ["--truth-worker"], { env: { ...process.env, ESMO_BALANCE_SKILLS: "on" }, stdio: ["ignore", "inherit", "inherit", "ipc"] });
     const timer = setTimeout(() => { child.kill(); reject(new Error(`探針逾時（${timeoutMs} ms）`)); }, timeoutMs);
     const finish = (fn, v) => { clearTimeout(timer); child.kill(); fn(v); };
     child.on("message", (m) => {
-      if (m.type === "ready") child.send({ type: "run", id: "probe", seed, blue: null, red: null });
+      if (m.type === "ready") child.send({ type: "run", id: "probe", seed, blue: null, red: null, ...(ruleset ? { ruleset } : {}) });
       else if (m.type === "done") finish(resolve, m.files ?? []);
       else if (m.type === "error") finish(reject, new Error(`探針場次失敗：${String(m.error).slice(0, 300)}`));
     });

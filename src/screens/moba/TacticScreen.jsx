@@ -21,7 +21,9 @@
 //    onNext(applied, buildStrategy) 的第二參數在 OFF 時是 null。
 // ============================================================================
 import React, { useMemo, useState } from "react";
-import { featureEnabled } from "../../featureFlags.js";
+import { featureEnabled, FEATURE_FLAGS } from "../../featureFlags.js";
+import { resolveRulesetForMode, tacticalDirectorModeOf } from "../../platform/contracts/matchRuleset.js";
+import { LIVE_RULESET_MODE } from "../../battle/moba/liveMatchSetup.js";
 import { itemsDevRequested } from "../../ui/itemsDevFlag.js";
 import { heroById } from "../../data/heroDatabase.js";
 import { draftRoster } from "../../battle/moba/draftRoster.js";
@@ -139,17 +141,20 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   //  席位選手素質與英雄原型只用來算「適性／配合度」這兩個參考指標，不進計畫本身。
   const talentRosterForBook = useMemo(() => (roster ? draftRoster(roster, draft) : null), [roster, draft]);
   const seatPlayers = useMemo(() => buildPlayerStatSlots(allPlayers, "blue", lineup), [allPlayers, lineup]);
+  //  Phase 3a-C：每時期的選擇（集結、物件優先）只在 v21 規則集（Director core.v1）可用——與開局時 liveMatchSetup 用同一個解析函式，
+  //  旗標關閉（v20）⇒ 戰術書不畫這些維度，舊計畫裡帶著的也先拿掉（否則組裝器會拒絕整份戰術）。
+  const tacticalDirector = useMemo(() => tacticalDirectorModeOf(resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS })), []);
   const book = useMemo(() => {
     const heroLookup = (seat) => { const id = talentRosterForBook?.[seat]?.heroId; return id ? getHeroCombatArchetype(id) : null; };
     const overlayIds = activeVariant ? [activeVariant.variantId] : [];
     //  先拿掉目前不提供的選擇（從戰術書載入的舊計畫可能帶著後來被量測排除的選項；換變體後也可能有選項不再提供）
     //  ⇒ 送出去的計畫永遠與畫面上看得到的選項一致。
-    const kept = offeredChoicesOnly(template.templateId, overlayIds, choices);
-    const view = tacticBookView({ templateId: template.templateId, overlayIds, choices: kept.choices, seatPlayers, heroLookup });
+    const kept = offeredChoicesOnly(template.templateId, overlayIds, choices, { tacticalDirector });
+    const view = tacticBookView({ templateId: template.templateId, overlayIds, choices: kept.choices, seatPlayers, heroLookup, tacticalDirector });
     //  仍不合法 ⇒ 退回「模板＋變體、沒有額外選擇」，不送出不合法的計畫。
     return view.ok ? { view, choices: kept.choices, dropped: kept.dropped }
-      : { view: tacticBookView({ templateId: template.templateId, overlayIds, choices: {}, seatPlayers, heroLookup }), choices: {}, dropped: kept.dropped };
-  }, [template.templateId, activeVariant, choices, seatPlayers, talentRosterForBook]);
+      : { view: tacticBookView({ templateId: template.templateId, overlayIds, choices: {}, seatPlayers, heroLookup, tacticalDirector }), choices: {}, dropped: kept.dropped };
+  }, [template.templateId, activeVariant, choices, seatPlayers, talentRosterForBook, tacticalDirector]);
   const bookView = book.view.ok ? book.view : null;
   //  真正生效的那一份：有戰術書的解析結果就用它（模板＋變體＋選擇，與引擎吃到的同一個合併函式）；否則是 v20 的基礎路徑。
   const applied = bookView ? bookView.config : baseApplied;

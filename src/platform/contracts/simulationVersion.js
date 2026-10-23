@@ -573,7 +573,17 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-22（真實性表以新指標整輪重測後）：MEASURED_EXCLUSIONS 加 4 筆弱點模板的時期姿態排除（classic.m4 前期 scaling、
   //  v2.defensive_hold 中期 scaling、classic.m1 後期 defensive／scaling；n=40 的 phaseEngageDecisionsPerMin.<p>）。只改提供哪些選擇；
   //  非時期的 72 列與前一版逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 a5ce0d283ead3e5c 未曾發布）。
-  "moba-sim.v21": "21a219764652fd1d",
+  //  2026-10-23（Phase 3a-C3-3／C4 升級 live）：Phase 3a-C3-3/C4 live: per-phase grouping/objectiveOrder (director rulesets only); per-match filter; behaviour unchanged for existing inputs.
+  //  capabilityRegistry.js：phases.<p>.grouping／objectiveOrder 改 live（requires Director core.v1）、REPLICATION_CONFIRMED／WITHHELD 加 C3-3／C4 列、
+  //  整場巨龍／巴龍的 G-A7 指標改為 contestShare（舊指標列入 retiredClaims；v21 證據只留在 REPLICATION_V21_SCOPE_ONLY，Owner 裁定不開放 v20）。
+  //  tacticChoiceMapping.js：objectiveOrder 加不覆寫值 none、共用 phaseProjectionOf（tacticResolver 改呼叫它，成功路徑輸出逐位元相同）、
+  //  選擇引擎提供每時期選擇、tacticBookOptions 依 Director 模式過濾。liveMatchSetup.js：本場規則集用不到的選擇只從本場 binding 拿掉（記在 notes）——
+  //  以前這種輸入會被組裝器拒絕（沒有輸出），現在開得了局；所有本來開得了局的輸入結果不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 21a219764652fd1d 未曾發布）。
+  //  2026-10-23（真實性表整輪重測後，Owner 裁定）：整場巨龍／巴龍的 G-A7 指標改回 v20 原本的 objectiveFightEntriesPerMin（v20 的能力與
+  //  排除表完全依 v20 既有證據；上面「改為 contestShare」那一段作廢，retiredClaims 與其封存檔一併拿掉）；MEASURED_EXCLUSIONS 加 9 筆
+  //  每時期型的弱點模板排除（classic.m2／m8，n=40）。只改提供哪些選擇 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 265bf51eeec97f55 未曾發布）。
+  "moba-sim.v21": "24661fa8041eb9a3",
 });
 
 export const isKnownSimulationVersion = (v) =>

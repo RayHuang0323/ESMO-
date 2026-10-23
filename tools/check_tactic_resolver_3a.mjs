@@ -118,7 +118,16 @@ const clone = (o) => structuredClone(o);
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§M CHOICE_MAPPING（選擇 → 契約欄位，唯一一份）");
 {
-  const M = R.CHOICE_MAPPING, live = Registry.liveRows();
+  //  Phase 3a-C：每時期型的 live 列住在 PHASE_CHOICE_MAPPING（另一張對照，M1p 驗）；本段的整場檢查只看整場列。
+  const PM = Choice.PHASE_CHOICE_MAPPING.rows;
+  const M = R.CHOICE_MAPPING, live = Registry.liveRows().filter((r) => !Object.hasOwn(PM, r.dimension));
+  const phaseLive = Registry.liveRows().filter((r) => Object.hasOwn(PM, r.dimension));
+  const patchKeys = (row) => [...new Set(Object.values(row.values).flatMap((v) => (v && typeof v === "object" ? Object.keys(v) : [])))];
+  ck("M1p 每時期型 live 列：在 PHASE_CHOICE_MAPPING 裡、選擇集合＝對照表的值、basis＝第一個覆寫欄位、touches＝覆寫欄位聯集、requires＝Director core.v1；整場對照表沒有這些鍵",
+    phaseLive.length === 6 && phaseLive.every((r) => { const row = PM[r.dimension];
+      return J(Object.keys(row.values).sort()) === J([...r.choices].sort()) && r.basis === patchKeys(row)[0] && J([...r.touches].sort()) === J(patchKeys(row).sort())
+        && r.requires === Registry.PHASE_DIRECTOR && !Object.hasOwn(M.rows, r.dimension); }),
+    phaseLive.map((r) => r.dimension).join(","));
   ck("M0 版本常數；對照表 deep-frozen 且帶同一個版本", R.TACTIC_RESOLVER_VERSION === "tacticResolver.v1" && M.version === R.TACTIC_RESOLVER_VERSION && deepFrozen(M));
   ck("M1 對照表涵蓋 Registry 每個 live 列（維度集合相同），沒有多餘列",
     J(Object.keys(M.rows).sort()) === J(live.map((r) => r.dimension).sort()), `${Object.keys(M.rows).length} vs ${live.length}`);
@@ -232,6 +241,9 @@ console.log("\n§G G-A3：binding ≡ v20 兩個投影");
   ck("G6 未知輸入種類、缺 tacticId 的 legacy ⇒ 拒絕（unknown_input_kind／legacy_config_invalid）", !x1.ok && codes(x1)[0] === "unknown_input_kind" && !x2.ok && codes(x2)[0] === "legacy_config_invalid");
 }
 
+//  Phase 3a-C：每時期型的 live 列不經 applyChoice（不改整場設定），§X／§W 的整場矩陣只看整場列；每時期型由 §XP 獨立驗。
+const wholeLiveRows = () => Registry.liveRows().filter((r) => !Object.hasOwn(Choice.PHASE_CHOICE_MAPPING.rows, r.dimension));
+
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇（ruling B）");
 {
@@ -242,7 +254,7 @@ console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇
     for (const { tpl, overlayIds } of contexts) {
       const base = res.mergeConfig(tpl, overlayIds, {});
       const baseSig = sigRes(res, base);
-      for (const row of Registry.liveRows()) {
+      for (const row of wholeLiveRows()) {
         out.cells++;
         const d = detailS(res, tpl.templateId, row.dimension, overlayIds);
         const tag = `${tpl.templateId}${overlayIds.length ? `+${overlayIds[0]}` : ""}|${row.dimension}`;
@@ -272,8 +284,8 @@ console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇
     "v2.top_solo_split|lanes.mid.stance=split(second_split_lane)",
     "v2.mid_solo_split|lanes.top.stance=split(second_split_lane)",
   ];
-  ck(`X0 矩陣範圍：21 模板（8 經典＋std＋12 v2）＋ 3 個「經典＋覆蓋層」情境 × ${Registry.liveRows().length} 個 live 維度 ＝ ${real.cells} 格、${real.pairs} 組提供的選擇對`,
-    Templates.TACTIC_TEMPLATE_LIST.length === 21 && real.cells === (21 + 3) * Registry.liveRows().length && real.pairs > 400, `${real.cells} 格 ${real.pairs} 對`);
+  ck(`X0 矩陣範圍：21 模板（8 經典＋std＋12 v2）＋ 3 個「經典＋覆蓋層」情境 × ${wholeLiveRows().length} 個 live 維度 ＝ ${real.cells} 格、${real.pairs} 組提供的選擇對`,
+    Templates.TACTIC_TEMPLATE_LIST.length === 21 && real.cells === (21 + 3) * wholeLiveRows().length && real.pairs > 400, `${real.cells} 格 ${real.pairs} 對`);
   ck("X1 每一對「提供的」選擇，解析出的 knobs＋identity 都不同（沒有假選項）", real.pairBad.length === 0, real.pairBad.slice(0, 4).join("; "));
   ck("X2 每個提供的選擇都不同於「沒有選擇」——除非它就是模板自己的值（釘住＝跟隨，解析結果相同，這是允許的）", real.noneBad.length === 0 && real.pinBad.length === 0, [...real.noneBad, ...real.pinBad].slice(0, 4).join("; "));
   ck("X3 提供清單永遠包含模板自己的有效值", real.ownMissing.length === 0, real.ownMissing.slice(0, 4).join("; "));
@@ -566,7 +578,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
     const bad = []; let cells = 0;
     for (const c of contexts) {
       const base = r.mergeConfig(c.tpl, c.overlayIds, {});
-      for (const row of Registry.liveRows()) {
+      for (const row of wholeLiveRows()) {
         const d = detailS(r, c.tpl.templateId, row.dimension, c.overlayIds);
         for (const ch of d.offered) {
           cells++;
@@ -612,7 +624,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
   }
   function independentMatrix(r) {
     const bad = [], exceptions = []; let cells = 0, pairs = 0;
-    for (const c of contexts) for (const row of Registry.liveRows()) {
+    for (const c of contexts) for (const row of wholeLiveRows()) {
       cells++;
       const want = independentWithheld(r, c, row), d = detailS(r, c.tpl.templateId, row.dimension, c.overlayIds);
       const got = new Set(d.withheld.map((w) => w.choice));
@@ -642,7 +654,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
   for (const c of contexts) {
     const base = res.mergeConfig(c.tpl, c.overlayIds, {});
     const singles = [];
-    for (const row of Registry.liveRows()) { const d = detailS(res, c.tpl.templateId, row.dimension, c.overlayIds); for (const ch of d.offered) if (ch !== d.own) singles.push([row.dimension, ch]); }
+    for (const row of wholeLiveRows()) { const d = detailS(res, c.tpl.templateId, row.dimension, c.overlayIds); for (const ch of d.offered) if (ch !== d.own) singles.push([row.dimension, ch]); }
     for (let i = 0; i < singles.length; i++) for (let j = i + 1; j < singles.length; j++) {
       if (singles[i][0] === singles[j][0] || (i * 7 + j * 13) % 9 !== 0) continue;     // 確定性取樣：不同維度、固定算式
       const choices = Choice.nestedOf([singles[i], singles[j]]);
@@ -674,7 +686,7 @@ console.log("\n§W Fix round 1：split 是真選擇、副作用欄位、獨立�
   };
   for (const tpl of Templates.TACTIC_TEMPLATE_LIST) for (const ov of [[], ...Overlays.TACTIC_OVERLAYS.map((o) => [o.overlayId])]) {
     checkPlan({ templateId: tpl.templateId, overlayIds: ov });
-    for (const row of Registry.liveRows()) for (const ch of row.choices) {
+    for (const row of wholeLiveRows()) for (const ch of row.choices) {
       const choices = Choice.nestedOf([[row.dimension, ch]]);
       //  獨立預期：覆蓋層歸屬正確，且該選擇不在獨立算出的保留集合內
       const okOverlay = ov.every((id) => `classic.${Overlays.overlayById(id).baseTacticId}` === tpl.templateId);
@@ -806,6 +818,47 @@ console.log("\n§S 原始碼衛生、決定性、語意清單");
   //  effectSheet 可用於解析結果（G-A7 之前的最低限度：binding 解析出的設定交給效果表不出錯，且 m7 gank 的入侵列方向由 higher 變 lower／same）
   const sheetM7 = effectSheet(Templates.TACTIC_TEMPLATES["classic.m7"].config), sheetG = effectSheet(resolveB(bind("classic.m7", { choices: { jungle: { focus: "gank" } } })).config);
   ck("S5 效果表可吃 resolver 的輸出：m7 選 gank 後，入侵機率的方向不再是 higher", sheetM7["invade.chance"].dir === "higher" && sheetG["invade.chance"].dir !== "higher", `${sheetM7["invade.chance"].dir} → ${sheetG["invade.chance"].dir}`);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境 × 6 個每時期維度，獨立重算提供清單與計畫接受");
+{
+  const PM = Choice.PHASE_CHOICE_MAPPING.rows, PROJECT = { toEngineTactic, toEngineTacticIdentity };
+  const phaseRows = Registry.liveRows().filter((r) => Object.hasOwn(PM, r.dimension));
+  const contextsP = [
+    ...Templates.TACTIC_TEMPLATE_LIST.map((tpl) => ({ tpl, overlayIds: [] })),
+    ...Overlays.TACTIC_OVERLAYS.map((o) => ({ tpl: Templates.TACTIC_TEMPLATES[`classic.${o.baseTacticId}`], overlayIds: [o.overlayId] })),
+  ];
+  const bad = []; let cells = 0, offeredN = 0;
+  for (const c of contextsP) for (const row of phaseRows) {
+    cells++;
+    const [, p, f] = row.dimension.split("."), i = ["early", "mid", "late"].indexOf(p);
+    const base = Choice.mergeTacticConfig(c.tpl, c.overlayIds, {});
+    //  獨立算：不覆寫的值＝本來；其他選擇的該時期投影與本來相同 ⇒ no_effect；與已見的相同 ⇒ collides（本對照表下不會發生）。
+    const sig = (ch) => { const ov = Choice.phaseOverridesOf({ [p]: { [f]: ch } }); return J(Choice.phaseProjectionOf(base, ov.overrides[i], PROJECT)); };
+    const own = Choice.noOverrideChoiceOf(PM[row.dimension]);
+    const baseSig = sig(own), seen = new Set([baseSig]), want = [own];
+    for (const ch of row.choices) { if (ch === own) continue; const sg = sig(ch); if (sg !== baseSig && !seen.has(sg)) { seen.add(sg); want.push(ch); } }
+    const d = Choice.offeredChoiceDetail(c.tpl.templateId, row.dimension, c.overlayIds, {}, { withMeasured: false });
+    const wantOrdered = row.choices.filter((x) => want.includes(x));
+    if (!d || J(d.offered) !== J(wantOrdered) || d.own !== own) bad.push(`${c.tpl.templateId}${c.overlayIds.length ? "+" + c.overlayIds[0] : ""}|${row.dimension}: ${J(d?.offered)} ≠ ${J(wantOrdered)}`);
+    for (const ch of row.choices) {
+      const okOverlay = c.overlayIds.every((id) => `classic.${Overlays.overlayById(id).baseTacticId}` === c.tpl.templateId);
+      const pl = Plan.createTacticPlan({ templateId: c.tpl.templateId, overlayIds: c.overlayIds, choices: Choice.nestedOf([[row.dimension, ch]]) });
+      if (pl.ok !== (okOverlay && wantOrdered.includes(ch))) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}: plan ok=${pl.ok}`);
+      if (pl.ok && ch !== own) {
+        offeredN++;
+        const b = R.bindTacticPlanToCurrentVersions(pl.plan);
+        const out = R.resolveTactic({ kind: "binding", binding: b }, {}, { phases: true });
+        const changed = out.ok && out.phases.map((ph, k) => ph.knobs !== out.knobs || ph.identity !== out.identity ? k : null).filter((k) => k !== null);
+        if (!out.ok || J(changed) !== J([i])) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}: 解析後另建物件的時期 ${J(changed)}（應只有 ${i}）`);
+        const stat = R.resolveTactic({ kind: "binding", binding: b });
+        if (stat.ok || !stat.errors.some((e) => e.code === "phase_choices_not_allowed")) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}: 沒要求每時期方針卻沒被拒絕`);
+      }
+    }
+  }
+  ck(`XP1 提供清單＝獨立重算（${cells} 格）；計畫接受恰好＝提供；每個非本來選擇解析後只有自己那個時期另建物件（${offeredN} 組）；沒要求每時期方針（static）⇒ 拒絕 phase_choices_not_allowed`,
+    bad.length === 0 && cells === (21 + 3) * 6 && offeredN > 50, bad.slice(0, 4).join(" | "));
 }
 
 console.log(`\ntacticResolver.v1（3a T9）：${pass}/${pass + fail}${fail ? "　FAIL" : "　OK"}`);

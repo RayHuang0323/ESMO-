@@ -5,6 +5,8 @@
 //   W  _joinV3 的觀察包裝不改對局：同一場「包裝」與 runner 原樣跑（phaseBucketSim）的長度、勝方、擊殺、每時期接戰數逐欄相同。
 //   X  跨儀器：每時期 engages／engageStarts＝phaseBucketSim（已驗證的分時期儀器）；秒數相同。
 //      X2：每時期「一般熱點」參團擲骰成功（joinGoGeneralStarts）三桶相加＝c7DiagSim 的 goStarts.general（C7 §4-B 判讀用的同一定義），且每桶 ≤ joinGoStarts。
+//      X3：G-A7 真實性儀器（tacticTruthSim v5）的每時期指標＝本儀器（同 seed、同輸入、balanceTool.v21）：集結、出現占比、圍塔窗口、
+//          己方路名的抓人占比與每分鐘抓人——新 live 維度的冒煙層與 n=400 複驗量的是同一個東西。
 //   S  自檢：爭奪三桶相加＝引擎 exec；抓人（己方路名）三路三桶相加＝引擎世界路總數；兩側物件出現次數相同；秒數＝長度。
 //   G  己方路名：紅方的抓人以 sideRelativeLane 換算（紅方世界上路＝己方下路）——用一場紅方「中期強邊＝上路」的輸入，
 //      引擎交給紅方的權重在世界下路，而儀器記到的是紅方**己方上路**比例上升的那一路（單場方向檢查，不是統計）。
@@ -56,6 +58,24 @@ ck("W1／X1 包裝不改對局；每時期接戰數與秒數＝phaseBucketSim（
     }
   }
   ck("X2 一般熱點擲骰成功：三桶相加＝c7DiagSim goStarts.general（同場、同定義），每桶 ≤ 全部", bad2.length === 0 && generalTotal > 0, bad2.length ? bad2.slice(0, 3).join(" ｜ ") : `general 總數 ${generalTotal}`);
+}
+{
+  //  X3（Phase 3a-C 升級 live）：真實性儀器 v5 與本儀器逐值相同。
+  const TS = await imp("tools/lib/tacticTruthSim.mjs");
+  const XM = ["joinGoGeneralStartsPerMin.early", "joinGoGeneralStartsPerMin.mid", "joinGoGeneralStartsPerMin.late",
+    "contestShare.dragon.early", "contestShare.dragon.mid", "contestShare.dragon.late", "contestShare.dragon.early+mid+late",
+    "contestShare.baron.mid", "contestShare.baron.late", "contestShare.baron.early+mid+late",
+    "siegeWindowsPerMin.early", "siegeWindowsPerMin.mid", "siegeWindowsPerMin.late",
+    ...["top", "mid", "bot"].flatMap((l) => ["early", "mid", "late"].map((p) => `gankShare.${l}.${p}`)), "ganksPerMin.early", "ganksPerMin.mid", "ganksPerMin.late"];
+  const arm = { templateId: "std", choices: { phases: { mid: { grouping: "group", objectiveOrder: "dragon" } } } };
+  const bad3 = [];
+  let compared = 0;
+  for (const seed of [3, 11]) {
+    const rt = await TS.runTruthMatch(seed, { blue: arm, red: null, ruleset: "balanceTool.v21" });
+    const rp = await PS.runPhaseStudyMatch(seed, { blue: TS.tacticInputOf(arm), red: TS.tacticInputOf(null), ruleset: "balanceTool.v21" });
+    for (const side of ["blue", "red"]) for (const m of XM) { compared++; const a = TS.metricValue(rt, side, m), b = PS.studyMetricValue(rp, side, m); if (a !== b) bad3.push(`${seed}/${side}/${m}: ${a}≠${b}`); }
+  }
+  ck(`X3 真實性儀器 v5 的每時期指標＝本儀器（2 場 × 2 側 × ${XM.length} 個指標，同 seed、同輸入、balanceTool.v21）`, bad3.length === 0 && compared === 4 * XM.length && TS.TRUTH_SIM_VERSION === "tacticTruthSim.v5", bad3.slice(0, 3).join(" ｜ "));
 }
 const sc = recs.flatMap((r) => PS.selfCheck(r).map((x) => `${r.seed}: ${x}`));
 ck("S1 爭奪／抓人三桶相加＝引擎整場值；兩側出現次數相同；秒數＝長度", sc.length === 0, sc.slice(0, 3).join(" ｜ "));
