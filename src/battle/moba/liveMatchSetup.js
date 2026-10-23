@@ -29,7 +29,7 @@
 // ============================================================================
 import { createMatchSetup } from "../../platform/contracts/matchSetup.js";
 import { resolveRulesetForMode, rulesetById, tacticalDirectorModeOf } from "../../platform/contracts/matchRuleset.js";
-import { measuredExclusion, registryRow, rowAvailableUnder } from "../../platform/tactics/capabilityRegistry.js";
+import { MEASURED_EXCLUSIONS, registryRow, rowAvailableUnder } from "../../platform/tactics/capabilityRegistry.js";
 import { createTacticPlan } from "../../platform/tactics/tacticPlan.js";
 import { leavesOf, nestedOf } from "../../platform/tactics/tacticChoiceMapping.js";
 import { bindTacticPlanToCurrentVersions } from "./tactics/tacticResolver.js";
@@ -51,7 +51,9 @@ export function bindingForRuleset(binding, ruleset) {
   let leaves;
   try { leaves = leavesOf(binding?.plan?.choices ?? {}); } catch { return { binding, dropped: [] }; }
   //  兩種「本場用不到」：需要本場沒有的規則集層（requires），或只在本場模式生效的量測排除（scope，跨版本證據隔離：v20 不用 v21 證據）。
-  const scopedOut = (dim, choice) => measuredExclusion(binding?.plan?.templateId, dim, String(choice), mode)?.scope === mode;
+  //  直接找「帶本場模式 scope」的列（不靠 measuredExclusion 回傳的第一筆：同一選擇若另有不分模式的模板列，順序不得影響結果）。
+  const tpl = binding?.plan?.templateId;
+  const scopedOut = (dim, choice) => MEASURED_EXCLUSIONS.some((x) => x.scope === mode && x.dimension === dim && x.choice === String(choice) && (x.template === "*" || x.template === tpl));
   const dropped = leaves.filter(([dim, choice]) => { const row = registryRow(dim); return row !== null && (!rowAvailableUnder(row, mode) || scopedOut(dim, choice)); }).map(([dimension, choice]) => ({ dimension, choice: String(choice) }));
   if (!dropped.length) return { binding, dropped: [] };
   const kept = leaves.filter(([dim]) => !dropped.some((d) => d.dimension === dim));
