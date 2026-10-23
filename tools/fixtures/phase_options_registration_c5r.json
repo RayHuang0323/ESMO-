@@ -509,10 +509,10 @@
  "ownerItems": {
   "focusLaneCount": "claimed: ganksOwnPerMin.<lane>.<p> up on both sides",
   "teamTotal": "guard: ganksPerMin.<p> must not fall significantly on either side",
-  "symmetry": "both sides required; control symmetry check (|red - blue| <= 0.10 on six control gank shares) must pass before promotion",
+  "symmetry": "both sides required; control symmetry check (|red - blue| <= 0.10 on six control gank shares) must pass before promotion; plus the side-asymmetry flag (sideAsymmetry, |z| >= 3 blocks promotion until documented)",
   "mainAttackLane": "= jungle gank focus only (phases.<p>.focusLane -> knobs.gankFocusLane / gankFocusAdd, additive score for that lane). No push, positioning, or lane-assignment behaviour is attached.",
   "resourceTilt": "not done: the engine has no gold/resource distribution system (contract §4.2). Stays design; nothing registered."
  },
  "power": "ganksOwnPerMin exists for every match whose phase lasted >= 60 s, so late pairs are the seeds where both arms reach a late phase >= 60 s (about 240/400 in C5; selection after treatment, as in C5). Late options may still be unmeasurable if fewer than 200; no fallback. Stated before the run.",
- "reviewHistory": ""
+ "reviewHistory": "Pre-run review 2026-10-23 (c2922cee): APPROVE WITH CHANGES (3 major / 3 minor / 1 nit) — #1 increment normalised by max weight (gate R3c), #2 magnitude vs whole-match aggressive disclosed, #3 sideAsymmetry flag registered (tool V8), #4 total non-decrease restated as expectation, #5 claim strength stated, #6 stale wording fixed, #7 run at final fingerprint on a clean tree. Re-review (45298098): APPROVE; nit 1 (this symmetry wording) applied before the run; nit 2 (absolute, not relative, side differences) to be noted in the write-up if the flag fires."
 }
