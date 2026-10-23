@@ -47,13 +47,18 @@ const fxB = readJson("tools/fixtures/phase_stance_result_c3_2_rev1.json");
 const OPTION_RESULTS = [
   { rel: "tools/fixtures/phase_options_result_c3_3.json", registration: "tools/fixtures/phase_options_registration_c3_3.json", seeds: [18401, 18800], rows: 3 },
   { rel: "tools/fixtures/phase_options_result_c4.json", registration: "tools/fixtures/phase_options_registration_c4.json", seeds: [3401, 3800], rows: 11 },
+  //  第五個來源（Phase 3a-C5R，2026-10-24 Owner 核准升級）：每時期強邊 9 列＋快速模式強邊 3 列（quick.*：畫面快捷，不是 Registry 維度）。
+  { rel: "tools/fixtures/phase_options_result_c5r.json", registration: "tools/fixtures/phase_options_registration_c5r.json", seeds: [8201, 8600], rows: 12 },
 ].map((o) => ({ ...o, fx: readJson(o.rel) }));
-const optKeys = new Set(OPTION_RESULTS.flatMap((o) => o.fx.rows.map((r) => `${r.dimension}=${r.choice}`)));
+//  結果檔裡快捷列的 dimension 帶說明（"quick.strongSide (phases.early.focusLane + phases.mid.focusLane)"）⇒ 鍵只取第一段。
+const dimKeyOf = (d) => String(d).split(" ")[0];
+const isPresetDim = (d) => dimKeyOf(d).startsWith("quick.");
+const optKeys = new Set(OPTION_RESULTS.flatMap((o) => o.fx.rows.map((r) => `${dimKeyOf(r.dimension)}=${r.choice}`)));
 //  Owner 2026-10-22：「前期 scaling、中期 scaling 維持 design，不開放，不放大係數」（即使複驗 confirmed）。
 const OWNER_HOLD = ["phases.early.stance=scaling", "phases.mid.stance=scaling"];
 const TEMPLATE_IDS = Object.keys(Templates.TACTIC_TEMPLATES);
 const nested = (dim, v) => { const o = {}; dim.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? v : {}, n[k]), o); return o; };
-const keyOf = (x) => `${x.dimension}=${x.choice}`;
+const keyOf = (x) => `${dimKeyOf(x.dimension)}=${x.choice}`;
 const r6 = (v) => Number(Number(v).toFixed(6));
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -286,7 +291,7 @@ ck(`V6 提供清單：核准的 6 個時期姿態在 std 及每個結構上可�
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-console.log("\n§P 第三、四個來源：每時期選擇複驗（C3-3 seeds 18401–18800、C4 seeds 3401–3800）");
+console.log("\n§P 第三～五個來源：每時期選擇複驗（C3-3 seeds 18401–18800、C4 seeds 3401–3800、C5R seeds 8201–8600）");
 {
   const RULES = { minZ: 3, minRel: 0.05, minValidPairs: 200 };
   const cellOkP = (st, dir) => { const sg = dir === "up" ? 1 : -1; return st.diff !== null && Math.sign(st.diff) === sg && st.z * sg >= RULES.minZ && st.rel !== null && Math.abs(st.rel) >= RULES.minRel; };
@@ -305,21 +310,26 @@ console.log("\n§P 第三、四個來源：每時期選擇複驗（C3-3 seeds 18
   ck("P1 結果檔形狀：完整、沒過期、0 失敗、0 儀器不符；登記檔路徑、列數、規則（z ≥ 3、|rel| ≥ 5%、配對 ≥ 200）與登記相同", shapeBad.length === 0, shapeBad.join(" "));
   const allRows = OPTION_RESULTS.flatMap((o) => o.fx.rows);
   const vBadP = allRows.filter((r) => verdictP(r) !== r.verdict).map((r) => `${keyOf(r)} ${r.verdict}≠${verdictP(r)}`);
-  ck(`P2 每列的判定能由數字依事前登記規則重算（${allRows.length} 列）`, vBadP.length === 0 && allRows.length === 14, vBadP.join(" | "));
+  ck(`P2 每列的判定能由數字依事前登記規則重算（${allRows.length} 列）`, vBadP.length === 0 && allRows.length === 26, vBadP.join(" | "));
   const primP = (r, s) => ({ n: r.claims[0][s].n, rel: r6(r.claims[0][s].rel), z: r6(r.claims[0][s].z) });
   //  只在 v21 量的證據只核准需要 Director 的每時期型；整場選項的 confirmed 列在 REPLICATION_V21_SCOPE_ONLY（不取代 v20 的真實性列）。
   const phaseDim = (d) => Registry.registryRow(d)?.requires === Registry.PHASE_DIRECTOR;
-  const wantV21 = allRows.filter((r) => r.verdict === "confirmed" && !phaseDim(r.dimension)).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
+  const wantV21 = allRows.filter((r) => r.verdict === "confirmed" && !phaseDim(r.dimension) && !isPresetDim(r.dimension)).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
   const wantCP = allRows.filter((r) => r.verdict === "confirmed" && phaseDim(r.dimension)).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
   const wantWP = allRows.filter((r) => r.verdict !== "confirmed").map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "not_replicated", verdict: r.verdict, metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
   const CP = Registry.REPLICATION_CONFIRMED.filter((x) => optKeys.has(keyOf(x))), WP = W.filter((x) => optKeys.has(keyOf(x)));
+  //  快捷（quick.*）的複驗：計畫裡仍是兩格每時期強邊；組合本身的證據只留在 REPLICATION_PRESET_CONFIRMED（數字照抄主宣稱）。
+  const PR = Registry.REPLICATION_PRESET_CONFIRMED;
+  const wantPR = allRows.filter((r) => r.verdict === "confirmed" && isPresetDim(r.dimension)).map((r) => ({ template: "*", dimension: dimKeyOf(r.dimension), choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
   ck("P3 REPLICATION_CONFIRMED 屬於這兩份的部分 ＝ confirmed 的每時期型列（逐欄相同：指標、判定、紅藍 n／rel／z 照抄主宣稱）", sameList(CP, wantCP), `${CP.length} 筆`);
   const V21 = Registry.REPLICATION_V21_SCOPE_ONLY;
   ck("P3b REPLICATION_V21_SCOPE_ONLY ＝ confirmed 的整場選項列（整場巨龍 high／low、巴龍 high；只留證據）；它們不在 REPLICATION_CONFIRMED，v20 的量測排除表照舊決定提供",
     sameList(V21, wantV21) && V21.length === 3 && V21.every((x) => !CP.some((y) => keyOf(y) === keyOf(x))) && Object.isFrozen(V21)
     && V21.every((x) => Registry.measuredExclusion("std", x.dimension, x.choice) !== null), V21.map(keyOf).join(" "));
   ck("P4 REPLICATION_WITHHELD 屬於這兩份的部分 ＝ 沒站住的列（not_replicated；後期巴龍 one_sided、後期推塔 insufficient）", sameList(WP, wantWP), WP.map((x) => `${keyOf(x)}:${x.verdict}`).join(" "));
-  ck("P5 三張表（核准、撤下、只在 v21）合起來恰好覆蓋兩份結果檔的每一列、沒有重疊、也不與前兩份來源重疊", CP.length + WP.length + V21.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
+  ck("P3c REPLICATION_PRESET_CONFIRMED ＝ confirmed 的快捷列（快速模式強邊 3 列；逐欄相同）；快捷的兩格每時期強邊都在 REPLICATION_CONFIRMED", sameList(PR, wantPR) && PR.length === 3 && Object.isFrozen(PR)
+    && PR.every((x) => ["early", "mid"].every((p) => Registry.REPLICATION_CONFIRMED.some((y) => y.dimension === `phases.${p}.focusLane` && y.choice === x.choice))), PR.map(keyOf).join(" "));
+  ck("P5 四張表（核准、撤下、只在 v21、快捷）合起來恰好覆蓋三份結果檔的每一列、沒有重疊、也不與前兩份來源重疊", CP.length + WP.length + V21.length + PR.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
     && [...optKeys].every((k) => !origKeys.has(k) && !revKeys.has(k)));
   const bindBad = allRows.filter((r) => phaseDim(r.dimension)).filter((r) => {
     const row = Registry.registryRow(r.dimension), claim = row?.gate?.claims?.find((c) => c.choice === r.choice);
@@ -337,6 +347,11 @@ console.log("\n§P 第三、四個來源：每時期選擇複驗（C3-3 seeds 18
     objRows.every((row) => row && !row.gate.retiredClaims && row.gate.claims.every((c) => c.metric === `objectiveFightEntriesPerMin.${row.dimension.split(".")[1]}`))
     && ["objectives.dragon=low", "objectives.dragon=high", "objectives.baron=low", "objectives.baron=high"].every((k) => { const [d, c] = k.split("="); return Registry.measuredExclusion("std", d, c)?.template === "*"; }),
     objRows.map((r) => r?.gate?.claims?.[0]?.metric).join(" "));
+  //  P9（2026-10-24 補上的缺口）：核准表的每一列都必須來自某一份登記過的複驗來源（C3-2 rev1 或每時期選擇的結果檔），恰好一份；
+  //  之前只檢查「來源裡的列都在表上」，沒檢查反方向——多塞一列沒有來源的 confirmed 不會被抓到。
+  const orphanC = Registry.REPLICATION_CONFIRMED.filter((x) => [revKeys, optKeys].filter((ks) => ks.has(keyOf(x))).length !== 1).map(keyOf);
+  const orphanPlant = [...Registry.REPLICATION_CONFIRMED, { dimension: "jungle.tempo", choice: "fast" }].filter((x) => [revKeys, optKeys].filter((ks) => ks.has(keyOf(x))).length !== 1).length;
+  ck("P9 REPLICATION_CONFIRMED 的每一列都恰好來自一份登記過的複驗來源（反向：塞一列沒有來源的 ⇒ 抓到）", orphanC.length === 0 && orphanPlant === 1, orphanC.join(" "));
   const n = clone(CP); n[0].red.z = 1;
   const rowsN = clone(allRows); rowsN[0].claims[0].blue.z = 1;
   ck("NP 反向：核准表的數字被改、結果檔某格 z 被改 ⇒ P3／P2 抓得到", !sameList(n, wantCP) && rowsN.some((r) => verdictP(r) !== r.verdict));

@@ -119,11 +119,13 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       const problems = engine.planProblems(tpl, plan.overlayIds, plan.choices);
       if (problems.length) return fail(...problems.map((e) => err(e.code, `binding.plan.${e.field}`, e.message)));
 
-      const merged = engine.mergeConfig(tpl, plan.overlayIds, plan.choices);
+      //  勝利條件（Phase 3a-C6）只是「替玩家沒選的維度預填既有選擇」：先展開，之後整條路與玩家自己選那些選擇完全相同。
+      const effective = engine.effectiveChoices(plan.templateId, plan.overlayIds, plan.choices);
+      const merged = engine.mergeConfig(tpl, plan.overlayIds, effective);
       const overlayName = plan.overlayIds.length ? (variantById(plan.overlayIds[0])?.name ?? null) : null;
       const config = deepFreeze(merged);
       //  每時期的選擇（PHASE_CHOICE_MAPPING 的維度）不進整場設定；另外交給 resolveTactic 建每時期方針。沒有就不帶這個鍵。
-      const phaseLeaves = leavesOf(plan.choices).filter(([dim]) => Object.hasOwn(PHASE_CHOICE_MAPPING.rows, dim));
+      const phaseLeaves = leavesOf(effective).filter(([dim]) => Object.hasOwn(PHASE_CHOICE_MAPPING.rows, dim));
       return deepFreeze({
         ok: true, errors: [], config,
         meta: { tacticId: config.tacticId, tacticName: config.name ?? null, playbookName: overlayName ?? tpl.name, templateId: plan.templateId, version: CANONICAL_TACTIC_VERSION },
@@ -236,5 +238,8 @@ export const resolveTactic = DEFAULT.resolveTactic;
 /** binding → 凍結的 MobaTacticConfig（還沒投影）；組裝器不用它（走 resolveTactic），gate 與 UI 預覽用。 */
 export const resolveTacticBinding = DEFAULT.resolveBindingConfig;
 export const bindTacticPlanToCurrentVersions = DEFAULT.bindPlan;
+/** 勝利條件展開（Phase 3a-C6；唯一一份在 tacticChoiceMapping.js）。 */
+export const winConditionFill = DEFAULT.winConditionFill;
+export const effectiveTacticChoices = DEFAULT.effectiveChoices;
 /** 登錄表 live 列的維度清單（對照表必須逐列涵蓋；gate 用）。 */
 export const liveDimensions = () => liveRows().map((r) => r.dimension);

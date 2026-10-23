@@ -12,6 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as View from "../src/screens/moba/tacticBook/tacticBookOptions.js";
+import * as Registry from "../src/platform/tactics/capabilityRegistry.js";
 import { liveRows, CAPABILITY_ROWS, measuredExclusion, replicationWithheld } from "../src/platform/tactics/capabilityRegistry.js";
 import { TACTIC_TEMPLATES } from "../src/platform/tactics/tacticTemplates.js";
 import { TACTIC_OVERLAYS } from "../src/platform/tactics/tacticOverlays.js";
@@ -38,7 +39,11 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   const noDim = live.filter((r) => !View.DIMENSION_LABELS[r.dimension]).map((r) => r.dimension);
   const noChoice = live.flatMap((r) => r.choices.filter((c) => !View.CHOICE_LABELS[r.dimension]?.[c]).map((c) => `${r.dimension}=${c}`));
   const groupIds = View.DIMENSION_GROUPS.map((g) => g.id);
-  ck("V1 標籤齊全：每個 live 維度、每個 live 選擇都有中文名，群組都存在；標籤表沒有 Registry 以外的維度", noDim.length === 0 && noChoice.length === 0 && Object.values(View.DIMENSION_LABELS).every((d) => groupIds.includes(d.group)) && Object.keys(View.DIMENSION_LABELS).every((d) => live.some((r) => r.dimension === d)), [...noDim, ...noChoice].join(","));
+  //  標籤表裡不是 live 維度的鍵恰好兩個（多一個、少一個都紅）：畫面快捷「強邊（前＋中期）」（不是 Registry 維度）、勝利條件（組合複驗前是 design，
+  //  標籤先備好；design 不會被 tacticBookOptions 列出，所以畫不出來）。
+  const extraLabels = Object.keys(View.DIMENSION_LABELS).filter((d) => !live.some((r) => r.dimension === d)).sort();
+  const wantExtra = [View.QUICK_STRONG_SIDE, ...(Registry.registryRow("winCondition")?.status === "live" ? [] : ["winCondition"])].sort();
+  ck("V1 標籤齊全：每個 live 維度、每個 live 選擇都有中文名，群組都存在；標籤表 Registry live 以外的鍵恰好是畫面快捷（強邊前＋中期）與尚未 live 的勝利條件", noDim.length === 0 && noChoice.length === 0 && Object.values(View.DIMENSION_LABELS).every((d) => groupIds.includes(d.group)) && J(extraLabels) === J(wantExtra), [...noDim, ...noChoice, ...extraLabels].join(","));
   ck("V1b 指標標籤齊全：六軸、五席位、每個任務", PROFILE_AXES.every((a) => View.PROFILE_AXIS_LABELS[a]) && SEATS.every((s) => View.SEAT_LABELS[s]) && Object.keys(MISSION_POINTS).every((m) => View.MISSION_LABELS[m]));
 
   const groups = View.templateGroups();
@@ -161,7 +166,24 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   const screenWired = /tacticalDirectorModeOf\(resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\)\)/.test(screenSrc)
     && /offeredChoicesOnly\([^)]*\{ tacticalDirector \}\)/.test(screenSrc) && (screenSrc.match(/tacticBookView\(\{[^\n]*tacticalDirector \}\)/g) ?? []).length === 2;
   ck(`V11 每時期維度（${reqDims.length} 個）：static 下不畫；core.v1 下畫出的（共 ${shownP}）＝tacticBookOptions(core.v1)；每個非預設選項（共 ${clickedP}）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式並傳給兩個呼叫點`,
-    badP.length === 0 && reqDims.length === 6 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
+    badP.length === 0 && reqDims.length === 9 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
+
+  //  V11b（Phase 3a-C5R 快捷）：core.v1 下 std 有「強邊（前＋中期）」一列，選項＝兩格強邊都提供的路；點「上路」⇒ 計畫恰好多兩格（前期、中期 focusLane＝top），
+  //  兩格的值相同時快捷顯示為選中；點「不指定」⇒ 兩格都清掉；static 下沒有這一列。
+  {
+    const on = View.tacticBookView({ templateId: "std", tacticalDirector: "core.v1" }), off = View.tacticBookView({ templateId: "std" });
+    const q = on.dimensions.find((d) => d.dimension === View.QUICK_STRONG_SIDE);
+    const e = on.dimensions.find((d) => d.dimension === "phases.early.focusLane"), m = on.dimensions.find((d) => d.dimension === "phases.mid.focusLane");
+    const want = e && m ? e.choices.map((c) => c.id).filter((id) => m.choices.some((c) => c.id === id)) : [];
+    const picked = View.withChoice({}, View.QUICK_STRONG_SIDE, "top", "none");
+    const after = View.tacticBookView({ templateId: "std", choices: picked, tacticalDirector: "core.v1" });
+    const qa = after.dimensions.find((d) => d.dimension === View.QUICK_STRONG_SIDE);
+    const cleared = View.withChoice(picked, View.QUICK_STRONG_SIDE, "none", "none");
+    ck("V11b 快捷「強邊（前＋中期）」：core.v1 才有、選項＝兩格交集；點上路 ⇒ 前／中期 focusLane 都是 top 且快捷顯示選中；點不指定 ⇒ 兩格清掉",
+      !!q && J(q.choices.map((c) => c.id)) === J(want) && want.length === 4 && !off.dimensions.some((d) => d.dimension === View.QUICK_STRONG_SIDE)
+      && J(picked) === J({ phases: { early: { focusLane: "top" }, mid: { focusLane: "top" } } }) && qa?.value === "top" && qa.choices.find((c) => c.id === "top")?.selected === true
+      && J(cleared) === "{}", J({ q: q?.choices.map((c) => c.id), picked, value: qa?.value, cleared }));
+  }
 
   //  V12（Owner 2026-10-22 檢查 1）：旗標關閉時只過濾本場，不得永久刪掉玩家存的戰術書。
   {

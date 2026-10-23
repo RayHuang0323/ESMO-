@@ -39,6 +39,8 @@ const SOURCES = [
   { result: "tools/fixtures/phase_stance_result_c3_2_rev1.json", registration: "tools/fixtures/phase_stance_registration_c3_2_rev1.json" },
   { result: "tools/fixtures/phase_options_result_c3_3.json", registration: "tools/fixtures/phase_options_registration_c3_3.json" },
   { result: "tools/fixtures/phase_options_result_c4.json", registration: "tools/fixtures/phase_options_registration_c4.json" },
+  //  Phase 3a-C5R（2026-10-24 升級）：強邊的 n=400 複驗。
+  { result: "tools/fixtures/phase_options_result_c5r.json", registration: "tools/fixtures/phase_options_registration_c5r.json" },
 ];
 const rulesetOfSource = (s) => {
   if (!s.registration) { const f = readJson(s.result); return f.meta?.harnessVersion?.startsWith("tacticTruthSim.") && !f.meta?.ruleset ? "balanceTool.v20" : (f.meta?.ruleset ?? null); }

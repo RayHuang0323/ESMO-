@@ -147,7 +147,9 @@ export const CHOICE_MAPPING = deepFreeze({
  *   kind "phaseGank"：values[choice]＝lanePlan 的鍵（top／mid／adc）或 null；只取「該路 lanePlan＝aggressive」投影出來的 gankWeights
  *     （該路本來就是 aggressive 的模板 ⇒ 不變），
  *     站位（laneOffset）不動（契約 C5-3：站位不是強邊的宣稱效果）。路名是**己方視角**；紅方轉世界路名只在 Director（laneFrame）。
- * 目前這些維度在 Registry 都是 design：玩家計畫不能選（createTacticPlan 拒絕）；量測工具經 legacy 輸入的 phaseChoices 使用（只限工具規則集）。
+ *     reads＝投影時讀的設定欄位（強邊不改設定，只讀 lanePlan 算增量；Registry 的 basis／touches 以它為準，phaseTouchedFieldsOf）。
+ * Registry 的 live／design 決定玩家能不能選（createTacticPlan）；量測工具另可經 legacy 輸入的 phaseChoices 使用（只限工具規則集）。
+ * 集結／物件優先自 C3-3／C4、強邊自 C5R（2026-10-24 Owner 核准 12 個選項）起 live，只在 Director core.v1 的 v21 規則集。
  */
 const PHASE_IDX = Object.freeze({ early: 0, mid: 1, late: 2 });
 /** 每時期維度的「不覆寫」選擇（objectiveOrder／focusLane 的 none、grouping 的 standard）；沒有 ⇒ null。 */
@@ -168,8 +170,12 @@ const groupRow = (phase) => ({
 const focusRow = (phase) => ({
   kind: "phaseGank", phase,
   values: { none: null, top: "top", mid: "mid", bot: "adc" },
+  reads: ["lanePlan"],
   source: "MobaTacticConfig toEngineTactic：lanePlan.<lane>＝aggressive 的 gankWeights 增量（LANE_PLAN_ENUM；C5R 起以加分方式使用，見 phaseProjectionOf）",
 });
+/** 一列每時期對照可能碰到的設定欄位：phaseConfig＝各選擇覆寫路徑的聯集；phaseGank＝投影時讀的欄位（reads）。Registry 的 basis＝第一個、touches＝全部。 */
+export const phaseTouchedFieldsOf = (row) => (row.kind === "phaseGank" ? [...row.reads]
+  : [...new Set(Object.values(row.values).flatMap((v) => (isPlainObject(v) ? Object.keys(v) : [])))]);
 export const PHASE_CHOICE_MAPPING = deepFreeze({
   version: TACTIC_RESOLVER_VERSION,
   rows: Object.fromEntries(["early", "mid", "late"].flatMap((p) => [
@@ -177,6 +183,25 @@ export const PHASE_CHOICE_MAPPING = deepFreeze({
     [`phases.${p}.grouping`, groupRow(p)],
     [`phases.${p}.focusLane`, focusRow(p)],
   ])),
+});
+/**
+ * 勝利條件（Phase 3a-C6；契約 C3-C6_行為契約草案.md §5，規劃 review/tactic-book-3a/C6_勝利條件_可行方案.md，Owner 2026-10-24 核准）。
+ * 一個勝利條件＝一串**既有**選擇（[維度, 選擇]，都是已驗證的 live 選擇）；它沒有自己的係數、不新增欄位、不讀比賽狀態。
+ * 只填玩家**沒有明確選**的維度（R-8）；某個組成選擇在這個模板上不提供（量測排除、複驗撤下、與模板相同、第二條帶線路）⇒ 那一格不填，
+ * 而「提供清單」會把這個勝利條件整個保留不提供（component_not_offered），所以玩家看得到的勝利條件一定是完整組合。
+ *   earlySnowball      前期滾雪球：前期進攻、中期進攻、前期多去龍坑。
+ *   objectiveControl   控圖運營（變體 A，Owner 有條件核准）：前期龍、中期巴龍、後期龍、中／後期成團。
+ *   midSplitPressure  中路分推牽制（Owner 只核准中路）：中路帶線（整場選擇）＋中期推塔優先。
+ *   後期團戰（teamfight_scaling）維持 design：前期 scaling 是 owner_hold（不動用 D-18）、後期巴龍沒站住 ⇒ 不在這張表。
+ * 勝利條件只在 Director core.v1（v21）可用（Registry requires）；組成選擇一律以 core.v1 的提供清單判斷。
+ */
+export const WIN_CONDITION_DIM = "winCondition";
+export const WIN_CONDITION_MODE = "core.v1";
+export const WIN_CONDITION_PRESETS = deepFreeze({
+  earlySnowball: [["phases.early.stance", "aggressive"], ["phases.mid.stance", "aggressive"], ["phases.early.objectiveOrder", "dragon"]],
+  objectiveControl: [["phases.early.objectiveOrder", "dragon"], ["phases.mid.objectiveOrder", "baron"], ["phases.late.objectiveOrder", "dragon"],
+    ["phases.mid.grouping", "group"], ["phases.late.grouping", "group"]],
+  midSplitPressure: [["lanes.mid.stance", "split"], ["phases.mid.objectiveOrder", "towers"]],
 });
 export const PHASE_CHOICE_ERROR = Object.freeze({
   PHASE_CHOICES_INVALID: "phase_choices_invalid",
@@ -317,6 +342,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     //  opts.tacticalDirector＝規則集的 Director 模式；帶 scope 的量測排除只在該模式生效（跨版本證據隔離）。省略 ⇒ 只套不分模式的列。
     const mode = opts?.tacticalDirector ?? null;
     const tpl = templateById(templateId), live = registryRow(dim);
+    if (tpl && live && live.status === CAPABILITY_STATUS.LIVE && dim === WIN_CONDITION_DIM) return winConditionOfferedDetail(tpl, live, overlayIds, otherChoices, useMeasured, mode);
     if (tpl && live && live.status === CAPABILITY_STATUS.LIVE && phaseRowOf(dim)) return phaseOfferedDetail(tpl, dim, live, overlayIds, otherChoices, useMeasured, mode);
     if (!tpl || !live || live.status !== CAPABILITY_STATUS.LIVE || !rowOf(dim)) return null;
     const base = mergeConfig(tpl, overlayIds, otherChoices);
@@ -352,7 +378,9 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     const row = phaseRowOf(dim);
     const [, phase, field] = dim.split(".");
     const base = mergeConfig(tpl, overlayIds, otherChoices);
-    const samePhase = { ...(otherChoices?.phases?.[phase] ?? {}) };
+    //  同一時期的其他**每時期**選擇（只取 PHASE_CHOICE_MAPPING 的鍵）：phases.<p>.stance 是整場對照表的維度（已在 base 裡），
+    //  不能交給 phaseOverridesOf——2026-10-24 修正：之前它被當成未知的每時期維度，導致「前期姿態＋前期物件優先」整個被拒絕（沒有對照）。
+    const samePhase = Object.fromEntries(Object.entries(otherChoices?.phases?.[phase] ?? {}).filter(([k]) => Object.hasOwn(phasePhaseRows, `phases.${phase}.${k}`)));
     delete samePhase[field];
     const own = noOverrideChoiceOf(row);
     const sigWith = (c) => {
@@ -371,6 +399,57 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
       const s = sigWith(c);
       if (s === null) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
       if (s === baseSig) { withheld.push({ choice: c, reason: "no_effect" }); continue; }
+      if (seen.has(s)) { withheld.push({ choice: c, reason: "collides", with: seen.get(s) }); continue; }
+      seen.set(s, c); kept.add(c);
+    }
+    return { offered: live.choices.filter((c) => kept.has(c)), withheld, own };
+  }
+
+  /**
+   * 勝利條件展開（Phase 3a-C6）：choices 裡的 winCondition → 只填玩家沒選的維度。回傳
+   * { choices（不含 winCondition 的巢狀選擇）, winCondition（認得的預設 id 或 null）, filled:[[維度, 選擇]], skipped:[{dimension, choice, reason}] }。
+   * 依預設表的順序逐格判斷，每一格都以「已填好的前幾格＋玩家的選擇」為前提，用 core.v1 的提供清單（含量測排除與複驗撤下）：
+   *   explicit＝玩家已選這個維度（玩家優先，R-8）；already＝模板本來就是這個選擇；其他原因＝提供清單的 withheld 原因（或 not_offered）。
+   * 沒有 winCondition 或不認得 ⇒ 原樣回傳（拿掉 winCondition 這一格）。純函式、不改輸入。
+   */
+  function winConditionFill(templateId, overlayIds, choices) {
+    const leaves = leavesOf(choices ?? {});
+    const wc = leaves.find(([d]) => d === WIN_CONDITION_DIM)?.[1];
+    let rest = leaves.filter(([d]) => d !== WIN_CONDITION_DIM);
+    const preset = typeof wc === "string" && Object.hasOwn(WIN_CONDITION_PRESETS, wc) ? WIN_CONDITION_PRESETS[wc] : null;
+    const filled = [], skipped = [];
+    for (const [dim, c] of preset ?? []) {
+      if (rest.some(([d]) => d === dim)) { skipped.push({ dimension: dim, choice: c, reason: "explicit" }); continue; }
+      const d = offeredDetail(templateId, dim, overlayIds, nestedOf(rest), { tacticalDirector: WIN_CONDITION_MODE });
+      if (d && d.own === c) { skipped.push({ dimension: dim, choice: c, reason: "already" }); continue; }
+      if (!d || !d.offered.includes(c)) { skipped.push({ dimension: dim, choice: c, reason: d?.withheld.find((w) => w.choice === c)?.reason ?? "not_offered" }); continue; }
+      rest = [...rest, [dim, c]];
+      filled.push([dim, c]);
+    }
+    return { choices: nestedOf(rest), winCondition: preset ? wc : null, filled, skipped };
+  }
+  /** 引擎實際用的選擇（展開勝利條件後）；沒有勝利條件 ⇒ 與輸入相同的葉子。 */
+  const effectiveChoices = (templateId, overlayIds, choices) => winConditionFill(templateId, overlayIds, choices).choices;
+
+  /**
+   * 勝利條件的提供清單：本來的選擇＝none。一個勝利條件被提供＝在 core.v1 下展開後至少填了一格，而且**沒有任何一格**因為「不提供」而被跳過
+   * （玩家自己選了／模板本來就是，不算跳過）——玩家看得到的勝利條件一定是完整組合（契約 §5.5 組成選項 gate）。
+   * 不是 core.v1 ⇒ 全部不提供（requires_director；Registry requires 另外讓戰術書不列出這個維度）。量測排除與複驗撤下照常套用在勝利條件本身。
+   */
+  function winConditionOfferedDetail(tpl, live, overlayIds, otherChoices, useMeasured, mode) {
+    const own = "none";
+    const others = leavesOf(otherChoices ?? {}).filter(([d]) => d !== WIN_CONDITION_DIM);
+    const seen = new Map(), kept = new Set([own]), withheld = [];
+    seen.set(stableStringify(others), own);
+    for (const c of live.choices.filter((x) => x !== own)) {
+      if (mode !== null && mode !== WIN_CONDITION_MODE) { withheld.push({ choice: c, reason: "requires_director" }); continue; }
+      if (useMeasured && measuredExclusion(tpl.templateId, WIN_CONDITION_DIM, c, mode)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      if (useMeasured) { const rw = replicationWithheld(tpl.templateId, WIN_CONDITION_DIM, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
+      if (!Object.hasOwn(WIN_CONDITION_PRESETS, c)) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
+      const f = winConditionFill(tpl.templateId, overlayIds, nestedOf([...others, [WIN_CONDITION_DIM, c]]));
+      if (f.skipped.some((s) => s.reason !== "explicit" && s.reason !== "already")) { withheld.push({ choice: c, reason: "component_not_offered" }); continue; }
+      if (!f.filled.length) { withheld.push({ choice: c, reason: "no_effect" }); continue; }
+      const s = stableStringify(leavesOf(f.choices));
       if (seen.has(s)) { withheld.push({ choice: c, reason: "collides", with: seen.get(s) }); continue; }
       seen.set(s, c); kept.add(c);
     }
@@ -401,6 +480,17 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
       if (tpl.templateId !== `classic.${o.baseTacticId}`) {
         return [err(E.OVERLAY_BASE_MISMATCH, "overlayIds", `覆蓋層 ${id} 只能用在 classic.${o.baseTacticId}，不能用在 ${tpl.templateId}`)];
       }
+    }
+    //  勝利條件（Phase 3a-C6）：先驗它本身在這個模板上被提供，再拿**展開後**的選擇做下面同一套檢查（引擎吃到的就是展開後的那一份）。
+    const wcLeaf = leavesOf(choices).find(([d]) => d === WIN_CONDITION_DIM);
+    if (wcLeaf) {
+      const others = nestedOf(leavesOf(choices).filter(([d]) => d !== WIN_CONDITION_DIM));
+      const det = offeredDetail(tpl.templateId, WIN_CONDITION_DIM, overlayIds, others, { withMeasured: false });
+      if (!det || !det.offered.includes(wcLeaf[1])) {
+        const why = det?.withheld.find((w) => w.choice === wcLeaf[1])?.reason ?? "not_live";
+        return [err(E.CHOICE_NOT_OFFERED, `choices.${WIN_CONDITION_DIM}`, `${WIN_CONDITION_DIM}=${wcLeaf[1]} 在 ${tpl.templateId} 上不提供（${why}）`)];
+      }
+      choices = effectiveChoices(tpl.templateId, overlayIds, choices);
     }
     const merged = mergeConfig(tpl, overlayIds, choices);
     const problems = problemsOf(merged);
@@ -438,7 +528,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     });
   }
 
-  return { applyChoice, mergeConfig, ownChoiceOf, offeredChoices, offeredDetail, problemsOf, planProblems, tacticBookOptions };
+  return { applyChoice, mergeConfig, ownChoiceOf, offeredChoices, offeredDetail, problemsOf, planProblems, tacticBookOptions, winConditionFill, effectiveChoices };
 }
 
 const DEFAULT = makeChoiceEngine();
@@ -448,4 +538,8 @@ export const offeredChoices = DEFAULT.offeredChoices;
 export const offeredChoiceDetail = DEFAULT.offeredDetail;
 export const tacticBookOptions = DEFAULT.tacticBookOptions;
 export const tacticPlanProblems = DEFAULT.planProblems;
+/** 勝利條件展開（Phase 3a-C6）：{ choices, winCondition, filled, skipped }。 */
+export const winConditionFill = DEFAULT.winConditionFill;
+/** 引擎實際用的選擇（展開勝利條件後的巢狀選擇）。 */
+export const effectiveTacticChoices = DEFAULT.effectiveChoices;
 export const tacticConfigProblems = DEFAULT.problemsOf;

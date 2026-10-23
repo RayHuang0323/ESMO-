@@ -12,11 +12,12 @@
 // ============================================================================
 import { createTacticPlan } from "../../../platform/tactics/tacticPlan.js";
 import { TACTIC_TEMPLATE_LIST, templateById } from "../../../platform/tactics/tacticTemplates.js";
-import { leavesOf, nestedOf, mergeTacticConfig } from "../../../platform/tactics/tacticChoiceMapping.js";
+import { leavesOf, nestedOf, mergeTacticConfig, winConditionFill, WIN_CONDITION_DIM } from "../../../platform/tactics/tacticChoiceMapping.js";
 import { tacticBookOptions, bindTacticPlanToCurrentVersions } from "../../../battle/moba/tactics/tacticResolver.js";
 import { planProfile, seatMissionFit, coordinationLoad, contradictions, PROFILE_AXES, SEATS } from "../../../platform/tactics/tacticIndicators.js";
 
 export const DIMENSION_GROUPS = Object.freeze([
+  { id: "win", label: "勝利條件" },
   { id: "team", label: "團隊" },
   { id: "jungle", label: "打野" },
   { id: "lanes", label: "三路" },
@@ -51,13 +52,26 @@ export const DIMENSION_LABELS = Object.freeze({
   "phases.early.objectiveOrder": { group: "phases", label: "前期物件優先" },
   "phases.mid.objectiveOrder": { group: "phases", label: "中期物件優先" },
   "phases.late.objectiveOrder": { group: "phases", label: "後期物件優先" },
+  "phases.early.focusLane": { group: "phases", label: "前期強邊" },
+  "phases.mid.focusLane": { group: "phases", label: "中期強邊" },
+  "phases.late.focusLane": { group: "phases", label: "後期強邊" },
+  //  畫面快捷（不是 Registry 維度）：一次寫入前期與中期的強邊（契約 §4.1；計畫裡仍是兩格 focusLane）。
+  "quick.strongSide": { group: "phases", label: "強邊（前＋中期）" },
+  //  Phase 3a-C6：勝利條件（只填玩家沒選的欄位）。
+  "winCondition": { group: "win", label: "勝利條件" },
 });
+/** 畫面快捷：強邊（前＋中期）。 */
+export const QUICK_STRONG_SIDE = "quick.strongSide";
+const QUICK_TARGETS = ["phases.early.focusLane", "phases.mid.focusLane"];
 
 const STANCE = { aggressive: "進攻", standard: "標準", defensive: "防守", split: "帶線", scaling: "發育" };
 const LEVEL = { low: "低", standard: "標準", high: "高" };
 //  每時期：成團＝更常決定去參團；物件優先＝更常出現在那個物件的坑邊（文案寫「多去」，不寫「拿到」）；推塔優先連帶三路站位前壓（文案揭露）。
 const GROUPING = { standard: "標準", group: "成團" };
 const OBJECTIVE_ORDER = { none: "不指定", dragon: "多去龍坑", baron: "多去巴龍坑", towers: "推塔優先（站位前壓）" };
+//  強邊＝打野更常去抓這一路（文案不寫「更有利」：複驗只證明指定路的抓人次數上升）。
+const FOCUS_LANE = { none: "不指定", top: "上路", mid: "中路", bot: "下路" };
+const WIN_CONDITION = { none: "不指定", earlySnowball: "前期滾雪球", objectiveControl: "控圖運營", midSplitPressure: "中路分推牽制" };
 /** 選擇 id → 中文（依維度；找不到就用共用表）。 */
 export const CHOICE_LABELS = Object.freeze({
   "teamfight.posture": { passive: "保守", standard: "標準", aggressive: "積極" },
@@ -74,6 +88,9 @@ export const CHOICE_LABELS = Object.freeze({
   "phases.early.stance": STANCE, "phases.mid.stance": STANCE, "phases.late.stance": STANCE,
   "phases.early.grouping": GROUPING, "phases.mid.grouping": GROUPING, "phases.late.grouping": GROUPING,
   "phases.early.objectiveOrder": OBJECTIVE_ORDER, "phases.mid.objectiveOrder": OBJECTIVE_ORDER, "phases.late.objectiveOrder": OBJECTIVE_ORDER,
+  "phases.early.focusLane": FOCUS_LANE, "phases.mid.focusLane": FOCUS_LANE, "phases.late.focusLane": FOCUS_LANE,
+  "quick.strongSide": FOCUS_LANE,
+  "winCondition": WIN_CONDITION,
 });
 export const dimensionLabel = (dim) => DIMENSION_LABELS[dim]?.label ?? dim;
 export const choiceLabel = (dim, choice) => CHOICE_LABELS[dim]?.[choice] ?? choice;
@@ -100,6 +117,12 @@ export function templateGroups() {
 
 /** 在巢狀 choices 上設定／取消一個維度的選擇。value 為 null、或等於模板自己的值（own）⇒ 取消（跟著模板）。 */
 export function withChoice(choices, dimension, value, own = null) {
+  //  快捷：強邊（前＋中期）同時設定兩格；none／取消 ⇒ 兩格都回到「跟著模板」。
+  if (dimension === QUICK_STRONG_SIDE) {
+    const rest = leavesOf(choices ?? {}).filter(([d]) => !QUICK_TARGETS.includes(d));
+    if (value !== null && value !== undefined && value !== "none") for (const d of QUICK_TARGETS) rest.push([d, value]);
+    return nestedOf(rest);
+  }
   const leaves = leavesOf(choices ?? {}).filter(([d]) => d !== dimension);
   if (value !== null && value !== undefined && value !== own) leaves.push([dimension, value]);
   return nestedOf(leaves);
@@ -151,13 +174,17 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
   const binding = bindTacticPlanToCurrentVersions(plan);
   if (!binding) return { ok: false, errors: [{ code: "bind_failed", field: "", message: "這份計畫無法綁定目前的資料版本" }] };
   const tpl = templateById(plan.templateId);
-  const config = mergeTacticConfig(tpl, plan.overlayIds, plan.choices);
+  //  勝利條件（Phase 3a-C6）：引擎吃的是展開後的選擇 ⇒ 設定與畫面上的值都用展開後的；被勝利條件填的格標 fromWinCondition（玩家點了就變成明確選擇）。
+  const fill = winConditionFill(plan.templateId, plan.overlayIds, plan.choices);
+  const config = mergeTacticConfig(tpl, plan.overlayIds, fill.choices);
   const explicit = Object.fromEntries(leavesOf(plan.choices));
+  const filledBy = Object.fromEntries(fill.filled);
   const dimensions = tacticBookOptions(plan.templateId, plan.overlayIds, plan.choices, { tacticalDirector })
     //  只有一個可選（＝模板自己的值）的維度不畫：沒有東西可以選。
     .filter((row) => row.offered.length >= 2)
     .map((row) => {
-      const value = Object.hasOwn(explicit, row.dimension) ? explicit[row.dimension] : row.own;
+      const fromWinCondition = !Object.hasOwn(explicit, row.dimension) && Object.hasOwn(filledBy, row.dimension);
+      const value = Object.hasOwn(explicit, row.dimension) ? explicit[row.dimension] : fromWinCondition ? filledBy[row.dimension] : row.own;
       return {
         dimension: row.dimension,
         group: DIMENSION_LABELS[row.dimension]?.group ?? "team",
@@ -165,16 +192,30 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
         own: row.own,
         value,
         explicit: Object.hasOwn(explicit, row.dimension),
+        fromWinCondition,
         //  模板在這個維度的數值不等於任何一個選項（例如速推流的風險 0.6 介於平衡與大膽之間）⇒ 沒有選項可以標成「預設」，
         //  畫面另外畫一顆「模板值」代表「跟著模板」。
         templateCustom: row.own === null,
         choices: row.offered.map((c) => ({ id: c, label: choiceLabel(row.dimension, c), selected: c === value, isTemplateDefault: c === row.own })),
       };
     });
+  //  快捷「強邊（前＋中期）」：兩格強邊都畫得出來時才加；選項＝兩格都提供的路；值＝兩格相同時的那一路（不同 ⇒ 沒有選中的）。
+  const qe = dimensions.find((d) => d.dimension === QUICK_TARGETS[0]), qm = dimensions.find((d) => d.dimension === QUICK_TARGETS[1]);
+  if (qe && qm) {
+    const ids = qe.choices.map((c) => c.id).filter((id) => qm.choices.some((c) => c.id === id));
+    const qv = qe.value === qm.value ? qe.value : null;
+    if (ids.length >= 2) dimensions.splice(dimensions.indexOf(qe), 0, {
+      dimension: QUICK_STRONG_SIDE, group: "phases", label: dimensionLabel(QUICK_STRONG_SIDE), own: "none", value: qv,
+      explicit: qe.explicit || qm.explicit, fromWinCondition: false, templateCustom: false, quick: true,
+      choices: ids.map((c) => ({ id: c, label: choiceLabel(QUICK_STRONG_SIDE, c), selected: c === qv, isTemplateDefault: c === "none" })),
+    });
+  }
   const groups = DIMENSION_GROUPS.map((g) => ({ ...g, dimensions: dimensions.filter((d) => d.group === g.id) })).filter((g) => g.dimensions.length);
   const profile = planProfile(binding);
   return {
     ok: true, plan, binding, config, dimensions, groups,
+    //  勝利條件實際填了哪些格、哪些格因玩家已選（explicit）或模板本來就是（already）而沒填。
+    winCondition: fill.winCondition ? { id: fill.winCondition, label: choiceLabel(WIN_CONDITION_DIM, fill.winCondition), filled: fill.filled, skipped: fill.skipped } : null,
     profile: PROFILE_AXES.map((axis) => ({ axis, label: PROFILE_AXIS_LABELS[axis], value: profile[axis] })),
     seats: (() => { const fit = seatMissionFit({ binding, seatPlayers, heroLookup }); return SEATS.map((seat) => ({ seat, label: SEAT_LABELS[seat], missionLabel: MISSION_LABELS[fit[seat].mission] ?? fit[seat].mission, ...fit[seat] })); })(),
     load: coordinationLoad(binding, seatPlayers),

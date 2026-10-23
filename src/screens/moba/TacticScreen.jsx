@@ -159,7 +159,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   //  真正生效的那一份：有戰術書的解析結果就用它（模板＋變體＋選擇，與引擎吃到的同一個合併函式）；否則是 v20 的基礎路徑。
   const applied = bookView ? bookView.config : baseApplied;
   const binding = bookView ? bookView.binding : null;
-  const changedCount = bookView ? bookView.dimensions.filter((d) => d.explicit).length : 0;
+  const changedCount = bookView ? bookView.dimensions.filter((d) => d.explicit && !d.quick).length : 0;
   const chooseTemplate = (id) => { setTemplateId(id); setChoices({}); setVariantSel(null); setBookNote(null); };
   const choose = (dimension, value, own) => { setChoices(withChoice(book.choices, dimension, value, own)); setBookNote(null); };
 

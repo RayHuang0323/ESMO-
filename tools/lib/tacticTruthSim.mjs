@@ -207,6 +207,12 @@ export const METRICS = Object.freeze({
     return tot ? s.ganksOwnPh[l][i] / tot : null;
   } },
   ganksPerMinPh: { params: PHASE_PARAMS, alias: "ganksPerMin", of: (s, r, p) => { const i = PHASE_PARAMS.indexOf(p); return per(s.ganksOwnPh.top[i] + s.ganksOwnPh.mid[i] + s.ganksOwnPh.bot[i], r.phaseSecs[i]); } },
+  //  Phase 3a-C5R 升級 live（2026-10-24）：強邊的宣稱指標＝該時期去這一路（己方路名）的抓人次數 ÷ 該時期分鐘數（與 phaseStudySim 同定義）。
+  //  只用既有的 ganksOwnPh 欄位，紀錄形狀不變（舊列逐位元不受影響）。
+  ganksOwnPerMin: { params: ["top", "mid", "bot"].flatMap((l) => PHASE_PARAMS.map((p) => `${l}.${p}`)), of: (s, r, lp) => {
+    const [l, p] = lp.split("."), i = PHASE_PARAMS.indexOf(p);
+    return per(s.ganksOwnPh[l][i], r.phaseSecs[i]);
+  } },
   contestShare: { params: ["dragon.early", "dragon.mid", "dragon.late", "dragon.early+mid+late", "baron.mid", "baron.late", "baron.early+mid+late"], of: (s, r, kp) => {
     const [k, ps] = kp.split("."), idx = ps.split("+").map((p) => PHASE_PARAMS.indexOf(p));
     const apps = idx.reduce((n, i) => n + s.objApps[k][i], 0);

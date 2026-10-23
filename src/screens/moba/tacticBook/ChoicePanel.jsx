@@ -31,7 +31,11 @@ export default function ChoicePanel({ groups, onChoose, onReset, changedCount = 
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {g.dimensions.map((d) => (
                 <div key={d.dimension} data-testid={`tb-dim-${d.dimension}`} role="radiogroup" aria-label={d.label} style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <span style={{ flex: "0 0 64px", fontSize: 11, color: d.explicit ? "#fff" : GC.gray, fontWeight: d.explicit ? 900 : 700 }}>{d.label}</span>
+                  <span style={{ flex: "0 0 64px", fontSize: 11, color: d.explicit ? "#fff" : GC.gray, fontWeight: d.explicit ? 900 : 700 }}>
+                    {d.label}
+                    {/* 勝利條件替玩家預填的格（玩家點任何一個選項就變成自己的選擇） */}
+                    {d.fromWinCondition && <span data-testid={`tb-wc-filled-${d.dimension}`} style={{ display: "block", fontSize: 8, color: GC.gold ?? GC.purp, fontWeight: 800 }}>勝利條件</span>}
+                  </span>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
                     {d.templateCustom && (
                       <button type="button" role="radio" aria-checked={!d.explicit}

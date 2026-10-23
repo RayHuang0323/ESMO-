@@ -593,7 +593,16 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  既有輸入的模擬行為不變 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 e3ba74f04a6ba3e0 未曾發布）。
   //  同日（隔離審查 #2）：liveMatchSetup 的 scope 判定改為直接查帶本場模式 scope 的列（與排除表順序無關）；行為不變 ⇒ 同版號重新登記（舊值 2ae772222d157170
   //  未曾發布；C5R 量測在 2ae772222d157170 下開始與完成，這次改動只在開局過濾、不在量測路徑上）。
-  "moba-sim.v21": "70a8af6428b02a03",
+  //  2026-10-24（Owner 第二輪 Review 核准）：C5R strong side live (v21 director rulesets only); C6 win-condition fill (design); stance+objectiveOrder plan fix.
+  //  capabilityRegistry.js：phases.<p>.focusLane 改 live（requires Director core.v1；宣稱 ganksOwnPerMin.<lane>.<p>）、REPLICATION_CONFIRMED 加 C5R 9 列、
+  //  新增 REPLICATION_PRESET_CONFIRMED（快速模式強邊 3 列，只留證據）；winCondition 仍是 design（列舉先登記）。
+  //  tacticChoiceMapping.js：WIN_CONDITION_PRESETS＋winConditionFill／effectiveChoices（只替沒選的維度預填既有選擇，tacticResolver 改用展開後的選擇；
+  //  沒有 winCondition ⇒ 展開結果＝原選擇，逐位元相同）；強邊列加 reads／phaseTouchedFieldsOf（資料說明，不影響解析）；
+  //  phaseOfferedDetail 修正：同一時期的 phases.<p>.stance（整場對照表的維度）不再被當成未知的每時期維度 ⇒「前期姿態＋前期物件優先」
+  //  以前整份計畫被拒絕（沒有輸出），現在接受；所有本來接受的計畫解析結果不變。強邊選了才出現的 knob 在 C5R 已登記。
+  //  ⇒ 所有既有輸入（含 v20、v21-A 黃金）的模擬行為不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 70a8af6428b02a03 未曾發布）。
+  "moba-sim.v21": "30b44a789b4c7548",
 });
 
 export const isKnownSimulationVersion = (v) =>

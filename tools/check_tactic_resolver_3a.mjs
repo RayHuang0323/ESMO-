@@ -122,9 +122,10 @@ console.log("\n§M CHOICE_MAPPING（選擇 → 契約欄位，唯一一份）");
   const PM = Choice.PHASE_CHOICE_MAPPING.rows;
   const M = R.CHOICE_MAPPING, live = Registry.liveRows().filter((r) => !Object.hasOwn(PM, r.dimension));
   const phaseLive = Registry.liveRows().filter((r) => Object.hasOwn(PM, r.dimension));
-  const patchKeys = (row) => [...new Set(Object.values(row.values).flatMap((v) => (v && typeof v === "object" ? Object.keys(v) : [])))];
-  ck("M1p 每時期型 live 列：在 PHASE_CHOICE_MAPPING 裡、選擇集合＝對照表的值、basis＝第一個覆寫欄位、touches＝覆寫欄位聯集、requires＝Director core.v1；整場對照表沒有這些鍵",
-    phaseLive.length === 6 && phaseLive.every((r) => { const row = PM[r.dimension];
+  //  覆寫欄位（強邊＝投影時讀的欄位）的唯一一份在 Choice.phaseTouchedFieldsOf。Phase 3a-C5R（2026-10-24）起強邊也 live ⇒ 9 列。
+  const patchKeys = (row) => Choice.phaseTouchedFieldsOf(row);
+  ck("M1p 每時期型 live 列：在 PHASE_CHOICE_MAPPING 裡、選擇集合＝對照表的值、basis＝第一個覆寫欄位（強邊＝讀的欄位）、touches＝覆寫欄位聯集、requires＝Director core.v1；整場對照表沒有這些鍵",
+    phaseLive.length === 9 && phaseLive.every((r) => { const row = PM[r.dimension];
       return J(Object.keys(row.values).sort()) === J([...r.choices].sort()) && r.basis === patchKeys(row)[0] && J([...r.touches].sort()) === J(patchKeys(row).sort())
         && r.requires === Registry.PHASE_DIRECTOR && !Object.hasOwn(M.rows, r.dimension); }),
     phaseLive.map((r) => r.dimension).join(","));
@@ -821,7 +822,7 @@ console.log("\n§S 原始碼衛生、決定性、語意清單");
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境 × 6 個每時期維度，獨立重算提供清單與計畫接受");
+console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境 × 9 個每時期維度（含 C5R 強邊），獨立重算提供清單與計畫接受");
 {
   const PM = Choice.PHASE_CHOICE_MAPPING.rows, PROJECT = { toEngineTactic, toEngineTacticIdentity };
   const phaseRows = Registry.liveRows().filter((r) => Object.hasOwn(PM, r.dimension));
@@ -858,7 +859,7 @@ console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境
     }
   }
   ck(`XP1 提供清單＝獨立重算（${cells} 格）；計畫接受恰好＝提供；每個非本來選擇解析後只有自己那個時期另建物件（${offeredN} 組）；沒要求每時期方針（static）⇒ 拒絕 phase_choices_not_allowed`,
-    bad.length === 0 && cells === (21 + 3) * 6 && offeredN > 50, bad.slice(0, 4).join(" | "));
+    bad.length === 0 && cells === (21 + 3) * 9 && offeredN > 50, bad.slice(0, 4).join(" | "));
 }
 
 console.log(`\ntacticResolver.v1（3a T9）：${pass}/${pass + fail}${fail ? "　FAIL" : "　OK"}`);

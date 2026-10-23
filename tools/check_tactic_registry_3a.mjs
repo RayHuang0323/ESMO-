@@ -75,9 +75,10 @@ const ENGINE_SRC = fs.readFileSync(path.join(ROOT, "src/LogicEngine.js"), "utf8"
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§S 列的形狀");
-ck("S1 有 24 個 live 維度（早／中／後期姿態、打野節奏、打野重心、三路姿態、輔助任務、三席核心、風險＋整場型：團戰姿態、集結、巨龍／巴龍／推塔重心＋每時期型：三個時期的集結、物件優先）", live.length === 24, `${live.length}`);
-const PHASE_LIVE = ["early", "mid", "late"].flatMap((p) => [`phases.${p}.grouping`, `phases.${p}.objectiveOrder`]);
-ck("S6 requires：恰好每時期型 6 列需要 Director core.v1（其他 live 列與所有 design 列為 null）；rowAvailableUnder：static 下不可用、core.v1 下可用",
+//  Phase 3a-C5R（2026-10-24 Owner 核准）：三個時期的強邊升 live ⇒ 24 → 27、每時期型 6 → 9。
+ck("S1 有 27 個 live 維度（早／中／後期姿態、打野節奏、打野重心、三路姿態、輔助任務、三席核心、風險＋整場型：團戰姿態、集結、巨龍／巴龍／推塔重心＋每時期型：三個時期的集結、物件優先、強邊）", live.length === 27, `${live.length}`);
+const PHASE_LIVE = ["early", "mid", "late"].flatMap((p) => [`phases.${p}.grouping`, `phases.${p}.objectiveOrder`, `phases.${p}.focusLane`]);
+ck("S6 requires：恰好每時期型 9 列需要 Director core.v1（其他 live 列與所有 design 列為 null）；rowAvailableUnder：static 下不可用、core.v1 下可用",
   J(live.filter((r) => r.requires !== null).map((r) => r.dimension).sort()) === J([...PHASE_LIVE].sort()) && live.every((r) => r.requires === null || r.requires === Registry.PHASE_DIRECTOR)
   && design.every((r) => r.requires === null) && PHASE_LIVE.every((d) => !Registry.rowAvailableUnder(Registry.registryRow(d)) && !Registry.rowAvailableUnder(Registry.registryRow(d), "static") && Registry.rowAvailableUnder(Registry.registryRow(d), "core.v1"))
   && Registry.rowAvailableUnder(Registry.registryRow("risk.tolerance"), "static"));
@@ -94,10 +95,17 @@ ck("S5 live 列的 minSimVersion 是 moba-sim.v21；design 列是 null", live.ev
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§F resolverFields");
-ck("F1 每個 resolverFields 的欄位都出現在 resolver 的輸出裡（std 輸出有這個鍵；值可以是 null；每時期型看 phases:true 的輸出）", stdOut.ok && stdOutPhases.ok && live.every((r) => {
-  const L = stdLeaves();
+//  強邊（phaseGank）的兩個 knob 只在選了強邊的時期出現（沒選 ⇒ 不存在，與 C5R 之前逐位元相同，R-4）⇒ 這兩列改看「std＋該時期選上路」的輸出。
+const chosenLeaves = (r) => {
+  if (Mapping.PHASE_CHOICE_MAPPING.rows[r.dimension]?.kind !== "phaseGank") return stdLeaves();
+  const [, ph, f] = r.dimension.split(".");
+  const o = resolveTactic({ kind: "legacy", config: Mapping.mergeTacticConfig(Templates.TACTIC_TEMPLATES.std, [], {}), phaseChoices: { [ph]: { [f]: "top" } } }, {}, { phases: true, allowPhaseChoices: true });
+  return leaves({ knobs: o.knobs, identity: o.identity, phases: o.phases });
+};
+ck("F1 每個 resolverFields 的欄位都出現在 resolver 的輸出裡（std 輸出有這個鍵；值可以是 null；每時期型看 phases:true 的輸出；強邊看選了強邊的輸出）", stdOut.ok && stdOutPhases.ok && live.every((r) => {
+  const L = chosenLeaves(r);
   return r.resolverFields.every((f) => Object.hasOwn(L, f));
-}), live.flatMap((r) => r.resolverFields.filter((f) => !Object.hasOwn(stdLeaves(), f)).map((f) => `${r.dimension}:${f}`)).join(" "));
+}), live.flatMap((r) => r.resolverFields.filter((f) => !Object.hasOwn(chosenLeaves(r), f)).map((f) => `${r.dimension}:${f}`)).join(" "));
 let pairsChecked = 0;
 const noChange = [], outside = [], usedFields = new Map(live.map((r) => [r.dimension, new Set()]));
 for (const r of live) for (const t of TEMPLATE_IDS) {
@@ -167,8 +175,8 @@ ck("E4 engineReads 與 resolverFields 互相對得上（每個欄位的第一段
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§M 列 ↔ 對照表 ↔ touches");
 const MAP = Mapping.CHOICE_MAPPING.rows;
-//  每時期對照（PHASE_CHOICE_MAPPING）：touches＝各選擇覆寫的設定路徑聯集；強邊（phaseGank）仍是 design。
-const phaseTouches = (row) => [...new Set(Object.values(row.values).flatMap((v) => (v && typeof v === "object" ? Object.keys(v) : [])))];
+//  每時期對照（PHASE_CHOICE_MAPPING）：touches＝各選擇覆寫的設定路徑聯集；強邊（phaseGank）＝投影時讀的欄位（reads）。唯一一份在 Mapping.phaseTouchedFieldsOf。
+const phaseTouches = (row) => Mapping.phaseTouchedFieldsOf(row);
 const mapRowOf = (dim) => MAP[dim] ?? PHASE_ROWS[dim] ?? null;
 const touchesOf = (dim) => (MAP[dim] ? Mapping.touchedFieldsOf(MAP[dim]) : phaseTouches(PHASE_ROWS[dim]));
 ck("M1 對照表的列（整場＋每時期 live 的）＝live 列（維度集合相同）；每時期對照中沒 live 的列在 Registry 是 design", J([...Object.keys(MAP), ...Object.keys(PHASE_ROWS).filter((d) => Registry.registryRow(d)?.status === "live")].sort()) === J(live.map((r) => r.dimension).sort())
@@ -229,7 +237,7 @@ ck("U2 UI 清單只含 live 維度（design 維度永遠不會出現）", TEMPLA
 ck("U5 v20（static，預設）下 UI 清單＝live 列扣掉需要 Director 的每時期型（旗標關閉時看不到、也送不出每時期選擇）",
   TEMPLATE_IDS.every((t) => J(tacticBookOptions(t).map((o) => o.dimension)) === J(live.filter((r) => r.requires === null).map((r) => r.dimension))
     && J(tacticBookOptions(t, [], {}, { tacticalDirector: "static" }).map((o) => o.dimension)) === J(tacticBookOptions(t).map((o) => o.dimension))));
-ck("U3 CAPABILITIES 是同一份列（別名）；liveCapabilities() ＝ liveRows()；v20 上沒有任何 live 列", Registry.CAPABILITIES === Registry.CAPABILITY_ROWS && J(Registry.liveCapabilities()) === J(Registry.liveRows()) && Registry.liveCapabilities("moba-sim.v20").length === 0 && Registry.liveCapabilities("moba-sim.v21").length === 24);
+ck("U3 CAPABILITIES 是同一份列（別名）；liveCapabilities() ＝ liveRows()；v20 上沒有任何 live 列", Registry.CAPABILITIES === Registry.CAPABILITY_ROWS && J(Registry.liveCapabilities()) === J(Registry.liveRows()) && Registry.liveCapabilities("moba-sim.v20").length === 0 && Registry.liveCapabilities("moba-sim.v21").length === 27);
 ck("U4 isLiveChoice 三參數：v21 ⇒ 可用；v20、亂字串 ⇒ 不可用；兩參數的舊行為不變",
   Registry.isLiveChoice("risk.tolerance", "bold", "moba-sim.v21") && !Registry.isLiveChoice("risk.tolerance", "bold", "moba-sim.v20") && !Registry.isLiveChoice("risk.tolerance", "bold", "garbage")
   && Registry.isLiveChoice("risk.tolerance", "bold") && !Registry.isLiveChoice("risk.tolerance", 0.8) && !Registry.isLiveChoice("winCondition", "x", "moba-sim.v21"));

@@ -138,12 +138,14 @@ console.log("\n§R Capability Registry 資料列");
       "teamfight.posture", "teamfight.grouping", "objectives.dragon", "objectives.baron", "objectives.tower",
       //  Phase 3a-C3-3／C4（2026-10-22）：每時期型，只在 v21 規則集（Director core.v1）可用（Registry requires）。
       "phases.early.grouping", "phases.mid.grouping", "phases.late.grouping",
-      "phases.early.objectiveOrder", "phases.mid.objectiveOrder", "phases.late.objectiveOrder"]));
+      "phases.early.objectiveOrder", "phases.mid.objectiveOrder", "phases.late.objectiveOrder",
+      //  Phase 3a-C5R（2026-10-24 Owner 核准）：每時期強邊，同樣只在 v21 規則集可用。
+      "phases.early.focusLane", "phases.mid.focusLane", "phases.late.focusLane"]));
   const SPEC_DESIGN = ["winCondition", "teamfight.style", "teamfight.engager", "teamfight.focusTarget", "teamfight.peelFor", "risk.comeback",
     "comms.shotcaller", "comms.secondCaller", "jungle.route", "lanes.top.wave", "lanes.mid.wave", "lanes.bot.wave",
     "phases.early.tradePolicy", "phases.mid.tradePolicy", "phases.late.tradePolicy",
-    //  每時期的集結／物件優先在 Phase 3a-C3-3／C4 由 n=400 紅藍複驗升級 live（R-10）；強邊（focusLane）仍待 C5。
-    "phases.early.focusLane", "phases.mid.focusLane", "phases.late.focusLane"];
+    //  每時期的集結／物件優先（C3-3／C4）、強邊（C5R，2026-10-24）已由 n=400 紅藍複驗升級 live（R-10），不在這張表。
+  ];
   ck("R5 規格 §4.1 標 * 或無旋鈕的鍵都是 design（不被提供）", SPEC_DESIGN.every((k) => Registry.registryRow(k)?.status === "design" && !Registry.isLiveChoice(k, "aggressive")));
   ck("R6 查詢 API：未知鍵／原型鍵／非字串 ⇒ null／false",
     Registry.registryRow("nope") === null && Registry.registryRow("__proto__") === null && Registry.registryRow("constructor") === null && Registry.registryRow(null) === null

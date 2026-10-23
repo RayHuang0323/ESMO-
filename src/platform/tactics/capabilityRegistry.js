@@ -272,10 +272,27 @@ const ROWS = [
       },
     })),
 
+  //  強邊（Phase 3a-C5R，2026-10-24 Owner 核准 12 個選項升為 v21 候選 live；review/tactic-book-3a/C5R_強邊重新設計.md）：
+  //  選了的時期，打野選路時只對指定路加分（gankFocusAdd × 權重係數），其他路分數與站位不變；none＝不覆寫。
+  //  證據：tools/fixtures/phase_options_result_c5r.json（seeds 8201–8600）12／12 紅藍 confirmed、全隊抓人總量守門全過；
+  //  ⚑ 前期中路紅藍效果量差 z 3.42、前期下路使前期全隊抓人 +87 %（風險紀錄保留）。主張只到「指定路真的多抓」，不宣稱勝率或經濟。
+  ...PHASES.map((p, idx) => live(`phases.${p}.focusLane`, ["none", "top", "mid", "bot"], "lanePlan", [], {
+    requires: PHASE_DIRECTOR,
+    resolverFields: [`phases.${idx}.knobs.gankFocusLane`, `phases.${idx}.knobs.gankFocusAdd`],
+    engineReads: ["gankFocusLane", "gankFocusAdd"],
+    gate: {
+      claims: LANES.map((l) => ({ choice: l, metric: `ganksOwnPerMin.${l}.${p}`, direction: "up" })),
+      deltaFields: [`phases.${idx}.knobs.gankFocusAdd`],
+      why: "數的是打野在這個時期真的出發去抓指定路（己方路名）的次數，除以該時期自己的分鐘數；與 C5R 複驗儀器 phaseStudySim 同定義。"
+        + "全隊總量是複驗的守門，不在這裡宣稱。",
+    },
+  })),
+
   //  ── design：規格列了，但現行引擎沒有可解析的旋鈕 ────────────────────────────
-  design("winCondition", "勝利路徑沒有對應的引擎旋鈕，列舉內容規格尚未定稿"),
+  //  勝利條件（Phase 3a-C6）：既有選擇的預設組合（tacticChoiceMapping.js WIN_CONDITION_PRESETS），只填玩家沒選的維度。
+  //  事前登記的新 seeds 紅藍組合複驗通過之前維持 design；後期團戰不在列舉（前期 scaling owner_hold、後期巴龍沒站住）。
+  design("winCondition", "勝利條件是既有選擇的預設組合；組合本身尚未以新 seeds 紅藍複驗（C6 事前登記）", ["none", "earlySnowball", "objectiveControl", "midSplitPressure"]),
   ...PHASES.flatMap((p) => [
-    design(`phases.${p}.focusLane`, "引擎沒有「依時期指定主攻路」的旋鈕（Gank 路線權重由路姿態推導，整場共用）"),
     design(`phases.${p}.tradePolicy`, "資源交換屬 3b（規格標 *）；引擎沒有對應旋鈕"),
   ]),
   ...LANES.map((l) => design(`lanes.${l}.wave`, "兵線處理屬 3b（規格標 *）；引擎沒有對應旋鈕")),
@@ -449,6 +466,27 @@ export const REPLICATION_CONFIRMED = deepFreeze([
   rc("phases.mid.objectiveOrder", "baron", "contestShare.baron.mid", { n: 400, rel: 0.062927, z: 5.542482 }, { n: 400, rel: 0.07438, z: 6.157781 }),
   rc("phases.early.objectiveOrder", "towers", "siegeWindowsPerMin.early", { n: 400, rel: 0.766467, z: 5.387618 }, { n: 400, rel: 0.702247, z: 5.314 }),
   rc("phases.mid.objectiveOrder", "towers", "siegeWindowsPerMin.mid", { n: 400, rel: 0.28016, z: 5.441881 }, { n: 400, rel: 0.210547, z: 3.909199 }),
+  //  Phase 3a-C5R（tools/fixtures/phase_options_result_c5r.json，seeds 8201–8600）：每時期強邊，紅藍兩側 confirmed（守門：全隊抓人總量全部上升）。
+  //  Owner 2026-10-24 核准升為 v21 候選 live；⚑ SIDE_ASYMMETRY（前期中路 z 3.42）已記錄並由 Owner 接受。
+  rc("phases.early.focusLane", "top", "ganksOwnPerMin.top.early", { n: 400, rel: 2.011494, z: 12.869743 }, { n: 400, rel: 1.62, z: 12.856051 }),
+  rc("phases.early.focusLane", "mid", "ganksOwnPerMin.mid.early", { n: 400, rel: 2.517241, z: 11.361857 }, { n: 400, rel: 2.166667, z: 9.075129 }),
+  rc("phases.early.focusLane", "bot", "ganksOwnPerMin.bot.early", { n: 400, rel: 1.146067, z: 23.480555 }, { n: 400, rel: 1.149091, z: 23.532943 }),
+  rc("phases.mid.focusLane", "top", "ganksOwnPerMin.top.mid", { n: 400, rel: 0.99446, z: 12.801498 }, { n: 400, rel: 0.941399, z: 11.979677 }),
+  rc("phases.mid.focusLane", "mid", "ganksOwnPerMin.mid.mid", { n: 400, rel: 1.096329, z: 12.223125 }, { n: 400, rel: 1.272561, z: 13.713923 }),
+  rc("phases.mid.focusLane", "bot", "ganksOwnPerMin.bot.mid", { n: 400, rel: 1.075144, z: 15.826719 }, { n: 400, rel: 0.786795, z: 14.845464 }),
+  rc("phases.late.focusLane", "top", "ganksOwnPerMin.top.late", { n: 232, rel: 0.809449, z: 7.447643 }, { n: 232, rel: 0.851799, z: 6.827106 }),
+  rc("phases.late.focusLane", "mid", "ganksOwnPerMin.mid.late", { n: 232, rel: 0.797343, z: 4.511476 }, { n: 232, rel: 0.884226, z: 4.870049 }),
+  rc("phases.late.focusLane", "bot", "ganksOwnPerMin.bot.late", { n: 232, rel: 0.928504, z: 7.537307 }, { n: 232, rel: 0.693154, z: 5.954301 }),
+]);
+/**
+ * 預設組合的複驗（不是 Registry 維度，只是畫面一次寫多個維度的快捷）：Phase 3a-C5R 的「快速模式強邊」＝同時選前期與中期的強邊。
+ * 計畫裡存的仍是 phases.early.focusLane／phases.mid.focusLane 兩格（契約 §4.1：不新增 strongSide 欄位）；這張表只留組合本身的證據
+ * （數字照抄結果檔的主宣稱＝前期那一條），check_tactic_replication_3a 驗證它＝C5R 結果檔裡 quick.* 的 confirmed 列。
+ */
+export const REPLICATION_PRESET_CONFIRMED = deepFreeze([
+  rc("quick.strongSide", "top", "ganksOwnPerMin.top.early", { n: 400, rel: 2.011494, z: 12.869743 }, { n: 400, rel: 1.62, z: 12.856051 }),
+  rc("quick.strongSide", "mid", "ganksOwnPerMin.mid.early", { n: 400, rel: 2.517241, z: 11.361857 }, { n: 400, rel: 2.166667, z: 9.075129 }),
+  rc("quick.strongSide", "bot", "ganksOwnPerMin.bot.early", { n: 400, rel: 1.146067, z: 23.480555 }, { n: 400, rel: 1.149091, z: 23.532943 }),
 ]);
 /**
  * 只在 v21 規則集量到的複驗（Phase 3a-C4，2026-10-22 審查後）：整場巨龍 high／low、巴龍 high 在 balanceTool.v21（Director core.v1、laneFrame
