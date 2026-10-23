@@ -29,6 +29,8 @@ const Plan = await imp("src/platform/tactics/tacticPlan.js");
 const RS = await imp("src/platform/contracts/matchRuleset.js");
 const Live = await imp("src/battle/moba/liveMatchSetup.js");
 const { bindTacticPlanToCurrentVersions } = await imp("src/battle/moba/tactics/tacticResolver.js");
+const { TACTIC_TEMPLATES } = await imp("src/platform/tactics/tacticTemplates.js");
+const TEMPLATE_IDS = Object.keys(TACTIC_TEMPLATES);
 const truth = readJson("tools/fixtures/tactic_truth_3a.json");
 
 //  E1：取代來源與它們的量測規則集（讀登記檔；不讀 Registry——Registry 不能自己宣告證據範圍）。
@@ -46,20 +48,24 @@ const rulesetOfSource = (s) => {
 const scoped = SOURCES.map((s) => ({ ...s, ruleset: rulesetOfSource(s) }));
 const isV20 = (rs) => rs === "balanceTool.v20" || rs === "career.v20";
 const truthSrc = fs.readFileSync(path.join(ROOT, "tools/check_tactic_truth_3a.mjs"), "utf8");
-const superseding = [...truthSrc.matchAll(/"(tools\/fixtures\/phase_[a-z_0-9]+_result_[a-z_0-9]+\.json)"/g)].map((m) => m[1]);
-ck("E1 每份 n=400 複驗來源都宣告量測規則集；真實性表的取代來源全部是 v21 來源（量在 balanceTool.v21）",
-  scoped.every((s) => s.ruleset) && superseding.length >= 3 && superseding.every((rel) => { const s = scoped.find((x) => x.result === rel); return s && s.ruleset === "balanceTool.v21"; }),
-  scoped.map((s) => `${path.basename(s.result)}:${s.ruleset}`).join(" "));
+//  只讀 check_tactic_truth_3a.mjs 裡 `const SUPERSEDING = [ ... ];` 這一個陣列字面值（任何檔名都算，不靠命名規則）。
+const supLit = truthSrc.match(/const SUPERSEDING = \[([^\]]*)\];/);
+const superseding = supLit ? [...supLit[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+const e1 = (list) => list.every((s) => s.ruleset) && superseding.length >= 3 && superseding.every((rel) => { const s = list.find((x) => x.result === rel); return !!s && s.ruleset === "balanceTool.v21"; });
+ck("E1 每份 n=400 複驗來源都宣告量測規則集；真實性表 SUPERSEDING 陣列裡的每個來源都已登記、都是 v21 來源（量在 balanceTool.v21）",
+  !!supLit && e1(scoped), `SUPERSEDING ${superseding.length} 份；` + scoped.map((s) => `${path.basename(s.result)}:${s.ruleset}`).join(" "));
 
 //  E2：v20 量的 std 主要列（沒有 ruleset 欄位＝真實性表預設 balanceTool.v20）沒過 ⇒ static 一定排除。
 const isOk = (v) => v === "pass" || v === "marginal";
 const staticOffer = (dim) => { const row = Registry.registryRow(dim); return !!row && Registry.rowAvailableUnder(row, "static"); };
 const v20Fails = truth.rows.filter((r) => r.role === "primary" && r.template === "std" && !r.ruleset && staticOffer(r.dimension) && !isOk(r.verdict));
 const e2 = (excl) => v20Fails.filter((r) => !excl(r));
-const excludedStatic = (r) => Registry.measuredExclusion("std", r.dimension, r.choice, "static") !== null;
+const excludedStatic = (r, t = "std") => Registry.measuredExclusion(t, r.dimension, r.choice, "static") !== null;
 const e2bad = e2(excludedStatic);
-ck(`E2 v20 能選、v20 的 std 主要列沒過的 ${v20Fails.length} 個選擇：static 模式下全部被排除（v21 複驗不能替 v20 開放）`, e2bad.length === 0,
-  e2bad.length ? e2bad.map((r) => `${r.dimension}=${r.choice}`).join(" ") : v20Fails.map((r) => `${r.dimension}=${r.choice}(${r.verdict})`).join(" "));
+//  21 個模板都要（std 的主要列代表 "*"；弱點模板另由真實性表推出自己的排除）。
+const e2tpl = v20Fails.flatMap((r) => TEMPLATE_IDS.filter((t) => !excludedStatic(r, t)).map((t) => `${t}/${r.dimension}=${r.choice}`));
+ck(`E2 v20 能選、v20 的 std 主要列沒過的 ${v20Fails.length} 個選擇：static 模式下在 ${TEMPLATE_IDS.length} 個模板全部被排除（v21 複驗不能替 v20 開放）`, e2bad.length === 0 && e2tpl.length === 0,
+  e2bad.length || e2tpl.length ? [...e2bad.map((r) => `${r.dimension}=${r.choice}`), ...e2tpl.slice(0, 5)].join(" ") : v20Fails.map((r) => `${r.dimension}=${r.choice}(${r.verdict})`).join(" "));
 
 //  E3：static 下 std 提供的每個非本來選擇，都要有 v20 的通過列（或是 v20 計畫沒有量的「本來選擇」）。
 const e3bad = [];
@@ -109,9 +115,10 @@ ck("E6 v20 規則集（career.v20／balanceTool.v20）的 Director 模式＝stat
 
 //  N：負向自檢。
 const dropOne = (r) => excludedStatic(r) && !(r.dimension === v20Fails[0]?.dimension && r.choice === v20Fails[0]?.choice);
-const fakeV20 = { ...scoped[1], ruleset: "balanceTool.v20" };
-ck("N 負向自檢：拿掉一筆 static 排除 ⇒ E2 抓到；把 v21 來源當成 v20 ⇒ E1 的條件不成立",
-  v20Fails.length > 0 && e2(dropOne).length === 1 && isV20(fakeV20.ruleset) && fakeV20.ruleset !== "balanceTool.v21");
+const swapped = scoped.map((s) => (s.result === superseding[0] ? { ...s, ruleset: "balanceTool.v20" } : s));
+const unregistered = scoped.filter((s) => s.result !== superseding[1]);
+ck("N 負向自檢：拿掉一筆 static 排除 ⇒ E2 抓到；把一份取代來源改成 v20 量的 ⇒ E1 不成立；拿掉一份取代來源的登記 ⇒ E1 不成立",
+  v20Fails.length > 0 && e2(dropOne).length === 1 && !e1(swapped) && !e1(unregistered) && isV20("balanceTool.v20"));
 
 console.log(`\nTactic Evidence Scope 3a：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
 process.exit(fail ? 1 : 0);

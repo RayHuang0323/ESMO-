@@ -127,7 +127,9 @@ ck("W2 預期的 8 筆（上路帶線、下路進攻、b1 核心、謹慎；前�
 //  兩者來源不同（v20 n=40 量測 vs Owner 裁示），各自由自己的 gate 推導；其他任何重疊都算錯。
 const w3Overlap = W.flatMap((x) => Registry.MEASURED_EXCLUSIONS.filter((m) => m.template === x.template && m.dimension === x.dimension && m.choice === x.choice).map((m) => ({ x, m })));
 ck("W3 與量測排除表分開：除了「static 範圍排除 × owner_hold」之外，沒有一筆同時（模板, 維度, 選擇）都在 MEASURED_EXCLUSIONS 裡，MEASURED_EXCLUSIONS 本身沒有原因代碼 not_replicated",
-  w3Overlap.every(({ x, m }) => m.scope === "static" && x.reason === "owner_hold") && Registry.MEASURED_EXCLUSIONS.every((m) => m.reason !== "not_replicated"),
+  w3Overlap.every(({ x, m }) => m.scope === "static" && x.reason === "owner_hold") && Registry.MEASURED_EXCLUSIONS.every((m) => m.reason !== "not_replicated")
+  //  釘住目前唯一的重疊（多一筆就要有意識地改這裡）。
+  && J(w3Overlap.map(({ x }) => `${x.dimension}=${x.choice}`).sort()) === J(["phases.mid.stance=scaling"]),
   w3Overlap.map(({ x, m }) => `${x.dimension}=${x.choice}(${m.scope ?? "*"}×${x.reason})`).join(" "));
 ck("W4 清單是凍結的資料；replicationWithheld(t, d, c) 命中回傳該列、沒命中回傳 null", Object.isFrozen(W) && W.every(Object.isFrozen)
   && W.every((x) => Registry.replicationWithheld("std", x.dimension, x.choice) === x) && Registry.replicationWithheld("std", "lanes.mid.stance", "split") === null && Registry.replicationWithheld("std", "lanes.top.stance", "defensive") === null);

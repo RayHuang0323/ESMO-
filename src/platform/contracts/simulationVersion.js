@@ -591,7 +591,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  同日（C5R 量測前審查後＋跨版本證據隔離）：gankFocusAdd 改為正規化後的增量（÷ 本來的最大權重，std 仍是 0.7）；MEASURED_EXCLUSIONS 加
   //  scope 欄位與 2 筆只在 static 生效的時期姿態排除（v20 不用 v21 證據，Owner 2026-10-23），measuredExclusion／提供清單／開局過濾依模式套用。
   //  既有輸入的模擬行為不變 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 e3ba74f04a6ba3e0 未曾發布）。
-  "moba-sim.v21": "2ae772222d157170",
+  //  同日（隔離審查 #2）：liveMatchSetup 的 scope 判定改為直接查帶本場模式 scope 的列（與排除表順序無關）；行為不變 ⇒ 同版號重新登記（舊值 2ae772222d157170
+  //  未曾發布；C5R 量測在 2ae772222d157170 下開始與完成，這次改動只在開局過濾、不在量測路徑上）。
+  "moba-sim.v21": "70a8af6428b02a03",
 });
 
 export const isKnownSimulationVersion = (v) =>
