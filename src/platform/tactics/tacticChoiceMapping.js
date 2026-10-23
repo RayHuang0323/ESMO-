@@ -412,7 +412,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
    *   explicit＝玩家已選這個維度（玩家優先，R-8）；already＝模板本來就是這個選擇；其他原因＝提供清單的 withheld 原因（或 not_offered）。
    * 沒有 winCondition 或不認得 ⇒ 原樣回傳（拿掉 winCondition 這一格）。純函式、不改輸入。
    */
-  function winConditionFill(templateId, overlayIds, choices) {
+  function winConditionFill(templateId, overlayIds, choices, { withMeasured = true } = {}) {
     const leaves = leavesOf(choices ?? {});
     const wc = leaves.find(([d]) => d === WIN_CONDITION_DIM)?.[1];
     let rest = leaves.filter(([d]) => d !== WIN_CONDITION_DIM);
@@ -420,7 +420,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     const filled = [], skipped = [];
     for (const [dim, c] of preset ?? []) {
       if (rest.some(([d]) => d === dim)) { skipped.push({ dimension: dim, choice: c, reason: "explicit" }); continue; }
-      const d = offeredDetail(templateId, dim, overlayIds, nestedOf(rest), { tacticalDirector: WIN_CONDITION_MODE });
+      const d = offeredDetail(templateId, dim, overlayIds, nestedOf(rest), { tacticalDirector: WIN_CONDITION_MODE, withMeasured });
       if (d && d.own === c) { skipped.push({ dimension: dim, choice: c, reason: "already" }); continue; }
       if (!d || !d.offered.includes(c)) { skipped.push({ dimension: dim, choice: c, reason: d?.withheld.find((w) => w.choice === c)?.reason ?? "not_offered" }); continue; }
       rest = [...rest, [dim, c]];
@@ -446,7 +446,8 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
       if (useMeasured && measuredExclusion(tpl.templateId, WIN_CONDITION_DIM, c, mode)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
       if (useMeasured) { const rw = replicationWithheld(tpl.templateId, WIN_CONDITION_DIM, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
       if (!Object.hasOwn(WIN_CONDITION_PRESETS, c)) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
-      const f = winConditionFill(tpl.templateId, overlayIds, nestedOf([...others, [WIN_CONDITION_DIM, c]]));
+      //  量測排除只決定「提供給玩家挑哪些」（同 offeredDetail 的 withMeasured）；plan 層驗證用 withMeasured:false，已存的計畫不會因後來的量測結論失效。
+      const f = winConditionFill(tpl.templateId, overlayIds, nestedOf([...others, [WIN_CONDITION_DIM, c]]), { withMeasured: useMeasured });
       if (f.skipped.some((s) => s.reason !== "explicit" && s.reason !== "already")) { withheld.push({ choice: c, reason: "component_not_offered" }); continue; }
       if (!f.filled.length) { withheld.push({ choice: c, reason: "no_effect" }); continue; }
       const s = stableStringify(leavesOf(f.choices));
@@ -481,15 +482,12 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
         return [err(E.OVERLAY_BASE_MISMATCH, "overlayIds", `覆蓋層 ${id} 只能用在 classic.${o.baseTacticId}，不能用在 ${tpl.templateId}`)];
       }
     }
-    //  勝利條件（Phase 3a-C6）：先驗它本身在這個模板上被提供，再拿**展開後**的選擇做下面同一套檢查（引擎吃到的就是展開後的那一份）。
+    //  勝利條件（Phase 3a-C6）：plan 層只驗它是認得的預設（Registry 的 live／列舉由 createTacticPlan 先驗），再拿**展開後**的選擇做下面同一套檢查
+    //  （引擎吃到的就是展開後的那一份）。完整組合的要求（component_not_offered／no_effect）只用在「提供給玩家挑」：玩家之後自己選了所有格、
+    //  或自己選了第二條帶線路，計畫仍然合法，只是那幾格以玩家為準（量測前審查 F4）。
     const wcLeaf = leavesOf(choices).find(([d]) => d === WIN_CONDITION_DIM);
     if (wcLeaf) {
-      const others = nestedOf(leavesOf(choices).filter(([d]) => d !== WIN_CONDITION_DIM));
-      const det = offeredDetail(tpl.templateId, WIN_CONDITION_DIM, overlayIds, others, { withMeasured: false });
-      if (!det || !det.offered.includes(wcLeaf[1])) {
-        const why = det?.withheld.find((w) => w.choice === wcLeaf[1])?.reason ?? "not_live";
-        return [err(E.CHOICE_NOT_OFFERED, `choices.${WIN_CONDITION_DIM}`, `${WIN_CONDITION_DIM}=${wcLeaf[1]} 在 ${tpl.templateId} 上不提供（${why}）`)];
-      }
+      if (!Object.hasOwn(WIN_CONDITION_PRESETS, wcLeaf[1])) return [err(E.CHOICE_NOT_OFFERED, `choices.${WIN_CONDITION_DIM}`, `${WIN_CONDITION_DIM}=${wcLeaf[1]} 沒有預設組合`)];
       choices = effectiveChoices(tpl.templateId, overlayIds, choices);
     }
     const merged = mergeConfig(tpl, overlayIds, choices);
@@ -522,8 +520,13 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     //  opts.tacticalDirector＝目前規則集的 Director 模式（缺少 ≡ "static"，即 v20）；需要每時期方針的列在 static 下不列出。
     const leaves = leavesOf(choices);
     const mode = opts?.tacticalDirector ?? "static";
+    //  勝利條件（Phase 3a-C6）：其他維度的提供清單以「展開後」的選擇為前提（引擎吃的那一份；量測前審查 F4d）；勝利條件本身看原始選擇。
+    //  沒有勝利條件 ⇒ 展開結果＝原選擇，清單與之前逐字相同。
+    const hasWc = leaves.some(([d]) => d === WIN_CONDITION_DIM);
+    const eff = hasWc && mode === WIN_CONDITION_MODE ? leavesOf(effectiveChoices(templateId, overlayIds, choices)) : leaves;
     return liveRows().filter((r) => rowAvailableUnder(r, mode)).map((r) => {
-      const d = offeredDetail(templateId, r.dimension, overlayIds, nestedOf(leaves.filter(([k]) => k !== r.dimension)), { tacticalDirector: mode });
+      const base = r.dimension === WIN_CONDITION_DIM ? leaves : eff;
+      const d = offeredDetail(templateId, r.dimension, overlayIds, nestedOf(base.filter(([k]) => k !== r.dimension)), { tacticalDirector: mode });
       return { dimension: r.dimension, own: d?.own ?? null, offered: d?.offered ?? [] };
     });
   }

@@ -169,6 +169,26 @@ ck("W7 引擎與 Director 不認得勝利條件（剝註解後沒有 winConditio
   }
 }
 
+// W9（量測前審查 F3／F4）
+{
+  const std = TACTIC_TEMPLATES.std;
+  const allExplicit = { [WC]: "midSplitPressure", lanes: { mid: { stance: "split" } }, phases: { mid: { objectiveOrder: "towers" } } };
+  const secondSplit = { [WC]: "midSplitPressure", lanes: { top: { stance: "split" } } };
+  const fSplit = Mapping.winConditionFill("std", [], secondSplit);
+  //  被勝利條件填的格點回模板值：own 傳 null ⇒ 存成明確選擇，展開不再覆蓋它。
+  const back = View.withChoice({ [WC]: "earlySnowball" }, "phases.early.stance", "standard", null);
+  const fBack = Mapping.winConditionFill("std", [], back);
+  //  已存的計畫不因後來的量測結論失效：plan 層展開用 withMeasured:false 判斷時，classic.m2 的前期龍（被量測排除）仍可填；提供給玩家時才跳過。
+  const m2Off = Mapping.winConditionFill("classic.m2", [], { [WC]: "earlySnowball" }, { withMeasured: false });
+  const m2On = Mapping.winConditionFill("classic.m2", [], { [WC]: "earlySnowball" });
+  ck("W9 玩家自己選了所有格、或自己選了第二條帶線路 ⇒ 計畫仍合法（那幾格以玩家為準）；被填的格可點回模板值（明確保留）；展開跟著 withMeasured",
+    Mapping.tacticPlanProblems(std, [], allExplicit).length === 0 && Mapping.tacticPlanProblems(std, [], secondSplit).length === 0
+    && fSplit.skipped.some((s) => s.dimension === "lanes.mid.stance" && s.reason === "second_split_lane") && fSplit.filled.some(([d]) => d === "phases.mid.objectiveOrder")
+    && J(back) === J({ [WC]: "earlySnowball", phases: { early: { stance: "standard" } } }) && Object.fromEntries(Mapping.leavesOf(fBack.choices))["phases.early.stance"] === "standard"
+    && m2Off.filled.some(([d]) => d === "phases.early.objectiveOrder") && m2On.skipped.some((s) => s.dimension === "phases.early.objectiveOrder" && s.reason === "no_measured_effect"),
+    J({ split: fSplit.skipped, back, m2Off: m2Off.filled, m2On: m2On.skipped }));
+}
+
 // N
 const planted = { ...P, bogus: [["phases.late.stance", "aggressive"]] };
 const plantedSkip = Mapping.winConditionFill("classic.m2", [], { [WC]: "midSplitPressure" }).skipped.filter((s) => s.reason !== "explicit" && s.reason !== "already");

@@ -66,6 +66,8 @@ export async function runPhaseStudyMatch(seed, spec) {
   const phaseSecs = z3();
   const goldAtPhaseEnd = [null, null, null];
   let ph = e.director.phase(e.t);
+  //  v2：上一個 tick 結束時的時期（與 ph 分開：ph 在 tick 前就被設成這一 tick 結束時的時期，拿它比較永遠相等——量測前審查 F1）。
+  let lastTickPh = ph;
   //  C3-3：參團擲骰的觀察包裝（呼叫原方法、原樣回傳；check_phase_study_c3 驗證包裝前後對局逐欄相同）。
   const orig = e._joinV3;
   const pitD = e._pitOf("dragon"), pitB = e._pitOf("baron");
@@ -90,10 +92,10 @@ export async function runPhaseStudyMatch(seed, spec) {
     ph = e.director.phase(e.t + DT);
     e.tick(DT);
     const t = e.t;
-    const phPrev = ph;
     ph = e.director.phase(t);
     //  v2：時期換了 ⇒ 記下「上一個時期結束」時的雙方金錢（這一 tick 結束時的值；邊界上至多差一個 tick，同其他分桶）。
-    if (ph !== phPrev && goldAtPhaseEnd[phPrev] === null) goldAtPhaseEnd[phPrev] = { blue: e.bGold, red: e.rGold };
+    if (ph !== lastTickPh && goldAtPhaseEnd[lastTickPh] === null) goldAtPhaseEnd[lastTickPh] = { blue: e.bGold, red: e.rGold };
+    lastTickPh = ph;
     phaseSecs[ph] += DT;
     for (const p of players) {
       const s = S[p.side], q = prev.get(p.id);
@@ -138,6 +140,8 @@ export function selfCheck(r) {
   }
   if (JSON.stringify(r.blue.objApps) !== JSON.stringify(r.red.objApps)) out.push("objApps differ between sides");
   if (Math.abs(sum(r.phaseSecs) - r.duration) > 1e-9) out.push("phaseSecs≠duration");
+  //  v2：進入下一個時期就一定記得到上一個時期結束時的金錢（量測前審查 F1：之前永遠是 null）。
+  if (r.goldAtPhaseEnd) for (const i of [0, 1]) if (r.phaseSecs[i + 1] > 0 && !r.goldAtPhaseEnd[i]) out.push(`goldAtPhaseEnd[${i}] missing`);
   return out;
 }
 

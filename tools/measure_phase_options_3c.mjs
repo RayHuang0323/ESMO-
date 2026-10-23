@@ -129,7 +129,8 @@ if (flag("selftest")) {
         siegeOpens: z3(), joinGoStarts: z3(), joinGoGeneralStarts: z3(), laneGeneralEntries: z3(), engages: z3(), engageStarts: z3(), ganksOwn: { top: [1, 1, 1], mid: [1, 1, 1], bot: [1, 1, 1] },
         seatFightsPh: { b1: z3(), b2: z3(), b3: z3(), b4: z3(), b5: z3() } } };
     //  登記檔用到的所有指標（宣稱、後備、守門、報告、區分性、交互作用、衝突檢查）都要是儀器認得的。
-    const extra = [...(REG.reportedMetrics ?? []), ...(REG.contrasts ?? []).map((x) => x.metric), ...(REG.interactions ?? []).map((x) => x.metric), ...(REG.conflicts ?? []).map((x) => x.metric)];
+    const extra = [...(REG.reportedMetrics ?? []), ...(REG.contrasts ?? []).map((x) => x.metric), ...(REG.interactions ?? []).map((x) => x.metric), ...(REG.conflicts ?? []).map((x) => x.metric),
+      ...(REG.ceilings ?? []).map((x) => x.metric), ...(REG.controlSymmetry?.metrics ?? []), ...(REG.controlSymmetry?.relative?.metrics ?? [])];
     try { for (const o of REG.options) { if (!o.claims?.length) return false; for (const c of [...o.claims, ...(o.guards ?? [])]) { PS.studyMetricValue(fake, "blue", c.metric); if (c.fallbackMetric) PS.studyMetricValue(fake, "blue", c.fallbackMetric); } } for (const m of extra) PS.studyMetricValue(fake, "blue", m); return true; } catch { return false; }
   })()));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
@@ -150,7 +151,16 @@ if (flag("po-worker")) {
   delete process.env.ESMO_BALANCE_TALENTS;
   const PS = await import(pathToFileURL(path.join(ROOT, "tools", "lib", "phaseStudySim.mjs")).href);
   const metricIds = [...new Set(OPTIONS.flatMap((o) => [...o.claims, ...(o.guards ?? [])].flatMap((c) => [c.metric, c.fallbackMetric].filter(Boolean))).concat(REG.reportedMetrics ?? [], REG.controlSymmetry?.metrics ?? [],
-    (REG.contrasts ?? []).map((x) => x.metric), (REG.interactions ?? []).map((x) => x.metric), (REG.conflicts ?? []).map((x) => x.metric)))];
+    (REG.contrasts ?? []).map((x) => x.metric), (REG.interactions ?? []).map((x) => x.metric), (REG.conflicts ?? []).map((x) => x.metric),
+    (REG.ceilings ?? []).map((x) => x.metric), REG.controlSymmetry?.relative?.metrics ?? []))];
+  //  Phase 3a-C6（量測前審查 F2）：登記檔的 winConditionExpected＝每個勝利條件在 std 上應展開成的格；執行時實際展開不同 ⇒ 寫進 selfCheck（儀器不符、停跑）。
+  const Mapping = REG.winConditionExpected ? await import(pathToFileURL(path.join(ROOT, "src", "platform", "tactics", "tacticChoiceMapping.js")).href) : null;
+  const expansionProblems = (o) => {
+    const want = REG.winConditionExpected?.[o?.id];
+    if (!want) return [];
+    const got = Mapping.leavesOf(Mapping.effectiveTacticChoices("std", [], o.input?.choices ?? {}));
+    return JSON.stringify(got) === JSON.stringify(want) ? [] : [`winCondition expansion ${JSON.stringify(got)} ≠ registered ${JSON.stringify(want)}`];
+  };
   process.on("message", async (t) => {
     try {
       const ctrl = await PS.studyInput();
@@ -158,7 +168,7 @@ if (flag("po-worker")) {
       const arm = o ? await PS.studyInput(o.input?.choices ?? {}, o.input?.phaseChoices ?? null) : ctrl;
       const r = await PS.runPhaseStudyMatch(t.seed, { blue: side === "blue" ? arm : ctrl, red: side === "red" ? arm : ctrl, ruleset: RULESET });
       const vals = Object.fromEntries(["blue", "red"].map((s) => [s, Object.fromEntries(metricIds.map((id) => [id, PS.studyMetricValue(r, s, id)]))]));
-      process.send({ type: "done", id: t.id, rec: { seed: r.seed, ruleset: r.ruleset, directorMode: r.directorMode, laneFrame: r.laneFrame, layers: r.layers, duration: r.duration, winner: r.winner, selfCheck: PS.selfCheck(r), vals } });
+      process.send({ type: "done", id: t.id, rec: { seed: r.seed, ruleset: r.ruleset, directorMode: r.directorMode, laneFrame: r.laneFrame, layers: r.layers, duration: r.duration, winner: r.winner, selfCheck: [...PS.selfCheck(r), ...expansionProblems(o)], vals } });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
   process.send({ type: "ready" });
@@ -290,7 +300,13 @@ if (flag("report")) {
     const mean = (a) => (a.length ? a.reduce((n, x) => n + x, 0) / a.length : null), b = mean(v("blue")), r = mean(v("red"));
     const diff = b === null || r === null ? null : r - b;
     return { metric: m, blue: b, red: r, diff, ok: diff !== null && Math.abs(diff) <= REG.controlSymmetry.maxAbsDiff };
-  });
+  }).concat((REG.controlSymmetry?.relative?.metrics ?? []).map((m) => {
+    //  Phase 3a-C6（量測前審查 F7）：每分鐘比率用相對容許值（|紅−藍| ÷ 兩側平均）。
+    const v = (s) => SEEDS.filter((x) => !errSeeds.has(x) && ctrl.has(x)).map((x) => ctrl.get(x).vals[s][m]).filter((x) => x !== null);
+    const mean = (a) => (a.length ? a.reduce((n, x) => n + x, 0) / a.length : null), b = mean(v("blue")), r = mean(v("red"));
+    const relDiff = b === null || r === null || b + r === 0 ? null : (r - b) / ((b + r) / 2);
+    return { metric: m, blue: b, red: r, diff: b === null || r === null ? null : r - b, relDiff, ok: relDiff !== null && Math.abs(relDiff) <= REG.controlSymmetry.relative.maxRelDiff };
+  }));
   //  紅藍效果量差（登記檔 sideAsymmetry）：每個宣稱一筆；|z| ≥ minZ ⇒ SIDE_ASYMMETRY 旗標（判定照算；登記檔寫明晉升前要先查並記錄）。
   const sideAsymmetry = REG.sideAsymmetry ? rows.flatMap((r) => OPTIONS.find((o) => o.id === r.id).claims.map((c) => {
     const tb = recs.get(`${r.id}@blue`), tr = recs.get(`${r.id}@red`);
@@ -329,17 +345,29 @@ if (flag("report")) {
     return { id: x.id, combo: x.combo, part: x.part, metric: x.metric, direction: x.direction, blue: st.blue, red: st.red,
       verdict: !judgeable ? null : !enough(st.blue) || !enough(st.red) ? "unmeasurable" : ok.blue.harmful || ok.red.harmful ? "flagged" : "clear" };
   });
+  //  絕對上限（量測前審查 F6，只報告給 Owner）：組合臂的平均 ÷ 比較對象（對照組或另一臂）的平均 ≥ maxRatio（任一側）⇒ flagged。
+  //  交互作用只抓「超過兩者相加」；這裡抓「相加本身就太多」。
+  const ceilings = (REG.ceilings ?? []).map((x) => {
+    const st = Object.fromEntries(["blue", "red"].map((s) => [s, x.versus === "ctrl" ? statsFor(`${x.arm}@${s}`, s, x.metric) : armStats(`${x.versus}@${s}`, `${x.arm}@${s}`, s, x.metric)]));
+    const ratio = (t) => (t.meanA ? t.meanB / t.meanA : null);
+    const hit = (t) => ratio(t) !== null && ratio(t) >= x.maxRatio;
+    return { id: x.id, arm: x.arm, versus: x.versus, metric: x.metric, maxRatio: x.maxRatio, blue: { ...st.blue, ratio: ratio(st.blue) }, red: { ...st.red, ratio: ratio(st.red) },
+      verdict: !judgeable ? null : !enough(st.blue) || !enough(st.red) ? "unmeasurable" : hit(st.blue) || hit(st.red) ? "flagged" : "clear" };
+  });
+  const cl = ceilings.filter((x) => x.verdict !== "clear");
+  if (cl.length) flags.push(`CEILING: ${cl.map((x) => `${x.id}=${x.verdict}`).join(", ")} — combination level above the pre-registered ratio (report to Owner)`);
   const nd = contrasts.filter((x) => x.verdict !== "distinct");
   if (contrasts.length && nd.length) flags.push(`NOT_DISTINCT: ${nd.map((x) => `${x.id}=${x.verdict}`).join(", ")} — the two directions may not both go live (D-17)`);
   const ia = interactions.filter((x) => x.verdict !== "clear");
   if (ia.length) flags.push(`INTERACTION: ${ia.map((x) => `${x.id}=${x.verdict}`).join(", ")} — combination exceeds the sum of its parts or is unmeasurable`);
   const cf = conflicts.filter((x) => x.verdict !== "clear");
   if (cf.length) flags.push(`CONFLICT: ${cf.map((x) => `${x.id}=${x.verdict}`).join(", ")} — one choice cancels the other's claim or is unmeasurable`);
-  const conf = rows.filter((r) => r.verdict === "confirmed").map((r) => r.id);
+  //  檢查臂（dimension 以 check. 開頭）不是新的證據，不列進 OWNER_DECISION（量測前審查 F9）。
+  const conf = rows.filter((r) => r.verdict === "confirmed" && !String(r.dimension).startsWith("check.")).map((r) => r.id);
   if (conf.length) flags.push(`OWNER_DECISION: confirmed ${conf.join(", ")} — promotion to live follows the Registry/truth-table rules, Owner decides`);
   const result = { schema: "esmo.phase-options-result.v1", registration: REG_REL, studyId: REG.studyId, reportedAt: new Date().toISOString(), ...prov, batchStartedUnder: meta, stale, complete,
     finishedMatches: ops.finished, erroredMatches: ops.errored, erroredSeeds: [...errSeeds], instrumentMismatch: ops.instrument, rules: RULES, rows, controlSymmetry, ...(REG.sideAsymmetry ? { sideAsymmetry } : {}),
-    ...(REG.contrasts ? { contrasts } : {}), ...(REG.interactions ? { interactions } : {}), ...(REG.conflicts ? { conflicts } : {}), flags,
+    ...(REG.contrasts ? { contrasts } : {}), ...(REG.interactions ? { interactions } : {}), ...(REG.conflicts ? { conflicts } : {}), ...(REG.ceilings ? { ceilings } : {}), flags,
     summary: Object.fromEntries(rows.map((r) => [r.id, r.verdict])) };
   const f = (x, d = 3) => (x == null ? "—" : Number(x).toFixed(d));
   console.log(`${REG.studyId}：完整 ${complete}、完成 ${ops.finished}、失敗 ${ops.errored}、儀器不符 ${ops.instrument}${stale.length ? "、STALE" : ""}`);
@@ -348,6 +376,7 @@ if (flag("report")) {
     for (const c of [...r.claims, ...r.guards.map((g) => ({ ...g, guard: true }))]) for (const s of ["blue", "red"]) { const st = c[s]; console.log(`     ${c.guard ? "守門 " : ""}${s.padEnd(4)} ${c.metric.padEnd(30)} n ${st.n} ctrl ${f(st.meanA)} → ${f(st.meanB)} rel ${st.rel == null ? "—" : (st.rel * 100).toFixed(1)}% z ${f(st.z, 2)}${c.usedFallback ? "（合併後備）" : ""}`); }
   }
   for (const x of [...contrasts, ...conflicts]) console.log(`  ${x.id} ⇒ ${x.verdict ?? "（未判定）"}  ${x.metric}  藍 z ${f(x.blue.z, 2)} rel ${x.blue.rel == null ? "—" : (x.blue.rel * 100).toFixed(1)}%  紅 z ${f(x.red.z, 2)} rel ${x.red.rel == null ? "—" : (x.red.rel * 100).toFixed(1)}%`);
+  for (const x of ceilings) console.log(`  ${x.id} ⇒ ${x.verdict ?? "（未判定）"}  ${x.metric} ${x.arm} ÷ ${x.versus}  藍 ${f(x.blue.ratio)}  紅 ${f(x.red.ratio)}（上限 ${x.maxRatio}）`);
   for (const x of interactions) console.log(`  ${x.id} ⇒ ${x.verdict ?? "（未判定）"}  ${x.metric}  藍 交互 ${f(x.blue.diff)} (${x.blue.rel == null ? "—" : (x.blue.rel * 100).toFixed(1)}% of ctrl) z ${f(x.blue.z, 2)}  紅 交互 ${f(x.red.diff)} (${x.red.rel == null ? "—" : (x.red.rel * 100).toFixed(1)}%) z ${f(x.red.z, 2)}`);
   for (const x of flags) console.log(`  ⚑ ${x}`);
   const out = val("out");

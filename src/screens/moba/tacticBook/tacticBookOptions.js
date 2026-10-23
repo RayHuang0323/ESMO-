@@ -115,7 +115,10 @@ export function templateGroups() {
   return groups;
 }
 
-/** 在巢狀 choices 上設定／取消一個維度的選擇。value 為 null、或等於模板自己的值（own）⇒ 取消（跟著模板）。 */
+/**
+ * 在巢狀 choices 上設定／取消一個維度的選擇。value 為 null、或等於模板自己的值（own）⇒ 取消（跟著模板）。
+ * own 傳 null ⇒ 一律存成明確選擇：被勝利條件填的格（fromWinCondition）點回模板值時要這樣，否則取消後勝利條件又會把它填回去。
+ */
 export function withChoice(choices, dimension, value, own = null) {
   //  快捷：強邊（前＋中期）同時設定兩格；none／取消 ⇒ 兩格都回到「跟著模板」。
   if (dimension === QUICK_STRONG_SIDE) {

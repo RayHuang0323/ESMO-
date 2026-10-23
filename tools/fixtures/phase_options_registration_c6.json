@@ -27,6 +27,54 @@
     "source": "src/battle/moba/matchProgression.js v3 rules: dragonSpawn 240 s, baronSpawn 480 s, dragonRespawn 150 s, baronRespawn 210 s; Director phases early 0-480, mid 480-960, late 960+",
     "consequence": "early phase: dragon only (first at 240 s); baron first spawns exactly at the mid-phase start, so 'mid baron' is contestable for the whole mid phase; late: both. Objective appearances are bucketed by the phase in which they spawn (instrument rule, contract §3.3). The per-phase appearance counts of the control arm (objApps) are reported in the interpretation as the measured contestable windows."
   },
+  "winConditionExpected": {
+    "earlySnowball": [
+      [
+        "phases.early.objectiveOrder",
+        "dragon"
+      ],
+      [
+        "phases.early.stance",
+        "aggressive"
+      ],
+      [
+        "phases.mid.stance",
+        "aggressive"
+      ]
+    ],
+    "objectiveControl": [
+      [
+        "phases.early.objectiveOrder",
+        "dragon"
+      ],
+      [
+        "phases.late.grouping",
+        "group"
+      ],
+      [
+        "phases.late.objectiveOrder",
+        "dragon"
+      ],
+      [
+        "phases.mid.grouping",
+        "group"
+      ],
+      [
+        "phases.mid.objectiveOrder",
+        "baron"
+      ]
+    ],
+    "midSplitPressure": [
+      [
+        "lanes.mid.stance",
+        "split"
+      ],
+      [
+        "phases.mid.objectiveOrder",
+        "towers"
+      ]
+    ]
+  },
   "options": [
     {
       "id": "earlySnowball",
@@ -525,6 +573,36 @@
       "direction": "up"
     }
   ],
+  "ceilings": [
+    {
+      "id": "level_ganks_combo_early_vs_ctrl",
+      "arm": "chkComboEarly",
+      "versus": "ctrl",
+      "metric": "ganksPerMin.early",
+      "maxRatio": 2
+    },
+    {
+      "id": "level_ganks_combo_early_vs_focus",
+      "arm": "chkComboEarly",
+      "versus": "chkFocusBotEarly",
+      "metric": "ganksPerMin.early",
+      "maxRatio": 1.1
+    },
+    {
+      "id": "level_ganks_combo_mid_vs_ctrl",
+      "arm": "chkComboMid",
+      "versus": "ctrl",
+      "metric": "ganksPerMin.mid",
+      "maxRatio": 2
+    },
+    {
+      "id": "level_ganks_combo_mid_vs_focus",
+      "arm": "chkComboMid",
+      "versus": "chkFocusBotMid",
+      "metric": "ganksPerMin.mid",
+      "maxRatio": 1.1
+    }
+  ],
   "reportedMetrics": [
     "win",
     "durationMin",
@@ -552,7 +630,9 @@
     "groups": "claims carry a group; each group gets its own verdict (same rules). The option's verdict still needs every claim, so a win condition is confirmed only if every group is confirmed. objectiveControl: presence (arrived within 9 units, contestShare) and capture (our side took it, captureShare) are judged separately; presence without capture is reported as 'presence only' and is NOT confirmed (Owner: no confirmed without control effect).",
     "distinctness": "contrast b-arm minus a-arm on the same side and seed: distinct = direction matches, z >= 3 and |rel| >= 5 % on BOTH sides; reversed if either side z <= -3 in the opposite direction; unmeasurable if < 200 pairs; else not_distinct. One metric per pair (contract §5.0 multiple-comparison rule; 3 tests per side).",
     "interaction": "per seed (combo - ctrl) - (partA - ctrl) - (partB - ctrl); flagged if, on EITHER side, z >= 3 and the mean is >= 5 % of the control mean in the registered direction (up = surge beyond the sum of the parts). Unmeasurable if < 200 pairs.",
-    "conflict": "combo vs the part on the same side; flagged if, on EITHER side, the part's own claim metric is lower in the combo with z <= -3 and |rel| >= 5 % (the other choice cancels it)."
+    "conflict": "combo vs the part on the same side; flagged if, on EITHER side, the part's own claim metric is lower in the combo with z <= -3 and |rel| >= 5 % (the other choice cancels it).",
+    "ceiling": "absolute level check (review F6): mean(arm) / mean(versus) >= maxRatio on EITHER side => flagged. Combo vs control >= 2.0 (team ganks doubled) and combo vs strong-side-only >= 1.10 (aggressive adds >= 10 % on top of the strong side). Report to the Owner only.",
+    "expansion": "winConditionExpected is checked at run time for every match of a win-condition arm (effectiveTacticChoices on std); a mismatch is written to selfCheck = instrument mismatch => the run stops (review F2)."
   },
   "promotionRule": {
     "winCondition": "A win condition may be promoted to live (v21 director rulesets only) only if: its verdict is confirmed; each contrast with another promoted direction is distinct (a not_distinct/reversed pair means the two may not both go live -> D-17, Owner decides, both stay design until then); any SIDE_ASYMMETRY flag on it is investigated and documented. teamfightScaling is not measured and stays design.",
@@ -563,10 +643,20 @@
     "metrics": [
       "contestShare.dragon.early+mid+late",
       "contestShare.baron.mid+late",
-      "gankShare.top.early",
+      "captureShare.dragon.early+mid+late",
+      "captureShare.baron.mid+late",
       "gankShare.bot.early"
     ],
-    "maxAbsDiff": 0.1
+    "maxAbsDiff": 0.1,
+    "relative": {
+      "metrics": [
+        "seatFightEntriesPerMin.b3.mid+late",
+        "engageStartsPerMin.early",
+        "siegeWindowsPerMin.mid"
+      ],
+      "maxRelDiff": 0.1
+    },
+    "note": "own-side counts of the control arm; a difference above tolerance flags CONTROL_ASYMMETRY (verdicts unchanged; investigate before promotion). Capture shares can legitimately differ by map side (known dragon-side advantage); a flag there is documented, not hidden."
   },
   "sideAsymmetry": {
     "minZ": 3,
@@ -588,5 +678,12 @@
     "combination finding (if flagged): whether to cap or change anything (not done here)",
     "formal-release validation of win rate, economy, length and side bias for any promoted direction"
   ],
-  "reviewHistory": []
+  "reviewHistory": [
+    {
+      "date": "2026-10-24",
+      "stage": "pre-run review of 82bf781f + 74fde76e",
+      "verdict": "APPROVE WITH CHANGES",
+      "fixed": "F1 goldAtPhaseEnd always null (instrument, + self-check); F2 run-time expansion check; F3 fill honours withMeasured; F4 plan validity with player overrides / own value kept / offer lists on expanded choices; F6 absolute ceilings; F7 control symmetry on claim-related metrics with relative tolerance; F8 contract differences documented; F9 check arms out of OWNER_DECISION. F5 (winCondition requires core.v1) is applied at promotion. F10 no change (leavesOf sorts)."
+    }
+  ]
 }

@@ -48,7 +48,7 @@ export default function ChoicePanel({ groups, onChoose, onReset, changedCount = 
                     {d.choices.map((c) => (
                       <button key={c.id} type="button" role="radio" aria-checked={c.selected}
                         data-testid={`tb-choice-${d.dimension}-${c.id}`} data-selected={c.selected ? "1" : "0"}
-                        onClick={() => onChoose?.(d.dimension, c.id, d.own)}
+                        onClick={() => onChoose?.(d.dimension, c.id, d.fromWinCondition ? null : d.own)}
                         style={{ minWidth: 44, minHeight: 34, background: c.selected ? `${GC.blueL}26` : GC.card2, border: `1px solid ${c.selected ? GC.blueL : GC.line}`, borderRadius: 8, padding: "4px 10px", color: c.selected ? "#fff" : "rgba(255,255,255,0.72)", cursor: "pointer", fontSize: 11, fontWeight: 800 }}>
                         {c.label}{c.isTemplateDefault && <span aria-hidden="true" style={{ marginLeft: 3, fontSize: 8, color: GC.gray }}>預設</span>}
                       </button>

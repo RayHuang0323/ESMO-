@@ -602,7 +602,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  以前整份計畫被拒絕（沒有輸出），現在接受；所有本來接受的計畫解析結果不變。強邊選了才出現的 knob 在 C5R 已登記。
   //  ⇒ 所有既有輸入（含 v20、v21-A 黃金）的模擬行為不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 70a8af6428b02a03 未曾發布）。
-  "moba-sim.v21": "30b44a789b4c7548",
+  //  同日（C6 量測前審查 F3／F4）：winConditionFill 跟著 withMeasured、plan 層不再以「完整組合」拒絕帶勝利條件的計畫、戰術書的其他維度以展開後的選擇算提供清單；
+  //  勝利條件仍是 design ⇒ 所有既有輸入的模擬行為不變 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 30b44a789b4c7548 未曾發布）。
+  "moba-sim.v21": "3d7ee3c4ac59f162",
 });
 
 export const isKnownSimulationVersion = (v) =>
