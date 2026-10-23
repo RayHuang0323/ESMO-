@@ -583,7 +583,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-23（真實性表整輪重測後，Owner 裁定）：整場巨龍／巴龍的 G-A7 指標改回 v20 原本的 objectiveFightEntriesPerMin（v20 的能力與
   //  排除表完全依 v20 既有證據；上面「改為 contestShare」那一段作廢，retiredClaims 與其封存檔一併拿掉）；MEASURED_EXCLUSIONS 加 9 筆
   //  每時期型的弱點模板排除（classic.m2／m8，n=40）。只改提供哪些選擇 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 265bf51eeec97f55 未曾發布）。
-  "moba-sim.v21": "24661fa8041eb9a3",
+  //  2026-10-23（C5R 強邊一次受控重新設計，Owner 核准；review/tactic-book-3a/C5R_強邊重新設計.md）：LogicEngine._gankPickV20 多一個 focus 參數——
+  //  knobs 帶 gankFocusLane 時那一路加 gankFocusAdd × 0.2（不做最大值正規化），其他路不變；tacticChoiceMapping.phaseProjectionOf 的強邊改帶
+  //  gankFocusLane／gankFocusAdd、不再覆寫 gankWeights；tacticalDirector LANE_KEYED_KNOBS 加 gankFocusLane（值型）。這兩個欄位只在選了強邊
+  //  （design，只限工具規則集的 phaseChoices）的時期出現 ⇒ 所有既有輸入行為不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 24661fa8041eb9a3 未曾發布）。
+  "moba-sim.v21": "e3ba74f04a6ba3e0",
 });
 
 export const isKnownSimulationVersion = (v) =>

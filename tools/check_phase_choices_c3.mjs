@@ -55,14 +55,14 @@ const diffKeys = (a, b) => { const A = flat(a), B = flat(b); return [...new Set(
   const r0 = res(null);
   ck("R1 沒有每時期選擇 ⇒ 三份就是整場的 knobs／identity（同一個參照）", r0.ok && r0.phases.every((p) => p.knobs === r0.knobs && p.identity === r0.identity));
   //  對照：同一個欄位在「整場」選高（或該路 aggressive）時的投影。每時期選擇改到的欄位與值，必須恰好等於那個整場選擇改到的
-  //  （強邊例外：只取 gankWeights 的那一路，站位不動——契約 C5-3）。
+  //  （強邊例外，C5R：不改 gankWeights，只多 gankFocusLane／gankFocusAdd，增量＝整場該路 aggressive 的 gankWeights 增量；站位不動——契約 C5-3）。
   const whole = (dim, choice) => R.resolveTactic({ kind: "legacy", config: R.mergeTacticConfig(T.TACTIC_TEMPLATES.std, [], MAP.nestedOf([[dim, choice]])) }, {}, {});
   const base = whole("objectives.dragon", "standard");
   const changedOf = (k, id, k0, id0) => [...diffKeys(k, k0).map((x) => `knobs.${x}`), ...diffKeys(id, id0).map((x) => `identity.${x}`)];
   const cases = [
     ["mid", "objectiveOrder", "dragon", "objectives.dragon", "high"], ["late", "objectiveOrder", "baron", "objectives.baron", "high"],
     ["early", "objectiveOrder", "towers", "objectives.tower", "high"], ["mid", "grouping", "group", "teamfight.grouping", "tight"],
-    ["early", "focusLane", "top", "lanes.top.stance", "aggressive", "gankWeights.top"], ["late", "focusLane", "bot", "lanes.bot.stance", "aggressive", "gankWeights.bot"],
+    ["early", "focusLane", "top", "lanes.top.stance", "aggressive", "top"], ["late", "focusLane", "bot", "lanes.bot.stance", "aggressive", "bot"],
   ];
   const bad = [], seen = [];
   for (const [p, d, v, wdim, wchoice, only] of cases) {
@@ -71,15 +71,27 @@ const diffKeys = (a, b) => { const A = flat(a), B = flat(b); return [...new Set(
     if (![0, 1, 2].filter((j) => j !== i).every((j) => r.phases[j].knobs === r.knobs && r.phases[j].identity === r.identity)) bad.push(`${p}.${d}=${v} 其他時期不是整場物件`);
     const w = whole(wdim, wchoice);
     const changed = changedOf(r.phases[i].knobs, r.phases[i].identity, r.knobs, r.identity);
-    const wantFields = only ? [`knobs.${only}`] : changedOf(w.knobs, w.identity, base.knobs, base.identity);
+    if (only) {
+      const k = r.phases[i].knobs, want = w.knobs.gankWeights[only] - base.knobs.gankWeights[only];
+      if (J(changed) !== J(["knobs.gankFocusAdd", "knobs.gankFocusLane"]) || k.gankFocusLane !== only || k.gankFocusAdd !== want || !(want > 0))
+        bad.push(`${p}.${d}=${v} 改到 [${changed}] lane=${k.gankFocusLane} add=${k.gankFocusAdd}（要 ${only}／${want}）`);
+      seen.push(`${p}.${d}=${v}→[${changed}] add=${k.gankFocusAdd}`);
+      continue;
+    }
+    const wantFields = changedOf(w.knobs, w.identity, base.knobs, base.identity);
     if (!changed.length || J(changed) !== J(wantFields)) bad.push(`${p}.${d}=${v} 改到 [${changed}]，整場 ${wdim}=${wchoice} 改到 [${wantFields}]`);
     const fK = flat(r.phases[i].knobs), fI = flat(r.phases[i].identity), wK = flat(w.knobs), wI = flat(w.identity);
     for (const f of changed) { const [grp, ...rest] = f.split("."), key = rest.join("."); if ((grp === "knobs" ? fK[key] : fI[key]) !== (grp === "knobs" ? wK[key] : wI[key])) bad.push(`${p}.${d}=${v} ${f} 值不等於整場`); }
     seen.push(`${p}.${d}=${v}→[${changed}]`);
   }
-  ck("R2 單一選擇：只有那個時期是新物件；改到的引擎欄位與值恰好等於整場選「高」時改到的（強邊只動該路 gankWeights）", bad.length === 0, (bad.length ? bad : seen).slice(0, 6).join(" ｜ "));
+  ck("R2 單一選擇：只有那個時期是新物件；改到的引擎欄位與值恰好等於整場選「高」時改到的（強邊 C5R：只多 gankFocusLane／gankFocusAdd，增量＝整場該路 aggressive 的權重增量）", bad.length === 0, (bad.length ? bad : seen).slice(0, 6).join(" ｜ "));
   const rf = res({ mid: { focusLane: "top" } });
-  ck("R3 強邊不動站位（laneOffset）與其他路的權重", J(rf.phases[1].knobs.laneOffset) === J(rf.knobs.laneOffset) && rf.phases[1].knobs.gankWeights.mid === rf.knobs.gankWeights.mid && rf.phases[1].knobs.gankWeights.bot === rf.knobs.gankWeights.bot);
+  ck("R3 強邊不動站位（laneOffset）、也不動任何一路的 gankWeights（C5R：舊作法覆寫 gankWeights，其他路被正規化壓低）", J(rf.phases[1].knobs.laneOffset) === J(rf.knobs.laneOffset) && J(rf.phases[1].knobs.gankWeights) === J(rf.knobs.gankWeights));
+  //  R3b：該路本來就是 aggressive 的設定 ⇒ 增量 0 ⇒ 不帶 knob、不另建物件（與本來相同）；沒選強邊 ⇒ 沒有 gankFocus 欄位。
+  const aggTop = R.mergeTacticConfig(T.TACTIC_TEMPLATES.std, [], MAP.nestedOf([["lanes.top.stance", "aggressive"]]));
+  const ra = R.resolveTactic({ kind: "legacy", config: aggTop, phaseChoices: { mid: { focusLane: "top" } } }, {}, { phases: true, allowPhaseChoices: true });
+  ck("R3b 該路本來就 aggressive ⇒ 增量 0、不帶 gankFocus、不另建物件；沒選強邊的 knobs 沒有 gankFocusLane／gankFocusAdd",
+    ra.ok && ra.phases[1].knobs === ra.knobs && !("gankFocusLane" in ra.knobs) && !("gankFocusAdd" in res(null).knobs) && !("gankFocusLane" in rf.knobs));
   const rs = res({ mid: { grouping: "standard", focusLane: "none" } });
   ck("R4 standard／none ⇒ 不另建物件（同一個參照）", rs.ok && rs.phases[1].knobs === rs.knobs && rs.phases[1].identity === rs.identity);
   const codes = [
@@ -146,7 +158,9 @@ const diffKeys = (a, b) => { const A = flat(a), B = flat(b); return [...new Set(
   ck("D2b 推塔第一（前期 identity 是另一份）：前期 knobs 在中期反查 ⇒ 前期 identity；藍紅兩側都成立", g3.every(Boolean), g3.join("/"));
   const red = tryConf("balanceTool.v21", { kind: "std" });
   const rr = (() => { try { return run.configure(101, "standard", M, 1, null, { blue: { kind: "std" }, red: { kind: "legacy", config: std, phaseChoices: { early: { focusLane: "top" } } } }, "balanceTool.v21").e; } catch (x) { return null; } })();
-  ck("D3 紅方（teamRelative）強邊＝上路 ⇒ 交給引擎的權重加在世界下路（紅方上路英雄所在的路）", !!rr && (() => { rr.t = 0; const g = rr.director.knobs("red").gankWeights; return g.bot > g.top && g.bot > g.mid; })(), rr ? J(rr.director.knobs("red").gankWeights) : "configure failed");
+  ck("D3 紅方（teamRelative）前期強邊＝上路 ⇒ 交給引擎的 gankFocusLane＝世界下路（紅方上路英雄所在的路）、gankWeights 不變；中期沒有 gankFocus；藍方沒有",
+    !!rr && (() => { rr.t = 0; const k = rr.director.knobs("red"), kb = rr.director.knobs("blue"); const ok0 = k.gankFocusLane === "bot" && k.gankFocusAdd > 0 && J(k.gankWeights) === J({ top: 1, mid: 1, bot: 1 }) && !("gankFocusLane" in kb);
+      rr.t = 600; const ok1 = !("gankFocusLane" in rr.director.knobs("red")); rr.t = 0; return ok0 && ok1; })(), rr ? J({ lane: rr.director.knobs("red").gankFocusLane, add: rr.director.knobs("red").gankFocusAdd }) : "configure failed");
   void red;
 }
 console.log(`\nPhase Choices C3：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);

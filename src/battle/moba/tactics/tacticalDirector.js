@@ -48,10 +48,10 @@ const LANES = ["top", "mid", "bot"];
  * 按路分的 knob 欄位登記表（TD-3A-23 §2.2／§2.3）："keys"＝物件的鍵是路名（值不動，鍵 top↔bot）；"value"＝值本身是路名或 null。
  * ⚠ 新增任何按路分的 knob 欄位都必須登記在這裡，否則紅方不會被轉換（tools/check_laneframe_c3.mjs A2 掃 186 組已解析 knobs）。
  */
-export const LANE_KEYED_KNOBS = Object.freeze({ laneOffset: "keys", gankWeights: "keys", splitLane: "value" });
+export const LANE_KEYED_KNOBS = Object.freeze({ laneOffset: "keys", gankWeights: "keys", splitLane: "value", gankFocusLane: "value" });
 /** 明列「不分路」的 knob 欄位（A2 ②：每一個 knob 欄位都必須在兩張表之一宣告，未宣告即紅）。 */
 export const LANE_NEUTRAL_KNOBS = Object.freeze(["tacticId", "joinFight", "dragonJoin", "baronJoin", "retreatAt", "splitPush",
-  "gankInterval", "invadeChance", "invadeWithMid", "roamRate"]);
+  "gankInterval", "invadeChance", "invadeWithMid", "roamRate", "gankFocusAdd"]);
 
 /**
  * 己方視角的 knobs → 世界路名（一個新的、凍結的物件；不改輸入）。藍方回傳同一個參照。

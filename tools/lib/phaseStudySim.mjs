@@ -15,6 +15,7 @@
 //   C4 物件：  objApps.<k>[p]、objContested.<k>[p]（那一次出現期間 exec.<k>Contests 增加）、objCaptured.<k>[p]（objectiveLog 擊殺方）、
 //              siegeOpens[p]（fsm3 主動權窗被設定且種類是 siege）
 //   C5 強邊：  ganksOwn.<top|mid|bot>[p]（打野出發抓人，exec.<world>Ganks 的增量換成**己方路名**：gameData.sideRelativeLane）
+//              指標：gankShare.<lane>.<p>（占比）、ganksPerMin.<p>（總量）、ganksOwnPerMin.<lane>.<p>（C5R：該路次數 ÷ 分）
 //   C3-2 對照：engages[p]／engageStarts[p]（同 phaseBucketSim）
 //   整場：duration、winner、kills。
 // ============================================================================
@@ -143,5 +144,7 @@ export function studyMetricValue(r, side, id) {
     return tot ? S.ganksOwn[a][i] / tot : null;
   }
   if (name === "ganksPerMin") { const i = pi(a); return per(["top", "mid", "bot"].reduce((n, l) => n + S.ganksOwn[l][i], 0), r.phaseSecs[i]); }
+  //  C5R：ganksOwnPerMin.<ownLane>.<phase>＝該時期去這一路（己方路名）的實際抓人次數 ÷ 分；沒有抓人的場次＝0（只要該時期有經過，同 ganksPerMin）。
+  if (name === "ganksOwnPerMin") { const i = pi(b); return per(S.ganksOwn[a][i], r.phaseSecs[i]); }
   throw new Error(`unknown study metric ${id}`);
 }

@@ -168,7 +168,7 @@ const groupRow = (phase) => ({
 const focusRow = (phase) => ({
   kind: "phaseGank", phase,
   values: { none: null, top: "top", mid: "mid", bot: "adc" },
-  source: "MobaTacticConfig toEngineTactic：lanePlan.<lane>＝aggressive 的 gankWeights（LANE_PLAN_ENUM）",
+  source: "MobaTacticConfig toEngineTactic：lanePlan.<lane>＝aggressive 的 gankWeights 增量（LANE_PLAN_ENUM；C5R 起以加分方式使用，見 phaseProjectionOf）",
 });
 export const PHASE_CHOICE_MAPPING = deepFreeze({
   version: TACTIC_RESOLVER_VERSION,
@@ -223,7 +223,10 @@ export function applyPhasePatch(config, patch) {
 /**
  * 一個時期的投影（Resolver 與選擇引擎共用的唯一一份）：整場設定＋該時期覆寫 → { knobs, identity }。
  * project＝{ toEngineTactic, toEngineTacticIdentity }（Resolver 傳入它注入的投影函式）；wantIdentity=false ⇒ identity 為 null。
- * 強邊只取「該路 lanePlan＝aggressive」投影出來的 gankWeights；站位與其他旋鈕不動（契約 C5-3）。不改輸入；投影失敗會丟例外。
+ * 強邊（C5R，2026-10-23 Owner 核准的一次重新設計，review/tactic-book-3a/C5R_強邊重新設計.md）：gankWeights **不覆寫**；改帶兩個只在
+ * 這個時期出現的 knob——gankFocusLane（己方路名）、gankFocusAdd（「該路 lanePlan＝aggressive」投影出的權重增量）。引擎在選路評分時
+ * 只對那一路加 gankFocusAdd × 權重係數、不做最大值正規化，其他路分數不變（舊作法把其他路壓低，總抓人數下降）。增量 0（該路本來就是
+ * aggressive）⇒ 不帶 knob（與本來相同）。站位與其他旋鈕不動（契約 C5-3）。不改輸入；投影失敗會丟例外。
  */
 export function phaseProjectionOf(config, override, project, wantIdentity = true) {
   const cfg = applyPhasePatch(structuredClone(config), override?.patch);
@@ -232,7 +235,9 @@ export function phaseProjectionOf(config, override, project, wantIdentity = true
   if (override?.gankLane) {
     const g = structuredClone(cfg);
     g.lanePlan = { ...(g.lanePlan ?? {}), [override.gankLane]: "aggressive" };
-    knobs.gankWeights = structuredClone(project.toEngineTactic(g).gankWeights);
+    const lane = override.gankLane === "adc" ? "bot" : override.gankLane;
+    const add = project.toEngineTactic(g).gankWeights[lane] - knobs.gankWeights[lane];
+    if (add > 0) { knobs.gankFocusLane = lane; knobs.gankFocusAdd = add; }
   }
   return { knobs, identity };
 }

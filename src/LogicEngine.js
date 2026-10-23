@@ -3310,8 +3310,9 @@ export class LogicEngine {
    * v20 ④ Gank 選路：以看得見的資訊評分，分數不夠就不出發（gankRecheckSec 後再看）。
    *   ＋ 敵方對線英雄殘血、壓線（離自家塔遠）、我方對線者在場且健康、Gank 偏好權重；
    *   － 敵方多人／敵方打野在附近、距離遠。積極的打野門檻低。
+   *   focus（C5R 強邊，只在 knobs 帶 gankFocusLane 的時期傳入）：那一路再加 gankFocusAdd × 0.2（權重項不做最大值正規化），其他路不變。
    */
-  _gankPickV20(p, alive, w) {
+  _gankPickV20(p, alive, w, focus = null) {
     const R = this.rules;
     const wmax = Math.max(w.top, w.mid, w.bot) || 1;
     let best = null;
@@ -3321,6 +3322,7 @@ export class LogicEngine {
       const mine = alive.filter((q) => q.side === p.side && q.lane === lane && q.role !== "jungle");
       const center = laners[0].pos;
       let s = (w[lane] / wmax) * 0.2;
+      if (focus && focus.gankFocusLane === lane) s += focus.gankFocusAdd * 0.2;
       s += Math.max(...laners.map((q) => 1 - q.hp / q.maxHp)) * 0.6;
       const ownTw = this.frontTower(p.side, lane);   // 敵方在這路的前線塔
       if (ownTw && Math.min(...laners.map((q) => dist(q.pos, ownTw.pos))) > 22) s += 0.3;
@@ -6653,7 +6655,7 @@ export class LogicEngine {
         //  v20 ④：Gank 改評分選路——沒有值得抓的路就不出發，gankRecheckSec 後再看（不抽 rng）。
         let gpick = null;
         if (R.gankScoreV20 && this.t >= S.gankNext && !hot) {
-          gpick = this._gankPickV20(p, alive, K.gankWeights);
+          gpick = this._gankPickV20(p, alive, K.gankWeights, K.gankFocusLane ? K : null);
           if (!gpick) S.gankNext = this.t + (R.gankRecheckSec ?? 4);
         }
         if (this.t >= S.gankNext && !hot) {

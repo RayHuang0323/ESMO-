@@ -1,0 +1,511 @@
+{
+ "schema": "esmo.phase-options-registration.v1",
+ "studyId": "phase-options-c5r",
+ "stage": "Phase 3a-C5R strong side, the single Owner-approved redesign (phases.<p>.focusLane = additive jungle gank focus; quick-mode strong side = early + mid)",
+ "registeredAt": "2026-10-23",
+ "status": "REGISTERED — fixed before any run; nothing changes after the run starts. Measurement only after independent reviewer approval (Owner 2026-10-23).",
+ "authority": {
+  "owner2026_10_23": "Owner: one controlled C5 redesign. First analyse, together with C7 §4-A, the root causes of the lane-stance reversal and of the total-gank drop; the fix must not just raise the main-lane weight; it must account for the focus lane's actual gank count, the team's total ganks and red/blue symmetry. Fix, new metrics, directions, thresholds and spare seeds 8201-8600 are pre-registered and approved by an independent reviewer before measuring. Only one redesign; failure keeps design.",
+  "design": "review/tactic-book-3a/C5R_強邊重新設計.md (root cause §1, fix §2, not done §3)",
+  "previous": "tools/fixtures/phase_options_result_c5.json (all 12 options failed: early/mid guard_failed, late unmeasurable); review/tactic-book-3a/C5_強邊_結果解讀.md",
+  "diagnostic": "tools/fixtures/c7_diag_result_3c.json §4-A: the lane-stance reversal comes from laneOffset (forward stance -> retreats+recalls +33..41 %), not from gank weights (diagnostic arm with gankWeights reset: same numbers). focusLane never changes laneOffset (contract C5-3), so the reversal does not apply; it stays an open Owner item and is neither used nor fixed here."
+ },
+ "seeds": {
+  "range": "8201-8600",
+  "n": 400,
+  "seedSource": "tool (balance runner, seed used as-is)",
+  "why": "spare range reserved for the single C5 redesign (contract seed table; Owner 2026-10-23); never used by any measurement"
+ },
+ "resultFixture": "tools/fixtures/phase_options_result_c5r.json",
+ "design": {
+  "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative: own-lane names are converted to world lanes in the Director, so red top/bot are measurable — contract §4.6 option A is active)",
+  "instrument": "tools/lib/phaseStudySim.mjs (phaseStudySim.v1; C5R adds the derived metric ganksOwnPerMin.<lane>.<p> = ganksOwn[lane][p] / phase minutes, computed from the same counters as gankShare/ganksPerMin), self-check tools/check_phase_study_c3.mjs; layers skills/passives/power curve on, talents off. Lanes are OWN-lane names (exec.<world>Ganks increments converted with gameData.sideRelativeLane).",
+  "arms": "control = std template, no per-phase choice, both sides. Each option is run twice: treatment on blue (red = control) and treatment on red (blue = control); pairs are the same seed.",
+  "mapping": "PHASE_CHOICE_MAPPING phases.<p>.focusLane (kind phaseGank, C5R): top/mid/bot -> knobs.gankFocusLane = that own lane, knobs.gankFocusAdd = gankWeights[lane] of the lanePlan.<top|mid|adc> = aggressive projection minus the current gankWeights[lane] (std: 1.7 - 1 = 0.7); gankWeights are NOT overridden; only in that phase; laneOffset and every other knob unchanged; none = no override. Engine (_gankPickV20): the focus lane's score gets + gankFocusAdd x 0.2 (no max-normalisation); the other lanes' scores are unchanged. Red: gankFocusLane converted to the world lane in the Director (laneFrame teamRelative, LANE_KEYED_KNOBS value type). Quick-mode strong side writes the same lane into early and mid (Owner D-4); late stays none."
+ },
+ "options": [
+  {
+   "id": "focusTopEarly",
+   "dimension": "phases.early.focusLane",
+   "choice": "top",
+   "phase": "early",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "early": {
+      "focusLane": "top"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.top.early",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.early",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.early",
+    "gankShare.top.early",
+    "ganksOwnPerMin.mid.early",
+    "ganksOwnPerMin.bot.early"
+   ]
+  },
+  {
+   "id": "focusMidEarly",
+   "dimension": "phases.early.focusLane",
+   "choice": "mid",
+   "phase": "early",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "early": {
+      "focusLane": "mid"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.mid.early",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.early",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.early",
+    "gankShare.mid.early",
+    "ganksOwnPerMin.top.early",
+    "ganksOwnPerMin.bot.early"
+   ]
+  },
+  {
+   "id": "focusBotEarly",
+   "dimension": "phases.early.focusLane",
+   "choice": "bot",
+   "phase": "early",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "early": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.bot.early",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.early",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.early",
+    "gankShare.bot.early",
+    "ganksOwnPerMin.top.early",
+    "ganksOwnPerMin.mid.early"
+   ]
+  },
+  {
+   "id": "focusTopMid",
+   "dimension": "phases.mid.focusLane",
+   "choice": "top",
+   "phase": "mid",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "mid": {
+      "focusLane": "top"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.top.mid",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.mid",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.mid",
+    "gankShare.top.mid",
+    "ganksOwnPerMin.mid.mid",
+    "ganksOwnPerMin.bot.mid"
+   ]
+  },
+  {
+   "id": "focusMidMid",
+   "dimension": "phases.mid.focusLane",
+   "choice": "mid",
+   "phase": "mid",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "mid": {
+      "focusLane": "mid"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.mid.mid",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.mid",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.mid",
+    "gankShare.mid.mid",
+    "ganksOwnPerMin.top.mid",
+    "ganksOwnPerMin.bot.mid"
+   ]
+  },
+  {
+   "id": "focusBotMid",
+   "dimension": "phases.mid.focusLane",
+   "choice": "bot",
+   "phase": "mid",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "mid": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.bot.mid",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.mid",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.mid",
+    "gankShare.bot.mid",
+    "ganksOwnPerMin.top.mid",
+    "ganksOwnPerMin.mid.mid"
+   ]
+  },
+  {
+   "id": "focusTopLate",
+   "dimension": "phases.late.focusLane",
+   "choice": "top",
+   "phase": "late",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "late": {
+      "focusLane": "top"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.top.late",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.late",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.late",
+    "gankShare.top.late",
+    "ganksOwnPerMin.mid.late",
+    "ganksOwnPerMin.bot.late"
+   ]
+  },
+  {
+   "id": "focusMidLate",
+   "dimension": "phases.late.focusLane",
+   "choice": "mid",
+   "phase": "late",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "late": {
+      "focusLane": "mid"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.mid.late",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.late",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.late",
+    "gankShare.mid.late",
+    "ganksOwnPerMin.top.late",
+    "ganksOwnPerMin.bot.late"
+   ]
+  },
+  {
+   "id": "focusBotLate",
+   "dimension": "phases.late.focusLane",
+   "choice": "bot",
+   "phase": "late",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "late": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.bot.late",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.late",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.late",
+    "gankShare.bot.late",
+    "ganksOwnPerMin.top.late",
+    "ganksOwnPerMin.mid.late"
+   ]
+  },
+  {
+   "id": "strongSideTop",
+   "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+   "choice": "top",
+   "phase": "early+mid",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "early": {
+      "focusLane": "top"
+     },
+     "mid": {
+      "focusLane": "top"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.top.early",
+     "direction": "up"
+    },
+    {
+     "metric": "ganksOwnPerMin.top.mid",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.early",
+     "direction": "up"
+    },
+    {
+     "metric": "ganksPerMin.mid",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.early",
+    "gankShare.top.early",
+    "ganksOwnPerMin.mid.early",
+    "ganksOwnPerMin.bot.early",
+    "ganksPerMin.mid",
+    "gankShare.top.mid",
+    "ganksOwnPerMin.mid.mid",
+    "ganksOwnPerMin.bot.mid",
+    "ganksOwnPerMin.top.late",
+    "gankShare.top.late"
+   ]
+  },
+  {
+   "id": "strongSideMid",
+   "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+   "choice": "mid",
+   "phase": "early+mid",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "early": {
+      "focusLane": "mid"
+     },
+     "mid": {
+      "focusLane": "mid"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.mid.early",
+     "direction": "up"
+    },
+    {
+     "metric": "ganksOwnPerMin.mid.mid",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.early",
+     "direction": "up"
+    },
+    {
+     "metric": "ganksPerMin.mid",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.early",
+    "gankShare.mid.early",
+    "ganksOwnPerMin.top.early",
+    "ganksOwnPerMin.bot.early",
+    "ganksPerMin.mid",
+    "gankShare.mid.mid",
+    "ganksOwnPerMin.top.mid",
+    "ganksOwnPerMin.bot.mid",
+    "ganksOwnPerMin.mid.late",
+    "gankShare.mid.late"
+   ]
+  },
+  {
+   "id": "strongSideBot",
+   "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+   "choice": "bot",
+   "phase": "early+mid",
+   "input": {
+    "choices": {},
+    "phaseChoices": {
+     "early": {
+      "focusLane": "bot"
+     },
+     "mid": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.bot.early",
+     "direction": "up"
+    },
+    {
+     "metric": "ganksOwnPerMin.bot.mid",
+     "direction": "up"
+    }
+   ],
+   "guards": [
+    {
+     "metric": "ganksPerMin.early",
+     "direction": "up"
+    },
+    {
+     "metric": "ganksPerMin.mid",
+     "direction": "up"
+    }
+   ],
+   "report": [
+    "ganksPerMin.early",
+    "gankShare.bot.early",
+    "ganksOwnPerMin.top.early",
+    "ganksOwnPerMin.mid.early",
+    "ganksPerMin.mid",
+    "gankShare.bot.mid",
+    "ganksOwnPerMin.top.mid",
+    "ganksOwnPerMin.mid.mid",
+    "ganksOwnPerMin.bot.late",
+    "gankShare.bot.late"
+   ]
+  }
+ ],
+ "reportedMetrics": [
+  "ganksPerMin.early",
+  "ganksPerMin.mid",
+  "ganksPerMin.late",
+  "gankShare.top.late",
+  "gankShare.mid.late",
+  "gankShare.bot.late"
+ ],
+ "rules": {
+  "minZ": 3,
+  "minRel": 0.05,
+  "minValidPairs": 200,
+  "text": "per claim per side: paired over seeds (treatment arm vs control, same side). OK = sign matches direction AND z in the direction >= 3 AND |rel| >= 5 %. ganksOwnPerMin is defined (0 allowed) whenever the phase lasted >= 60 s in the match; valid pairs < 200 on either side => unmeasurable (no fallback registered). Guard: ganksPerMin.<p> (team total) of the same side must not fall (z <= -3 AND |rel| >= 5 % on either side => guard_failed); a guard with < 200 valid pairs on either side makes the option unmeasurable. A strong-side option needs BOTH phase claims and BOTH guards on BOTH sides. Red/blue symmetry = both sides must pass (one side alone stays design) plus the control symmetry check below. Precedence: unmeasurable > reversed > guard_failed > confirmed > one_sided > insufficient. Same thresholds and precedence as the approved C5 registration; only the claim metric changed (share -> focus-lane count, per Owner)."
+ },
+ "notClaimed": {
+  "laneOffset": "positioning (laneOffset) is not a strong-side effect (C5-3) and is not changed by focusLane",
+  "protectRole": "C5-2 (core protection tilt) is not implemented and not measured (Owner: no hidden support behaviour)",
+  "resourceTilt": "resource / gold tilt has no engine system (contract §4.2 '不做'); it stays design, nothing is registered",
+  "weakSide": "no separate weak-side behaviour",
+  "laneStances": "the lanes.top.stance=defensive / lanes.mid.stance=aggressive behavioural reversal (C7 §4-A) is an Owner decision; this study neither uses nor fixes it",
+  "share": "gankShare.<lane>.<p> is reported, not claimed (the Owner asked for the focus lane's actual gank count and the team total)",
+  "otherLanes": "ganks to the other two lanes may fall (concentration); reported, not judged; the team-total guard catches a net drop"
+ },
+ "consequences": {
+  "confirmed": "the per-phase focusLane value (and the quick-mode strong side for that lane, if its own option is confirmed) becomes offerable under v21 director rulesets only, in a separate commit with gates; evidence scope is balanceTool.v21, std template; a lane confirmed on one side only stays design",
+  "notConfirmed": "stays design permanently for this redesign (Owner: only one redesign); coefficients are never enlarged; root cause recorded"
+ },
+ "controlSymmetry": {
+  "metrics": [
+   "gankShare.top.early",
+   "gankShare.mid.early",
+   "gankShare.bot.early",
+   "gankShare.top.mid",
+   "gankShare.mid.mid",
+   "gankShare.bot.mid"
+  ],
+  "maxAbsDiff": 0.1,
+  "rule": "contract §4.4: gankShare is counted in own-lane names, so the control arm's blue and red means should be close. |red - blue| > 0.10 on any listed metric => flag CONTROL_ASYMMETRY in the result; verdicts are still computed and recorded, but no C5 option is promoted until the instrument is checked and the check is documented. Tolerance fixed before the run without looking at C5 data."
+ },
+ "ownerItems": {
+  "focusLaneCount": "claimed: ganksOwnPerMin.<lane>.<p> up on both sides",
+  "teamTotal": "guard: ganksPerMin.<p> must not fall significantly on either side",
+  "symmetry": "both sides required; control symmetry check (|red - blue| <= 0.10 on six control gank shares) must pass before promotion",
+  "mainAttackLane": "= jungle gank tilt only (phases.<p>.focusLane -> gankWeights). No push, positioning, or lane-assignment behaviour is attached.",
+  "resourceTilt": "not done: the engine has no gold/resource distribution system (contract §4.2). Stays design; nothing registered."
+ },
+ "power": "ganksOwnPerMin exists for every match whose phase lasted >= 60 s, so late pairs are the seeds where both arms reach a late phase >= 60 s (about 240/400 in C5; selection after treatment, as in C5). Late options may still be unmeasurable if fewer than 200; no fallback. Stated before the run.",
+ "reviewHistory": ""
+}

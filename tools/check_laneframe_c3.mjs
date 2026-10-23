@@ -45,7 +45,7 @@ const { createMatchSetup } = await import("../src/platform/contracts/matchSetup.
 const { TACTIC_TEMPLATES } = await import("../src/platform/tactics/tacticTemplates.js");
 const REGISTRY = await import("../src/platform/tactics/capabilityRegistry.js");
 const MAP = await import("../src/platform/tactics/tacticChoiceMapping.js");
-const { resolveTactic } = await import("../src/battle/moba/tactics/tacticResolver.js");
+const { resolveTactic, mergeTacticConfig } = await import("../src/battle/moba/tactics/tacticResolver.js");
 const { assembleMatch } = await import("../src/battle/moba/matchAssembler.js");
 const { sharedMatchAssemblerDeps } = await import("../src/battle/moba/matchAssemblerDeps.js");
 const { buildLiveMatchSetup } = await import("../src/battle/moba/liveMatchSetup.js");
@@ -164,15 +164,23 @@ const regIssues = (knobsList) => {
   const undeclared = [...fields].filter((f) => !(f in KEYED) && !NEUTRAL.includes(f));
   return { det, missing, undeclared };
 };
+//  C5R（Owner 2026-10-23，review/tactic-book-3a/C5R_強邊重新設計.md）：強邊在選了它的時期帶 gankFocusLane（值型路名）／gankFocusAdd（不分路）。
+//  laneFrame 登記檔（歷史證據）不改；新欄位在這裡以附錄登記，同樣逐欄比對型別。每時期 knobs 也納入偵測（每個模板 × 三路，中期）。
+const C5R_ADDENDUM = Object.freeze({ gankFocusLane: "value" });
+const focusKnobs = Object.keys(TACTIC_TEMPLATES).flatMap((t) => ["top", "mid", "bot"].map((lane) => {
+  const r = resolveTactic({ kind: "legacy", config: mergeTacticConfig(TACTIC_TEMPLATES[t], [], {}), phaseChoices: { mid: { focusLane: lane } } }, {}, { phases: true, allowPhaseChoices: true });
+  return r?.ok ? r.phases[1].knobs : null;
+}));
 {
-  const all = resolved.map((x) => x.knobs);
+  const all = [...resolved.map((x) => x.knobs), ...focusKnobs.filter(Boolean)];
   const r = regIssues(all);
+  ck(`A2 ⓪ 每時期強邊 knobs 全部解析成功（${focusKnobs.length} 組），且至少一組帶 gankFocusLane（偵測得到才算有涵蓋）`, focusKnobs.every(Boolean) && focusKnobs.some((k) => k && "gankFocusLane" in k));
   const A2P = STATIC.A2.pass;
   ck(`A2 ① 偵測到的按路分欄位（${[...r.det].map(([f, t]) => `${f}:${t}`).join("、")}）全部登記且型別相符：漏登 ${r.missing.length}（登記 ${A2P.missingRegistrations}）`, r.missing.length === A2P.missingRegistrations, r.missing.join(" "));
   ck(`A2 ② 每個 knob 欄位都已宣告（分路 ${Object.keys(KEYED).length}＋不分路 ${NEUTRAL.length}）：未宣告 ${r.undeclared.length}（登記 ${A2P.undeclaredFields}）；登記表＝登記檔的 laneKeyedKnobs（名稱、欄位、型別）`,
     r.undeclared.length === A2P.undeclaredFields && Object.isFrozen(KEYED) && Object.isFrozen(NEUTRAL)
-    && J(Object.keys(KEYED).sort()) === J(Object.keys(REG.laneKeyedKnobs.fields).sort())
-    && Object.entries(REG.laneKeyedKnobs.fields).every(([f, d]) => KEYED[f] === d.keyType)
+    && J(Object.keys(KEYED).sort()) === J([...Object.keys(REG.laneKeyedKnobs.fields), ...Object.keys(C5R_ADDENDUM)].sort())
+    && Object.entries(REG.laneKeyedKnobs.fields).every(([f, d]) => KEYED[f] === d.keyType) && Object.entries(C5R_ADDENDUM).every(([f, t]) => KEYED[f] === t)
     && REG.laneKeyedKnobs.registryName === "LANE_KEYED_KNOBS", r.undeclared.join(" "));
   ck("A2 ③ 宣告的欄位實際存在於已解析 knobs、兩張表不重疊（沒有死登記）",
     [...Object.keys(KEYED), ...NEUTRAL].every((f) => all.some((k) => f in k)) && NEUTRAL.every((f) => !(f in KEYED)));

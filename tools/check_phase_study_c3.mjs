@@ -87,9 +87,9 @@ ck("S2 有東西可數：每場都有巨龍出現、兩側都有抓人、有一�
   const { modules, configure } = await imp("tools/balance/moba_items_balance_runner.mjs");
   const M = await modules();
   const { e } = configure(43, "standard", M, 1, null, { blue: ctrl, red }, RULESET);
-  e.t = 600; const g = e.director.knobs("red").gankWeights; e.t = 0;
+  e.t = 600; const g = e.director.knobs("red"); e.t = 0;
   const gd = await imp("src/gameData.js");
-  ck("G1 紅方中期強邊＝上路：引擎權重加在世界下路；sideRelativeLane(red, bot)＝top（儀器的換算方向）", g.bot > g.top && g.bot > g.mid && gd.sideRelativeLane("red", "bot") === "top", J(g));
+  ck("G1 紅方中期強邊＝上路：引擎的 gankFocusLane 是世界下路（C5R）；sideRelativeLane(red, bot)＝top（儀器的換算方向）", g.gankFocusLane === "bot" && g.gankFocusAdd > 0 && gd.sideRelativeLane("red", "bot") === "top", J({ lane: g.gankFocusLane, add: g.gankFocusAdd }));
   const r = await PS.runPhaseStudyMatch(43, { blue: ctrl, red, ruleset: RULESET });
   ck("G2 換算後的紅方抓人三路相加＝引擎世界三路相加（中期）", PS.selfCheck(r).length === 0);
 }
