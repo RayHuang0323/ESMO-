@@ -123,7 +123,12 @@ ck("W1 REPLICATION_WITHHELD 屬於第一份複驗的部分 ＝ 結果檔推出�
 ck("W2 預期的 8 筆（上路帶線、下路進攻、b1 核心、謹慎；前期／中期 scaling 為 Owner 暫緩；後期巴龍／推塔優先沒站住），每一筆都恰好來自其中一份結果檔",
   J(W.map(keyOf).sort()) === J(["lanes.bot.stance=aggressive", "lanes.top.stance=split", "phases.early.stance=scaling", "phases.late.objectiveOrder=baron", "phases.late.objectiveOrder=towers", "phases.mid.stance=scaling", "risk.tolerance=cautious", "seats.b1.priority=core"])
   && W.every((x) => [origKeys, revKeys, optKeys].filter((ks) => ks.has(keyOf(x))).length === 1), W.map(keyOf).join(" "));
-ck("W3 與量測排除表分開：沒有一筆同時（模板, 維度, 選擇）都在 MEASURED_EXCLUSIONS 裡，MEASURED_EXCLUSIONS 本身沒有原因代碼 not_replicated", W.every((x) => !Registry.MEASURED_EXCLUSIONS.some((m) => m.template === x.template && m.dimension === x.dimension && m.choice === x.choice)) && Registry.MEASURED_EXCLUSIONS.every((m) => m.reason !== "not_replicated"));
+//  例外只有一種（跨版本證據隔離，Owner 2026-10-23）：v20 真實性列推出的 scope "static" 排除，可以與 Owner 暫緩（owner_hold，所有模式都撤下）重疊——
+//  兩者來源不同（v20 n=40 量測 vs Owner 裁示），各自由自己的 gate 推導；其他任何重疊都算錯。
+const w3Overlap = W.flatMap((x) => Registry.MEASURED_EXCLUSIONS.filter((m) => m.template === x.template && m.dimension === x.dimension && m.choice === x.choice).map((m) => ({ x, m })));
+ck("W3 與量測排除表分開：除了「static 範圍排除 × owner_hold」之外，沒有一筆同時（模板, 維度, 選擇）都在 MEASURED_EXCLUSIONS 裡，MEASURED_EXCLUSIONS 本身沒有原因代碼 not_replicated",
+  w3Overlap.every(({ x, m }) => m.scope === "static" && x.reason === "owner_hold") && Registry.MEASURED_EXCLUSIONS.every((m) => m.reason !== "not_replicated"),
+  w3Overlap.map(({ x, m }) => `${x.dimension}=${x.choice}(${m.scope ?? "*"}×${x.reason})`).join(" "));
 ck("W4 清單是凍結的資料；replicationWithheld(t, d, c) 命中回傳該列、沒命中回傳 null", Object.isFrozen(W) && W.every(Object.isFrozen)
   && W.every((x) => Registry.replicationWithheld("std", x.dimension, x.choice) === x) && Registry.replicationWithheld("std", "lanes.mid.stance", "split") === null && Registry.replicationWithheld("std", "lanes.top.stance", "defensive") === null);
 const mappingSrc = stripComments(fs.readFileSync(path.join(ROOT, "src/platform/tactics/tacticChoiceMapping.js"), "utf8"));

@@ -21,7 +21,7 @@
   "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative: own-lane names are converted to world lanes in the Director, so red top/bot are measurable — contract §4.6 option A is active)",
   "instrument": "tools/lib/phaseStudySim.mjs (phaseStudySim.v1; C5R adds the derived metric ganksOwnPerMin.<lane>.<p> = ganksOwn[lane][p] / phase minutes, computed from the same counters as gankShare/ganksPerMin), self-check tools/check_phase_study_c3.mjs; layers skills/passives/power curve on, talents off. Lanes are OWN-lane names (exec.<world>Ganks increments converted with gameData.sideRelativeLane).",
   "arms": "control = std template, no per-phase choice, both sides. Each option is run twice: treatment on blue (red = control) and treatment on red (blue = control); pairs are the same seed.",
-  "mapping": "PHASE_CHOICE_MAPPING phases.<p>.focusLane (kind phaseGank, C5R): top/mid/bot -> knobs.gankFocusLane = that own lane, knobs.gankFocusAdd = gankWeights[lane] of the lanePlan.<top|mid|adc> = aggressive projection minus the current gankWeights[lane] (std: 1.7 - 1 = 0.7); gankWeights are NOT overridden; only in that phase; laneOffset and every other knob unchanged; none = no override. Engine (_gankPickV20): the focus lane's score gets + gankFocusAdd x 0.2 (no max-normalisation); the other lanes' scores are unchanged. Red: gankFocusLane converted to the world lane in the Director (laneFrame teamRelative, LANE_KEYED_KNOBS value type). Quick-mode strong side writes the same lane into early and mid (Owner D-4); late stays none."
+  "mapping": "PHASE_CHOICE_MAPPING phases.<p>.focusLane (kind phaseGank, C5R): top/mid/bot -> knobs.gankFocusLane = that own lane, knobs.gankFocusAdd = (gankWeights[lane] of the lanePlan.<top|mid|adc> = aggressive projection minus the current gankWeights[lane]) / max(current gankWeights), i.e. on the same normalised scale as the engine weight term (std 0.7, farm 0.7, a template with another lane already aggressive 0.7/1.7); gankWeights are NOT overridden; only in that phase; laneOffset and every other knob unchanged; none = no override. Engine (_gankPickV20): the focus lane's score gets + gankFocusAdd x 0.2 (gankFocusAdd is already on the normalised scale; the other lanes are not lowered); the other lanes' scores are unchanged. Red: gankFocusLane converted to the world lane in the Director (laneFrame teamRelative, LANE_KEYED_KNOBS value type). Quick-mode strong side writes the same lane into early and mid (Owner D-4); late stays none."
  },
  "options": [
   {
@@ -481,6 +481,9 @@
   "weakSide": "no separate weak-side behaviour",
   "laneStances": "the lanes.top.stance=defensive / lanes.mid.stance=aggressive behavioural reversal (C7 §4-A) is an Owner decision; this study neither uses nor fixes it",
   "share": "gankShare.<lane>.<p> is reported, not claimed (the Owner asked for the focus lane's actual gank count and the team total)",
+  "claimStrength": "C5R pre-run review #5: since only the focus lane's score rises, its count rising is close to a manipulation check; the team-total guard and the red/blue checks (both sides + control symmetry + side asymmetry flag) are the substantive tests. A 'confirmed' means: the focus lane really gets more ganks, the team total does not fall significantly, on both sides — nothing more (no win-rate or outcome claim).",
+  "wholeMatchAggressive": "C5R pre-run review #2: the whole-match lanes.<lane>.stance=aggressive path keeps the old max-normalised behaviour (focus lane +0.082 over the others, achieved by lowering the others); the per-phase focus option gives +0.14 (std) by raising the focus lane only. The two therefore differ; the whole-match path is not changed here (that would change existing behaviour and v21-A goldens); listed for the Owner.",
+  "totalGanks": "C5R pre-run review #4: per decision the other lanes are unchanged and the focus lane only improves, but over a match the total can still move (every gank start draws rng2 for the gankNext jitter, shifting the shared stream; ganks into a worse-conditioned lane can change deaths and hot windows that block ganks). The non-decrease is an expectation, not a guarantee; the guard is binding and the total's change is reported.",
   "otherLanes": "ganks to the other two lanes may fall (concentration); reported, not judged; the team-total guard catches a net drop"
  },
  "consequences": {
@@ -497,13 +500,17 @@
    "gankShare.bot.mid"
   ],
   "maxAbsDiff": 0.1,
-  "rule": "contract §4.4: gankShare is counted in own-lane names, so the control arm's blue and red means should be close. |red - blue| > 0.10 on any listed metric => flag CONTROL_ASYMMETRY in the result; verdicts are still computed and recorded, but no C5 option is promoted until the instrument is checked and the check is documented. Tolerance fixed before the run without looking at C5 data."
+  "rule": "contract §4.4: gank counts are in own-lane names, so the control arm's blue and red means should be close. |red - blue| > 0.10 on any listed share => flag CONTROL_ASYMMETRY in the result; verdicts are still computed and recorded, but no C5R option is promoted until the instrument is checked and the check is documented. Tolerance carried over unchanged from the C5 registration (fixed before C5 ran)."
+ },
+ "sideAsymmetry": {
+  "minZ": 3,
+  "rule": "C5R pre-run review #3: for every claim, per seed (blue treatment - blue control) - (red treatment - red control), paired z over seeds valid in all four cells. |z| >= 3 => flag SIDE_ASYMMETRY; the verdict is unchanged (map/world-side asymmetry is legitimate), but no option with the flag is promoted until the asymmetry is examined and documented for the Owner. Reported for every claim."
  },
  "ownerItems": {
   "focusLaneCount": "claimed: ganksOwnPerMin.<lane>.<p> up on both sides",
   "teamTotal": "guard: ganksPerMin.<p> must not fall significantly on either side",
   "symmetry": "both sides required; control symmetry check (|red - blue| <= 0.10 on six control gank shares) must pass before promotion",
-  "mainAttackLane": "= jungle gank tilt only (phases.<p>.focusLane -> gankWeights). No push, positioning, or lane-assignment behaviour is attached.",
+  "mainAttackLane": "= jungle gank focus only (phases.<p>.focusLane -> knobs.gankFocusLane / gankFocusAdd, additive score for that lane). No push, positioning, or lane-assignment behaviour is attached.",
   "resourceTilt": "not done: the engine has no gold/resource distribution system (contract §4.2). Stays design; nothing registered."
  },
  "power": "ganksOwnPerMin exists for every match whose phase lasted >= 60 s, so late pairs are the seeds where both arms reach a late phase >= 60 s (about 240/400 in C5; selection after treatment, as in C5). Late options may still be unmeasurable if fewer than 200; no fallback. Stated before the run.",

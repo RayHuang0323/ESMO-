@@ -49,6 +49,17 @@ export function cellOk(st, direction, rules) {
   return { zDir, ok, reversed, harmful };
 }
 /**
+ * 紅藍效果量差（C5R 審查 #3，登記檔 sideAsymmetry，選用）：每個 seed 的（藍方處理−藍方對照）−（紅方處理−紅方對照），配對 z。
+ * rows：[[ctrlBlue, treatBlue, ctrlRed, treatRed]]（任一為 null 的 seed 不計）。只產生旗標、不改判定。
+ */
+export function sideAsymStatsOf(rows) {
+  const d = rows.filter((r) => r.every((x) => x !== null)).map(([cb, tb, cr, tr]) => (tb - cb) - (tr - cr));
+  const n = d.length;
+  if (n < 2) return { n, diff: null, sd: null, z: null };
+  const diff = d.reduce((s, x) => s + x, 0) / n, sd = Math.sqrt(d.reduce((s, x) => s + (x - diff) ** 2, 0) / (n - 1));
+  return { n, diff, sd, z: sd === 0 ? (diff === 0 ? 0 : Math.sign(diff) * 99) : diff / (sd / Math.sqrt(n)) };
+}
+/**
  * claims：[{ blue: stats, red: stats, direction }]（已選定主指標或合併後備）；guards 同形。measurable＝每個宣稱兩側都有足夠配對。
  */
 export function verdictOf({ measurable, claims, guards }, rules) {
@@ -82,6 +93,10 @@ if (flag("selftest")) {
     && verdictOf({ measurable: true, claims: [cl(st(1, 0.1), st(2, 0.1))], guards: [] }, R) === "insufficient" && verdictOf({ measurable: true, claims: [cl(st(-4, -0.1), st(-4, -0.1), "down")], guards: [] }, R) === "confirmed");
   ck("V6 兩個宣稱：藍側兩個都過、紅側只過一個 ⇒ one_sided；兩側各只過一個 ⇒ insufficient（一側要所有宣稱都過）", verdictOf({ measurable: true, claims: [cl(st(4, 0.1), st(4, 0.1)), cl(st(4, 0.1), st(1, 0))], guards: [] }, R) === "one_sided"
     && verdictOf({ measurable: true, claims: [cl(st(4, 0.1), st(1, 0)), cl(st(1, 0), st(4, 0.1))], guards: [] }, R) === "insufficient");
+  {
+    const a = sideAsymStatsOf([[1, 2, 1, 2], [1, 3, 1, 3], [2, 2, 2, 2], [null, 1, 1, 1]]), b = sideAsymStatsOf([[0, 1, 0, 0], [0, 1.1, 0, 0.1], [0, 0.9, 0, -0.1]]);
+    ck("V8 紅藍效果量差：效果相同 ⇒ diff 0、z 0（null 的 seed 不計）；藍方效果大 1 ⇒ diff 1、z 很大", a.n === 3 && a.diff === 0 && a.z === 0 && Math.abs(b.diff - 1) < 1e-9 && b.z > 3);
+  }
   if (REG) ck(`V7 登記檔 ${REG_REL}：每個選項至少一個宣稱，指標都是儀器認得的，seeds ${REG.seeds.range}`, (await (async () => {
     process.env.ESMO_BALANCE_SKILLS = "on";
     const PS = await import(pathToFileURL(path.join(ROOT, "tools", "lib", "phaseStudySim.mjs")).href);
@@ -239,12 +254,21 @@ if (flag("report")) {
     const diff = b === null || r === null ? null : r - b;
     return { metric: m, blue: b, red: r, diff, ok: diff !== null && Math.abs(diff) <= REG.controlSymmetry.maxAbsDiff };
   });
+  //  紅藍效果量差（登記檔 sideAsymmetry）：每個宣稱一筆；|z| ≥ minZ ⇒ SIDE_ASYMMETRY 旗標（判定照算；登記檔寫明晉升前要先查並記錄）。
+  const sideAsymmetry = REG.sideAsymmetry ? rows.flatMap((r) => OPTIONS.find((o) => o.id === r.id).claims.map((c) => {
+    const tb = recs.get(`${r.id}@blue`), tr = recs.get(`${r.id}@red`);
+    const st = sideAsymStatsOf(SEEDS.filter((s) => !errSeeds.has(s) && ctrl.has(s) && tb.has(s) && tr.has(s))
+      .map((s) => [ctrl.get(s).vals.blue[c.metric], tb.get(s).vals.blue[c.metric], ctrl.get(s).vals.red[c.metric], tr.get(s).vals.red[c.metric]]));
+    return { id: r.id, metric: c.metric, ...st, flagged: st.z !== null && Math.abs(st.z) >= REG.sideAsymmetry.minZ };
+  })) : [];
+  const sideFlag = sideAsymmetry.filter((x) => x.flagged);
+  if (sideFlag.length) flags.push(`SIDE_ASYMMETRY (|z| >= ${REG.sideAsymmetry.minZ}): ${sideFlag.map((x) => `${x.id} ${x.metric} blue−red ${x.diff.toFixed(3)} z ${x.z.toFixed(2)}`).join(", ")} — document before any promotion`);
   const asym = controlSymmetry.filter((x) => !x.ok);
   if (asym.length) flags.push(`CONTROL_ASYMMETRY (> ${REG.controlSymmetry.maxAbsDiff}): ${asym.map((x) => `${x.metric} ${x.blue?.toFixed(3)}/${x.red?.toFixed(3)}`).join(", ")} — instrument check required before any promotion`);
   const conf = rows.filter((r) => r.verdict === "confirmed").map((r) => r.id);
   if (conf.length) flags.push(`OWNER_DECISION: confirmed ${conf.join(", ")} — promotion to live follows the Registry/truth-table rules, Owner decides`);
   const result = { schema: "esmo.phase-options-result.v1", registration: REG_REL, studyId: REG.studyId, reportedAt: new Date().toISOString(), ...prov, batchStartedUnder: meta, stale, complete,
-    finishedMatches: ops.finished, erroredMatches: ops.errored, erroredSeeds: [...errSeeds], instrumentMismatch: ops.instrument, rules: RULES, rows, controlSymmetry, flags,
+    finishedMatches: ops.finished, erroredMatches: ops.errored, erroredSeeds: [...errSeeds], instrumentMismatch: ops.instrument, rules: RULES, rows, controlSymmetry, ...(REG.sideAsymmetry ? { sideAsymmetry } : {}), flags,
     summary: Object.fromEntries(rows.map((r) => [r.id, r.verdict])) };
   const f = (x, d = 3) => (x == null ? "—" : Number(x).toFixed(d));
   console.log(`${REG.studyId}：完整 ${complete}、完成 ${ops.finished}、失敗 ${ops.errored}、儀器不符 ${ops.instrument}${stale.length ? "、STALE" : ""}`);

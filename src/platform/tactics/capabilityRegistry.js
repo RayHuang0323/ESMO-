@@ -332,7 +332,9 @@ export const liveCapabilities = (simVersion = CAPABILITY_SIM_VERSION_3A) => live
 //  reason：no_measured_effect＝方向對但 z < 2 或方向不明顯；reversed_effect＝顯著朝反方向（z ≤ −2）。z／n 是事前登記指標的配對結果（seeds 1–40）。
 //  ⚠ 這些不是「證明沒有效果」：n=40 檢定力有限，許多是旋鈕本來就很小（例如階段姿態只平移 4–8 個百分點）。
 //    Owner 若要保留，另以 n≥400 的新 seeds 證明（見 task-10-report.md），不是放大係數。
-const ex = (template, dimension, choice, reason, metric, n, z) => ({ template, dimension, choice, reason, metric, n, z });
+//  scope（Phase 3a-C，Owner 2026-10-23 跨版本證據隔離）：省略＝所有規則集；"static"＝只在 Director static（v20 類規則集）生效——
+//  v20 的真實性列（balanceTool.v20 量的）失敗、但同一選擇被 v21 的 n=400 複驗取代時，v21 證據只能開放到 v21，v20 照 v20 證據不提供。
+const ex = (template, dimension, choice, reason, metric, n, z, scope) => ({ template, dimension, choice, reason, metric, n, z, ...(scope ? { scope } : {}) });
 export const MEASURED_EXCLUSIONS = deepFreeze([
   //  時期姿態 8 列（fightEntriesPerMin.<p>，n=40）已由 n=400 紅藍複驗取代（REPLICATION_CONFIRMED／REPLICATION_WITHHELD；Phase 3a-C3-2 收尾）；
   //  舊列與舊結果表保留在 git 歷史（commit 0efb759 的 tools/fixtures/tactic_truth_3a.json），不刪不改證據本身。
@@ -341,6 +343,9 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("v2.defensive_hold", "phases.mid.stance", "scaling", "no_measured_effect", "phaseEngageDecisionsPerMin.mid", 40, 0.3),
   ex("classic.m1", "phases.late.stance", "defensive", "unmeasurable", "phaseEngageDecisionsPerMin.late", 19, -2.85),
   ex("classic.m1", "phases.late.stance", "scaling", "unmeasurable", "phaseEngageDecisionsPerMin.late", 19, 2.2),
+  //  跨版本證據隔離（Owner 2026-10-23）：時期姿態在 v20 也能選；v20 的 n=40 列（balanceTool.v20）沒過的，C3-2 的 v21 複驗不能替 v20 開放 ⇒ 只在 static 排除。
+  ex("*", "phases.mid.stance", "aggressive", "no_measured_effect", "phaseEngageDecisionsPerMin.mid", 40, 1.83, "static"),
+  ex("*", "phases.mid.stance", "scaling", "no_measured_effect", "phaseEngageDecisionsPerMin.mid", 40, -1.79, "static"),
   ex("*", "jungle.tempo", "slow", "no_measured_effect", "ganksPerMin", 40, -0.85),
   ex("*", "jungle.tempo", "fast", "no_measured_effect", "ganksPerMin", 40, 0.42),
   ex("classic.m1", "jungle.focus", "farm", "no_measured_effect", "ganksPerMin", 40, -1.38),
@@ -374,9 +379,14 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("classic.m8", "phases.late.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.late", 22, 0),
   ex("classic.m2", "phases.late.objectiveOrder", "towers", "no_measured_effect", "siegeWindowsPerMin.late", 27, 0.6),
 ]);
-/** 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。 */
-export const measuredExclusion = (template, dimension, choice) =>
-  MEASURED_EXCLUSIONS.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)) ?? null;
+/**
+ * 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。
+ * mode＝目前規則集的 Director 模式（"static"＝v20 類、"core.v1"＝v21）：帶 scope 的列只在同一個模式生效。
+ * 省略 mode ⇒ 只看不分模式的列（計畫本身與規則集無關：與 Registry requires 相同，計畫可以存，本場／畫面再依模式過濾）。
+ */
+export const measuredExclusion = (template, dimension, choice, mode = null) =>
+  MEASURED_EXCLUSIONS.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)
+    && (x.scope === undefined || x.scope === mode)) ?? null;
 
 /**
  * 複驗後撤下的選擇（Owner 裁示：邊際選項要用新 seeds、紅藍雙方複驗；證據不足的不再提供）。**獨立於 MEASURED_EXCLUSIONS**：

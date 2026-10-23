@@ -86,7 +86,8 @@ async function main() {
   //  Phase 3a-C3-3／C4：每時期集結、物件優先的 n=400 紅藍複驗（同一條取代規則：只取代 std 主要列）。
   //  這兩份是在 balanceTool.v21 量的 ⇒ 只取代同樣在 v21 量的列（需要 Director 的每時期型）；C4 裡的整場巨龍／巴龍在 v20 也可選，
   //  v21 的證據不取代 v20 的真實性列（審查 2026-10-22 #2；證據留在 Registry.REPLICATION_V21_SCOPE_ONLY，待 Owner 決定）。
-  //  （C3-2 的時期姿態複驗也是 v21 量的，取代 v20 的 std 列是 Owner 2026-10-22 明確核准的，維持原狀。）
+  //  C3-2 的時期姿態複驗也是 v21 量的：Owner 2026-10-23 裁定 v20 不得用 v21 證據擴充可用選項（含 C3-2）⇒ 它只在 v21（Director core.v1）
+  //  取代 std 列；v20 能選的維度（requires 不需要 Director）其 n=40 列（balanceTool.v20 量的）失敗時，照樣推出 scope "static" 的排除。
   const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json", "tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json"];
   const V21_ONLY_SOURCES = new Set(["tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json"]);
   const supersededKeys = new Set(SUPERSEDING.flatMap((rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")).rows
@@ -113,6 +114,8 @@ async function main() {
     for (const p of prim) {
       if (!isOk(p.verdict) && !superseded(p)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)) });
       else {
+        //  被 v21 複驗取代、但 v20 也能選且 v20 的 n=40 列沒過 ⇒ 只在 static 排除（v21 照複驗提供）。
+        if (!isOk(p.verdict) && !p.ruleset && staticOffer(p.dimension)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)), scope: "static" });
         const w = rows.find((r) => r.role === "weak" && r.dimension === p.dimension && r.choice === p.choice);
         if (w && !isOk(w.verdict)) out.push({ template: w.template, dimension: w.dimension, choice: w.choice, reason: reasonOf(w.verdict), metric: w.metric, n: w.n, z: w.z === null ? null : Number(w.z.toFixed(2)) });
       }
@@ -123,7 +126,9 @@ async function main() {
     const p = rows.find((x) => x.role === "primary" && x.dimension === r.dimension && x.choice === r.choice);
     return p && isOk(p.verdict) !== isOk(r.verdict) ? { dimension: r.dimension, choice: r.choice, blue: p.verdict, red: r.verdict, zBlue: p.z, zRed: r.z } : null;
   }).filter(Boolean);
-  const exKey = (x) => `${x.template}|${x.dimension}|${x.choice}|${x.reason}`;
+  const exKey = (x) => `${x.template}|${x.dimension}|${x.choice}|${x.reason}|${x.scope ?? "*"}`;
+  //  v20 能選的維度（static 下可用）：v21 的複驗不能替它開放（跨版本證據隔離）。
+  const staticOffer = (dim) => { const row = Registry.registryRow(dim); return !!row && Registry.rowAvailableUnder(row, "static"); };
 
   // ════════════════════════════════════════════════════════════════════════
   //   --measure 路線
@@ -363,14 +368,14 @@ async function main() {
     ck("T9b 結果表自己記的 exclusionsDerived 與重算相同", sameSet((fx.exclusionsDerived ?? []).map(exKey), derived.map(exKey)));
     //  排除表 ↔ offeredChoices
     const withheldOk = ctx.exclusions.every((x) => Plan.TEMPLATE_IDS.filter((t) => x.template === "*" || x.template === t).every((t) => {
-      const d = Mapping.offeredChoiceDetail(t, x.dimension);
+      const d = Mapping.offeredChoiceDetail(t, x.dimension, [], {}, x.scope ? { tacticalDirector: x.scope } : {});
       if (!d || d.own === x.choice) return true;     // 模板本來就選了它：排除表管不到「本來的選擇」
       return !d.offered.includes(x.choice) && d.withheld.some((w) => w.choice === x.choice && w.reason === "no_measured_effect");
     }));
-    ck("T10 排除表的每一筆，offeredChoices 都不提供（原因 no_measured_effect）", withheldOk, `${ctx.exclusions.length} 筆`);
+    ck("T10 排除表的每一筆，offeredChoices 都不提供（原因 no_measured_effect；帶 scope 的在該模式下查）", withheldOk, `${ctx.exclusions.length} 筆`);
     const survivors = Registry.liveRows().every((r) => {
       const d1 = Mapping.offeredChoiceDetail("std", r.dimension), d0 = Mapping.offeredChoiceDetail("std", r.dimension, [], {}, { withMeasured: false });
-      const gone = (c) => [...ctx.exclusions, ...Registry.REPLICATION_WITHHELD].some((x) => x.dimension === r.dimension && x.choice === c && (x.template === "*" || x.template === "std"));
+      const gone = (c) => [...ctx.exclusions.filter((x) => !x.scope), ...Registry.REPLICATION_WITHHELD].some((x) => x.dimension === r.dimension && x.choice === c && (x.template === "*" || x.template === "std"));
       return d1 && d0 && J(d1.offered) === J(d0.offered.filter((c) => c === d0.own || !gone(c)));
     });
     ck("T10b 在 std 上，提供清單恰好＝不套用排除表時的提供清單扣掉被排除的（量測排除表與複驗撤下清單；兩張表都不影響其他選擇）", survivors);
@@ -381,7 +386,7 @@ async function main() {
       //  T13：被複驗取代的每個選擇，在 Registry 恰好落在一張表：REPLICATION_CONFIRMED（提供）或 REPLICATION_WITHHELD（不提供）；
       //  逐筆數字由 check_tactic_replication_3a.mjs 對結果檔驗。這裡只驗「沒有漏網、沒有兩邊都在」，以及它們不在 MEASURED_EXCLUSIONS。
       const inC = (k) => Registry.REPLICATION_CONFIRMED.some((x) => `${x.dimension}=${x.choice}` === k), inW = (k) => Registry.REPLICATION_WITHHELD.some((x) => `${x.dimension}=${x.choice}` === k);
-      const bad = [...supersededKeys].filter((k) => inC(k) === inW(k) || ctx.exclusions.some((x) => x.template === "*" && `${x.dimension}=${x.choice}` === k));
+      const bad = [...supersededKeys].filter((k) => inC(k) === inW(k) || ctx.exclusions.some((x) => x.template === "*" && !x.scope && `${x.dimension}=${x.choice}` === k));
       if (!supersedingOk) bad.push(`複驗結果檔形狀不對：${SUPERSEDING_SHAPE.join("；")}`);
       const n40 = prim.filter(superseded).map((r) => `${r.dimension}=${r.choice}:${r.verdict}(z=${r.z})`);
       ck("T13 被 n=400 複驗取代的選擇：複驗結果檔完整、沒停、沒過期、0 失敗；每個恰好在 REPLICATION_CONFIRMED 或 REPLICATION_WITHHELD 其中一張，且沒有 \"*\" 排除（弱點模板的排除照舊）", supersededKeys.size > 0 && bad.length === 0, bad.length ? bad.join(" ") : `${supersededKeys.size} 個；n=40 列照記：${n40.join("、")}`);

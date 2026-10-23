@@ -588,7 +588,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  gankFocusLane／gankFocusAdd、不再覆寫 gankWeights；tacticalDirector LANE_KEYED_KNOBS 加 gankFocusLane（值型）。這兩個欄位只在選了強邊
   //  （design，只限工具規則集的 phaseChoices）的時期出現 ⇒ 所有既有輸入行為不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 24661fa8041eb9a3 未曾發布）。
-  "moba-sim.v21": "e3ba74f04a6ba3e0",
+  //  同日（C5R 量測前審查後＋跨版本證據隔離）：gankFocusAdd 改為正規化後的增量（÷ 本來的最大權重，std 仍是 0.7）；MEASURED_EXCLUSIONS 加
+  //  scope 欄位與 2 筆只在 static 生效的時期姿態排除（v20 不用 v21 證據，Owner 2026-10-23），measuredExclusion／提供清單／開局過濾依模式套用。
+  //  既有輸入的模擬行為不變 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 e3ba74f04a6ba3e0 未曾發布）。
+  "moba-sim.v21": "2ae772222d157170",
 });
 
 export const isKnownSimulationVersion = (v) =>

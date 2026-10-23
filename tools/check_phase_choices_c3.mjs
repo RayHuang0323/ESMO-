@@ -72,7 +72,7 @@ const diffKeys = (a, b) => { const A = flat(a), B = flat(b); return [...new Set(
     const w = whole(wdim, wchoice);
     const changed = changedOf(r.phases[i].knobs, r.phases[i].identity, r.knobs, r.identity);
     if (only) {
-      const k = r.phases[i].knobs, want = w.knobs.gankWeights[only] - base.knobs.gankWeights[only];
+      const k = r.phases[i].knobs, bw = base.knobs.gankWeights, want = (w.knobs.gankWeights[only] - bw[only]) / Math.max(bw.top, bw.mid, bw.bot);
       if (J(changed) !== J(["knobs.gankFocusAdd", "knobs.gankFocusLane"]) || k.gankFocusLane !== only || k.gankFocusAdd !== want || !(want > 0))
         bad.push(`${p}.${d}=${v} 改到 [${changed}] lane=${k.gankFocusLane} add=${k.gankFocusAdd}（要 ${only}／${want}）`);
       seen.push(`${p}.${d}=${v}→[${changed}] add=${k.gankFocusAdd}`);
@@ -92,6 +92,12 @@ const diffKeys = (a, b) => { const A = flat(a), B = flat(b); return [...new Set(
   const ra = R.resolveTactic({ kind: "legacy", config: aggTop, phaseChoices: { mid: { focusLane: "top" } } }, {}, { phases: true, allowPhaseChoices: true });
   ck("R3b 該路本來就 aggressive ⇒ 增量 0、不帶 gankFocus、不另建物件；沒選強邊的 knobs 沒有 gankFocusLane／gankFocusAdd",
     ra.ok && ra.phases[1].knobs === ra.knobs && !("gankFocusLane" in ra.knobs) && !("gankFocusAdd" in res(null).knobs) && !("gankFocusLane" in rf.knobs));
+  //  R3c（C5R 審查 #1）：增量與引擎權重項同尺度——farm（三路 ×0.4）與 std 一樣是 0.7；另一路已 aggressive（最大權重 1.7）⇒ 0.7÷1.7。
+  const farm = R.mergeTacticConfig(T.TACTIC_TEMPLATES.std, [], MAP.nestedOf([["jungle.focus", "farm"]]));
+  const aggMid = R.mergeTacticConfig(T.TACTIC_TEMPLATES.std, [], MAP.nestedOf([["lanes.mid.stance", "aggressive"]]));
+  const addOf = (cfg) => R.resolveTactic({ kind: "legacy", config: cfg, phaseChoices: { mid: { focusLane: "top" } } }, {}, { phases: true, allowPhaseChoices: true }).phases[1].knobs.gankFocusAdd;
+  const near = (a, b) => Math.abs(a - b) < 1e-12;
+  ck("R3c gankFocusAdd 是正規化後的增量：std 0.7、farm 0.7、另一路已 aggressive 0.7÷1.7", near(rf.phases[1].knobs.gankFocusAdd, 0.7) && near(addOf(farm), 0.7) && near(addOf(aggMid), 0.7 / 1.7), J([rf.phases[1].knobs.gankFocusAdd, addOf(farm), addOf(aggMid)]));
   const rs = res({ mid: { grouping: "standard", focusLane: "none" } });
   ck("R4 standard／none ⇒ 不另建物件（同一個參照）", rs.ok && rs.phases[1].knobs === rs.knobs && rs.phases[1].identity === rs.identity);
   const codes = [

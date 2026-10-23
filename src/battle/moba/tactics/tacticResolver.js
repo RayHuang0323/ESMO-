@@ -200,7 +200,7 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
         out.phases = ov.overrides.map((o) => {
           if (!o) return { knobs: out.knobs, identity: out.identity };
           //  該時期的設定＝整場設定＋該時期的覆寫，再走**同一對**投影（數值只來自對照表與既有投影，不在這裡算）。
-          //  投影本身在 phaseProjectionOf（與選擇引擎的「提供清單」共用同一份，強邊只取 gankWeights，契約 C5-3）。
+          //  投影本身在 phaseProjectionOf（與選擇引擎的「提供清單」共用同一份，強邊 C5R 只帶 gankFocusLane／gankFocusAdd、不動 gankWeights 與站位，契約 C5-3）。
           let k, id = null;
           try {
             ({ knobs: k, identity: id } = phaseProjectionOf(source, o, A, wantIdentity));

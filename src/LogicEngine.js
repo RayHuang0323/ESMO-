@@ -3310,7 +3310,7 @@ export class LogicEngine {
    * v20 ④ Gank 選路：以看得見的資訊評分，分數不夠就不出發（gankRecheckSec 後再看）。
    *   ＋ 敵方對線英雄殘血、壓線（離自家塔遠）、我方對線者在場且健康、Gank 偏好權重；
    *   － 敵方多人／敵方打野在附近、距離遠。積極的打野門檻低。
-   *   focus（C5R 強邊，只在 knobs 帶 gankFocusLane 的時期傳入）：那一路再加 gankFocusAdd × 0.2（權重項不做最大值正規化），其他路不變。
+   *   focus（C5R 強邊，只在 knobs 帶 gankFocusLane 的時期傳入）：那一路再加 gankFocusAdd × 0.2（gankFocusAdd 已是正規化後的增量），其他路不變。
    */
   _gankPickV20(p, alive, w, focus = null) {
     const R = this.rules;

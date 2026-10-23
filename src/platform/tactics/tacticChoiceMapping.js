@@ -224,9 +224,10 @@ export function applyPhasePatch(config, patch) {
  * 一個時期的投影（Resolver 與選擇引擎共用的唯一一份）：整場設定＋該時期覆寫 → { knobs, identity }。
  * project＝{ toEngineTactic, toEngineTacticIdentity }（Resolver 傳入它注入的投影函式）；wantIdentity=false ⇒ identity 為 null。
  * 強邊（C5R，2026-10-23 Owner 核准的一次重新設計，review/tactic-book-3a/C5R_強邊重新設計.md）：gankWeights **不覆寫**；改帶兩個只在
- * 這個時期出現的 knob——gankFocusLane（己方路名）、gankFocusAdd（「該路 lanePlan＝aggressive」投影出的權重增量）。引擎在選路評分時
- * 只對那一路加 gankFocusAdd × 權重係數、不做最大值正規化，其他路分數不變（舊作法把其他路壓低，總抓人數下降）。增量 0（該路本來就是
- * aggressive）⇒ 不帶 knob（與本來相同）。站位與其他旋鈕不動（契約 C5-3）。不改輸入；投影失敗會丟例外。
+ * 這個時期出現的 knob——gankFocusLane（己方路名）、gankFocusAdd（「該路 lanePlan＝aggressive」投影出的權重增量 ÷ 本來的最大權重，
+ * 與引擎權重項同一個尺度：std 0.7；farm 三路 ×0.4 也是 0.7；另一路已 aggressive 的模板 0.7÷1.7）。引擎在選路評分時只對那一路加
+ * gankFocusAdd × 權重係數，其他路分數不變（舊作法把其他路壓低，總抓人數下降）。增量 0（該路本來就是 aggressive）⇒ 不帶 knob
+ * （與本來相同）。站位與其他旋鈕不動（契約 C5-3）。不改輸入；投影失敗會丟例外。
  */
 export function phaseProjectionOf(config, override, project, wantIdentity = true) {
   const cfg = applyPhasePatch(structuredClone(config), override?.patch);
@@ -236,7 +237,8 @@ export function phaseProjectionOf(config, override, project, wantIdentity = true
     const g = structuredClone(cfg);
     g.lanePlan = { ...(g.lanePlan ?? {}), [override.gankLane]: "aggressive" };
     const lane = override.gankLane === "adc" ? "bot" : override.gankLane;
-    const add = project.toEngineTactic(g).gankWeights[lane] - knobs.gankWeights[lane];
+    const w = knobs.gankWeights, wmax = Math.max(w.top, w.mid, w.bot) || 1;
+    const add = (project.toEngineTactic(g).gankWeights[lane] - w[lane]) / wmax;
     if (add > 0) { knobs.gankFocusLane = lane; knobs.gankFocusAdd = add; }
   }
   return { knobs, identity };
@@ -312,8 +314,10 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
   function offeredDetail(templateId, dim, overlayIds = [], otherChoices = {}, opts = {}) {
     //  opts.withMeasured:false ⇒ 不套用「量測排除表」與「複驗撤下清單」（G-A7 的量測計畫要看到所有候選，包括已經被排除的）。
     const useMeasured = opts?.withMeasured !== false;
+    //  opts.tacticalDirector＝規則集的 Director 模式；帶 scope 的量測排除只在該模式生效（跨版本證據隔離）。省略 ⇒ 只套不分模式的列。
+    const mode = opts?.tacticalDirector ?? null;
     const tpl = templateById(templateId), live = registryRow(dim);
-    if (tpl && live && live.status === CAPABILITY_STATUS.LIVE && phaseRowOf(dim)) return phaseOfferedDetail(tpl, dim, live, overlayIds, otherChoices, useMeasured);
+    if (tpl && live && live.status === CAPABILITY_STATUS.LIVE && phaseRowOf(dim)) return phaseOfferedDetail(tpl, dim, live, overlayIds, otherChoices, useMeasured, mode);
     if (!tpl || !live || live.status !== CAPABILITY_STATUS.LIVE || !rowOf(dim)) return null;
     const base = mergeConfig(tpl, overlayIds, otherChoices);
     const baseSig = sigOf(base), own = ownChoiceOf(base, dim);
@@ -324,7 +328,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     for (const c of order) {
       if (c === own) { const s = sigOf(applyChoice(base, dim, c) ?? base); seen.set(s, c); kept.add(c); continue; }
       //  G-A7：量測不到實際效果的選擇（Registry 的 MEASURED_EXCLUSIONS，逐模板或 "*"＝全部模板）不提供；不佔用旋鈕組的「已見」位置。
-      if (useMeasured && measuredExclusion(templateId, dim, c)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      if (useMeasured && measuredExclusion(templateId, dim, c, mode)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
       //  複驗撤下（REPLICATION_WITHHELD，獨立於量測排除表）：先查量測排除（reason 不變），沒命中才查這張。
       if (useMeasured) { const rw = replicationWithheld(templateId, dim, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
       if (c === "split" && otherSplit) { withheld.push({ choice: c, reason: "second_split_lane" }); continue; }
@@ -344,7 +348,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
    *   用 Resolver 的同一個投影（phaseProjectionOf）算出該時期的 knobs／identity；與本來相同 ⇒ no_effect（覆寫取較高者，
    *   已經比對照表高的模板不變），與同維度其他選擇相同 ⇒ collides。量測排除表與複驗撤下照常套用。
    */
-  function phaseOfferedDetail(tpl, dim, live, overlayIds, otherChoices, useMeasured) {
+  function phaseOfferedDetail(tpl, dim, live, overlayIds, otherChoices, useMeasured, mode = null) {
     const row = phaseRowOf(dim);
     const [, phase, field] = dim.split(".");
     const base = mergeConfig(tpl, overlayIds, otherChoices);
@@ -361,7 +365,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     const seen = new Map(), kept = new Set(), withheld = [];
     for (const c of order) {
       if (c === own) { seen.set(baseSig, c); kept.add(c); continue; }
-      if (useMeasured && measuredExclusion(tpl.templateId, dim, c)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      if (useMeasured && measuredExclusion(tpl.templateId, dim, c, mode)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
       if (useMeasured) { const rw = replicationWithheld(tpl.templateId, dim, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
       if (!Object.hasOwn(row.values, c)) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
       const s = sigWith(c);
@@ -427,8 +431,9 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
   function tacticBookOptions(templateId, overlayIds = [], choices = {}, opts = {}) {
     //  opts.tacticalDirector＝目前規則集的 Director 模式（缺少 ≡ "static"，即 v20）；需要每時期方針的列在 static 下不列出。
     const leaves = leavesOf(choices);
-    return liveRows().filter((r) => rowAvailableUnder(r, opts?.tacticalDirector ?? "static")).map((r) => {
-      const d = offeredDetail(templateId, r.dimension, overlayIds, nestedOf(leaves.filter(([k]) => k !== r.dimension)));
+    const mode = opts?.tacticalDirector ?? "static";
+    return liveRows().filter((r) => rowAvailableUnder(r, mode)).map((r) => {
+      const d = offeredDetail(templateId, r.dimension, overlayIds, nestedOf(leaves.filter(([k]) => k !== r.dimension)), { tacticalDirector: mode });
       return { dimension: r.dimension, own: d?.own ?? null, offered: d?.offered ?? [] };
     });
   }

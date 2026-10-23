@@ -29,7 +29,7 @@
 // ============================================================================
 import { createMatchSetup } from "../../platform/contracts/matchSetup.js";
 import { resolveRulesetForMode, rulesetById, tacticalDirectorModeOf } from "../../platform/contracts/matchRuleset.js";
-import { registryRow, rowAvailableUnder } from "../../platform/tactics/capabilityRegistry.js";
+import { measuredExclusion, registryRow, rowAvailableUnder } from "../../platform/tactics/capabilityRegistry.js";
 import { createTacticPlan } from "../../platform/tactics/tacticPlan.js";
 import { leavesOf, nestedOf } from "../../platform/tactics/tacticChoiceMapping.js";
 import { bindTacticPlanToCurrentVersions } from "./tactics/tacticResolver.js";
@@ -50,7 +50,9 @@ export function bindingForRuleset(binding, ruleset) {
   const mode = tacticalDirectorModeOf(ruleset);
   let leaves;
   try { leaves = leavesOf(binding?.plan?.choices ?? {}); } catch { return { binding, dropped: [] }; }
-  const dropped = leaves.filter(([dim]) => { const row = registryRow(dim); return row !== null && !rowAvailableUnder(row, mode); }).map(([dimension, choice]) => ({ dimension, choice: String(choice) }));
+  //  兩種「本場用不到」：需要本場沒有的規則集層（requires），或只在本場模式生效的量測排除（scope，跨版本證據隔離：v20 不用 v21 證據）。
+  const scopedOut = (dim, choice) => measuredExclusion(binding?.plan?.templateId, dim, String(choice), mode)?.scope === mode;
+  const dropped = leaves.filter(([dim, choice]) => { const row = registryRow(dim); return row !== null && (!rowAvailableUnder(row, mode) || scopedOut(dim, choice)); }).map(([dimension, choice]) => ({ dimension, choice: String(choice) }));
   if (!dropped.length) return { binding, dropped: [] };
   const kept = leaves.filter(([dim]) => !dropped.some((d) => d.dimension === dim));
   const created = createTacticPlan({ templateId: binding.plan.templateId, overlayIds: binding.plan.overlayIds ?? [], choices: nestedOf(kept) });
@@ -178,7 +180,7 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
   const explicitLayout = OBJECTIVE_LAYOUTS.includes(opts.objectiveLayout) ? opts.objectiveLayout : null;
   //  本場規則集用不到的戰術選擇只從本場拿掉（見 bindingForRuleset）；記在 notes，存檔的戰術書不動。
   const blueBinding = opts.tacticPlanBinding ? bindingForRuleset(toPlainData(opts.tacticPlanBinding), rs) : null;
-  if (blueBinding?.dropped.length) notes.push(`tactic.blue: dropped ${blueBinding.dropped.map((d) => `${d.dimension}=${d.choice}`).join(", ")} (needs a ruleset layer this match does not have; saved plan unchanged)`);
+  if (blueBinding?.dropped.length) notes.push(`tactic.blue: dropped ${blueBinding.dropped.map((d) => `${d.dimension}=${d.choice}`).join(", ")} (not available under this match's ruleset; saved plan unchanged)`);
 
   const input = {
     ruleset: rs,
