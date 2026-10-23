@@ -24869,3 +24869,21 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **審查**：C5 解讀 APPROVE WITH CHANGES（已修）；升級第一次 REJECT（已修）；最終獨立複審 APPROVE WITH CHANGES（#1–#3、#6 已修 `1a09f923`）。
 
 **未完成／風險**：見 08 同日一節。C6 未開始（Owner 指示本輪完成後停止）。
+
+## 2026-10-24 Phase 3a-C5R 強邊重新設計（12／12 confirmed，未升級）＋ 跨版本證據隔離 ＋ C6 規劃（local，未 push／deploy／整合 main）
+
+**依據**：Owner 2026-10-23 第二輪決策（C5 一次受控重新設計；v20 不得用 v21 證據擴充選項；前／中期 scaling 維持 design；simulationVersion.js 過期判定維持保守；C5 收尾與 C6 規劃後停止）。
+
+**完成**
+- C5 根因：`_gankPickV20` 權重項以最大值正規化 ⇒ 舊強邊沒有提高指定路、反而壓低其他兩路 ⇒ 抓人總量下降。C7 §4-A 路線姿態反轉來自 `laneOffset`（站位），與強邊無關（不改，仍待 Owner）。
+- 修法（`c2922cee` `45298098` `735b16a0`）：只在選了強邊的時期，指定路評分加 `gankFocusAdd × 0.2`（增量＝投影權重差 ÷ 本來最大權重；std 0.7）；不再覆寫 gankWeights；新 knob `gankFocusLane`（laneFrame 值型）／`gankFocusAdd`；沒選強邊 ⇒ 逐位元不變。量測前審查 APPROVE WITH CHANGES ⇒ 全修 ⇒ 複審 APPROVE。
+- 正式量測（`77eaf56b`，seeds 8201–8600，10,000 場，0 失敗，中途被記憶體保護中斷一次、同資料夾續跑；量測時指紋 `2ae772222d157170`，之後的 `70a8af6428b02a03` 只改開局過濾、不在量測路徑上，將來升級前要再確認結果未過期）：**12／12 紅藍 confirmed**；守門全隊抓人總量全部上升（+9～+87 %）；對照紅藍對稱通過；⚑ SIDE_ASYMMETRY 前期中路（z 3.42，已記錄）；⚑ OWNER_DECISION（未升級）。解讀與結果審查（APPROVE WITH CHANGES，全修）：`d3f60797`，`review/tactic-book-3a/C5R_強邊重新設計.md` §7–§9。
+- 跨版本證據隔離（`45298098` `62e29ff7`）：`MEASURED_EXCLUSIONS` 可帶 `scope:"static"`；戰術書與開局依本場模式過濾；v20 失去中期 aggressive（v20 證據沒過）。新 gate `check_tactic_evidence_scope_3a`（7/7）；v20 規則集與歷史指紋未動。隔離審查 APPROVE WITH CHANGES ⇒ 全修。
+- 指紋 `moba-sim.v21`＝`70a8af6428b02a03`（未發布）；dev 合併 `45eff649`。
+- 真實性表整輪重測（`c13aebe4`，5,320 場，0 失敗，中斷一次續跑）：119 列與前一版**逐位元相同**；推導排除 +2 筆 static 列；truth 34/34（T9b 轉綠）。
+- 戰術書 Browser Gate（`98e5523e`）：桌機 1366＋手機 390 **31/31**。O2 的「時期姿態是 design」舊黑名單過期（C3-2 已 live）⇒ 拿掉；新增 O2b 釘住畫面上的 v20 隔離。
+- C6 四種勝利條件可行方案：`review/tactic-book-3a/C6_勝利條件_可行方案.md`（前期滾雪球可行；控圖運營原案不可行、變體 A 待 Owner；分推只有中路版本、待 D-5；後期團戰維持 design）。**未實作**。
+
+**驗證（MOBA 分支，指紋 70a8af6428b02a03，實跑）**：version 82/82、evidence scope 7/7、book view 24/24、registry 34/34、phase choices 24/24、phase study 10/10、replication 51/51、laneframe 55/55、director 97/97、directive 61/61、ruleset 43/43、resolver 138/138、match setup 153/153、golden v21a 131/131、truth 34/34、skeleton 170/170、bucket 23/23、tactic save 38/38、plan 219/219、indicators 59/59、browser tactic book 31/31；`verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條：m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS；`npm run build` built in 17.48s，dist 0 筆 `heroSkillsDev`。
+
+**未完成／風險**：見 08 同日一節。強邊升級、C6 實作都未開始（等 Owner Review）。
