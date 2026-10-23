@@ -24853,3 +24853,19 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 維持 design：後期巴龍優先 one_sided（藍 z 2.29）；後期推塔優先 insufficient（幅度過 5 % 但 z 1.72／2.86）。原因只列假設，不放大係數。
 - 主張是「出現占比」（存活期間該側英雄進坑 9 單位內），取得占比只報告；取得變化是出現的 2–7 倍。推塔優先連帶 laneOffset +0.012 需在 Registry 與文案揭露；全場選項要走真實性表／複驗規則才能離開排除表。前期仍不能選巴龍。
 - 獨立審查 APPROVE WITH CHANGES（6 項 MINOR：出處、出現的定義、天花板實測值、根因改為假設、對手側與跨時期外溢未量），已修進解讀文件。
+
+## 2026-10-23 Phase 3a-C3-3／C4／C5 結果與升級 live（local，未 push／deploy／整合 main）
+
+**完成**
+- C3-3 成團（`c70ba926`＋解讀／審查 `1144757c` `a236154c` `b2a78afb`）：前／中／後期 group 紅藍皆 confirmed（+10.7～+29.2 %）。
+- C4 物件優先（`a68fd71f`＋`5f37092d` `9d7c340e`）：前期 dragon／towers、中期 dragon／baron／towers、後期 dragon confirmed；後期 baron one_sided、後期 towers insufficient ⇒ 不提供。指標是「出現在坑邊」（contest），不是「拿到」。
+- C5 主攻路（`4e0e97a9`＋`4b4f3189` `82d7f030`）：12 個選項全部未過（前中期 guard_failed：占比上升但抓人總數 −7.4～−45.9 %；後期 unmeasurable）。根因是 `_gankPickV20` 以最大值正規化權重；focusLane 維持 design，不調係數。
+- Owner 裁定（2026-10-22 晚）：不以 v21 證據開放 v20 整場龍 high／low、巴龍 high；v20 能力與排除表依 v20 既有證據。
+- 升級（開發分支 `feature/moba-phase3a-cdev`，合併 `05eead97`）：每時期 grouping／objectiveOrder 改 live（只在有 Director core.v1 的 v21 規則集）；戰術書依規則集過濾；`liveMatchSetup.bindingForRuleset` 只從本場拿掉本場規則集用不到的選擇（存檔不動）。
+- 真實性表第一輪重測發現 v20 巴龍 high 會因換指標而開放 ⇒ 整場龍／巴龍指標改回 `objectiveFightEntriesPerMin`、補 9 筆弱點模板排除（`52516994`）；指紋 `24661fa8041eb9a3`；第二輪重測（`714e6f43`，5,320 場、0 失敗）：119 列＝91 列與 `9c88d3d0` 逐位元相同＋28 列 v21。
+
+**驗證（開發分支 HEAD `714e6f43`／`1a09f923`，實跑）**：registry 34/34、plan 219/219、resolver 138/138、book view 24/24、phase choices 22/22、replication 51/51、indicators 59/59、phase study 10/10、truth 34/34、version 82/82、director 97/97、directive 61/61、ruleset 43/43、bucket 23/23、skeleton 170/170、laneframe 54/54、tactic save 38/38、golden v21a 131/131、match setup 153/153、`verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條）、runtime29 PASS；`npm run build` OK（dist 0 筆 DEV 開關字串）。合併後在 `05eead97` 複跑 version／truth／replication／registry／book view／phase choices 全綠。
+
+**審查**：C5 解讀 APPROVE WITH CHANGES（已修）；升級第一次 REJECT（已修）；最終獨立複審 APPROVE WITH CHANGES（#1–#3、#6 已修 `1a09f923`）。
+
+**未完成／風險**：見 08 同日一節。C6 未開始（Owner 指示本輪完成後停止）。
