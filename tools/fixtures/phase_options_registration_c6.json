@@ -3,7 +3,7 @@
   "studyId": "phase-options-c6",
   "stage": "Phase 3a-C6 win conditions (early snowball, objective control variant A, mid-lane split pressure) as presets of already-live choices; plus the strong-side x aggressive-stance combination check (C5 promotion condition)",
   "registeredAt": "2026-10-24",
-  "status": "REGISTERED — fixed before any run; nothing changes after the run starts. Measurement only after independent reviewer approval (Owner 2026-10-24).",
+  "status": "REGISTERED AND APPROVED (independent re-review 2026-10-24) — fixed before any run; nothing changes after the run starts.",
   "authority": {
     "owner2026_10_24": "Owner approved: early snowball implement+verify; objective control variant A (mid baron, late dragon) conditionally — confirm objective spawn timing and contestable windows first, judge 'more presence' and 'actual capture' separately, no confirmed without control effect; split pressure only as a mid-lane experiment; teamfight scaling stays design (no D-18). C6 combines verified capabilities only, no hidden bonus, no second tactic engine; explicit player choices win, the win condition only fills unspecified fields. Add a C6 distinctness test; verify strong side + aggressive stance together does not cause an unreasonable gank surge or tactic conflict. Metrics, seeds, thresholds pre-registered and approved by an independent reviewer before the formal run.",
     "contract": "review/tactic-book-3a/C3-C6_行為契約草案.md §5 (presets of C3-C5 per-phase fields; R-8 fill only unspecified; no own coefficients; distinctness one metric per pair, z>=3 both sides, |rel|>=5%; seeds 4201-4600; one redesign on 8601-9000)",
@@ -684,6 +684,12 @@
       "stage": "pre-run review of 82bf781f + 74fde76e",
       "verdict": "APPROVE WITH CHANGES",
       "fixed": "F1 goldAtPhaseEnd always null (instrument, + self-check); F2 run-time expansion check; F3 fill honours withMeasured; F4 plan validity with player overrides / own value kept / offer lists on expanded choices; F6 absolute ceilings; F7 control symmetry on claim-related metrics with relative tolerance; F8 contract differences documented; F9 check arms out of OWNER_DECISION. F5 (winCondition requires core.v1) is applied at promotion. F10 no change (leavesOf sorts)."
+    },
+    {
+      "date": "2026-10-24",
+      "stage": "re-review of e72ff87c",
+      "verdict": "APPROVE",
+      "note": "registration may be run as-is at e72ff87c / fingerprint 3d7ee3c4ac59f162; nit: CONTROL_ASYMMETRY flag text now prints relative entries (text only); carried to promotion: winCondition requires core.v1 + bindingForRuleset gate, tactic-book browser gate re-run."
     }
   ]
 }

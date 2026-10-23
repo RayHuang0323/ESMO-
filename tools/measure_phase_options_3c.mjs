@@ -317,7 +317,7 @@ if (flag("report")) {
   const sideFlag = sideAsymmetry.filter((x) => x.flagged);
   if (sideFlag.length) flags.push(`SIDE_ASYMMETRY (|z| >= ${REG.sideAsymmetry.minZ}): ${sideFlag.map((x) => `${x.id} ${x.metric} blue−red ${x.diff.toFixed(3)} z ${x.z.toFixed(2)}`).join(", ")} — document before any promotion`);
   const asym = controlSymmetry.filter((x) => !x.ok);
-  if (asym.length) flags.push(`CONTROL_ASYMMETRY (> ${REG.controlSymmetry.maxAbsDiff}): ${asym.map((x) => `${x.metric} ${x.blue?.toFixed(3)}/${x.red?.toFixed(3)}`).join(", ")} — instrument check required before any promotion`);
+  if (asym.length) flags.push(`CONTROL_ASYMMETRY (abs > ${REG.controlSymmetry.maxAbsDiff}${REG.controlSymmetry.relative ? ` / rel > ${REG.controlSymmetry.relative.maxRelDiff}` : ""}): ${asym.map((x) => `${x.metric} ${x.blue?.toFixed(3)}/${x.red?.toFixed(3)}${x.relDiff !== undefined ? ` rel ${x.relDiff === null ? "—" : x.relDiff.toFixed(3)}` : ""}`).join(", ")} — instrument check required before any promotion`);
   //  ── Phase 3a-C6（選用）：區分性、交互作用、衝突檢查。都用同 seed、同側的配對；有效配對不足 minValidPairs ⇒ unmeasurable。──
   const armStats = (keyA, keyB, side, metric) => pairStatsOf(SEEDS.filter((s) => !errSeeds.has(s) && recs.get(keyA)?.has(s) && recs.get(keyB)?.has(s))
     .map((s) => [recs.get(keyA).get(s).vals[side][metric], recs.get(keyB).get(s).vals[side][metric]]));
