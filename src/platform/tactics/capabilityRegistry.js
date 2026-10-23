@@ -443,7 +443,7 @@ export const REPLICATION_CONFIRMED = deepFreeze([
 /**
  * 只在 v21 規則集量到的複驗（Phase 3a-C4，2026-10-22 審查後）：整場巨龍 high／low、巴龍 high 在 balanceTool.v21（Director core.v1、laneFrame
  * teamRelative）紅藍兩側 confirmed，但這三個選擇在 v20 規則集（正式站現況）也可選，而 v21 的證據不能直接代表 v20（laneFrame 改變紅方路名）。
- * ⇒ **不**取代真實性表、**不**影響提供清單：v20 是否提供仍由真實性表（seeds 1–40）決定；這張表只留證據，是否以 v21 證據開放到 v20 由 Owner 決定。
+ * ⇒ **不**取代真實性表、**不**影響提供清單：v20 是否提供仍由真實性表（seeds 1–40）決定；這張表只留證據；Owner 2026-10-22 已裁定**不**以 v21 證據開放到 v20。
  * 形狀同 REPLICATION_CONFIRMED；tools/check_tactic_replication_3a.mjs 驗證它＝C4 結果檔裡整場選項的 confirmed 列。
  */
 export const REPLICATION_V21_SCOPE_ONLY = deepFreeze([

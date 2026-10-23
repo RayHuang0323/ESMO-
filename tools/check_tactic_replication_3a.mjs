@@ -274,6 +274,8 @@ ck(`V6 提供清單：核准的 6 個時期姿態在 std 及每個結構上可�
     archNote = `${old.rows.length} 列；舊時期姿態列 ${old.rows.filter((r) => r.metric?.startsWith("fightEntriesPerMin.")).length}`;
   } catch (e) { archNote = String(e?.message ?? e); }
   ck("V8 retiredClaims：每個時期姿態都有一筆舊宣稱（fightEntriesPerMin.<p>），證據檔存在且＝0efb759 的結果表（逐位元）", retired.length === 3 && retired.every((c) => c.metric === `fightEntriesPerMin.${c.dim.split(".")[1]}` && c.evidence.startsWith(ARCH)) && archOk, archNote);
+  const otherRetired = Registry.liveRows().filter((r) => !/^phases\.(early|mid|late)\.stance$/.test(r.dimension) && r.gate?.retiredClaims).map((r) => r.dimension);
+  ck("V8b 時期姿態以外的 live 列都沒有 retiredClaims（新增退休宣稱必須連同證據檔與檢查一起登記）", otherRetired.length === 0, otherRetired.join(" "));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
