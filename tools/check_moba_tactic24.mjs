@@ -166,14 +166,20 @@ const d2 = rk.reduce((s, v, i) => s + (v - rb[i]) ** 2, 0);
 const rho = 1 - (6 * d2) / (n8 * (n8 * n8 - 1));
 ck(`objJoin knob → objRate 行為單調（8 套戰術 Spearman ρ=${rho.toFixed(2)}；門檻 ≥ 0.40）`, rho >= 0.40);
 
-// C4d. Gank 節奏：m6 全圖游走（gankInterval 32）> m4 龍堆運營（58）——機制上必然。
-//   S29：4 seeds 合計 → 40 seeds 平均 + 容忍區（實測 ×1.35，門檻 ×1.15）。
-const gankOf = (id) => mean(OBS_SEEDS.map((s) => {
-  const x = run(s, id).tacticExec.blue; return x.topGanks + x.midGanks + x.botGanks;
-}));
-const g6 = gankOf("m6"), g4 = gankOf("m4");
-ck(`m6 全圖游走 Gank 次數 > m4 龍堆運營（${OBS_SEEDS.length} seeds 平均 ${g6.toFixed(1)} vs ${g4.toFixed(1)} = ×${(g6 / g4).toFixed(2)}；門檻 ×1.15）`,
-  g6 >= g4 * 1.15);
+// C4d. Gank 選路：m6 全圖游走（gankWeights 中 1.7／側 1）的中路 Gank 占比 > m4 龍堆運營（三路均等）。
+//   ⚠ 歷史：原宣稱是「m6 Gank 次數 ≥ m4 ×1.15」（gankInterval 32 vs 58；S29 實測 ×1.35）。v20（1d0e219）起 Gank 改成評分選路、
+//     分數不到 gankMinScore 不出發，gankInterval 只剩出發後的冷卻 ⇒ 次數不再由它決定（HEAD／v20 都是 4.225 vs 4.35＝×0.97；v19 d146e02 ×1.61）。
+//     舊宣稱失效、保留紀錄（3a-B 開工清單 §2；Owner 2026-10-25 決策 2：不降門檻湊 PASS、沒有證據不換新宣稱）。
+//   新宣稱依 v20 機制：評分的權重項是 (w[路]/max(w))×0.2 ⇒ m6 的兩側被扣 0.082、中路不變；m4 三路相同 ⇒ m6 的中路占比較高。
+//   事前登記 tools/fixtures/tactic24_v20claim_registration.json；新 seeds 19001–19200 的證據 tools/fixtures/tactic24_v20claim_result.json
+//   （0.452 vs 0.305＝×1.48，z 6.21，PASS）。本 gate 在自己的 40 seeds 上用同一條規則（占比比 ≥ ×1.15，沿用原門檻的慣例）。
+const gankLanes = (id) => OBS_SEEDS.reduce((a, s) => {
+  const x = run(s, id).tacticExec.blue; return { mid: a.mid + x.midGanks, total: a.total + x.topGanks + x.midGanks + x.botGanks };
+}, { mid: 0, total: 0 });
+const L6 = gankLanes("m6"), L4 = gankLanes("m4");
+const share6 = L6.mid / Math.max(1, L6.total), share4 = L4.mid / Math.max(1, L4.total);
+ck(`m6 全圖游走的中路 Gank 占比 > m4 龍堆運營（${OBS_SEEDS.length} seeds 合計 ${L6.mid}/${L6.total}＝${share6.toFixed(3)} vs ${L4.mid}/${L4.total}＝${share4.toFixed(3)}，×${(share6 / share4).toFixed(2)}；門檻 ×1.15）`,
+  L4.total > 0 && share6 >= share4 * 1.15);
 
 // C5. 戰術不保證勝負：同一戰術跨 16 seeds，兩種勝方都出現
 for (const id of ["m3", "m8"]) {
