@@ -270,7 +270,8 @@ for (const t of TEMPLATE_IDS) {
         if (structural.includes(c) && !o.offered.includes(c)) {
           const w = dm.withheld.find((x) => x.choice === c)?.reason;
           const compGone = w === "component_not_offered" && Mapping.WIN_CONDITION_PRESETS[c].some(([d, v]) => Registry.measuredExclusion(t, d, v, "core.v1") || Registry.replicationWithheld(t, d, v));
-          const selfExcluded = w === Registry.measuredExclusion(t, o.dimension, c, "core.v1")?.reason;
+          //  offeredChoiceDetail 對量測排除一律寫 no_measured_effect（不論排除表的 reason）；排除表必須真的有這一列。
+          const selfExcluded = !!Registry.measuredExclusion(t, o.dimension, c, "core.v1") && w === "no_measured_effect";
           if (!(w === "not_replicated" && Registry.replicationWithheld(t, o.dimension, c)) && !selfExcluded && !compGone) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:少掉的原因不是撤下或組成格被排除（${w}）`); }
         }
       }

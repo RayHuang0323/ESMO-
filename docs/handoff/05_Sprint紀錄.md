@@ -24887,3 +24887,32 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **驗證（MOBA 分支，指紋 70a8af6428b02a03，實跑）**：version 82/82、evidence scope 7/7、book view 24/24、registry 34/34、phase choices 24/24、phase study 10/10、replication 51/51、laneframe 55/55、director 97/97、directive 61/61、ruleset 43/43、resolver 138/138、match setup 153/153、golden v21a 131/131、truth 34/34、skeleton 170/170、bucket 23/23、tactic save 38/38、plan 219/219、indicators 59/59、browser tactic book 31/31；`verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條：m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS；`npm run build` built in 17.48s，dist 0 筆 `heroSkillsDev`。
 
 **未完成／風險**：見 08 同日一節。強邊升級、C6 實作都未開始（等 Owner Review）。
+
+## 2026-10-24 Phase 3a 第三輪：C5 強邊升級＋C6 勝利條件（前期滾雪球升級 live，v21 only；local，未 push／deploy／整合 main）
+
+**依據**：Owner 2026-10-24 第三輪決策（C5 方案 (a) 12 個強邊升為 v21 候選 live；C6 前期滾雪球／控圖運營變體 A／中路分推實驗、後期團戰維持 design）＋ Owner 核准方案 1（前期滾雪球升為 v21 候選 live；控圖運營、中路分推維持 design；不得宣稱提升勝率；紅方前期經濟 z=3.60 列為發布前側偏風險）。
+
+**完成**
+- C5 升級（`82bf781f`）：12 個強邊選項進 `REPLICATION_CONFIRMED`，只在 v21 規則集＋對應旗標提供；v20 不變。
+- C6 事前登記（`74fde76e`）→ 量測前審查 APPROVE WITH CHANGES、F1–F9 全修（`e72ff87c`）→ 複審 APPROVE（`6d4e4f78`）。
+- C6 正式量測（`b564377f`，write-once `tools/fixtures/phase_options_result_c6.json`）：7,600／7,600 場、0 失敗、0 儀器不一致，量測時指紋 `3d7ee3c4ac59f162`；中途被記憶體保護中斷兩次、同資料夾續跑。
+  - 前期滾雪球 **confirmed**：前期開戰決策 +15.6 %／+14.2 %（z 13.9／12.7），前期巨龍爭奪 +15.1 %／+10.3 %。
+  - 控圖運營 **insufficient**：實際取得 confirmed（巨龍 +17.3 %／+17.6 %、巴龍 +26.7 %／+37.6 %），但「更多到場」的後期巨龍備援 z 2.82／2.96 < 3 ⇒ 不標 confirmed，維持 design。
+  - 中路分推 **one_sided**：紅方分推 z −2.07 ⇒ 維持 design（圍攻 confirmed）。
+  - 區分性：滾雪球 vs 控圖、控圖 vs 分推 distinct；滾雪球 vs 分推 not_distinct（分推沒升級，不影響）。
+  - 強邊 × 積極：衝突 4／4、暴增 2／2、上限 4／4 都通過；前期組合÷對照 藍 1.990（上限 2.0），主要來自強邊本身（藍 +98 %、紅 +87 %）。
+  - 只報告不判定：勝率 藍 52.8→53.5 %（z 0.21）、紅 47.3→52.8 %（z 1.54），比賽時長不顯著；**紅方前期經濟 z 3.60**（控圖運營也有同樣紅方型態 z 3.34）。
+- 解讀與結果審查（`348f5a55`，C6 文件 §8／§8.10）：APPROVE WITH CHANGES，全修（配對數 154／169、升級待 Owner、側偏用詞）。
+- 升級（`72146d30`，Owner 核准方案 1）：`winCondition` 在 v21 Director 規則集變 live（需要 `tacticalDirector:core.v1`）；前期滾雪球進 `REPLICATION_CONFIRMED`；控圖運營／中路分推進 `REPLICATION_WITHHELD`（不提供，已存計畫仍可解析）；`winCondition:"none"` 不再被拒；真實性儀器 `tacticTruthSim.v6`（每時期座位參戰，與 `phaseStudySim.v2` 同定義）；真實性計畫展開勝利條件；指紋 `moba-sim.v21`＝`58d999709c239ca4`（同版本重新登記；沒選勝利條件的輸入逐位元相同）。
+- 新 gate：`check_career_v21_tactics_c6`（6/6，正式 Live 組裝路徑：旗標 → `resolveLiveRuleset` → `buildLiveMatchSetup` → `assembleMatch` → Director）、`browser_check_tactic_book_v21`（23/23，桌機 1366＋手機 390，只在測試分頁攔截 `featureFlags.js` 把 v21 旗標打開，不改 src）。
+- 真實性表整輪重測兩次：
+  - #1（`de69565a`，指紋 `58d999709c239ca4`，163 批、0 失敗，被記憶體保護中斷 2 次、同資料夾續跑）：舊 119 列與前一版**逐位元相同**；新增 28 列（強邊、勝利條件）；推導出 6 筆弱點模板排除，照結果原樣加進 `MEASURED_EXCLUSIONS`（強邊 classic.m1 前期上路／後期上路／後期下路、classic.m2 後期中路；勝利條件 classic.m2 控圖運營、v2.mid_solo_split 中路分推，這兩個本來就撤下），只對該模板不提供；Registry U1 勝利條件分支補上「預設本身被量測排除」這個缺席原因（U1 定義本來就含量測排除表）。
+  - 排除表改動在 `capabilityRegistry.js`（語意檔）⇒ 指紋重新登記 `b37772a2f1777b03`（同版號，未發布）⇒ simulationVersion.js 改了 ⇒ #2（`d14170c6`，163 批、0 失敗，中斷 3 次續跑）：147 列、推導排除、不對稱清單全部與 #1 **逐位元相同**（只有 meta.loadedFiles 不同）；truth 34/34。
+
+**驗證（MOBA 分支，指紋 b37772a2f1777b03，實跑）**：version 82/82、registry 35/35、plan 219/219、resolver 139/139、phase choices 24/24、book view 25/25、replication 53/53、evidence scope 7/7、win condition 11/11、career v21 6/6、indicators 59/59、laneframe 55/55、director 97/97、directive 61/61、ruleset 43/43、phase study 10/10、match setup 153/153、golden v21a 131/131、truth 34/34；`verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條：m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS；`npm run build` built in 18.61s，dist 0 筆 `heroSkillsDev`；browser 戰術書 v21 23/23、static 31/31。
+
+**有效能力（只在 v21，旗標開＋Director core.v1）**：12 個強邊選項；勝利條件「前期滾雪球」（只填補玩家沒指定的格，玩家明確設定優先；沒有隱藏加成）。v20 不變。
+
+**未完成／風險**：見 08 同日一節。前期滾雪球確認的是**戰術行為**，不得宣稱提升勝率。
+
+**最終獨立審查**：APPROVE WITH CHANGES（無重大問題）⇒ 全修：Registry U1 的勝利條件「預設本身被量測排除」改為要求排除表真的有這一列（不再依賴兩個 reason 字串剛好相同）；08 補上「std 後期中路強邊只靠 C5R n=400 提供、真實性表 n=40 列 fail」；08 弱點模板一句標明 n=400 複驗是 C5R。審查自行比對了三個 commit 的真實性表（119／147 列逐位元相同）與 C6 數字。修正後 registry 35/35。
