@@ -1,0 +1,33 @@
+{
+  "schema": "esmo.career-behaviour-registration.v1",
+  "studyId": "e2-career-v21-behaviour-3aB",
+  "stage": "Phase 3a-B P0-4 (measurement is P2-3: after the AI coach and the semantics freeze, with separate Owner approval)",
+  "registeredAt": "2026-10-25",
+  "status": "draft: NOT runnable until (1) the AI coach (T15) is merged, because the red side's behaviour in career.v21 comes from it, (2) the measurement entry tool exists with a selftest, (3) the semantics freeze; then re-committed as 'registered' before the run",
+  "authority": "3a-B kickoff checklist §5 (structure ✅ / behaviour ❌ / outcome ❌): the n=400 evidence was measured on balanceTool.v21 (red std, no player stats); career.v21 differs (red = AI coach, blue player stats, items/talents per flags), so the effect sizes cannot be carried over without a behaviour check through the formal entry",
+  "question": "Do the live v21 choices, when entered through the formal career path (prepareLiveMatch with career.v21), still move the registered behaviour in the registered direction on the player's side?",
+  "seeds": {
+    "range": "23001-23799 odd only (400 distinct effectiveSeeds; normalizeLiveSeed(s,'session') = s)",
+    "checkedBy": "tools/check_study_seed_plan_3aB.mjs E2",
+    "opponents": "AI_TEAMS[seed % 7] (57-58 matches per team; the same rule as measure_laneframe_c3)"
+  },
+  "design": {
+    "entry": "useLocalServer.prepareLiveMatch with career.v21 resolved from flags { mobaTacticalDirectorV21: true }, golden live inputs (profile players/lineup, default loadout), roster = mirrored(seed), buildStrategy standard, opponentTeam = aiTeamById(...); blue = the tactic book binding of the arm",
+    "control": "blue = std template binding with no choices (the formal new-game path; note: with no blue tactic at all Live does not call configureMatch)",
+    "arms": [
+      { "id": "aggressiveEarly", "choices": { "phases": { "early": { "stance": "aggressive" } } }, "claim": "engageDecisionsPerMin.early up (+ engageStartsPerMin.early up)", "evidence": "C3-2 rev1 confirmed" },
+      { "id": "snowball", "choices": { "winCondition": "earlySnowball" }, "claim": "engageDecisionsPerMin.early up and contestShare.dragon.early up", "evidence": "C6 confirmed" },
+      { "id": "quickStrongBot", "choices": { "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } }, "claim": "ganksOwnPerMin.bot.early up", "evidence": "C5R quick preset confirmed" }
+    ],
+    "matches": "control + 3 arms = 4 x 400 = 1,600 matches (~35-45 min, 3 workers)",
+    "side": "blue only: career.v21 has the player on blue and red is the AI coach; there is no red-side treatment in career"
+  },
+  "rules": {
+    "pass": "per arm, every claim on blue: same direction, paired z >= 3 and |rel| >= 0.05 (the replication rule)",
+    "stop": "any claim reversed (directed z <= -3) => STOP, Owner",
+    "inconclusive": "otherwise",
+    "reportOnly": "effect size next to the balanceTool.v21 evidence (rel blue); win rate, duration and gold lead (no win-rate claim)"
+  },
+  "instrument": "a career-path wrapper of the phaseStudySim observation (same per-phase counters and metric definitions; tick loop outside the engine, read-only); to be written with a selftest that cross-checks one balanceTool seed against phaseStudySim bit-identically",
+  "rerun": "re-run whenever the AI coach or the career.v21 assembly changes (the red side is part of the condition)"
+}
