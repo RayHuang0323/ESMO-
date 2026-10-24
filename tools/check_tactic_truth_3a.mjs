@@ -10,6 +10,10 @@
 //        --plan                  只印量測計畫（批次數、每批比較什麼）
 //        --finish                批次都齊了就寫結果表（--measure 跑完會自動做；中斷後可單獨執行）
 //        --report                把結果表印成表格（報告用）
+//        --preview               預演批次（Phase 3a-B，Owner 2026-10-25 核准方案 A）：同一份計畫、同一個 worker，但結果只寫進 --dir 裡的
+//                                tactic_truth_preview.json（schema TacticTruth.preview.v1），**永遠不寫 tools/fixtures**；快速模式 T1 只收
+//                                TacticTruth.v1 ⇒ 預演檔就算被複製進 repo 也過不了。用途：語意凍結前先看會推導出哪些排除，避免正式量測後又改排除表、
+//                                再整輪重測。預演資料夾有 PREVIEW 標記，正式 --measure 不得沿用（反之亦然）；正式量測仍在最終指紋下完整執行。
 //      停止：在 --dir 裡建一個叫 STOP 的檔案，目前批次跑完就收工；再執行 --measure 會從沒做完的批次續跑。
 //      ⚠ 重新量測前先把 capabilityRegistry.js 的 MEASURED_EXCLUSIONS 清空（被排除的選擇 createTacticPlan 會拒絕，無法模擬）；
 //        量完用結果表印出的 exclusionsDerived 重新填回，再跑一次快速模式。
@@ -151,7 +155,15 @@ async function main() {
   }
 
   async function measureMode() {
-    const dir = dirOf(), pilot = flag("pilot");
+    const dir = dirOf(), pilot = flag("pilot"), preview = flag("preview");
+    //  預演與正式量測的資料夾互不沿用（PREVIEW 標記）；預演只能寫在 repo 之外。
+    const marker = path.join(dir, "PREVIEW");
+    const insideRepo = (() => { const a = path.resolve(dir).toLowerCase(), r = ROOT.toLowerCase(); return a === r || a.startsWith(r + path.sep); })();
+    if (preview && insideRepo) { console.error("--preview 的 --dir 必須在 repo 之外"); process.exit(2); }
+    const hasBatches = fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.endsWith(".jsonl"));
+    if (preview && hasBatches && !fs.existsSync(marker)) { console.error(`${dir} 是正式量測的資料夾，預演不得沿用`); process.exit(2); }
+    if (!preview && fs.existsSync(marker)) { console.error(`${dir} 是預演資料夾（PREVIEW），正式量測必須用新的資料夾`); process.exit(2); }
+    if (preview) { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(marker, "Phase 3a-B truth preview batch: NOT EVIDENCE, never copied into tools/fixtures\n"); }
     const wdir = pilot ? path.join(dir, "pilot") : dir;
     fs.mkdirSync(wdir, { recursive: true });
     const plan = Plan.buildPlan();
@@ -220,7 +232,23 @@ async function main() {
       if (failed || stopped) { console.log(stopped ? "已依 STOP 停止；再執行 --measure 會續跑。" : "有失敗的場次；再執行 --measure 會續跑。"); process.exit(stopped ? 3 : 1); }
     }
     if (pilot) return;
+    if (preview) return writePreview(dir, plan);
     await writeFixture(dir, plan);
+  }
+
+  /** 預演結果：與正式結果表同一個分析，寫在資料夾裡（不是 tools/fixtures），schema 不同（快速模式 T1 拒收）。 */
+  async function writePreview(dir, plan) {
+    const { rows, splitStayOut } = analyse(dir, plan);
+    const loaded = Prov.loadedFilesSidecar(dir).all();
+    const out = {
+      schema: "TacticTruth.preview.v1", notEvidence: "preview batch (Owner 2026-10-25 option A): never a fixture, never evidence; the formal measurement runs in full under the final fingerprint",
+      meta: { ...(await currentHashes()), loadedFiles: Prov.hashLoadedFiles(loaded), seeds: [TRUTH_GATE.seedFrom, TRUTH_GATE.seedTo] },
+      rows, splitStayOut, exclusionsDerived: deriveExclusions(rows), asymmetries: deriveAsymmetries(rows),
+    };
+    const f = path.join(dir, "tactic_truth_preview.json");
+    fs.writeFileSync(f, `${JSON.stringify(out)}\n`, "utf8");
+    console.log(`預演結果（不是證據）已寫入 ${f}：${rows.length} 列`);
+    console.log(`預演推導的排除（只供凍結前參考）：${JSON.stringify(out.exclusionsDerived)}`);
   }
 
   function analyse(dir, plan) {
@@ -340,7 +368,7 @@ async function main() {
     const ctx = { hashes: await currentHashes(), probeFiles, planRows, exclusions: Registry.MEASURED_EXCLUSIONS };
     let fx = null;
     try { fx = JSON.parse(fs.readFileSync(FIXTURE, "utf8")); } catch { /* 下面的檢查會報 */ }
-    ck("T1 結果表存在、格式 TacticTruth.v1", !!fx && fx.schema === "TacticTruth.v1" && Array.isArray(fx.rows), fx ? `${fx.rows?.length} 列` : "tools/fixtures/tactic_truth_3a.json 不存在或讀不出來（執行 --measure）");
+    ck("T1 結果表存在、格式 TacticTruth.v1（預演檔 TacticTruth.preview.v1 不收）", !!fx && fx.schema === "TacticTruth.v1" && !fx.notEvidence && Array.isArray(fx.rows), fx ? `${fx.rows?.length} 列` : "tools/fixtures/tactic_truth_3a.json 不存在或讀不出來（執行 --measure）");
     if (!fx) { console.log(`\nTactic Truth 3a：${pass}/${pass + fail} FAIL`); process.exit(1); }
 
     ck("T1b 探針場次跑得起來（對照組；計畫有 v21 批次時 v20／v21 各一場，看它們載入了哪些 repo 檔案）", !!probeFiles && probeFiles.length > 0, probeFiles ? `${probeFiles.length} 個檔案，${((Date.now() - tProbe) / 1000).toFixed(1)} 秒` : probeErr);
