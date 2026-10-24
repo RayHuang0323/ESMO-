@@ -1,4 +1,4 @@
-import { MATCH_RULESETS, resolveRulesetForMode, validateRuleset, LAYER_RELEASE_FLAG, MATCH_RULESET_VERSION, ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf } from "../src/platform/contracts/matchRuleset.js";
+import { MATCH_RULESETS, resolveRulesetForMode, validateRuleset, LAYER_RELEASE_FLAG, MATCH_RULESET_VERSION, ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, challengeRulesetForVersion, challengeSimulationVersionFor, TACTIC_KINDS_BY_RULESET } from "../src/platform/contracts/matchRuleset.js";
 import { stableStringify } from "../src/platform/contracts/squadSnapshot.js";
 import { createHash } from "node:crypto";
 import { FEATURE_FLAGS } from "../src/featureFlags.js";
@@ -62,5 +62,23 @@ ck("R14 resolveRulesetForMode 保留 assemblyOrder（旗標只關布林層）", 
   outs.push(stableStringify(resolveRulesetForMode({ mode: "career", flags: undefined })));
   ck("R17 resolveRulesetForMode（career 8 種旗標組合＋challenge＋無旗標）輸出與變更前相同",
     createHash("sha256").update(outs.join("\n")).digest("hex").slice(0, 16) === "11093581c4605dae" && outs.every((s) => !s.includes("tacticalDirector")));
+}
+//  ── Phase 3a-B T16／T15（Owner 2026-10-25 決策 5／6）──────────────────────────────────────────────
+{
+  const c21 = MATCH_RULESETS["challenge.v21"], L = c21?.layers ?? {};
+  ck("R18 challenge.v21＝正式架構 §3 補充 1 的表：技能／被動／曲線 ON、天賦 OFF、裝備 OFF、佈局 bySeed、雙方素質、Live 順序、Director core.v1、laneFrame teamRelative；只收 legacy／std",
+    !!c21 && c21.kind === "production" && c21.simVersion === "moba-sim.v21" && L.heroSkills === true && L.heroPassives === true && L.heroPowerCurve === true && L.battleTalents === false && L.items === false
+    && L.objectiveLayout === "bySeed" && L.playerStatSides === "both" && L.assemblyOrder === "live" && L.tacticalDirector === "core.v1" && L.laneFrame === "teamRelative"
+    && JSON.stringify(c21.releaseRequirements) === JSON.stringify(["heroSkillsV1", "mobaTacticalDirectorV21"]) && JSON.stringify(TACTIC_KINDS_BY_RULESET["challenge.v21"]) === JSON.stringify(["legacy", "std"]));
+  const on = { heroSkillsV1: true, mobaTacticalDirectorV21: true };
+  ck("R19 challenge 模式：旗標關 ⇒ challenge.v20（同一個物件）；Director＋技能旗標都開 ⇒ challenge.v21；只開 Director、技能關 ⇒ 仍是 challenge.v20",
+    resolveRulesetForMode({ mode: "challenge", flags: FEATURE_FLAGS }) === MATCH_RULESETS["challenge.v20"] && resolveRulesetForMode({ mode: "challenge", flags: on }) === c21
+    && resolveRulesetForMode({ mode: "challenge", flags: { ...on, heroSkillsV1: false } }) === MATCH_RULESETS["challenge.v20"]);
+  ck("R20 每場挑戰的規則集由記下的版本凍結：v20 ⇒ challenge.v20、v21 ⇒ challenge.v21、其他 ⇒ null；正式旗標下新挑戰記 moba-sim.v20",
+    challengeRulesetForVersion("moba-sim.v20") === MATCH_RULESETS["challenge.v20"] && challengeRulesetForVersion("moba-sim.v21") === c21 && challengeRulesetForVersion("moba-sim.v19") === null
+    && challengeSimulationVersionFor(FEATURE_FLAGS) === "moba-sim.v20" && challengeSimulationVersionFor(on) === "moba-sim.v21");
+  ck("R21 career.v21 的紅方是 AI 教練（redTactic aiCoachV1）；career.v20 仍是 styleTemplate（R16 已逐字釘住）",
+    MATCH_RULESETS["career.v21"].layers.redTactic === "aiCoachV1" && MATCH_RULESETS["career.v20"].layers.redTactic === "styleTemplate"
+    && resolveRulesetForMode({ mode: "career", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true } }).layers.redTactic === "aiCoachV1");
 }
 console.log(`\nMatch Ruleset 3a：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`); process.exit(fail ? 1 : 0);
