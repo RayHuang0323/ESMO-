@@ -15,6 +15,8 @@ import { TACTIC_TEMPLATE_LIST, templateById } from "../../../platform/tactics/ta
 import { leavesOf, nestedOf, mergeTacticConfig, winConditionFill, WIN_CONDITION_DIM } from "../../../platform/tactics/tacticChoiceMapping.js";
 import { tacticBookOptions, bindTacticPlanToCurrentVersions } from "../../../battle/moba/tactics/tacticResolver.js";
 import { planProfile, seatMissionFit, coordinationLoad, contradictions, PROFILE_AXES, SEATS } from "../../../platform/tactics/tacticIndicators.js";
+import { aiCoachPlan } from "../../../platform/tactics/aiCoach.js";
+import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle } from "../../../platform/contracts/MobaTacticConfig.js";
 
 export const DIMENSION_GROUPS = Object.freeze([
   { id: "win", label: "勝利條件" },
@@ -224,4 +226,39 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
     load: coordinationLoad(binding, seatPlayers),
     contradictions: contradictions(binding),
   };
+}
+
+// ── Phase 3a-B T13：對手情報概要（賽前、合法資訊；Owner 2026-10-25 決策 5／8）──────────────────────
+//  v21（Director core.v1，career.v21）：AI 教練賽前排的計畫的**概要**（模板名稱＋白話描述）；v20：風格模板的名稱。
+//  都**不含**權重或旋鈕數字。教練與開局用同一個函式、同一份輸入（對手隊伍＋本場 Director 模式）⇒ 畫面看到的就是開局會用的那一份。
+export const TEAM_STYLE_LABELS = Object.freeze({ aggressive: "積極進攻", defensive: "穩守反擊", balanced: "均衡運營", objective: "資源控制", skirmish: "團戰對抗" });
+/**
+ * @param {{ team: object|null, tacticalDirector?: string }} a
+ * @returns {{ hasOpponent: boolean, teamName: string|null, styleLabel: string|null, planName: string, notes: string[], source: "aiCoach"|"styleTemplate"|"standard" }}
+ */
+export function opponentIntelOf({ team = null, tacticalDirector = "static" } = {}) {
+  if (!team) return Object.freeze({ hasOpponent: false, teamName: null, styleLabel: null, planName: STANDARD_OPP_TACTIC.name, notes: Object.freeze([]), source: "standard" });
+  const base = { hasOpponent: true, teamName: team.name ?? null, styleLabel: TEAM_STYLE_LABELS[team.style] ?? null };
+  if (tacticalDirector === "core.v1") {
+    const r = aiCoachPlan({ team, tacticalDirector });
+    if (r.ok) return Object.freeze({ ...base, planName: r.summary.templateName, notes: r.summary.notes, source: "aiCoach" });
+  }
+  return Object.freeze({ ...base, planName: mobaTacticForTeamStyle(team.style).name, notes: Object.freeze([]), source: "styleTemplate" });
+}
+
+// ── Phase 3a-B（Owner 2026-10-25 決策 4）：存進戰術書之前就講清楚會發生什麼 ──────────────────────────────
+//   · copy：載入的那一份有選項不提供（被過濾）⇒ 存下去是另一份不含那些選項的計畫，原計畫保留
+//   · duplicate：過濾後剛好等於另一份已存的計畫 ⇒ 已經在戰術書裡，不另存、也不幫那一份改名
+//   · full：戰術書已滿、這又是新的一份 ⇒ 先刪一份才存得進去
+/**
+ * @param {{ loadedEntryId: string|null, droppedCount: number, currentPlanId: string|null, saved: Array<{id,name}>, max: number }} a
+ * @returns {{ copy: boolean, duplicate: {id,name}|null, full: boolean, blocked: boolean, label: string }}
+ */
+export function tacticBookSaveState({ loadedEntryId = null, droppedCount = 0, currentPlanId = null, saved = [], max = 5 } = {}) {
+  const activeId = currentPlanId && saved.some((e) => e.id === currentPlanId) ? currentPlanId : null;
+  const copy = !!loadedEntryId && droppedCount > 0;
+  const duplicate = copy && activeId && activeId !== loadedEntryId ? saved.find((e) => e.id === activeId) ?? null : null;
+  const full = !activeId && saved.length >= max;
+  const label = duplicate ? "已在戰術書" : activeId ? "更新名稱" : copy ? "另存一份" : "存起來";
+  return { copy, duplicate, full, blocked: !!duplicate || full, label };
 }

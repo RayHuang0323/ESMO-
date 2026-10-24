@@ -55,6 +55,13 @@ import { templateGroups, tacticBookView, withChoice, offeredChoicesOnly, dimensi
 import TemplateStrip from "./tacticBook/TemplateStrip.jsx";
 import ChoicePanel from "./tacticBook/ChoicePanel.jsx";
 import IndicatorPanel from "./tacticBook/IndicatorPanel.jsx";
+//  Phase 3a-B T13（Owner 2026-10-25 決策 8）：三步驟（情報／戰術書／確認）、確認頁、對手情報概要。沿用既有 Router 與戰術書資料契約：
+//  本畫面只多一個「目前在哪一步」的狀態；對手情報用 AI 教練的概要（v21）或風格模板名稱（v20），都不含權重。
+import { TACTIC_BOOK_MAX } from "../../platform/tactics/tacticBook.js";
+import { aiTeamById } from "../../platform/competition/aiTeams.js";
+import { opponentIntelOf, tacticBookSaveState } from "./tacticBook/tacticBookOptions.js";
+import OpponentIntelPanel from "./tacticBook/OpponentIntelPanel.jsx";
+import ConfirmPanel from "./tacticBook/ConfirmPanel.jsx";
 
 const TEMPLATE_GROUPS = templateGroups();
 const DEFAULT_TEMPLATE_ID = `classic.${MOBA_TACTICS[0].tacticId}`;
@@ -97,6 +104,10 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   //  Phase 3a T13：選的是「模板」（經典八套＋標準＋v2）。`sel` 仍是經典戰術 id——變體資格、歷史表現、熟練度都以它為鍵。
   const [templateId, setTemplateId] = useState(DEFAULT_TEMPLATE_ID);
   const [choices, setChoices] = useState({});
+  //  T13：三步驟。預設停在「戰術書」（主要工作的那一步；情報與確認隨時可切換，「開始載入」在每一步都可按）。
+  const [step, setStep] = useState("book");
+  //  Owner 2026-10-25 決策 4：從戰術書載入的那一份（用來判斷「另存副本」與「重複」）。
+  const [loadedEntryId, setLoadedEntryId] = useState(null);
   const template = templateById(templateId) ?? templateById(DEFAULT_TEMPLATE_ID);
   const sel = template.legacyTacticId;
   const allPlayers = useProfileStore((s) => s.players) ?? [];
@@ -160,7 +171,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const applied = bookView ? bookView.config : baseApplied;
   const binding = bookView ? bookView.binding : null;
   const changedCount = bookView ? bookView.dimensions.filter((d) => d.explicit && !d.quick).length : 0;
-  const chooseTemplate = (id) => { setTemplateId(id); setChoices({}); setVariantSel(null); setBookNote(null); };
+  const chooseTemplate = (id) => { setTemplateId(id); setChoices({}); setVariantSel(null); setBookNote(null); setLoadedEntryId(null); };
   const choose = (dimension, value, own) => { setChoices(withChoice(book.choices, dimension, value, own)); setBookNote(null); };
 
   //  我的戰術書（存檔切片在 profileStore；這裡只呼叫公開動作）
@@ -169,12 +180,13 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const [bookNote, setBookNote] = useState(null);
   const activeBookId = binding ? (savedBook.find((e) => e.id === binding.planHash)?.id ?? null) : null;
   const saveToBook = () => {
-    if (!bookView) return;
+    if (!bookView || saveBlocked) return;
     const r = useProfileStore.getState().saveTacticPlan(bookView.plan, { name: bookName });
     setBookNote(r.ok ? { ok: true, text: r.replaced ? `已更新「${r.entry.name}」` : `已存成「${r.entry.name}」` } : { ok: false, text: r.errors[0]?.message ?? "存不進去" });
     if (r.ok) setBookName("");
   };
   const loadFromBook = (entry) => {
+    setLoadedEntryId(entry.id);
     setTemplateId(entry.plan.templateId);
     setChoices(entry.plan.choices ?? {});
     //  變體資格仍由俱樂部專精決定：存的時候有、現在不能用 ⇒ activeVariant 會是 null，計畫退回沒有變體的版本。
@@ -185,6 +197,15 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
     const r = useProfileStore.getState().deleteTacticPlan(entry.id);
     setBookNote(r.ok ? { ok: true, text: `已刪除「${entry.name}」` } : { ok: false, text: r.errors[0]?.message ?? "刪除失敗" });
   };
+  //  Owner 2026-10-25 決策 4：存檔前就講清楚會發生什麼。
+  //   · 載入的那一份有選項不提供（被過濾）⇒ 存下去是**另一份**不含那些選項的計畫，原計畫保留。
+  //   · 過濾後剛好等於另一份已存的計畫 ⇒ 已經在戰術書裡，不另存、也不幫那一份改名。
+  //   · 戰術書已滿、這又是新的一份 ⇒ 先刪一份才存得進去（不等按了才報錯）。
+  const saveState = tacticBookSaveState({ loadedEntryId, droppedCount: book.dropped.length, currentPlanId: binding?.planHash ?? null, saved: savedBook, max: TACTIC_BOOK_MAX });
+  const filteredCopy = saveState.copy, dupEntry = saveState.duplicate, bookFull = saveState.full, saveBlocked = saveState.blocked;
+  //  T13：對手情報（賽前、合法資訊）。v21（Director core.v1）＝AI 教練賽前排的計畫概要；v20＝風格模板名稱。沒有對手 ⇒ 標準運營。
+  const opponentId = useProfileStore((s) => s.matchmaking?.launch?.opponentId ?? null);
+  const intel = useMemo(() => opponentIntelOf({ team: opponentId ? aiTeamById(opponentId) : null, tacticalDirector }), [opponentId, tacticalDirector]);
   const fitOf = (id) => fitGrade(fitScore(templateById(id).config, starters));
 
   const curFit = fitScore(cur, starters);
@@ -216,6 +237,20 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   return (
     <Frame title="戰術" sub="TEAM STRATEGY · 戰術書 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections, binding)} nextLabel="開始載入 →">
       <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+        {/* T13：步驟條（情報／戰術書／確認）。三步都可直接切換；不改 Router，不另建畫面。 */}
+        <nav data-testid="tb-steps" aria-label="戰術準備步驟" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[["intel", "① 情報"], ["book", "② 戰術書"], ["confirm", "③ 確認"]].map(([id, label]) => (
+            <button key={id} type="button" data-testid={`tb-step-${id}`} aria-current={step === id ? "step" : undefined} onClick={() => setStep(id)}
+              style={{ flex: "1 1 90px", minWidth: 0, minHeight: 38, background: step === id ? `${GC.blueL}22` : GC.card2, border: `1px solid ${step === id ? GC.blueL : GC.line}`,
+                borderRadius: 8, color: "#fff", fontSize: 12.5, fontWeight: 900, cursor: "pointer" }}>{label}</button>
+          ))}
+        </nav>
+        {step === "intel" && <OpponentIntelPanel intel={intel} onNext={() => setStep("book")} />}
+        {step === "confirm" && bookView && (
+          <ConfirmPanel templateName={template.name} variantName={activeVariant?.name ?? null} dimensions={bookView.dimensions} dropped={book.dropped}
+            profile={bookView.profile} intel={intel} onEdit={() => setStep("book")} onGo={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections, binding)} />
+        )}
+        {step === "book" && (<>
         {/* 模板列：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容；上方是「我的戰術書」 */}
         <TemplateStrip groups={TEMPLATE_GROUPS} selectedId={template.templateId} onSelect={chooseTemplate} fitOf={fitOf}
           columns="repeat(auto-fill,minmax(min(190px,100%),1fr))"
@@ -337,10 +372,19 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
               <input data-testid="tb-save-name" aria-label="戰術書名稱" value={bookName} maxLength={20} placeholder={cur.name}
                 onChange={(e) => setBookName(e.target.value)}
                 style={{ flex: "1 1 140px", minWidth: 0, minHeight: 36, boxSizing: "border-box", background: GC.card2, border: `1px solid ${GC.line}`, borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12 }} />
-              <button type="button" data-testid="tb-save" onClick={saveToBook}
-                style={{ minHeight: 36, background: `${GC.gold}22`, border: `1px solid ${GC.gold}88`, borderRadius: 8, padding: "6px 14px", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 900 }}>
-                {activeBookId ? "更新名稱" : "存起來"}
+              <button type="button" data-testid="tb-save" onClick={saveToBook} disabled={saveBlocked}
+                style={{ minHeight: 36, background: `${GC.gold}22`, border: `1px solid ${GC.gold}88`, borderRadius: 8, padding: "6px 14px", color: "#fff", cursor: saveBlocked ? "not-allowed" : "pointer", opacity: saveBlocked ? 0.5 : 1, fontSize: 12, fontWeight: 900 }}>
+                {saveState.label}
               </button>
+              {filteredCopy && !dupEntry && !bookFull && (
+                <span data-testid="tb-save-copy-note" role="note" style={{ flexBasis: "100%", fontSize: 11, color: "#fde68a" }}>將另存一份不含上述選項的計畫，原計畫保留。</span>
+              )}
+              {dupEntry && (
+                <span data-testid="tb-save-dup-note" role="note" style={{ flexBasis: "100%", fontSize: 11, color: "#fde68a" }}>不含上述選項的這份計畫已經在戰術書裡（「{dupEntry.name}」），不需另存；原計畫保留。</span>
+              )}
+              {bookFull && (
+                <span data-testid="tb-save-full-note" role="note" style={{ flexBasis: "100%", fontSize: 11, color: GC.redL }}>戰術書已滿 {TACTIC_BOOK_MAX} 份：請先在上方「我的戰術書」刪除一份，才能{filteredCopy ? "另存這一份" : "存起來"}。</span>
+              )}
               {bookNote && <span data-testid="tb-save-note" data-ok={bookNote.ok ? "1" : "0"} role="status" style={{ flexBasis: "100%", fontSize: 11, color: bookNote.ok ? GC.green : GC.redL }}>{bookNote.text}</span>}
             </section>
           </>
@@ -380,6 +424,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
           </section>
         )}
         <HeroBattleTalentPicker roster={talentRoster} selected={talentSelections} onChange={setPickedTalentSelections} />
+        </>)}
       </div>
     </Frame>
   );

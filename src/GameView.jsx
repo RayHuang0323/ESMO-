@@ -30,6 +30,8 @@ import { observerTokens } from "./battle/ui/BattleObserverHUD.jsx";
 import { useHudMode, hudSafeTop } from './battle/ui/hudStore.js';
 import { isDebugMode } from "./ui/debugMode.js";
 import { featureEnabled } from "./featureFlags.js";
+//  Phase 3a-B：開局提示的選項名稱與戰術書畫面同一份文案（不在這裡另寫）。
+import { dimensionLabel, choiceLabel } from "./screens/moba/tacticBook/tacticBookOptions.js";
 //  小地圖底圖走 Vite asset pipeline（內容雜湊檔名），不再用 ?rev= 查詢字串切版本。
 import riftAlbedoUrl from "./assets/moba/rift-v1/rift-albedo.png";
 import {
@@ -183,7 +185,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
   // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
   //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
-  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates, resumeProgress, assemblyError } = useLocalServer();
+  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates, resumeProgress, assemblyError, droppedNotice, dismissDroppedNotice } = useLocalServer();
   //  ── Milestone O7：權威場次 ─────────────────────────────────────────────
   //  seed / sessionId 一律**從 Store 讀**（由 O6 的一次性令牌寫入），
   //  刻意**不接受 props 傳入** ⇒ 前端無法覆寫 seed、對手或場次資料。
@@ -329,6 +331,19 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
               ← 先離開這個畫面
             </button>
           </div>
+        </div>
+      )}
+      {/* Phase 3a-B（Owner 2026-10-25 決策 4）：本場規則集不提供的戰術選擇（例如旗標回滾後恢復／開局）只從本場拿掉——
+           明講是哪幾個、戰術書裡的計畫不變。不擋操作，可關閉。 */}
+      {droppedNotice && !assemblyError && (
+        <div data-testid="battle-dropped-note" role="status"
+          style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, width: "min(420px, calc(100% - 32px))", boxSizing: "border-box",
+            background: "rgba(10,16,28,0.94)", border: "1px solid rgba(251,191,36,0.6)", borderRadius: 10, padding: "8px 12px", color: "#fde68a", fontSize: 12, lineHeight: 1.6, display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
+            本場未使用的戰術選項：{droppedNotice.dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（本場規則不提供；戰術書裡的計畫不變）
+          </span>
+          <button type="button" data-testid="battle-dropped-note-close" aria-label="關閉提示" onClick={dismissDroppedNotice}
+            style={{ flexShrink: 0, minWidth: 32, minHeight: 32, background: "transparent", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, color: "#fff", cursor: "pointer" }}>✕</button>
         </div>
       )}
       {!playing && !resumeProgress && !hud.over && !assemblyError && (

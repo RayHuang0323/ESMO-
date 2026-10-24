@@ -40,14 +40,14 @@ import { itemsDevRequested } from "./ui/itemsDevFlag.js";
  *             setupHash: string|null, engine: object|null, applied: object|null, buildStrategy: string|null, notes: string[] }}
  */
 export function prepareLiveMatch(liveInputs) {
-  const rejected = (stage, errors, notes = []) => ({ ok: false, stage, errors, setup: null, setupHash: null, engine: null, applied: null, buildStrategy: null, notes });
+  const rejected = (stage, errors, notes = [], droppedChoices = []) => ({ ok: false, stage, errors, setup: null, setupHash: null, engine: null, applied: null, buildStrategy: null, notes, droppedChoices });
   try {
     const built = buildLiveMatchSetup(liveInputs);
-    if (!built.ok) return rejected("MatchSetup", built.errors, built.notes);
+    if (!built.ok) return rejected("MatchSetup", built.errors, built.notes, built.droppedChoices);
     const assembled = assembleMatch(built.setup, sharedMatchAssemblerDeps());
-    if (!assembled.ok) return rejected("assembleMatch", assembled.errors, built.notes);
+    if (!assembled.ok) return rejected("assembleMatch", assembled.errors, built.notes, built.droppedChoices);
     return { ok: true, stage: null, errors: [], setup: built.setup, setupHash: matchSetupHash(built.setup),
-      engine: assembled.engine, applied: assembled.applied, buildStrategy: built.buildStrategy, notes: built.notes };
+      engine: assembled.engine, applied: assembled.applied, buildStrategy: built.buildStrategy, notes: built.notes, droppedChoices: built.droppedChoices ?? [] };
   } catch (error) {
     return rejected("exception", [{ code: "assembly_exception", field: "$", message: String(error?.message ?? error) }]);
   }
@@ -91,6 +91,8 @@ export function useLocalServer() {
   const [resumeProgress, setResumeProgress] = useState(null);
   //  開局被拒（null = 沒有錯誤）{ stage, errors }。畫面據此顯示訊息；引擎沒有啟動。
   const [assemblyError, setAssemblyError] = useState(null);
+  //  Phase 3a-B（Owner 2026-10-25 決策 4）：本場沒用到的戰術選擇（旗標回滾、DEV 旁路等）⇒ 畫面上要看得到，不只寫進主控台。
+  const [droppedNotice, setDroppedNotice] = useState(null);
   //  每次 start()／stop() 遞增：?shot= 模式下開局要等動態 import，回來時若已不是同一次啟動就不得再開節拍。
   const startTokenRef = useRef(0);
 
@@ -226,6 +228,7 @@ export function useLocalServer() {
     }
     setAssemblyError(null);
     for (const note of prepared.notes) console.warn(`[useLocalServer] ${note}`);
+    setDroppedNotice(prepared.droppedChoices?.length ? { dropped: prepared.droppedChoices } : null);
     const eng = prepared.engine;
     const { objectiveLayout, talentSelection, replayConfig } = prepared.applied;
     const { setup, setupHash, buildStrategy } = prepared;
@@ -371,7 +374,7 @@ export function useLocalServer() {
     persistActiveSnapshot({ status: "paused", force: true });
     stop();
   }, [persistActiveSnapshot, stop]);
-  return { playing, start, stop, pause, fastForward, fastForwarding, engineRef, rate, setRate, rates: PLAYBACK_RATES, resumeProgress, assemblyError };
+  return { playing, start, stop, pause, fastForward, fastForwarding, engineRef, rate, setRate, rates: PLAYBACK_RATES, resumeProgress, assemblyError, droppedNotice, dismissDroppedNotice: () => setDroppedNotice(null) };
 }
 
 // ── 多人版（示意）──────────────────────────────────────────────────────────

@@ -224,5 +224,6 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
     notes.push(`objectiveLayout ${explicitLayout} dropped: it disagrees with the local fallback seed ${seed}`);
     r = createMatchSetup({ ...input, objectiveLayout: null });
   }
-  return { ok: r.ok, setup: r.setup, errors: r.errors, buildStrategy, notes };
+  //  Phase 3a-B（Owner 2026-10-25 決策 4）：本場拿掉的戰術選擇以結構化資料交給畫面（開局提示），notes 照舊。
+  return { ok: r.ok, setup: r.setup, errors: r.errors, buildStrategy, notes, droppedChoices: blueBinding?.dropped ?? [] };
 }
