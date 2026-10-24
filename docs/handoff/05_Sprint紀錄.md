@@ -24916,3 +24916,18 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **未完成／風險**：見 08 同日一節。前期滾雪球確認的是**戰術行為**，不得宣稱提升勝率。
 
 **最終獨立審查**：APPROVE WITH CHANGES（無重大問題）⇒ 全修：Registry U1 的勝利條件「預設本身被量測排除」改為要求排除表真的有這一列（不再依賴兩個 reason 字串剛好相同）；08 補上「std 後期中路強邊只靠 C5R n=400 提供、真實性表 n=40 列 fail」；08 弱點模板一句標明 n=400 複驗是 C5R。審查自行比對了三個 commit 的真實性表（119／147 列逐位元相同）與 C6 數字。修正後 registry 35/35。
+
+## 2026-10-25 Phase 3a-B 開工審查＋v21 發布風險盤點（只有文件；local，未 push／deploy／整合 main）
+
+**依據**：Owner 2026-10-25 接受第三輪成果（C5 12 個強邊＋C6 前期滾雪球維持 v21 候選 live；控圖運營／中路分推／後期團戰維持 design，不為湊數改係數），指示先做 3a-B 開工審查與 v21 發布風險盤點，不實作。
+
+**完成**
+- 開工清單：`review/tactic-book-3a/3a-B_開工清單.md`（一致性核對、tactic24 確切案例、std 後期中路強邊、經濟／疊加研究 E1、career.v21 行為研究 E2、v20 過濾 UI、真實性表成本、Roadmap 缺口、P0–P3 清單與成本）。
+- tactic24 兩條紅改以**確切案例**確認（不再只看 27/29）：HEAD、v20 發布 `1d0e219` 逐值相同（m6／m4 40 seeds 逐場 Gank 數相同，4.225 vs 4.35＝×0.9713；`res.schema`＝`BattleResult.v3`）；v19 發布 `d146e02` 是 31.05 vs 19.25（×1.61 通過）⇒ m6／m4 那條自 v20 評分選路起失效，BattleResult 那條是 v14 升 v3 後的版本事實過期。
+- std 後期中路強邊：n=40 的 23 組配對**全部 A＝B**；探針確認 Resolver 有給 `gankFocusAdd=0.7`、引擎後期選路幾乎都低於出發門檻（49 次中 48 次不出發）⇒ 罕見事件、非接線問題；C5R n=232 每分鐘 0.030→0.054。
+
+- 獨立審查：APPROVE WITH CHANGES（5 major），全部採納（清單 §12）：沒有任何複驗來源被機械驗證過期與否；v20 下儲存是另存副本、不是移除；career.v21 對「無 v21 專用選擇」的輸入有黃金（phase skeleton G／laneframe C3），缺的是 v21 專用選擇與 challenge.v21；前期經濟紅＞藍出現在所有有前期作用的臂，原因不明、不歸因巨龍；T15 會讓 career.v21 setup 雜湊全變，須先登記預期變動集合。
+
+**驗證（HEAD `b5a27c17`，實跑）**：`check_simulation_version_gate` 82/82、`check_tactic_truth_3a` 34/34、`check_tactic_replication_3a` 53/53；`ESMO_VERIFY_FLAT=1 node tools/check_moba_tactic24.mjs` 27/29（兩條紅如上）。本輪沒有改 src／tools，沒有新的大型量測。
+
+**未完成／風險**：見 08 同日一節。3a-B 功能未開始，等 Owner Review。
