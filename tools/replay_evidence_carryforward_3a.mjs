@@ -353,9 +353,17 @@ if (flag("report")) {
   const all = compareAll(), pending = all.filter((r) => !r.done), bad = all.filter((r) => r.done && r.diffs.length);
   const meta = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8")), prov = provenance();
   if (pending.length) { console.log(`未完整：還有 ${pending.length} 場，不寫結果檔`); process.exit(6); }
-  if (meta.gitHead !== prov.gitHead || meta.fingerprint !== prov.fingerprint) { console.log(`資料夾在 ${meta.gitHead}／${meta.fingerprint} 下跑，現在是 ${prov.gitHead}／${prov.fingerprint}：不寫結果檔`); process.exit(2); }
+  //  重播的依賴＝src 與量測儀器（tools/lib、tools/balance）。場次是開跑那個 commit（replayedUnder.gitHead）的本工具跑的；之後可以有別的 commit，
+  //  但這些路徑自開跑的 commit 起不得有任何變更、工作目錄也必須乾淨；指紋必須相同。
+  const DEPS = "src tools/lib tools/balance";
+  const depsChanged = meta.gitHead === prov.gitHead ? [] : execSync(`git diff --name-only ${meta.gitHead} HEAD -- ${DEPS}`, { cwd: ROOT }).toString().trim().split("\n").filter(Boolean);
+  const depsDirty = execSync(`git status --porcelain -- ${DEPS}`, { cwd: ROOT }).toString().trim().split("\n").filter(Boolean);
+  if (meta.fingerprint !== prov.fingerprint || depsChanged.length || depsDirty.length) {
+    console.log(`資料夾在 ${meta.gitHead}／${meta.fingerprint} 下跑，現在是 ${prov.gitHead}／${prov.fingerprint}；依賴變更 ${depsChanged.join(",") || "無"}、未提交 ${depsDirty.join(",") || "無"}：不寫結果檔`); process.exit(2);
+  }
   const out = {
-    schema: SCHEMA, reportedAt: new Date().toISOString(), replayedUnder: meta, ...prov,
+    schema: SCHEMA, reportedAt: new Date().toISOString(), replayedUnder: meta,
+    reportedUnder: { gitHead: prov.gitHead, depsChangedSinceReplay: 0, depsDirty: 0, deps: DEPS }, simulationVersion: prov.simulationVersion, fingerprint: prov.fingerprint,
     rule: { perArm: PER_ARM, differingFirst: DIFF_PICK, differingTopByAbsDiff: DIFF_TOP, controlSeeds: CTRL_PICK, compare: "every field of the original record present and identical in the replay (JSON round trip); replay may add fields",
       rawRoot: RAW_ROOT, rawLink: "per arm, the paired means of the claimed metric recomputed from the raw records equal the result fixture's meanA/meanB (3a-A rounded to 6 places)" },
     studies: plan.map((s) => ({ id: s.id, raw: s.raw, resultFixtures: s.resultFixtures, rawLinkOk: s.linkProblems.length === 0,

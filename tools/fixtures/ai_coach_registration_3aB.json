@@ -1,0 +1,52 @@
+{
+  "schema": "esmo.ai-coach-registration.v1",
+  "registeredAt": "2026-10-25",
+  "status": "registered before implementation (Owner 2026-10-25: before implementing the AI coach, register the career.v21 assembly and golden cases expected to change; keep v20 and the historical v21-A evidence; never relax a gate afterwards)",
+  "authority": "Owner 2026-10-25 decision 5 and the 3a plan Task 15",
+  "behaviour": {
+    "what": "AI coach v1 picks the red side's plan before the match (pre-match only; no in-match intervention, 3b)",
+    "inputs": "the AI team's own style (team.style), its own roster's stats (team.roster[].stats, legal: the team's own data), the match seed and the ruleset's director mode. Never the player's plan, binding, hidden settings or anything else about the blue side.",
+    "options": "only choices the v21 Registry offers for the chosen template under the ruleset's director mode (live, replication-confirmed, not measured-excluded, not withheld) — the same offered list the tactic book shows; a choice the book would not offer is never picked",
+    "output": "a TacticPlan bound to the current versions (kind 'binding'); deterministic: same inputs, same plan",
+    "statsInEngine": "red player stats are still NOT injected into the engine (3a; 3b per the formal architecture §7): the coach changes the plan, not red's individual execution",
+    "playerSees": "an opponent summary (template name and a few plain-language descriptors such as strong side, win condition, phase stances), never the knob weights"
+  },
+  "assemblyChange": {
+    "ruleset": "career.v21 layers.redTactic 'styleTemplate' -> 'aiCoachV1'. career.v20, challenge.v20 and balanceTool.v20/.v21 are untouched.",
+    "redTactic": "career.v21 with an opponentTeam: red = aiCoachPlan(...) binding. Without an opponentTeam: STANDARD_OPP_TACTIC exactly as today.",
+    "setupHash": "every career.v21 setup hash changes because the ruleset object is part of the hash; this is expected and is not counted as a result change (same convention as laneframe C3 'notCounted')",
+    "pinnedRulesetString": "check_match_ruleset_3a R16/R17 pin each ruleset's serialisation: the career.v21 string changes in exactly the redTactic value (version fact, not a relaxation)"
+  },
+  "goldenExpectedChanges": {
+    "fixture": "tools/fixtures/match_golden_v21a.json (not re-recorded; its pinned gitHead/fingerprint constants stay)",
+    "comparedFields": ["digest", "streamHash", "resultHash"],
+    "rule": "re-run under career.v21, a live case's result changes iff it has an AI opponent AND Live calls configureMatch (the blue side has a tactic). Runner cases (balanceTool.v21, red std) and live cases without an opponent never change.",
+    "changedSetMustEqualExactly": [
+      { "id": "v20:live-m8-7", "reason": "AI opponent, blue m8" },
+      { "id": "v20:live-m4-11", "reason": "AI opponent, blue m4" },
+      { "id": "v20:live-m8-23", "reason": "AI opponent, blue m8 (already in the laneframe C3 set)" },
+      { "id": "v20:live-m6-29", "reason": "AI opponent, blue m6" },
+      { "id": "v20:live-noplayers-17", "reason": "AI opponent, blue m5, no player stats" },
+      { "id": "v20:live-noroster-21", "reason": "AI opponent, blue m2, no roster" }
+    ],
+    "notChanging": [
+      "v20:live-notactic-13: AI opponent but no blue tactic, so Live does not call configureMatch and red's tactic is never applied",
+      "v20:live-m4-3, v20:live-m4-19: no opponent",
+      "all 58 bind-* live cases: opponentId null, red std",
+      "all 30 runner cases (incl. the bind-red:* cases): balanceTool.v21, whose red side is set by the case itself, never by an AI team"
+    ],
+    "combinedWithLaneFrame": "gates that re-run v21-A under career.v21 (check_c3_phase_skeleton G, check_laneframe_c3 C3) must see a changed set exactly equal to the union of this set and the laneframe C3 set (laneframe_registration_c3.json, 9 ids); the union has 9 + 6 - 1 = 14 ids"
+  },
+  "unchanged": [
+    "v20 golden (tools/fixtures/match_golden_v20.json, 39 cases) and check_match_setup_3a's v20 cases: bit-identical",
+    "career.v20 (flag off) assembly and results: bit-identical",
+    "balanceTool.v21 (every n=400 study's ruleset): bit-identical",
+    "the historical v21-A fixture and its pinned constants: kept as recorded"
+  ],
+  "gatesToAdapt": [
+    "check_c3_phase_skeleton G1b/G1c: expected set = laneframe C3 set ∪ this set",
+    "check_laneframe_c3 C3: same union; the laneframe 9 stay required",
+    "check_match_ruleset_3a R16/R17: career.v21 serialisation (redTactic value)",
+    "new check_ai_coach_3a: determinism, style separation, only offered choices, stat ordering, no blue-side input, career.v21 red side is the coach binding and career.v20 is untouched"
+  ]
+}

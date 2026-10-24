@@ -1,0 +1,44 @@
+{
+  "schema": "esmo.study-seed-plan.v1",
+  "registeredAt": "2026-10-25",
+  "status": "reserved before registration (Phase 3a-B P0; Owner 2026-10-25: confirm each study's assembly path and seed de-duplication rule before registering). Reserving a block is not a registration: no claim, metric or threshold lives here, and no match has been run on any of these blocks.",
+  "checkedBy": "tools/check_study_seed_plan_3aB.mjs",
+  "rule": {
+    "effectiveSeed": "the engine seed after the assembly path's own normalization: engine = LogicEngine(seed) uses seed|0; tool = balance runner createMatchSetup with seedSource 'tool' (seed used as-is); career = normalizeLiveSeed(seed, 'session') = (seed>>>0)|1; challenge = toEngineSeed(seed) = ((seed>>>0)|1)>>>0",
+    "unit": "one sample = one distinct effectiveSeed. Paths that force odd seeds (career, challenge) walk odd seeds only (step 2): an odd seed is its own effectiveSeed, an even seed 2k would silently replay engine seed 2k+1",
+    "disjoint": "no two studies share an effectiveSeed, and no study touches a used or reserved range below",
+    "layout": "objectiveLayoutForSeed(effectiveSeed) decides STANDARD/SWAPPED; reported per study, walking studies stop when both layouts reach the target"
+  },
+  "usedRanges": [
+    { "range": "1-40", "source": "G-A7 truth table (capabilityRegistry TRUTH_GATE)" },
+    { "range": "1-200", "source": "balance runner default seedStart=1 (regress / historical side bias, inferred; draft §1.3)" },
+    { "range": "1001-1400", "source": "3a-A replication and quick mode (tactic_followup_3a_*.json)" },
+    { "range": "1401-1800", "source": "C7 diagnostics (c7_diag_registration_3c.json)" },
+    { "range": "2001-2060", "source": "3a-A templates study" },
+    { "range": "3001-3400", "source": "C3-2 phase stance (observed)" },
+    { "range": "3401-3800", "source": "C4 (phase_options_registration_c4.json)" },
+    { "range": "3801-4200", "source": "C5 (phase_options_registration_c5.json, superseded)" },
+    { "range": "4201-4600", "source": "C6 (phase_options_registration_c6.json)" },
+    { "range": "5001-6000", "source": "balance first check / side bias (laneframe_registration_c3.json)" },
+    { "range": "8201-8600", "source": "C5R (phase_options_registration_c5r.json)" },
+    { "range": "9001-9100", "source": "C3-1 laneFrame behaviour symmetry" },
+    { "range": "9101-16000", "source": "C3-1 laneFrame D-20 side bias continuation (odd seeds, walkLimit 16000)" },
+    { "range": "16001-17600", "source": "C3-1 laneFrame behaviour revision" },
+    { "range": "18001-18400", "source": "C3-2 rev1 phase stance" },
+    { "range": "18401-18800", "source": "C3-3 grouping" }
+  ],
+  "reservedRanges": [
+    { "range": "4601-5000", "source": "draft §1.3: unassigned, Owner assignment only" },
+    { "range": "6001-7000", "source": "draft §1.3: C8 behaviour family sampling" },
+    { "range": "7001-8200", "source": "draft §1.3: redesign spares C3 stance / C3 grouping / C4" },
+    { "range": "8601-9000", "source": "draft §1.3: redesign spare C6" }
+  ],
+  "studies": [
+    { "id": "tactic24.v20claim", "purpose": "evidence for the replacement of the m6/m4 gank-count claim (P0-2); same engine path as check_moba_tactic24 (LogicEngine + configureMatch, no assembler)", "path": "engine", "range": "19001-19200", "step": 1 },
+    { "id": "E1", "purpose": "v21 options: red/blue economy equivalence and stacking safety (P2-2). If the Owner keeps n=400 only the prefix 21001-21400 is used; the block is reserved for n=1200", "path": "tool", "range": "21001-22200", "step": 1 },
+    { "id": "E2", "purpose": "career.v21 behaviour acceptance through the formal live entry (P2-3; after the AI coach)", "path": "career", "range": "23001-23799", "step": 2, "opponents": "AI_TEAMS[seed % AI_TEAMS.length] (same rule as measure_laneframe_c3)" },
+    { "id": "G-A8", "purpose": "dominant-plan sweep, every template vs std (P2-4); tool path unless its registration chooses career (then odd seeds of 25001-25799)", "path": "tool", "range": "25001-25400", "step": 1 },
+    { "id": "sideBias.career.v21", "purpose": "side bias n>=1000 per layout on career.v21 (P2-5)", "path": "career", "range": "27001-31999", "step": 2, "walk": { "targetPerLayout": 1000 }, "opponents": "AI_TEAMS[seed % AI_TEAMS.length]" },
+    { "id": "sideBias.challenge.v21", "purpose": "side bias n>=1000 per layout on challenge.v21 (P2-5; after T16)", "path": "challenge", "range": "33001-37999", "step": 2, "walk": { "targetPerLayout": 1000 } }
+  ]
+}
