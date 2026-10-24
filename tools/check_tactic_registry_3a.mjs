@@ -162,7 +162,9 @@ const F4_EXCEPTIONS = [{ dimension: "seats.b1.priority", field: "identity.protec
   //  Phase 3a-C6：控圖運營（insufficient）、中路分推（one_sided）被複驗撤下 ⇒ 勝利條件只剩前期滾雪球可見，只有這兩個預設會動的欄位在可見清單下沒人動。
   ...["phases.1.knobs.baronJoin", "phases.1.identity.siegeBias", "phases.1.knobs.laneOffset.top", "phases.1.knobs.laneOffset.mid", "phases.1.knobs.laneOffset.bot",
     "phases.2.knobs.dragonJoin", "phases.1.knobs.joinFight", "phases.2.knobs.joinFight", "knobs.laneOffset.mid", "knobs.gankWeights.mid", "knobs.splitLane", "knobs.splitPush"]
-    .map((field) => ({ dimension: "winCondition", field, why: "控圖運營／中路分推被複驗撤下（REPLICATION_WITHHELD）" }))];
+    .map((field) => ({ dimension: "winCondition", field, why: "控圖運營／中路分推被複驗撤下（REPLICATION_WITHHELD）" })),
+  //  Phase 3a-B（Owner 2026-10-25 決策 1）：後期上／中／下強邊改回 design（owner_hold）⇒ 後期強邊在可見清單下沒有任何選項，兩個欄位沒人動。
+  ...["phases.2.knobs.gankFocusLane", "phases.2.knobs.gankFocusAdd"].map((field) => ({ dimension: "phases.late.focusLane", field, why: "後期強邊由 Owner 暫緩（REPLICATION_WITHHELD owner_hold）" }))];
 const deadVisible = live.flatMap((r) => r.resolverFields.filter((f) => !usedFields.get(r.dimension).has(f)).map((f) => ({ dimension: r.dimension, field: f })));
 const eKey = (x) => `${x.dimension}:${x.field}`;
 ck(`F4 resolverFields 沒有死欄位（可見清單下）：除了明確例外 ${F4_EXCEPTIONS.map(eKey).join(",")}（${F4_EXCEPTIONS[0].why}）之外，每個欄位都被至少一個可見的（模板, 選擇）真的改到；找到的死欄位集合恰好等於例外集合`,
@@ -175,7 +177,8 @@ const structuralChanges = (dim, field) => TEMPLATE_IDS.some((t) => {
 });
 ck("F4b 例外裡的每個欄位在結構清單（withMeasured:false）下確實會被改到，且屬於該列的 resolverFields（例外不是假的）", F4_EXCEPTIONS.every((x) => Registry.registryRow(x.dimension).resolverFields.includes(x.field) && structuralChanges(x.dimension, x.field)), F4_EXCEPTIONS.map(eKey).join(","));
 const noVisibleDims = live.filter((r) => TEMPLATE_IDS.every((t) => { const d = Mapping.offeredChoiceDetail(t, r.dimension); return !d || d.offered.every((c) => c === d.own); })).map((r) => r.dimension);
-ck(`F4c 在 21 個模板上都沒有可見非預設選項的維度集合恰好等於列舉值：${noVisibleDims.join(",") || "無"}`, J(noVisibleDims) === J(["seats.b1.priority"]), noVisibleDims.join(","));
+//  Phase 3a-B（Owner 2026-10-25）：後期強邊改回 design ⇒ 也在這個集合（與 b1 核心同理：唯一的選項被撤下）。
+ck(`F4c 在 21 個模板上都沒有可見非預設選項的維度集合恰好等於列舉值：${noVisibleDims.join(",") || "無"}`, J(noVisibleDims) === J(["seats.b1.priority", "phases.late.focusLane"]), noVisibleDims.join(","));
 const otherProtect = live.filter((r) => r.dimension !== "seats.b1.priority" && r.resolverFields.includes("identity.protectRole")).map((r) => r.dimension);
 ck("F4d identity.protectRole 並非整個欄位都死：其他列（b3／b4 的資源優先）在可見清單下仍會動它", otherProtect.length > 0 && otherProtect.every((d) => usedFields.get(d).has("identity.protectRole")), otherProtect.join(","));
 

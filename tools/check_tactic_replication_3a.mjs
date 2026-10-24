@@ -60,6 +60,8 @@ const isPresetDim = (d) => dimKeyOf(d).startsWith("quick.");
 const optKeys = new Set(OPTION_RESULTS.flatMap((o) => o.fx.rows.map((r) => `${dimKeyOf(r.dimension)}=${r.choice}`)));
 //  Owner 2026-10-22：「前期 scaling、中期 scaling 維持 design，不開放，不放大係數」（即使複驗 confirmed）。
 const OWNER_HOLD = ["phases.early.stance=scaling", "phases.mid.stance=scaling"];
+//  Owner 2026-10-25（3a-B 決策 1）：後期上／中／下強邊改回 design（C5R confirmed，證據保留）⇒ 在 REPLICATION_WITHHELD（owner_hold），所有模板不提供。
+const OWNER_HOLD_P = ["phases.late.focusLane=top", "phases.late.focusLane=mid", "phases.late.focusLane=bot"];
 const TEMPLATE_IDS = Object.keys(Templates.TACTIC_TEMPLATES);
 const nested = (dim, v) => { const o = {}; dim.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? v : {}, n[k]), o); return o; };
 const keyOf = (x) => `${dimKeyOf(x.dimension)}=${x.choice}`;
@@ -129,8 +131,8 @@ const origKeys = new Set(fx.rows.map(keyOf)), revKeys = new Set(fxB.rows.map(key
 const WA = W.filter((x) => origKeys.has(keyOf(x)));
 const baseProblems = verifyList(WA, fx.rows);
 ck("W1 REPLICATION_WITHHELD 屬於第一份複驗的部分 ＝ 結果檔推出的撤下清單（逐筆相同、不多不少；判定、指標、紅藍 n／rel／z 一致）", baseProblems.length === 0 && WA.length === deriveWithheld(fx.rows).length, baseProblems.slice(0, 3).join(" | "));
-ck("W2 預期的 10 筆（上路帶線、下路進攻、b1 核心、謹慎；前期／中期 scaling 為 Owner 暫緩；後期巴龍／推塔優先沒站住；勝利條件控圖運營／中路分推沒站住），每一筆都恰好來自其中一份結果檔",
-  J(W.map(keyOf).sort()) === J(["lanes.bot.stance=aggressive", "lanes.top.stance=split", "phases.early.stance=scaling", "phases.late.objectiveOrder=baron", "phases.late.objectiveOrder=towers", "phases.mid.stance=scaling", "risk.tolerance=cautious", "seats.b1.priority=core", "winCondition=midSplitPressure", "winCondition=objectiveControl"])
+ck("W2 預期的 13 筆（上路帶線、下路進攻、b1 核心、謹慎；前期／中期 scaling 為 Owner 暫緩；後期巴龍／推塔優先沒站住；勝利條件控圖運營／中路分推沒站住；後期上／中／下強邊為 Owner 暫緩〔2026-10-25〕），每一筆都恰好來自其中一份結果檔",
+  J(W.map(keyOf).sort()) === J(["lanes.bot.stance=aggressive", "lanes.top.stance=split", "phases.early.stance=scaling", "phases.late.focusLane=bot", "phases.late.focusLane=mid", "phases.late.focusLane=top", "phases.late.objectiveOrder=baron", "phases.late.objectiveOrder=towers", "phases.mid.stance=scaling", "risk.tolerance=cautious", "seats.b1.priority=core", "winCondition=midSplitPressure", "winCondition=objectiveControl"])
   && W.every((x) => [origKeys, revKeys, optKeys].filter((ks) => ks.has(keyOf(x))).length === 1), W.map(keyOf).join(" "));
 //  例外只有一種（跨版本證據隔離，Owner 2026-10-23）：v20 真實性列推出的 scope "static" 排除，可以與 Owner 暫緩（owner_hold，所有模式都撤下）重疊——
 //  兩者來源不同（v20 n=40 量測 vs Owner 裁示），各自由自己的 gate 推導；其他任何重疊都算錯。
@@ -328,8 +330,8 @@ console.log("\n§P 第三～五個來源：每時期選擇複驗（C3-3 seeds 18
   //  只在 v21 量的證據只核准需要 Director 的每時期型；整場選項的 confirmed 列在 REPLICATION_V21_SCOPE_ONLY（不取代 v20 的真實性列）。
   const phaseDim = (d) => Registry.registryRow(d)?.requires === Registry.PHASE_DIRECTOR;
   const wantV21 = allRows.filter((r) => r.verdict === "confirmed" && !phaseDim(r.dimension) && !isPresetDim(r.dimension)).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
-  const wantCP = allRows.filter((r) => r.verdict === "confirmed" && phaseDim(r.dimension)).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
-  const wantWP = allRows.filter((r) => r.verdict !== "confirmed").map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "not_replicated", verdict: r.verdict, metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
+  const wantCP = allRows.filter((r) => r.verdict === "confirmed" && phaseDim(r.dimension) && !OWNER_HOLD_P.includes(keyOf(r))).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: "replicated", verdict: "confirmed", metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
+  const wantWP = allRows.filter((r) => r.verdict !== "confirmed" || OWNER_HOLD_P.includes(keyOf(r))).map((r) => ({ template: "*", dimension: r.dimension, choice: r.choice, reason: r.verdict === "confirmed" ? "owner_hold" : "not_replicated", verdict: r.verdict, metric: r.claims[0].metric, blue: primP(r, "blue"), red: primP(r, "red") }));
   const CP = Registry.REPLICATION_CONFIRMED.filter((x) => optKeys.has(keyOf(x))), WP = W.filter((x) => optKeys.has(keyOf(x)));
   //  快捷（quick.*）的複驗：計畫裡仍是兩格每時期強邊；組合本身的證據只留在 REPLICATION_PRESET_CONFIRMED（數字照抄主宣稱）。
   const PR = Registry.REPLICATION_PRESET_CONFIRMED;
@@ -339,7 +341,8 @@ console.log("\n§P 第三～五個來源：每時期選擇複驗（C3-3 seeds 18
   ck("P3b REPLICATION_V21_SCOPE_ONLY ＝ confirmed 的整場選項列（整場巨龍 high／low、巴龍 high；只留證據）；它們不在 REPLICATION_CONFIRMED，v20 的量測排除表照舊決定提供",
     sameList(V21, wantV21) && V21.length === 3 && V21.every((x) => !CP.some((y) => keyOf(y) === keyOf(x))) && Object.isFrozen(V21)
     && V21.every((x) => Registry.measuredExclusion("std", x.dimension, x.choice) !== null), V21.map(keyOf).join(" "));
-  ck("P4 REPLICATION_WITHHELD 屬於這兩份的部分 ＝ 沒站住的列（not_replicated；後期巴龍 one_sided、後期推塔 insufficient）", sameList(WP, wantWP), WP.map((x) => `${keyOf(x)}:${x.verdict}`).join(" "));
+  ck("P4 REPLICATION_WITHHELD 屬於這幾份的部分 ＝ 沒站住的列（not_replicated）＋ Owner 暫緩的 confirmed 列（owner_hold：後期強邊 3 列，2026-10-25）",
+    sameList(WP, wantWP) && OWNER_HOLD_P.every((k) => allRows.find((r) => keyOf(r) === k)?.verdict === "confirmed" && WP.find((x) => keyOf(x) === k)?.reason === "owner_hold"), WP.map((x) => `${keyOf(x)}:${x.reason}`).join(" "));
   ck("P3c REPLICATION_PRESET_CONFIRMED ＝ confirmed 的快捷列（快速模式強邊 3 列；逐欄相同）；快捷的兩格每時期強邊都在 REPLICATION_CONFIRMED", sameList(PR, wantPR) && PR.length === 3 && Object.isFrozen(PR)
     && PR.every((x) => ["early", "mid"].every((p) => Registry.REPLICATION_CONFIRMED.some((y) => y.dimension === `phases.${p}.focusLane` && y.choice === x.choice))), PR.map(keyOf).join(" "));
   ck("P5 四張表（核准、撤下、只在 v21、快捷）合起來恰好覆蓋四份結果檔的每一列（檢查臂除外）、沒有重疊、也不與前兩份來源重疊；檢查臂不在任何一張表", CP.length + WP.length + V21.length + PR.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
@@ -355,7 +358,8 @@ console.log("\n§P 第三～五個來源：每時期選擇複驗（C3-3 seeds 18
   const offerBadP = [];
   for (const x of CP) { const d = Mapping.offeredChoiceDetail("std", x.dimension); if (!d?.offered.includes(x.choice)) offerBadP.push(`std/${keyOf(x)}:confirmed 卻不提供`); }
   for (const x of WP) for (const t of TEMPLATE_IDS) { const d = Mapping.offeredChoiceDetail(t, x.dimension); if (d && d.own !== x.choice && d.offered.includes(x.choice)) offerBadP.push(`${t}/${keyOf(x)}:沒站住卻仍提供`); }
-  ck("P7 提供清單：confirmed 的在 std 提供；沒站住的在 21 個模板都不提供", offerBadP.length === 0, offerBadP.slice(0, 4).join(" "));
+  for (const k of OWNER_HOLD_P) { const [dim, ch] = k.split("="); for (const t of TEMPLATE_IDS) for (const mode of ["static", "core.v1"]) { const d = Mapping.offeredChoiceDetail(t, dim, [], {}, { tacticalDirector: mode }); if (d?.offered.includes(ch)) offerBadP.push(`${t}/${mode}/${k}:owner_hold 卻仍提供`); } }
+  ck("P7 提供清單：confirmed 的在 std 提供；沒站住的與 Owner 暫緩的（後期強邊）在 21 個模板、兩種 Director 模式都不提供", offerBadP.length === 0, offerBadP.slice(0, 4).join(" "));
   //  P8：Owner 2026-10-22 裁定——v20 的整場巨龍／巴龍宣稱維持 v20 原本的指標，不以 v21 證據換指標；四筆 `*` 排除照舊（v20 既有證據）。
   const objRows = ["objectives.dragon", "objectives.baron"].map((d) => Registry.registryRow(d));
   ck("P8 整場巨龍／巴龍：Registry 宣稱維持 objectiveFightEntriesPerMin.<k>、沒有 retiredClaims；std 上 low／high 的四筆排除照舊（v21 證據不開放 v20）",

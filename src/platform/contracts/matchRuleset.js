@@ -49,8 +49,10 @@ export const MATCH_RULESETS = Object.freeze({
   //  career.v21 只在旗標 mobaTacticalDirectorV21 開啟時由 resolveRulesetForMode 解析出來（旗標預設關 ⇒ 正式站照舊 career.v20）。
   //  C3-1 laneFrame（TD-3A-23，D-1 = A）：v21 規則集另帶 laneFrame "teamRelative"（紅方按路分的 knobs 改成己方視角；
   //  career.v21／challenge.v21 是正式規則集 ⇒ 被 matchSetup 鎖在 teamRelative；balanceTool.v21 可覆寫成 legacyMirror 做負對照）。
+  //  Phase 3a-B T15（Owner 2026-10-25 決策 5；事前登記 tools/fixtures/ai_coach_registration_3aB.json）：career.v21 的紅方戰術＝AI 教練 v1
+  //  （redTactic "aiCoachV1"：賽前依 AI 隊伍自己的風格與選手素質、只用戰術書會提供的選項排計畫；platform/tactics/aiCoach.js）。
   "career.v21": R({ rulesetId: "career.v21", kind: "production", simVersion: "moba-sim.v21",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "aiCoachV1", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
     releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1", "mobaTacticalDirectorV21"] }),
   "balanceTool.v21": R({ rulesetId: "balanceTool.v21", kind: "tool", simVersion: "moba-sim.v21",
     layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },

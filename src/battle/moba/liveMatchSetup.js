@@ -35,6 +35,7 @@ import { leavesOf, nestedOf } from "../../platform/tactics/tacticChoiceMapping.j
 import { bindTacticPlanToCurrentVersions } from "./tactics/tacticResolver.js";
 import { OBJECTIVE_LAYOUTS } from "../../platform/contracts/objectiveLayout.js";
 import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle } from "../../platform/contracts/MobaTacticConfig.js";
+import { aiCoachPlan } from "../../platform/tactics/aiCoach.js";
 import { applyFatigueToLoadout, buildPlayerStatSlots } from "./mobaRosterAdapter.js";
 import { normalizeBuildStrategy } from "./items/buildStrategyPrep.js";
 import { battleTalentOptions } from "./talents/heroBattleTalents.js";
@@ -136,6 +137,14 @@ export function resolveLiveRuleset({ flags, persisted = null, dev = null, allowT
   return { ruleset: base, source: "flags" };
 }
 
+/** T15：AI 教練的紅方 binding；排不出來 ⇒ null（呼叫端退回風格模板）並記一筆 note。 */
+function redCoachBinding(opponentTeam, ruleset, notes) {
+  const r = aiCoachPlan({ team: opponentTeam, tacticalDirector: tacticalDirectorModeOf(ruleset) });
+  const binding = r.ok ? bindTacticPlanToCurrentVersions(r.plan) : null;
+  if (!binding) notes.push(`tactic.red: AI coach unavailable (${r.ok ? "bind failed" : r.errors.map((e) => e.code).join(",")}); style template used`);
+  return binding ? toPlainData(binding) : null;
+}
+
 /** 天賦選擇正規化：只留席位鍵；不是該席位英雄的天賦 ⇒ null（交給 AI）。全空 ⇒ null。 */
 function normalizeTalentSelections(selections, roster) {
   if (!isPlainObject(selections) || !roster) return null;
@@ -179,6 +188,10 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
   const talentSelections = L.battleTalents === true && roster ? normalizeTalentSelections(opts.talentSelections, roster) : null;
   const buildStrategy = L.items === true && roster ? normalizeBuildStrategy(opts.buildStrategy) : null;
   const redTactic = opponentTeam ? mobaTacticForTeamStyle(opponentTeam.style) : STANDARD_OPP_TACTIC;
+  //  T15：規則集的 redTactic 層是 aiCoachV1（career.v21）且有 AI 對手 ⇒ 紅方＝AI 教練賽前排的計畫（binding）。
+  //  教練只讀對手隊伍自己的資料（風格、名單素質）與本場 Director 模式，不讀 opts／藍方任何東西。
+  //  教練排不出來（例如對手沒有名單）⇒ 退回風格模板並記在 notes（不讓開局失敗；同一份輸入永遠得到同一個結果）。
+  const redBinding = L.redTactic === "aiCoachV1" && opponentTeam ? redCoachBinding(opponentTeam, rs, notes) : null;
   const explicitLayout = OBJECTIVE_LAYOUTS.includes(opts.objectiveLayout) ? opts.objectiveLayout : null;
   //  本場規則集用不到的戰術選擇只從本場拿掉（見 bindingForRuleset）；記在 notes，存檔的戰術書不動。
   const blueBinding = opts.tacticPlanBinding ? bindingForRuleset(toPlainData(opts.tacticPlanBinding), rs) : null;
@@ -197,7 +210,7 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
       //  binding 不合法 ⇒ 組裝器照實拒絕，不退回 legacy 戰術偷偷開打。
       blue: blueBinding ? { kind: "binding", binding: blueBinding.binding }
         : opts.tactic?.tacticId ? { kind: "legacy", config: toPlainData(opts.tactic) } : null,
-      red: { kind: "legacy", config: toPlainData(redTactic) },
+      red: redBinding ? { kind: "binding", binding: redBinding } : { kind: "legacy", config: toPlainData(redTactic) },
     },
     ...(isTool
       ? (buildStrategy ? { tool: { itemsStrategies: { blue: buildStrategy, red: "standard" } } } : {})

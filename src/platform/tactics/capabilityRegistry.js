@@ -477,6 +477,12 @@ export const REPLICATION_WITHHELD = deepFreeze([
   //  中路分推的牽制（中路席位參戰減少）只有藍方過 ⇒ one_sided。兩者維持不提供（Owner 2026-10-24：不得一併開放）。
   rw("winCondition", "objectiveControl", "insufficient", "contestShare.dragon.early", { n: 400, rel: 0.148318, z: 8.262517 }, { n: 400, rel: 0.088106, z: 5.447723 }),
   rw("winCondition", "midSplitPressure", "one_sided", "seatFightEntriesPerMin.b3.mid+late", { n: 400, rel: -0.088436, z: -4.175141 }, { n: 400, rel: -0.045783, z: -2.072841 }),
+  //  Phase 3a-B（Owner 2026-10-25 決策 1）：後期上／中／下強邊改回 design。C5R（tools/fixtures/phase_options_result_c5r.json，seeds 8201–8600）
+  //  紅藍兩側 confirmed（數字照抄，證據保留），但效果極小（後期抓人每場約多 0.05–0.07 次）、後期打野選路幾乎都低於出發門檻（3a-B 開工清單 §3）
+  //  ⇒ owner_hold：所有模板都不提供；前期／中期強邊與快速模式強邊照舊提供。不調係數。
+  oh("phases.late.focusLane", "top", "ganksOwnPerMin.top.late", { n: 232, rel: 0.809449, z: 7.447643 }, { n: 232, rel: 0.851799, z: 6.827106 }),
+  oh("phases.late.focusLane", "mid", "ganksOwnPerMin.mid.late", { n: 232, rel: 0.797343, z: 4.511476 }, { n: 232, rel: 0.884226, z: 4.870049 }),
+  oh("phases.late.focusLane", "bot", "ganksOwnPerMin.bot.late", { n: 232, rel: 0.928504, z: 7.537307 }, { n: 232, rel: 0.693154, z: 5.954301 }),
 ]);
 /** 這個（模板, 維度, 選擇）被複驗撤下嗎？回傳該列或 null。 */
 export const replicationWithheld = (template, dimension, choice) =>
@@ -520,9 +526,6 @@ export const REPLICATION_CONFIRMED = deepFreeze([
   rc("phases.mid.focusLane", "top", "ganksOwnPerMin.top.mid", { n: 400, rel: 0.99446, z: 12.801498 }, { n: 400, rel: 0.941399, z: 11.979677 }),
   rc("phases.mid.focusLane", "mid", "ganksOwnPerMin.mid.mid", { n: 400, rel: 1.096329, z: 12.223125 }, { n: 400, rel: 1.272561, z: 13.713923 }),
   rc("phases.mid.focusLane", "bot", "ganksOwnPerMin.bot.mid", { n: 400, rel: 1.075144, z: 15.826719 }, { n: 400, rel: 0.786795, z: 14.845464 }),
-  rc("phases.late.focusLane", "top", "ganksOwnPerMin.top.late", { n: 232, rel: 0.809449, z: 7.447643 }, { n: 232, rel: 0.851799, z: 6.827106 }),
-  rc("phases.late.focusLane", "mid", "ganksOwnPerMin.mid.late", { n: 232, rel: 0.797343, z: 4.511476 }, { n: 232, rel: 0.884226, z: 4.870049 }),
-  rc("phases.late.focusLane", "bot", "ganksOwnPerMin.bot.late", { n: 232, rel: 0.928504, z: 7.537307 }, { n: 232, rel: 0.693154, z: 5.954301 }),
   //  Phase 3a-C6（tools/fixtures/phase_options_result_c6.json，seeds 4201–4600）：勝利條件「前期滾雪球」接戰與前期龍到場兩組、紅藍兩側 confirmed；
   //  Owner 2026-10-24 核准升為 v21 候選 live。⚑ 只報告：紅方前期經濟 z 3.60（側偏風險，正式發布前直接驗證）；不宣稱勝率。
   rc("winCondition", "earlySnowball", "engageDecisionsPerMin.early", { n: 400, rel: 0.155596, z: 13.854808 }, { n: 400, rel: 0.14247, z: 12.704293 }),
