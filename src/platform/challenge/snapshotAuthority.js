@@ -42,7 +42,8 @@
 import {
   createSquadSnapshot, findForbiddenClientKeys, ONLINE_NORMALIZATION, SNAPSHOT_SEATS,
 } from "../contracts/squadSnapshot.js";
-import { MOBA_SIMULATION_VERSION } from "../contracts/simulationVersion.js";
+//  T16：快照記下的模擬版本＝本 build 在正式旗標下的 Challenge 版本（不是 MOBA_SIMULATION_VERSION；見 challengeVersion.js）。
+import { CHALLENGE_SIMULATION_VERSION } from "./challengeVersion.js";
 //  Slice 4：非同步選角方針。⚠ 只是**偏好**，不是數值 —— 見 draftPolicy.js 檔頭。
 import { createDraftPolicy, validateDraftPolicy } from "./draftPolicy.js";
 import { buildPlayerStatSlots } from "../../battle/moba/mobaRosterAdapter.js";
@@ -137,10 +138,12 @@ export function validatePublishRequest(request) {
  * @param {object} p.careerState  **權威層讀的**：
  *   { players, lineup, heroProgress, heroAssign, team, careerDay, lastPublishedCareerDay }
  * @param {number} p.now          呼叫端注入的時刻（本層不讀時鐘）
+ * @param {string} [p.simulationVersion]  權威層決定的模擬版本（預設＝CHALLENGE_SIMULATION_VERSION；**不是**客戶端欄位，
+ *                                 request 裡帶的一律不看）。gate／黃金基準在旗標開的情境下建 v21 快照時才傳。
  * @returns {{ ok:boolean, snapshot:object|null, errors:Array, throttled:boolean }}
  */
 export function publishDefensiveSnapshot({
-  request = null, careerState = {}, now = null, intent = SNAPSHOT_INTENT.defense,
+  request = null, careerState = {}, now = null, intent = SNAPSHOT_INTENT.defense, simulationVersion = CHALLENGE_SIMULATION_VERSION,
 } = {}) {
   //  ── ① 客戶端信任邊界 ──────────────────────────────────────────────────
   const rv = validatePublishRequest(request);
@@ -249,7 +252,7 @@ export function publishDefensiveSnapshot({
     },
     issuedBy: SNAPSHOT_AUTHORITY.id,
     issuedAt: now,
-    simulationVersion: MOBA_SIMULATION_VERSION,
+    simulationVersion,
   });
   if (!built.ok) return { ok: false, snapshot: null, throttled: false, errors: built.errors };
   return { ok: true, snapshot: built.snapshot, errors: [], throttled: false };

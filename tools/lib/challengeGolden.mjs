@@ -55,13 +55,15 @@ export function challengeBuilderArgs(v, withDraft) {
 
 /**
  * @param {{ id: string, params: { index: number, seed: number, draft: boolean, tacticIds: [string, string] } }} c  golden challenge 案例
+ * @param {{ simulationVersion?: string }} [o]  T16：快照記下的模擬版本（缺少 ⇒ 權威層預設＝CHALLENGE_SIMULATION_VERSION；
+ *                                             challenge.v21 的黃金基準傳 "moba-sim.v21"）
  * @returns {{ challenger: object, defender: object, challenge: object, draftResult: object|null, keyA: string, keyB: string }}
  */
-export function challengeGoldenInputs(c) {
+export function challengeGoldenInputs(c, { simulationVersion = undefined } = {}) {
   const p = c.params;
   const keyA = FIXTURE_KEYS[p.index % FIXTURE_KEYS.length], keyB = FIXTURE_KEYS[(p.index + 2) % FIXTURE_KEYS.length];
-  let a = withTactic(fixtureSnapshot(keyA, { playerMasteryLevel: 1 }).snapshot, p.tacticIds[0]);
-  let d = withTactic(fixtureSnapshot(keyB, { playerMasteryLevel: 1 }).snapshot, p.tacticIds[1]);
+  let a = withTactic(fixtureSnapshot(keyA, { playerMasteryLevel: 1, simulationVersion }).snapshot, p.tacticIds[0]);
+  let d = withTactic(fixtureSnapshot(keyB, { playerMasteryLevel: 1, simulationVersion }).snapshot, p.tacticIds[1]);
   if (!p.draft) { a = withoutDraftPolicy(a); d = withoutDraftPolicy(d); }
   let draftResult = null;
   if (p.draft) {

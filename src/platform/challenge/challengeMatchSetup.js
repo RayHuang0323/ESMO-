@@ -2,7 +2,7 @@
 //  platform/challenge/challengeMatchSetup.js — Challenge 的 MatchSetup builder（Phase 3a Task 5）
 //
 //  【是什麼】把「兩份凍結快照 ＋ 凍結的 matchSeed ＋（有的話）凍結的 DraftResult」轉成一份
-//  MatchSetup.v1（規則集 `challenge.v20`），之後交給唯一的組裝器 `assembleMatch`。
+//  MatchSetup.v1（規則集 `challenge.v20`；T16 起依挑戰記下的模擬版本也可能是 `challenge.v21`），之後交給唯一的組裝器 `assembleMatch`。
 //  對照 liveMatchSetup.js：同樣是**純函式**，不讀 store／window／時鐘／亂數、不 import 英雄庫／引擎；
 //  Live 專屬的東西（疲勞、出裝策略、天賦、AI 隊伍戰術、版面推導）一概不在這裡。
 //
@@ -29,8 +29,10 @@ import { SNAPSHOT_SEATS } from "../contracts/squadSnapshot.js";
 import { buildLoadout as buildHeroLoadout } from "../../battle/moba/mobaHeroLoadout.js";
 import { draftResultToRoster } from "./draftResult.js";
 
-/** Challenge 一律用這個規則集（見 contracts/matchRuleset.js；Task 16 才會有 challenge.v21）。 */
+/** v20 的挑戰規則集（T16 之前一律用它；之後由 runChallenge 依挑戰記下的模擬版本傳入 rulesetId，缺少 ≡ 這一個）。 */
 export const CHALLENGE_RULESET_ID = "challenge.v20";
+/** T16：Challenge 可以用的規則集。 */
+export const CHALLENGE_RULESET_IDS = Object.freeze(["challenge.v20", "challenge.v21"]);
 
 /**
  * Challenge 的 heroLookup 在 deps manifest 裡的標籤。查表是呼叫端注入的 `heroOf`（runner 不 import 英雄庫）；
@@ -59,6 +61,9 @@ export function sideInputs(snapshot, side) {
 
 /**
  * @param {object} a
+ * @param {string} [a.rulesetId]          "challenge.v20"（預設）或 "challenge.v21"（T16：runChallenge 依挑戰記下的模擬版本決定）。
+ *                                        v21：佈局依 seed（objectiveLayout 留 null 交 matchSetup 推導）、組裝順序 Live、Director core.v1；
+ *                                        其餘欄位的填法與 v20 完全相同（只組快照宣告的層）。
  * @param {number} a.seed                 ChallengeInstance 凍結的 matchSeed（原樣）
  * @param {string|null} [a.opponentKey]   ChallengeInstance.opponentKey（只進 meta，不進 setup 雜湊）
  * @param {object} a.challengerSnapshot   SquadSnapshot.v1（藍方）
@@ -70,7 +75,7 @@ export function sideInputs(snapshot, side) {
  * @returns {{ ok: boolean, setup: object|null, errors: Array<{ code, field, message }> }}
  */
 export function buildChallengeMatchSetup({
-  seed, opponentKey = null, challengerSnapshot, defenderSnapshot, use, tactics = null, draftResult = null, heroOf = null,
+  rulesetId = CHALLENGE_RULESET_ID, seed, opponentKey = null, challengerSnapshot, defenderSnapshot, use, tactics = null, draftResult = null, heroOf = null,
 } = {}) {
   const blue = sideInputs(challengerSnapshot, "blue");
   const red = sideInputs(defenderSnapshot, "red");
@@ -85,8 +90,9 @@ export function buildChallengeMatchSetup({
       { heroId: withHero[seat].heroId, ...(spells[seat]?.spells ? { spells: spells[seat].spells } : {}) }]));
   }
 
+  if (!CHALLENGE_RULESET_IDS.includes(rulesetId)) return { ok: false, setup: null, errors: [{ code: "unknown_ruleset", field: "rulesetId", message: `not a challenge ruleset: ${rulesetId}` }] };
   return createMatchSetup({
-    rulesetId: CHALLENGE_RULESET_ID,
+    rulesetId,
     seed,
     loadout: use.loadout ? { ...blue.loadout, ...red.loadout } : null,
     playerSlots: use.stats ? { blue: blue.slots, red: red.slots } : null,

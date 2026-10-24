@@ -47,15 +47,22 @@ export const MATCH_RULESETS = Object.freeze({
     releaseRequirements: [] }),
   //  Phase 3a-C3-1（D-15）：v21 規則集＝v20 的層原樣＋tacticalDirector "core.v1"（v20 三份不動，見上）。
   //  career.v21 只在旗標 mobaTacticalDirectorV21 開啟時由 resolveRulesetForMode 解析出來（旗標預設關 ⇒ 正式站照舊 career.v20）。
-  //  challenge.v21 不在本輪（D-16，3a-B）。
-  //  C3-1 laneFrame（TD-3A-23，D-1 = A）：兩份 v21 規則集另帶 laneFrame "teamRelative"（紅方按路分的 knobs 改成己方視角；
-  //  career.v21 是正式規則集 ⇒ 被 matchSetup 鎖在 teamRelative；balanceTool.v21 可覆寫成 legacyMirror 做負對照）。
+  //  C3-1 laneFrame（TD-3A-23，D-1 = A）：v21 規則集另帶 laneFrame "teamRelative"（紅方按路分的 knobs 改成己方視角；
+  //  career.v21／challenge.v21 是正式規則集 ⇒ 被 matchSetup 鎖在 teamRelative；balanceTool.v21 可覆寫成 legacyMirror 做負對照）。
   "career.v21": R({ rulesetId: "career.v21", kind: "production", simVersion: "moba-sim.v21",
     layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
     releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1", "mobaTacticalDirectorV21"] }),
   "balanceTool.v21": R({ rulesetId: "balanceTool.v21", kind: "tool", simVersion: "moba-sim.v21",
     layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
     releaseRequirements: [] }),
+  //  Phase 3a-B T16（正式架構 §3 補充 1 的表；Owner 2026-10-25 決策 6）：技能／被動／曲線 ON、天賦 OFF（Challenge 沒有天賦選擇資料）、
+  //  裝備 OFF（featureFlags 的 Competitive／Challenge 邊界）、佈局 bySeed、組裝順序＝Live、Director core.v1、laneFrame teamRelative
+  //  （順帶修掉 TD-3A-23 的殘留：Challenge 防守方紅方的路線對調）。雙方仍只用合法的靜態模板（legacy／std；不收 binding ⇒
+  //  沒有自訂每時期戰術，那是 3c）。只在旗標 mobaTacticalDirectorV21（＋heroSkillsV1）開啟時由 resolveRulesetForMode 解析出來；
+  //  每一場挑戰的規則集由它記下的模擬版本凍結（challengeRulesetForVersion），旗標日後改動不影響既有挑戰的重播。
+  "challenge.v21": R({ rulesetId: "challenge.v21", kind: "production", simVersion: "moba-sim.v21",
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: false, items: false, tacticIdentity: true, playerStatSides: "both", objectiveLayout: "bySeed", redTactic: "snapshot", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
+    releaseRequirements: ["heroSkillsV1", "mobaTacticalDirectorV21"] }),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
 //  戰術輸入的種類（Phase 3a T9）：每個 ruleset 接受哪幾種 `setup.tactic.<side>.kind`。
@@ -69,15 +76,19 @@ export const TACTIC_KINDS_BY_RULESET = Object.freeze({
   "balanceTool.v20": Object.freeze(["legacy", "std", "binding"]),
   "career.v21": Object.freeze(["legacy", "std", "binding"]),
   "balanceTool.v21": Object.freeze(["legacy", "std", "binding"]),
+  //  T16：Challenge 雙方仍是快照裡選定的靜態模板（legacy）；不收 binding（自訂每時期戰術屬 3c）。
+  "challenge.v21": Object.freeze(["legacy", "std"]),
 });
 //  旗標關閉 ⇒ 對應層關閉（永不強制開啟）。
 //  C3-1：career 模式只有在 flags.mobaTacticalDirectorV21 === true 時改用 career.v21（其餘層的旗標處理完全相同，
 //  releaseRequirements 末尾多列 mobaTacticalDirectorV21）；旗標不是 true ⇒ 與 C3-1 之前逐字相同的 career.v20 輸出。
+//  T16：challenge 模式在 mobaTacticalDirectorV21 與 heroSkillsV1 都是 true 時改用 challenge.v21（整份原樣回傳：它的層是固定的，
+//  沒有要被旗標關掉的布林層——技能要開就必須兩個旗標都開，否則整場回到 challenge.v20）；否則與 T16 之前相同的 challenge.v20。
 export function resolveRulesetForMode({ mode, flags }) {
   const on = (f) => flags?.[f] === true;
-  const director = mode !== "challenge" && on("mobaTacticalDirectorV21");
-  const base = mode === "challenge" ? MATCH_RULESETS["challenge.v20"] : MATCH_RULESETS[director ? "career.v21" : "career.v20"];
-  if (base.rulesetId === "challenge.v20") return base;
+  if (mode === "challenge") return MATCH_RULESETS[on("mobaTacticalDirectorV21") && on("heroSkillsV1") ? "challenge.v21" : "challenge.v20"];
+  const director = on("mobaTacticalDirectorV21");
+  const base = MATCH_RULESETS[director ? "career.v21" : "career.v20"];
   const skills = on("heroSkillsV1");
   const newLayers = { ...base.layers, heroSkills: skills, heroPassives: skills, heroPowerCurve: skills,
     battleTalents: skills && on("heroBattleTalentsV1"), items: on("itemsV1") };
@@ -91,6 +102,13 @@ export function resolveRulesetForMode({ mode, flags }) {
 
   return R({ ...base, layers: newLayers, releaseRequirements: newReqs });
 }
+//  T16：每一場挑戰的規則集由它**記下的模擬版本**決定（ChallengeInstance.simulationVersion；欄位與雜湊都不變）。
+//  新挑戰記下的版本＝建立當下旗標解析出的規則集的 simVersion（challengeSimulationVersionFor）⇒ 第一次跑與日後重播用同一份規則集，
+//  旗標日後改動不會讓既有挑戰換規則。不認得的版本 ⇒ null（runChallenge 照實拒絕）。
+export const CHALLENGE_RULESET_BY_VERSION = Object.freeze({ "moba-sim.v20": "challenge.v20", "moba-sim.v21": "challenge.v21" });
+export const challengeRulesetForVersion = (simVersion) => MATCH_RULESETS[CHALLENGE_RULESET_BY_VERSION[simVersion]] ?? null;
+/** 這組旗標下，新的挑戰快照／挑戰要記下的模擬版本（＝challenge 模式解析出的規則集的 simVersion）。 */
+export const challengeSimulationVersionFor = (flags) => resolveRulesetForMode({ mode: "challenge", flags }).simVersion;
 export function validateRuleset(r) {
   const errors = [];
   if (!r || r.version !== MATCH_RULESET_VERSION) errors.push("version");

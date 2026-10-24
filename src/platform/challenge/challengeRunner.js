@@ -37,7 +37,9 @@
 import { mobaTacticById } from "../contracts/MobaTacticConfig.js";
 import { SNAPSHOT_INPUTS, snapshotCovers } from "../contracts/squadSnapshot.js";
 import { assertSeedFrozen, challengeReplayability } from "../contracts/challengeInstance.js";
-import { MOBA_SIMULATION_VERSION } from "../contracts/simulationVersion.js";
+//  T16：目前版本＝本 build 在正式旗標下的 Challenge 版本；每一場的規則集由它記下的版本凍結（challengeRulesetForVersion）。
+import { CHALLENGE_SIMULATION_VERSION } from "./challengeVersion.js";
+import { challengeRulesetForVersion } from "../contracts/matchRuleset.js";
 import { validateDraftResult } from "./draftResult.js";
 //  Phase 3a Task 5：唯一組裝器與它的 deps（查表是注入的 heroOf，所以用 core 的 builder；見 matchAssemblerDepsCore.js 檔頭）。
 import { assembleMatch } from "../../battle/moba/matchAssembler.js";
@@ -66,7 +68,7 @@ const stageErrors = (stage, errors) => errors.map((e) => ({ code: `${stage}_${e.
  */
 export function runChallenge({
   challenge = null, challengerSnapshot = null, defenderSnapshot = null,
-  currentSimulationVersion = MOBA_SIMULATION_VERSION,
+  currentSimulationVersion = CHALLENGE_SIMULATION_VERSION,
   //  Slice 5：這一場凍結的 Draft，以及英雄查表。
   //  ⚠ 查表**注入**，本檔不 import 英雄庫（396KB data URI，Node verifier 會吃到）。
   draftResult = null, heroOf = null,
@@ -76,6 +78,10 @@ export function runChallenge({
     challengerSnapshot, defenderSnapshot, currentSimulationVersion,
   });
   if (!rep.ok) return { ok: false, result: null, errors: [{ code: "replay", message: rep.reason }] };
+
+  //  ── T16：規則集由這一場記下的模擬版本決定（第一次跑與重播相同；旗標日後改動不影響）──
+  const ruleset = challengeRulesetForVersion(challenge.simulationVersion);
+  if (!ruleset) return { ok: false, result: null, errors: [{ code: "replay", message: `這場使用 ${challenge.simulationVersion} 的模擬語意，沒有對應的挑戰規則集，不可重播` }] };
 
   //  ── 紅線①：seed 只讀不生 ──────────────────────────────────────────────
   const seed = challenge.matchSeed;
@@ -143,6 +149,7 @@ export function runChallenge({
   let assembled;
   try {
     const built = buildChallengeMatchSetup({
+      rulesetId: ruleset.rulesetId,
       seed, opponentKey: challenge.opponentKey ?? null,
       challengerSnapshot, defenderSnapshot,
       use: { loadout: useLoadout, stats: useStats, tactic: useTactic },
