@@ -428,6 +428,14 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("classic.m2", "phases.late.objectiveOrder", "dragon", "no_measured_effect", "contestShare.dragon.late", 27, 0.57),
   ex("classic.m8", "phases.late.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.late", 22, 0),
   ex("classic.m2", "phases.late.objectiveOrder", "towers", "no_measured_effect", "siegeWindowsPerMin.late", 27, 0.6),
+  //  Phase 3a-C5／C6 升級後（2026-10-24 真實性表重測，tacticTruthSim.v6，n=40）：強邊與勝利條件的 n=400 複驗只涵蓋 std ⇒ 弱點模板由 n=40 列決定，只對該模板不提供。
+  //  勝利條件的兩列本來就在 REPLICATION_WITHHELD（不提供）；這裡照結果表逐筆列出。
+  ex("classic.m1", "phases.early.focusLane", "top", "no_measured_effect", "ganksOwnPerMin.top.early", 40, 1.96),
+  ex("classic.m1", "phases.late.focusLane", "top", "unmeasurable", "ganksOwnPerMin.top.late", 19, 0),
+  ex("classic.m2", "phases.late.focusLane", "mid", "no_measured_effect", "ganksOwnPerMin.mid.late", 27, 1.8),
+  ex("classic.m1", "phases.late.focusLane", "bot", "unmeasurable", "ganksOwnPerMin.bot.late", 19, 1.7),
+  ex("classic.m2", "winCondition", "objectiveControl", "no_measured_effect", "contestShare.dragon.early", 40, 0),
+  ex("v2.mid_solo_split", "winCondition", "midSplitPressure", "no_measured_effect", "seatFightEntriesPerMin.b3.mid+late", 40, 1.24),
 ]);
 /**
  * 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。

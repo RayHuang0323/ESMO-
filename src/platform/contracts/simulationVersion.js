@@ -610,7 +610,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  tacticChoiceMapping.js：帶 winCondition＝none 的計畫不再被拒絕（none＝不填任何格）。勝利條件只展開成既有 live 選擇（引擎不認得它），
   //  沒有勝利條件的輸入解析結果逐位元相同 ⇒ 所有既有輸入（含 v20、v21-A 黃金）的模擬行為不變 ⇒ 不是語意變化。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 3d7ee3c4ac59f162 未曾發布；C6 量測在 3d7ee3c4ac59f162 下開始與完成）。
-  "moba-sim.v21": "58d999709c239ca4",
+  //  同日（升級後真實性表重測 tools/fixtures/tactic_truth_3a.json，58d999709c239ca4 下 163 批、0 失敗；舊 119 列逐位元相同）：
+  //  capabilityRegistry.js 的 MEASURED_EXCLUSIONS 照結果表推導加 6 筆弱點模板列（強邊 4、勝利條件 2，只對該模板不提供）。
+  //  這會改變「那幾個模板＋那幾個選擇」的計畫在開局被拿掉與否（勝利條件兩列本來就撤下）；其他輸入不變。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 58d999709c239ca4 未曾發布）；simulationVersion.js 被量測載入 ⇒ 真實性表再整輪重測。
+  "moba-sim.v21": "b37772a2f1777b03",
 });
 
 export const isKnownSimulationVersion = (v) =>

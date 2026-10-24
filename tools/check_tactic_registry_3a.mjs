@@ -259,7 +259,8 @@ for (const t of TEMPLATE_IDS) {
     const structural = offeredChoices(t, o.dimension, [], {}, { withMeasured: false });
     //  勝利條件（量測前審查 F4）：計畫層只要求認得的預設（含 none），展開後再照常驗；提供清單另外要求完整組合。
     //  ⇒ 結構上提供的一定被接受，但接受的不一定提供（例如第二條帶線路時只填得到部分格）；玩家清單少掉的，原因一定是
-    //  勝利條件本身被撤下，或某一個組成格在這個模板被量測排除／複驗撤下（component_not_offered 且結構上能填滿）。
+    //  勝利條件本身被撤下，或勝利條件本身在這個模板被量測排除（量測排除表有這一列），
+    //  或某一個組成格在這個模板被量測排除／複驗撤下（component_not_offered 且結構上能填滿）。
     if (o.dimension === Mapping.WIN_CONDITION_DIM) {
       const dm = Mapping.offeredChoiceDetail(t, o.dimension);
       for (const c of row.choices) {
@@ -269,7 +270,8 @@ for (const t of TEMPLATE_IDS) {
         if (structural.includes(c) && !o.offered.includes(c)) {
           const w = dm.withheld.find((x) => x.choice === c)?.reason;
           const compGone = w === "component_not_offered" && Mapping.WIN_CONDITION_PRESETS[c].some(([d, v]) => Registry.measuredExclusion(t, d, v, "core.v1") || Registry.replicationWithheld(t, d, v));
-          if (!(w === "not_replicated" && Registry.replicationWithheld(t, o.dimension, c)) && !compGone) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:少掉的原因不是撤下或組成格被排除（${w}）`); }
+          const selfExcluded = w === Registry.measuredExclusion(t, o.dimension, c, "core.v1")?.reason;
+          if (!(w === "not_replicated" && Registry.replicationWithheld(t, o.dimension, c)) && !selfExcluded && !compGone) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:少掉的原因不是撤下或組成格被排除（${w}）`); }
         }
       }
       continue;
