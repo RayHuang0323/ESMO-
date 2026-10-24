@@ -9,6 +9,7 @@ const { MOBA_TACTICS, MOBA_TACTIC_VERSION, STANDARD_OPP_TACTIC, validateMobaTact
   await import("../src/platform/contracts/MobaTacticConfig.js");
 const { LogicEngine } = await import("../src/LogicEngine.js");
 const { snapshotToBattleResult } = await import("../src/battle/battleResult.js");
+const { BATTLE_RESULT_VERSION } = await import("../src/platform/contracts/battleResultVersion.js");
 const { PITS, dist } = await import("../src/gameData.js");   // S29：C4b 目標投入度觀測
 
 // ── A. 契約 ────────────────────────────────────────────────────────────────
@@ -188,7 +189,9 @@ ck("BattleResult.tactic 留下相同 tacticId/version", res.tactic?.tacticId ===
 ck("BattleResult.tacticExecution = 引擎統計（blue/red 齊備）", !!res.tacticExecution?.blue && !!res.tacticExecution?.red);
 const res0 = snapshotToBattleResult(run(4242, null), []);
 ck("無戰術 ⇒ BattleResult.tactic/tacticExecution = null（向下相容）", res0.tactic === null && res0.tacticExecution === null);
-ck("BattleResult.v2 結構未變（schema/mode/winner/players 完整）", res.schema === "BattleResult.v2" && res.mode === "moba" && res.players.length === 10);
+//  Phase 3a-B（Owner 2026-10-25）：schema 依正式版本常數驗證。原斷言寫死 "BattleResult.v2"，MOBA v14（6d93a973）升 v3 後就是過期的版本事實
+//  （HEAD／v20 1d0e219／v19 d146e02 三點的 schema 都是 v3）；這不是放寬：仍要求 schema 恰好等於契約目前宣告的版本。
+ck(`BattleResult 結構未變（schema＝${BATTLE_RESULT_VERSION}／mode／winner／players 完整）`, res.schema === BATTLE_RESULT_VERSION && res.mode === "moba" && res.players.length === 10);
 
 // ── D. CS 隔離（S23 流程不受影響）──────────────────────────────────────────
 const csres = fs.readFileSync("src/platform/contracts/CsMatchResult.js", "utf8");
