@@ -89,8 +89,10 @@ async function main() {
   //  C3-2 的時期姿態複驗也是 v21 量的：Owner 2026-10-23 裁定 v20 不得用 v21 證據擴充可用選項（含 C3-2）⇒ 它只在 v21（Director core.v1）
   //  取代 std 列；v20 能選的維度（requires 不需要 Director）其 n=40 列（balanceTool.v20 量的）失敗時，照樣推出 scope "static" 的排除。
   //  Phase 3a-C5R（2026-10-24 Owner 核准升級）：強邊的 n=400 複驗（v21 來源）也取代 std 主要列。
-  const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json", "tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json", "tools/fixtures/phase_options_result_c5r.json"];
-  const V21_ONLY_SOURCES = new Set(["tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json", "tools/fixtures/phase_options_result_c5r.json"]);
+  //  Phase 3a-C6（2026-10-24 Owner 核准前期滾雪球）：勝利條件的 n=400 組合複驗（v21 來源）；檢查臂（check.*）不是 Registry 維度，
+  //  rulesetOfRow(null) 不是 v21 ⇒ 下面的過濾自動把它們排除。
+  const SUPERSEDING = ["tools/fixtures/phase_stance_result_c3_2_rev1.json", "tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json", "tools/fixtures/phase_options_result_c5r.json", "tools/fixtures/phase_options_result_c6.json"];
+  const V21_ONLY_SOURCES = new Set(["tools/fixtures/phase_options_result_c3_3.json", "tools/fixtures/phase_options_result_c4.json", "tools/fixtures/phase_options_result_c5r.json", "tools/fixtures/phase_options_result_c6.json"]);
   const supersededKeys = new Set(SUPERSEDING.flatMap((rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")).rows
     .filter((r) => !V21_ONLY_SOURCES.has(rel) || Plan.rulesetOfRow(Registry.registryRow(r.dimension)) === "balanceTool.v21").map((r) => `${r.dimension}=${r.choice}`)));
   //  只有 std 的主要列會被取代（複驗量的是 std＋那一個時期選擇）。

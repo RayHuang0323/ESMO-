@@ -41,6 +41,8 @@ const SOURCES = [
   { result: "tools/fixtures/phase_options_result_c4.json", registration: "tools/fixtures/phase_options_registration_c4.json" },
   //  Phase 3a-C5R（2026-10-24 升級）：強邊的 n=400 複驗。
   { result: "tools/fixtures/phase_options_result_c5r.json", registration: "tools/fixtures/phase_options_registration_c5r.json" },
+  //  Phase 3a-C6（2026-10-24 升級前期滾雪球）：勝利條件的 n=400 組合複驗。
+  { result: "tools/fixtures/phase_options_result_c6.json", registration: "tools/fixtures/phase_options_registration_c6.json" },
 ];
 const rulesetOfSource = (s) => {
   if (!s.registration) { const f = readJson(s.result); return f.meta?.harnessVersion?.startsWith("tacticTruthSim.") && !f.meta?.ruleset ? "balanceTool.v20" : (f.meta?.ruleset ?? null); }

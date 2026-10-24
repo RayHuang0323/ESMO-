@@ -15,7 +15,7 @@
 // ============================================================================
 import { liveRows, registryRow, PHASE_DIRECTOR } from "../../src/platform/tactics/capabilityRegistry.js";
 import { TACTIC_TEMPLATES, templateById } from "../../src/platform/tactics/tacticTemplates.js";
-import { offeredChoiceDetail, nestedOf, mergeTacticConfig, PHASE_CHOICE_MAPPING, phaseOverridesOf, phaseProjectionOf } from "../../src/platform/tactics/tacticChoiceMapping.js";
+import { offeredChoiceDetail, nestedOf, mergeTacticConfig, PHASE_CHOICE_MAPPING, phaseOverridesOf, phaseProjectionOf, effectiveTacticChoices } from "../../src/platform/tactics/tacticChoiceMapping.js";
 import { toEngineTactic, toEngineTacticIdentity } from "../../src/platform/contracts/MobaTacticConfig.js";
 
 const get = (o, p) => p.split(".").reduce((x, k) => x?.[k], o);
@@ -41,7 +41,9 @@ export function offeredOf(templateId, dimension) {
 export const unitOf = (path) => (path === "knobs.gankInterval" ? 45 : /^knobs\.laneOffset\./.test(path) ? 0.05 : 1);
 //  不經 createTacticPlan／resolveTactic（它們會套用量測排除表，被排除的選擇會被拒絕）；直接合併再投影，與 resolver 的投影同一對函式。
 //  每時期維度（Phase 3a-C）：另外帶 resolver 輸出的 phases[i]（同一個 phaseProjectionOf），deltaFields 是 phases.<i>.… 的路徑。
-const projected = (templateId, choices) => {
+//  勝利條件（Phase 3a-C6）：先展開成組成選擇（與 resolver 同一個 effectiveTacticChoices；沒有勝利條件 ⇒ 原樣），旋鈕差距才量得到。
+const projected = (templateId, rawChoices) => {
+  const choices = effectiveTacticChoices(templateId, [], rawChoices);
   const cfg = mergeTacticConfig(templateById(templateId), [], choices);
   const ov = phaseOverridesOf(Object.fromEntries(Object.entries(choices?.phases ?? {}).map(([p, d]) => [p, Object.fromEntries(Object.entries(d).filter(([k]) => Object.hasOwn(PHASE_CHOICE_MAPPING.rows, `phases.${p}.${k}`)))])));
   const phases = ov.ok ? ov.overrides.map((o) => phaseProjectionOf(cfg, o, { toEngineTactic, toEngineTacticIdentity })) : null;

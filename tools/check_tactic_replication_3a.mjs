@@ -49,7 +49,11 @@ const OPTION_RESULTS = [
   { rel: "tools/fixtures/phase_options_result_c4.json", registration: "tools/fixtures/phase_options_registration_c4.json", seeds: [3401, 3800], rows: 11 },
   //  第五個來源（Phase 3a-C5R，2026-10-24 Owner 核准升級）：每時期強邊 9 列＋快速模式強邊 3 列（quick.*：畫面快捷，不是 Registry 維度）。
   { rel: "tools/fixtures/phase_options_result_c5r.json", registration: "tools/fixtures/phase_options_registration_c5r.json", seeds: [8201, 8600], rows: 12 },
+  //  第六個來源（Phase 3a-C6，2026-10-24 Owner 核准前期滾雪球升級）：勝利條件 3 列＋檢查臂 6 列（check.*：強邊×進攻的交互作用用，不是 Registry 證據）。
+  { rel: "tools/fixtures/phase_options_result_c6.json", registration: "tools/fixtures/phase_options_registration_c6.json", seeds: [4201, 4600], rows: 9 },
 ].map((o) => ({ ...o, fx: readJson(o.rel) }));
+//  檢查臂（check.*）只算判定（P2），不進任何 Registry 表（登記檔 notClaimed.checkArms）。
+const isCheckDim = (d) => String(d).startsWith("check.");
 //  結果檔裡快捷列的 dimension 帶說明（"quick.strongSide (phases.early.focusLane + phases.mid.focusLane)"）⇒ 鍵只取第一段。
 const dimKeyOf = (d) => String(d).split(" ")[0];
 const isPresetDim = (d) => dimKeyOf(d).startsWith("quick.");
@@ -125,8 +129,8 @@ const origKeys = new Set(fx.rows.map(keyOf)), revKeys = new Set(fxB.rows.map(key
 const WA = W.filter((x) => origKeys.has(keyOf(x)));
 const baseProblems = verifyList(WA, fx.rows);
 ck("W1 REPLICATION_WITHHELD 屬於第一份複驗的部分 ＝ 結果檔推出的撤下清單（逐筆相同、不多不少；判定、指標、紅藍 n／rel／z 一致）", baseProblems.length === 0 && WA.length === deriveWithheld(fx.rows).length, baseProblems.slice(0, 3).join(" | "));
-ck("W2 預期的 8 筆（上路帶線、下路進攻、b1 核心、謹慎；前期／中期 scaling 為 Owner 暫緩；後期巴龍／推塔優先沒站住），每一筆都恰好來自其中一份結果檔",
-  J(W.map(keyOf).sort()) === J(["lanes.bot.stance=aggressive", "lanes.top.stance=split", "phases.early.stance=scaling", "phases.late.objectiveOrder=baron", "phases.late.objectiveOrder=towers", "phases.mid.stance=scaling", "risk.tolerance=cautious", "seats.b1.priority=core"])
+ck("W2 預期的 10 筆（上路帶線、下路進攻、b1 核心、謹慎；前期／中期 scaling 為 Owner 暫緩；後期巴龍／推塔優先沒站住；勝利條件控圖運營／中路分推沒站住），每一筆都恰好來自其中一份結果檔",
+  J(W.map(keyOf).sort()) === J(["lanes.bot.stance=aggressive", "lanes.top.stance=split", "phases.early.stance=scaling", "phases.late.objectiveOrder=baron", "phases.late.objectiveOrder=towers", "phases.mid.stance=scaling", "risk.tolerance=cautious", "seats.b1.priority=core", "winCondition=midSplitPressure", "winCondition=objectiveControl"])
   && W.every((x) => [origKeys, revKeys, optKeys].filter((ks) => ks.has(keyOf(x))).length === 1), W.map(keyOf).join(" "));
 //  例外只有一種（跨版本證據隔離，Owner 2026-10-23）：v20 真實性列推出的 scope "static" 排除，可以與 Owner 暫緩（owner_hold，所有模式都撤下）重疊——
 //  兩者來源不同（v20 n=40 量測 vs Owner 裁示），各自由自己的 gate 推導；其他任何重疊都算錯。
@@ -181,7 +185,10 @@ for (const t of TEMPLATE_IDS) for (const row of Registry.liveRows()) {
   if (d0.withheld.some((w) => w.reason === "no_measured_effect" || w.reason === "not_replicated")) structBad.push(`${t}/${row.dimension}:結構清單套用了排除表`);
   for (const c of row.choices) {
     structChecked++;
-    const gone = c !== d0.own && (Registry.measuredExclusion(t, row.dimension, c) !== null || Registry.replicationWithheld(t, row.dimension, c) !== null);
+    let gone = c !== d0.own && (Registry.measuredExclusion(t, row.dimension, c) !== null || Registry.replicationWithheld(t, row.dimension, c) !== null);
+    //  勝利條件：提供清單要求完整組合 ⇒ 某一個組成格在這個模板被量測排除／複驗撤下，整個預設也不提供（component_not_offered）。
+    if (row.dimension === Mapping.WIN_CONDITION_DIM && !gone && d0.offered.includes(c) && !d1.offered.includes(c))
+      gone = d1.withheld.some((w) => w.choice === c && w.reason === "component_not_offered") && Mapping.WIN_CONDITION_PRESETS[c].some(([d, v]) => Registry.measuredExclusion(t, d, v, "core.v1") || Registry.replicationWithheld(t, d, v));
     if (d1.offered.includes(c) !== (d0.offered.includes(c) && !gone)) structBad.push(`${t}/${row.dimension}=${c}:提供清單≠結構清單∖兩張表`);
   }
 }
@@ -198,11 +205,15 @@ for (const t of TEMPLATE_IDS) for (const x of W) {
   const created = createTacticPlan({ templateId: t, choices });
   if (!created.ok) { planBad.push(`${t}/${keyOf(x)}:createTacticPlan 拒絕 ${created.errors.map((e) => e.code).join(",")}`); continue; }
   //  每時期型（Phase 3a-C）需要每時期方針（Director core.v1）才解析得出；比對的是該時期的投影。
-  const phaseRow = Object.hasOwn(Mapping.PHASE_CHOICE_MAPPING.rows, x.dimension);
-  const r = resolveTactic(tacticInputOf({ templateId: t, choices }), {}, phaseRow ? { phases: true } : {});
+  const phaseRow = Object.hasOwn(Mapping.PHASE_CHOICE_MAPPING.rows, x.dimension), wcRow = x.dimension === Mapping.WIN_CONDITION_DIM;
+  const r = resolveTactic(tacticInputOf({ templateId: t, choices }), {}, phaseRow || wcRow ? { phases: true } : {});
   if (!r.ok) { planBad.push(`${t}/${keyOf(x)}:resolver 失敗`); continue; }
   //  撤下前的解析結果＝對照表直接投影（不經提供清單）；resolver 現在的輸出必須逐值相同。
-  if (phaseRow) {
+  //  勝利條件：＝玩家直接選展開後那幾格的解析結果（沒有隱藏加成；W3 同一條等價在 check_win_condition_c6）。
+  if (wcRow) {
+    const want = resolveTactic(tacticInputOf({ templateId: t, choices: Mapping.effectiveTacticChoices(t, [], choices) }), {}, { phases: true });
+    if (!want.ok || J([r.knobs, r.identity, r.phases]) !== J([want.knobs, want.identity, want.phases])) knobBad.push(`${t}/${keyOf(x)}`);
+  } else if (phaseRow) {
     const [, ph, f] = x.dimension.split("."), i = ["early", "mid", "late"].indexOf(ph);
     const ov = Mapping.phaseOverridesOf({ [ph]: { [f]: x.choice } });
     const want = Mapping.phaseProjectionOf(Mapping.mergeTacticConfig(Templates.templateById(t), [], {}), ov.overrides[i], { toEngineTactic, toEngineTacticIdentity });
@@ -308,9 +319,11 @@ console.log("\n§P 第三～五個來源：每時期選擇複驗（C3-3 seeds 18
     && J({ minZ: o.fx.rules.minZ, minRel: o.fx.rules.minRel, minValidPairs: o.fx.rules.minValidPairs }) === J(RULES)
     && readJson(o.registration).seeds?.range === `${o.seeds[0]}-${o.seeds[1]}` && readJson(o.registration).seeds?.n === 400)).map((o) => o.rel);
   ck("P1 結果檔形狀：完整、沒過期、0 失敗、0 儀器不符；登記檔路徑、列數、規則（z ≥ 3、|rel| ≥ 5%、配對 ≥ 200）與登記相同", shapeBad.length === 0, shapeBad.join(" "));
-  const allRows = OPTION_RESULTS.flatMap((o) => o.fx.rows);
-  const vBadP = allRows.filter((r) => verdictP(r) !== r.verdict).map((r) => `${keyOf(r)} ${r.verdict}≠${verdictP(r)}`);
-  ck(`P2 每列的判定能由數字依事前登記規則重算（${allRows.length} 列）`, vBadP.length === 0 && allRows.length === 26, vBadP.join(" | "));
+  const everyRow = OPTION_RESULTS.flatMap((o) => o.fx.rows);
+  const vBadP = everyRow.filter((r) => verdictP(r) !== r.verdict).map((r) => `${keyOf(r)} ${r.verdict}≠${verdictP(r)}`);
+  ck(`P2 每列的判定能由數字依事前登記規則重算（${everyRow.length} 列，含 C6 檢查臂 6 列）`, vBadP.length === 0 && everyRow.length === 35 && everyRow.filter((r) => isCheckDim(r.dimension)).length === 6, vBadP.join(" | "));
+  //  以下的表格比對只看 Registry 維度（檢查臂不是證據）。
+  const allRows = everyRow.filter((r) => !isCheckDim(r.dimension));
   const primP = (r, s) => ({ n: r.claims[0][s].n, rel: r6(r.claims[0][s].rel), z: r6(r.claims[0][s].z) });
   //  只在 v21 量的證據只核准需要 Director 的每時期型；整場選項的 confirmed 列在 REPLICATION_V21_SCOPE_ONLY（不取代 v20 的真實性列）。
   const phaseDim = (d) => Registry.registryRow(d)?.requires === Registry.PHASE_DIRECTOR;
@@ -329,14 +342,16 @@ console.log("\n§P 第三～五個來源：每時期選擇複驗（C3-3 seeds 18
   ck("P4 REPLICATION_WITHHELD 屬於這兩份的部分 ＝ 沒站住的列（not_replicated；後期巴龍 one_sided、後期推塔 insufficient）", sameList(WP, wantWP), WP.map((x) => `${keyOf(x)}:${x.verdict}`).join(" "));
   ck("P3c REPLICATION_PRESET_CONFIRMED ＝ confirmed 的快捷列（快速模式強邊 3 列；逐欄相同）；快捷的兩格每時期強邊都在 REPLICATION_CONFIRMED", sameList(PR, wantPR) && PR.length === 3 && Object.isFrozen(PR)
     && PR.every((x) => ["early", "mid"].every((p) => Registry.REPLICATION_CONFIRMED.some((y) => y.dimension === `phases.${p}.focusLane` && y.choice === x.choice))), PR.map(keyOf).join(" "));
-  ck("P5 四張表（核准、撤下、只在 v21、快捷）合起來恰好覆蓋三份結果檔的每一列、沒有重疊、也不與前兩份來源重疊", CP.length + WP.length + V21.length + PR.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
-    && [...optKeys].every((k) => !origKeys.has(k) && !revKeys.has(k)));
+  ck("P5 四張表（核准、撤下、只在 v21、快捷）合起來恰好覆蓋四份結果檔的每一列（檢查臂除外）、沒有重疊、也不與前兩份來源重疊；檢查臂不在任何一張表", CP.length + WP.length + V21.length + PR.length === allRows.length && CP.every((x) => !WP.some((y) => keyOf(y) === keyOf(x)))
+    && [...optKeys].every((k) => !origKeys.has(k) && !revKeys.has(k))
+    && [Registry.REPLICATION_CONFIRMED, W, V21, PR].every((tb) => tb.every((x) => !isCheckDim(x.dimension))));
+  const bindMetric = (m) => { const p = /^engageDecisionsPerMin\.(early|mid|late)$/.exec(m)?.[1]; return p ? `phaseEngageDecisionsPerMin.${p}` : m; };
   const bindBad = allRows.filter((r) => phaseDim(r.dimension)).filter((r) => {
     const row = Registry.registryRow(r.dimension), claim = row?.gate?.claims?.find((c) => c.choice === r.choice);
     const dir = claim?.direction === "rank" ? (row.gate.rank.indexOf(r.choice) > row.gate.rank.indexOf("standard") ? "up" : "down") : claim?.direction;
-    return claim?.metric !== r.claims[0].metric || dir !== r.claims[0].direction;
+    return claim?.metric !== bindMetric(r.claims[0].metric) || dir !== r.claims[0].direction;
   }).map(keyOf);
-  ck("P6 指標綁定：每時期型的 Registry 宣稱指標與方向＝複驗的主宣稱（同一個指標 id、同方向）", bindBad.length === 0, bindBad.join(" "));
+  ck("P6 指標綁定：每時期型（含勝利條件）的 Registry 宣稱指標與方向＝複驗的主宣稱（同一個指標 id、同方向；複驗儀器的 engageDecisionsPerMin.<p> ＝ G-A7 的 phaseEngageDecisionsPerMin.<p>，同 V7）", bindBad.length === 0, bindBad.join(" "));
   const offerBadP = [];
   for (const x of CP) { const d = Mapping.offeredChoiceDetail("std", x.dimension); if (!d?.offered.includes(x.choice)) offerBadP.push(`std/${keyOf(x)}:confirmed 卻不提供`); }
   for (const x of WP) for (const t of TEMPLATE_IDS) { const d = Mapping.offeredChoiceDetail(t, x.dimension); if (d && d.own !== x.choice && d.offered.includes(x.choice)) offerBadP.push(`${t}/${keyOf(x)}:沒站住卻仍提供`); }

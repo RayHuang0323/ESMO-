@@ -23,6 +23,7 @@ import { applyVariant, variantById } from "../src/platform/mastery/tacticVariant
 import { planProfile, seatMissionFit, coordinationLoad, contradictions, MISSION_POINTS, PROFILE_AXES, SEATS } from "../src/platform/tactics/tacticIndicators.js";
 import { stableStringify } from "../src/platform/contracts/squadSnapshot.js";
 import { stripComments } from "./lib/stripComments.mjs";
+import { WIN_CONDITION_DIM } from "../src/platform/tactics/tacticChoiceMapping.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0, fail = 0;
@@ -136,7 +137,7 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   const screen = read("src/screens/moba/TacticScreen.jsx"), shell = read("src/AppShell.jsx");
   ck("W4 TacticScreen：選項與指標來自 tacticBookView；送出時第四個參數是 binding；換模板會清掉選擇與變體", screen.includes("tacticBookView({") && /onNext\(applied, prep \? buildStrategy : null, talentSelections, binding\)/.test(screen) && /setTemplateId\(id\); setChoices\(\{\}\); setVariantSel\(null\)/.test(screen) && !/CAPABILITY_ROWS|liveRows|MEASURED_EXCLUSIONS/.test(screen));
   ck("W5 TacticScreen：存／刪戰術書只呼叫 store 的公開動作（它們自己存檔）", screen.includes("saveTacticPlan(bookView.plan") && screen.includes("deleteTacticPlan(entry.id)") && !screen.includes("localStorage"));
-  //  V11（Phase 3a-C）：每時期的集結／物件優先只在 v21（Director core.v1）畫出；點下去的計畫要用每時期方針解析（phases:true），
+  //  V11（Phase 3a-C）：每時期的集結／物件優先（＋C5R 強邊、C6 勝利條件，共 10 個需要 core.v1 的維度）只在 v21（Director core.v1）畫出；點下去的計畫要用每時期方針解析（phases:true），
   //  v20（static）下不畫、舊計畫先拿掉；TacticScreen 用開局同一個解析函式決定模式，兩個呼叫點都帶它。
   const reqDims = liveRows().filter((r) => r.requires).map((r) => r.dimension);
   let shownP = 0, clickedP = 0; const badP = [];
@@ -155,8 +156,15 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
         const next = View.tacticBookView({ templateId: id, choices: chosen, tacticalDirector: "core.v1" });
         clickedP++;
         const r = next.ok ? resolveTactic({ kind: "binding", binding: next.binding }, {}, { phases: true }) : null;
-        const idx = ["early", "mid", "late"].indexOf(d.dimension.split(".")[1]);
-        if (!r?.ok || r.phases[idx].knobs === r.knobs && r.phases[idx].identity === r.identity) badP.push(`${id} ${d.dimension}=${c.id} 點了沒有該時期的方針`);
+        if (d.dimension === WIN_CONDITION_DIM) {
+          //  勝利條件（C6 升級 live）：沒有自己的時期；點下去＝解析結果與沒選時不同（展開的格真的生效；逐格等價由 check_win_condition_c6 驗）。
+          const base = View.tacticBookView({ templateId: id, tacticalDirector: "core.v1" });
+          const r0 = resolveTactic({ kind: "binding", binding: base.binding }, {}, { phases: true });
+          if (!r?.ok || !r0?.ok || J([r.knobs, r.identity, r.phases]) === J([r0.knobs, r0.identity, r0.phases])) badP.push(`${id} ${d.dimension}=${c.id} 點了沒有效果`);
+        } else {
+          const idx = ["early", "mid", "late"].indexOf(d.dimension.split(".")[1]);
+          if (!r?.ok || r.phases[idx].knobs === r.knobs && r.phases[idx].identity === r.identity) badP.push(`${id} ${d.dimension}=${c.id} 點了沒有該時期的方針`);
+        }
         const stripped = View.offeredChoicesOnly(id, [], chosen);
         if (J(stripped.choices) !== "{}" || stripped.dropped.length !== 1) badP.push(`${id} ${d.dimension}=${c.id} static 下沒有被拿掉`);
       }
@@ -166,7 +174,7 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   const screenWired = /tacticalDirectorModeOf\(resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\)\)/.test(screenSrc)
     && /offeredChoicesOnly\([^)]*\{ tacticalDirector \}\)/.test(screenSrc) && (screenSrc.match(/tacticBookView\(\{[^\n]*tacticalDirector \}\)/g) ?? []).length === 2;
   ck(`V11 每時期維度（${reqDims.length} 個）：static 下不畫；core.v1 下畫出的（共 ${shownP}）＝tacticBookOptions(core.v1)；每個非預設選項（共 ${clickedP}）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式並傳給兩個呼叫點`,
-    badP.length === 0 && reqDims.length === 9 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
+    badP.length === 0 && reqDims.length === 10 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
 
   //  V11b（Phase 3a-C5R 快捷）：core.v1 下 std 有「強邊（前＋中期）」一列，選項＝兩格強邊都提供的路；點「上路」⇒ 計畫恰好多兩格（前期、中期 focusLane＝top），
   //  兩格的值相同時快捷顯示為選中；點「不指定」⇒ 兩格都清掉；static 下沒有這一列。

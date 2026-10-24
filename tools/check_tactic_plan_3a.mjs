@@ -103,8 +103,27 @@ console.log("\n§R Capability Registry 資料列");
     delete out.knobs.tacticId; delete out.identity.tacticId;
     return J(out);
   };
+  //  勝利條件（Phase 3a-C6 升級 live）：沒有自己的設定欄位，選擇＝展開成組成選擇（resolver 同一個 effectiveTacticChoices）；
+  //  旋鈕組＝展開後的整場 knobs／identity＋三個時期的投影（std 模板上）。
+  const wcSig = (c) => {
+    const eff = PhaseMap.effectiveTacticChoices("std", [], { winCondition: c });
+    const phaseChoices = Object.fromEntries(Object.entries(eff.phases ?? {}).map(([p, d]) => [p, Object.fromEntries(Object.entries(d).filter(([k]) => Object.hasOwn(PhaseMap.PHASE_CHOICE_MAPPING.rows, `phases.${p}.${k}`)))]));
+    const whole = clone(eff);
+    for (const [p, d] of Object.entries(phaseChoices)) for (const k of Object.keys(d)) delete whole.phases[p][k];
+    const cfg = PhaseMap.mergeTacticConfig(Templates.templateById("std"), [], whole);
+    if (!validateMobaTacticConfig(cfg).ok) return null;
+    const ov = PhaseMap.phaseOverridesOf(phaseChoices);
+    if (!ov.ok) return null;
+    return J([sigOf(cfg), ov.overrides.map((o) => { const out = PhaseMap.phaseProjectionOf(cfg, o, { toEngineTactic, toEngineTacticIdentity }); delete out.knobs.tacticId; delete out.identity.tacticId; return out; })]);
+  };
   for (const r of live) {
     const sigs = new Set();
+    if (r.dimension === PhaseMap.WIN_CONDITION_DIM) {
+      for (const c of r.choices) { const sg = wcSig(c); if (sg === null) { unprobed.push(r.dimension); break; } sigs.add(sg); }
+      probed++;
+      if (sigs.size !== r.choices.length) dupSig.push(r.dimension);
+      continue;
+    }
     if (Object.hasOwn(PhaseMap.PHASE_CHOICE_MAPPING.rows, r.dimension)) {
       for (const c of r.choices) { const sg = phaseSig(r.dimension, c); if (sg === null) { unprobed.push(r.dimension); break; } sigs.add(sg); }
       probed++;
@@ -123,7 +142,10 @@ console.log("\n§R Capability Registry 資料列");
   ck(`R3 每個 live 列（${live.length}）都映射得到現行設定欄位`, unprobed.length === 0, unprobed.join(","));
   ck("R3b 每個 live 選項映射後都是合法的 MobaTacticConfig.v1", badCfg.length === 0, badCfg.join(","));
   ck("R3c 同一個 live 維度的每個選項，解析出的引擎旋鈕組都不同（沒有假選擇）", dupSig.length === 0, dupSig.join(","));
-  ck("R3d basis 欄位路徑存在於現行設定", live.every((r) => get(mobaTacticById("m1"), r.basis.replace(/\(.*\)$/, "")) !== undefined));
+  //  勝利條件的 basis 是記號 "winCondition(preset)"（它不寫任何設定欄位；組成維度的 basis 各自在這裡驗）。
+  ck("R3d basis 欄位路徑存在於現行設定（勝利條件＝預設記號、且現行設定沒有這個欄位）", live.every((r) => r.dimension === PhaseMap.WIN_CONDITION_DIM
+    ? r.basis === "winCondition(preset)" && get(mobaTacticById("m1"), "winCondition") === undefined
+    : get(mobaTacticById("m1"), r.basis.replace(/\(.*\)$/, "")) !== undefined));
   ck("R3e 對照組：兩個選項解析成相同旋鈕組時 R3c 會抓到（planted: late.aggressive ≡ late.scaling）", (() => {
     const a = baseCfg(), b = baseCfg(); a.macro.lateGame = "aggressive"; b.macro.lateGame = "scaling";   // 直接設欄位（resolver 不提供 aggressive）
     return sigOf(a) === sigOf(b);
@@ -140,11 +162,13 @@ console.log("\n§R Capability Registry 資料列");
       "phases.early.grouping", "phases.mid.grouping", "phases.late.grouping",
       "phases.early.objectiveOrder", "phases.mid.objectiveOrder", "phases.late.objectiveOrder",
       //  Phase 3a-C5R（2026-10-24 Owner 核准）：每時期強邊，同樣只在 v21 規則集可用。
-      "phases.early.focusLane", "phases.mid.focusLane", "phases.late.focusLane"]));
-  const SPEC_DESIGN = ["winCondition", "teamfight.style", "teamfight.engager", "teamfight.focusTarget", "teamfight.peelFor", "risk.comeback",
+      "phases.early.focusLane", "phases.mid.focusLane", "phases.late.focusLane",
+      //  Phase 3a-C6（2026-10-24 Owner 核准前期滾雪球）：勝利條件（只填未指定欄位的預設組合），同樣只在 v21 規則集可用。
+      "winCondition"]));
+  const SPEC_DESIGN = ["teamfight.style", "teamfight.engager", "teamfight.focusTarget", "teamfight.peelFor", "risk.comeback",
     "comms.shotcaller", "comms.secondCaller", "jungle.route", "lanes.top.wave", "lanes.mid.wave", "lanes.bot.wave",
     "phases.early.tradePolicy", "phases.mid.tradePolicy", "phases.late.tradePolicy",
-    //  每時期的集結／物件優先（C3-3／C4）、強邊（C5R，2026-10-24）已由 n=400 紅藍複驗升級 live（R-10），不在這張表。
+    //  每時期的集結／物件優先（C3-3／C4）、強邊（C5R，2026-10-24）、勝利條件（C6，2026-10-24）已由 n=400 紅藍複驗升級 live（R-10），不在這張表。
   ];
   ck("R5 規格 §4.1 標 * 或無旋鈕的鍵都是 design（不被提供）", SPEC_DESIGN.every((k) => Registry.registryRow(k)?.status === "design" && !Registry.isLiveChoice(k, "aggressive")));
   ck("R6 查詢 API：未知鍵／原型鍵／非字串 ⇒ null／false",
@@ -665,11 +689,11 @@ if (Plan) {
     [null, undefined, {}, "x"].every((v) => rej({ templateId: "std", choices: { bogus: v } }, E.UNKNOWN_CHOICE_KEY) && rej({ templateId: "std", choices: { jungle: { bogus: v } } }, E.UNKNOWN_CHOICE_KEY)
       && rej({ templateId: "std", choices: { risk: { nope: v }, jungle: { focus: "farm" } } }, E.UNKNOWN_CHOICE_KEY)));
   ck("P3r2 design 鍵不論值是 null／undefined／{} 都以 design_choice 拒絕（頂層枝與巢狀葉）",
-    [null, undefined].every((v) => rej({ templateId: "std", choices: { teamfight: { style: v } } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: v } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { comms: v } }, E.DESIGN_CHOICE))
-    && rej({ templateId: "std", choices: { comms: {} } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { winCondition: {} } }, E.DESIGN_CHOICE)
+    [null, undefined].every((v) => rej({ templateId: "std", choices: { teamfight: { style: v } } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { jungle: { route: v } } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { comms: v } }, E.DESIGN_CHOICE))
+    && rej({ templateId: "std", choices: { comms: {} } }, E.DESIGN_CHOICE) && rej({ templateId: "std", choices: { teamfight: { style: {} } } }, E.DESIGN_CHOICE)
     && KEYS.every((r) => { const ch = {}; r.dimension.split(".").reduce((n, k, i, a) => (n[k] = i === a.length - 1 ? null : {}, n[k]), ch); return rej({ templateId: "std", choices: ch }, E.DESIGN_CHOICE); }));
   ck("P3r3 live 鍵的 null／undefined／空枝仍然＝沒有選擇，且雜湊與缺項相同（標準形保證不變）",
-    [{ risk: { tolerance: null } }, { risk: { tolerance: undefined } }, { risk: {} }, { seats: {} }, { jungle: { focus: null, tempo: undefined } }, { lanes: { top: {} } }, { phases: { early: { stance: null } } }].every((c) => { const r = mk({ templateId: "std", choices: c }); return r.ok && tacticPlanHash(r.plan) === tacticPlanHash(mk({ templateId: "std" }).plan); }));
+    [{ risk: { tolerance: null } }, { risk: { tolerance: undefined } }, { risk: {} }, { seats: {} }, { jungle: { focus: null, tempo: undefined } }, { lanes: { top: {} } }, { phases: { early: { stance: null } } }, { winCondition: null }].every((c) => { const r = mk({ templateId: "std", choices: c }); return r.ok && tacticPlanHash(r.plan) === tacticPlanHash(mk({ templateId: "std" }).plan); }));
   ck("P3r4 對照組：合法 live 值仍然被接受（先驗鍵不會誤殺）", mk({ templateId: "std", choices: { risk: { tolerance: "bold" }, jungle: { focus: null } } }).ok);
 
   //  P4：plan 裡沒有任何 number

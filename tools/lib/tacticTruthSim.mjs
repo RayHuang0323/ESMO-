@@ -36,6 +36,9 @@
 //   objApps／objContested.<k>[ph]  物件每次出現（依出現那一刻的時期）＋那次出現期間 exec.<k>Contests 有沒有增加（＝有英雄進坑 9 單位內）。
 //   siegeOpensPh[ph]           同 siegeOpens，依時期分桶。
 //   ganksOwnPh.<top|mid|bot>[ph]  打野出發抓人（exec.<world>Ganks 的增量）換成**己方路名**（gameData.sideRelativeLane），依時期分桶（C5）。
+//   ── v6（2026-10-24，Phase 3a-C6 勝利條件升級 live；只**新增**欄位與指標，上面每一個計數的算法都沒動）──
+//   seatFightsPh[seat][ph]  同 seatFights（席位進入團戰），依該 tick 的時期分桶；指標 seatFightEntriesPerMin.<seat>.<p 或 p+p>
+//                           ＝這些時期合計的進入次數 ÷ 合計分鐘數（與 phaseStudySim.v2 逐字同定義；中路分推的宣稱指標）。
 //   規則集：spec.ruleset（缺少 ⇒ balance runner 預設 balanceTool.v20，與 v4 逐字相同）；需要 Director core.v1 的維度由量測計畫指定 balanceTool.v21。
 //  純函式部分（metricValue／pairStats）不碰引擎，gate 的快速模式會用它重算 z。
 // ============================================================================
@@ -44,7 +47,7 @@ import { fileURLToPath } from "node:url";
 import { createTacticPlan } from "../../src/platform/tactics/tacticPlan.js";
 import { bindTacticPlanToCurrentVersions } from "../../src/battle/moba/tactics/tacticResolver.js";
 
-export const TRUTH_SIM_VERSION = "tacticTruthSim.v5";
+export const TRUTH_SIM_VERSION = "tacticTruthSim.v6";
 export const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DT = 0.5;
 const CAP_S = 3600;
@@ -90,6 +93,7 @@ export async function runTruthMatch(seed, spec = {}) {
     engagesPh: [0, 0, 0], engageStartsPh: [0, 0, 0],
     joinGoGeneralStartsPh: [0, 0, 0], siegeOpensPh: [0, 0, 0], ganksOwnPh: { top: [0, 0, 0], mid: [0, 0, 0], bot: [0, 0, 0] },
     objApps: { dragon: [0, 0, 0], baron: [0, 0, 0] }, objContested: { dragon: [0, 0, 0], baron: [0, 0, 0] },
+    seatFightsPh: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
   });
   const S = { blue: zero(), red: zero() };
   //  v5：參團擲骰的觀察包裝（與 phaseStudySim 同一段邏輯；呼叫原方法、原樣回傳）。時期＝這一 tick 結束時刻的時期。
@@ -122,7 +126,7 @@ export async function runTruthMatch(seed, spec = {}) {
     for (const p of players) {
       const s = S[p.side], q = prev.get(p.id), seatN = Number(p.id.slice(1));
       if (p.state === "團戰!" && q.state !== "團戰!") {
-        s.fights[ph]++; s.seatFights[seatN - 1]++;
+        s.fights[ph]++; s.seatFights[seatN - 1]++; s.seatFightsPh[seatN - 1][ph]++;
         for (const key of ["dragon", "baron"]) if (dist(p.pos, e._pitOf(key)) <= OBJ_RADIUS) s.objFights[key]++;
       }
       if (p.state === "入侵" && q.state !== "入侵") s.invasions++;
@@ -178,10 +182,17 @@ export async function runTruthMatch(seed, spec = {}) {
 // ── 指標 ──────────────────────────────────────────────────────────────────
 const per = (n, secs) => (secs >= 60 ? n / (secs / 60) : null);
 const PHASE_PARAMS = ["early", "mid", "late"];
+const PHASE_SPANS = ["early", "mid", "late", "early+mid", "mid+late", "early+mid+late"];
 /** 指標表：id（或 id 前綴＋參數）→ (side 紀錄, 整場紀錄) → 數字或 null（不適用）。 */
 export const METRICS = Object.freeze({
   fightEntriesPerMin: { params: ["early", "mid", "late"], of: (s, r, ph) => { const i = ["early", "mid", "late"].indexOf(ph); return per(s.fights[i], r.phaseSecs[i]); } },
-  seatFightEntriesPerMin: { params: ["b1", "b2", "b3", "b4", "b5"], of: (s, r, seat) => per(s.seatFights[Number(seat.slice(1)) - 1], r.duration) },
+  //  v6：<seat>＝整場（原定義不變）；<seat>.<p 或 p+p>＝那些時期合計（與 phaseStudySim.v2 同定義）。
+  seatFightEntriesPerMin: { params: ["b1", "b2", "b3", "b4", "b5"].flatMap((b) => [b, ...PHASE_SPANS.map((ps) => `${b}.${ps}`)]), of: (s, r, sp) => {
+    const [seat, ps] = sp.split("."), si = Number(seat.slice(1)) - 1;
+    if (ps === undefined) return per(s.seatFights[si], r.duration);
+    const idx = ps.split("+").map((p) => PHASE_PARAMS.indexOf(p));
+    return per(idx.reduce((n, i) => n + s.seatFightsPh[si][i], 0), idx.reduce((n, i) => n + r.phaseSecs[i], 0));
+  } },
   ganksPerMin: { params: [], of: (s, r) => per(s.exec.topGanks + s.exec.midGanks + s.exec.botGanks, r.duration) },
   invasionsActed: { params: [], of: (s) => s.invasions },
   supportRoamsPerMin: { params: [], of: (s, r) => per(s.exec.supportRoams, r.duration) },

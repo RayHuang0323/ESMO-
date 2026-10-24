@@ -604,7 +604,13 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v21 未發布 ⇒ 同版號重新登記（舊值 70a8af6428b02a03 未曾發布）。
   //  同日（C6 量測前審查 F3／F4）：winConditionFill 跟著 withMeasured、plan 層不再以「完整組合」拒絕帶勝利條件的計畫、戰術書的其他維度以展開後的選擇算提供清單；
   //  勝利條件仍是 design ⇒ 所有既有輸入的模擬行為不變 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 30b44a789b4c7548 未曾發布）。
-  "moba-sim.v21": "3d7ee3c4ac59f162",
+  //  2026-10-24（C6 正式量測 tools/fixtures/phase_options_result_c6.json 後，Owner 核准前期滾雪球升為 v21 候選 live）：
+  //  capabilityRegistry.js：winCondition 改 live（requires Director core.v1 ⇒ v20／static 開局拿掉，量測前審查 F5）、REPLICATION_CONFIRMED 加
+  //  前期滾雪球、REPLICATION_WITHHELD 加控圖運營（insufficient）與中路分推（one_sided）；新增 WIN_CONDITION_COMPONENTS（資料說明）。
+  //  tacticChoiceMapping.js：帶 winCondition＝none 的計畫不再被拒絕（none＝不填任何格）。勝利條件只展開成既有 live 選擇（引擎不認得它），
+  //  沒有勝利條件的輸入解析結果逐位元相同 ⇒ 所有既有輸入（含 v20、v21-A 黃金）的模擬行為不變 ⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 3d7ee3c4ac59f162 未曾發布；C6 量測在 3d7ee3c4ac59f162 下開始與完成）。
+  "moba-sim.v21": "58d999709c239ca4",
 });
 
 export const isKnownSimulationVersion = (v) =>

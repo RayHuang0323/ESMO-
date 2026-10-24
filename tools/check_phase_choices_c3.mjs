@@ -115,15 +115,17 @@ const diffKeys = (a, b) => { const A = flat(a), B = flat(b); return [...new Set(
   //  G1：binding 輸入帶 phaseChoices ⇒ 拒絕；計畫裡放每時期維度（design）⇒ createTacticPlan 拒絕（design_choice）。
   const PLAN = await imp("src/platform/tactics/tacticPlan.js");
   //  Phase 3a-C3-3／C4 起集結、物件優先已 live（R-10）；強邊（focusLane）自 C5R（2026-10-24 Owner 核准）起也 live。
-  //  仍是 design 的時期維度：資源交換（tradePolicy，3b）⇒ 拒絕；勝利條件在組合複驗前也是 design。
+  //  仍是 design 的時期維度：資源交換（tradePolicy，3b）⇒ 拒絕。勝利條件 2026-10-24 升級 live（C6）：認得的預設 ⇒ 接受（被撤下的預設也接受＝已存計畫不失效，
+  //  只是不再提供挑選）；不認得的值 ⇒ 結構驗證拒絕。
   const planBad = PLAN.createTacticPlan({ templateId: "std", choices: { phases: { mid: { tradePolicy: "top" } } } });
-  const planWc = PLAN.createTacticPlan({ templateId: "std", choices: { winCondition: "objectiveControl" } });
+  const planWc = PLAN.createTacticPlan({ templateId: "std", choices: { winCondition: "earlySnowball" } });
+  const planWcBad = PLAN.createTacticPlan({ templateId: "std", choices: { winCondition: "teamfightScaling" } });
   const planLive = PLAN.createTacticPlan({ templateId: "std", choices: { phases: { mid: { grouping: "group" } } } });
   const planFocus = PLAN.createTacticPlan({ templateId: "std", choices: { phases: { mid: { focusLane: "top" } } } });
-  ck("R10 binding 輸入帶 phaseChoices ⇒ 拒絕；玩家計畫選仍是 design 的時期維度（資源交換）或勝利條件 ⇒ createTacticPlan 拒絕；已 live 的（中期集結、中期強邊）⇒ 接受",
+  ck("R10 binding 輸入帶 phaseChoices ⇒ 拒絕；玩家計畫選仍是 design 的時期維度（資源交換）⇒ createTacticPlan 拒絕；不在列舉的勝利條件（後期團戰）⇒ 拒絕；已 live 的（中期集結、中期強邊、前期滾雪球）⇒ 接受",
     R.resolveTactic({ kind: "binding", binding: {}, phaseChoices: {} }, {}, { phases: true, allowPhaseChoices: true }).errors?.[0]?.code === "phase_choices_not_allowed"
-    && !planBad.ok && planBad.errors.some((x) => /design/.test(x.code)) && !planWc.ok && planWc.errors.some((x) => /design/.test(x.code)) && planLive.ok && planFocus.ok,
-    [planBad, planWc, planFocus].map((x) => x.errors?.map((e) => e.code).join(",") || "ok").join(" | "));
+    && !planBad.ok && planBad.errors.some((x) => /design/.test(x.code)) && planWc.ok && !planWcBad.ok && planLive.ok && planFocus.ok,
+    [planBad, planWc, planWcBad, planFocus].map((x) => x.errors?.map((e) => e.code).join(",") || "ok").join(" | "));
   //  G4／C2：取較高者——模板本來就 ≥ 對照表的值 ⇒ 不改、同一個參照；手寫的更高值不被拉低。
   const m4 = R.mergeTacticConfig(T.TACTIC_TEMPLATES["classic.m4"], [], {});
   const rm4 = R.resolveTactic({ kind: "legacy", config: m4, phaseChoices: { mid: { objectiveOrder: "dragon" } } }, {}, { phases: true, allowPhaseChoices: true });

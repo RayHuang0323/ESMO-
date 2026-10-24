@@ -72,6 +72,8 @@ const design = (dimension, note, choices = []) => Object.freeze({
 });
 
 const PHASES = ["early", "mid", "late"];
+//  勝利條件列的位置記號（它的欄位要從組成維度的列取聯集，那些列在表裡）；CAPABILITY_ROWS 凍結前換成真正的列。
+const WIN_CONDITION_PLACEHOLDER = Object.freeze({ dimension: "winCondition" });
 /** 每時期型的列需要的規則集層（matchRuleset 的 layers.tacticalDirector）；格式 "<層>:<值>"。 */
 export const PHASE_DIRECTOR = "tacticalDirector:core.v1";
 /** 這一列在「Director 模式＝mode」的規則集下可用嗎（requires 為 null ⇒ 永遠可用；mode 缺少 ≡ "static"）。 */
@@ -288,10 +290,13 @@ const ROWS = [
     },
   })),
 
+  //  勝利條件（Phase 3a-C6，2026-10-24 Owner 核准前期滾雪球升為 v21 候選 live）：既有 live 選擇的預設組合
+  //  （tacticChoiceMapping.js WIN_CONDITION_PRESETS），只填玩家沒選的維度；引擎與 Director 不認得它（resolver 只看展開後的選擇）。
+  //  證據：tools/fixtures/phase_options_result_c6.json（seeds 4201–4600）：前期滾雪球兩側 confirmed；控圖運營 insufficient（取得有、到場的後期龍未過）、
+  //  中路分推 one_sided ⇒ REPLICATION_WITHHELD（不提供）。主張只到戰術行為（接戰、前期龍到場），不宣稱勝率或經濟。後期團戰不在列舉。
+  //  resolverFields／engineReads／deltaFields：預設實際用到的組成值會改到的欄位（列在下方 WIN_CONDITION_COMPONENTS 那一段；gate 驗證它們都屬於組成維度）。
+  WIN_CONDITION_PLACEHOLDER,
   //  ── design：規格列了，但現行引擎沒有可解析的旋鈕 ────────────────────────────
-  //  勝利條件（Phase 3a-C6）：既有選擇的預設組合（tacticChoiceMapping.js WIN_CONDITION_PRESETS），只填玩家沒選的維度。
-  //  事前登記的新 seeds 紅藍組合複驗通過之前維持 design；後期團戰不在列舉（前期 scaling owner_hold、後期巴龍沒站住）。
-  design("winCondition", "勝利條件是既有選擇的預設組合；組合本身尚未以新 seeds 紅藍複驗（C6 事前登記）", ["none", "earlySnowball", "objectiveControl", "midSplitPressure"]),
   ...PHASES.flatMap((p) => [
     design(`phases.${p}.tradePolicy`, "資源交換屬 3b（規格標 *）；引擎沒有對應旋鈕"),
   ]),
@@ -309,6 +314,34 @@ const ROWS = [
   design("comms.secondCaller", "副 Call 屬 3b（規格標 *）"),
 ];
 
+/** 勝利條件預設會寫到的維度（check_win_condition_c6 驗證它＝WIN_CONDITION_PRESETS 用到的維度集合）。 */
+export const WIN_CONDITION_COMPONENTS = Object.freeze(["phases.early.stance", "phases.mid.stance", "phases.early.objectiveOrder", "phases.mid.objectiveOrder",
+  "phases.late.objectiveOrder", "phases.mid.grouping", "phases.late.grouping", "lanes.mid.stance"]);
+{
+  //  欄位只列「預設實際用到的組成值」會改到的（不是組成維度的整個聯集：預設沒用到前期推塔、後期巴龍／推塔）。
+  //  check_tactic_registry_3a 驗：每一個都屬於某個組成維度、在結構清單下真的被某個預設改到（F4／F4b）、預設改到的都在清單裡（F3）。
+  ROWS[ROWS.indexOf(WIN_CONDITION_PLACEHOLDER)] = live("winCondition", ["none", "earlySnowball", "objectiveControl", "midSplitPressure"], "winCondition(preset)", [], {
+    requires: PHASE_DIRECTOR,
+    resolverFields: ["identity.phaseEngage.0", "identity.phaseJoin.0", "identity.phaseEngage.1", "identity.phaseJoin.1", "phases.0.knobs.dragonJoin",
+      "phases.1.knobs.baronJoin", "phases.1.identity.siegeBias", "phases.1.knobs.laneOffset.top", "phases.1.knobs.laneOffset.mid", "phases.1.knobs.laneOffset.bot",
+      "phases.2.knobs.dragonJoin", "phases.1.knobs.joinFight", "phases.2.knobs.joinFight",
+      "knobs.laneOffset.mid", "knobs.gankWeights.mid", "knobs.splitLane", "knobs.splitPush"],
+    engineReads: ["phaseEngage", "phaseJoin", "dragonJoin", "baronJoin", "siegeBias", "laneOffset", "joinFight", "gankWeights", "splitLane", "splitPush"],
+    gate: {
+      //  宣稱＝C6 事前登記的主宣稱（同一個量法；engageDecisionsPerMin.early ↔ G-A7 的 phaseEngageDecisionsPerMin.early，同 C3-2 的 V7 綁定）。
+      claims: [
+        { choice: "earlySnowball", metric: "phaseEngageDecisionsPerMin.early", direction: "up" },
+        { choice: "objectiveControl", metric: "contestShare.dragon.early", direction: "up" },
+        { choice: "midSplitPressure", metric: "seatFightEntriesPerMin.b3.mid+late", direction: "down" },
+      ],
+      deltaFields: ["identity.phaseEngage.0", "identity.phaseJoin.0", "identity.phaseEngage.1", "identity.phaseJoin.1", "phases.0.knobs.dragonJoin",
+        "phases.1.knobs.baronJoin", "phases.1.identity.siegeBias", "phases.2.knobs.dragonJoin", "phases.1.knobs.joinFight", "phases.2.knobs.joinFight", "knobs.laneOffset.mid"],
+      why: "勝利條件只是把幾個已驗證的選擇一次填好（玩家自己選的格優先），沒有自己的旋鈕；量的是組合後的戰術行為："
+        + "前期滾雪球＝前期接戰決策（同時期姿態的計數）；控圖＝前期龍到場；中路分推＝中路席位在中後期進入團戰的次數變少。"
+        + "n=400 組合複驗另有分組宣稱（接戰開始、物件取得、圍塔），見 tools/fixtures/phase_options_result_c6.json。",
+    },
+  });
+}
 export const CAPABILITY_ROWS = Object.freeze(ROWS);
 const BY_KEY = new Map(ROWS.map((r) => [r.dimension, r]));
 
@@ -431,6 +464,11 @@ export const REPLICATION_WITHHELD = deepFreeze([
   //  後期推塔優先 insufficient（幅度過 5 % 但 z 未達 3）⇒ 不提供；不放大係數（原因假設見 review/tactic-book-3a/C4_物件優先_結果解讀.md）。
   rw("phases.late.objectiveOrder", "baron", "one_sided", "contestShare.baron.late", { n: 209, rel: 0.096459, z: 2.293164 }, { n: 209, rel: 0.142357, z: 3.902204 }),
   rw("phases.late.objectiveOrder", "towers", "insufficient", "siegeWindowsPerMin.late", { n: 236, rel: 0.057889, z: 1.717821 }, { n: 236, rel: 0.073891, z: 2.864628 }),
+  //  Phase 3a-C6（tools/fixtures/phase_options_result_c6.json，seeds 4201–4600）：數字照抄主宣稱（第一條）；判定看全部宣稱——
+  //  控圖運營的主宣稱（前期龍到場）有過，沒過的是到場組的後期龍（備用指標 contestShare.dragon.mid+late，z 2.82／2.96）⇒ insufficient；
+  //  中路分推的牽制（中路席位參戰減少）只有藍方過 ⇒ one_sided。兩者維持不提供（Owner 2026-10-24：不得一併開放）。
+  rw("winCondition", "objectiveControl", "insufficient", "contestShare.dragon.early", { n: 400, rel: 0.148318, z: 8.262517 }, { n: 400, rel: 0.088106, z: 5.447723 }),
+  rw("winCondition", "midSplitPressure", "one_sided", "seatFightEntriesPerMin.b3.mid+late", { n: 400, rel: -0.088436, z: -4.175141 }, { n: 400, rel: -0.045783, z: -2.072841 }),
 ]);
 /** 這個（模板, 維度, 選擇）被複驗撤下嗎？回傳該列或 null。 */
 export const replicationWithheld = (template, dimension, choice) =>
@@ -477,6 +515,9 @@ export const REPLICATION_CONFIRMED = deepFreeze([
   rc("phases.late.focusLane", "top", "ganksOwnPerMin.top.late", { n: 232, rel: 0.809449, z: 7.447643 }, { n: 232, rel: 0.851799, z: 6.827106 }),
   rc("phases.late.focusLane", "mid", "ganksOwnPerMin.mid.late", { n: 232, rel: 0.797343, z: 4.511476 }, { n: 232, rel: 0.884226, z: 4.870049 }),
   rc("phases.late.focusLane", "bot", "ganksOwnPerMin.bot.late", { n: 232, rel: 0.928504, z: 7.537307 }, { n: 232, rel: 0.693154, z: 5.954301 }),
+  //  Phase 3a-C6（tools/fixtures/phase_options_result_c6.json，seeds 4201–4600）：勝利條件「前期滾雪球」接戰與前期龍到場兩組、紅藍兩側 confirmed；
+  //  Owner 2026-10-24 核准升為 v21 候選 live。⚑ 只報告：紅方前期經濟 z 3.60（側偏風險，正式發布前直接驗證）；不宣稱勝率。
+  rc("winCondition", "earlySnowball", "engageDecisionsPerMin.early", { n: 400, rel: 0.155596, z: 13.854808 }, { n: 400, rel: 0.14247, z: 12.704293 }),
 ]);
 /**
  * 預設組合的複驗（不是 Registry 維度，只是畫面一次寫多個維度的快捷）：Phase 3a-C5R 的「快速模式強邊」＝同時選前期與中期的強邊。

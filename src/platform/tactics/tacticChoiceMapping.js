@@ -487,7 +487,8 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     //  或自己選了第二條帶線路，計畫仍然合法，只是那幾格以玩家為準（量測前審查 F4）。
     const wcLeaf = leavesOf(choices).find(([d]) => d === WIN_CONDITION_DIM);
     if (wcLeaf) {
-      if (!Object.hasOwn(WIN_CONDITION_PRESETS, wcLeaf[1])) return [err(E.CHOICE_NOT_OFFERED, `choices.${WIN_CONDITION_DIM}`, `${WIN_CONDITION_DIM}=${wcLeaf[1]} 沒有預設組合`)];
+      //  none＝本來的選擇（不填任何格；2026-10-24 升級 live 時補上：之前帶 none 的計畫會被當成沒有預設組合而拒絕）。
+      if (wcLeaf[1] !== "none" && !Object.hasOwn(WIN_CONDITION_PRESETS, wcLeaf[1])) return [err(E.CHOICE_NOT_OFFERED, `choices.${WIN_CONDITION_DIM}`, `${WIN_CONDITION_DIM}=${wcLeaf[1]} 沒有預設組合`)];
       choices = effectiveChoices(tpl.templateId, overlayIds, choices);
     }
     const merged = mergeConfig(tpl, overlayIds, choices);

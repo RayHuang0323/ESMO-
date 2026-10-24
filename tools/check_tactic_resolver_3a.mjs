@@ -120,7 +120,11 @@ console.log("\n§M CHOICE_MAPPING（選擇 → 契約欄位，唯一一份）");
 {
   //  Phase 3a-C：每時期型的 live 列住在 PHASE_CHOICE_MAPPING（另一張對照，M1p 驗）；本段的整場檢查只看整場列。
   const PM = Choice.PHASE_CHOICE_MAPPING.rows;
-  const M = R.CHOICE_MAPPING, live = Registry.liveRows().filter((r) => !Object.hasOwn(PM, r.dimension));
+  //  勝利條件（Phase 3a-C6 升級 live）不在任何一張對照表：它只展開成其他維度的選擇，由 check_win_condition_c6 驗（W1–W9）；這裡驗它真的不在對照表（M1w）。
+  const M = R.CHOICE_MAPPING, live = Registry.liveRows().filter((r) => !Object.hasOwn(PM, r.dimension) && r.dimension !== Choice.WIN_CONDITION_DIM);
+  ck("M1w 勝利條件 live、需要 Director core.v1，且不在整場或每時期對照表（沒有自己的設定欄位）",
+    Registry.registryRow(Choice.WIN_CONDITION_DIM)?.status === "live" && Registry.registryRow(Choice.WIN_CONDITION_DIM).requires === Registry.PHASE_DIRECTOR
+    && !Object.hasOwn(M.rows, Choice.WIN_CONDITION_DIM) && !Object.hasOwn(PM, Choice.WIN_CONDITION_DIM));
   const phaseLive = Registry.liveRows().filter((r) => Object.hasOwn(PM, r.dimension));
   //  覆寫欄位（強邊＝投影時讀的欄位）的唯一一份在 Choice.phaseTouchedFieldsOf。Phase 3a-C5R（2026-10-24）起強邊也 live ⇒ 9 列。
   const patchKeys = (row) => Choice.phaseTouchedFieldsOf(row);
@@ -243,7 +247,8 @@ console.log("\n§G G-A3：binding ≡ v20 兩個投影");
 }
 
 //  Phase 3a-C：每時期型的 live 列不經 applyChoice（不改整場設定），§X／§W 的整場矩陣只看整場列；每時期型由 §XP 獨立驗。
-const wholeLiveRows = () => Registry.liveRows().filter((r) => !Object.hasOwn(Choice.PHASE_CHOICE_MAPPING.rows, r.dimension));
+//  勝利條件同樣不經 applyChoice（展開後的組成選擇才經過），由 check_win_condition_c6 驗。
+const wholeLiveRows = () => Registry.liveRows().filter((r) => !Object.hasOwn(Choice.PHASE_CHOICE_MAPPING.rows, r.dimension) && r.dimension !== Choice.WIN_CONDITION_DIM);
 
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n§X 矩陣：21 模板 × live 維度 × 每一對提供的選擇（ruling B）");
