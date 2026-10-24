@@ -409,9 +409,10 @@ try {
   } finally { delete process.env.ESMO_BALANCE_RULESET; }
   const want = new Map(fixture.cases.map((c) => [c.id, c]));
   //  C3-1 laneFrame：預期改變的 id 只來自事前登記檔（不在這裡另寫一份清單）。
-  const EXPECTED_CHANGED = new Set(LF.C3_EXPECTED_CHANGED);
-  ck(`G1b 事前登記的改變清單：${EXPECTED_CHANGED.size} 個 id（登記總數 ${LF.C3_TOTAL_EXPECTED}），全部是本段重跑的 live／runner 案`,
-    EXPECTED_CHANGED.size === LF.C3_TOTAL_EXPECTED && [...EXPECTED_CHANGED].every((id) => specs.some((s) => s.id === id)));
+  //  Phase 3a-B T15：再加上 AI 教練的事前登記（tools/fixtures/ai_coach_registration_3aB.json）——比對用兩份的聯集。
+  const EXPECTED_CHANGED = new Set(LF.V21_EXPECTED_CHANGED);
+  ck(`G1b 事前登記的改變清單：laneFrame ${LF.C3_EXPECTED_CHANGED.length} 個（登記總數 ${LF.C3_TOTAL_EXPECTED}）＋ AI 教練 ${LF.AI_COACH_EXPECTED_CHANGED.length} 個 ＝ 聯集 ${EXPECTED_CHANGED.size} 個 id，全部是本段重跑的 live／runner 案`,
+    LF.C3_EXPECTED_CHANGED.length === LF.C3_TOTAL_EXPECTED && [...EXPECTED_CHANGED].every((id) => specs.some((s) => s.id === id)));
   let callsDiff = 0, withMatch = 0, coreOk = 0, r4Ok = 0;
   for (const spec of specs) {
     const w = want.get(spec.id), g = observed.find((o) => o.id === spec.id), run = failedRun.get(spec.id);
@@ -419,7 +420,7 @@ try {
     const inputDiffs = run ? [] : [...(((w.bindingHash ?? null) !== (g.bindingHash ?? null)) ? [`bindingHash ${w.bindingHash} -> ${g.bindingHash}`] : []),
       ...(L.stableStringify(w.params) !== L.stableStringify(g.params) ? ["params differ"] : [])];
     if (EXPECTED_CHANGED.has(spec.id))
-      ck(`G ${spec.id}　登記的紅方不對稱案：v21 規則集（teamRelative）下 digest／streamHash／resultHash 至少一欄改變；輸入（params／bindingHash）不變`,
+      ck(`G ${spec.id}　登記的改變案（${LF.C3_EXPECTED_CHANGED.includes(spec.id) ? "紅方不對稱 teamRelative" : ""}${LF.C3_EXPECTED_CHANGED.includes(spec.id) && LF.AI_COACH_EXPECTED_CHANGED.includes(spec.id) ? "＋" : ""}${LF.AI_COACH_EXPECTED_CHANGED.includes(spec.id) ? "AI 教練紅方" : ""}）：v21 規則集下 digest／streamHash／resultHash 至少一欄改變；輸入（params／bindingHash）不變`,
         !run && diffs.length > 0 && inputDiffs.length === 0, run ?? (diffs.length ? diffs.join("; ") : "三欄都沒變") + (inputDiffs.length ? `; ${inputDiffs.join("; ")}` : ""));
     else
       ck(`G ${spec.id}　v21 規則集下 digest＋streamHash＋resultHash＝fixture`, !run && diffs.length === 0 && inputDiffs.length === 0, [...(run ? [run] : diffs), ...inputDiffs].join("; "));
@@ -434,7 +435,7 @@ try {
   }
   {
     const scope = specs.map((s) => want.get(s.id));
-    const cmp = LF.compareChangedSet(scope, observed);
+    const cmp = LF.compareChangedSet(scope, observed, LF.V21_EXPECTED_CHANGED);
     ck(`G1c 改變集合**恰好**＝登記的 ${EXPECTED_CHANGED.size} 個（多出 ${cmp.unexpected.length}、缺少 ${cmp.missing.length}、未跑 ${cmp.notRun.length}）；其餘 ${cmp.identical} 案逐位元相同`,
       cmp.ok && cmp.identical === specs.length - EXPECTED_CHANGED.size, `多出 [${cmp.unexpected.join(", ")}] 缺少 [${cmp.missing.join(", ")}]`);
   }

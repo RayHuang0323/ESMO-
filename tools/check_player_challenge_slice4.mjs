@@ -251,7 +251,8 @@ ck("⑥ 對照組沒有注入選角（usedInputs 誠實）",
 // ══════════════════════════════════════════════════════════════════════════
 console.log("\n── ⑦ 歷史挑戰：跨版本必須明確拒絕，不得靜默重算 ──");
 {
-  const { MOBA_SIMULATION_VERSION } = await import("../src/platform/contracts/simulationVersion.js");
+  //  Phase 3a-B T16（版本事實）：挑戰記下的是 Challenge 目前的模擬版本（旗標關＝v20，與正式站相同），不是整個 build 的候選版本。
+  const { CHALLENGE_SIMULATION_VERSION: MOBA_SIMULATION_VERSION } = await import("../src/platform/challenge/challengeVersion.js");
   store().publishDefenseSnapshot("m1", { heroProgress: FRESH });
   const s2 = store().startFixtureChallenge("drill_mirror", { tacticId: "m1", heroProgress: FRESH });
   store().runChallengeById(s2.challengeId);

@@ -372,11 +372,12 @@ if (STATIC_ONLY) {
     }
   } finally { delete process.env.ESMO_BALANCE_RULESET; }
   ck(`C3 全部重跑成功（${observed.length}/${specs.length}）`, failed.length === 0, failed.join(" | "));
-  const cmp = LF.compareChangedSet(scope, observed);
+  //  Phase 3a-B T15：career.v21 的紅方改用 AI 教練 ⇒ 改變集合以 laneFrame 與 AI 教練兩份事前登記的聯集比對（laneFrame 的 9 個仍逐一要求改變）。
+  const cmp = LF.compareChangedSet(scope, observed, LF.V21_EXPECTED_CHANGED);
   console.log(`ℹ C3 改變的案例（${cmp.changed.length}）：${cmp.changed.join("、")}`);
   for (const id of LF.C3_EXPECTED_CHANGED) ck(`C3 登記案 ${id} 在 v21 規則集下改變（digest／streamHash／resultHash 至少一欄）`, cmp.changed.includes(id), cmp.diffsOf(id).join("; "));
-  ck(`C3 改變集合**恰好**＝登記的 ${LF.C3_EXPECTED_CHANGED.length} 個（多出 ${cmp.unexpected.length}、缺少 ${cmp.missing.length}）；其餘 ${cmp.identical} 案三欄逐位元相同`,
-    cmp.ok && cmp.identical === scope.length - LF.C3_EXPECTED_CHANGED.length, `多出 [${cmp.unexpected.join(", ")}] 缺少 [${cmp.missing.join(", ")}]`);
+  ck(`C3 改變集合**恰好**＝登記的 ${LF.V21_EXPECTED_CHANGED.length} 個（laneFrame ${LF.C3_EXPECTED_CHANGED.length} ∪ AI 教練 ${LF.AI_COACH_EXPECTED_CHANGED.length}；多出 ${cmp.unexpected.length}、缺少 ${cmp.missing.length}）；其餘 ${cmp.identical} 案三欄逐位元相同`,
+    cmp.ok && cmp.identical === scope.length - LF.V21_EXPECTED_CHANGED.length, `多出 [${cmp.unexpected.join(", ")}] 缺少 [${cmp.missing.join(", ")}]`);
   //  notChanging 的明列 id（前綴＋:s<seed>；clarifications.enumerationSources）必須在「相同」那一邊。
   const notChangingIds = REG.gates.regression.C3.notChanging.filter((s) => s.startsWith("bind-red:"));
   const hits = notChangingIds.map((p) => scope.filter((c) => new RegExp(`^${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:s\\d+$`).test(c.id)).map((c) => c.id));

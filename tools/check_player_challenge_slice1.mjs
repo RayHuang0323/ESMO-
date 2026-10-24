@@ -32,6 +32,9 @@ import {
 import {
   MOBA_SIMULATION_VERSION, KNOWN_SIMULATION_VERSIONS, canReplay, isKnownSimulationVersion,
 } from "../src/platform/contracts/simulationVersion.js";
+//  Phase 3a-B T16（版本事實）：快照與挑戰記下的是 Challenge 目前的模擬版本（旗標關＝moba-sim.v20，與正式站相同；旗標開＝v21），
+//  不再是整個 build 的 MOBA_SIMULATION_VERSION。判準不變：記下的＝目前的、不同就不可重播。
+import { CHALLENGE_SIMULATION_VERSION } from "../src/platform/challenge/challengeVersion.js";
 import {
   SNAPSHOT_AUTHORITY, PUBLISH_REASONS, publishDefensiveSnapshot,
   publishThrottle, validatePublishRequest, normalizeCombatStats, COMBAT_STAT_KEYS,
@@ -90,7 +93,7 @@ const snapA = pubA.snapshot;
 ck("① schema 正確", snapA?.schema === SQUAD_SNAPSHOT_VERSION, snapA?.schema);
 ck("① 帶簽發者標記", snapA?.issuedBy === SNAPSHOT_AUTHORITY.id, snapA?.issuedBy);
 ck("① 帶 issuedAt", Number.isFinite(snapA?.issuedAt), String(snapA?.issuedAt));
-ck("① 帶 simulationVersion", snapA?.simulationVersion === MOBA_SIMULATION_VERSION, snapA?.simulationVersion);
+ck("① 帶 simulationVersion（＝Challenge 目前版本）", snapA?.simulationVersion === CHALLENGE_SIMULATION_VERSION, snapA?.simulationVersion);
 ck("① 宣告 capturedInputs（涵蓋範圍寫進快照本身）",
   JSON.stringify(snapA?.capturedInputs) === JSON.stringify([...SLICE1_CAPTURED_INPUTS]),
   (snapA?.capturedInputs ?? []).join(","));
@@ -248,7 +251,7 @@ ck("③ runner 原始碼不含任何亂數呼叫（seed 只讀不生）",
 // ══════════════════════════════════════════════════════════════════════════
 console.log("\n── ④ simulationVersion ──");
 
-ck("④ challenge 記錄了 simulationVersion", ch1.challenge.simulationVersion === MOBA_SIMULATION_VERSION);
+ck("④ challenge 記錄了 simulationVersion（＝Challenge 目前版本）", ch1.challenge.simulationVersion === CHALLENGE_SIMULATION_VERSION);
 ck("④ 目前版本在已知清單裡", isKnownSimulationVersion(MOBA_SIMULATION_VERSION));
 ck("④ 未記錄版本 ⇒ 不可重播", !canReplay(undefined).ok);
 ck("④ 不明版本 ⇒ 不可重播", !canReplay("moba-sim.v999").ok);
@@ -262,11 +265,11 @@ ck("④ 拒絕原因是可直接顯示的中文",
 ck("④ 版本相同 ⇒ 可重播", canReplay(MOBA_SIMULATION_VERSION).ok);
 ck("④ 舊版 challenge 一律不可重播（跨版本不假裝算得出同一結果）",
   !challengeReplayability({ ...ch1.challenge, simulationVersion: "moba-sim.v0" },
-    { challengerSnapshot: snapA, defenderSnapshot: snapDef, currentSimulationVersion: MOBA_SIMULATION_VERSION }).ok);
+    { challengerSnapshot: snapA, defenderSnapshot: snapDef, currentSimulationVersion: CHALLENGE_SIMULATION_VERSION }).ok);
 ck("④ 引用錯快照 ⇒ 明確報「快照不符」，不與版本問題混為一談",
   /快照與這場記錄的不符/.test(challengeReplayability(ch1.challenge, {
     challengerSnapshot: snapDef, defenderSnapshot: snapDef,
-    currentSimulationVersion: MOBA_SIMULATION_VERSION,
+    currentSimulationVersion: CHALLENGE_SIMULATION_VERSION,
   }).reason ?? ""));
 ck("④ 不做 migration framework（原始碼明說）",
   /不做 migration framework/.test(read("src/platform/contracts/simulationVersion.js")));

@@ -20,6 +20,14 @@ export const C3_FIELDS = Object.freeze([...C3.comparedFields]);
 export const C3_EXPECTED_CHANGED = Object.freeze(C3.changedSetMustEqualExactly
   .filter((x) => x.fixture === "tools/fixtures/match_golden_v21a.json").map((x) => x.id));
 export const C3_TOTAL_EXPECTED = C3.totalExpected;
+/**
+ * Phase 3a-B T15：AI 教練讓 career.v21 的紅方改用教練計畫 ⇒ 另一份事前登記（tools/fixtures/ai_coach_registration_3aB.json，實作前 commit）
+ * 列出 v21-A fixture 裡**恰好**再多改變的 live 案。重跑 v21-A 的 gate 以兩份登記的**聯集**比對（同一份 fixture、同樣三欄）。
+ */
+export const AI_COACH_REGISTRATION = Object.freeze(JSON.parse(fs.readFileSync(path.join(ROOT, "tools", "fixtures", "ai_coach_registration_3aB.json"), "utf8")));
+export const AI_COACH_EXPECTED_CHANGED = Object.freeze(AI_COACH_REGISTRATION.goldenExpectedChanges.changedSetMustEqualExactly.map((x) => x.id));
+/** 兩份登記的聯集（career.v21 重跑 v21-A 時應改變的全部 id）。 */
+export const V21_EXPECTED_CHANGED = Object.freeze([...new Set([...C3_EXPECTED_CHANGED, ...AI_COACH_EXPECTED_CHANGED])]);
 
 /**
  * 改變集合比對（純函式）。
