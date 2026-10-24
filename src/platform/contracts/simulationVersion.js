@@ -216,6 +216,12 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   //    static 模式＝設定值原樣回傳，但改它（例如階段界線、identity 反查）就會改結果 ⇒ 必須在清單。
   //    它 import 的 tacticalDirective.js 只供 directive() 契約視圖用，不在引擎熱路徑上 ⇒ C2 不收（C3 接上動態模式時再評估）。
   "src/battle/moba/tactics/tacticalDirector.js",
+  //  ── 2026-10-25（Phase 3a-B T15，moba-sim.v21 候選）：AI 教練 v1 ─────────────────────────────────────
+  //  · career.v21（redTactic aiCoachV1）的紅方計畫在組裝時由它從對手隊伍推導（liveMatchSetup.buildLiveMatchSetup）：
+  //    改它的規則表＝同一份 live 輸入（同一個對手）組出不同的紅方 binding ⇒ 必須在清單。
+  //    （platform/challenge/challengeVersion.js 不收：它只決定**新**挑戰記下哪個版本，同 snapshotAuthority.js 的判準；
+  //     既有挑戰由記下的版本經 matchRuleset.challengeRulesetForVersion 決定規則集，那一段在清單內。）
+  "src/platform/tactics/aiCoach.js",
 ]);
 
 /**
@@ -614,7 +620,16 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  capabilityRegistry.js 的 MEASURED_EXCLUSIONS 照結果表推導加 6 筆弱點模板列（強邊 4、勝利條件 2，只對該模板不提供）。
   //  這會改變「那幾個模板＋那幾個選擇」的計畫在開局被拿掉與否（勝利條件兩列本來就撤下）；其他輸入不變。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 58d999709c239ca4 未曾發布）；simulationVersion.js 被量測載入 ⇒ 真實性表再整輪重測。
-  "moba-sim.v21": "b37772a2f1777b03",
+  //  2026-10-25（Phase 3a-B P1；Owner 2026-10-25 核准開工，所有 P1 語意變更合併登記一次）：
+  //  ① T16 challenge.v21（matchRuleset.js 新規則集＋旗標解析＋challengeRulesetForVersion；challengeRunner／challengeMatchSetup 依挑戰記下的
+  //     版本選規則集）：旗標關 ⇒ 新挑戰記 moba-sim.v20、跑 challenge.v20，與正式站逐位元相同（challenge setup 12/12）；旗標開 ⇒ challenge.v21。
+  //  ② T15 AI 教練 v1（aiCoach.js 加入本清單；career.v21 的 redTactic 改 aiCoachV1）：career.v21 有 AI 對手的 live 輸入紅方改用教練計畫
+  //     （事前登記 tools/fixtures/ai_coach_registration_3aB.json：v21-A 恰好 6 案改變）；career.v20、balanceTool.v20／v21 不變。
+  //  ③ 後期上／中／下強邊改回 design（capabilityRegistry.js：REPLICATION_CONFIRMED → REPLICATION_WITHHELD owner_hold）：提供清單少了這三個，
+  //     帶著它們的已存計畫照舊解析（同控圖運營）；其他輸入不變。
+  //  ④ liveMatchSetup.js 多回傳 droppedChoices（畫面提示用，不進 setup）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 b37772a2f1777b03 未曾發布）；matchRuleset.js 被量測載入 ⇒ 真實性表必須在語意凍結後整輪重測（先跑預演批次）。
+  "moba-sim.v21": "e3acf891023937e9",
 });
 
 export const isKnownSimulationVersion = (v) =>
