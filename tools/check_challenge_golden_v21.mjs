@@ -28,8 +28,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = path.join(ROOT, "tools/fixtures/challenge_golden_v21.json");
 const V21 = "moba-sim.v21";
 //  錄製出處（重錄＝必須在這裡看得見地改兩個常數）。
-const PINNED_GIT_HEAD = "UNRECORDED";
-const PINNED_FINGERPRINT = "UNRECORDED";
+const PINNED_GIT_HEAD = "ae3c9e470a8d98b5ec221c3de4ae4780c255ed6e";
+const PINNED_FINGERPRINT = "e3acf891023937e9";
 let pass = 0, fail = 0;
 const ck = (l, ok, n = "") => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}${n ? `　${n}` : ""}`); };
 const sha = (s) => createHash("sha256").update(s).digest("hex").slice(0, 16);
