@@ -60,9 +60,14 @@ const R4_TIMES = [0, 479.9, 480, 959.9, 960, 2000, 3600];
 //  teamRelative 下紅方「應該」拿到的物件內容：gameData.js 的映射（世界路 L 的值＝己方路 sideRelativeLane("red", L) 的值；
 //  splitLane 用 worldLaneForSide）。獨立於 Director 的實作重算，用來核對 Director 的轉換結果。
 const { worldLaneForSide, sideRelativeLane } = await import("../src/gameData.js");
+//  Phase 3a-B：補上 C5 加進 LANE_KEYED_KNOBS 的 gankFocusLane（值型，同 splitLane）。以前紅方從不帶強邊，漏了也看不出來；
+//  AI 教練的紅方計畫會帶 ⇒ 模型必須與 Director 宣告的欄位完全相同（下面 G5b 檢查，防止再漂移）。
+const EXPECTED_RED_FIELDS = ["laneOffset", "gankWeights", "splitLane", "gankFocusLane"];
 const expectedWorldRed = (k) => {
   const keyed = (o) => Object.fromEntries(["top", "mid", "bot"].map((L) => [L, o[sideRelativeLane("red", L)]]));
-  return { ...k, laneOffset: keyed(k.laneOffset), gankWeights: keyed(k.gankWeights), splitLane: k.splitLane == null ? k.splitLane : worldLaneForSide("red", k.splitLane) };
+  const value = (v) => (v == null ? v : worldLaneForSide("red", v));
+  return { ...k, laneOffset: keyed(k.laneOffset), gankWeights: keyed(k.gankWeights), splitLane: value(k.splitLane),
+    ...(Object.prototype.hasOwnProperty.call(k, "gankFocusLane") ? { gankFocusLane: value(k.gankFocusLane) } : {}) };
 };
 {
   const orig = LogicEngine.prototype.configureMatch;
@@ -72,16 +77,23 @@ const expectedWorldRed = (k) => {
       const a = args[0] ?? {};
       const D = this.director, saved = this.t;
       const teamRelative = D.laneFrame === "teamRelative";
-      const redRef = D.knobs("red");
+      //  Phase 3a-B T15：career.v21 的紅方改由 AI 教練排計畫，可能帶每時期選擇（例：前期滾雪球、前期強邊）⇒ 紅方的方針隨時期不同。
+      //  R-4 對紅方改成「逐時期」比對：時期 p 的旋鈕＝a.phases.red[p].knobs 的世界路名轉換、凍結、同一時期內每次同一參照、identity＝該時期的；
+      //  紅方三個時期是同一份（靜態模板，T15 之前的所有案例）時，這就退化成原本的「整場同一參照」，嚴格度不變。
+      const redRefByPhase = new Map();
       let sameRef = true;
       for (const t of R4_TIMES) {
         this.t = t;
         for (const s of ["blue", "red"]) {
           const wantI = D.hasIdentity() ? (a.identity?.[s] ?? null) : null;
           if (s === "red" && teamRelative) {
-            //  R-4（teamRelative）：紅方＝轉換結果、每次同一參照、凍結；identity 以交給引擎的那一份反查仍是紅方的。
-            if (D.knobs(s) !== redRef || !Object.isFrozen(redRef) || J(redRef) !== J(expectedWorldRed(a[s]))
-              || D.identity(s) !== wantI || D.identityOfKnobs(D.knobs(s)) !== wantI) sameRef = false;
+            //  R-4（teamRelative）：紅方＝轉換結果、同一時期每次同一參照、凍結；identity 以交給引擎的那一份反查仍是紅方的。
+            const ph = D.phase(t), redPh = a.phases?.red?.[ph] ?? null;
+            const wantRedI = D.hasIdentity() ? (redPh ? (redPh.identity ?? null) : wantI) : null;
+            const ref = D.knobs(s);
+            if (!redRefByPhase.has(ph)) redRefByPhase.set(ph, ref);
+            if (ref !== redRefByPhase.get(ph) || !Object.isFrozen(ref) || J(ref) !== J(expectedWorldRed(redPh ? redPh.knobs : a[s]))
+              || D.identity(s) !== wantRedI || D.identityOfKnobs(ref) !== wantRedI) sameRef = false;
           } else if (D.knobs(s) !== a[s] || D.identity(s) !== wantI || D.identityOfKnobs(a[s]) !== wantI) sameRef = false;
         }
       }
@@ -291,9 +303,13 @@ try {
   const omit = (o, ...ks) => { const rest = { ...o }; for (const k of ks) delete rest[k]; return rest; };
   //  C3-1 laneFrame 起 v21 的層另帶 laneFrame "teamRelative"（只有這兩個 v21 新鍵；其餘層與 v20 逐字相同）。
   const V21_KEYS = ["tacticalDirector", "laneFrame"];
-  ck("RS1 career.v21＝career.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative、simVersion moba-sim.v21、正式；releaseRequirements＝v20 的＋mobaTacticalDirectorV21",
+  //  Phase 3a-B T15（事前登記 tools/fixtures/ai_coach_registration_3aB.json）：career.v21 的 redTactic 改成 aiCoachV1（career.v20 仍是 styleTemplate）；
+  //  其餘層與 v20 逐字相同的要求不變。balanceTool.v21 的 redTactic 仍是 std（RS2 原樣）。
+  const C21_KEYS = [...V21_KEYS, "redTactic"];
+  ck("RS1 career.v21＝career.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋redTactic aiCoachV1（T15）、simVersion moba-sim.v21、正式；releaseRequirements＝v20 的＋mobaTacticalDirectorV21",
     c21.kind === "production" && c21.simVersion === "moba-sim.v21" && c21.layers.tacticalDirector === "core.v1" && c21.layers.laneFrame === "teamRelative"
-    && L.stableStringify(omit(c21.layers, ...V21_KEYS)) === L.stableStringify(c20.layers)
+    && c21.layers.redTactic === "aiCoachV1" && c20.layers.redTactic === "styleTemplate"
+    && L.stableStringify(omit(c21.layers, ...C21_KEYS)) === L.stableStringify(omit(c20.layers, "redTactic"))
     && J(c21.releaseRequirements) === J([...c20.releaseRequirements, "mobaTacticalDirectorV21"]) && RS.validateRuleset(c21).ok);
   ck("RS2 balanceTool.v21＝balanceTool.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative、工具、不需旗標",
     b21.kind === "tool" && b21.layers.tacticalDirector === "core.v1" && b21.layers.laneFrame === "teamRelative" && L.stableStringify(omit(b21.layers, ...V21_KEYS)) === L.stableStringify(b20.layers)
@@ -329,10 +345,16 @@ try {
   ck("RS7 旗標開 ⇒ career.v21（其餘層照旗標關閉；releaseRequirements 末尾多列 mobaTacticalDirectorV21），每一種都通過 validateRuleset 與 createMatchSetup",
     combos.every((f) => { const r = RS.resolveRulesetForMode({ mode: "career", flags: { ...f, mobaTacticalDirectorV21: true } });
       const r20 = RS.resolveRulesetForMode({ mode: "career", flags: f });
-      return r.rulesetId === "career.v21" && r.layers.tacticalDirector === "core.v1" && r.layers.laneFrame === "teamRelative" && L.stableStringify(omit(r.layers, ...V21_KEYS)) === L.stableStringify(r20.layers)
+      return r.rulesetId === "career.v21" && r.layers.tacticalDirector === "core.v1" && r.layers.laneFrame === "teamRelative" && r.layers.redTactic === "aiCoachV1"
+        && L.stableStringify(omit(r.layers, ...C21_KEYS)) === L.stableStringify(omit(r20.layers, "redTactic"))
         && J(r.releaseRequirements) === J([...r20.releaseRequirements, "mobaTacticalDirectorV21"]) && Object.isFrozen(r) && v(r).ok
         && createMatchSetup({ ruleset: r, seed: 1, meta: { seedSource: "local" } }).ok; }));
-  ck("RS8 challenge 模式不讀這個旗標（開了仍是 challenge.v20；沒有 challenge.v21，D-16）", RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true } }).rulesetId === "challenge.v20");
+  //  Phase 3a-B T16（Owner 2026-10-25 決策 6）：challenge.v21 出現了（D-16 結案）。旗標關 ⇒ 仍是 challenge.v20（正式站照舊，RS6b 雜湊不變）；
+  //  旗標開＋技能旗標開 ⇒ challenge.v21；只開 Director、技能關 ⇒ challenge.v20（challenge.v21 的技能層是固定的，不能被關成半套）。
+  ck("RS8 challenge 模式：正式旗標 ⇒ challenge.v20；旗標開（技能旗標開）⇒ challenge.v21；旗標開但技能關 ⇒ challenge.v20",
+    RS.resolveRulesetForMode({ mode: "challenge", flags: FEATURE_FLAGS }).rulesetId === "challenge.v20"
+    && RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true } }).rulesetId === (FEATURE_FLAGS.heroSkillsV1 === true ? "challenge.v21" : "challenge.v20")
+    && RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true, heroSkillsV1: false } }).rulesetId === "challenge.v20");
   const setupCodes = (r) => { const x = createMatchSetup({ ruleset: r, seed: 1, meta: { seedSource: "local" } }); return x.ok ? [] : x.errors.map((e) => `${e.code}@${e.field}`); };
   //  career.v20＋core.v1 沒列旗標時先被 RS-1 擋（ruleset_invalid@ruleset）；補上旗標後仍被層鍵鎖定擋下。
   const c20With = (m, reqs = c20.releaseRequirements) => ({ ...c20, layers: { ...c20.layers, tacticalDirector: m }, releaseRequirements: reqs });
@@ -440,6 +462,10 @@ try {
       cmp.ok && cmp.identical === specs.length - EXPECTED_CHANGED.size, `多出 [${cmp.unexpected.join(", ")}] 缺少 [${cmp.missing.join(", ")}]`);
   }
   ck(`G4 有 configureMatch 的案（${withMatch}）全部以 core.v1、帶 phases 鍵與 laneFrame:"teamRelative" 執行；沒有的案也沒有被多呼叫（${coreOk}/${specs.length}）`, coreOk === specs.length && failedRun.size === 0);
+  {
+    const { LANE_KEYED_KNOBS } = await import("../src/battle/moba/tactics/tacticalDirector.js");
+    ck("G5b 本檔的紅方世界路名模型涵蓋的欄位＝Director 的 LANE_KEYED_KNOBS（不多不少）", JSON.stringify([...EXPECTED_RED_FIELDS].sort()) === JSON.stringify(Object.keys(LANE_KEYED_KNOBS).sort()), Object.keys(LANE_KEYED_KNOBS).join(","));
+  }
   ck(`G5 G-AC1 ③（真實對局；R-4 的 laneFrame 形式）：configureMatch 之後 t∈{${R4_TIMES.join(",")}}：藍方 knobs／identity／identityOfKnobs 與設定物件同參照；紅方＝世界路名轉換、同一參照、凍結、identity 不變（${r4Ok}/${specs.length}）`, r4Ok === specs.length);
   console.log(`ℹ G-AC1 ② 計數（資訊；預期不同）：configure 序列雜湊不同 ${callsDiff}/${specs.length} 案（＝有 configureMatch 的 ${withMatch} 案）；setup 雜湊不同 ${setupDiff}/${specs.length} 案（規則集不同）`);
   ck(`G6 configure 序列只在有 configureMatch 的案不同（差異來自 phases／laneFrame 鍵與規則集，不多不少：${callsDiff}＝${withMatch}）；setup 雜湊每案都不同（${setupDiff}/${specs.length}）`,

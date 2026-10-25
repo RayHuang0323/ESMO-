@@ -13,6 +13,9 @@
 //       玩家再自己點其中一格 ⇒ 那一格以玩家為準、標記消失（R-8），其他被填的格不變
 //    Q  快速強邊：點「下路」⇒ 前期、中期強邊都選下路；與積極姿態同時選用 ⇒ 計畫合法、binding＝Node 算的
 //    L  390 與 1366 都沒有橫向溢出；選項觸控大小足夠
+//    T  Phase 3a-B T13：三步驟（預設停在戰術書）、① 情報（測試分頁沒有場次 ⇒ 標準對手）、③ 確認頁的「確認上場」送出與「開始載入」同一份 binding
+//    S  Owner 2026-10-25 決策 4：載入含已不提供選項（後期強邊，Owner 暫緩）的已存計畫 ⇒ 過濾提示＋「將另存一份不含上述選項的計畫，原計畫保留」；
+//       過濾後等於另一份已存計畫 ⇒ 重複提示、不能另存；戰術書已滿 ⇒ 已滿提示、不能存（測完把戰術書清空）
 //    E  page error 0、console error 0
 //  ⚠ chrome.evaluate 的字串裡不能有反引號。
 // ============================================================================
@@ -102,8 +105,9 @@ const result = await runGate({
     const stdView = tacticBookView({ templateId: "std", tacticalDirector: MODE });
     const domDims = await ev("return JSON.stringify([...document.querySelectorAll('#tb-host [data-testid^=\"tb-dim-\"]')].map(e=>e.getAttribute('data-testid').slice(7)).sort());");
     const viewDims = stdView.dimensions.map((d) => d.dimension).sort();
-    ck("O2 std 的 DOM 維度＝view-model；含每時期強邊（前／中／後期）、快速強邊、勝利條件", J(domDims) === J(viewDims)
-      && ["phases.early.focusLane", "phases.mid.focusLane", "phases.late.focusLane", QUICK_STRONG_SIDE, "winCondition"].every((d) => domDims?.includes(d)), J(domDims));
+    //  Phase 3a-B（Owner 2026-10-25 決策 1）：後期強邊改回 design（owner_hold）⇒ 不在 DOM；前期／中期強邊與快速強邊照舊。
+    ck("O2 std 的 DOM 維度＝view-model；含前／中期強邊、快速強邊、勝利條件；後期強邊不在（Owner 暫緩）", J(domDims) === J(viewDims)
+      && ["phases.early.focusLane", "phases.mid.focusLane", QUICK_STRONG_SIDE, "winCondition"].every((d) => domDims?.includes(d)) && !domDims?.includes("phases.late.focusLane"), J(domDims));
     ck("O3 勝利條件只提供「前期滾雪球」（控圖運營、中路分推維持不提供；後期團戰不在列舉）",
       (await has("tb-choice-winCondition-earlySnowball")) && !(await has("tb-choice-winCondition-objectiveControl")) && !(await has("tb-choice-winCondition-midSplitPressure")) && !(await has("tb-choice-winCondition-teamfightScaling")));
     ck("O4 複驗撤下的每時期選擇不在 DOM（後期巴龍優先、後期推塔優先）", !(await has("tb-choice-phases.late.objectiveOrder-baron")) && !(await has("tb-choice-phases.late.objectiveOrder-towers")));
@@ -149,6 +153,48 @@ const result = await runGate({
     ck("Q2 強邊（下路）＋前期／中期積極同時選用 ⇒ 計畫合法（沒有被拒或拿掉）、送出的 binding＝Node 算的、以每時期方針解析得出",
       v4.ok && J(sent4?.binding) === J(v4.binding) && r4.ok && r4.phases[0].knobs.gankFocusLane !== undefined, `${sent4?.binding?.planHash} vs ${v4.binding?.planHash}`);
     ck("L1[d] 1366 沒有橫向溢出", (await overflow()) <= 0, String(await overflow()));
+
+    // ── T 三步驟（Phase 3a-B T13）─────────────────────────────────────────
+    const stepOf = () => ev("const b=document.querySelector('#tb-host [data-testid^=\"tb-step-\"][aria-current=\"step\"]'); return JSON.stringify(b?b.getAttribute('data-testid'):null);");
+    const bookSent = await next();
+    ck("T1 三步驟列存在，預設停在「戰術書」", (await has("tb-steps")) && (await stepOf()) === "tb-step-book", String(await stepOf()));
+    await click(tid("tb-step-intel")); await sleep(400);
+    const intelSrc = await ev("const e=document.querySelector('#tb-host [data-testid=\"tb-intel-plan\"]'); return JSON.stringify(e?e.getAttribute('data-source'):null);");
+    ck("T2 ① 情報：顯示對手概要（測試分頁沒有場次 ⇒ 標準對手）；不含數字權重", (await has("tb-intel")) && intelSrc === "standard" && !(await has("tb-choice-panel")), String(intelSrc));
+    await click(tid("tb-step-confirm")); await sleep(400);
+    await ev("window.__TB_NEXT=null; return JSON.stringify(1);");
+    await click(tid("tb-confirm-go")); await sleep(300);
+    const confirmSent = await ev("return JSON.stringify(window.__TB_NEXT);");
+    ck("T3 ③ 確認頁：「確認上場」送出的 binding＝「開始載入」送出的（同一份）", (await has("tb-confirm")) && !!confirmSent && J(confirmSent?.binding) === J(bookSent?.binding), `${confirmSent?.binding?.planHash} vs ${bookSent?.binding?.planHash}`);
+    await shot("d1366_tactic_book_v21_confirm");
+    await click(tid("tb-step-book")); await sleep(400);
+
+    // ── S 存檔提示（Owner 決策 4）────────────────────────────────────────
+    const store = (body) => ev("const B=" + J(BASE) + "; return (async()=>{ const S=(await import(B+'src/platform/profileStore.js')).useProfileStore; const P=await import(B+'src/platform/tactics/tacticPlan.js');"
+      + "const mk=(c)=>P.createTacticPlan({templateId:'std',choices:c}).plan; const st=()=>S.getState(); " + body + " })();");
+    const clearBook = () => store("for(const e of [...(st().tacticBook?.plans||[])]) st().deleteTacticPlan(e.id); return JSON.stringify((st().tacticBook?.plans||[]).length);");
+    await clearBook();
+    const A = await store("const r=st().saveTacticPlan(mk({phases:{late:{focusLane:'bot'}}}),{name:'後期強邊舊計畫'}); return JSON.stringify(r.ok?r.entry.id:null);");
+    await sleep(400);
+    await click(tid("tb-book-" + A)); await sleep(600);
+    const copyText = await ev("const e=document.querySelector('#tb-host [data-testid=\"tb-save-copy-note\"]'); return JSON.stringify(e?e.textContent:null);");
+    const saveLabel = await ev("const e=document.querySelector('#tb-host [data-testid=\"tb-save\"]'); return JSON.stringify(e?{t:e.textContent,d:e.disabled}:null);");
+    ck("S1 載入含後期強邊（已不提供）的已存計畫 ⇒ 過濾提示＋「將另存一份不含上述選項的計畫，原計畫保留」；按鈕＝另存一份、可按",
+      !!A && (await has("tb-dropped-note")) && (copyText ?? "").includes("將另存一份不含上述選項的計畫，原計畫保留") && saveLabel?.t === "另存一份" && saveLabel.d === false, `${copyText} ${J(saveLabel)}`);
+    await shot("d1366_tactic_book_v21_save_copy");
+    await store("st().saveTacticPlan(mk({}),{name:'標準'}); return JSON.stringify(1);"); await sleep(300);
+    await click(tid("tb-template-classic.m1")); await sleep(300); await click(tid("tb-book-" + A)); await sleep(600);
+    const dup = await ev("const e=document.querySelector('#tb-host [data-testid=\"tb-save-dup-note\"]'); const b=document.querySelector('#tb-host [data-testid=\"tb-save\"]'); return JSON.stringify({note:e?e.textContent:null,disabled:b?b.disabled:null});");
+    ck("S2 過濾後等於另一份已存計畫 ⇒ 重複提示（點名那一份）、不能另存、不改名", (dup?.note ?? "").includes("標準") && dup.disabled === true && !(await has("tb-save-copy-note")), J(dup));
+    await store("const ids=(st().tacticBook?.plans||[]).filter(e=>e.name==='標準').map(e=>e.id); for(const id of ids) st().deleteTacticPlan(id);"
+      + "for(const c of [{phases:{early:{stance:'aggressive'}}},{phases:{early:{stance:'defensive'}}},{phases:{mid:{stance:'aggressive'}}},{phases:{mid:{stance:'defensive'}}}]) st().saveTacticPlan(mk(c),{}); return JSON.stringify((st().tacticBook?.plans||[]).length);");
+    await sleep(300);
+    await click(tid("tb-template-classic.m1")); await sleep(300); await click(tid("tb-book-" + A)); await sleep(600);
+    const full = await ev("const e=document.querySelector('#tb-host [data-testid=\"tb-save-full-note\"]'); const b=document.querySelector('#tb-host [data-testid=\"tb-save\"]'); return JSON.stringify({note:e?e.textContent:null,disabled:b?b.disabled:null});");
+    ck("S3 戰術書已滿 5 份 ⇒ 已滿提示（請先刪除一份）、不能存", (full?.note ?? "").includes("已滿") && full.disabled === true, J(full));
+    const left = await clearBook();
+    ck("S4 測完清空戰術書（不留測試資料）", left === 0 || left === "0", String(left));
+    await click(tid("tb-template-std")); await sleep(400);
 
     // ── L 手機 390 ─────────────────────────────────────────────────────
     await click(tid("tb-choice-winCondition-earlySnowball")); await sleep(500);
