@@ -1,8 +1,8 @@
 {
  "schema": "esmo.challenge-golden.v21",
- "gitHead": "ae3c9e470a8d98b5ec221c3de4ae4780c255ed6e",
+ "gitHead": "1d64ecd62a3a1ab362a7a9973a1c46ca4011a23a",
  "simVersion": "moba-sim.v21",
- "fingerprint": "e3acf891023937e9",
+ "fingerprint": "0578fa882d74b205",
  "node": "v24.18.0",
  "inputs": "tools/fixtures/match_golden_v20.json challenge params, snapshots stamped moba-sim.v21",
  "cases": [
