@@ -1,0 +1,518 @@
+{
+ "schema": "esmo.e1-result.v1",
+ "registration": "tools/fixtures/e1_registration_3aB.json",
+ "registrationHash": "1adcbec98e7513ef",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "d130c7e43880f34cebfc5be5a05aeec640065a51",
+ "reportedAt": "2026-10-25T20:59:54.110Z",
+ "matches": 8400,
+ "errored": [],
+ "guardGaps": [],
+ "primary": [
+  {
+   "id": "snowball",
+   "n": 1200,
+   "planned": 1200,
+   "D": -7.9908091666666925,
+   "ci90": [
+    -86.20778426725832,
+    70.22616593392493
+   ],
+   "se": 47.54831313105874,
+   "verdict": "PASS",
+   "deltaBlue": 101.06071499999995,
+   "deltaRed": 93.0699058333334,
+   "strata": {
+    "blueIsDragonSide": {
+     "n": 569,
+     "mean": -93.90904042179258,
+     "sd": 1635.8229186385365,
+     "se": 68.57726417653787,
+     "z": -1.3693903008443635,
+     "lo": -228.3204782078068,
+     "hi": 40.50239736422162
+    },
+    "redIsDragonSide": {
+     "n": 631,
+     "mean": 69.48537717908073,
+     "sd": 1654.7147675061235,
+     "se": 65.87315479515877,
+     "z": 1.0548360313872114,
+     "lo": -59.62600621943045,
+     "hi": 198.5967605775919
+    }
+   }
+  },
+  {
+   "id": "quickStrongBot",
+   "n": 1200,
+   "planned": 1200,
+   "D": -28.072970833333414,
+   "ci90": [
+    -98.53478114965704,
+    42.38883948299021
+   ],
+   "se": 42.833927243965725,
+   "verdict": "PASS",
+   "deltaBlue": -37.86244916666665,
+   "deltaRed": -65.93542000000008,
+   "strata": {
+    "blueIsDragonSide": {
+     "n": 569,
+     "mean": -0.09285588752196683,
+     "sd": 1467.8605638781175,
+     "se": 61.535915970153056,
+     "z": -0.00150897059153235,
+     "lo": -120.70325118902196,
+     "hi": 120.51753941397803
+    },
+    "redIsDragonSide": {
+     "n": 631,
+     "mean": -53.30385103011102,
+     "sd": 1498.7631423089263,
+     "se": 59.66481862211887,
+     "z": -0.8933883025389819,
+     "lo": -170.246895529464,
+     "hi": 63.639193469241974
+    }
+   }
+  }
+ ],
+ "guards": [
+  {
+   "arm": "snowball",
+   "side": "blue",
+   "ownGold": {
+    "mean": 48.077044166666646,
+    "z": 2.486858329718733,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.5316666666666666,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.58,
+    "absIncrease": 0.03166666666666667,
+    "rel": 0.0545977011494253,
+    "z": 1.4798812529428818,
+    "lowEvents": false,
+    "warn": false,
+    "n": 1200
+   }
+  },
+  {
+   "arm": "snowball",
+   "side": "red",
+   "ownGold": {
+    "mean": 41.8851516666667,
+    "z": 2.237947770806644,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.505,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.44416666666666665,
+    "absIncrease": -0.0008333333333333334,
+    "rel": -0.0018761726078799252,
+    "z": -0.0408418926453315,
+    "lowEvents": true,
+    "warn": false,
+    "n": 1200
+   }
+  },
+  {
+   "arm": "quickStrongBot",
+   "side": "blue",
+   "ownGold": {
+    "mean": -5.003899999999978,
+    "z": -0.29398540667410394,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.525,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "ganks": {
+    "ratio": 1.9385964912280726,
+    "lo": 1.8913379008969593,
+    "hi": 1.985855081559186,
+    "n": 1200,
+    "z": 38.92729575549495,
+    "warn": true,
+    "stop": false,
+    "enough": true
+   },
+   "botDeaths": {
+    "ctrlMean": 0.2175,
+    "absIncrease": 0.004166666666666667,
+    "rel": 0.019157088122605363,
+    "z": 0.24713734687139696,
+    "lowEvents": true,
+    "warn": false,
+    "n": 1200
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.58,
+    "absIncrease": 0.035,
+    "rel": 0.060344827586206906,
+    "z": 1.6853374353410502,
+    "lowEvents": false,
+    "warn": false,
+    "n": 1200
+   }
+  },
+  {
+   "arm": "quickStrongBot",
+   "side": "red",
+   "ownGold": {
+    "mean": -29.67278833333327,
+    "z": -1.757051874363967,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.4625,
+    "n": 1200,
+    "stop": false,
+    "enough": true
+   },
+   "ganks": {
+    "ratio": 1.8348837209302329,
+    "lo": 1.7911645732684445,
+    "hi": 1.8786028685920213,
+    "n": 1200,
+    "z": 37.429185620960354,
+    "warn": false,
+    "stop": false,
+    "enough": true
+   },
+   "botDeaths": {
+    "ctrlMean": 0.18583333333333332,
+    "absIncrease": 0.028333333333333332,
+    "rel": 0.15246636771300448,
+    "z": 1.7788103206425425,
+    "lowEvents": true,
+    "warn": false,
+    "n": 1200
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.44416666666666665,
+    "absIncrease": -0.043333333333333335,
+    "rel": -0.0975609756097561,
+    "z": -2.084565660990775,
+    "lowEvents": true,
+    "warn": false,
+    "n": 1200
+   }
+  },
+  {
+   "arm": "snowballStrongBot",
+   "side": "blue",
+   "ownGold": {
+    "mean": 26.979587500000033,
+    "z": 0.7938480792229805,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.5575,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "ganks": {
+    "ratio": 1.9410852713178293,
+    "lo": 1.8572142952682593,
+    "hi": 2.0249562473673994,
+    "n": 400,
+    "z": 21.992436700543227,
+    "warn": true,
+    "stop": false,
+    "enough": true
+   },
+   "botDeaths": {
+    "ctrlMean": 0.2475,
+    "absIncrease": 0.0475,
+    "rel": 0.19191919191919193,
+    "z": 1.3154568952217711,
+    "lowEvents": true,
+    "warn": false,
+    "n": 400
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.59,
+    "absIncrease": 0.04,
+    "rel": 0.06779661016949153,
+    "z": 0.9736657270464786,
+    "lowEvents": false,
+    "warn": false,
+    "n": 400
+   }
+  },
+  {
+   "arm": "snowballStrongBot",
+   "side": "red",
+   "ownGold": {
+    "mean": -3.424532499999955,
+    "z": -0.10493715349862222,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.5175,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "ganks": {
+    "ratio": 1.7988668555240797,
+    "lo": 1.7179805340300556,
+    "hi": 1.8797531770181037,
+    "n": 400,
+    "z": 19.357772833604205,
+    "warn": false,
+    "stop": false,
+    "enough": true
+   },
+   "botDeaths": {
+    "ctrlMean": 0.17,
+    "absIncrease": 0.09,
+    "rel": 0.5294117647058822,
+    "z": 2.7514769559661745,
+    "lowEvents": true,
+    "warn": false,
+    "n": 400
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.455,
+    "absIncrease": -0.0725,
+    "rel": -0.15934065934065933,
+    "z": -1.889797424431653,
+    "lowEvents": true,
+    "warn": false,
+    "n": 400
+   }
+  },
+  {
+   "arm": "strongBotAggressive",
+   "side": "blue",
+   "ownGold": {
+    "mean": -17.87036499999999,
+    "z": -0.5503866977927904,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.465,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "ganks": {
+    "ratio": 1.9131782945736442,
+    "lo": 1.8286575233489004,
+    "hi": 1.997699065798388,
+    "n": 400,
+    "z": 21.176208302751096,
+    "warn": true,
+    "stop": false,
+    "enough": true
+   },
+   "botDeaths": {
+    "ctrlMean": 0.2475,
+    "absIncrease": -0.02,
+    "rel": -0.08080808080808081,
+    "z": -0.6242182611074419,
+    "lowEvents": true,
+    "warn": false,
+    "n": 400
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.59,
+    "absIncrease": 0.0725,
+    "rel": 0.12288135593220338,
+    "z": 1.948763109237852,
+    "lowEvents": false,
+    "warn": false,
+    "n": 400
+   }
+  },
+  {
+   "arm": "strongBotAggressive",
+   "side": "red",
+   "ownGold": {
+    "mean": -42.110515000000014,
+    "z": -1.3255554253471116,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.4825,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "ganks": {
+    "ratio": 1.8300283286118972,
+    "lo": 1.7517266413865424,
+    "hi": 1.9083300158372518,
+    "n": 400,
+    "z": 20.77676205618887,
+    "warn": false,
+    "stop": false,
+    "enough": true
+   },
+   "botDeaths": {
+    "ctrlMean": 0.17,
+    "absIncrease": 0.0275,
+    "rel": 0.16176470588235292,
+    "z": 0.9684207403582766,
+    "lowEvents": true,
+    "warn": false,
+    "n": 400
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.455,
+    "absIncrease": -0.105,
+    "rel": -0.23076923076923075,
+    "z": -2.8179330055157643,
+    "lowEvents": true,
+    "warn": false,
+    "n": 400
+   }
+  },
+  {
+   "arm": "refAggressiveEarly",
+   "side": "blue",
+   "ownGold": {
+    "mean": 3.0349225000000204,
+    "z": 0.10603877570933166,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.46,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.59,
+    "absIncrease": 0.0725,
+    "rel": 0.12288135593220338,
+    "z": 2.1186182255035604,
+    "lowEvents": false,
+    "warn": false,
+    "n": 400
+   }
+  },
+  {
+   "arm": "refAggressiveEarly",
+   "side": "red",
+   "ownGold": {
+    "mean": -39.87138250000003,
+    "z": -1.515665701618135,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "winRate": {
+    "rate": 0.4625,
+    "n": 400,
+    "stop": false,
+    "enough": true
+   },
+   "junglerDeaths": {
+    "ctrlMean": 0.455,
+    "absIncrease": -0.0475,
+    "rel": -0.1043956043956044,
+    "z": -1.383625449160426,
+    "lowEvents": true,
+    "warn": false,
+    "n": 400
+   }
+  }
+ ],
+ "interactions": [
+  {
+   "id": "stack_ganks_early",
+   "metric": "ganksPerMin.early",
+   "blue": {
+    "n": 400,
+    "mean": -0.020020855057351385,
+    "sd": 0.20755341908400407,
+    "se": 0.010377670954200204,
+    "z": -1.9292243072370925,
+    "lo": -0.04036109012758378,
+    "hi": 0.0003193800128810133,
+    "flag": false
+   },
+   "red": {
+    "n": 400,
+    "mean": -0.0075078206465067805,
+    "sd": 0.20284898279885183,
+    "se": 0.010142449139942592,
+    "z": -0.7402374458985235,
+    "lo": -0.02738702096079426,
+    "hi": 0.0123713796677807,
+    "flag": false
+   }
+  },
+  {
+   "id": "stack_gold_early",
+   "metric": "goldLeadAt.early",
+   "blue": {
+    "n": 400,
+    "mean": 25.947314999999854,
+    "sd": 1225.878959181097,
+    "se": 61.29394795905485,
+    "z": 0.42332588883543604,
+    "lo": -94.18882299974766,
+    "hi": 146.08345299974735,
+    "flag": false
+   },
+   "red": {
+    "n": 400,
+    "mean": 32.34994500000013,
+    "sd": 1180.340262478722,
+    "se": 59.0170131239361,
+    "z": 0.5481460902141057,
+    "lo": -83.32340072291463,
+    "hi": 148.0232907229149,
+    "flag": false
+   }
+  }
+ ],
+ "stops": [],
+ "warns": [
+  "quickStrongBot@blue ganks ratio 1.939 >= 1.9",
+  "snowballStrongBot@blue ganks ratio 1.941 >= 1.9",
+  "strongBotAggressive@blue ganks ratio 1.913 >= 1.9"
+ ],
+ "overall": "PASS",
+ "notes": [
+  "ganks ratio CI = paired-difference CI / control mean (the control mean's own uncertainty is ignored; declared in the registration)",
+  "deathsPerMin is report-only; the WARN rule uses the per-match counts deathsAt"
+ ]
+}
