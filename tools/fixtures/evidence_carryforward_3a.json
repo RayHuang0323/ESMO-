@@ -1,22 +1,22 @@
 {
   "schema": "esmo.evidence-carryforward.v1",
-  "reportedAt": "2026-10-24T22:58:56.260Z",
+  "reportedAt": "2026-10-25T17:38:02.998Z",
   "replayedUnder": {
     "tool": "replay_evidence_carryforward_3a",
-    "startedAt": "2026-10-24T21:56:53.060Z",
-    "gitHead": "02936f55d6c6754c196f6c5281e6eeced0324e6f",
+    "startedAt": "2026-10-25T16:33:10.058Z",
+    "gitHead": "17f410384d18785bcfd8f3bbc25c9fe5a73e9054",
     "dirtyFilesUnderSrcTools": 0,
     "simulationVersion": "moba-sim.v21",
-    "fingerprint": "b37772a2f1777b03"
+    "fingerprint": "0578fa882d74b205"
   },
   "reportedUnder": {
-    "gitHead": "3da6b9ffdc01e5a8c32b4f69ebf2c6cb7629f3f6",
+    "gitHead": "17f410384d18785bcfd8f3bbc25c9fe5a73e9054",
     "depsChangedSinceReplay": 0,
     "depsDirty": 0,
     "deps": "src tools/lib tools/balance"
   },
   "simulationVersion": "moba-sim.v21",
-  "fingerprint": "b37772a2f1777b03",
+  "fingerprint": "0578fa882d74b205",
   "rule": {
     "perArm": 20,
     "differingFirst": 10,
