@@ -344,7 +344,8 @@ export function useLocalServer() {
           window.__ESMO_MATCH_SETUP_HASH = setupHash;
           window.__ESMO_MATCH_SETUP = JSON.parse(JSON.stringify(setup));
           window.__ESMO_LIVE_SETUP_INPUTS = JSON.parse(JSON.stringify({ ...liveInputs, opts: setupOpts,
-            opponentTeam: liveInputs.opponentTeam ? { id: liveInputs.opponentTeam.id, style: liveInputs.opponentTeam.style } : null }));
+            //  Phase 3a-B：career.v21 的 AI 教練讀對手名單 ⇒ 交出整份隊伍資料（只 id／style 的話 Node 端重建會排不出教練計畫）。
+            opponentTeam: liveInputs.opponentTeam ?? null }));
           window.__ESMO_ENGINE_STREAM_HASH = () => ({
             setupHash, ticks: stream.ticks, t: eng.t, streamHash: stream.hex, stateHash: m.engineStateHash(eng),
             depsFingerprint: prepared.applied.depsFingerprint,

@@ -360,7 +360,7 @@ if (STATIC_ONLY) {
   const v20On = { ...v20, featureFlags: { ...v20.featureFlags, mobaTacticalDirectorV21: true } };
   const scope = fixture.cases.filter((c) => c.path === "live" || c.path === "runner");
   const specs = L.specsFromFixture({ cases: scope });
-  ck(`C3 範圍＝v21-A fixture 的 live＋runner 案（${scope.length}；challenge ${fixture.cases.length - scope.length} 案不重跑：沒有 challenge.v21）；登記清單 ${LF.C3_EXPECTED_CHANGED.length} 個 id 全部在範圍內（登記總數 ${LF.C3_TOTAL_EXPECTED}）`,
+  ck(`C3 範圍＝v21-A fixture 的 live＋runner 案（${scope.length}；challenge ${fixture.cases.length - scope.length} 案不重跑：career.v21 只涵蓋 live／runner，challenge.v21 由 check_challenge_golden_v21 另驗）；登記清單 ${LF.C3_EXPECTED_CHANGED.length} 個 id 全部在範圍內（登記總數 ${LF.C3_TOTAL_EXPECTED}）`,
     LF.C3_EXPECTED_CHANGED.length === LF.C3_TOTAL_EXPECTED && LF.C3_EXPECTED_CHANGED.every((id) => scope.some((c) => c.id === id)));
   process.env.ESMO_BALANCE_RULESET = "balanceTool.v21";
   const observed = [], failed = [];

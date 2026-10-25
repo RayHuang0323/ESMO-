@@ -165,7 +165,7 @@ function normalizeTalentSelections(selections, roster) {
  * @param {object} a.heroProgress  { loadout }：heroProgressStore.getLoadout() 的輸出
  * @param {object} [a.ruleset]     resolveLiveRuleset 的結果（開局解析一次／恢復沿用）；未給 ⇒ 依 flags 解析
  * @param {object} [a.flags]       未給 ruleset 時用
- * @param {object} [a.opponentTeam] aiTeamById(opts.opponentId) 的結果（只讀 style）
+ * @param {object} [a.opponentTeam] aiTeamById(opts.opponentId) 的結果（風格模板只讀 style；career.v21 的 AI 教練另讀名單的素質，見 aiCoach.js）
  * @param {number} a.seed          **原始** seed：session ⇒ MatchSession 的權威 seed；local ⇒ hook 讀到的時鐘值。
  *                                 正規化（奇數化）在這裡做，見 normalizeLiveSeed；setup.seed 才是引擎 seed。
  * @param {"session"|"local"} a.seedSource

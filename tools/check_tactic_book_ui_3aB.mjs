@@ -32,16 +32,18 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
 // ── U1／U2 ────────────────────────────────────────────────────────────────
 {
-  const none = opponentIntelOf({ team: null, tacticalDirector: "core.v1" });
+  const none = opponentIntelOf({ team: null, tacticalDirector: "core.v1", redTactic: "aiCoachV1" });
   const bad = [];
   for (const t of AI_TEAMS) {
-    const v20 = opponentIntelOf({ team: t, tacticalDirector: "static" }), v21 = opponentIntelOf({ team: t, tacticalDirector: "core.v1" });
+    const v20 = opponentIntelOf({ team: t, tacticalDirector: "static", redTactic: "styleTemplate" }), v21 = opponentIntelOf({ team: t, tacticalDirector: "core.v1", redTactic: "aiCoachV1" });
+    //  審查：教練與否看 redTactic，不看 Director 模式（DEV 工具規則集是 core.v1 但紅方 std／風格）。
+    if (opponentIntelOf({ team: t, tacticalDirector: "core.v1", redTactic: "styleTemplate" }).source !== "styleTemplate") bad.push(`${t.id}/core-without-coach`);
     const coach = aiCoachPlan({ team: t, tacticalDirector: "core.v1" }).summary;
     if (v20.source !== "styleTemplate" || v20.planName !== mobaTacticForTeamStyle(t.style).name || v20.notes.length) bad.push(`${t.id}/v20`);
     if (v21.source !== "aiCoach" || v21.planName !== coach.templateName || J(v21.notes) !== J(coach.notes) || v21.teamName !== t.name || !v21.styleLabel) bad.push(`${t.id}/v21`);
   }
   ck(`U1 對手情報：沒有對手 ⇒ 標準（${none.planName}）；v20 ⇒ 風格模板名稱；v21 ⇒ AI 教練概要（${AI_TEAMS.length} 隊）`, !none.hasOpponent && none.source === "standard" && bad.length === 0, bad.join(" "));
-  const all = AI_TEAMS.flatMap((t) => ["static", "core.v1"].map((m) => opponentIntelOf({ team: t, tacticalDirector: m })));
+  const all = AI_TEAMS.flatMap((t) => [["static", "styleTemplate"], ["core.v1", "aiCoachV1"]].map(([m, rt]) => opponentIntelOf({ team: t, tacticalDirector: m, redTactic: rt })));
   ck("U2 對手情報沒有任何數字（只有名稱與白話描述）", all.every((x) => ![x.planName, ...x.notes].some((s) => /[0-9０-９]/.test(s))));
 }
 // ── U3 存檔提示 ───────────────────────────────────────────────────────────

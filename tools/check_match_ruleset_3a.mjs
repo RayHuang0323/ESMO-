@@ -77,6 +77,12 @@ ck("R14 resolveRulesetForMode 保留 assemblyOrder（旗標只關布林層）", 
   ck("R20 每場挑戰的規則集由記下的版本凍結：v20 ⇒ challenge.v20、v21 ⇒ challenge.v21、其他 ⇒ null；正式旗標下新挑戰記 moba-sim.v20",
     challengeRulesetForVersion("moba-sim.v20") === MATCH_RULESETS["challenge.v20"] && challengeRulesetForVersion("moba-sim.v21") === c21 && challengeRulesetForVersion("moba-sim.v19") === null
     && challengeSimulationVersionFor(FEATURE_FLAGS) === "moba-sim.v20" && challengeSimulationVersionFor(on) === "moba-sim.v21");
+  //  審查（3a-B）：兩份 v21 正式規則集也逐字釘住（整份進 setup 雜湊；改任何一層都必須看得見地改這裡）。
+  const V21_PINNED = {
+    "career.v21": '{"kind":"production","layers":{"assemblyOrder":"live","battleTalents":true,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":true,"laneFrame":"teamRelative","objectiveLayout":"bySeed","playerStatSides":"blue","redTactic":"aiCoachV1","tacticIdentity":true,"tacticalDirector":"core.v1"},"releaseRequirements":["heroSkillsV1","heroBattleTalentsV1","itemsV1","mobaTacticalDirectorV21"],"rulesetId":"career.v21","simVersion":"moba-sim.v21","version":"MatchRuleset.v1"}',
+    "challenge.v21": '{"kind":"production","layers":{"assemblyOrder":"live","battleTalents":false,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":false,"laneFrame":"teamRelative","objectiveLayout":"bySeed","playerStatSides":"both","redTactic":"snapshot","tacticIdentity":true,"tacticalDirector":"core.v1"},"releaseRequirements":["heroSkillsV1","mobaTacticalDirectorV21"],"rulesetId":"challenge.v21","simVersion":"moba-sim.v21","version":"MatchRuleset.v1"}',
+  };
+  for (const [id, lit] of Object.entries(V21_PINNED)) ck(`R22 ${id} 逐字釘住`, stableStringify(MATCH_RULESETS[id]) === lit);
   ck("R21 career.v21 的紅方是 AI 教練（redTactic aiCoachV1）；career.v20 仍是 styleTemplate（R16 已逐字釘住）",
     MATCH_RULESETS["career.v21"].layers.redTactic === "aiCoachV1" && MATCH_RULESETS["career.v20"].layers.redTactic === "styleTemplate"
     && resolveRulesetForMode({ mode: "career", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true } }).layers.redTactic === "aiCoachV1");

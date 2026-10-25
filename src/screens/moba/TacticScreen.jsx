@@ -154,7 +154,8 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const seatPlayers = useMemo(() => buildPlayerStatSlots(allPlayers, "blue", lineup), [allPlayers, lineup]);
   //  Phase 3a-C：每時期的選擇（集結、物件優先）只在 v21 規則集（Director core.v1）可用——與開局時 liveMatchSetup 用同一個解析函式，
   //  旗標關閉（v20）⇒ 戰術書不畫這些維度，舊計畫裡帶著的也先拿掉（否則組裝器會拒絕整份戰術）。
-  const tacticalDirector = useMemo(() => tacticalDirectorModeOf(resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS })), []);
+  const liveRuleset = useMemo(() => resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS }), []);
+  const tacticalDirector = tacticalDirectorModeOf(liveRuleset);
   const book = useMemo(() => {
     const heroLookup = (seat) => { const id = talentRosterForBook?.[seat]?.heroId; return id ? getHeroCombatArchetype(id) : null; };
     const overlayIds = activeVariant ? [activeVariant.variantId] : [];
@@ -183,7 +184,8 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
     if (!bookView || saveBlocked) return;
     const r = useProfileStore.getState().saveTacticPlan(bookView.plan, { name: bookName });
     setBookNote(r.ok ? { ok: true, text: r.replaced ? `已更新「${r.entry.name}」` : `已存成「${r.entry.name}」` } : { ok: false, text: r.errors[0]?.message ?? "存不進去" });
-    if (r.ok) setBookName("");
+    //  Phase 3a-B（審查）：存好之後，目前這份就是剛存的那一份（另存的副本可以照常改名，不會被當成「與別份重複」）。
+    if (r.ok) { setBookName(""); setLoadedEntryId(r.entry.id); }
   };
   const loadFromBook = (entry) => {
     setLoadedEntryId(entry.id);
@@ -205,7 +207,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const filteredCopy = saveState.copy, dupEntry = saveState.duplicate, bookFull = saveState.full, saveBlocked = saveState.blocked;
   //  T13：對手情報（賽前、合法資訊）。v21（Director core.v1）＝AI 教練賽前排的計畫概要；v20＝風格模板名稱。沒有對手 ⇒ 標準運營。
   const opponentId = useProfileStore((s) => s.matchmaking?.launch?.opponentId ?? null);
-  const intel = useMemo(() => opponentIntelOf({ team: opponentId ? aiTeamById(opponentId) : null, tacticalDirector }), [opponentId, tacticalDirector]);
+  const intel = useMemo(() => opponentIntelOf({ team: opponentId ? aiTeamById(opponentId) : null, tacticalDirector, redTactic: liveRuleset.layers.redTactic }), [opponentId, tacticalDirector, liveRuleset]);
   const fitOf = (id) => fitGrade(fitScore(templateById(id).config, starters));
 
   const curFit = fitScore(cur, starters);
@@ -246,6 +248,11 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
           ))}
         </nav>
         {step === "intel" && <OpponentIntelPanel intel={intel} onNext={() => setStep("book")} />}
+        {step === "confirm" && !bookView && (
+          <div data-testid="tb-confirm-empty" role="status" style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "12px 14px", fontSize: 12, color: GC.gray }}>
+            這份戰術目前無法整理成確認頁（請回戰術書重新選擇模板）；底部「開始載入」仍會以模板的基礎設定開打。
+          </div>
+        )}
         {step === "confirm" && bookView && (
           <ConfirmPanel templateName={template.name} variantName={activeVariant?.name ?? null} dimensions={bookView.dimensions} dropped={book.dropped}
             profile={bookView.profile} intel={intel} onEdit={() => setStep("book")} onGo={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections, binding)} />

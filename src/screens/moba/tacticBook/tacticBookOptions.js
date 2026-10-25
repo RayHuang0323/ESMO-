@@ -229,17 +229,18 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
 }
 
 // ── Phase 3a-B T13：對手情報概要（賽前、合法資訊；Owner 2026-10-25 決策 5／8）──────────────────────
-//  v21（Director core.v1，career.v21）：AI 教練賽前排的計畫的**概要**（模板名稱＋白話描述）；v20：風格模板的名稱。
+//  紅方是 AI 教練（規則集 redTactic aiCoachV1，career.v21）：教練賽前排的計畫的**概要**（模板名稱＋白話描述）；否則：風格模板的名稱。
+//  （以 redTactic 判斷，不以 Director 模式判斷：開局用不用教練是看那一層，兩者對不上時畫面會說錯。）
 //  都**不含**權重或旋鈕數字。教練與開局用同一個函式、同一份輸入（對手隊伍＋本場 Director 模式）⇒ 畫面看到的就是開局會用的那一份。
 export const TEAM_STYLE_LABELS = Object.freeze({ aggressive: "積極進攻", defensive: "穩守反擊", balanced: "均衡運營", objective: "資源控制", skirmish: "團戰對抗" });
 /**
  * @param {{ team: object|null, tacticalDirector?: string }} a
  * @returns {{ hasOpponent: boolean, teamName: string|null, styleLabel: string|null, planName: string, notes: string[], source: "aiCoach"|"styleTemplate"|"standard" }}
  */
-export function opponentIntelOf({ team = null, tacticalDirector = "static" } = {}) {
+export function opponentIntelOf({ team = null, tacticalDirector = "static", redTactic = "styleTemplate" } = {}) {
   if (!team) return Object.freeze({ hasOpponent: false, teamName: null, styleLabel: null, planName: STANDARD_OPP_TACTIC.name, notes: Object.freeze([]), source: "standard" });
   const base = { hasOpponent: true, teamName: team.name ?? null, styleLabel: TEAM_STYLE_LABELS[team.style] ?? null };
-  if (tacticalDirector === "core.v1") {
+  if (redTactic === "aiCoachV1") {
     const r = aiCoachPlan({ team, tacticalDirector });
     if (r.ok) return Object.freeze({ ...base, planName: r.summary.templateName, notes: r.summary.notes, source: "aiCoach" });
   }
