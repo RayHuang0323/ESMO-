@@ -629,7 +629,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //     帶著它們的已存計畫照舊解析（同控圖運營）；其他輸入不變。
   //  ④ liveMatchSetup.js 多回傳 droppedChoices（畫面提示用，不進 setup）。
   //  v21 未發布 ⇒ 同版號重新登記（舊值 b37772a2f1777b03 未曾發布）；matchRuleset.js 被量測載入 ⇒ 真實性表必須在語意凍結後整輪重測（先跑預演批次）。
-  "moba-sim.v21": "e3acf891023937e9",
+  //  2026-10-25（Owner Review 決策 5，語意凍結前）：AI 教練加證據規則——模板以外的選擇只加在有 n=400 紅藍複驗的 std 上
+  //  （積極型＝std＋前期滾雪球、均衡型＝std＋依素質的輔助任務；v2 模板用純模板；不用強邊；不用未量過的「野區入侵＋前期滾雪球」）。
+  //  只改 career.v21 有 AI 對手時的紅方計畫；其他輸入不變。v21 未發布 ⇒ 同版號重新登記（舊值 e3acf891023937e9 未曾發布）。
+  "moba-sim.v21": "0578fa882d74b205",
 });
 
 export const isKnownSimulationVersion = (v) =>

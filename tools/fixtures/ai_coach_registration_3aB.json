@@ -19,15 +19,37 @@
   },
   "goldenExpectedChanges": {
     "fixture": "tools/fixtures/match_golden_v21a.json (not re-recorded; its pinned gitHead/fingerprint constants stay)",
-    "comparedFields": ["digest", "streamHash", "resultHash"],
+    "comparedFields": [
+      "digest",
+      "streamHash",
+      "resultHash"
+    ],
     "rule": "re-run under career.v21, a live case's result changes iff it has an AI opponent AND Live calls configureMatch (the blue side has a tactic). Runner cases (balanceTool.v21, red std) and live cases without an opponent never change.",
     "changedSetMustEqualExactly": [
-      { "id": "v20:live-m8-7", "reason": "AI opponent, blue m8" },
-      { "id": "v20:live-m4-11", "reason": "AI opponent, blue m4" },
-      { "id": "v20:live-m8-23", "reason": "AI opponent, blue m8 (already in the laneframe C3 set)" },
-      { "id": "v20:live-m6-29", "reason": "AI opponent, blue m6" },
-      { "id": "v20:live-noplayers-17", "reason": "AI opponent, blue m5, no player stats" },
-      { "id": "v20:live-noroster-21", "reason": "AI opponent, blue m2, no roster" }
+      {
+        "id": "v20:live-m8-7",
+        "reason": "AI opponent, blue m8"
+      },
+      {
+        "id": "v20:live-m4-11",
+        "reason": "AI opponent, blue m4"
+      },
+      {
+        "id": "v20:live-m8-23",
+        "reason": "AI opponent, blue m8 (already in the laneframe C3 set)"
+      },
+      {
+        "id": "v20:live-m6-29",
+        "reason": "AI opponent, blue m6"
+      },
+      {
+        "id": "v20:live-noplayers-17",
+        "reason": "AI opponent, blue m5, no player stats"
+      },
+      {
+        "id": "v20:live-noroster-21",
+        "reason": "AI opponent, blue m2, no roster"
+      }
     ],
     "notChanging": [
       "v20:live-notactic-13: AI opponent but no blue tactic, so Live does not call configureMatch and red's tactic is never applied",
@@ -48,5 +70,13 @@
     "check_laneframe_c3 C3: same union; the laneframe 9 stay required",
     "check_match_ruleset_3a R16/R17: career.v21 serialisation (redTactic value)",
     "new check_ai_coach_3a: determinism, style separation, only offered choices, stat ordering, no blue-side input, career.v21 red side is the coach binding and career.v20 is untouched"
+  ],
+  "amendments": [
+    {
+      "date": "2026-10-25",
+      "by": "Owner Review decision 5 (before the semantics freeze)",
+      "change": "evidence rule: choices beyond the template only on EVIDENCE_TEMPLATES (std), where the n=400 red/blue replications were measured; aggressive = std + earlySnowball (jungler best: v2.jungle_invasion plain, the jungle_invasion + earlySnowball combination was never measured); balanced = std + support mission by stats; defensive/objective/skirmish = plain v2 templates; no strong side (stacking with earlySnowball not measured)",
+      "expectedChangeSet": "unchanged: the same 6 live cases must change (the red side is still the coach plan instead of the style template); re-checked by check_c3_phase_skeleton G1c before the freeze"
+    }
   ]
 }

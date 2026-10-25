@@ -7,7 +7,9 @@
 //    A1 決定性：同一份輸入兩次結果逐字相同；不改動輸入物件
 //    A2 只用提供的選項：每一個明確選擇都在 tacticBookOptions（該模板、該 Director 模式、其他選擇為前提）的提供清單裡（≥ 2 個選項）
 //    A3 風格區分：五種風格排出至少四種模板；static 下不出現任何需要 Director 的維度（強邊、勝利條件）
-//    A4 素質排序：強邊＝自家最強的一路；把那一路的素質調低、另一路調高 ⇒ 強邊跟著換；輔助任務隨視野＋溝通 vs 站位＋配合翻轉
+//    A4 證據規則（Owner 2026-10-25 Review 決策 5）：模板以外的選擇只出現在 EVIDENCE_TEMPLATES（std）上；打野最強的積極隊＝野區入侵純模板
+//       （不帶前期滾雪球：那個組合沒量過）；任何計畫都沒有強邊；輔助任務（只在 std）隨視野＋溝通 vs 站位＋配合翻轉
+//    A10 每個明確選擇在它的模板上都有 n=400 紅藍 confirmed 的複驗（REPLICATION_CONFIRMED，或 3a-A 追加複驗結果檔的 confirmed 列）
 //    A5 不讀藍方：多塞藍方的 binding／opts 結果不變；原始碼沒有 import store／session／藍方資料
 //    A6 career.v21 正式組裝：有 AI 對手 ⇒ 紅方是 kind "binding"、計畫＝aiCoachPlan(對手)；沒有對手 ⇒ std legacy（同今天）
 //    A7 career.v20（旗標關）：紅方仍是風格模板 legacy，與 T15 之前相同
@@ -17,7 +19,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { aiCoachPlan, aiCoachSummary, STYLE_TEMPLATES } from "../src/platform/tactics/aiCoach.js";
+import { aiCoachPlan, aiCoachSummary, STYLE_TEMPLATES, EVIDENCE_TEMPLATES } from "../src/platform/tactics/aiCoach.js";
+import { REPLICATION_CONFIRMED } from "../src/platform/tactics/capabilityRegistry.js";
 import { tacticBookOptions, leavesOf, nestedOf } from "../src/platform/tactics/tacticChoiceMapping.js";
 import { registryRow, PHASE_DIRECTOR } from "../src/platform/tactics/capabilityRegistry.js";
 import { AI_TEAMS, aiTeamById } from "../src/platform/competition/aiTeams.js";
@@ -69,17 +72,32 @@ const MODES = ["core.v1", "static"];
   ck(`A3 五種風格排出 ≥ 4 種模板（${[...byStyle].map(([s, id]) => `${s}:${id}`).join("、")}）；static 下沒有需要 Director 的選擇`,
     byStyle.size === 5 && new Set(byStyle.values()).size >= 4 && staticPhase.length === 0, J(staticPhase));
 }
-// ── A4 素質排序 ───────────────────────────────────────────────────────────
+// ── A4 證據規則 ───────────────────────────────────────────────────────────
 {
   const KEYS = Object.keys(AI_TEAMS[0].roster[0].stats);
   const player = (role, v, over = {}) => ({ role, stats: { ...Object.fromEntries(KEYS.map((k) => [k, v])), ...over } });
-  const team = (lanes, sup = {}) => ({ style: "objective", roster: [player("上路", lanes.top), player("打野", 70), player("中路", lanes.mid), player("下路", lanes.bot), player("輔助", lanes.bot, sup)] });
-  const focus = (t) => Object.fromEntries(leavesOf(aiCoachPlan({ team: t, tacticalDirector: "core.v1" }).plan.choices))["phases.early.focusLane"] ?? null;
-  const fTop = focus(team({ top: 90, mid: 60, bot: 60 })), fMid = focus(team({ top: 60, mid: 90, bot: 60 })), fBot = focus(team({ top: 60, mid: 60, bot: 90 }));
-  const mission = (sup) => Object.fromEntries(leavesOf(aiCoachPlan({ team: { ...team({ top: 70, mid: 70, bot: 70 }, sup), style: "balanced" }, tacticalDirector: "core.v1" }).plan.choices))["seats.b5.mission"] ?? "own";
+  const team = (style, best, sup = {}) => ({ style, roster: [player("上路", 70), player("打野", best === "打野" ? 95 : 70), player("中路", 70), player("下路", best === "下路" ? 95 : 70), player("輔助", 70, sup)] });
+  const plans = [];
+  for (const style of Object.keys(STYLE_TEMPLATES)) for (const best of ["打野", "下路", null]) for (const mode of MODES) plans.push(aiCoachPlan({ team: team(style, best), tacticalDirector: mode }).plan);
+  for (const t of AI_TEAMS) for (const mode of MODES) plans.push(aiCoachPlan({ team: t, tacticalDirector: mode }).plan);
+  const offTemplate = plans.filter((p) => !EVIDENCE_TEMPLATES.includes(p.templateId) && leavesOf(p.choices).length > 0).map((p) => p.templateId);
+  const focus = plans.filter((p) => leavesOf(p.choices).some(([d]) => /focusLane/.test(d))).length;
+  const jungle = aiCoachPlan({ team: team("aggressive", "打野"), tacticalDirector: "core.v1" }).plan;
+  const aggr = aiCoachPlan({ team: team("aggressive", null), tacticalDirector: "core.v1" }).plan;
+  const mission = (sup) => Object.fromEntries(leavesOf(aiCoachPlan({ team: team("balanced", null, sup), tacticalDirector: "core.v1" }).plan.choices))["seats.b5.mission"] ?? "own";
   const roam = mission({ mapAware: 95, comms: 95, positioning: 50, synergy: 50 }), protect = mission({ mapAware: 50, comms: 50, positioning: 95, synergy: 95 });
-  ck(`A4 強邊跟著最強的一路走（上→${fTop}、中→${fMid}、下→${fBot}）；輔助任務隨素質翻轉（視野＋溝通高→${roam}、站位＋配合高→${protect}）`,
-    fTop === "top" && fMid === "mid" && fBot === "bot" && roam === "roam" && protect !== "roam");
+  ck(`A4 證據規則：v2 模板上沒有任何額外選擇（${offTemplate.length} 例外）；打野最強的積極隊＝${jungle.templateId}、${leavesOf(jungle.choices).length} 個選擇（不帶滾雪球）；其他積極隊＝${aggr.templateId}＋${JSON.stringify(leavesOf(aggr.choices))}；沒有強邊（${focus}）；輔助任務隨素質翻轉（${roam}／${protect}）`,
+    offTemplate.length === 0 && jungle.templateId === "v2.jungle_invasion" && leavesOf(jungle.choices).length === 0
+    && aggr.templateId === "std" && JSON.stringify(leavesOf(aggr.choices)) === JSON.stringify([["winCondition", "earlySnowball"]]) && focus === 0 && roam === "roam" && protect !== "roam");
+}
+// ── A10 每個明確選擇都有 n=400 證據 ─────────────────────────────────────────
+{
+  const rep = readJson("tools/fixtures/tactic_followup_3a_replication.json");
+  const confirmed = new Set([...REPLICATION_CONFIRMED.map((x) => `${x.dimension}=${x.choice}`), ...rep.rows.filter((r) => r.verdict === "confirmed").map((r) => `${r.dimension}=${r.choice}`)]);
+  const used = new Set();
+  for (const t of AI_TEAMS) for (const mode of MODES) { const p = aiCoachPlan({ team: t, tacticalDirector: mode }).plan; for (const [d, v] of leavesOf(p.choices)) used.add(`${p.templateId}|${d}=${v}`); }
+  const bad = [...used].filter((k) => { const [tpl, dc] = k.split("|"); return tpl !== "std" || !confirmed.has(dc); });
+  ck(`A10 教練用到的每個（模板, 選擇）都在 std 上有 n=400 紅藍 confirmed 證據（${[...used].join("、") || "無"}）`, bad.length === 0, bad.join(" "));
 }
 // ── A5 不讀藍方 ───────────────────────────────────────────────────────────
 {
