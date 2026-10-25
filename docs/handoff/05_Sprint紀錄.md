@@ -24931,3 +24931,21 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **驗證（HEAD `b5a27c17`，實跑）**：`check_simulation_version_gate` 82/82、`check_tactic_truth_3a` 34/34、`check_tactic_replication_3a` 53/53；`ESMO_VERIFY_FLAT=1 node tools/check_moba_tactic24.mjs` 27/29（兩條紅如上）。本輪沒有改 src／tools，沒有新的大型量測。
 
 **未完成／風險**：見 08 同日一節。3a-B 功能未開始，等 Owner Review。
+
+## 2026-10-25 Phase 3a-B P0＋P1（Owner 核准開工；local，未 push／deploy／整合 main，旗標未啟用）
+
+**依據**：Owner 2026-10-25 正式核准 3a-B 開工（八項決策＋額外要求）。執行紀錄：`review/tactic-book-3a/3a-B_P0P1_執行紀錄.md`。
+
+**完成**
+- P0-1 證據延續重播：六份歷史研究 130 臂、2,600 場，與原始逐場紀錄**逐值相同（0 不同）**，罕見路徑（每臂 ≥10 個 A≠B seeds）包含在內；原始紀錄核對為各結果檔的來源（`tools/fixtures/evidence_carryforward_3a.json`，在 `02936f55`／`b37772a2f1777b03` 下）。
+- P0-2 tactic24 29/29（原 27/29）：BattleResult 依 `BATTLE_RESULT_VERSION`；m6／m4 舊次數宣稱失效（保留歷史），換成事前登記的 v20 機制宣稱「m6 中路 Gank 占比 ≥ m4 ×1.15」，新 seeds 19001–19200 ×1.48、z 6.21（群集 z 5.89）。
+- P0-3 既有 jsonl 重分析（非證據）：紅＞藍的六臂共用同一對照組；2 倍抓人來自強邊本身（交互作用 ≈0）。±150 金在 n=400 檢定能力 0.13–0.42 ⇒ E1 草案改提 n=1200（draft，待 Owner）。
+- seed 計畫與 effectiveSeed 去重（19/19）；E2、AI 教練事前登記（實作前 `3da6b9ff`）。
+- P1：T16 `challenge.v21`（旗標控制、每場規則集由記下的版本凍結、旗標關記 moba-sim.v20＝正式站）；T15 AI 教練 v1（`aiCoach.js`、career.v21 `redTactic aiCoachV1`）；後期強邊改回 design（owner_hold）；T13 三步驟／對手情報／確認頁；決策 4 的提示（另存、重複、已滿、開局未使用選項）；真實性表預演批次；`moba-sim.v21` 重新登記 `e3acf891023937e9`；challenge.v21 黃金（`ae3c9e47` 釘死）。
+- 獨立審查 APPROVE WITH CHANGES（3 major／8 minor），採納後見執行紀錄 §8。
+
+**驗證（實跑）**：version 83/83、ruleset 51/51、registry 35/35、replication 53/53、AI 教練 10/10、UI 8/8、book view 25/25、director 97/97、directive 61/61、career v21 C6 6/6、win condition 11/11、phase choices 24/24、evidence scope 7/7、seed plan 19/19、challenge 黃金 v21 6/6、setup 153/153、assembler 227/227、live setup 118/118、skeleton 171/171（career.v21 改變集合＝登記 14、其餘 83 相同）、laneFrame 55/55、challenge setup 65/65、slice1 108／2 79／3 100／4 60／5 71／6 30／7 35／8 122、verify tactic24（29/29）＋runtime29 PASS、build OK、瀏覽器 tactic book v21 30/30、static 31/31。
+- **未過**：`check_match_golden_v21a` 119/131（12 個 Challenge 案只差 simulationVersion／challengeId／draft.hash 三個身分欄位，引擎行為全同；未登記 ⇒ 交 Owner）；`check_tactic_truth_3a` T2 過期（語意凍結後整輪重測，屬 P2）。
+- **未經瀏覽器實測**：對戰畫面的「本場未使用的戰術選項」提示（只有 Node 資料流 U5）；真實 AI 對手下的對手情報畫面（瀏覽器只驗了沒有場次的標準對手）。
+
+**未完成／風險**：見 08 同日一節。
