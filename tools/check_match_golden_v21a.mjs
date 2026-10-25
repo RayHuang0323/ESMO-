@@ -17,6 +17,10 @@
 //       戰術書日後正當地改了提供清單，不應讓這支 gate 假紅。
 //   N   負向自檢（合成資料）：竄改一案的雜湊／少一案／多一案／順序改變／calls 改變，比對函式都要報出來
 //   C   逐案重跑，與 fixture 逐欄相同（每案一條檢查）；案例清單（缺／多）一條
+//   K   版本事實修正表（Phase 3a-B；Owner 2026-10-25 **事後核准**的更正，不是事前登記）：tools/fixtures/match_golden_v21a_corrections.json
+//       釘住 12 個 Challenge 案的 simulationVersion／challengeId／draft.hash 舊值、新值與新舊 resultHash。那 12 案：digest／streamHash／
+//       configure 序列／params 仍要與 fixture 逐位元相同；結果的三欄必須＝新值、resultHash＝新值、三欄換回舊值後的雜湊＝原 fixture；
+//       表外的案照舊逐欄比對。原始 fixture 不重錄。反向測試：竄改表的新值／舊值、結果多差一欄、表多列一個沒變的案 ⇒ 都抓得到。
 //   I   資訊（不計入通過數）：F4i 提供清單差異、simVersion／指紋與 fixture 的差異。C2 改到語意檔時指紋會變，那不是這支 gate 要判的事（版本 gate 另有）。
 // ============================================================================
 import fs from "node:fs";
@@ -99,6 +103,29 @@ const asObserved = () => clone(fixture.cases);
   ck("N7 案例輸入（params）改變 ⇒ 報出", L.compareToFixture(fixture, t7).problems.some((p) => p.includes("params differ")));
 }
 
+// ── K：版本事實修正表（結構）──────────────────────────────────────────────
+const CORR = JSON.parse(fs.readFileSync(new URL("./fixtures/match_golden_v21a_corrections.json", import.meta.url), "utf8"));
+const CORR_FIELDS = ["simulationVersion", "challengeId", "draft.hash"];
+const corrById = new Map(CORR.cases.map((c) => [c.id, c]));
+const fxById = new Map(fixture.cases.map((c) => [c.id, c]));
+ck("K0 修正表：schema、指向這份 fixture（gitHead／指紋相同）、恰好 12 案且全部是 Challenge 案、三欄、舊 resultHash＝fixture、標明是事後核准",
+  CORR.schema === "esmo.golden-version-fact-corrections.v1" && CORR.fixtureGitHead === fixture.gitHead && CORR.fixtureFingerprint === fixture.fingerprint
+  && CORR.cases.length === 12 && corrById.size === 12 && CORR.cases.every((c) => fxById.get(c.id)?.path === "challenge" && fxById.get(c.id).resultHash === c.oldResultHash)
+  && JSON.stringify(CORR.fields) === JSON.stringify(CORR_FIELDS) && /post-hoc correction, NOT a pre-registration/.test(CORR.approval)
+  && CORR.cases.every((c) => c.old.simulationVersion === "moba-sim.v21" && c.new.simulationVersion === "moba-sim.v20"));
+const getF = (r, f) => (f === "draft.hash" ? r?.draft?.hash ?? null : r?.[f]);
+const setF = (r, f, v) => (f === "draft.hash" ? (r.draft ? { ...r, draft: { ...r.draft, hash: v } } : r) : { ...r, [f]: v });
+/** 修正表一列 × 目前結果 ⇒ 問題清單（空＝成立）。只看結果；引擎欄位由 compareToFixture 照常比。 */
+function correctionProblems(entry, fxCase, rec) {
+  const out = [], r = rec?.challengeResult;
+  if (!r) return ["no challenge result"];
+  for (const f of CORR_FIELDS) if (JSON.stringify(getF(r, f)) !== JSON.stringify(entry.new[f])) out.push(`${f} ${getF(r, f)} != new ${entry.new[f]}`);
+  if (rec.resultHash !== entry.newResultHash) out.push(`resultHash ${rec.resultHash} != new ${entry.newResultHash}`);
+  let back = r; for (const f of CORR_FIELDS) back = setF(back, f, entry.old[f]);
+  if (L.resultHashOf(back) !== fxCase.resultHash) out.push(`old-value reconstruction ${L.resultHashOf(back)} != fixture ${fxCase.resultHash} (another field differs)`);
+  return out;
+}
+
 // ── C：逐案重跑 ─────────────────────────────────────────────────────────────
 const observed = [];
 const failedRun = new Map();
@@ -107,13 +134,37 @@ for (const [n, spec] of cases.entries()) {
   try { observed.push(L.recordOf(spec, v20)); } catch (e) { failedRun.set(spec.id, String(e.message ?? e)); }
   progress(`${n + 1}/${cases.length} ${spec.id} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }
-const cmp = L.compareToFixture(fixture, observed);
+//  修正表內的案：resultHash 的差異改由 correctionProblems 嚴格判定（其他欄位照 compareToFixture）。
+const corrResults = new Map();
+const observedForCmp = observed.map((o) => {
+  const e = corrById.get(o.id);
+  if (!e) return o;
+  corrResults.set(o.id, correctionProblems(e, fxById.get(o.id), o));
+  return corrResults.get(o.id).length === 0 ? { ...o, resultHash: fxById.get(o.id).resultHash } : o;
+});
+const cmp = L.compareToFixture(fixture, observedForCmp);
 const listProblems = cmp.problems.filter((p) => /^(missing|extra) case|^case order/.test(p));
 ck("C0 案例清單＝fixture（沒有缺、沒有多、順序相同）", listProblems.length === 0 && failedRun.size === 0, [...listProblems, ...[...failedRun].map(([i, m]) => `${i}: ${m}`)].join(" | "));
 for (const c of fixture.cases) {
   const mine = cmp.problems.filter((p) => p.startsWith(`${c.id}:`));
   const run = failedRun.get(c.id);
-  ck(`C ${c.id}　digest＋streamHash＋resultHash＋configure 序列＝fixture`, mine.length === 0 && !run, run ?? mine.join("; "));
+  const cp = corrResults.get(c.id) ?? [];
+  ck(`C ${c.id}　digest＋streamHash＋resultHash＋configure 序列＝fixture${corrById.has(c.id) ? "（resultHash 依版本事實修正表：只差三個身分欄位）" : ""}`, mine.length === 0 && cp.length === 0 && !run, run ?? [...mine, ...cp].join("; "));
+}
+ck("K1 修正表的 12 案全部成立（三欄＝新值、resultHash＝新值、換回舊值＝原 fixture）", CORR.cases.every((e) => (corrResults.get(e.id) ?? ["not run"]).length === 0),
+  CORR.cases.filter((e) => (corrResults.get(e.id) ?? ["x"]).length).map((e) => e.id).join(" "));
+// ── K：反向測試（用真的重跑結果）────────────────────────────────────────────
+{
+  const e0 = CORR.cases[0], rec0 = observed.find((o) => o.id === e0.id), fx0 = fxById.get(e0.id);
+  const badNew = { ...e0, new: { ...e0.new, challengeId: "chal:00000000:00000000" } };
+  const badOld = { ...e0, old: { ...e0.old, "draft.hash": "deadbeef" } };
+  const recMore = rec0 ? Object.defineProperty({ ...rec0 }, "challengeResult", { value: { ...rec0.challengeResult, durationSec: rec0.challengeResult.durationSec + 1 }, enumerable: false }) : null;
+  ck("K2 反向：竄改表的新值 ⇒ 抓到", !!rec0 && correctionProblems(badNew, fx0, rec0).some((x) => x.startsWith("challengeId")));
+  ck("K3 反向：竄改表的舊值 ⇒ 舊值重建對不上原 fixture ⇒ 抓到", !!rec0 && correctionProblems(badOld, fx0, rec0).some((x) => x.startsWith("old-value reconstruction")));
+  ck("K4 反向：結果多差一個表外欄位（時長 +1）⇒ 抓到", !!recMore && correctionProblems(e0, fx0, recMore).some((x) => x.startsWith("old-value reconstruction")));
+  const liveId = fixture.cases.find((c) => c.path === "live").id;
+  const plantedTable = [...CORR.cases, { ...e0, id: liveId }];
+  ck("K5 反向：表多列一個非 Challenge 案 ⇒ K0 的結構規則不成立", !plantedTable.every((c) => fxById.get(c.id)?.path === "challenge"));
 }
 
 // ── I：資訊 ─────────────────────────────────────────────────────────────────
