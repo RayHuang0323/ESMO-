@@ -164,7 +164,7 @@ export function runCase(spec, v20) {
       const v = challengeGoldenInputs(c);
       const { out, thrown, ctx } = observe(() => runChallenge({ challenge: v.challenge, challengerSnapshot: v.challenger, defenderSnapshot: v.defender, draftResult: v.draftResult, heroOf: heroById }), v20.streamEvery);
       if (thrown || !out?.ok) throw new Error(`golden v21a: runChallenge failed for ${spec.id}: ${thrown ? String(thrown) : JSON.stringify(out?.errors)}`);
-      return { digest: finalDigest(ctx.engine), streamHash: ctx.hasher.hex, resultHash: resultHashOf(out.result), calls: ctx.calls };
+      return { digest: finalDigest(ctx.engine), streamHash: ctx.hasher.hex, resultHash: resultHashOf(out.result), calls: ctx.calls, result: out.result };
     }
     const M = c.params.skills ? M_ON : M_OFF;
     const { out, thrown, ctx } = observe(() => runner.configure(c.seed, c.params.config, M), RUN.runner.every);
@@ -201,13 +201,18 @@ export const specsFromFixture = (fixture) => fixture.cases.map((c) => ({ id: c.i
 /** 一案的紀錄（寫進 fixture 的形狀）。 */
 export function recordOf(spec, v20) {
   const r = runCase(spec, v20);
-  return {
+  const rec = {
     id: spec.id, group: spec.group, path: spec.path, seed: spec.seed, params: spec.params,
     ...(spec.group === "v20" ? {} : { bindingHash: bindingHashOf(spec) }),
     digest: r.digest, streamHash: r.streamHash, resultHash: r.resultHash,
     calls: r.calls.map(({ m, h }) => ({ m, h })),
   };
+  //  Phase 3a-B（Owner 2026-10-25 核准的版本事實修正表）：Challenge 案另帶完整結果物件，供修正表逐欄核對；
+  //  不可列舉 ⇒ 不會寫進 fixture、也不影響任何比對欄位。
+  if (r.result) Object.defineProperty(rec, "challengeResult", { value: r.result, enumerable: false });
+  return rec;
 }
+export { resultHashOf };
 
 // ── 比對（純函式；負向自檢直接餵合成資料）──────────────────────────────────────
 /**
