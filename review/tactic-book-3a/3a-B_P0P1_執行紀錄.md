@@ -88,7 +88,7 @@
 | **後期強邊改回 design** | C5R 三列由 `REPLICATION_CONFIRMED` 移到 `REPLICATION_WITHHELD`（owner_hold）。證據保留、係數不動；前／中期與快速模式照舊。 | replication 53/53、registry 35/35 |
 | **T13 最小完整 UI** | 三步驟（情報／戰術書／確認）、對手情報概要（v21 顯示 AI 教練概要、v20 顯示風格模板名稱，**不含權重**）、確認頁。 | `check_tactic_book_ui_3aB` 8/8；瀏覽器 v21 30/30、static 31/31 |
 | **決策 4 提示** | 被過濾的選項清楚列出；另存時顯示「將另存一份不含上述選項的計畫，原計畫保留」。<br>過濾後與別份重複時不另存、不改名；戰術書已滿時事前擋下。<br>開局時，本場未使用的選項會在對戰畫面顯示（可關閉）。 | 瀏覽器 S1–S4；開局提示只有 Node 資料流（U5），**沒有瀏覽器實測** |
-| **方案 A 預演批次** | `check_tactic_truth_3a --measure --preview`：只寫 repo 外的 `TacticTruth.preview.v1`；T1 拒收；預演與正式資料夾互不沿用。 | 預演進行中（見 §7） |
+| **方案 A 預演批次** | `check_tactic_truth_3a --measure --preview`：只寫 repo 外的 `TacticTruth.preview.v1`；T1 拒收；預演與正式資料夾互不沿用。 | 預演完成：6,520 場、0 失敗；147 列與現有結果表**逐位元相同**，推導的排除與不對稱也相同（不是證據；正式量測仍要在最終指紋下整輪跑） |
 | **指紋** | `aiCoach.js` 加入語意檔清單；`moba-sim.v21` 同版號重新登記一次 `e3acf891023937e9`（P1 全部語意變更合併）。 | version gate 83/83 |
 
 **其他 gate**
@@ -132,3 +132,9 @@
 
   Major 1 寫進 §7-3。未改的兩項：`challengeInstance`／`squadSnapshot` 的預設值後備走不到；`bindingForRuleset` 見 §7-5。
 - **制度檔備份**：05、08 另建 `_backup_20261025_2_*`，Roadmap 建 `_backup_20261025_04_Roadmap.md`；今天稍早的 `_backup_20261025_*` 沒有覆蓋。
+
+## 9. 補記：真實性表預演批次結果
+
+- `C:/Users/ifikn/esmo-measure/truth-preview-3aB-dcfa341c/tactic_truth_preview.json`（`TacticTruth.preview.v1`，在 `dcfa341c`／`e3acf891023937e9` 下）：163 批、6,520 場、0 失敗。中途電腦休眠，只拉長了實際花費的時間，結果是逐場決定性的。
+- 147 列與 `tools/fixtures/tactic_truth_3a.json` **逐位元相同**；`exclusionsDerived`、`asymmetries` 也完全相同，沒有新增或消失的排除。
+- 含意：P1 的語意變更沒有影響真實性量測。只要凍結前不再改語意，正式重測預期不會改變提供清單，§7-3 的第③步（重新核對 AI 教練變動集合）預期無變化，但仍要照順序實際核對。預演不是證據，正式量測仍要在最終指紋下整輪執行。
