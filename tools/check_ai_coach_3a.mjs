@@ -9,7 +9,8 @@
 //    A3 風格區分：五種風格排出至少四種模板；static 下不出現任何需要 Director 的維度（強邊、勝利條件）
 //    A4 證據規則（Owner 2026-10-25 Review 決策 5）：模板以外的選擇只出現在 EVIDENCE_TEMPLATES（std）上；打野最強的積極隊＝野區入侵純模板
 //       （不帶前期滾雪球：那個組合沒量過）；任何計畫都沒有強邊；輔助任務（只在 std）隨視野＋溝通 vs 站位＋配合翻轉
-//    A10 每個明確選擇在它的模板上都有 n=400 紅藍 confirmed 的複驗（REPLICATION_CONFIRMED，或 3a-A 追加複驗結果檔的 confirmed 列）
+//    A10 每個明確選擇在它的模板上都有紅藍 confirmed 的複驗（REPLICATION_CONFIRMED，或 3a-A 追加複驗結果檔的 confirmed 列；n 照實列出：前期滾雪球 400、輔助任務 200）
+//        —— 涵蓋所有可達的計畫（A4 列舉的合成隊伍 × 2 模式，加上 7 支真實 AI 隊伍）
 //    A5 不讀藍方：多塞藍方的 binding／opts 結果不變；原始碼沒有 import store／session／藍方資料
 //    A6 career.v21 正式組裝：有 AI 對手 ⇒ 紅方是 kind "binding"、計畫＝aiCoachPlan(對手)；沒有對手 ⇒ std legacy（同今天）
 //    A7 career.v20（旗標關）：紅方仍是風格模板 legacy，與 T15 之前相同
@@ -90,14 +91,20 @@ const MODES = ["core.v1", "static"];
     offTemplate.length === 0 && jungle.templateId === "v2.jungle_invasion" && leavesOf(jungle.choices).length === 0
     && aggr.templateId === "std" && JSON.stringify(leavesOf(aggr.choices)) === JSON.stringify([["winCondition", "earlySnowball"]]) && focus === 0 && roam === "roam" && protect !== "roam");
 }
-// ── A10 每個明確選擇都有 n=400 證據 ─────────────────────────────────────────
+// ── A10 每個明確選擇都有紅藍 confirmed 證據（涵蓋所有可達的計畫；n 照實列出）─────────────────
 {
   const rep = readJson("tools/fixtures/tactic_followup_3a_replication.json");
-  const confirmed = new Set([...REPLICATION_CONFIRMED.map((x) => `${x.dimension}=${x.choice}`), ...rep.rows.filter((r) => r.verdict === "confirmed").map((r) => `${r.dimension}=${r.choice}`)]);
-  const used = new Set();
-  for (const t of AI_TEAMS) for (const mode of MODES) { const p = aiCoachPlan({ team: t, tacticalDirector: mode }).plan; for (const [d, v] of leavesOf(p.choices)) used.add(`${p.templateId}|${d}=${v}`); }
-  const bad = [...used].filter((k) => { const [tpl, dc] = k.split("|"); return tpl !== "std" || !confirmed.has(dc); });
-  ck(`A10 教練用到的每個（模板, 選擇）都在 std 上有 n=400 紅藍 confirmed 證據（${[...used].join("、") || "無"}）`, bad.length === 0, bad.join(" "));
+  const evid = new Map([...REPLICATION_CONFIRMED.map((x) => [`${x.dimension}=${x.choice}`, Math.min(x.blue.n, x.red.n)]),
+    ...rep.rows.filter((r) => r.verdict === "confirmed").map((r) => [`${r.dimension}=${r.choice}`, Math.min(r.blue.n, r.red.n)])]);
+  const KEYS = Object.keys(AI_TEAMS[0].roster[0].stats);
+  const player = (role, v, over = {}) => ({ role, stats: { ...Object.fromEntries(KEYS.map((k) => [k, v])), ...over } });
+  const teams = [...AI_TEAMS];
+  for (const style of Object.keys(STYLE_TEMPLATES)) for (const best of ["打野", "下路", null]) for (const sup of [{ mapAware: 95, comms: 95, positioning: 50, synergy: 50 }, { mapAware: 50, comms: 50, positioning: 95, synergy: 95 }])
+    teams.push({ style, roster: [player("上路", 70), player("打野", best === "打野" ? 95 : 70), player("中路", 70), player("下路", best === "下路" ? 95 : 70), player("輔助", 70, sup)] });
+  const used = new Map();
+  for (const t of teams) for (const mode of MODES) { const p = aiCoachPlan({ team: t, tacticalDirector: mode }).plan; for (const [d, v] of leavesOf(p.choices)) used.set(`${p.templateId}|${d}=${v}`, evid.get(`${d}=${v}`) ?? 0); }
+  const bad = [...used].filter(([k, n]) => k.split("|")[0] !== "std" || !n);
+  ck(`A10 所有可達的計畫（${teams.length} 隊 × 2 模式）用到的每個（模板, 選擇）都在 std 上有紅藍 confirmed 證據：${[...used].map(([k, n]) => `${k}（n=${n}）`).join("、") || "無"}`, bad.length === 0 && used.size > 0, bad.map(([k]) => k).join(" "));
 }
 // ── A5 不讀藍方 ───────────────────────────────────────────────────────────
 {

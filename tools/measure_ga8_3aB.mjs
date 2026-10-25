@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { runStudy, readKey, provenance, sha16, ROOT } from "./lib/studyRunner.mjs";
+import { runStudy, readKey, provenance, sha16, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -16,6 +16,8 @@ const val = (k, d = null) => { const a = args.find((x) => x.startsWith(`--${k}=`
 const REG_REL = "tools/fixtures/ga8_registration_3aB.json";
 const REG_TEXT = fs.readFileSync(path.join(ROOT, REG_REL), "utf8"), REG = JSON.parse(REG_TEXT);
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
+/** 儀器檢查（--run 即時、--report 全部重查；審查 M1）。 */
+const recCheck = (r) => (r.director === "core.v1" && r.laneFrame === "teamRelative" && r.ruleset === "balanceTool.v21" && r.layers?.heroSkills && !r.layers?.battleTalents ? [] : ["instrument mismatch"]);
 
 if (flag("ga8-worker")) {
   process.env.ESMO_BALANCE_SKILLS = "on";
@@ -32,7 +34,8 @@ if (flag("ga8-worker")) {
       for (let i = 1; i * 0.5 <= 3600 && !e.over; i++) e.tick(0.5);
       const side = blueIsTemplate ? "blue" : "red";
       const win = e.over && (e.winner === "blue" || e.winner === "red") ? (e.winner === side ? 1 : 0) : 0.5;
-      process.send({ type: "done", id: t.id, rec: { seed: t.seed, template: t.template, side, layout: objectiveLayoutForSeed(t.seed), director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null, win, duration: e.t } });
+      process.send({ type: "done", id: t.id, rec: { seed: t.seed, template: t.template, side, layout: objectiveLayoutForSeed(t.seed), ruleset: "balanceTool.v21",
+        layers: { heroSkills: !!M.skills, heroPassives: !!M.passives, heroPowerCurve: !!M.curves, battleTalents: !!M.talents }, director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null, win, duration: e.t } });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
   process.send({ type: "ready" });
@@ -69,31 +72,34 @@ const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: S
 if (flag("run")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
   if (provenance().dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--ga8-worker"], meta: META, workers: Number(val("workers", 3)), label: "G-A8",
-    check: (r) => (r.director === "core.v1" && r.laneFrame === "teamRelative" ? [] : ["instrument mismatch"]) });
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--ga8-worker"], meta: META, workers: Number(val("workers", 3)), label: "G-A8", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 if (flag("report")) {
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  const audit = auditStudy(DIR, tasks, recCheck);
+  if (audit.halt) { console.error(`⛔ HALT：${audit.halt}（不判定，交 Owner）`); process.exit(5); }
+  if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
   const rows = [], stops = [], warns = [];
-  let missing = 0;
   for (const tpl of TEMPLATES) {
-    const d = readKey(DIR, tpl), recs = SEEDS.map((s) => d.get(`${tpl}#${s}`));
-    missing += recs.filter((r) => !r).length;
-    if (recs.some((r) => !r)) continue;
+    const d = readKey(DIR, tpl), recs = SEEDS.map((s) => d.get(`${tpl}#${s}`)).filter(Boolean);
     const v = templateVerdict(recs.map((r) => r.win));
     const sub = (f) => templateVerdict(recs.filter(f).map((r) => r.win)).rate;
     const durs = recs.map((r) => r.duration).sort((a, b) => a - b);
-    rows.push({ template: tpl, ...v, asBlue: sub((r) => r.side === "blue"), asRed: sub((r) => r.side === "red"), standard: sub((r) => r.layout === "STANDARD"), swapped: sub((r) => r.layout === "SWAPPED"), medianDurationMin: durs[Math.floor(durs.length / 2)] / 60 });
+    const dragonSide = recs.filter((r) => (r.side === "blue") === (r.layout === "STANDARD")).length / recs.length;
+    rows.push({ template: tpl, ...v, dragonSideShare: dragonSide, asBlue: sub((r) => r.side === "blue"), asRed: sub((r) => r.side === "red"), standard: sub((r) => r.layout === "STANDARD"), swapped: sub((r) => r.layout === "SWAPPED"), medianDurationMin: durs[Math.floor(durs.length / 2)] / 60 });
   }
-  if (missing) { console.log(`資料未完整：還有 ${missing} 場（不判定）`); process.exit(6); }
   const ctl = rows.find((r) => r.template === "std");
   const instrument = Math.abs(ctl.rate - 0.5) > 0.05;
   for (const r of rows.filter((x) => x.template !== "std")) { if (r.stop) stops.push(`${r.template} ${(r.rate * 100).toFixed(1)}%（下界 ${(r.lo * 100).toFixed(1)}%）`); else if (r.warn) warns.push(`${r.template} ${(r.rate * 100).toFixed(1)}%`); }
-  const verdict = instrument ? "STOP" : stops.length ? "STOP" : "PASS";
+  const er = errorRule(audit.errored.length, tasks.length);
+  if (audit.instrument.length) stops.push(`STOP(INSTRUMENT): ${audit.instrument.slice(0, 5).join(" | ")}`);
+  if (er === "STOP") stops.push(`STOP(INSTRUMENT): ${audit.errored.length} errored > 1%`);
+  const verdict = instrument || stops.length ? "STOP" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "PASS";
   const out = { schema: "esmo.ga8-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
-    matches: tasks.length, control: ctl, instrumentStop: instrument, rows, stops, warns, verdict };
+    matches: tasks.length, errored: audit.errored, control: ctl, instrumentStop: instrument, rows, stops, warns, verdict,
+    notes: ["the template is on the dragon side in about 52.5% of seeds (odd seeds STANDARD 109 / even seeds SWAPPED 101); the std control absorbs this; per-template dragonSideShare reported", "checkpointing is per match (finer than the 250-match batches in the plan)"] };
   const OUT = path.join(ROOT, "tools/fixtures/ga8_result_3aB.json");
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);

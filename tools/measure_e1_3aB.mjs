@@ -11,7 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { runStudy, readKey, provenance, sha16, pairedStats, meanSd, ROOT } from "./lib/studyRunner.mjs";
+import { runStudy, readKey, provenance, sha16, pairedStats, meanSd, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -24,6 +24,9 @@ export const METRICS = Object.freeze(["goldLeadAt.early", "goldLeadAt.mid", "own
 const range = (r) => { const [a, b] = r.split("-").map(Number); return Array.from({ length: b - a + 1 }, (_, i) => a + i); };
 const seedsOf = (arm) => range(REG.seeds[arm.seeds]);
 const keyOf = (arm, side) => (arm.role === "control" ? "ctrl" : `${arm.id}@${side}`);
+/** 每一筆紀錄的儀器檢查（--run 即時、--report 全部重查；審查 M1）。 */
+const recCheck = (r) => [...(r.ruleset === "balanceTool.v21" && r.directorMode === "core.v1" && r.laneFrame === "teamRelative" && r.tool === "phaseStudySim.v3" && r.layers?.heroSkills && r.layers?.heroPassives && r.layers?.heroPowerCurve && !r.layers?.battleTalents ? [] : ["instrument mismatch"]),
+  ...(r.selfCheck?.length ? [`selfCheck ${r.selfCheck.join(",")}`] : [])];
 
 // ── worker ──────────────────────────────────────────────────────────────────
 if (flag("e1-worker")) {
@@ -98,18 +101,17 @@ if (flag("run")) {
   if (fs.existsSync(path.join(ROOT, OUT_REL))) { console.error("結果檔已存在：這些 seeds 已觀察過"); process.exit(2); }
   const prov = provenance();
   if (prov.dirtyFilesUnderSrcTools) { console.error(`src／tools 有 ${prov.dirtyFilesUnderSrcTools} 個未提交變更`); process.exit(2); }
-  const okRec = (r) => r.ruleset === "balanceTool.v21" && r.directorMode === "core.v1" && r.laneFrame === "teamRelative" && r.tool === "phaseStudySim.v3" && r.layers?.heroSkills && !r.layers?.battleTalents ? [] : ["instrument mismatch"];
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e1-worker"], meta: META, workers: Number(val("workers", 3)), label: "E1",
-    check: (r) => [...okRec(r), ...(r.selfCheck?.length ? [`selfCheck ${r.selfCheck.join(",")}`] : [])] });
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e1-worker"], meta: META, workers: Number(val("workers", 3)), label: "E1", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 
 if (flag("report")) {
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  const audit = auditStudy(DIR, tasks, recCheck);
+  if (audit.halt) { console.error(`⛔ HALT：${audit.halt}（不判定，交 Owner）`); process.exit(5); }
+  if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
   const data = new Map(); for (const k of new Set(tasks.map((t) => t.key))) data.set(k, readKey(DIR, k));
-  const missing = tasks.filter((t) => !data.get(t.key).has(t.id)).length;
-  if (missing) { console.log(`資料未完整：還有 ${missing} 場（不判定）`); process.exit(6); }
   const rec = (key, seed) => data.get(key).get(`${key}#${seed}`);
   const v = (r, side, mtr) => r?.vals?.[side]?.[mtr];
   const fin = (x) => typeof x === "number" && Number.isFinite(x);
@@ -127,26 +129,29 @@ if (flag("report")) {
     }
     const t = tost(ds, REG.primary.margin);
     const planned = seeds(id).length;
-    const verdict = ds.length < 0.9 * planned ? "INCONCLUSIVE" : t.verdict;
+    //  優先序（登記檔 precedence）：STOP 優先；不是 STOP 而有效 seed 不足計畫的 90% ⇒ INCONCLUSIVE。
+    const verdict = t.verdict === "STOP" ? "STOP" : ds.length < 0.9 * planned ? "INCONCLUSIVE" : t.verdict;
     return { id, n: ds.length, planned, D: t.mean, ci90: [t.lo, t.hi], se: t.se, verdict, deltaBlue: meanSd(dB).mean, deltaRed: meanSd(dR).mean,
       strata: { blueIsDragonSide: pairedStats(strata.blueDragon), redIsDragonSide: pairedStats(strata.redDragon) } };
   });
   //  護欄
-  const guards = [], warns = [], stops = [];
+  const guards = [], warns = [], stops = [], guardGaps = [];
   for (const arm of REG.arms.filter((a) => a.role !== "control")) for (const side of arm.sides) {
     const key = `${arm.id}@${side}`, S = seeds(arm.id);
     const pairs = (mtr) => S.map((s) => [v(rec("ctrl", s), side, mtr), v(rec(key, s), side, mtr)]).filter((p) => p.every(fin));
     const g = { arm: arm.id, side };
+    const enough = (n) => n >= 0.9 * S.length;
     const og = pairedStats(pairs("ownGoldAt.early").map((p) => p[1] - p[0]));
-    g.ownGold = { mean: og.mean, z: og.z, n: og.n, stop: (og.z ?? 0) <= -3 };
+    g.ownGold = { mean: og.mean, z: og.z, n: og.n, stop: (og.z ?? 0) <= -3, enough: enough(og.n) };
     const w = meanSd(S.map((s) => v(rec(key, s), side, "win")).filter(fin));
-    g.winRate = { rate: w.mean, n: w.n, stop: w.mean < 0.4 || w.mean > 0.6 };
+    g.winRate = { rate: w.mean, n: w.n, stop: w.mean < 0.4 || w.mean > 0.6, enough: enough(w.n) };
     if (["quickStrongBot", "snowballStrongBot", "strongBotAggressive"].includes(arm.id)) {
       const rc = ratioCi(pairs("ganksPerMin.early"));
-      g.ganks = { ...rc, warn: rc.ratio >= 1.9, stop: rc.lo > 2.0 };
+      g.ganks = { ...rc, warn: rc.ratio != null && rc.ratio >= 1.9, stop: rc.lo != null && rc.lo > 2.0, enough: rc.ratio != null && enough(rc.n) };
       g.botDeaths = deathsWarn(pairs("deathsAt.adc+sup.early"));
     }
     g.junglerDeaths = deathsWarn(pairs("deathsAt.jungle.early"));
+    for (const [nm, x] of [["own gold", g.ownGold], ["win band", g.winRate], ["ganks", g.ganks]]) if (x && !x.stop && !x.enough) guardGaps.push(`${key} ${nm}: n ${x.n} < 90% of ${S.length}`);
     if (g.ownGold.stop) stops.push(`${key} own gold z ${og.z?.toFixed(2)}`);
     if (g.winRate.stop) stops.push(`${key} win rate ${w.mean?.toFixed(3)}`);
     if (g.ganks?.stop) stops.push(`${key} ganks ratio lower bound ${g.ganks.lo.toFixed(3)} > 2.0`);
@@ -166,10 +171,14 @@ if (flag("report")) {
     return { id: it.id, metric: it.metric, ...out };
   });
   for (const p of primary) if (p.verdict === "STOP") stops.push(`${p.id} side difference ${p.D.toFixed(1)} (90% CI ${p.ci90.map((x) => x.toFixed(1)).join("..")}) outside +/-150`);
-  const overall = stops.length ? "STOP" : primary.some((p) => p.verdict === "INCONCLUSIVE") ? "INCONCLUSIVE" : "PASS";
+  const er = errorRule(audit.errored.length, tasks.length);
+  if (audit.instrument.length) stops.push(`STOP(INSTRUMENT): ${audit.instrument.slice(0, 5).join(" | ")}`);
+  if (er === "STOP") stops.push(`STOP(INSTRUMENT): ${audit.errored.length} errored matches > 1%`);
+  const overall = stops.length ? "STOP" : (primary.some((p) => p.verdict === "INCONCLUSIVE") || guardGaps.length || er === "INCONCLUSIVE") ? "INCONCLUSIVE" : "PASS";
   const prov = provenance();
   const out = { schema: "esmo.e1-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: FP, gitHead: prov.gitHead, reportedAt: new Date().toISOString(),
-    matches: tasks.length, primary, guards, interactions: inter, stops, warns, overall };
+    matches: tasks.length, errored: audit.errored, guardGaps, primary, guards, interactions: inter, stops, warns, overall,
+    notes: ["ganks ratio CI = paired-difference CI / control mean (the control mean's own uncertainty is ignored; declared in the registration)", "deathsPerMin is report-only; the WARN rule uses the per-match counts deathsAt"] };
   if (fs.existsSync(path.join(ROOT, OUT_REL))) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(path.join(ROOT, OUT_REL), `${JSON.stringify(out, null, 1)}\n`);
   for (const p of primary) console.log(`主比較 ${p.id}：D ${p.D.toFixed(1)} 金（90% CI ${p.ci90.map((x) => x.toFixed(1)).join("～")}；n ${p.n}/${p.planned}）⇒ ${p.verdict}；Δ藍 ${p.deltaBlue.toFixed(1)}、Δ紅 ${p.deltaRed.toFixed(1)}`);

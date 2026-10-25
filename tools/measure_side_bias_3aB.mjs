@@ -46,7 +46,8 @@ if (flag("sb-worker")) {
     const v = chal.G.challengeGoldenInputs({ id: `sb-${t.seed}`, params: { index: t.seed % keys.length, seed: t.seed, draft: true, tacticIds: [a.tacticId, d.tacticId] } }, { simulationVersion: ver });
     const r = chal.R.runChallenge({ challenge: v.challenge, challengerSnapshot: v.challenger, defenderSnapshot: v.defender, draftResult: v.draftResult, heroOf: chal.H.heroById, currentSimulationVersion: ver });
     if (!r.ok) throw new Error(`runChallenge: ${JSON.stringify(r.errors).slice(0, 200)}`);
-    return { seed: t.seed, engineSeed: r.result.matchSeed, ruleset: t.arm, layout: objectiveLayoutForSeed(r.result.matchSeed), opponent: `${a.key}>${d.key}`,
+    //  審查 M5：記實際套用的佈局（challenge.v20 一律 STANDARD）；分層用 seed 的 bySeed 標記（stratum）。
+    return { seed: t.seed, engineSeed: r.result.matchSeed, ruleset: t.arm, layout: t.arm === "challenge.v20" ? "STANDARD" : objectiveLayoutForSeed(r.result.matchSeed), stratum: objectiveLayoutForSeed(r.result.matchSeed), opponent: `${a.key}>${d.key}`,
       winner: r.result.outcome === "challengerWin" ? "blue" : r.result.outcome === "defenderWin" ? "red" : null, duration: r.result.durationSec, simulationVersion: r.result.simulationVersion };
   }
   process.on("message", async (t) => {
@@ -65,7 +66,8 @@ export function layoutVerdict(pairs) {
   const w20 = pairs.map((p) => winOf(p.v20)), w21 = pairs.map((p) => winOf(p.v21));
   const m = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
   const bias20 = m(w20) - 0.5, bias21 = m(w21) - 0.5;
-  const sg = Math.sign(bias20) || Math.sign(bias21) || 1;
+  //  審查 minor：「變糟」的方向取偏差較大的那一臂（v21 把偏差翻到另一邊而且變大時，z 也要在變糟的方向上）。
+  const sg = (Math.abs(bias21) > Math.abs(bias20) ? Math.sign(bias21) : Math.sign(bias20)) || Math.sign(bias21) || 1;
   const z = pairedStats(pairs.map((p, i) => (w21[i] - w20[i]) * sg)).z ?? 0;
   const worsePp = (Math.abs(bias21) - Math.abs(bias20)) * 100;
   const durRatio = median(pairs.map((p) => p.v21.duration)) / median(pairs.map((p) => p.v20.duration));
@@ -111,12 +113,17 @@ const META = { study: `${REG.studyId}/${PATH}`, registration: sha16(REG_TEXT), f
 const invalidSeeds = () => {
   const bad = new Set();
   for (const arm of P.arms) for (const [id] of readKey(DIR, arm, ".errors")) bad.add(Number(id.split("#")[1]));
-  for (const arm of P.arms) for (const [, r] of readKey(DIR, arm)) if (r.ruleset !== arm || r.engineSeed !== r.seed || (PATH === "career" && arm === "career.v21" && (r.director !== "core.v1" || r.laneFrame !== "teamRelative"))) bad.add(r.seed);
+  //  有效性：career 比對規則集與 Director；challenge 比對結果裡記下的模擬版本（審查 M5：worker 自己填的 ruleset 不能當證據）。
+  const verOf = (arm) => (arm === "challenge.v21" ? "moba-sim.v21" : "moba-sim.v20");
+  for (const arm of P.arms) for (const [, r] of readKey(DIR, arm)) if (r.engineSeed !== r.seed
+    || (PATH === "career" && (r.ruleset !== arm || (arm === "career.v21" && (r.director !== "core.v1" || r.laneFrame !== "teamRelative"))))
+    || (PATH === "challenge" && r.simulationVersion !== verOf(arm))) bad.add(r.seed);
   return bad;
 };
 
 if (flag("run")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
+  if (fs.existsSync(path.join(DIR, "HALT"))) { console.error("資料夾有 HALT：不得續跑"); process.exit(5); }
   const prov = provenance();
   if (prov.dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
   for (let round = 0; round < 5; round++) {
@@ -134,6 +141,7 @@ if (flag("run")) {
 if (flag("report")) {
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  if (fs.existsSync(path.join(DIR, "HALT"))) { console.error("資料夾有 HALT：不判定，交 Owner"); process.exit(5); }
   const bad = invalidSeeds(), w = walk(bad);
   const data = Object.fromEntries(P.arms.map((a) => [a, readKey(DIR, a)]));
   const missing = w.seeds.filter((s) => !bad.has(s) && P.arms.some((a) => !data[a].has(`${a}#${s}`)));
@@ -147,14 +155,27 @@ if (flag("report")) {
   const breaker = w.seeds.length >= 100 && bad.size / w.seeds.length > 0.02;
   const verdict = breaker ? "STOP" : !w.complete ? "INCONCLUSIVE" : (per.STANDARD.stop || per.SWAPPED.stop) ? "STOP" : (per.STANDARD.warn || per.SWAPPED.warn) ? "WARN" : "PASS";
   const pure = (v) => (per.STANDARD[v] + per.SWAPPED[v]) / 2, dragon = (v) => (per.STANDARD[v] - per.SWAPPED[v]) / 2;
+  //  各對手明細（登記檔 report）。
+  const byOpp = {};
+  for (const s of w.seeds.filter((x) => !bad.has(x))) {
+    const r20 = data[a20].get(`${a20}#${s}`), r21 = data[a21].get(`${a21}#${s}`), k = r21.opponent;
+    (byOpp[k] ??= { n: 0, blueWin20: 0, blueWin21: 0 }); byOpp[k].n++; byOpp[k].blueWin20 += winOf(r20); byOpp[k].blueWin21 += winOf(r21);
+  }
+  for (const v of Object.values(byOpp)) { v.blueWin20 /= v.n; v.blueWin21 /= v.n; }
+  //  challenge.v20 一律在 STANDARD 打（seed 的分層只是標記）⇒ v20 只能報「STANDARD 下的藍方勝率」，不拆純藍方／巨龍側（審查 M5）。
+  const sideSplit = PATH === "career"
+    ? { pureBlueAdvantage: { v20: pure("bias20"), v21: pure("bias21") }, dragonSideAdvantage: { v20: dragon("bias20"), v21: dragon("bias21") } }
+    : { v20StandardOnlyBlueRate: (per.STANDARD.blueWin20 * per.STANDARD.n + per.SWAPPED.blueWin20 * per.SWAPPED.n) / (per.STANDARD.n + per.SWAPPED.n),
+        pureBlueAdvantage: { v21: pure("bias21") }, dragonSideAdvantage: { v21: dragon("bias21") },
+        pairingNote: "challenger = FIXTURE_KEYS[seed % 5], defender = FIXTURE_KEYS[(seed + 2) % 5]: every fixture is challenger and defender equally often, but each pairing is one-directional, so blue (challenger) strength is not fully separated from the side" };
   const out = { schema: "esmo.side-bias-result.v1", path: PATH, registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
-    seedsWalked: w.seeds.length, lastSeed: w.seeds[w.seeds.length - 1], invalidSeeds: [...bad], perLayout: per,
-    pureBlueAdvantage: { v20: pure("bias20"), v21: pure("bias21") }, dragonSideAdvantage: { v20: dragon("bias20"), v21: dragon("bias21") }, verdict };
+    seedsWalked: w.seeds.length, lastSeed: w.seeds[w.seeds.length - 1], invalidSeeds: [...bad], perLayout: per, ...sideSplit, byOpponent: byOpp, verdict };
   const OUT = path.join(ROOT, `tools/fixtures/side_bias_result_${PATH}_3aB.json`);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   for (const L of ["STANDARD", "SWAPPED"]) { const v = per[L]; console.log(`${L}：n ${v.n}，藍勝 ${a20} ${(v.blueWin20 * 100).toFixed(1)}% → ${a21} ${(v.blueWin21 * 100).toFixed(1)}%，worse ${v.worsePp.toFixed(2)}pp，z ${v.z.toFixed(2)}，時長比 ${v.durRatio.toFixed(3)}${v.stop ? " STOP" : v.warn ? " WARN" : ""}`); }
-  console.log(`純藍方優勢 ${(out.pureBlueAdvantage.v20 * 100).toFixed(1)} → ${(out.pureBlueAdvantage.v21 * 100).toFixed(1)}pp；巨龍側優勢 ${(out.dragonSideAdvantage.v20 * 100).toFixed(1)} → ${(out.dragonSideAdvantage.v21 * 100).toFixed(1)}pp`);
+  if (PATH === "career") console.log(`純藍方優勢 ${(out.pureBlueAdvantage.v20 * 100).toFixed(1)} → ${(out.pureBlueAdvantage.v21 * 100).toFixed(1)}pp；巨龍側優勢 ${(out.dragonSideAdvantage.v20 * 100).toFixed(1)} → ${(out.dragonSideAdvantage.v21 * 100).toFixed(1)}pp`);
+  else console.log(`challenge.v20（一律 STANDARD）藍方勝率 ${(out.v20StandardOnlyBlueRate * 100).toFixed(1)}%；challenge.v21 純藍方 ${(out.pureBlueAdvantage.v21 * 100).toFixed(1)}pp、巨龍側 ${(out.dragonSideAdvantage.v21 * 100).toFixed(1)}pp`);
   console.log(`side bias ${PATH} 判定：${verdict}`);
   process.exit(verdict === "STOP" ? 5 : 0);
 }

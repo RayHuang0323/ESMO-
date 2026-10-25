@@ -15,12 +15,117 @@
     "path": "tool: every seed is a distinct engine seed (tools/check_study_seed_plan_3aB.mjs E1)"
   },
   "arms": [
-    { "id": "ctrl", "role": "control", "input": { "choices": {} }, "seeds": "control", "sides": ["both"] },
-    { "id": "snowball", "role": "primary", "input": { "choices": { "winCondition": "earlySnowball" } }, "seeds": "primary", "sides": ["blue", "red"] },
-    { "id": "quickStrongBot", "role": "primary", "input": { "choices": { "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } } }, "seeds": "primary", "sides": ["blue", "red"], "note": "quick-mode strong side bottom (the live shortcut writes early + mid focusLane)" },
-    { "id": "snowballStrongBot", "role": "safety", "input": { "choices": { "winCondition": "earlySnowball", "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } } }, "seeds": "safety", "sides": ["blue", "red"] },
-    { "id": "strongBotAggressive", "role": "safety", "input": { "choices": { "phases": { "early": { "stance": "aggressive", "focusLane": "bot" }, "mid": { "stance": "aggressive", "focusLane": "bot" } } } }, "seeds": "safety", "sides": ["blue", "red"] },
-    { "id": "refAggressiveEarly", "role": "reference", "input": { "choices": { "phases": { "early": { "stance": "aggressive" } } } }, "seeds": "safety", "sides": ["blue", "red"], "note": "no dragon and no economy component: baseline for a colour asymmetry not specific to an option" }
+    {
+      "id": "ctrl",
+      "role": "control",
+      "input": {
+        "choices": {}
+      },
+      "seeds": "control",
+      "sides": [
+        "both"
+      ]
+    },
+    {
+      "id": "snowball",
+      "role": "primary",
+      "input": {
+        "choices": {
+          "winCondition": "earlySnowball"
+        }
+      },
+      "seeds": "primary",
+      "sides": [
+        "blue",
+        "red"
+      ]
+    },
+    {
+      "id": "quickStrongBot",
+      "role": "primary",
+      "input": {
+        "choices": {
+          "phases": {
+            "early": {
+              "focusLane": "bot"
+            },
+            "mid": {
+              "focusLane": "bot"
+            }
+          }
+        }
+      },
+      "seeds": "primary",
+      "sides": [
+        "blue",
+        "red"
+      ],
+      "note": "quick-mode strong side bottom (the live shortcut writes early + mid focusLane)"
+    },
+    {
+      "id": "snowballStrongBot",
+      "role": "safety",
+      "input": {
+        "choices": {
+          "winCondition": "earlySnowball",
+          "phases": {
+            "early": {
+              "focusLane": "bot"
+            },
+            "mid": {
+              "focusLane": "bot"
+            }
+          }
+        }
+      },
+      "seeds": "safety",
+      "sides": [
+        "blue",
+        "red"
+      ]
+    },
+    {
+      "id": "strongBotAggressive",
+      "role": "safety",
+      "input": {
+        "choices": {
+          "phases": {
+            "early": {
+              "stance": "aggressive",
+              "focusLane": "bot"
+            },
+            "mid": {
+              "stance": "aggressive",
+              "focusLane": "bot"
+            }
+          }
+        }
+      },
+      "seeds": "safety",
+      "sides": [
+        "blue",
+        "red"
+      ]
+    },
+    {
+      "id": "refAggressiveEarly",
+      "role": "reference",
+      "input": {
+        "choices": {
+          "phases": {
+            "early": {
+              "stance": "aggressive"
+            }
+          }
+        }
+      },
+      "seeds": "safety",
+      "sides": [
+        "blue",
+        "red"
+      ],
+      "note": "no dragon and no economy component: baseline for a colour asymmetry not specific to an option"
+    }
   ],
   "matches": "control 1,200 + primary 2 x 2 x 1,200 = 4,800 + safety/reference 3 x 2 x 400 = 2,400 => 8,400 matches (~3 h, 3 workers)",
   "primary": {
@@ -33,27 +138,98 @@
       "STOP": "the 90% CI lies entirely outside [-150, +150]",
       "INCONCLUSIVE": "otherwise, or fewer than 90% of the planned seeds are valid; never reported as PASS, the Owner decides"
     },
-    "comparisons": ["snowball", "quickStrongBot"],
-    "report": "Delta_blue, Delta_red, and D split by 'the treated side is the dragon side' (objectiveLayoutForSeed; STANDARD = blue is the dragon side); report only"
+    "comparisons": [
+      "snowball",
+      "quickStrongBot"
+    ],
+    "report": "Delta_blue, Delta_red, and D split by 'the treated side is the dragon side' (objectiveLayoutForSeed; STANDARD = blue is the dragon side); report only",
+    "precedence": "STOP takes precedence: a 90% CI entirely outside the margin is STOP even with fewer than 90% valid seeds; otherwise fewer than 90% valid seeds => INCONCLUSIVE"
   },
   "economicMeaning": "150 gold = half a kill (kill 300, assist share 150) = about 1.2% of a team's gold at the end of the early phase (~13,000 in C6 samples) = 0.17 SD of the control's early gold lead (SD 886) = about half of the map's dragon-side early advantage (+227/+332)",
   "power": "from C6 variance (not evidence): SD of the side difference 1,362-1,661 => at n=1200 SE 39-48; TOST power at a true D of 0 about 0.86 (SD 1,661) to 0.97 (SD 1,362)",
   "guards": {
     "pairing": "per arm and side, same-seed pairs against the control from the same side's view; the safety/reference arms use seeds 21001-21400",
     "items": [
-      { "id": "own_gold_early", "metric": "ownGoldAt.early", "level": "STOP", "rule": "paired z <= -3 (own team gold at the end of the early phase drops)", "arms": "all treatment arms" },
-      { "id": "win_band", "metric": "win (draw = 0.5)", "level": "STOP", "rule": "the treated side's win rate is outside [0.40, 0.60] (point estimate); safety band only, never a claim that a tactic is favourable", "arms": "all treatment arms" },
-      { "id": "ganks_level", "metric": "ganksPerMin.early", "level": "WARN at ratio >= 1.9 (point); STOP when the lower 95% bound of the ratio > 2.0", "rule": "ratio = mean(treatment) / mean(control); 95% CI of the ratio from the paired difference divided by the control mean", "arms": ["quickStrongBot", "snowballStrongBot", "strongBotAggressive"] },
-      { "id": "jungler_deaths_early", "metric": "deathsAt.jungle.early (count) and deathsPerMin.jungle.early", "level": "WARN", "rule": "low events (control mean < 0.5 deaths per match): WARN if the absolute increase >= 0.25 deaths per match with paired z >= 3; otherwise WARN if rel >= +50% AND absolute increase >= 0.15 deaths per match AND paired z >= 3", "arms": "all treatment arms" },
-      { "id": "bot_lane_deaths_early", "metric": "deathsAt.adc+sup.early and deathsPerMin.adc+sup.early", "level": "WARN", "rule": "same as jungler_deaths_early", "arms": ["quickStrongBot", "snowballStrongBot", "strongBotAggressive"] }
-    ]
+      {
+        "id": "own_gold_early",
+        "metric": "ownGoldAt.early",
+        "level": "STOP",
+        "rule": "paired z <= -3 (own team gold at the end of the early phase drops)",
+        "arms": "all treatment arms"
+      },
+      {
+        "id": "win_band",
+        "metric": "win (draw = 0.5)",
+        "level": "STOP",
+        "rule": "the treated side's win rate is outside [0.40, 0.60] (point estimate); safety band only, never a claim that a tactic is favourable",
+        "arms": "all treatment arms"
+      },
+      {
+        "id": "ganks_level",
+        "metric": "ganksPerMin.early",
+        "level": "WARN at ratio >= 1.9 (point); STOP when the lower 95% bound of the ratio > 2.0",
+        "rule": "ratio = mean(treatment) / mean(control); 95% CI of the ratio from the paired difference divided by the control mean",
+        "arms": [
+          "quickStrongBot",
+          "snowballStrongBot",
+          "strongBotAggressive"
+        ]
+      },
+      {
+        "id": "jungler_deaths_early",
+        "metric": "deathsAt.jungle.early (count) (rule); deathsPerMin.jungle.early report-only",
+        "level": "WARN",
+        "rule": "low events (control mean < 0.5 deaths per match): WARN if the absolute increase >= 0.25 deaths per match with paired z >= 3; otherwise WARN if rel >= +50% AND absolute increase >= 0.15 deaths per match AND paired z >= 3",
+        "arms": "all treatment arms"
+      },
+      {
+        "id": "bot_lane_deaths_early",
+        "metric": "deathsAt.adc+sup.early (rule); deathsPerMin.adc+sup.early report-only",
+        "level": "WARN",
+        "rule": "same as jungler_deaths_early",
+        "arms": [
+          "quickStrongBot",
+          "snowballStrongBot",
+          "strongBotAggressive"
+        ]
+      }
+    ],
+    "validity": "every STOP-level guard (own gold, win band, ganks) needs valid pairs >= 90% of the arm's planned seeds; otherwise that guard is a data gap and the overall verdict is at most INCONCLUSIVE (a STOP still wins)",
+    "ratioCi": "ganks ratio 95% CI = 1 + (paired-difference CI) / control mean; the control mean's own uncertainty is ignored (declared; this makes STOP slightly easier, i.e. conservative for safety)"
   },
   "interactions": [
-    { "id": "stack_ganks_early", "combo": "snowballStrongBot", "parts": ["snowball", "quickStrongBot"], "metric": "ganksPerMin.early", "rule": "per seed (combo - a - b + ctrl) on seeds 21001-21400; report; flag if |z| >= 3" },
-    { "id": "stack_gold_early", "combo": "snowballStrongBot", "parts": ["snowball", "quickStrongBot"], "metric": "goldLeadAt.early", "rule": "same; report; flag if |z| >= 3" }
+    {
+      "id": "stack_ganks_early",
+      "combo": "snowballStrongBot",
+      "parts": [
+        "snowball",
+        "quickStrongBot"
+      ],
+      "metric": "ganksPerMin.early",
+      "rule": "per seed (combo - a - b + ctrl) on seeds 21001-21400; report; flag if |z| >= 3"
+    },
+    {
+      "id": "stack_gold_early",
+      "combo": "snowballStrongBot",
+      "parts": [
+        "snowball",
+        "quickStrongBot"
+      ],
+      "metric": "goldLeadAt.early",
+      "rule": "same; report; flag if |z| >= 3"
+    }
   ],
-  "overall": "STOP if any primary comparison or STOP-level guard says STOP; otherwise INCONCLUSIVE if any primary comparison is INCONCLUSIVE; otherwise PASS. WARN flags and interaction flags are listed for the Owner and never change PASS into anything else silently.",
-  "reportedMetrics": ["goldLeadAt.mid", "durationMin", "ganksPerMin.mid", "ganksOwnPerMin.bot.early", "contestShare.dragon.early", "captureShare.dragon.early+mid+late"],
+  "overall": "STOP if any primary comparison, STOP-level guard or instrument/error rule says STOP; otherwise INCONCLUSIVE if any primary comparison is INCONCLUSIVE, any STOP-level guard has a data gap, or any match errored; otherwise PASS. WARN and interaction flags are listed for the Owner.",
+  "reportedMetrics": [
+    "goldLeadAt.mid",
+    "durationMin",
+    "ganksPerMin.mid",
+    "ganksOwnPerMin.bot.early",
+    "contestShare.dragon.early",
+    "captureShare.dragon.early+mid+late"
+  ],
   "noOptionalStopping": "verdicts are computed only on complete data; partial batches are never evaluated",
-  "notClaimed": "no win-rate claim; no coefficient, engine or rule change in response to a STOP/WARN without the Owner"
+  "notClaimed": "no win-rate claim; no coefficient, engine or rule change in response to a STOP/WARN without the Owner",
+  "errors": "errored matches (errors.jsonl) are never retried or replaced and are listed by seed; any errored match => the verdict is at most INCONCLUSIVE; more than 1% of the planned matches errored => STOP(INSTRUMENT)",
+  "instrumentCheck": "every record (live and again at report time): balanceTool.v21, Director core.v1, laneFrame teamRelative, phaseStudySim.v3, skills/passives/curve on, talents off, empty selfCheck; any failure => HALT file / STOP(INSTRUMENT)"
 }

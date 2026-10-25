@@ -13,7 +13,8 @@
 //   ① 模板：依風格（STYLE_TEMPLATES）。積極型若自家打野是全隊最強 ⇒ 野區入侵（純模板），否則標準運營＋前期滾雪球；
 //      防守型若自家下路（射手）是全隊最強 ⇒ 保核心拖後期，否則劣勢穩守；均衡型＝標準運營；控龍＝龍坑運營；強開團＝抱團強開。
 //   ② 證據規則（Owner 2026-10-25 Review 決策 5：不得以未驗證行為充作已確認戰術）：模板以外的選擇**只加在有直接證據的模板上**
-//      （EVIDENCE_TEMPLATES＝std：前期滾雪球、輔助任務都在 std 上有 n=400 紅藍複驗 confirmed）。v2 模板一律用純模板——
+//      （EVIDENCE_TEMPLATES＝std：前期滾雪球在 std 上 n=400 紅藍複驗 confirmed（C6）；輔助任務遊走／保護在 std 上 n=200 紅藍複驗 confirmed
+//       （3a-A 追加複驗的確認組 seeds 1001–1200，z 10.6–15.0））。v2 模板一律用純模板——
 //      那些選擇在 v2 模板上從沒量過（Registry 提供它們只是因為「沒被排除」）；「野區入侵＋前期滾雪球」這個組合也從沒量過 ⇒ 不用。
 //      強邊不用：與前期滾雪球的疊加未經量測（E1 才量），也不在 v2 模板上量過。
 //   ③ 輔助任務（只在 std）：輔助的視野＋溝通 ≥ 站位＋配合 ⇒ 遊走，否則保護（有提供才選；與模板自己的值相同就不寫）。
@@ -28,7 +29,7 @@ export const AI_COACH_VERSION = "aiCoach.v1";
 const STAT_KEYS = Object.freeze(["reflex", "accuracy", "apm", "positioning", "mapAware", "tacticalIQ", "decision", "adaptability",
   "courage", "clutch", "focus", "resilience", "comms", "leadership", "synergy", "learning"]);
 
-/** 模板以外的選擇只能加在這些模板上（選擇的 n=400 紅藍複驗是在這些模板上量的）。 */
+/** 模板以外的選擇只能加在這些模板上（選擇的紅藍複驗是在這些模板上量的：前期滾雪球 n=400、輔助任務 n=200）。 */
 export const EVIDENCE_TEMPLATES = Object.freeze(["std"]);
 export const STYLE_TEMPLATES = Object.freeze({
   aggressive: Object.freeze({ byBest: Object.freeze({ 打野: "v2.jungle_invasion" }), otherwise: "std", winCondition: "earlySnowball", mission: false }),

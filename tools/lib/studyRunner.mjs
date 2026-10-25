@@ -6,6 +6,9 @@
 //  停止：<dir>/STOP 存在 ⇒ 每個 worker 跑完手上那一場就收工。worker 中途死掉（記憶體保護等）⇒ 那一場記為遺失，續跑會補。
 //  資料夾第一次使用時寫 meta.json（研究 id、gitHead、指紋、登記檔雜湊）；之後必須一致，否則拒絕混跑。
 //  workers ≤ 3（記憶體保護）；長量測一律單線、一次一支。
+//  即時檢查失敗（儀器不符、自檢失敗）⇒ 寫 <dir>/HALT（原因），之後 --run 與 --report 都拒絕，直到 Owner 處理（審查 M1：停跑必須跨次保留）。
+//  錯誤場次（errors.jsonl）規則（審查 M2，各研究登記檔同一條）：不重試、不替換、逐 seed 列出；有任何錯誤 ⇒ 判定最多 INCONCLUSIVE；
+//  錯誤超過計畫的 1% ⇒ STOP(INSTRUMENT)。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
@@ -45,6 +48,8 @@ export function provenance() {
 export async function runStudy({ dir, tasks, workerFile, workerArgs = [], meta, workers = 3, check = null, label = "study" }) {
   if (insideRepo(dir)) throw new Error("--dir 必須在 repo 之外");
   fs.mkdirSync(dir, { recursive: true });
+  const haltF = path.join(dir, "HALT");
+  if (fs.existsSync(haltF)) throw new Error(`資料夾有 HALT（${fs.readFileSync(haltF, "utf8").trim()}）：即時檢查曾經失敗，不得續跑，交 Owner`);
   const metaF = path.join(dir, "meta.json");
   if (fs.existsSync(metaF)) {
     const m = JSON.parse(fs.readFileSync(metaF, "utf8"));
@@ -73,7 +78,7 @@ export async function runStudy({ dir, tasks, workerFile, workerArgs = [], meta, 
         if (m.type === "done") {
           fs.appendFileSync(fileOf(dir, t.key), `${JSON.stringify({ id: t.id, seed: t.seed, rec: m.rec })}\n`);
           const p = check ? check(m.rec, t) : [];
-          if (p.length) { halted = `${t.id}: ${p.join(" ｜ ")}`; console.error(`⛔ ${halted}`); }
+          if (p.length) { halted = `${t.id}: ${p.join(" ｜ ")}`; fs.writeFileSync(haltF, `${halted}\n`); console.error(`⛔ ${halted}（已寫 HALT）`); }
           finished++;
           if (finished % 100 === 0 || finished === todo.length) {
             const el = (Date.now() - t0) / 1000, per = el / finished;
@@ -94,6 +99,28 @@ export async function runStudy({ dir, tasks, workerFile, workerArgs = [], meta, 
   console.log(`${label}：本輪 ${finished} 場、錯誤 ${failed}、遺失 ${lost}，${((Date.now() - t0) / 60000).toFixed(1)} 分${stopped ? "；依 STOP 停止" : ""}${halted ? "；即時檢查停跑" : ""}`);
   return { finished, failed, lost, stopped, halted };
 }
+
+/**
+ * 報告前的共同檢查（審查 M1／M2）：HALT 存在 ⇒ 拒絕；每一筆紀錄重跑即時檢查；錯誤場次逐筆列出。
+ * @returns {{ halt: string|null, instrument: string[], errored: Array<{id,seed}>, missing: number }}
+ */
+export function auditStudy(dir, tasks, check = null) {
+  const haltF = path.join(dir, "HALT");
+  const halt = fs.existsSync(haltF) ? fs.readFileSync(haltF, "utf8").trim() : null;
+  const instrument = [], errored = [];
+  let missing = 0;
+  for (const k of [...new Set(tasks.map((t) => t.key))]) {
+    const recs = readKey(dir, k), errs = readKey(dir, k, ".errors");
+    for (const t of tasks.filter((x) => x.key === k)) {
+      if (recs.has(t.id)) { const p = check ? check(recs.get(t.id), t) : []; if (p.length) instrument.push(`${t.id}: ${p.join(",")}`); }
+      else if (errs.has(t.id)) errored.push({ id: t.id, seed: t.seed });
+      else missing++;
+    }
+  }
+  return { halt, instrument, errored, missing };
+}
+/** 錯誤場次規則：0 ⇒ 不影響；> 0 ⇒ 最多 INCONCLUSIVE；> 1% ⇒ STOP(INSTRUMENT)。 */
+export const errorRule = (errored, planned) => (errored === 0 ? null : errored / planned > 0.01 ? "STOP" : "INCONCLUSIVE");
 
 // ── 統計（純函式）────────────────────────────────────────────────────────────
 export function meanSd(xs) {

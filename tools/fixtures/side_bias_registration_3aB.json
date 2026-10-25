@@ -7,30 +7,56 @@
   "authority": "Formal architecture §5 gate G-A8 (STANDARD/SWAPPED side bias, pre-specified new seeds); 3a plan T17 (side bias n=1000 on the production setting and on the Challenge setting); Owner 2026-10-25 P2 authorisation",
   "tool": "tools/measure_side_bias_3aB.mjs --path=career|challenge (--run / --report; results tools/fixtures/side_bias_result_{career,challenge}_3aB.json)",
   "metric": "blue win rate per layout; a match with no winner at the cap counts 0.5; bias(arm, layout) = blueWinRate - 0.5",
-  "comparison": "the v21 arm against the v20 arm on the same seeds (paired); worse_pp = (|bias_v21| - |bias_v20|) x 100 per layout; paired per-seed d = (win_v21 - win_v20) x sign(bias_v20) (sign(bias_v21) if bias_v20 = 0); z = mean(d) / (sd(d)/sqrt(n))",
+  "comparison": "the v21 arm against the v20 arm on the same seeds (paired); worse_pp = (|bias_v21| - |bias_v20|) x 100 per layout; paired per-seed d = (win_v21 - win_v20) x s, s = the sign of the larger |bias| of the two arms (so a flip to the other side that grows the bias counts as worsening); z = mean(d) / (sd(d)/sqrt(n))",
   "thresholds": {
     "STOP": "in either layout: worse_pp >= 5, or z >= 3 in the worsening direction",
     "WARN": "in either layout: worse_pp >= 3, or |median duration v21 / median duration v20 - 1| > 0.10",
     "PASS": "data complete, no STOP and no WARN",
     "INCONCLUSIVE": "the walk ends at the limit without both layouts reaching the target, or more than 2% invalid seeds (circuit breaker => STOP)"
   },
-  "report": ["blue win rate and bias per arm and layout", "pure blue advantage = mean of the two layouts' bias", "dragon-side advantage = (bias_STANDARD - bias_SWAPPED) / 2 (STANDARD = dragon pit next to blue's duo lane)", "median duration per arm", "per-opponent breakdown"],
+  "report": [
+    "blue win rate and bias per arm and layout",
+    "pure blue advantage = mean of the two layouts' bias",
+    "dragon-side advantage = (bias_STANDARD - bias_SWAPPED) / 2 (STANDARD = dragon pit next to blue's duo lane)",
+    "median duration per arm",
+    "per-opponent breakdown"
+  ],
   "paths": {
     "career": {
-      "arms": ["career.v20", "career.v21"],
+      "arms": [
+        "career.v20",
+        "career.v21"
+      ],
       "entry": "prepareLiveMatch (formal live entry) via tools/lib/careerLiveInputs.mjs: golden live inputs, mirroredRoster(seed), blue = std tactic-book binding with no choices, opponent AI_TEAMS[seed % 7]; career.v21 red = AI coach v1, career.v20 red = style template",
-      "seeds": { "range": "27001-31999", "step": 2, "targetPerLayout": 1000, "stopRule": "walk odd seeds ascending; include every seed; stop after the first seed at which both layouts (objectiveLayoutForSeed(effectiveSeed)) have >= 1000 valid seeds; expected stop 31057 (check_study_seed_plan_3aB L1)", "walkLimit": 31999 },
+      "seeds": {
+        "range": "27001-31999",
+        "step": 2,
+        "targetPerLayout": 1000,
+        "stopRule": "walk odd seeds ascending; include every seed; stop after the first seed at which both layouts (objectiveLayoutForSeed(effectiveSeed)) have >= 1000 valid seeds; expected stop 31057 (check_study_seed_plan_3aB L1)",
+        "walkLimit": 31999
+      },
       "valid": "both arms produced a record; ruleset = the arm; engine seed = effectiveSeed; career.v21 has Director core.v1 and laneFrame teamRelative"
     },
     "challenge": {
-      "arms": ["challenge.v20", "challenge.v21"],
+      "arms": [
+        "challenge.v20",
+        "challenge.v21"
+      ],
       "entry": "runChallenge (the single challenge assembly point) with the two fixture-opponent snapshots stamped moba-sim.v20 or moba-sim.v21; challenger = FIXTURE_KEYS[seed % 5], defender = FIXTURE_KEYS[(seed + 2) % 5], their own tacticIds, draft on (DraftResult as in the golden inputs); matchSeed = toEngineSeed(seed) = seed for odd seeds",
-      "layoutNote": "challenge.v20 fixes the layout to STANDARD; the strata are the seed's bySeed layout (what challenge.v21 uses). Expectation: v21 symmetrises the dragon side; the comparison still uses the STOP/WARN rules above per stratum",
-      "seeds": { "range": "33001-37999", "step": 2, "targetPerLayout": 1000, "stopRule": "same walk; expected stop 37097", "walkLimit": 37999 },
-      "valid": "both arms ran (runChallenge ok); ruleset by recorded version = the arm"
+      "layoutNote": "challenge.v20 always plays STANDARD (recorded layout STANDARD); the strata are the seed's bySeed layout, i.e. what challenge.v21 uses. For challenge, v20 is reported only as the STANDARD-only blue rate; the pure-blue / dragon-side split is reported for v21 only. The per-stratum STOP/WARN comparison still applies.",
+      "seeds": {
+        "range": "33001-37999",
+        "step": 2,
+        "targetPerLayout": 1000,
+        "stopRule": "same walk; expected stop 37097",
+        "walkLimit": 37999
+      },
+      "valid": "both arms ran (runChallenge ok); the result's recorded simulationVersion equals the arm's version (moba-sim.v20 / moba-sim.v21); engine seed = seed",
+      "pairingNote": "challenger = FIXTURE_KEYS[seed % 5], defender = FIXTURE_KEYS[(seed + 2) % 5]: each fixture appears as challenger and as defender equally often, but each pairing is one-directional (never reversed), so challenger strength is not fully separated from the blue side; disclosed in the result"
     }
   },
   "costs": "career about 2,030 seeds x 2 arms = 4,060 matches (~1.5 h); challenge about 2,050 x 2 = 4,100 (~1 h, no items/talents)",
   "circuitBreaker": "more than 2% invalid seeds after >= 100 walked => STOP(CIRCUIT_BREAKER), Owner decides",
-  "noOptionalStopping": "verdicts only on complete data"
+  "noOptionalStopping": "verdicts only on complete data",
+  "halt": "a HALT file in the data folder blocks --run and --report until the Owner decides"
 }

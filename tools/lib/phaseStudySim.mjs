@@ -76,7 +76,7 @@ export async function runCareerStudyMatch(liveInputs) {
   const E = out.setup.effectiveLayers;
   const r = await observeStudyMatch(out.engine, { seed: out.setup.seed, ruleset: out.setup.rulesetId,
     layers: { heroSkills: !!E.heroSkills, heroPassives: !!E.heroPassives, heroPowerCurve: !!E.heroPowerCurve, battleTalents: !!E.battleTalents } });
-  return { ...r, setupHash: out.setupHash, objectiveLayout: out.setup.objectiveLayout, redTacticKind: out.setup.tactic?.red?.kind ?? null };
+  return { ...r, setupHash: out.setupHash, objectiveLayout: out.setup.objectiveLayout, redTacticKind: out.setup.tactic?.red?.kind ?? null, droppedChoices: out.droppedChoices ?? [] };
 }
 
 /** v3：觀測迴圈（v2 的 runPhaseStudyMatch 本體，原樣搬出；只多了 deathsPh）。 */

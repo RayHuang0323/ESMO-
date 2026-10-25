@@ -9,7 +9,12 @@
   "ruleset": "balanceTool.v21 (tool path: Director core.v1, laneFrame teamRelative, skills on, talents off, items standard, no player stats) — the plans themselves are compared, not the AI coach or player stats",
   "templates": "all 21 templates of TACTIC_TEMPLATE_LIST (8 classic, std, 12 v2), each as a tactic-book plan with no choices; std vs std is the control",
   "opponent": "std template plan with no choices",
-  "seeds": { "range": "25001-25400", "n": 400, "path": "tool (seed as-is; tools/check_study_seed_plan_3aB.mjs G-A8)", "side": "the template plays blue on odd seeds and red on even seeds (200 / 200), so the map side cancels; layout by seed (report STANDARD/SWAPPED split)" },
+  "seeds": {
+    "range": "25001-25400",
+    "n": 400,
+    "path": "tool (seed as-is; tools/check_study_seed_plan_3aB.mjs G-A8)",
+    "side": "the template plays blue on odd seeds and red on even seeds (200 / 200), so the map side cancels; layout by seed (report STANDARD/SWAPPED split)"
+  },
   "matches": "21 x 400 = 8,400 (~3 h, 3 workers)",
   "metric": "the template side's win rate; a match with no winner at 3600 s counts 0.5",
   "thresholds": {
@@ -18,7 +23,14 @@
     "control": "std vs std must have a win rate within 0.50 +/- 0.05 (instrument sanity); outside => STOP(INSTRUMENT)",
     "PASS": "data complete, no STOP"
   },
-  "report": ["per template: win rate, 95% CI, as blue / as red, STANDARD / SWAPPED split", "median match duration per template (20-40 min long-term target, report only)"],
+  "report": [
+    "per template: win rate, 95% CI, as blue / as red, STANDARD / SWAPPED split",
+    "median match duration per template (20-40 min long-term target, report only)"
+  ],
   "noOptionalStopping": "verdicts only on complete data",
-  "notClaimed": "no claim that a template is favourable; a STOP means a template must not ship as-is and goes to the Owner (no coefficient change without the Owner)"
+  "notClaimed": "no claim that a template is favourable; a STOP means a template must not ship as-is and goes to the Owner (no coefficient change without the Owner)",
+  "errors": "errored matches are never retried or replaced and are listed by seed; any errored match => at most INCONCLUSIVE; more than 1% errored => STOP(INSTRUMENT)",
+  "instrumentCheck": "every record (live and at report time): balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off; any failure => HALT / STOP(INSTRUMENT)",
+  "sideBalanceNote": "odd seeds: template on blue; even seeds: on red. Because the layout is by seed, the template is on the dragon side in 210/400 = 52.5% of seeds; the std vs std control absorbs a common side effect; each template's dragonSideShare is reported",
+  "checkpointing": "per match (finer than the plan's 250-match batches)"
 }

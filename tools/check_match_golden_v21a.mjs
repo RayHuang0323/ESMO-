@@ -164,7 +164,9 @@ ck("K1 修正表的 12 案全部成立（三欄＝新值、resultHash＝新值�
   ck("K4 反向：結果多差一個表外欄位（時長 +1）⇒ 抓到", !!recMore && correctionProblems(e0, fx0, recMore).some((x) => x.startsWith("old-value reconstruction")));
   const liveId = fixture.cases.find((c) => c.path === "live").id;
   const plantedTable = [...CORR.cases, { ...e0, id: liveId }];
-  ck("K5 反向：表多列一個非 Challenge 案 ⇒ K0 的結構規則不成立", !plantedTable.every((c) => fxById.get(c.id)?.path === "challenge"));
+  const liveRec = observed.find((o) => o.id === liveId);
+  ck("K5 反向：表多列一個非 Challenge 案 ⇒ K0 的結構規則不成立，而且走 correctionProblems 也不會被原諒（沒有挑戰結果）",
+    !plantedTable.every((c) => fxById.get(c.id)?.path === "challenge") && !!liveRec && correctionProblems({ ...e0, id: liveId }, fxById.get(liveId), liveRec).length > 0);
 }
 
 // ── I：資訊 ─────────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { runStudy, readKey, provenance, sha16, pairedStats, meanSd, ROOT } from "./lib/studyRunner.mjs";
+import { runStudy, readKey, provenance, sha16, pairedStats, meanSd, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -16,6 +16,9 @@ const val = (k, d = null) => { const a = args.find((x) => x.startsWith(`--${k}=`
 const REG_REL = "tools/fixtures/e2_registration_3aB.json";
 const REG_TEXT = fs.readFileSync(path.join(ROOT, REG_REL), "utf8"), REG = JSON.parse(REG_TEXT);
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
+/** 每一筆紀錄的儀器檢查（--run 即時、--report 全部重查；審查 M1）。藍方的選擇必須真的進了本場（droppedChoices 為空；審查 minor）。 */
+const recCheck = (r) => [...(r.ruleset === "career.v21" && r.directorMode === "core.v1" && r.laneFrame === "teamRelative" && r.engineSeed === r.seed && r.redKind === "binding" && r.tool === "phaseStudySim.v3" ? [] : ["instrument mismatch"]),
+  ...(r.selfCheck?.length ? [`selfCheck ${r.selfCheck}`] : []), ...(r.dropped?.length ? [`blue choices dropped ${JSON.stringify(r.dropped)}`] : [])];
 const METRICS = ["engageDecisionsPerMin.early", "engageStartsPerMin.early", "contestShare.dragon.early", "ganksOwnPerMin.bot.early", "win", "durationMin", "goldLeadAt.early"];
 
 if (flag("e2-worker")) {
@@ -28,7 +31,7 @@ if (flag("e2-worker")) {
       const { liveInputs, team } = await L.careerLiveInputs({ seed: t.seed, rulesetId: "career.v21", choices: arm.choices });
       const r = await PS.runCareerStudyMatch(liveInputs);
       const vals = Object.fromEntries(METRICS.map((m) => [m, m === "win" ? (r.over && ["blue", "red"].includes(r.winner) ? (r.winner === "blue" ? 1 : 0) : 0.5) : PS.studyMetricValue(r, "blue", m)]));
-      process.send({ type: "done", id: t.id, rec: { seed: t.seed, engineSeed: r.seed, ruleset: r.ruleset, directorMode: r.directorMode, laneFrame: r.laneFrame, redKind: r.redTacticKind, opponent: team.id, tool: r.tool, selfCheck: PS.selfCheck(r), vals } });
+      process.send({ type: "done", id: t.id, rec: { seed: t.seed, engineSeed: r.seed, ruleset: r.ruleset, directorMode: r.directorMode, laneFrame: r.laneFrame, redKind: r.redTacticKind, opponent: team.id, tool: r.tool, selfCheck: PS.selfCheck(r), dropped: r.droppedChoices, vals } });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
   process.send({ type: "ready" });
@@ -64,26 +67,29 @@ const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: S
 if (flag("run")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
   if (provenance().dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e2-worker"], meta: META, workers: Number(val("workers", 3)), label: "E2",
-    check: (r) => [...(r.ruleset === "career.v21" && r.directorMode === "core.v1" && r.laneFrame === "teamRelative" && r.engineSeed === r.seed && r.redKind === "binding" && r.tool === "phaseStudySim.v3" ? [] : ["instrument mismatch"]), ...(r.selfCheck?.length ? [`selfCheck ${r.selfCheck}`] : [])] });
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e2-worker"], meta: META, workers: Number(val("workers", 3)), label: "E2", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 if (flag("report")) {
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  const audit = auditStudy(DIR, tasks, recCheck);
+  if (audit.halt) { console.error(`⛔ HALT：${audit.halt}（不判定，交 Owner）`); process.exit(5); }
+  if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
   const data = Object.fromEntries(REG.arms.map((a) => [a.id, readKey(DIR, a.id)]));
-  const missing = tasks.filter((t) => !data[t.arm].has(t.id)).length;
-  if (missing) { console.log(`資料未完整：還有 ${missing} 場（不判定）`); process.exit(6); }
+  const recV = (arm, s, mtr) => data[arm].get(`${arm}#${s}`)?.vals?.[mtr];
   const fin = (x) => typeof x === "number" && Number.isFinite(x);
   const arms = REG.arms.filter((a) => a.claims).map((a) => {
-    const claims = a.claims.map((c) => ({ ...c, ...claimVerdict(SEEDS.map((s) => [data.ctrl.get(`ctrl#${s}`).vals[c.metric], data[a.id].get(`${a.id}#${s}`).vals[c.metric]]).filter((p) => p.every(fin)), c.direction) }));
+    const claims = a.claims.map((c) => ({ ...c, ...claimVerdict(SEEDS.map((s) => [recV("ctrl", s, c.metric), recV(a.id, s, c.metric)]).filter((p) => p.every(fin)), c.direction) }));
     const verdict = claims.some((c) => c.verdict === "STOP") ? "STOP" : claims.every((c) => c.verdict === "PASS") ? "PASS" : "INCONCLUSIVE";
-    const win = meanSd(SEEDS.map((s) => data[a.id].get(`${a.id}#${s}`).vals.win)).mean;
+    const win = meanSd(SEEDS.map((s) => recV(a.id, s, "win")).filter(fin)).mean;
     return { id: a.id, claims, verdict, blueWinRate: win };
   });
-  const overall = arms.some((a) => a.verdict === "STOP") ? "STOP" : arms.every((a) => a.verdict === "PASS") ? "PASS" : "INCONCLUSIVE";
+  const er = errorRule(audit.errored.length, tasks.length);
+  const instrumentStop = audit.instrument.length > 0 || er === "STOP";
+  const overall = instrumentStop || arms.some((a) => a.verdict === "STOP") ? "STOP" : arms.every((a) => a.verdict === "PASS") && !er ? "PASS" : "INCONCLUSIVE";
   const out = { schema: "esmo.e2-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
-    matches: tasks.length, ctrlBlueWinRate: meanSd(SEEDS.map((s) => data.ctrl.get(`ctrl#${s}`).vals.win)).mean, arms, overall };
+    matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), ctrlBlueWinRate: meanSd(SEEDS.map((s) => recV("ctrl", s, "win")).filter(fin)).mean, arms, overall };
   const OUT = path.join(ROOT, "tools/fixtures/e2_result_3aB.json");
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);

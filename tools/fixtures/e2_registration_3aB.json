@@ -7,13 +7,78 @@
   "authority": "3a-B kickoff checklist §5 (structure ✅ / behaviour ❌ / outcome ❌) and Owner 2026-10-25 P2 authorisation: the n=400 evidence was measured on balanceTool.v21 (red std, no player stats); career.v21 differs (red = AI coach, blue player stats, items/talents per flags), so the effect must be checked through the formal entry",
   "question": "Do the live v21 choices, entered through the formal career path (prepareLiveMatch with career.v21), still move the registered behaviour in the registered direction on the player's side?",
   "tool": "tools/measure_e2_3aB.mjs (--run / --report; result tools/fixtures/e2_result_3aB.json); instrument tools/lib/phaseStudySim.mjs v3 runCareerStudyMatch (the same observation code as the balance-runner path); inputs tools/lib/careerLiveInputs.mjs",
-  "seeds": { "range": "23001-23799", "step": 2, "n": 400, "path": "career: odd seeds only, every seed its own effectiveSeed (check_study_seed_plan_3aB E2)", "opponents": "AI_TEAMS[seed % 7] (57-58 matches per team)" },
+  "seeds": {
+    "range": "23001-23799",
+    "step": 2,
+    "n": 400,
+    "path": "career: odd seeds only, every seed its own effectiveSeed (check_study_seed_plan_3aB E2)",
+    "opponents": "AI_TEAMS[seed % 7] (57-58 matches per team)"
+  },
   "ruleset": "career.v21 resolved from the golden featureFlags + mobaTacticalDirectorV21 = true; the run fails if another ruleset resolves",
   "arms": [
-    { "id": "ctrl", "choices": {}, "role": "control" },
-    { "id": "aggressiveEarly", "choices": { "phases": { "early": { "stance": "aggressive" } } }, "claims": [{ "metric": "engageDecisionsPerMin.early", "direction": "up" }, { "metric": "engageStartsPerMin.early", "direction": "up" }], "evidence": "C3-2 rev1 confirmed" },
-    { "id": "snowball", "choices": { "winCondition": "earlySnowball" }, "claims": [{ "metric": "engageDecisionsPerMin.early", "direction": "up" }, { "metric": "contestShare.dragon.early", "direction": "up" }], "evidence": "C6 confirmed" },
-    { "id": "quickStrongBot", "choices": { "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } }, "claims": [{ "metric": "ganksOwnPerMin.bot.early", "direction": "up" }], "evidence": "C5R quick preset confirmed" }
+    {
+      "id": "ctrl",
+      "choices": {},
+      "role": "control"
+    },
+    {
+      "id": "aggressiveEarly",
+      "choices": {
+        "phases": {
+          "early": {
+            "stance": "aggressive"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "engageDecisionsPerMin.early",
+          "direction": "up"
+        },
+        {
+          "metric": "engageStartsPerMin.early",
+          "direction": "up"
+        }
+      ],
+      "evidence": "C3-2 rev1 confirmed"
+    },
+    {
+      "id": "snowball",
+      "choices": {
+        "winCondition": "earlySnowball"
+      },
+      "claims": [
+        {
+          "metric": "engageDecisionsPerMin.early",
+          "direction": "up"
+        },
+        {
+          "metric": "contestShare.dragon.early",
+          "direction": "up"
+        }
+      ],
+      "evidence": "C6 confirmed"
+    },
+    {
+      "id": "quickStrongBot",
+      "choices": {
+        "phases": {
+          "early": {
+            "focusLane": "bot"
+          },
+          "mid": {
+            "focusLane": "bot"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.bot.early",
+          "direction": "up"
+        }
+      ],
+      "evidence": "C5R quick preset confirmed"
+    }
   ],
   "matches": "4 arms x 400 = 1,600 matches (~40 min, 3 workers)",
   "side": "blue only: in career the player is blue and red is the AI coach; no red-side treatment exists in career",
@@ -24,5 +89,7 @@
     "INCONCLUSIVE": "otherwise (including UNMEASURABLE); never reported as PASS, the Owner decides",
     "reportOnly": "effect size next to the balanceTool.v21 evidence; win rate, duration and gold lead (no win-rate claim)"
   },
-  "rerun": "re-run whenever the AI coach or the career.v21 assembly changes (the red side is part of the condition)"
+  "rerun": "re-run whenever the AI coach or the career.v21 assembly changes (the red side is part of the condition)",
+  "errors": "errored matches are never retried or replaced and are listed by seed; any errored match => at most INCONCLUSIVE; more than 1% of the planned matches errored => STOP(INSTRUMENT)",
+  "instrumentCheck": "every record (live and again at report time): career.v21, Director core.v1, laneFrame teamRelative, engine seed = seed, red = AI coach binding, phaseStudySim.v3, empty selfCheck, and no blue choice dropped (droppedChoices empty); any failure => HALT / STOP(INSTRUMENT)"
 }
