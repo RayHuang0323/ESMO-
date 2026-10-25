@@ -13,7 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { opponentIntelOf, tacticBookSaveState } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
+import { opponentIntelOf, tacticBookSaveState, keptUnofferedChoices } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
 import { aiCoachPlan } from "../src/platform/tactics/aiCoach.js";
 import { AI_TEAMS } from "../src/platform/competition/aiTeams.js";
 import { mobaTacticForTeamStyle } from "../src/platform/contracts/MobaTacticConfig.js";
@@ -89,7 +89,18 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
   ck(`U5 旗標關：本場拿掉的 v21 專用選擇以結構化資料回傳（${dims.join("、")}）；prepareLiveMatch 原樣交出；旗標開 ⇒ 空`,
     b20.ok && J(dims) === J(["phases.early.focusLane=bot", "winCondition=earlySnowball"]) && p20.ok && J(p20.droppedChoices) === J(b20.droppedChoices) && b21.ok && b21.droppedChoices.length === 0);
   const uls = stripComments(read("src/useLocalServer.js"));
-  ck("U5b useLocalServer 把 droppedChoices 交給畫面（droppedNotice），不只寫主控台", uls.includes("setDroppedNotice(prepared.droppedChoices?.length") && uls.includes("droppedNotice, dismissDroppedNotice"));
+  ck("U5b useLocalServer 把 droppedChoices 交給畫面（droppedNotice），不只寫主控台", uls.includes("const dropped = prepared.droppedChoices ?? [];") && uls.includes("setDroppedNotice(dropped.length || kept.length ? { dropped, kept } : null)") && uls.includes("droppedNotice, dismissDroppedNotice"));
+}
+
+// ── U6 恢復中的比賽：沿用的 binding 裡目前不提供的選擇（Owner 2026-10-25 Review 決策 4：只提示，不改寫）──
+{
+  const b = (choices) => bindTacticPlanToCurrentVersions(createTacticPlan({ templateId: "std", choices }).plan);
+  const kept = keptUnofferedChoices(b({ phases: { late: { focusLane: "bot" } } }), "core.v1");
+  const none = keptUnofferedChoices(b({ winCondition: "earlySnowball" }), "core.v1");
+  const uls = stripComments(read("src/useLocalServer.js"));
+  ck(`U6 後期強邊（Owner 暫緩）在 core.v1 被列為「沿用但不再提供」（${JSON.stringify(kept)}）；仍提供的前期滾雪球不列；useLocalServer 只讀組好的 setup、不重新組裝`,
+    JSON.stringify(kept) === JSON.stringify([{ dimension: "phases.late.focusLane", choice: "bot" }]) && none.length === 0
+    && uls.includes("keptUnofferedChoices(blueTac.binding") && (uls.match(/prepareLiveMatch[(]/g) ?? []).length === 2);
 }
 
 console.log(`\nTactic Book UI 3a-B：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);

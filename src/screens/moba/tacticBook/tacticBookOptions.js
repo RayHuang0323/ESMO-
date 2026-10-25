@@ -263,3 +263,22 @@ export function tacticBookSaveState({ loadedEntryId = null, droppedCount = 0, cu
   const label = duplicate ? "已在戰術書" : activeId ? "更新名稱" : copy ? "另存一份" : "存起來";
   return { copy, duplicate, full, blocked: !!duplicate || full, label };
 }
+
+// ── Phase 3a-B（Owner 2026-10-25 Review 決策 4）：恢復中的比賽沿用開局時的 binding ─────────────────────────────
+//  恢復進行中的比賽時，戰術一律沿用存檔裡的 binding（包含後來被撤下的選擇，例如後期強邊），**不重新組裝、不改寫**，否則賽果會變。
+//  這裡只找出「binding 裡有、但戰術書目前不再提供」的選擇，讓畫面說明「本場沿用開局時的設定」。判斷與戰術書畫面同一套提供清單。
+/** @returns {Array<{dimension:string, choice:string}>} */
+export function keptUnofferedChoices(binding, tacticalDirector = "static") {
+  const plan = binding?.plan;
+  if (!plan?.templateId) return [];
+  let leaves;
+  try { leaves = leavesOf(plan.choices ?? {}); } catch { return []; }
+  const out = [];
+  for (const [dim, v] of leaves) {
+    const others = nestedOf(leaves.filter(([d]) => d !== dim));
+    let row = null;
+    try { row = tacticBookOptions(plan.templateId, plan.overlayIds ?? [], others, { tacticalDirector }).find((r) => r.dimension === dim) ?? null; } catch { row = null; }
+    if (!row || row.offered.length < 2 || !row.offered.includes(String(v))) out.push({ dimension: dim, choice: String(v) });
+  }
+  return out;
+}

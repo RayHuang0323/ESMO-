@@ -340,7 +340,16 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, width: "min(420px, calc(100% - 32px))", boxSizing: "border-box",
             background: "rgba(10,16,28,0.94)", border: "1px solid rgba(251,191,36,0.6)", borderRadius: 10, padding: "8px 12px", color: "#fde68a", fontSize: 12, lineHeight: 1.6, display: "flex", gap: 8, alignItems: "flex-start" }}>
           <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
-            本場未使用的戰術選項：{droppedNotice.dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（本場規則不提供；戰術書裡的計畫不變）
+            {droppedNotice.dropped.length > 0 && (
+              <span data-testid="battle-dropped-note-dropped" style={{ display: "block" }}>
+                本場未使用的戰術選項：{droppedNotice.dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（本場規則不提供；戰術書裡的計畫不變）
+              </span>
+            )}
+            {(droppedNotice.kept ?? []).length > 0 && (
+              <span data-testid="battle-dropped-note-kept" style={{ display: "block" }}>
+                本場沿用開局時的戰術設定，包含目前已不再提供的選項：{droppedNotice.kept.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（比賽中途不會改變）
+              </span>
+            )}
           </span>
           <button type="button" data-testid="battle-dropped-note-close" aria-label="關閉提示" onClick={dismissDroppedNotice}
             style={{ flexShrink: 0, minWidth: 32, minHeight: 32, background: "transparent", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, color: "#fff", cursor: "pointer" }}>✕</button>
