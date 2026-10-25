@@ -1,0 +1,91 @@
+{
+ "schema": "esmo.e2-result.v1",
+ "registration": "tools/fixtures/e2_registration_3aB.json",
+ "registrationHash": "3ef775e889056d7c",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "1eaeee2c6d51c16cff5fde6c3b582c05bd79c201",
+ "reportedAt": "2026-10-25T21:28:59.017Z",
+ "matches": 1600,
+ "errored": [],
+ "instrument": [],
+ "ctrlBlueWinRate": 0.4,
+ "arms": [
+  {
+   "id": "aggressiveEarly",
+   "claims": [
+    {
+     "metric": "engageDecisionsPerMin.early",
+     "direction": "up",
+     "n": 400,
+     "ctrlMean": 6.784254431699685,
+     "diff": 0.701355578727842,
+     "rel": 0.10337990501221941,
+     "z": 8.893852863010228,
+     "zDir": 8.893852863010228,
+     "verdict": "PASS"
+    },
+    {
+     "metric": "engageStartsPerMin.early",
+     "direction": "up",
+     "n": 400,
+     "ctrlMean": 3.306256517205424,
+     "diff": 0.23242961418143906,
+     "rel": 0.07029993376856844,
+     "z": 7.13368659748289,
+     "zDir": 7.13368659748289,
+     "verdict": "PASS"
+    }
+   ],
+   "verdict": "PASS",
+   "blueWinRate": 0.4025
+  },
+  {
+   "id": "snowball",
+   "claims": [
+    {
+     "metric": "engageDecisionsPerMin.early",
+     "direction": "up",
+     "n": 400,
+     "ctrlMean": 6.784254431699685,
+     "diff": 0.999791449426486,
+     "rel": 0.14736939180154016,
+     "z": 12.342289825256135,
+     "zDir": 12.342289825256135,
+     "verdict": "PASS"
+    },
+    {
+     "metric": "contestShare.dragon.early",
+     "direction": "up",
+     "n": 400,
+     "ctrlMean": 0.7775,
+     "diff": 0.12,
+     "rel": 0.15434083601286175,
+     "z": 8.133599474679581,
+     "zDir": 8.133599474679581,
+     "verdict": "PASS"
+    }
+   ],
+   "verdict": "PASS",
+   "blueWinRate": 0.415
+  },
+  {
+   "id": "quickStrongBot",
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.bot.early",
+     "direction": "up",
+     "n": 400,
+     "ctrlMean": 0.1367049009384779,
+     "diff": 0.1920750782064652,
+     "rel": 1.4050343249427895,
+     "z": 24.44125525215305,
+     "zDir": 24.44125525215305,
+     "verdict": "PASS"
+    }
+   ],
+   "verdict": "PASS",
+   "blueWinRate": 0.4225
+  }
+ ],
+ "overall": "PASS"
+}
