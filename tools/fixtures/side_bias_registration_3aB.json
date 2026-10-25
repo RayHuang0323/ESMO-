@@ -43,7 +43,7 @@
         "challenge.v21"
       ],
       "entry": "runChallenge (the single challenge assembly point) with the two fixture-opponent snapshots stamped moba-sim.v20 or moba-sim.v21; challenger = FIXTURE_KEYS[seed % 5], defender = FIXTURE_KEYS[(seed + 2) % 5], their own tacticIds, draft on (DraftResult as in the golden inputs); matchSeed = toEngineSeed(seed) = seed for odd seeds",
-      "layoutNote": "challenge.v20 always plays STANDARD (recorded layout STANDARD); the strata are the seed's bySeed layout, i.e. what challenge.v21 uses. For challenge, v20 is reported only as the STANDARD-only blue rate; the pure-blue / dragon-side split is reported for v21 only. The per-stratum STOP/WARN comparison still applies.",
+      "layoutNote": "challenge.v20 always plays STANDARD (the challenge.v20 ruleset fixes it). The record's layout field is derived from the ruleset (v20: STANDARD) and the seed (v21: bySeed), because runChallenge returns no layout; it is not read back from the engine. the strata are the seed's bySeed layout, i.e. what challenge.v21 uses. For challenge, v20 is reported only as the STANDARD-only blue rate; the pure-blue / dragon-side split is reported for v21 only. The per-stratum STOP/WARN comparison still applies.",
       "seeds": {
         "range": "33001-37999",
         "step": 2,

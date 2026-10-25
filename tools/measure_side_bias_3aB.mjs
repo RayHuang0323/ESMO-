@@ -46,7 +46,7 @@ if (flag("sb-worker")) {
     const v = chal.G.challengeGoldenInputs({ id: `sb-${t.seed}`, params: { index: t.seed % keys.length, seed: t.seed, draft: true, tacticIds: [a.tacticId, d.tacticId] } }, { simulationVersion: ver });
     const r = chal.R.runChallenge({ challenge: v.challenge, challengerSnapshot: v.challenger, defenderSnapshot: v.defender, draftResult: v.draftResult, heroOf: chal.H.heroById, currentSimulationVersion: ver });
     if (!r.ok) throw new Error(`runChallenge: ${JSON.stringify(r.errors).slice(0, 200)}`);
-    //  審查 M5：記實際套用的佈局（challenge.v20 一律 STANDARD）；分層用 seed 的 bySeed 標記（stratum）。
+    //  審查 M5：layout＝由規則集與 seed 推得的佈局（challenge.v20 規則集固定 STANDARD、v21 依 seed；runChallenge 不回傳佈局，不是從引擎讀回）；分層用 seed 的 bySeed 標記（stratum）。
     return { seed: t.seed, engineSeed: r.result.matchSeed, ruleset: t.arm, layout: t.arm === "challenge.v20" ? "STANDARD" : objectiveLayoutForSeed(r.result.matchSeed), stratum: objectiveLayoutForSeed(r.result.matchSeed), opponent: `${a.key}>${d.key}`,
       winner: r.result.outcome === "challengerWin" ? "blue" : r.result.outcome === "defenderWin" ? "red" : null, duration: r.result.durationSec, simulationVersion: r.result.simulationVersion };
   }
