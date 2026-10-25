@@ -23,10 +23,16 @@
 //   goldAtPhaseEnd[p]      時期結束那一 tick 的雙方隊伍金錢 { blue, red }（e.bGold／e.rGold；比賽在該時期內結束 ⇒ null）。
 //   指標：seatFightEntriesPerMin.<seat>.<p 或 p+p>、goldLeadAt.<early|mid>（己方 − 對方）、win（該側獲勝＝1；未分勝負 ⇒ null）、durationMin。
 //   勝利條件：studyInput 的 choices 可帶 winCondition（經 tacticChoiceMapping.effectiveTacticChoices 展開，與正式解析同一個函式）。
+//   ── v3（2026-10-25，Phase 3a-B E1／E2 事前登記；只**新增**欄位、指標與入口，上面每一個計數的算法都沒動）──
+//   觀測迴圈抽成 observeStudyMatch(e, meta)：balance runner 路徑（runPhaseStudyMatch）照舊；新增 runCareerStudyMatch（正式 Live 入口
+//   prepareLiveMatch，E2 用），兩條路徑吃同一份觀測程式。
+//   deathsPh.<role>[p]  己方該角色（top／jungle／mid／adc／sup）的英雄從活著變成死亡（p.dead false→true）的次數，依那一 tick 的時期分桶。
+//   指標：deathsPerMin.<role 或 role+role>.<p>（合計死亡 ÷ 該時期分鐘）、deathsAt.<role 或 role+role>.<p>（次數，低事件數判讀用）、
+//         ownGoldAt.<early|mid>（該時期結束時己方隊伍金錢；同 goldLeadAt 的時刻）。
 // ============================================================================
 import { tacticInputOf } from "./tacticTruthSim.mjs";
 
-export const PHASE_STUDY_SIM_VERSION = "phaseStudySim.v2";
+export const PHASE_STUDY_SIM_VERSION = "phaseStudySim.v3";
 export const DEFAULT_RULESET = "balanceTool.v21";
 export const PHASE_NAMES = Object.freeze(["early", "mid", "late"]);
 const DT = 0.5, CAP_S = 3600, MIN_PHASE_SECS = 60;
@@ -53,15 +59,35 @@ export async function studyInput(choices = {}, phaseChoices = null) {
 
 export async function runPhaseStudyMatch(seed, spec) {
   const { modules, configure } = await import("../balance/moba_items_balance_runner.mjs");
-  const { sideRelativeLane } = await import("../../src/gameData.js");
   const M = await modules();
   const ruleset = spec.ruleset ?? DEFAULT_RULESET;
   const { e } = configure(seed, "standard", M, 1, null, { blue: spec.blue ?? tacticInputOf(null), red: spec.red ?? tacticInputOf(null) }, ruleset);
+  return observeStudyMatch(e, { seed, ruleset, layers: { heroSkills: !!M.skills, heroPassives: !!M.passives, heroPowerCurve: !!M.curves, battleTalents: !!M.talents } });
+}
+
+/**
+ * v3：正式 Live 入口（prepareLiveMatch，與 useLocalServer.start 同一支）組出的對局，用同一份觀測程式跑完。E2 用。
+ * @param {object} liveInputs  prepareLiveMatch 的入參（呼叫端負責：規則集、opts、profile、heroProgress、opponentTeam、seed、seedSource）
+ */
+export async function runCareerStudyMatch(liveInputs) {
+  const { prepareLiveMatch } = await import("../../src/useLocalServer.js");
+  const out = prepareLiveMatch(liveInputs);
+  if (!out.ok) throw new Error(`career study: prepareLiveMatch rejected (${out.stage}): ${JSON.stringify(out.errors).slice(0, 300)}`);
+  const E = out.setup.effectiveLayers;
+  const r = await observeStudyMatch(out.engine, { seed: out.setup.seed, ruleset: out.setup.rulesetId,
+    layers: { heroSkills: !!E.heroSkills, heroPassives: !!E.heroPassives, heroPowerCurve: !!E.heroPowerCurve, battleTalents: !!E.battleTalents } });
+  return { ...r, setupHash: out.setupHash, objectiveLayout: out.setup.objectiveLayout, redTacticKind: out.setup.tactic?.red?.kind ?? null };
+}
+
+/** v3：觀測迴圈（v2 的 runPhaseStudyMatch 本體，原樣搬出；只多了 deathsPh）。 */
+export async function observeStudyMatch(e, { seed, ruleset, layers }) {
+  const { sideRelativeLane } = await import("../../src/gameData.js");
   const players = e.players;
   const z3 = () => [0, 0, 0];
   const zero = () => ({ engages: z3(), engageStarts: z3(), joinGoStarts: z3(), joinGoGeneralStarts: z3(), laneGeneralEntries: z3(), siegeOpens: z3(),
     objApps: { dragon: z3(), baron: z3() }, objContested: { dragon: z3(), baron: z3() }, objCaptured: { dragon: z3(), baron: z3() },
-    ganksOwn: { top: z3(), mid: z3(), bot: z3() }, seatFightsPh: { b1: z3(), b2: z3(), b3: z3(), b4: z3(), b5: z3() } });
+    ganksOwn: { top: z3(), mid: z3(), bot: z3() }, seatFightsPh: { b1: z3(), b2: z3(), b3: z3(), b4: z3(), b5: z3() },
+    deathsPh: { top: z3(), jungle: z3(), mid: z3(), adc: z3(), sup: z3() } });
   const S = { blue: zero(), red: zero() };
   const phaseSecs = z3();
   const goldAtPhaseEnd = [null, null, null];
@@ -77,7 +103,7 @@ export async function runPhaseStudyMatch(seed, spec) {
     if (p.joinEvalT !== before && LANE_ROLES.includes(p.role) && p.joinGo && !goBefore) { S[p.side].joinGoStarts[ph]++; if (hot !== pitD && hot !== pitB) S[p.side].joinGoGeneralStarts[ph]++; }
     return r;
   };
-  const prev = new Map(players.map((p) => [p.id, { state: p.state, decisionAt: p.decisionAt, action: p.decisionAction ?? null }]));
+  const prev = new Map(players.map((p) => [p.id, { state: p.state, decisionAt: p.decisionAt, action: p.decisionAction ?? null, dead: !!p.dead }]));
   const life = { dragon: null, baron: null }, wasAlive = { dragon: !!e.dragon?.alive, baron: !!e.baron?.alive };
   const initSeen = { blue: e.fsm3?.blue?.initUntil, red: e.fsm3?.red?.initUntil };
   let logSeq = e._objLogSeq ?? 0;
@@ -102,7 +128,8 @@ export async function runPhaseStudyMatch(seed, spec) {
       if (p.state === "團戰!" && q.state !== "團戰!" && LANE_ROLES.includes(p.role) && !p.objGo) s.laneGeneralEntries[ph]++;
       if (p.state === "團戰!" && q.state !== "團戰!") s.seatFightsPh["b" + Number(p.id.slice(1))][ph]++;
       if (p.decisionAt !== q.decisionAt && p.decisionAction === "ENGAGE") { s.engages[ph]++; if (q.action !== "ENGAGE") s.engageStarts[ph]++; }
-      q.state = p.state; q.decisionAt = p.decisionAt; q.action = p.decisionAction ?? null;
+      if (p.dead && !q.dead && s.deathsPh[p.role]) s.deathsPh[p.role][ph]++;
+      q.state = p.state; q.decisionAt = p.decisionAt; q.action = p.decisionAction ?? null; q.dead = !!p.dead;
     }
     for (const side of SIDES) for (const w of WORLD) {
       const d = (e.exec[side][`${w}Ganks`] ?? 0) - (execBefore[side][`${w}Ganks`] ?? 0);
@@ -126,7 +153,7 @@ export async function runPhaseStudyMatch(seed, spec) {
   closeLife("dragon"); closeLife("baron");
   const execFinal = Object.fromEntries(SIDES.map((s) => [s, { ...e.exec[s] }]));
   return { tool: PHASE_STUDY_SIM_VERSION, seed, ruleset, directorMode: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null,
-    layers: { heroSkills: !!M.skills, heroPassives: !!M.passives, heroPowerCurve: !!M.curves, battleTalents: !!M.talents },
+    layers,
     duration: e.t, over: e.over ? 1 : 0, winner: e.winner ?? null, kills: e.bK + e.rK, phaseSecs, goldAtPhaseEnd, blue: S.blue, red: S.red, execFinal };
 }
 
@@ -140,6 +167,8 @@ export function selfCheck(r) {
   }
   if (JSON.stringify(r.blue.objApps) !== JSON.stringify(r.red.objApps)) out.push("objApps differ between sides");
   if (Math.abs(sum(r.phaseSecs) - r.duration) > 1e-9) out.push("phaseSecs≠duration");
+  //  v3：兩側死亡（每時期、每角色）合計＝整場擊殺數（引擎 bK＋rK）。
+  if (r.blue.deathsPh) { const d = SIDES.reduce((n, s) => n + Object.values(r[s].deathsPh).reduce((m, a) => m + sum(a), 0), 0); if (d !== r.kills) out.push(`deaths ${d}≠kills ${r.kills}`); }
   //  v2：進入下一個時期就一定記得到上一個時期結束時的金錢（量測前審查 F1：之前永遠是 null）。
   if (r.goldAtPhaseEnd) for (const i of [0, 1]) if (r.phaseSecs[i + 1] > 0 && !r.goldAtPhaseEnd[i]) out.push(`goldAtPhaseEnd[${i}] missing`);
   return out;
@@ -178,5 +207,14 @@ export function studyMetricValue(r, side, id) {
   //  win：該側獲勝＝1、落敗＝0；時間上限內未分勝負 ⇒ null。durationMin：比賽分鐘數（兩側同值）。只報告，不判定。
   if (name === "win") return r.over && SIDES.includes(r.winner) ? (r.winner === side ? 1 : 0) : null;
   if (name === "durationMin") return r.duration / 60;
+  //  v3：deathsPerMin.<role(+role)>.<p>＝這些角色在該時期的死亡合計 ÷ 該時期分鐘（不足 60 秒 ⇒ null）；deathsAt 是次數本身（低事件數判讀用）。
+  if (name === "deathsPerMin" || name === "deathsAt") {
+    const roles = a.split("+"), i = pi(b);
+    if (!S.deathsPh || roles.some((x) => !S.deathsPh[x]) || i < 0) throw new Error(`unknown study metric ${id}`);
+    const n = roles.reduce((m, x) => m + S.deathsPh[x][i], 0);
+    return name === "deathsAt" ? (r.phaseSecs[i] >= MIN_PHASE_SECS ? n : null) : per(n, r.phaseSecs[i]);
+  }
+  //  v3：ownGoldAt.<early|mid>：該時期結束時己方隊伍金錢（同 goldLeadAt 的時刻；比賽在該時期內結束 ⇒ null）。
+  if (name === "ownGoldAt") { const g = r.goldAtPhaseEnd?.[pi(a)]; return g ? g[side] : null; }
   throw new Error(`unknown study metric ${id}`);
 }

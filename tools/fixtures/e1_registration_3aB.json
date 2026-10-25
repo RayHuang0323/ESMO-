@@ -1,75 +1,59 @@
 {
-  "schema": "esmo.phase-options-registration.v1",
+  "schema": "esmo.e1-registration.v1",
   "studyId": "e1-economy-stacking-3aB",
-  "stage": "Phase 3a-B P0-3 (measurement is P2-2, after the semantics freeze, with separate Owner approval)",
+  "stage": "Phase 3a-B P2-2",
   "registeredAt": "2026-10-25",
-  "status": "draft: NOT runnable. Before the run the Owner confirms (1) the sample size (power below: the +/-150 gold margin is not testable at n=400) and (2) the guard thresholds. The registration is then re-committed with status 'registered' and the measurement tool gains the equivalence/guard verdict code (with selftest) in the same commit; the tool must refuse a draft.",
-  "authority": "Owner 2026-10-25 decision 3: E1 adopts a +/-150 gold equivalence margin in principle; before formal registration confirm its economic meaning and the test power; verdicts PASS / STOP / INCONCLUSIVE; safety guards and the primary comparisons are registered first; existing jsonl is analysed first and is not new evidence.",
+  "status": "registered (Owner 2026-10-25 Review decision 2); runnable only after the independent review of this registration and the semantics freeze. Thresholds are fixed here and are never adjusted after seeing results.",
+  "authority": "Owner 2026-10-25 Review decision 2: primary comparison n=1200 with a +/-150 gold TOST equivalence margin; deaths +50% is a WARN, add an absolute death difference and low-event handling; early ganks 1.9x WARN, 95% lower bound above 2.0 STOP; detailed registration and an independent reviewer before the run.",
+  "tool": "tools/measure_e1_3aB.mjs (--run / --report; result tools/fixtures/e1_result_3aB.json; refuses to run twice)",
+  "instrument": "tools/lib/phaseStudySim.mjs phaseStudySim.v3 (v3 only adds deathsPh and the metrics deathsPerMin/deathsAt/ownGoldAt; v2 counters unchanged, checked against C6 raw records)",
+  "ruleset": "balanceTool.v21 (tool path; same as the C5R/C6 evidence)",
   "seeds": {
-    "range": "21001-22200",
-    "path": "tool (balance runner createMatchSetup, seedSource 'tool': every seed is a distinct engine seed; tools/check_study_seed_plan_3aB.mjs E1)",
-    "primaryN": 1200,
-    "safetyN": 400,
-    "safetyRange": "21001-21400 (prefix of the same block; the control arm covers 21001-22200)",
-    "alternative": "n=400 for every arm (21001-21400): 4,400 matches (~95 min) but the primary comparisons are expected to end INCONCLUSIVE (power 0.13-0.42 at a true difference of 0)"
+    "control": "21001-22200",
+    "primary": "21001-22200",
+    "safety": "21001-21400",
+    "path": "tool: every seed is a distinct engine seed (tools/check_study_seed_plan_3aB.mjs E1)"
   },
-  "design": {
-    "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative), same as the C5R/C6 evidence",
-    "instrument": "tools/lib/phaseStudySim.mjs v3 (to be added before registration: per-phase deaths by role deathsPh.<role>[p] and the metrics deathsPerMin.<role>.<p>, ownGoldAt.<p>; every v2 counter unchanged, checked by re-reporting C6 bit-identically)",
-    "arms": "control = std, no choices, both sides. Each option twice: treatment on blue (red = control) and on red (blue = control); same seed = pair.",
-    "layout": "objectiveLayoutForSeed(seed); the dragon pit is next to blue's duo lane in STANDARD (2026-09-30 audit) => STANDARD seeds = blue is the dragon side. Every comparison is also reported split by 'the treated side is the dragon side' (report only)."
-  },
-  "options": [
-    { "id": "snowball", "role": "primary", "input": { "choices": { "winCondition": "earlySnowball" } }, "n": 1200 },
-    { "id": "quickStrongBot", "role": "primary", "input": { "choices": { "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } } }, "n": 1200, "note": "quick-mode strong side bottom (early + mid focusLane bot), the live v21 shortcut" },
-    { "id": "snowballStrongBot", "role": "safety", "input": { "choices": { "winCondition": "earlySnowball", "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } } }, "n": 400 },
-    { "id": "strongBotAggressive", "role": "safety", "input": { "choices": { "phases": { "early": { "stance": "aggressive", "focusLane": "bot" }, "mid": { "stance": "aggressive", "focusLane": "bot" } } } }, "n": 400, "note": "the '~2x ganks' case (C6 chkComboEarly: early ganks x1.99 blue / x1.81 red; x1.006 of strong side alone => the doubling comes from the strong side itself)" },
-    { "id": "refAggressiveEarly", "role": "reference", "input": { "choices": { "phases": { "early": { "stance": "aggressive" } } } }, "n": 400, "note": "no dragon and no economy component: baseline for a colour asymmetry that is not specific to an option" }
+  "arms": [
+    { "id": "ctrl", "role": "control", "input": { "choices": {} }, "seeds": "control", "sides": ["both"] },
+    { "id": "snowball", "role": "primary", "input": { "choices": { "winCondition": "earlySnowball" } }, "seeds": "primary", "sides": ["blue", "red"] },
+    { "id": "quickStrongBot", "role": "primary", "input": { "choices": { "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } } }, "seeds": "primary", "sides": ["blue", "red"], "note": "quick-mode strong side bottom (the live shortcut writes early + mid focusLane)" },
+    { "id": "snowballStrongBot", "role": "safety", "input": { "choices": { "winCondition": "earlySnowball", "phases": { "early": { "focusLane": "bot" }, "mid": { "focusLane": "bot" } } } }, "seeds": "safety", "sides": ["blue", "red"] },
+    { "id": "strongBotAggressive", "role": "safety", "input": { "choices": { "phases": { "early": { "stance": "aggressive", "focusLane": "bot" }, "mid": { "stance": "aggressive", "focusLane": "bot" } } } }, "seeds": "safety", "sides": ["blue", "red"] },
+    { "id": "refAggressiveEarly", "role": "reference", "input": { "choices": { "phases": { "early": { "stance": "aggressive" } } } }, "seeds": "safety", "sides": ["blue", "red"], "note": "no dragon and no economy component: baseline for a colour asymmetry not specific to an option" }
   ],
+  "matches": "control 1,200 + primary 2 x 2 x 1,200 = 4,800 + safety/reference 3 x 2 x 400 = 2,400 => 8,400 matches (~3 h, 3 workers)",
   "primary": {
-    "metric": "goldLeadAt.early (own team gold minus enemy team gold at the end of the early phase; null if the match ended in the phase)",
-    "estimand": "D = mean over seeds of (Delta_red - Delta_blue), Delta_side = treatment - control on the same seed and side (paired; both sides needed)",
+    "metric": "goldLeadAt.early",
+    "estimand": "D = mean over seeds of (Delta_red - Delta_blue); Delta_side = (treatment on that side) - (control), both from that side's view, same seed; a seed counts only if all three records have the metric (match ended in the early phase => null)",
     "margin": 150,
-    "test": "TOST, two one-sided z tests at alpha 0.05 each = the 90% CI of D",
+    "ci": "90% (z 1.645) = two one-sided tests at alpha 0.05",
     "verdict": {
-      "PASS": "the 90% CI of D lies inside (-150, +150)",
-      "STOP": "the 90% CI of D lies entirely outside [-150, +150] (a side difference larger than the margin is demonstrated) => release blocker, Owner",
-      "INCONCLUSIVE": "otherwise; not a pass, the Owner decides (release stays blocked on this item until then)"
+      "PASS": "the 90% CI lies inside (-150, +150)",
+      "STOP": "the 90% CI lies entirely outside [-150, +150]",
+      "INCONCLUSIVE": "otherwise, or fewer than 90% of the planned seeds are valid; never reported as PASS, the Owner decides"
     },
-    "comparisons": ["snowball", "quickStrongBot"]
+    "comparisons": ["snowball", "quickStrongBot"],
+    "report": "Delta_blue, Delta_red, and D split by 'the treated side is the dragon side' (objectiveLayoutForSeed; STANDARD = blue is the dragon side); report only"
   },
-  "economicMeaning": {
-    "goldSources": "LogicEngine: kill 300 to the team (+150 assist share via items.earnKill), tower 250, dragon 200, baron 400, passive 14 per second per team",
-    "scale": "150 gold = half a kill = 0.17 SD of the control's early gold lead (SD 886, C6 control n=400, |lead| median 550) = about half of the map's dragon-side early advantage (control: dragon-side team leads by +332 as blue / +227 as red at the end of the early phase)",
-    "reading": "a side difference within +/-150 is smaller than one assist share and well inside the existing layout effect; a difference above it would mean an option systematically pays one colour about half a kill more than the other"
-  },
-  "power": {
-    "source": "descriptive re-analysis of already observed data (C6 seeds 4201-4600; tools/analyze_side_asymmetry_3aB.mjs). Not evidence, only the variance.",
-    "sdOfSideDifference": { "earlySnowball": 1661, "midSplitPressure": 1906, "objectiveControl": 1513, "chkAggrEarly": 1362, "chkFocusBotEarly": 1440, "chkComboEarly": 1633 },
-    "tostPowerN400": "power at a true D of 0 / 50 / 100: earlySnowball 0.13 / 0.11 / 0.06, chkFocusBotEarly 0.34 / 0.27 / 0.14, chkAggrEarly 0.42 / 0.33 / 0.16",
-    "requiredN": "80% power at a true D of 0 needs SE <= 150 / 2.926 = 51.3 => n >= (SD / 51.3)^2: about 790 (SD 1440) to 1050 (SD 1661). n=1200 gives SE 48 (SD 1661): power 0.86 at D=0, 0.66 at D=50",
-    "estimatorVariance": "R - B (no control) has a similar SD (1537 for earlySnowball) because the treatment and control matches are correlated (r 0.4-0.6); the paired estimand is kept",
-    "priorSignal": "C6 point estimates of D (already seen, not evidence): earlySnowball +185 (z 2.23), chkFocusBotEarly +51 (z 0.71). All six early-acting C6 arms share one control arm, so their common red>blue sign is not six independent observations."
-  },
+  "economicMeaning": "150 gold = half a kill (kill 300, assist share 150) = about 1.2% of a team's gold at the end of the early phase (~13,000 in C6 samples) = 0.17 SD of the control's early gold lead (SD 886) = about half of the map's dragon-side early advantage (+227/+332)",
+  "power": "from C6 variance (not evidence): SD of the side difference 1,362-1,661 => at n=1200 SE 39-48; TOST power at a true D of 0 about 0.86 (SD 1,661) to 0.97 (SD 1,362)",
   "guards": {
-    "rule": "per arm and side, same-seed pairs vs the control on the same side; n as registered for the arm",
+    "pairing": "per arm and side, same-seed pairs against the control from the same side's view; the safety/reference arms use seeds 21001-21400",
     "items": [
-      { "id": "own_gold_early", "metric": "ownGoldAt.early", "harmful": "directed z <= -3 (own team gold drops)", "onHarm": "STOP" },
-      { "id": "jungler_deaths_early", "metric": "deathsPerMin.jungle.early", "harmful": "z >= 3 and rel >= +0.50", "onHarm": "STOP", "note": "threshold proposed, Owner to confirm" },
-      { "id": "focus_lane_deaths_early", "metric": "deathsPerMin.adc+sup.early", "arms": ["quickStrongBot", "snowballStrongBot", "strongBotAggressive"], "harmful": "z >= 3 and rel >= +0.50", "onHarm": "STOP", "note": "own bottom lane = adc + support; threshold proposed, Owner to confirm" },
-      { "id": "win_band", "metric": "win", "harmful": "treated side's win rate outside [0.40, 0.60]", "onHarm": "STOP", "note": "safety band only (same line as G-A8); never a claim that a tactic is favourable (Owner)" },
-      { "id": "ganks_ceiling_early", "metric": "ganksPerMin.early", "arms": ["strongBotAggressive", "snowballStrongBot"], "rule": "ratio = treatment mean / control mean, 95% CI from the paired difference", "harmful": "the lower 95% bound of the ratio > 2.0", "inconclusive": "point ratio > 2.0 but the CI includes 2.0", "onHarm": "STOP", "note": "C6 point ratio 1.99 (blue) sits on the old 2.0 level check; a point-estimate rule would STOP about half of new samples by chance, so the CI rule is proposed; Owner to confirm" }
+      { "id": "own_gold_early", "metric": "ownGoldAt.early", "level": "STOP", "rule": "paired z <= -3 (own team gold at the end of the early phase drops)", "arms": "all treatment arms" },
+      { "id": "win_band", "metric": "win (draw = 0.5)", "level": "STOP", "rule": "the treated side's win rate is outside [0.40, 0.60] (point estimate); safety band only, never a claim that a tactic is favourable", "arms": "all treatment arms" },
+      { "id": "ganks_level", "metric": "ganksPerMin.early", "level": "WARN at ratio >= 1.9 (point); STOP when the lower 95% bound of the ratio > 2.0", "rule": "ratio = mean(treatment) / mean(control); 95% CI of the ratio from the paired difference divided by the control mean", "arms": ["quickStrongBot", "snowballStrongBot", "strongBotAggressive"] },
+      { "id": "jungler_deaths_early", "metric": "deathsAt.jungle.early (count) and deathsPerMin.jungle.early", "level": "WARN", "rule": "low events (control mean < 0.5 deaths per match): WARN if the absolute increase >= 0.25 deaths per match with paired z >= 3; otherwise WARN if rel >= +50% AND absolute increase >= 0.15 deaths per match AND paired z >= 3", "arms": "all treatment arms" },
+      { "id": "bot_lane_deaths_early", "metric": "deathsAt.adc+sup.early and deathsPerMin.adc+sup.early", "level": "WARN", "rule": "same as jungler_deaths_early", "arms": ["quickStrongBot", "snowballStrongBot", "strongBotAggressive"] }
     ]
   },
   "interactions": [
-    { "id": "stack_ganks_early", "combo": "snowballStrongBot", "parts": ["snowball", "quickStrongBot"], "metric": "ganksPerMin.early", "rule": "report; flag if |z| >= 3 (combination differs from the sum of its parts)" },
-    { "id": "stack_gold_early", "combo": "snowballStrongBot", "parts": ["snowball", "quickStrongBot"], "metric": "goldLeadAt.early", "rule": "report; flag if |z| >= 3" }
+    { "id": "stack_ganks_early", "combo": "snowballStrongBot", "parts": ["snowball", "quickStrongBot"], "metric": "ganksPerMin.early", "rule": "per seed (combo - a - b + ctrl) on seeds 21001-21400; report; flag if |z| >= 3" },
+    { "id": "stack_gold_early", "combo": "snowballStrongBot", "parts": ["snowball", "quickStrongBot"], "metric": "goldLeadAt.early", "rule": "same; report; flag if |z| >= 3" }
   ],
-  "overallVerdict": "STOP if any primary comparison or guard says STOP; PASS only if every primary comparison is PASS and no guard is harmful or inconclusive; otherwise INCONCLUSIVE",
-  "reportedMetrics": ["goldLeadAt.mid", "durationMin", "win", "ganksPerMin.mid", "ganksOwnPerMin.bot.early", "contestShare.dragon.early", "captureShare.dragon.early+mid+late"],
-  "notClaimed": {
-    "outcome": "no win-rate claim; win rate is a safety band and a report only",
-    "attribution": "a STOP or INCONCLUSIVE is reported with the dragon-side split and the reference arm; no coefficient, engine or rule change is made in response without the Owner"
-  },
-  "cost": { "primaryN1200": "control + 2 primary options x 2 sides at 1200 = 6,000; 3 safety/reference options x 2 sides at 400 = 2,400; total 8,400 matches ~ 3 h (3 workers, ~1.3 s/match)", "allN400": "4,400 matches ~ 95 min" }
+  "overall": "STOP if any primary comparison or STOP-level guard says STOP; otherwise INCONCLUSIVE if any primary comparison is INCONCLUSIVE; otherwise PASS. WARN flags and interaction flags are listed for the Owner and never change PASS into anything else silently.",
+  "reportedMetrics": ["goldLeadAt.mid", "durationMin", "ganksPerMin.mid", "ganksOwnPerMin.bot.early", "contestShare.dragon.early", "captureShare.dragon.early+mid+late"],
+  "noOptionalStopping": "verdicts are computed only on complete data; partial batches are never evaluated",
+  "notClaimed": "no win-rate claim; no coefficient, engine or rule change in response to a STOP/WARN without the Owner"
 }
