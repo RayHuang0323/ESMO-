@@ -5,9 +5,10 @@
  "registeredAt": "2026-10-27",
  "status": "registered; runnable only after the independent review (review.reviewedAt with verdict APPROVE or APPROVE WITH CHANGES) and a passing --validate run AFTER the review record is written (the registration hash includes the review fields); written after the G-A8 result (0024a067) and the v20 control (f7abd883) were observed, declared as such",
  "review": {
-  "reviewedAt": null,
-  "verdict": null,
-  "round1": "APPROVE WITH CHANGES 2026-10-27 (M1 order-dependent knob split -> RISKNEUTRAL arms + both orders + Shapley + ORDER_DEPENDENT; M2 player-reachable knob values -> SCAN_A 0.25 / 0.85 + reachable flag from code; M3 interpretationMap; m4 MDE / borderline; m5 multiplicity; m6 OPPOSITE flags; m7 nexus excluded, gold1200; m8 arithmetic self-check; m9 verdict / fingerprint / validate order / S6; m10 phase stance shares the engage channel; m11 wording) - all applied; reviewer's 'risk 0.3 / 0.8 reachable' corrected from code: risk.tolerance cautious and bold are not offered on any focal template or std (bold appears only as classic.m3's own value), so no risk arm is added for reachability"
+  "reviewedAt": "2026-10-27",
+  "verdict": "APPROVE WITH CHANGES (round 2; remaining R1-R4 applied, coordinator diff check per the reviewer, no round 3 needed)",
+  "round1": "APPROVE WITH CHANGES 2026-10-27 (M1 order-dependent knob split -> RISKNEUTRAL arms + both orders + Shapley + ORDER_DEPENDENT; M2 player-reachable knob values -> SCAN_A 0.25 / 0.85 + reachable flag from code; M3 interpretationMap; m4 MDE / borderline; m5 multiplicity; m6 OPPOSITE flags; m7 nexus excluded, gold1200; m8 arithmetic self-check; m9 verdict / fingerprint / validate order / S6; m10 phase stance shares the engage channel; m11 wording) - all applied; reviewer's 'risk 0.3 / 0.8 reachable' corrected from code: risk.tolerance cautious and bold are not offered on any focal template or std (bold appears only as classic.m3's own value), so no risk arm is added for reachability",
+  "round2": "APPROVE WITH CHANGES 2026-10-27: all round-1 findings resolved, the risk-reachability correction confirmed from code; R1 FAVOURS_B directional (strong: aggression 0.85 point, STOP or WARN strong; weak: 0.25 point, WARN weak); R2 FAVOURS_B only for attribution AGGRESSION / BOTH / AGGRESSION_ONLY_VARIED + new RISK_C_SUFFICES_FOR_REACHABILITY; R3 the reachable point also needs its paired difference to STD to exclude 0 in that direction; R4 FAVOURS_C uses the directional interaction, hint logic is a pure function pinned by selftest S8/S9 - all applied"
  },
  "purpose": "Diagnose the G-A8 dominant-plan STOP: how much of each strong or weak template's win rate comes from its macro.aggression / macro.riskTolerance values and how much from the rest of the template (lanePlan, objectives, tempo, phase stances, economy), and separate the two knobs from each other (they are collinear across the 21 templates, r 0.95, so the template table alone cannot separate them).",
  "notClaimed": "Diagnostic only. This study authorises nothing. It never changes the G-A8 verdict (STOP), the G-A8 thresholds, any coefficient, template or the Registry (Owner items 2-4: plan B engine change and plan C template coefficients are not authorised). The five STOP templates keep blocking v21; the release flag stays off. No outcome label below is a release PASS. The Owner decides whether to authorise any fix (B, C, or neither).",
@@ -27,16 +28,40 @@
  },
  "focalTemplates": {
   "strong (G-A8 STOP)": {
-   "classic.m3": [0.8, 0.8],
-   "classic.m7": [0.85, 0.85],
-   "classic.m1": [0.65, 0.6],
-   "v2.three_lane_pressure": [0.7, 0.6],
-   "v2.mid_jungle_sync": [0.6, 0.5]
+   "classic.m3": [
+    0.8,
+    0.8
+   ],
+   "classic.m7": [
+    0.85,
+    0.85
+   ],
+   "classic.m1": [
+    0.65,
+    0.6
+   ],
+   "v2.three_lane_pressure": [
+    0.7,
+    0.6
+   ],
+   "v2.mid_jungle_sync": [
+    0.6,
+    0.5
+   ]
   },
   "weak (G-A8 WARN weak)": {
-   "v2.defensive_hold": [0.25, 0.2],
-   "classic.m8": [0.25, 0.2],
-   "v2.mid_solo_split": [0.45, 0.5]
+   "v2.defensive_hold": [
+    0.25,
+    0.2
+   ],
+   "classic.m8": [
+    0.25,
+    0.2
+   ],
+   "v2.mid_solo_split": [
+    0.45,
+    0.5
+   ]
   },
   "note": "[aggression, riskTolerance] as read from the template configs; the tool re-reads them and refuses to run if they differ"
  },
@@ -96,11 +121,13 @@
  },
  "interpretationMap (descriptive; decided now; authorises nothing)": {
   "CONTENT_DRIVEN": "the dominance does not come from the two knob values at detectable size: neither an engine cost on the knobs (B) nor compressing the template's knob values (C) is indicated for that template; look at the rest of the template (phase stances, lane plan, objectives, tempo), keeping contentCaveat in mind",
-  "KNOB_DRIVEN or MIXED, and Kstd excludes 0 in K's direction, and a player-reachable std point (aggression 0.25 or 0.85) carries the G-A8 STOP or WARN label on these seeds": "the knob value itself is strong on any base and players can reach it through the tactic book: compressing template values (C) cannot remove it; this favours B (a cost in the engine) or restricting the offered values - both need a new Owner decision",
-  "KNOB_DRIVEN or MIXED, and Kstd includes 0 while I excludes 0": "the knob value is strong only in combination with that template's content: this favours C (or a content change in that template)",
+  "FAVOURS_B: KNOB_DRIVEN or MIXED, attribution AGGRESSION / BOTH / AGGRESSION_ONLY_VARIED, Kstd excludes 0 in K's direction, and the player-reachable std point in the template's direction (strong: aggression 0.85 with label STOP or WARN strong; weak: aggression 0.25 with label WARN weak) has a paired difference to STD that excludes 0 in that direction": "the aggression value itself is strong on any base and players can reach it through the tactic book: compressing template values (C) cannot remove it; this favours B (a cost in the engine) or restricting the offered values - both need a new Owner decision",
+  "RISK_C_SUFFICES_FOR_REACHABILITY: KNOB_DRIVEN or MIXED with attribution RISK": "players can set riskTolerance only to 0.5 or the template's own value (code: risk.tolerance offers only balanced), so the template value is the only entry: compressing it (C) closes that entry",
+  "FAVOURS_C: KNOB_DRIVEN or MIXED, Kstd does not exclude 0 in K's direction, and I excludes 0 in K's direction": "the knob value is strong only in combination with that template's content: this favours C (or a content change in that template)",
   "MIXED": "C alone (knob compression) would not be enough for that template",
   "scan shape": "a monotone aggression or riskTolerance curve with no plateau at high values is consistent with 'the knob has little cost'; a plateau or turnover means a cost already appears at high values",
-  "limit": "this study measures no effect of B (no engine change is authorised); it only shows whether and where the knob values buy wins without a matching cost"
+  "limit": "this study measures no effect of B (no engine change is authorised); it only shows whether and where the knob values buy wins without a matching cost",
+  "implementation": "tools/measure_ga8_knob_3aB.mjs interpretHints (pure function, selftest S8/S9)"
  },
  "validation (all must pass before --run; --validate, run after the review record is written)": [
   "V1 legacy path = committed binding path: FULL (8) and STD arms on the first 20 seeds (180 matches) reproduce the committed G-A8 records exactly (win and duration)",

@@ -96,6 +96,23 @@ export function knobAttribution(direction, Kagg, Krisk) {
   const ex = (s) => (direction > 0 ? s.lo > 0 : s.hi < 0);
   return ex(Kagg) && ex(Krisk) ? "BOTH" : ex(Kagg) ? "AGGRESSION" : ex(Krisk) ? "RISK" : "NONE";
 }
+/**
+ * interpretationMap（登記；只是描述，不授權任何修正）。
+ * reach＝玩家在 std 上選得到、方向與模板相同的那一點：強模板看 aggression 0.85、弱模板看 0.25；
+ *   { label, d }：該點的 G-A8 標籤、與 STD 的成對差（CI）。riskTolerance 玩家只選得到 0.5 與模板自己的值。
+ */
+export function interpretHints({ kind, label, attribution, Kstd, I, reach }) {
+  const dir = kind === "strong" ? 1 : -1, ex = (s) => !!s && (dir > 0 ? s.lo > 0 : s.hi < 0);
+  const knob = label === "KNOB_DRIVEN" || label === "MIXED";
+  const reachHit = !!reach && (reach.label === "STOP" || reach.label === (dir > 0 ? "WARN strong" : "WARN weak")) && ex(reach.d);
+  const hints = [];
+  if (label === "CONTENT_DRIVEN") hints.push("CONTENT: neither B nor C on the knobs is indicated; look at the template content (stances share the engage channel)");
+  if (knob && ex(Kstd) && reachHit && ["AGGRESSION", "BOTH", "AGGRESSION_ONLY_VARIED"].includes(attribution)) hints.push("FAVOURS_B: the aggression value is strong on a neutral base and players reach it through the tactic book; C alone cannot remove it");
+  if (knob && attribution === "RISK") hints.push("RISK_C_SUFFICES_FOR_REACHABILITY: the effect is in riskTolerance, which players can only set to 0.5 or the template's own value; compressing the template value (C) closes the only entry");
+  if (knob && !ex(Kstd) && ex(I)) hints.push("FAVOURS_C: the knob value is strong only with this template content");
+  if (label === "MIXED") hints.push("C_ALONE_INSUFFICIENT");
+  return hints;
+}
 /** 反方向旗標：某個旋鈕的部分在 K 的反方向上排除 0。 */
 export function oppositeFlags(direction, Kagg, Krisk) {
   const against = (s) => s && (direction > 0 ? s.hi < 0 : s.lo > 0);
@@ -115,6 +132,18 @@ if (flag("selftest")) {
   ck("S4 templateLabel 弱（鏡像）", templateLabel("weak", 0.3, 0.48, { lo: -0.3, hi: -0.1 }) === "KNOB_DRIVEN" && templateLabel("weak", 0.3, 0.4, { lo: -0.2, hi: -0.01 }) === "MIXED" && templateLabel("weak", 0.3, 0.4, { lo: -0.1, hi: 0.02 }) === "CONTENT_DRIVEN");
   ck("S5 knobAttribution", knobAttribution(1, { lo: 0.01 }, { lo: -0.01 }) === "AGGRESSION" && knobAttribution(1, { lo: -0.01 }, { lo: 0.02 }) === "RISK" && knobAttribution(-1, { hi: -0.01 }, { hi: -0.02 }) === "BOTH" && knobAttribution(1, { lo: -0.1 }, null) === "AGGRESSION_ONLY_VARIED");
   ck("S6 反方向旗標", oppositeFlags(1, { lo: -0.2, hi: -0.01 }, { lo: 0.01, hi: 0.1 }).join() === "OPPOSITE_AGGRESSION" && oppositeFlags(-1, { lo: -0.2, hi: -0.01 }, { lo: 0.01, hi: 0.1 }).join() === "OPPOSITE_RISK" && oppositeFlags(1, { lo: 0.01, hi: 0.2 }, null).length === 0);
+  const P = { lo: 0.05, hi: 0.15 }, Z = { lo: -0.03, hi: 0.04 }, Ng = { lo: -0.15, hi: -0.05 };
+  const tags = (o) => interpretHints(o).map((h) => h.split(":")[0]).join();
+  ck("S8 提示：強模板 KNOB＋AGGRESSION＋Kstd>0＋0.85 點 STOP 且差>0 ⇒ FAVOURS_B；0.85 只有絕對 WARN、差含 0 ⇒ 不給 B；RISK ⇒ RISK_C；Kstd 含 0 且 I>0 ⇒ FAVOURS_C；MIXED ⇒ C_ALONE；CONTENT ⇒ CONTENT",
+    tags({ kind: "strong", label: "KNOB_DRIVEN", attribution: "AGGRESSION", Kstd: P, I: Z, reach: { label: "STOP", d: P } }) === "FAVOURS_B"
+    && tags({ kind: "strong", label: "KNOB_DRIVEN", attribution: "AGGRESSION", Kstd: P, I: Z, reach: { label: "WARN strong", d: Z } }) === ""
+    && tags({ kind: "strong", label: "KNOB_DRIVEN", attribution: "RISK", Kstd: P, I: Z, reach: { label: "STOP", d: P } }) === "RISK_C_SUFFICES_FOR_REACHABILITY"
+    && tags({ kind: "strong", label: "KNOB_DRIVEN", attribution: "BOTH", Kstd: Z, I: P, reach: null }) === "FAVOURS_C"
+    && tags({ kind: "strong", label: "MIXED", attribution: "NONE", Kstd: Z, I: Z, reach: null }) === "C_ALONE_INSUFFICIENT"
+    && tags({ kind: "strong", label: "CONTENT_DRIVEN", attribution: "NONE", Kstd: P, I: Z, reach: null }) === "CONTENT");
+  ck("S9 提示（弱，方向反過來）：0.25 點 WARN weak 且差<0 ⇒ FAVOURS_B；強方向的 STOP 不觸發",
+    tags({ kind: "weak", label: "KNOB_DRIVEN", attribution: "BOTH", Kstd: Ng, I: Z, reach: { label: "WARN weak", d: Ng } }) === "FAVOURS_B"
+    && tags({ kind: "weak", label: "KNOB_DRIVEN", attribution: "BOTH", Kstd: Ng, I: Z, reach: { label: "STOP", d: P } }) === "");
   ck("S7 登記：seeds 25001–25400、46 臂、指紋 0578fa882d74b205", REG.seeds.range === "25001-25400" && /^46 arms/.test(REG.arms.total) && REG.fingerprint.startsWith("0578fa882d74b205"));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
@@ -275,14 +304,9 @@ if (flag("report")) {
     const cut = kind === "strong" ? 0.57 : 0.43;
     const borderline = A[N].lo <= cut && cut <= A[N].hi;
     const label = templateLabel(kind, A[F].rate, A[N].rate, K);
-    const exDir = (s) => (dir > 0 ? s.lo > 0 : s.hi < 0);
-    //  interpretationMap（登記；只是描述，不授權任何修正）
-    const reachableStdHit = ["SCAN_A_0.25", "SCAN_A_0.85"].some((x) => A[x].playerReachable && (A[x].label === "STOP" || A[x].label === (dir > 0 ? "WARN strong" : "WARN weak")));
-    const hints = [];
-    if (label === "CONTENT_DRIVEN") hints.push("CONTENT: neither B nor C on the knobs is indicated; look at the template content (stances share the engage channel)");
-    if ((label === "KNOB_DRIVEN" || label === "MIXED") && exDir(Kstd) && reachableStdHit) hints.push("FAVOURS_B: the knob value is strong on a neutral base and players reach it through the tactic book; C alone cannot remove it");
-    if ((label === "KNOB_DRIVEN" || label === "MIXED") && !exDir(Kstd) && (I.lo > 0 || I.hi < 0)) hints.push("FAVOURS_C: the knob value is strong only with this template content");
-    if (label === "MIXED") hints.push("C_ALONE_INSUFFICIENT");
+    const reachArm = dir > 0 ? "SCAN_A_0.85" : "SCAN_A_0.25";
+    const reach = A[reachArm].playerReachable ? { arm: reachArm, label: A[reachArm].label, d: diff(reachArm, "STD") } : null;
+    const hints = interpretHints({ kind, label, attribution, Kstd, I, reach });
     return { template: tpl, kind, aggression: a, riskTolerance: r, full: A[F].rate, neutral: A[N].rate, neutralCI: [A[N].lo, A[N].hi], aggNeutral: ARM[G] ? A[G].rate : null, riskNeutral: ARM[Q] ? A[Q].rate : null, stdKnobs: A[SK].rate, std: A.STD.rate,
       K, mdeK: 2.8 * K.se, Kbonferroni: { lo: Kbonf.lo, hi: Kbonf.hi, z: BONF_Z }, orderA: { Kagg: KaggA, Krisk: KriskA }, orderB: { Kagg: KaggB, Krisk: KriskB }, Kagg, Krisk, Iknob, C, Kstd, I,
       arithmeticSelfCheck: Math.abs(diff(F, "STD").mean - (K.mean + C.mean)) < 1e-9,
