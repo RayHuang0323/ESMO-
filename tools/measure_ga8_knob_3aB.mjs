@@ -55,7 +55,8 @@ if (flag("knob-worker")) {
       }
       const win = e.over && (e.winner === "blue" || e.winner === "red") ? (e.winner === side ? 1 : 0) : 0.5;
       const foe = side === "blue" ? "red" : "blue";
-      const dead = (s) => Object.values(e.towers).filter((x) => x.side === s && x.hp <= 0).length;
+      //  主堡不算（贏了就一定倒主堡，會跟勝負重疊）。
+      const dead = (s) => Object.entries(e.towers).filter(([k, x]) => x.side === s && x.hp <= 0 && x.lane !== "nexus" && !k.includes("nexus")).length;
       process.send({ type: "done", id: t.id, rec: { seed: t.seed, arm: t.arm, side, layout: objectiveLayoutForSeed(t.seed), ruleset: RULESET,
         layers: { heroSkills: !!M.skills, heroPassives: !!M.passives, heroPowerCurve: !!M.curves, battleTalents: !!M.talents }, director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null,
         probe, win, duration: e.t, killsFor: side === "blue" ? e.bK : e.rK, killsAgainst: side === "blue" ? e.rK : e.bK, gold600, gold1200, towersTaken: dead(foe), towersLost: dead(side) } });
@@ -95,6 +96,11 @@ export function knobAttribution(direction, Kagg, Krisk) {
   const ex = (s) => (direction > 0 ? s.lo > 0 : s.hi < 0);
   return ex(Kagg) && ex(Krisk) ? "BOTH" : ex(Kagg) ? "AGGRESSION" : ex(Krisk) ? "RISK" : "NONE";
 }
+/** 反方向旗標：某個旋鈕的部分在 K 的反方向上排除 0。 */
+export function oppositeFlags(direction, Kagg, Krisk) {
+  const against = (s) => s && (direction > 0 ? s.hi < 0 : s.lo > 0);
+  return [against(Kagg) ? "OPPOSITE_AGGRESSION" : null, against(Krisk) ? "OPPOSITE_RISK" : null].filter(Boolean);
+}
 
 if (flag("selftest")) {
   let pass = 0, fail = 0;
@@ -108,7 +114,8 @@ if (flag("selftest")) {
     templateLabel("strong", 0.68, 0.52, { lo: 0.05, hi: 0.2 }) === "KNOB_DRIVEN" && templateLabel("strong", 0.68, 0.6, { lo: 0.02, hi: 0.1 }) === "MIXED" && templateLabel("strong", 0.62, 0.6, { lo: -0.03, hi: 0.07 }) === "CONTENT_DRIVEN" && templateLabel("strong", 0.6, 0.5, { lo: -0.01, hi: 0.2 }) === "UNRESOLVED");
   ck("S4 templateLabel 弱（鏡像）", templateLabel("weak", 0.3, 0.48, { lo: -0.3, hi: -0.1 }) === "KNOB_DRIVEN" && templateLabel("weak", 0.3, 0.4, { lo: -0.2, hi: -0.01 }) === "MIXED" && templateLabel("weak", 0.3, 0.4, { lo: -0.1, hi: 0.02 }) === "CONTENT_DRIVEN");
   ck("S5 knobAttribution", knobAttribution(1, { lo: 0.01 }, { lo: -0.01 }) === "AGGRESSION" && knobAttribution(1, { lo: -0.01 }, { lo: 0.02 }) === "RISK" && knobAttribution(-1, { hi: -0.01 }, { hi: -0.02 }) === "BOTH" && knobAttribution(1, { lo: -0.1 }, null) === "AGGRESSION_ONLY_VARIED");
-  ck("S6 登記：seeds 25001–25400、38 臂、G-A8 門檻沒有出現在本工具的判定以外", REG.seeds.range === "25001-25400" && /38 arms/.test(REG.arms.total));
+  ck("S6 反方向旗標", oppositeFlags(1, { lo: -0.2, hi: -0.01 }, { lo: 0.01, hi: 0.1 }).join() === "OPPOSITE_AGGRESSION" && oppositeFlags(-1, { lo: -0.2, hi: -0.01 }, { lo: 0.01, hi: 0.1 }).join() === "OPPOSITE_RISK" && oppositeFlags(1, { lo: 0.01, hi: 0.2 }, null).length === 0);
+  ck("S7 登記：seeds 25001–25400、46 臂、指紋 0578fa882d74b205", REG.seeds.range === "25001-25400" && /^46 arms/.test(REG.arms.total) && REG.fingerprint.startsWith("0578fa882d74b205"));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
 }
@@ -129,20 +136,32 @@ add("STD", null, STD_CFG);
 for (const tpl of Object.keys(FOCAL)) add(`FULL_${tpl}`, null, cfgOf(tpl));
 for (const tpl of Object.keys(FOCAL)) add(`NEUTRAL_${tpl}`, `FULL_${tpl}`, withKnobs(cfgOf(tpl), 0.5, 0.5));
 for (const [tpl, [, r]] of Object.entries(FOCAL)) if (r !== 0.5) add(`AGGNEUTRAL_${tpl}`, `FULL_${tpl}`, withKnobs(cfgOf(tpl), 0.5, null));
+for (const [tpl, [, r]] of Object.entries(FOCAL)) if (r !== 0.5) add(`RISKNEUTRAL_${tpl}`, `FULL_${tpl}`, withKnobs(cfgOf(tpl), null, 0.5));
 for (const [a, r] of [...new Map(Object.values(FOCAL).map(([a, r]) => [`${a}_${r}`, [a, r]])).values()]) add(pairKey(a, r), "STD", withKnobs(STD_CFG, a, r));
-for (const v of [0.2, 0.35, 0.65, 0.8]) add(`SCAN_A_${v}`, "STD", withKnobs(STD_CFG, v, null));
+for (const v of [0.2, 0.25, 0.35, 0.65, 0.8, 0.85]) add(`SCAN_A_${v}`, "STD", withKnobs(STD_CFG, v, null));
 for (const v of [0.2, 0.35, 0.65, 0.8]) add(`SCAN_R_${v}`, "STD", withKnobs(STD_CFG, null, v));
 const ARM = Object.fromEntries(ARMS.map((x) => [x.arm, x]));
 /** 臂設定預期的 Director 數值（純量；laneOffset 取值的多重集合，紅方換路名不影響）。 */
 const expectOf = (config) => { const K = MTC.toEngineTactic(config), I = MTC.toEngineTacticIdentity(config); return { retreatAt: K.retreatAt, laneOffsetValues: Object.values(K.laneOffset).sort((a, b) => a - b), engageBias: I.engageBias, retreatFloorShift: I.retreatFloorShift, commitShift: I.commitShift }; };
 const probeEq = (p, q) => ["retreatAt", "engageBias", "retreatFloorShift", "commitShift"].every((k) => near(p[k], q[k])) && p.laneOffsetValues.length === q.laneOffsetValues.length && p.laneOffsetValues.every((v, i) => near(v, q.laneOffsetValues[i]));
 for (const x of ARMS) x.expect = expectOf(x.config);
+//  玩家選得到嗎：從程式讀（CHOICE_MAPPING 的數值＋tacticBookOptions 在 core.v1 下提供的選項＋模板自己的值）。
+const { CHOICE_MAPPING } = await imp("src/platform/tactics/tacticChoiceMapping.js");
+const { tacticBookOptions } = await imp("src/battle/moba/tactics/tacticResolver.js");
+const templateOfArm = (arm) => { const m = /^(FULL|NEUTRAL|AGGNEUTRAL|RISKNEUTRAL)_(.+)$/.exec(arm); return m ? m[2] : "std"; };
+const offeredValues = (tpl, dim, own) => { const row = tacticBookOptions(tpl, [], {}, { tacticalDirector: "core.v1" }).find((r) => r.dimension === dim); return [...new Set([own, ...(row?.offered ?? []).map((c) => CHOICE_MAPPING.rows[dim].values[c])])].sort((a, b) => a - b); };
+const REACH = {};
+for (const x of ARMS) {
+  const tpl = templateOfArm(x.arm), own = cfgOf(tpl).macro;
+  const agg = (REACH[`${tpl}|a`] ??= offeredValues(tpl, "teamfight.posture", own.aggression)), risk = (REACH[`${tpl}|r`] ??= offeredValues(tpl, "risk.tolerance", own.riskTolerance));
+  x.playerReachable = agg.includes(x.config.macro.aggression) && risk.includes(x.config.macro.riskTolerance);
+}
 
 const [S0, S1] = REG.seeds.range.split("-").map(Number);
 const SEEDS = Array.from({ length: S1 - S0 + 1 }, (_, i) => S0 + i);
 const taskOf = (x, seed) => ({ id: `${x.arm}#${seed}`, key: x.arm, seed, arm: x.arm, config: x.config });
 const tasks = ARMS.flatMap((x) => SEEDS.map((seed) => taskOf(x, seed)));
-if (flag("plan")) { console.log(`${ARMS.length} 臂 × ${SEEDS.length} seeds ＝ ${tasks.length} 場`); for (const x of ARMS) console.log(`  ${x.arm.padEnd(36)} a ${x.config.macro.aggression} r ${x.config.macro.riskTolerance}${x.base ? `（基準 ${x.base}）` : ""}`); process.exit(0); }
+if (flag("plan")) { console.log(`${ARMS.length} 臂 × ${SEEDS.length} seeds ＝ ${tasks.length} 場`); for (const x of ARMS) console.log(`  ${x.arm.padEnd(36)} a ${x.config.macro.aggression} r ${x.config.macro.riskTolerance}${x.base ? `（基準 ${x.base}）` : ""}${x.playerReachable ? "　玩家選得到" : ""}`); console.log(`玩家可選值：${Object.entries(REACH).map(([k, v]) => `${k} ${v.join("/")}`).join("；")}`); process.exit(0); }
 
 const recCheck = (r, t) => {
   const p = [];
@@ -156,6 +175,7 @@ const SV = await imp("src/platform/contracts/simulationVersion.js");
 const FP = SV.SIMULATION_SEMANTICS_FINGERPRINTS[SV.MOBA_SIMULATION_VERSION];
 const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: FP };
 const GA8DIR = val("ga8dir", GA8DIR_DEFAULT);
+if ((flag("validate") || flag("run")) && !REG.fingerprint.startsWith(FP)) { console.error(`登記的指紋與目前不同（目前 ${FP}）：拒絕`); process.exit(2); }
 const ga8Rec = (arm, seed) => { const tpl = arm === "STD" ? "std" : arm.slice("FULL_".length); return readKey(GA8DIR, tpl).get(`${tpl}#${seed}`); };
 
 if (flag("validate")) {
@@ -174,12 +194,12 @@ if (flag("validate")) {
   const deepDiff = (a, b, p = "") => (a && b && typeof a === "object" && typeof b === "object" ? [...new Set([...Object.keys(a), ...Object.keys(b)])].flatMap((k) => deepDiff(a[k], b[k], p ? `${p}.${k}` : k)) : JSON.stringify(a) === JSON.stringify(b) ? [] : [p]);
   const v2 = ARMS.map((x) => {
     const okValid = MTC.validateMobaTacticConfig(x.config).ok;
-    const ref = x.arm === "STD" ? STD_CFG : x.arm.startsWith("FULL_") ? cfgOf(x.arm.slice(5)) : x.arm.startsWith("NEUTRAL_") || x.arm.startsWith("AGGNEUTRAL_") ? cfgOf(x.arm.replace(/^(AGG)?NEUTRAL_/, "")) : STD_CFG;
+    const ref = cfgOf(templateOfArm(x.arm));
     const d = deepDiff(ref, x.config);
     const allowed = x.arm.startsWith("FULL_") || x.arm === "STD" ? d.length === 0 : d.length > 0 && d.every((k) => k === "macro.aggression" || k === "macro.riskTolerance");
     return okValid && allowed ? null : `${x.arm} valid=${okValid} diff=${d.join(",")}`;
   }).filter(Boolean);
-  ck(`V2 ${ARMS.length} 臂設定合法、只改宣告的欄位、FULL 與模板相同`, v2.length === 0 && ARMS.length === 38, v2.slice(0, 3).join(" | "));
+  ck(`V2 ${ARMS.length} 臂設定合法、只改宣告的欄位、FULL 與模板相同、登記指紋＝目前`, v2.length === 0 && ARMS.length === 46 && REG.fingerprint.startsWith(FP), v2.slice(0, 3).join(" | "));
   // V3 non-vacuous（設定層；實際引擎值由 V1 的探針與即時檢查比對）
   const v3 = ARMS.filter((x) => x.base).filter((x) => probeEq(x.expect, ARM[x.base].expect)).map((x) => x.arm);
   ck("V3a 每個改過旋鈕的臂，預期 Director 數值至少一項與基準臂不同", v3.length === 0, v3.join(","));
@@ -205,7 +225,7 @@ const DIR = val("dir");
 if (!DIR) { console.error("需要 --dir"); process.exit(2); }
 
 if (flag("run")) {
-  if (!/^registered/.test(REG.status) || !REG.review?.reviewedAt) { console.error("登記未經審查"); process.exit(2); }
+  if (!/^registered/.test(REG.status) || !REG.review?.reviewedAt || !/^APPROVE( WITH CHANGES)?\b/.test(REG.review?.verdict ?? "")) { console.error("登記未經審查通過"); process.exit(2); }
   if (envBad.length) { console.error(`環境有 ${envBad.join(",")}：拒絕`); process.exit(2); }
   if (insideRepo(DIR)) { console.error("--dir 必須在 repo 外"); process.exit(2); }
   const VDIR = val("vdir");
@@ -231,46 +251,72 @@ if (flag("report")) {
   const replication = ARMS.filter((x) => x.arm === "STD" || x.arm.startsWith("FULL_")).map((x) => { const d = S.filter((s) => { const r = R(x.arm, s), g = ga8Rec(x.arm, s); return !g || r.win !== g.win || r.duration !== g.duration; }); return { arm: x.arm, n: S.length, different: d.length, seeds: d.slice(0, 10) }; });
   const replicationOk = replication.every((x) => x.different === 0);
   const mech = (arm) => { const rs = S.map((s) => R(arm, s)), ms = (f) => meanSd(rs.map(f).filter((v) => v != null)).mean; return { killDiff: ms((r) => r.killsFor - r.killsAgainst), gold600: ms((r) => r.gold600), gold1200: ms((r) => r.gold1200), towersTaken: ms((r) => r.towersTaken), towersLost: ms((r) => r.towersLost), durationMin: ms((r) => r.duration) / 60 }; };
-  const arms = ARMS.map((x) => ({ arm: x.arm, aggression: x.config.macro.aggression, riskTolerance: x.config.macro.riskTolerance, ...rateCI(S.map((s) => R(x.arm, s).win)), mechanism: mech(x.arm) }));
+  const arms = ARMS.map((x) => ({ arm: x.arm, aggression: x.config.macro.aggression, riskTolerance: x.config.macro.riskTolerance, playerReachable: x.playerReachable, ...rateCI(S.map((s) => R(x.arm, s).win)), mechanism: mech(x.arm) }));
   const A = Object.fromEntries(arms.map((x) => [x.arm, x]));
-  const diff = (a, b, f = (r) => r.win) => pairedStats(S.map((s) => f(R(a, s)) - f(R(b, s))));
-  const mechDiff = (a, b) => ({ killDiff: diff(a, b, (r) => r.killsFor - r.killsAgainst).mean, gold600: pairedStats(S.filter((s) => R(a, s).gold600 != null && R(b, s).gold600 != null).map((s) => R(a, s).gold600 - R(b, s).gold600)).mean, towersTaken: diff(a, b, (r) => r.towersTaken).mean, towersLost: diff(a, b, (r) => r.towersLost).mean, durationMin: diff(a, b, (r) => r.duration).mean / 60 });
+  const per = (f) => pairedStats(S.map(f));
+  const diff = (a, b, f = (r) => r.win) => per((s) => f(R(a, s)) - f(R(b, s)));
+  const goldDiff = (a, b, k) => pairedStats(S.filter((s) => R(a, s)[k] != null && R(b, s)[k] != null).map((s) => R(a, s)[k] - R(b, s)[k])).mean;
+  const mechDiff = (a, b) => ({ killDiff: diff(a, b, (r) => r.killsFor - r.killsAgainst).mean, gold600: goldDiff(a, b, "gold600"), gold1200: goldDiff(a, b, "gold1200"), towersTaken: diff(a, b, (r) => r.towersTaken).mean, towersLost: diff(a, b, (r) => r.towersLost).mean, durationMin: diff(a, b, (r) => r.duration).mean / 60 });
+  const w = (arm, s) => R(arm, s).win;
+  const BONF_Z = 2.73;
   const templates = Object.entries(FOCAL).map(([tpl, [a, r]]) => {
-    const F = `FULL_${tpl}`, N = `NEUTRAL_${tpl}`, G = `AGGNEUTRAL_${tpl}`, SK = pairKey(a, r);
+    const F = `FULL_${tpl}`, N = `NEUTRAL_${tpl}`, G = `AGGNEUTRAL_${tpl}`, Q = `RISKNEUTRAL_${tpl}`, SK = pairKey(a, r);
+    const kind = KIND[tpl], dir = kind === "strong" ? 1 : -1;
     const K = diff(F, N), C = diff(N, "STD"), Kstd = diff(SK, "STD");
-    const Kagg = ARM[G] ? diff(F, G) : null, Krisk = ARM[G] ? diff(G, N) : null;
-    const I = pairedStats(S.map((s) => (R(F, s).win - R(N, s).win) - (R(SK, s).win - R("STD", s).win)));
-    const total = diff(F, "STD");
-    const additiveOk = Math.abs(total.mean - (K.mean + C.mean)) < 1e-9;
-    const kind = KIND[tpl];
-    return { template: tpl, kind, aggression: a, riskTolerance: r, full: A[F].rate, neutral: A[N].rate, aggNeutral: ARM[G] ? A[G].rate : null, stdKnobs: A[SK].rate, std: A.STD.rate,
-      K, Kagg, Krisk, C, Kstd, I, total, additiveOk, label: templateLabel(kind, A[F].rate, A[N].rate, K), attribution: knobAttribution(kind === "strong" ? 1 : -1, Kagg ?? K, Krisk),
+    const Kbonf = pairedStats(S.map((s) => w(F, s) - w(N, s)), BONF_Z);
+    const I = per((s) => (w(F, s) - w(N, s)) - (w(SK, s) - w("STD", s)));
+    const both = !!(ARM[G] && ARM[Q]);
+    const KaggA = both ? diff(F, G) : null, KriskA = both ? diff(G, N) : null, KriskB = both ? diff(F, Q) : null, KaggB = both ? diff(Q, N) : null;
+    const Kagg = both ? per((s) => ((w(F, s) - w(G, s)) + (w(Q, s) - w(N, s))) / 2) : null;
+    const Krisk = both ? per((s) => ((w(F, s) - w(Q, s)) + (w(G, s) - w(N, s))) / 2) : null;
+    const Iknob = both ? per((s) => w(F, s) - w(G, s) - w(Q, s) + w(N, s)) : null;
+    const attribution = knobAttribution(dir, Kagg ?? K, Krisk);
+    const orderDependent = both && knobAttribution(dir, KaggA, KriskA) !== knobAttribution(dir, KaggB, KriskB);
+    const cut = kind === "strong" ? 0.57 : 0.43;
+    const borderline = A[N].lo <= cut && cut <= A[N].hi;
+    const label = templateLabel(kind, A[F].rate, A[N].rate, K);
+    const exDir = (s) => (dir > 0 ? s.lo > 0 : s.hi < 0);
+    //  interpretationMap（登記；只是描述，不授權任何修正）
+    const reachableStdHit = ["SCAN_A_0.25", "SCAN_A_0.85"].some((x) => A[x].playerReachable && (A[x].label === "STOP" || A[x].label === (dir > 0 ? "WARN strong" : "WARN weak")));
+    const hints = [];
+    if (label === "CONTENT_DRIVEN") hints.push("CONTENT: neither B nor C on the knobs is indicated; look at the template content (stances share the engage channel)");
+    if ((label === "KNOB_DRIVEN" || label === "MIXED") && exDir(Kstd) && reachableStdHit) hints.push("FAVOURS_B: the knob value is strong on a neutral base and players reach it through the tactic book; C alone cannot remove it");
+    if ((label === "KNOB_DRIVEN" || label === "MIXED") && !exDir(Kstd) && (I.lo > 0 || I.hi < 0)) hints.push("FAVOURS_C: the knob value is strong only with this template content");
+    if (label === "MIXED") hints.push("C_ALONE_INSUFFICIENT");
+    return { template: tpl, kind, aggression: a, riskTolerance: r, full: A[F].rate, neutral: A[N].rate, neutralCI: [A[N].lo, A[N].hi], aggNeutral: ARM[G] ? A[G].rate : null, riskNeutral: ARM[Q] ? A[Q].rate : null, stdKnobs: A[SK].rate, std: A.STD.rate,
+      K, mdeK: 2.8 * K.se, Kbonferroni: { lo: Kbonf.lo, hi: Kbonf.hi, z: BONF_Z }, orderA: { Kagg: KaggA, Krisk: KriskA }, orderB: { Kagg: KaggB, Krisk: KriskB }, Kagg, Krisk, Iknob, C, Kstd, I,
+      arithmeticSelfCheck: Math.abs(diff(F, "STD").mean - (K.mean + C.mean)) < 1e-9,
+      label, borderline, attribution, flags: [...(orderDependent ? ["ORDER_DEPENDENT"] : []), ...oppositeFlags(dir, Kagg ?? K, Krisk)], interpretationHints: hints,
       mechanismK: mechDiff(F, N), mechanismKstd: mechDiff(SK, "STD") };
   });
   const scanPts = (knob) => (knob === "aggression"
-    ? [["SCAN_A_0.2", 0.2], ["SCAN_A_0.35", 0.35], [pairKey(0.45, 0.5), 0.45], ["STD", 0.5], [pairKey(0.6, 0.5), 0.6], ["SCAN_A_0.65", 0.65], ["SCAN_A_0.8", 0.8]]
+    ? [["SCAN_A_0.2", 0.2], ["SCAN_A_0.25", 0.25], ["SCAN_A_0.35", 0.35], [pairKey(0.45, 0.5), 0.45], ["STD", 0.5], [pairKey(0.6, 0.5), 0.6], ["SCAN_A_0.65", 0.65], ["SCAN_A_0.8", 0.8], ["SCAN_A_0.85", 0.85]]
     : [["SCAN_R_0.2", 0.2], ["SCAN_R_0.35", 0.35], ["STD", 0.5], ["SCAN_R_0.65", 0.65], ["SCAN_R_0.8", 0.8]]);
   const scans = Object.fromEntries(["aggression", "riskTolerance"].map((knob) => {
     const pts = scanPts(knob);
     const slope = pairedStats(seedSlopes(pts.map(([arm, x]) => ({ x, wins: W(arm) })), S));
-    const curve = pts.map(([arm, x]) => ({ x, arm, rate: A[arm].rate, lo: A[arm].lo, hi: A[arm].hi, label: A[arm].label }));
+    const curve = pts.map(([arm, x]) => ({ x, arm, rate: A[arm].rate, lo: A[arm].lo, hi: A[arm].hi, label: A[arm].label, playerReachable: A[arm].playerReachable, mechanism: A[arm].mechanism }));
     const monotone = curve.every((p, i) => i === 0 || p.rate - curve[i - 1].rate >= -0.02);
-    return [knob, { slopePer01: slope, curve, monotone, stopPoints: curve.filter((p) => p.label === "STOP").map((p) => p.x) }];
+    return [knob, { slopePer01: slope, curve, monotone, flaggedPoints: curve.filter((p) => p.label).map((p) => ({ x: p.x, label: p.label, playerReachable: p.playerReachable })) }];
   }));
-  const joint = pairedStats(S.map((s) => (R(pairKey(0.8, 0.8), s).win - R("STD", s).win) - ((R("SCAN_A_0.8", s).win - R("STD", s).win) + (R("SCAN_R_0.8", s).win - R("STD", s).win))));
+  const joint = per((s) => (w(pairKey(0.8, 0.8), s) - w("STD", s)) - ((w("SCAN_A_0.8", s) - w("STD", s)) + (w("SCAN_R_0.8", s) - w("STD", s))));
   const er = errorRule(audit.errored.length, tasks.length);
-  const outcome = audit.instrument.length || !replicationOk || er === "STOP" || !templates.every((t) => t.additiveOk) ? "INSTRUMENT" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "DIAGNOSED";
+  const outcome = audit.instrument.length || !replicationOk || er === "STOP" ? "INSTRUMENT" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "DIAGNOSED";
   const out = { schema: "esmo.ga8-knob-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: FP, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
-    ga8Verdict: "STOP (unchanged; diagnostic only, never a PASS; plans B and C not authorised)", matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), replication, outcome,
+    ga8Verdict: "STOP (unchanged; diagnostic only, never a PASS; plans B and C not authorised; this study authorises nothing)",
+    seedNote: "every per-arm label is computed on the reused G-A8 seeds; it is not a G-A8 re-run and cannot release anything; any fix must be re-checked by G-A8 on fresh seeds with the original thresholds",
+    statsNote: "all intervals are unadjusted 95% (normal approximation on paired differences); descriptive, no family-wise error control; Kbonferroni is a reference for the 8 label contrasts",
+    contentCaveat: REG.contentCaveat, playerReachableValues: REACH,
+    matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), replication, outcome,
     templates, scans, jointHighHigh: joint, arms };
   const OUT = path.join(ROOT, "tools/fixtures/ga8_knob_result_3aB.json");
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   const pp = (x) => (x == null ? "  —  " : `${(x * 100).toFixed(1)}`), ci = (s) => (s ? `${pp(s.mean)}（${pp(s.lo)}..${pp(s.hi)}）` : "—");
   console.log(`複製性：${replication.map((x) => `${x.arm} ${x.n - x.different}/${x.n}`).join("、")}`);
-  for (const t of templates) console.log(`${t.template.padEnd(24)} 全 ${pp(t.full)} 中性 ${pp(t.neutral)} 只中性侵略 ${pp(t.aggNeutral)} std＋旋鈕 ${pp(t.stdKnobs)}｜K ${ci(t.K)} Kagg ${ci(t.Kagg)} Krisk ${ci(t.Krisk)} C ${ci(t.C)} Kstd ${ci(t.Kstd)} I ${ci(t.I)}｜${t.label}／${t.attribution}`);
-  for (const [k, s] of Object.entries(scans)) console.log(`掃描 ${k}：斜率每 +0.1 ${ci(s.slopePer01)}；${s.curve.map((p) => `${p.x}:${pp(p.rate)}`).join(" ")}；單調 ${s.monotone}；STOP 點 ${s.stopPoints.join(",") || "無"}`);
-  console.log(`0.8/0.8 聯合交互 ${ci(joint)}`);
+  for (const t of templates) console.log(`${t.template.padEnd(24)} 全 ${pp(t.full)} 中性 ${pp(t.neutral)} 侵略回中 ${pp(t.aggNeutral)} 風險回中 ${pp(t.riskNeutral)} std＋旋鈕 ${pp(t.stdKnobs)}｜K ${ci(t.K)} MDE ${pp(t.mdeK)} Kagg ${ci(t.Kagg)} Krisk ${ci(t.Krisk)} Iknob ${ci(t.Iknob)} C ${ci(t.C)} Kstd ${ci(t.Kstd)} I ${ci(t.I)}｜${t.label}${t.borderline ? "(borderline)" : ""}／${t.attribution} ${t.flags.join(",")} ${t.interpretationHints.map((h) => h.split(":")[0]).join(",")}`);
+  for (const [k, s] of Object.entries(scans)) console.log(`掃描 ${k}：斜率每 +0.1 ${ci(s.slopePer01)}；${s.curve.map((p) => `${p.x}${p.playerReachable ? "*" : ""}:${pp(p.rate)}`).join(" ")}；單調 ${s.monotone}；標記點 ${s.flaggedPoints.map((p) => `${p.x}${p.playerReachable ? "*" : ""} ${p.label}`).join(",") || "無"}`);
+  console.log(`0.8/0.8 聯合交互 ${ci(joint)}（* ＝玩家選得到）`);
   console.log(`結果：${outcome}（G-A8 維持 STOP）`);
   process.exit(outcome === "INSTRUMENT" ? 5 : 0);
 }
