@@ -24949,3 +24949,24 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - **未經瀏覽器實測**：對戰畫面的「本場未使用的戰術選項」提示（只有 Node 資料流 U5）；真實 AI 對手下的對手情報畫面（瀏覽器只驗了沒有場次的標準對手）。
 
 **未完成／風險**：見 08 同日一節。
+
+## 2026-10-27 Phase 3a-B P2（發布量測；local，未 push／deploy／整合 main，旗標未啟用，未碰 CS）
+
+**依據**：Owner 2026-10-25 條件式核准 P2；2026-10-27 當機後恢復（不重開、不重跑有效量測）；同日 Owner 兩次裁定（G-A8 方案 (b)＋(c)、Challenge 側偏方案 (a)）。執行紀錄：`review/tactic-book-3a/3a-B_P2_執行紀錄.md`。語意凍結 `176ccac0`、指紋 `0578fa882d74b205`，P2 期間 `src/` 未改。
+
+**完成**
+- 真實性表正式重測 6,520 場（147 列逐位元相同，`1d64ecd6`）；challenge.v21 黃金重錄＋釘死（`0e0cb5a2` `17f41038`）；證據延續重播 2,600/2,600 逐值相同（`d130c7e4`）。
+- E1 經濟／疊加 8,400 場 **PASS**（WARN：藍方前期抓人比 ≥ 1.9 三臂；C6 紅＞藍前期經濟在 n=1200 未重現，`1eaeee2c`）；E2 career.v21 正式入口 1,600 場 **PASS**（`a161b443`）。
+- G-A8 8,400 場 **STOP**（m3 68.3%、m7 67.3%、m1／three_lane_pressure／mid_jungle_sync 60.3%，`0024a067`）；v20 對照（事前登記＋審查，可比性 8/8）8,400 場：五個 STOP 模板 v20 逐位元相同＝PRE_EXISTING（兩個 v2 模板為反事實），classic.m2 只有 v20 是 STOP（`6a3d9464` `f7abd883`）。**G-A8 維持 STOP**，修正方案 A／B／C 待 Owner。
+- 側偏 career 4,058 場 **PASS**（`c07e0481`）；challenge 4,098 場 **STOP**（STANDARD 側偏惡化 +4.10pp z 3.46、SWAPPED +7.60pp z 4.56，`b2af521b`）；雙向配對研究已登記＋審查 APPROVE、V1–V4 5/5（`64980533`），**4,098 場正式跑等 Owner 確認**。
+- career.v21 黃金 24 案釘死（`7e28b1d3`）；`check_tactic_book_view_3a` V11 過期原始碼比對修正（`fb7045a1`，假紅，非回歸）。
+- 單位定義（Owner 第 4 點）：側偏惡化 pp 與藍方勝率變動 pp 兩欄並列、都用未四捨五入值（見執行紀錄 §5）。
+
+**驗證（實跑）**
+- Node gate 42 支逐支單線：42/42（version 83、ruleset 51、registry 35、replication 53、AI 教練 11、book UI 9、book view 25、plan 219、resolver 139、save 38、indicators 59、evidence scope 7、seed plan 19、directive 61、director 97、career v21 C6 6、win condition 11、phase choices 24、bucket 23、laneFrame 55、skeleton 171、setup 契約 85、assembler 227、live setup 118、challenge setup 65、balance runner 122、challenge 黃金 6、career 黃金 5、match setup 153、truth 34、b1b 86、b1c 76、b1d 126、slice1–8 108/79/100/60/71/30/35/122、v21-A 黃金 137/137）。
+- `npm run build`：built in 33.39s，dist 0 個檔案含 `heroSkillsDev`。
+- `node tools/verify.mjs` 全套：51/118 段通過、67 段紅；67 段**全部**在 v20 發布基準（`v20-baseline-1d0e219` 狀態檔，10-14）就紅，失敗訊息逐字相同 67/67（CS 研究線、milestone 舊斷言、stats28／progress25、pacing29b1／controls29b3 等）⇒ **沒有新的回歸**。tactic24、runtime29、experience26、regress 15/15、regress2 8/8、所有 Phase 3a 段 PASS。
+- 瀏覽器（單線）：tactic book v21 30/30、static 31/31、battle notices 3a-B 11/11、exit flush 12/12、Player Challenge slice8 50/50（桌機＋390）。
+- 獨立 Reviewer（P2 收尾）：APPROVE WITH CHANGES（1 Major：側偏兩欄單位四捨五入不一致；8 minor：判準措辭、challenge 佈局是 seed 分層、v2 列數、舊資料選擇性引用、相關係數共線與「高端」說法過頭、反事實但書、雙向研究限定、05 引用懸空）→ 全部採納。
+
+**未完成／風險**：見 08 同日一節。兩項 STOP（G-A8、Challenge 側偏）阻擋 v21 發布；雙向研究等 Owner 確認才開跑；偏弱模板（defensive_hold 28.5%、m8 36.3%、mid_solo_split 42.3%）列入後續平衡評估。
