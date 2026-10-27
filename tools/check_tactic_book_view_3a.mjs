@@ -171,7 +171,9 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
     }
   }
   const screenSrc = fs.readFileSync(path.join(ROOT, "src/screens/moba/TacticScreen.jsx"), "utf8");
-  const screenWired = /tacticalDirectorModeOf\(resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\)\)/.test(screenSrc)
+  //  3a-B dcfa341c 起拆成兩步（先解析 liveRuleset 給對手情報共用，再取模式）；兩種寫法都必須是同一個解析呼叫、同樣的引數。
+  const screenWired = (/tacticalDirectorModeOf\(resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\)\)/.test(screenSrc)
+    || /const liveRuleset = useMemo\(\(\) => resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\), \[\]\);\s*const tacticalDirector = tacticalDirectorModeOf\(liveRuleset\);/.test(screenSrc))
     && /offeredChoicesOnly\([^)]*\{ tacticalDirector \}\)/.test(screenSrc) && (screenSrc.match(/tacticBookView\(\{[^\n]*tacticalDirector \}\)/g) ?? []).length === 2;
   ck(`V11 每時期維度（${reqDims.length} 個）：static 下不畫；core.v1 下畫出的（共 ${shownP}）＝tacticBookOptions(core.v1)；每個非預設選項（共 ${clickedP}）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式並傳給兩個呼叫點`,
     badP.length === 0 && reqDims.length === 10 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
