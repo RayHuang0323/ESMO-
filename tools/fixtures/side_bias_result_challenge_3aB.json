@@ -1,0 +1,74 @@
+{
+ "schema": "esmo.side-bias-result.v1",
+ "path": "challenge",
+ "registration": "tools/fixtures/side_bias_registration_3aB.json",
+ "registrationHash": "3348f4a4ff6d97b2",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "c07e04818d50963f9c1ab2b911c20df4d1100e5d",
+ "reportedAt": "2026-10-27T05:30:32.738Z",
+ "seedsWalked": 2049,
+ "lastSeed": 37097,
+ "invalidSeeds": [],
+ "perLayout": {
+  "STANDARD": {
+   "n": 1049,
+   "blueWin20": 0.4938036224976168,
+   "blueWin21": 0.5471877979027645,
+   "bias20": -0.006196377502383221,
+   "bias21": 0.047187797902764506,
+   "worsePp": 4.099142040038128,
+   "z": 3.461277108864474,
+   "durRatio": 0.9530201342281879,
+   "stop": true,
+   "warn": false
+  },
+  "SWAPPED": {
+   "n": 1000,
+   "blueWin20": 0.5065,
+   "blueWin21": 0.5825,
+   "bias20": 0.00649999999999995,
+   "bias21": 0.08250000000000002,
+   "worsePp": 7.600000000000007,
+   "z": 4.5622693686423785,
+   "durRatio": 0.9462010382255781,
+   "stop": true,
+   "warn": false
+  }
+ },
+ "v20StandardOnlyBlueRate": 0.5,
+ "pureBlueAdvantage": {
+  "v21": 0.06484389895138226
+ },
+ "dragonSideAdvantage": {
+  "v21": -0.017656101048617756
+ },
+ "pairingNote": "challenger = FIXTURE_KEYS[seed % 5], defender = FIXTURE_KEYS[(seed + 2) % 5]: every fixture is challenger and defender equally often, but each pairing is one-directional, so blue (challenger) strength is not fully separated from the side",
+ "byOpponent": {
+  "drill_balanced>drill_veteran": {
+   "n": 410,
+   "blueWin20": 0.14146341463414633,
+   "blueWin21": 0.1951219512195122
+  },
+  "drill_veteran>drill_mirror": {
+   "n": 410,
+   "blueWin20": 0.9634146341463414,
+   "blueWin21": 1
+  },
+  "drill_mirror>drill_topheavy": {
+   "n": 410,
+   "blueWin20": 0.6853658536585366,
+   "blueWin21": 0.5390243902439025
+  },
+  "drill_topheavy>drill_rotation": {
+   "n": 410,
+   "blueWin20": 0.06951219512195123,
+   "blueWin21": 0.11829268292682926
+  },
+  "drill_rotation>drill_balanced": {
+   "n": 409,
+   "blueWin20": 0.6405867970660146,
+   "blueWin21": 0.9706601466992665
+  }
+ },
+ "verdict": "STOP"
+}
