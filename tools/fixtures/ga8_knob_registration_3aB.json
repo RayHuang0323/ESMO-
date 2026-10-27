@@ -1,0 +1,105 @@
+{
+ "schema": "esmo.ga8-knob-registration.v1",
+ "studyId": "ga8-knob-diagnostic-3aB",
+ "stage": "Phase 3a-B P2-4c (G-A8 fix plan A; Owner ruling 2026-10-27 item 2)",
+ "registeredAt": "2026-10-27",
+ "status": "registered; runnable only after the independent review (review.reviewedAt) and a passing --validate; written after the G-A8 result (0024a067) and the v20 control (f7abd883) were observed, declared as such",
+ "review": {
+  "reviewedAt": null,
+  "verdict": null
+ },
+ "purpose": "Diagnose the G-A8 dominant-plan STOP: how much of each strong or weak template's win rate comes from its macro.aggression / macro.riskTolerance values and how much from the rest of the template (lanePlan, objectives, tempo, phase stances, economy), and separate the two knobs from each other (they are collinear across the 21 templates, r 0.95, so the template table alone cannot separate them).",
+ "notClaimed": "Diagnostic only. It never changes the G-A8 verdict (STOP), the G-A8 thresholds, any coefficient, template or the Registry (Owner items 2-4: plan B engine change and plan C template coefficients are not authorised). The five STOP templates keep blocking v21; the release flag stays off. No outcome label below is a release PASS.",
+ "tool": "tools/measure_ga8_knob_3aB.mjs (--validate / --run / --report; result tools/fixtures/ga8_knob_result_3aB.json)",
+ "fingerprint": "0578fa882d74b205 (semantics frozen at 176ccac0; src unchanged)",
+ "ruleset": "balanceTool.v21, identical to G-A8 (tool path: Director core.v1, laneFrame teamRelative, skills on, talents off, items standard, no player stats)",
+ "opponent": "the std template plan with no choices (as G-A8)",
+ "inputPath": "every arm is a full MobaTacticConfig passed as the legacy tactic input ({kind: legacy, config}); the arm config is the template's own config (TACTIC_TEMPLATE_LIST[].config, deep copy) with only macro.aggression and/or macro.riskTolerance replaced. Spot check before registration: the legacy path with the unmodified template config reproduced 5/5 committed G-A8 records (win and duration); V1 checks this at scale. Nothing in src/ changes.",
+ "knobReach": "macro.aggression feeds toEngineTactic laneOffset (clamped +/-0.09, mixed with lanePlan and towerPriority) and toEngineTacticIdentity engageBias; macro.riskTolerance feeds retreatAt, retreatFloorShift and commitShift (src/platform/contracts/MobaTacticConfig.js 236-300). Nothing else reads them.",
+ "seeds": {
+  "range": "25001-25400",
+  "n": 400,
+  "reuse": "deliberately the G-A8 seeds, so every arm is paired per seed with the committed G-A8 records and with every other arm (same seed, same side, same map). This is a diagnostic on already-observed seeds, not new release evidence: any later fix must be re-checked by G-A8 on fresh seeds with the original thresholds",
+  "side": "as G-A8: the arm plays blue on odd seeds and red on even seeds; layout by seed"
+ },
+ "focalTemplates": {
+  "strong (G-A8 STOP)": {
+   "classic.m3": [0.8, 0.8],
+   "classic.m7": [0.85, 0.85],
+   "classic.m1": [0.65, 0.6],
+   "v2.three_lane_pressure": [0.7, 0.6],
+   "v2.mid_jungle_sync": [0.6, 0.5]
+  },
+  "weak (G-A8 WARN weak)": {
+   "v2.defensive_hold": [0.25, 0.2],
+   "classic.m8": [0.25, 0.2],
+   "v2.mid_solo_split": [0.45, 0.5]
+  },
+  "note": "[aggression, riskTolerance] as read from the template configs; the tool re-reads them and refuses to run if they differ"
+ },
+ "arms": {
+  "FULL:<template>": "8 arms: the unmodified template config (replication of the committed G-A8 arm through the legacy path; also gives the mechanism metrics the committed records lack)",
+  "STD": "1 arm: std vs std (replication of the committed control)",
+  "NEUTRAL:<template>": "8 arms: template with aggression = 0.5 and riskTolerance = 0.5 (the std values); everything else unchanged",
+  "AGGNEUTRAL:<template>": "6 arms (templates whose riskTolerance != 0.5: m3, m7, m1, three_lane_pressure, defensive_hold, m8): aggression = 0.5, riskTolerance kept",
+  "STDKNOBS:<a>/<r>": "7 arms: std config with a focal template's knob pair (0.8/0.8, 0.85/0.85, 0.65/0.6, 0.7/0.6, 0.6/0.5, 0.25/0.2, 0.45/0.5; defensive_hold and m8 share 0.25/0.2)",
+  "SCAN_A:<v>": "4 arms: std with aggression v in {0.2, 0.35, 0.65, 0.8}, riskTolerance 0.5",
+  "SCAN_R:<v>": "4 arms: std with riskTolerance v in {0.2, 0.35, 0.65, 0.8}, aggression 0.5",
+  "total": "38 arms x 400 seeds = 15,200 matches (~6 h at 3 workers, single line, per-match checkpoints, resumable in the same dir)"
+ },
+ "metric": {
+  "win": "the arm side's win (1 / 0; 0.5 if unresolved at 3600 s), as G-A8",
+  "mechanism (descriptive, from the arm side's perspective)": "team kills for / against, team gold difference at 600 s and 1200 s (bGold - rGold oriented; null if the match ended before), enemy towers destroyed / own towers lost at the end, duration"
+ },
+ "analysis": {
+  "perArm": "win rate with 95% CI and the G-A8 label it would get (STOP / WARN strong / WARN weak / none) - descriptive only, never a G-A8 verdict",
+  "decomposition (per focal template, paired per seed)": {
+   "K": "FULL - NEUTRAL: total effect of the template's knob values inside the template",
+   "Kagg": "FULL - AGGNEUTRAL: aggression part inside the template (only where AGGNEUTRAL exists; otherwise K is all aggression)",
+   "Krisk": "AGGNEUTRAL - NEUTRAL: riskTolerance part inside the template",
+   "C": "NEUTRAL - STD: effect of the rest of the template with std knob values",
+   "Kstd": "STDKNOBS(template pair) - STD: the same knob pair on a neutral base",
+   "I": "K - Kstd: interaction of the knobs with the rest of the template",
+   "stats": "per-seed paired differences of the arm-side win; mean with 95% CI (pairedStats, normal approximation); additive check FULL - STD = K + C exactly"
+  },
+  "templateLabels (decided now)": {
+   "strong template (FULL rate >= 0.57)": {
+    "KNOB_DRIVEN": "K lower bound > 0 AND NEUTRAL rate < 0.57",
+    "CONTENT_DRIVEN": "NEUTRAL rate >= 0.57 AND K lower bound <= 0",
+    "MIXED": "K lower bound > 0 AND NEUTRAL rate >= 0.57",
+    "UNRESOLVED": "anything else"
+   },
+   "weak template (FULL rate <= 0.43)": {
+    "KNOB_DRIVEN": "K upper bound < 0 AND NEUTRAL rate > 0.43",
+    "CONTENT_DRIVEN": "NEUTRAL rate <= 0.43 AND K upper bound >= 0",
+    "MIXED": "K upper bound < 0 AND NEUTRAL rate <= 0.43",
+    "UNRESOLVED": "anything else"
+   },
+   "knobAttribution": "AGGRESSION if Kagg excludes 0 in K's direction and Krisk does not; RISK if the reverse; BOTH if both do; NONE if neither; templates without AGGNEUTRAL report AGGRESSION_ONLY_VARIED"
+  },
+  "scans": {
+   "points": "aggression: SCAN_A at 0.2, 0.35, 0.65, 0.8 plus STD (0.5) and STDKNOBS 0.45/0.5 and 0.6/0.5 (riskTolerance 0.5) = 7 points; riskTolerance: SCAN_R at 0.2, 0.35, 0.65, 0.8 plus STD = 5 points",
+   "slope": "per seed, ordinary least squares of win on the knob value over that knob's points; report the mean per-seed slope per +0.1 with a paired 95% CI",
+   "shape": "win rate per point with CI; monotone if every adjacent step is >= -0.02 (descriptive); the points whose rate would carry the G-A8 STOP label are listed",
+   "joint": "STDKNOBS pairs where both knobs move are compared with the sum of the matching single-knob effects where both single points exist (0.8/0.8 vs SCAN_A 0.8 + SCAN_R 0.8; descriptive)"
+  },
+  "mechanism": "for each arm and for K and Kstd: paired mean differences of kill difference, gold difference at 600 s / 1200 s, towers and duration (descriptive; explains how the win effect arises)"
+ },
+ "validation (all must pass before --run; --validate)": [
+  "V1 legacy path = committed binding path: FULL (8) and STD arms on the first 20 seeds (180 matches) reproduce the committed G-A8 records exactly (win and duration)",
+  "V2 arm configs: every arm config passes validateMobaTacticConfig; differs from its base config only in the declared macro fields (deep diff); FULL deep-equals the template config; the focal knob values equal the registered ones",
+  "V3 knob reach, non-vacuous: for every arm, at t = 0 the arm side's director knobs(side).retreatAt and identity(side) engageBias / retreatFloorShift / commitShift equal toEngineTactic / toEngineTacticIdentity of the arm config; laneOffset equals it after the side's lane frame; and for every NEUTRAL / AGGNEUTRAL / STDKNOBS / SCAN arm at least one of these differs from its base arm",
+  "V4 the G-A8 data dir (C:/Users/ifikn/esmo-measure/ga8-3aB-final) is complete with meta = the G-A8 registration and fingerprint"
+ ],
+ "liveCheck": "every record, live (by the task's arm) and at report time: balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off, and the recorded t = 0 engageBias / commitShift of the arm side equal the values expected from the arm config",
+ "replicationAtReport": "every FULL and STD record must equal the committed G-A8 record of the same seed (win and duration), 400/400 per arm; any difference => INSTRUMENT",
+ "noOptionalStopping": "labels only on complete data",
+ "errors": "errored matches are never retried or replaced and are listed by seed; any => at most INCONCLUSIVE; > 1% => INSTRUMENT",
+ "envGuard": "--run and --validate refuse any ESMO_BALANCE_* other than ESMO_BALANCE_SKILLS set by the worker",
+ "outcome": {
+  "DIAGNOSED": "data complete, replication 400/400 on all FULL/STD arms, no instrument issue, no errors: template labels and scan slopes are reported to the Owner",
+  "INCONCLUSIVE": "any errored match (<= 1%)",
+  "INSTRUMENT": "any validation or live check fails, any replication difference, or > 1% errored",
+  "note": "no outcome changes G-A8; the Owner decides the minimal fix (B or C) from the report"
+ }
+}
