@@ -28,7 +28,9 @@ const near = (a, b) => typeof a === "number" && typeof b === "number" && Math.ab
 
 function knobProbe(e, side) {
   const K = e.director.knobs(side), I = e.director.identity(side);
-  return { retreatAt: K.retreatAt, laneOffsetValues: Object.values(K.laneOffset ?? {}).sort((a, b) => a - b), engageBias: I?.engageBias ?? 0, retreatFloorShift: I?.retreatFloorShift ?? 0, commitShift: I?.commitShift ?? 0 };
+  //  審查 #7：也看內容欄位會改到的旋鈕（打野抓人、時期接戰／參團、龍／巴龍參與），否則只改列舉欄位的候選在探針上看不出差別。
+  return { retreatAt: K.retreatAt, laneOffsetValues: Object.values(K.laneOffset ?? {}).sort((a, b) => a - b), engageBias: I?.engageBias ?? 0, retreatFloorShift: I?.retreatFloorShift ?? 0, commitShift: I?.commitShift ?? 0,
+    gankWeights: JSON.stringify(K.gankWeights ?? null), gankIntervalK: I?.gankIntervalK ?? null, phaseEngage: JSON.stringify(I?.phaseEngage ?? null), phaseJoin: JSON.stringify(I?.phaseJoin ?? null), dragonJoin: K.dragonJoin ?? null, baronJoin: K.baronJoin ?? null };
 }
 
 if (flag("screen-worker")) {
@@ -65,12 +67,14 @@ export function rateCI(wins) {
   return { n, rate: p, lo, hi, label };
 }
 /** 登記的選擇規則：依列出的順序取第一個達標的候選；strong＝勝率 < 0.57，weak＝勝率 > 0.43。 */
+//  審查 #1／#2：兩種方向都只認 0.43 < 勝率 < 0.57（不得矯枉過正到另一邊）；SELECTED 要落在 0.45–0.55（贏家詛咒的緩衝），否則 SELECTED_BORDERLINE。
+//  kind 保留在簽名裡（呼叫端與登記一致），兩種方向用同一條帶。
 export function selectCandidate(kind, candidates) {
-  const ok = (c) => (kind === "strong" ? c.rate < 0.57 : c.rate > 0.43);
-  const pick = candidates.find(ok);
-  if (!pick) return { selected: null, verdict: "NO_CANDIDATE" };
-  const borderline = kind === "strong" ? pick.hi >= 0.57 : pick.lo <= 0.43;
-  return { selected: pick.arm, verdict: borderline ? "SELECTED_BORDERLINE" : "SELECTED" };
+  const inBand = (c) => c.rate > 0.43 && c.rate < 0.57, solid = (c) => c.rate >= 0.45 && c.rate <= 0.55;
+  const firstSolid = candidates.find((c) => inBand(c) && solid(c));
+  if (firstSolid) return { selected: firstSolid.arm, verdict: "SELECTED" };
+  const pick = candidates.find(inBand);
+  return pick ? { selected: pick.arm, verdict: "SELECTED_BORDERLINE" } : { selected: null, verdict: "NO_CANDIDATE" };
 }
 /** BASE 在篩選 seeds 上是否重現 G-A8 的旗標（strong：STOP 或 WARN strong；weak：WARN weak）。 */
 export const reproduced = (kind, label) => (kind === "strong" ? label === "STOP" || label === "WARN strong" : label === "WARN weak");
@@ -80,9 +84,9 @@ if (flag("selftest")) {
   let pass = 0, fail = 0;
   const ck = (l, ok) => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}`); };
   ck("S1 rateCI 標籤＝G-A8 規則：0.62／n400 STOP、0.58 WARN strong、0.43 WARN weak、0.5 無", rateCI(Array.from({ length: 400 }, (_, i) => (i < 248 ? 1 : 0))).label === "STOP" && rateCI(Array.from({ length: 400 }, (_, i) => (i < 232 ? 1 : 0))).label === "WARN strong" && rateCI(Array.from({ length: 400 }, (_, i) => (i < 172 ? 1 : 0))).label === "WARN weak" && rateCI(Array.from({ length: 400 }, (_, i) => (i < 200 ? 1 : 0))).label === null);
-  ck("S2 選擇：依序取第一個達標（A 0.58 不達標、B 0.55 達標 ⇒ B）", selectCandidate("strong", [{ arm: "A", rate: 0.58, hi: 0.63 }, { arm: "B", rate: 0.55, hi: 0.6 }]).selected === "B");
-  ck("S3 選擇：區間碰到 0.57 ⇒ SELECTED_BORDERLINE；全不達標 ⇒ NO_CANDIDATE", selectCandidate("strong", [{ arm: "A", rate: 0.55, hi: 0.6 }]).verdict === "SELECTED_BORDERLINE" && selectCandidate("strong", [{ arm: "A", rate: 0.6, hi: 0.65 }]).verdict === "NO_CANDIDATE");
-  ck("S4 weak 方向：0.44 達標、0.43 不達標", selectCandidate("weak", [{ arm: "A", rate: 0.43, lo: 0.38 }, { arm: "B", rate: 0.44, lo: 0.4 }]).selected === "B");
+  ck("S2 選擇：依序取第一個落在 0.45–0.55（A 0.58 不達標、B 0.55 ⇒ B SELECTED）", (() => { const r = selectCandidate("strong", [{ arm: "A", rate: 0.58 }, { arm: "B", rate: 0.55 }]); return r.selected === "B" && r.verdict === "SELECTED"; })());
+  ck("S3 選擇：只有 0.56 ⇒ SELECTED_BORDERLINE；全 ≥ 0.57 ⇒ NO_CANDIDATE；後面的 0.50 優先於前面的 0.56", selectCandidate("strong", [{ arm: "A", rate: 0.56 }]).verdict === "SELECTED_BORDERLINE" && selectCandidate("strong", [{ arm: "A", rate: 0.6 }]).verdict === "NO_CANDIDATE" && selectCandidate("strong", [{ arm: "A", rate: 0.56 }, { arm: "B", rate: 0.5 }]).selected === "B");
+  ck("S4 矯枉過正不算：strong 候選掉到 0.42、weak 候選升到 0.58 ⇒ NO_CANDIDATE；weak 0.44 ⇒ BORDERLINE", selectCandidate("strong", [{ arm: "A", rate: 0.42 }]).verdict === "NO_CANDIDATE" && selectCandidate("weak", [{ arm: "A", rate: 0.58 }]).verdict === "NO_CANDIDATE" && selectCandidate("weak", [{ arm: "A", rate: 0.44 }]).verdict === "SELECTED_BORDERLINE");
   ck("S5 重現：strong 認 STOP／WARN strong，weak 只認 WARN weak", reproduced("strong", "WARN strong") && !reproduced("strong", null) && reproduced("weak", "WARN weak") && !reproduced("weak", "WARN strong"));
   ck("S6 setPath 只改指定欄位", (() => { const o = { a: { b: 1, c: 2 } }; setPath(o, "a.b", 5); return o.a.b === 5 && o.a.c === 2; })());
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
@@ -96,9 +100,11 @@ const OV = await imp("src/platform/tactics/tacticOverlays.js");
 const cfgOf = (id) => { const t = TACTIC_TEMPLATE_LIST.find((x) => x.templateId === id); if (!t) throw new Error(`no template ${id}`); return structuredClone(t.config); };
 const ARMS = Object.entries(REG.arms).map(([arm, d]) => { const c = cfgOf(d.template); for (const [p, v] of Object.entries(d.change)) setPath(c, p, v); return { arm, template: d.template, change: d.change, config: c, base: arm === "STD" || arm.startsWith("BASE_") ? null : `BASE_${d.template}` }; });
 const ARM = Object.fromEntries(ARMS.map((x) => [x.arm, x]));
-const expectOf = (config) => { const K = MTC.toEngineTactic(config), I = MTC.toEngineTacticIdentity(config); return { retreatAt: K.retreatAt, laneOffsetValues: Object.values(K.laneOffset).sort((a, b) => a - b), engageBias: I.engageBias, retreatFloorShift: I.retreatFloorShift, commitShift: I.commitShift }; };
+const expectOf = (config) => { const K = MTC.toEngineTactic(config), I = MTC.toEngineTacticIdentity(config); return { retreatAt: K.retreatAt, laneOffsetValues: Object.values(K.laneOffset).sort((a, b) => a - b), engageBias: I.engageBias, retreatFloorShift: I.retreatFloorShift, commitShift: I.commitShift,
+  gankWeights: JSON.stringify(K.gankWeights ?? null), gankIntervalK: I.gankIntervalK ?? null, phaseEngage: JSON.stringify(I.phaseEngage ?? null), phaseJoin: JSON.stringify(I.phaseJoin ?? null), dragonJoin: K.dragonJoin ?? null, baronJoin: K.baronJoin ?? null }; };
 for (const x of ARMS) x.expect = expectOf(x.config);
-const probeEq = (p, q) => ["retreatAt", "engageBias", "retreatFloorShift", "commitShift"].every((k) => near(p[k], q[k])) && p.laneOffsetValues.length === q.laneOffsetValues.length && p.laneOffsetValues.every((v, i) => near(v, q.laneOffsetValues[i]));
+const probeEq = (p, q) => ["retreatAt", "engageBias", "retreatFloorShift", "commitShift"].every((k) => near(p[k], q[k])) && p.laneOffsetValues.length === q.laneOffsetValues.length && p.laneOffsetValues.every((v, i) => near(v, q.laneOffsetValues[i]))
+  && ["gankWeights", "phaseEngage", "phaseJoin"].every((k) => p[k] === q[k]) && ["gankIntervalK", "dragonJoin", "baronJoin"].every((k) => p[k] === q[k] || near(p[k], q[k]));
 const sigOf = (cfg) => { const a = MTC.toEngineTactic(cfg), b = MTC.toEngineTacticIdentity(cfg); delete a.tacticId; delete b.tacticId; return JSON.stringify([a, b]); };
 const KIND = { "classic.m3": "strong", "classic.m7": "strong", "classic.m1": "strong", "v2.three_lane_pressure": "strong", "v2.mid_jungle_sync": "strong", "v2.defensive_hold": "weak", "classic.m8": "weak", "v2.mid_solo_split": "weak" };
 const [S0, S1] = REG.seeds.range.split("-").map(Number);
@@ -149,7 +155,7 @@ if (flag("validate")) {
     }
     return problems.length ? `${x.arm}: ${problems.join(";")}` : null;
   }).filter(Boolean);
-  ck(`V2 ${ARMS.length} 臂：設定合法、數值在已出貨範圍內、候選旋鈕組與每個模板／其他候選都不同、只改宣告欄位`, v2.length === 0 && ARMS.length === 22, v2.slice(0, 3).join(" | "));
+  ck(`V2 ${ARMS.length} 臂：設定合法、數值在已出貨範圍內、候選旋鈕組與每個模板／其他候選都不同、只改宣告欄位`, v2.length === 0 && ARMS.length === 23, v2.slice(0, 3).join(" | "));
   const v3a = ARMS.filter((x) => x.base && probeEq(x.expect, ARM[x.base].expect)).map((x) => x.arm);
   //  DH_A／DH_B／M8_B 只改列舉欄位：Director 數值可能與 BASE 相同；那就改用整份旋鈕組簽章判定非空轉。
   const v3aSig = v3a.filter((arm) => sigOf(ARM[arm].config) === sigOf(ARM[ARM[arm].base].config));
@@ -201,29 +207,33 @@ if (flag("report")) {
   const arms = ARMS.map((x) => ({ arm: x.arm, template: x.template, change: x.change, ...rateCI(S.map((s) => R(x.arm, s).win)),
     asBlue: half(x.arm, (s) => s % 2 === 1), asRed: half(x.arm, (s) => s % 2 === 0), standard: half(x.arm, (s) => R(x.arm, s).layout === "STANDARD"), swapped: half(x.arm, (s) => R(x.arm, s).layout === "SWAPPED"),
     medianDurationMin: med(S.map((s) => R(x.arm, s).duration)) / 60,
-    ...(x.base ? { vsBase: pairedStats(S.map((s) => R(x.arm, s).win - R(x.base, s).win)), vsStd: pairedStats(S.map((s) => R(x.arm, s).win - R("STD", s).win)) } : {}) }));
+    ...(x.base ? { vsBase: pairedStats(S.map((s) => R(x.arm, s).win - R(x.base, s).win)) } : {}),
+    ...(x.arm !== "STD" ? { vsStd: pairedStats(S.map((s) => R(x.arm, s).win - R("STD", s).win)) } : {}) }));
   const A = Object.fromEntries(arms.map((a) => [a.arm, a]));
   const ga8 = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/ga8_result_3aB.json"), "utf8"));
   const ga8Label = (tpl) => { const row = ga8.rows.find((r) => r.template === tpl); return row ? { rate: row.rate, label: row.stop ? "STOP" : row.warn ? (row.rate >= 0.5 ? "WARN strong" : "WARN weak") : null } : null; };
   const templates = Object.entries(KIND).map(([tpl, kind]) => {
     const base = A[`BASE_${tpl}`], cands = ARMS.filter((x) => x.template === tpl && x.base).map((x) => A[x.arm]);
     const sel = cands.length ? selectCandidate(kind, cands) : { selected: null, verdict: "NO_CANDIDATE_REGISTERED" };
-    return { template: tpl, kind, ga8: ga8Label(tpl), base: { rate: base.rate, lo: base.lo, hi: base.hi, label: base.label }, reproduced: reproduced(kind, base.label),
-      candidates: cands.map((c) => ({ arm: c.arm, change: c.change, rate: c.rate, lo: c.lo, hi: c.hi, label: c.label, vsBase: c.vsBase })), ...sel };
+    const rep = reproduced(kind, base.label);
+    //  審查 #8：BASE 沒重現 ⇒ 判定 NOT_REPRODUCED；篩選出的候選仍列在 screenedCandidate。
+    return { template: tpl, kind, ga8: ga8Label(tpl), base: { rate: base.rate, lo: base.lo, hi: base.hi, label: base.label, vsStd: base.vsStd }, reproduced: rep,
+      candidates: cands.map((c) => ({ arm: c.arm, change: c.change, rate: c.rate, lo: c.lo, hi: c.hi, label: c.label, vsBase: c.vsBase })),
+      selected: rep ? sel.selected : null, verdict: rep ? sel.verdict : "NOT_REPRODUCED", screenedCandidate: sel.selected, screenedVerdict: sel.verdict };
   });
   const control = A.STD, controlOk = Math.abs(control.rate - 0.5) <= 0.05;
   const er = errorRule(audit.errored.length, tasks.length);
   const outcome = audit.instrument.length || !controlOk || er === "STOP" ? "INSTRUMENT" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "SCREENED";
   const out = { schema: "esmo.ga8-fix-screen-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: FP, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     ga8Verdict: "STOP (unchanged; screening only, no template changed; a selection is a proposal that must be confirmed by G-A8 on the reserved fresh seeds after an Owner-approved versioned change)",
-    statsNote: "unadjusted 95% intervals; 22 arms on one seed block", matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), control: { rate: control.rate, ok: controlOk }, outcome, templates, arms };
+    statsNote: "unadjusted 95% intervals; 23 arms on one seed block", matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), control: { rate: control.rate, ok: controlOk }, outcome, templates, arms };
   const OUT = path.join(ROOT, "tools/fixtures/ga8_fix_screen_result_3aB.json");
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   const pp = (x) => (x == null ? "—" : (x * 100).toFixed(1)), ci = (s) => (s ? `${pp(s.mean)}（${pp(s.lo)}..${pp(s.hi)}）` : "—");
   console.log(`對照 std ${pp(control.rate)}%（${controlOk ? "OK" : "超出 0.50±0.05"}）`);
   for (const t of templates) {
-    console.log(`${t.template.padEnd(24)} G-A8 ${t.ga8 ? `${pp(t.ga8.rate)} ${t.ga8.label ?? ""}` : "—"}｜篩選 BASE ${pp(t.base.rate)}（${pp(t.base.lo)}..${pp(t.base.hi)}）${t.base.label ?? ""}｜${t.reproduced ? "重現" : "未重現"}｜${t.verdict}${t.selected ? ` ${t.selected}` : ""}`);
+    console.log(`${t.template.padEnd(24)} G-A8 ${t.ga8 ? `${pp(t.ga8.rate)} ${t.ga8.label ?? ""}` : "—"}｜篩選 BASE ${pp(t.base.rate)}（${pp(t.base.lo)}..${pp(t.base.hi)}）${t.base.label ?? ""}｜${t.reproduced ? "重現" : "未重現"}｜${t.verdict}${t.selected ? ` ${t.selected}` : ""}${!t.reproduced && t.screenedCandidate ? `（篩選候選 ${t.screenedCandidate} ${t.screenedVerdict}）` : ""}`);
     for (const c of t.candidates) console.log(`     ${c.arm.padEnd(8)} ${pp(c.rate)}（${pp(c.lo)}..${pp(c.hi)}）${c.label ?? ""}　對 BASE ${ci(c.vsBase)}`);
   }
   console.log(`結果 ${outcome}（G-A8 維持 STOP）`);

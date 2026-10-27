@@ -22,22 +22,24 @@
   "L3a_skills": "v20 + frame + order + skills",
   "L3_growth": "v20 + frame + order + skills + growth",
   "L4": "challenge.v21 (endpoint, reused like L0)",
-  "R_noFrame": "v21 minus frame (order + skills + growth + layout): frame effect measured a second time on top of skills (interaction check)"
+  "R_noFrame": "v21 minus frame (order + skills + growth + layout): frame effect measured a second time on top of skills (interaction check)",
+  "Lx_layout": "v20 + frame + order + layout, SWAPPED seeds only (review #2): layout measured at the low end as well (the challengeV20 order cannot take a layout, so order comes with it; V2 shows order is a no-op without skills)"
  },
  "orderStep": "frame + order alone (L2) is not run as an arm: V2 must show L2 == L1_frame record-for-record on the validation sample; if V2 fails the run is blocked and the registration goes back to review with L2 as a full arm",
  "steps": {
   "frame@v20": "L1_frame - L0",
-  "skills (incl. order)": "L3a_skills - L1_frame",
-  "growth": "L3_growth - L3a_skills",
-  "layout": "L4 - L3_growth (expected exactly 0 on STANDARD seeds; reported as a check)",
-  "frame@v21": "L4 - R_noFrame"
+  "skills (incl. order)": "L3a_skills - L1_frame (bundles the order change: with skills on, order cannot be reverted because the challengeV20 order rejects skills)",
+  "growth": "L3_growth - L3a_skills (growth given skills; the order is fixed by dependency)",
+  "layout@v21": "L4 - L3_growth (expected exactly 0 on STANDARD seeds; reported as a check)",
+  "frame@v21": "L4 - R_noFrame",
+  "layout@low": "Lx_layout - L1_frame (SWAPPED seeds only)"
  },
  "seeds": {
   "range": "33001-37999",
   "rule": "the same 2,049 walked seeds as the committed bidirectional study (odd seeds from 33001 up to lastSeed 37097 of side_bias_result_challenge_3aB.json); reused on purpose so every arm is paired with the endpoints; diagnostic reuse, no confirmatory claim",
   "orientation": "each seed is played forward (challenger blue) and reverse (defender blue, tactics swapped, draft assignment mirrored b_i<->r_i), exactly as the bidirectional study"
  },
- "matches": "4 new arms x 2,049 seeds x 2 orientations = 16,392 (about 5.7 h at 1.25 s per match, 3 workers); validation about 480 matches",
+ "matches": "4 arms x 2,049 seeds x 2 orientations + Lx_layout on the 1,000 SWAPPED seeds x 2 = 18,392 (about 6.4 h at 1.25 s per match, 3 workers); validation about 480 matches",
  "metrics": {
   "s": "side term per seed = (forward blue win + reverse blue win) / 2; S = mean(s) - 0.5",
   "t": "challenger strength per seed = (forward blue win + (1 - reverse blue win)) / 2",
@@ -47,10 +49,12 @@
  "analysis": [
   "per arm and per layout stratum (STANDARD / SWAPPED by engine seed): S with 95% CI; per pairing: T with 95% CI",
   "per step and stratum: paired mean of the per-seed difference in s (pp) with 95% CI; per step and pairing: paired mean difference in t (pp) with 95% CI and the difference in s",
-  "a step 'moves S' or 'moves T' when its 95% CI excludes 0; z >= 2.73 is reported as a Bonferroni reference over the 5 steps x 2 strata",
-  "sequential attribution depends on the ladder order; frame is measured at both ends (frame@v20, frame@v21) and the difference is reported as the interaction",
+  "labels (MAP_LAYOUT / SKILLS_OR_GROWTH / FRAME) are assigned only when a step meets the Bonferroni bar |z| >= 2.84 (11 step tests: 5 steps x 2 strata + layout@low on SWAPPED); a step whose unadjusted 95% CI excludes 0 is reported as a hint only; implemented as the pure function stepLabels (selftest S7, S8)",
+  "sequential attribution depends on the ladder order; frame and layout are each measured at both ends and the differences are reported as interactions",
   "sum check: the step means along L0 -> L1 -> L3a -> L3 -> L4 add up to L4 - L0 per stratum (arithmetic identity)",
-  "the committed SWAPPED / STANDARD side verdicts are not re-computed or changed"
+  "the committed SWAPPED / STANDARD side verdicts are not re-computed or changed",
+  "outcome DIFFUSE_OR_UNDERPOWERED: L4 - L0 excludes 0 in a stratum but no step there meets the bar; that is not evidence that any group has no effect",
+  "per-pairing steps (T and S) are descriptive, without multiplicity correction"
  ],
  "interpretationMap": {
   "MAP_LAYOUT": "the layout step moves S on SWAPPED seeds: the side term comes from the map configuration (the dragon-pit side) -> candidate fixes are map / objective-layout work, not numbers",
@@ -64,11 +68,17 @@
   "V2": "L2 (frame + order) == L1_frame record-for-record on the same sample (otherwise blocked, see orderStep)",
   "V3": "frame with tacticalDirector static == frame with core.v1 on the same sample (with legacy tactics core.v1 has no per-phase choices)",
   "V4": "endpoint data complete: forward (side bias challenge folder) and reverse (bidirectional folder) records for all 2,049 seeds x both versions, meta = their registrations and the frozen fingerprint",
-  "V5": "every arm's setup differs from L0 only in the declared layer keys and effectiveLayers / objectiveLayout fields"
+  "V5": "every arm setup differs from L0 only in the declared layer keys and effectiveLayers / objectiveLayout fields, on all 40 sample seeds x 2 orientations (config only)",
+  "V6": "L3a (skills on, growth off; never shipped by any ruleset) runs with 0 errors on the sample, and the engine has skills attached and passives / power curve not attached"
  },
- "liveCheck": "every record carries its arm, orientation, engine seed and the Director mode / lane frame read from the engine; a mismatch with the arm definition => HALT",
+ "liveCheck": "every record: arm, orientation, engine seed; Director mode and lane frame read from the engine; skills / passives / power curve attachment and the effective objective layout read from the engine (SWAPPED exactly when the arm has the layout group and the seed is a SWAPPED seed); assembly order from the setup; any mismatch => HALT; the report refuses to run if any record failed the check",
  "errors": "errored matches are never retried; a seed with any errored match in any arm is dropped from every comparison and listed; more than 1% errored => STOP(INSTRUMENT)",
  "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
  "notClaimed": "no fix, no release PASS, no change to the side bias STOP; results go to the Owner",
- "checkpointing": "per match; resume in the same folder"
+ "checkpointing": "per match; resume in the same folder",
+ "power": "paired step SE about 1.07pp per stratum (from the committed level CIs) => MDE per step and stratum about 3.0pp (80% power, alpha 0.05) and about 3.6pp at the Bonferroni level; the whole v20 -> v21 SWAPPED change is +4.4pp, so it may be spread over steps that are each below the MDE",
+ "review": {
+  "reviewedAt": "2026-10-28",
+  "verdict": "APPROVE WITH CHANGES (round 1; 4 Major / 6 minor, all applied: power / MDE and DIFFUSE_OR_UNDERPOWERED outcome, layout measured at the low end (Lx_layout), report gated on the instrument audit, labels only at the Bonferroni bar via a pure function, z 2.84 for 11 tests and descriptive per-pairing steps, V6 for the never-shipped L3a state and the bundled order label, V5 on all sample seeds and V1 with engine seed, engine-read live checks incl. passives, seed-plan reuse note)"
+ }
 }

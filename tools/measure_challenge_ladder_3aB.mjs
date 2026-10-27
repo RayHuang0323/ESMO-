@@ -36,10 +36,28 @@ export const GROUPS = Object.freeze({
 });
 export const ARM_GROUPS = Object.freeze({
   L1_frame: ["frame"], L3a_skills: ["frame", "order", "skills"], L3_growth: ["frame", "order", "skills", "growth"], R_noFrame: ["order", "skills", "growth", "layout"],
+  //  審查 #2：layout 在下端也量一次（challengeV20 順序不支援 layout ⇒ 搭 order；order 在 L1 上已由 V2 證明是 no-op）。只跑 SWAPPED seeds。
+  Lx_layout: ["frame", "order", "layout"],
   //  驗證用（不是正式臂）
   L0_built: [], L4_built: ["frame", "order", "skills", "growth", "layout"], L2_order: ["frame", "order"], L1_static: ["frame"],
 });
-export const NEW_ARMS = Object.freeze(["L1_frame", "L3a_skills", "L3_growth", "R_noFrame"]);
+export const NEW_ARMS = Object.freeze(["L1_frame", "L3a_skills", "L3_growth", "R_noFrame", "Lx_layout"]);
+export const SWAPPED_ONLY = Object.freeze(["Lx_layout"]);
+//  審查 #4／#5：步驟檢定 11 個（5 步 × 2 層＋下端 layout 只有 SWAPPED）⇒ Bonferroni z＝2.84；標籤只在達到這條線時給，未校正的命中只算提示。
+export const BONF_Z = 2.84;
+/** 步驟 → 詮釋標籤（純函式；selftest 涵蓋）。steps：{ stratum: { stepName: {mean, lo, hi, z} } }；total：{ stratum: {lo, hi} }（L4−L0）。 */
+export function stepLabels(steps, total) {
+  const LABEL = { "frame@v20": "FRAME", "frame@v21": "FRAME", "skills (incl. order)": "SKILLS_OR_GROWTH", growth: "SKILLS_OR_GROWTH", "layout@v21": "MAP_LAYOUT", "layout@low": "MAP_LAYOUT" };
+  const labels = [], hints = [];
+  for (const [stratum, byStep] of Object.entries(steps)) for (const [name, c] of Object.entries(byStep)) {
+    if (!c || c.n === 0) continue;
+    if (Math.abs(c.z ?? 0) >= BONF_Z) labels.push({ stratum, step: name, label: LABEL[name] });
+    else if (c.lo > 0 || c.hi < 0) hints.push({ stratum, step: name, label: LABEL[name] });
+  }
+  const totalMoves = Object.entries(total).filter(([, t]) => t.lo > 0 || t.hi < 0).map(([k]) => k);
+  const diffuse = totalMoves.filter((k) => !labels.some((l) => l.stratum === k));
+  return { labels, hints, outcome: labels.length ? "ATTRIBUTED" : totalMoves.length ? "DIFFUSE_OR_UNDERPOWERED" : "NO_SIDE_CHANGE", diffuseStrata: diffuse };
+}
 
 /** v20 setup 的副本＋從 v21 setup 複製的層群組（純函式；selftest 涵蓋）。L1_static：frame 但 Director 留 static（拿掉鍵）。 */
 export function ladderSetup(s20, s21, arm) {
@@ -100,7 +118,9 @@ async function play(setup) {
   if (!r.ok) throw new Error(`assemble: ${JSON.stringify(r.errors).slice(0, 200)}`);
   const e = r.engine;
   for (let t = R.CHALLENGE_DT; t <= R.CHALLENGE_MAX_T && !e.over; t += R.CHALLENGE_DT) e.tick(R.CHALLENGE_DT);
-  return { winner: e.over && (e.winner === "blue" || e.winner === "red") ? e.winner : null, duration: Math.round(e.t), director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null };
+  //  審查 #9：層是否真的接上，從引擎讀（不是從 setup 讀）。
+  return { winner: e.over && (e.winner === "blue" || e.winner === "red") ? e.winner : null, duration: Math.round(e.t), director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null,
+    engine: { skills: e.heroSkillsOn === true, passives: e.heroPassivesOn === true, curve: e.powerCurveOn === true, layout: e.objectiveLayout ?? null } };
 }
 const expectFrame = (arm) => (ARM_GROUPS[arm].includes("frame") ? { director: arm === "L1_static" ? "static" : "core.v1", laneFrame: "teamRelative" } : { director: "static", laneFrame: "legacyMirror" });
 
@@ -128,6 +148,10 @@ if (flag("selftest")) {
   ck("S4 R_noFrame：v21 但沒有 tacticalDirector／laneFrame 鍵", (() => { const x = ladderSetup(s20, s21, "R_noFrame"); return !("laneFrame" in x.ruleset.layers) && !("tacticalDirector" in x.ruleset.layers) && x.objectiveLayout === "SWAPPED" && x.effectiveLayers.heroPowerCurve; })());
   ck("S5 L1_static：laneFrame teamRelative、沒有 tacticalDirector", (() => { const x = ladderSetup(s20, s21, "L1_static"); return x.ruleset.layers.laneFrame === "teamRelative" && !("tacticalDirector" in x.ruleset.layers); })());
   ck("S6 s／t：強隊兩邊都贏 ⇒ s 0.5、t 1；藍方兩次都贏 ⇒ s 1、t 0.5", sideOf(1, 0) === 0.5 && strengthOf(1, 0) === 1 && sideOf(1, 1) === 1 && strengthOf(1, 1) === 0.5);
+  const st = (z, lo, hi) => ({ mean: 0, z, lo, hi, n: 100 });
+  ck("S7 標籤：|z| ≥ 2.84 才給標籤；未校正命中只算提示", (() => { const r = stepLabels({ SWAPPED: { "layout@v21": st(3.0, 0.01, 0.05), growth: st(2.2, 0.001, 0.04) } }, { SWAPPED: { lo: 0.01, hi: 0.06 } }); return r.labels.length === 1 && r.labels[0].label === "MAP_LAYOUT" && r.hints.length === 1 && r.hints[0].label === "SKILLS_OR_GROWTH" && r.outcome === "ATTRIBUTED"; })());
+  ck("S8 總變化顯著但沒有步驟達標 ⇒ DIFFUSE_OR_UNDERPOWERED；總變化也不顯著 ⇒ NO_SIDE_CHANGE", stepLabels({ SWAPPED: { growth: st(2.0, 0.001, 0.04) } }, { SWAPPED: { lo: 0.01, hi: 0.07 } }).outcome === "DIFFUSE_OR_UNDERPOWERED" && stepLabels({ SWAPPED: { growth: st(1.0, -0.01, 0.03) } }, { SWAPPED: { lo: -0.01, hi: 0.05 } }).outcome === "NO_SIDE_CHANGE");
+  ck("S9 Lx_layout：frame＋order＋layout，沒有技能", (() => { const x = ladderSetup(s20, s21, "Lx_layout"); return x.objectiveLayout === "SWAPPED" && !x.effectiveLayers.heroSkills && x.ruleset.layers.assemblyOrder === "live" && x.ruleset.layers.laneFrame === "teamRelative"; })());
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
 }
@@ -142,7 +166,8 @@ const SEEDS = [];
 for (let s = 33001; s <= committed.lastSeed; s += 2) SEEDS.push(s);
 const ORIENTS = ["forward", "reverse"];
 const taskOf = (arm, seed, orientation) => ({ id: `${arm}#${seed}#${orientation}`, key: arm, seed, arm, orientation });
-const tasks = NEW_ARMS.flatMap((arm) => SEEDS.flatMap((seed) => ORIENTS.map((o) => taskOf(arm, seed, o))));
+const seedsOfArm = (arm) => (SWAPPED_ONLY.includes(arm) ? SEEDS.filter((s) => objectiveLayoutForSeed(s) === "SWAPPED") : SEEDS);
+const tasks = NEW_ARMS.flatMap((arm) => seedsOfArm(arm).flatMap((seed) => ORIENTS.map((o) => taskOf(arm, seed, o))));
 if (flag("plan")) { console.log(`${NEW_ARMS.length} 臂 × ${SEEDS.length} seeds × 2 方向 ＝ ${tasks.length} 場；端點 L0／L4 沿用已提交資料`); for (const a of NEW_ARMS) console.log(`  ${a.padEnd(12)} ${ARM_GROUPS[a].join(" + ")}`); process.exit(0); }
 if (!REG.fingerprint.startsWith(FP)) { console.error(`登記的指紋與目前不同（目前 ${FP}）：拒絕`); process.exit(2); }
 
@@ -150,8 +175,11 @@ const recCheck = (r, t) => {
   const p = [], arm = t?.arm ?? r.arm, x = expectFrame(arm);
   if (r.arm !== arm || (t && (r.seed !== t.seed || r.orientation !== t.orientation)) || r.engineSeed !== r.seed) p.push("identity mismatch");
   if (r.director !== x.director || r.laneFrame !== x.laneFrame) p.push(`frame mismatch ${r.director}/${r.laneFrame}`);
-  const g = ARM_GROUPS[arm] ?? [];
-  if (r.layers && ((r.layers.heroSkills === true) !== g.includes("skills") || (r.layers.heroPowerCurve === true) !== g.includes("growth") || (r.layers.objectiveLayout === "bySeed") !== g.includes("layout") || (r.layers.assemblyOrder === "live") !== g.includes("order"))) p.push("layer mismatch");
+  const g = ARM_GROUPS[arm] ?? [], en = r.engine ?? {};
+  //  審查 #9：技能／成長／佈局從引擎讀；佈局：有 layout 群組且 seed 是 SWAPPED ⇒ 引擎必須是 SWAPPED，否則不得是 SWAPPED。
+  const wantSwapped = g.includes("layout") && objectiveLayoutForSeed(r.seed) === "SWAPPED";
+  if (en.skills !== g.includes("skills") || en.passives !== g.includes("growth") || en.curve !== g.includes("growth") || (en.layout === "SWAPPED") !== wantSwapped) p.push("engine layer mismatch");
+  if (r.layers && (r.layers.assemblyOrder === "live") !== g.includes("order")) p.push("order mismatch");
   return p;
 };
 /** 端點：L0／L4 的正向（side bias challenge）與反向（雙向研究），每個 seed 兩版都要有（V4）。 */
@@ -178,23 +206,28 @@ if (flag("validate")) {
   const allowed = (arm) => new Set(ARM_GROUPS[arm].flatMap((g) => GROUPS[g].map((k) => `ruleset.layers.${k}`).concat(g === "skills" || g === "growth" ? GROUPS[g].map((k) => `effectiveLayers.${k}`) : g === "layout" ? ["effectiveLayers.layoutConfigured", "objectiveLayout"] : [])));
   const deepDiff = (a, b, p = "") => (a && b && typeof a === "object" && typeof b === "object" ? [...new Set([...Object.keys(a), ...Object.keys(b)])].flatMap((k) => deepDiff(a[k], b[k], p ? `${p}.${k}` : k)) : JSON.stringify(a) === JSON.stringify(b) ? [] : [p]);
   const v5bad = [];
-  for (const arm of [...NEW_ARMS, "L2_order"]) for (const o of ORIENTS) {
-    const { setup, s20 } = await armSetup(sample[0], arm, o === "reverse");
+  //  審查 #8：所有樣本 seed × 兩個方向（含 SWAPPED，layout 的差異才會被檢到）；只比設定，不跑對局。
+  for (const arm of [...NEW_ARMS, "L2_order"]) for (const s of sample) for (const o of ORIENTS) {
+    const { setup, s20 } = await armSetup(s, arm, o === "reverse");
     const d = deepDiff(s20, setup).filter((k) => !allowed(arm).has(k));
-    if (d.length) v5bad.push(`${arm}/${o}: ${d.join(",")}`);
+    if (d.length) v5bad.push(`${arm}#${s}/${o}: ${d.join(",")}`);
   }
-  ck("V5 每個臂的 setup 只在宣告的層鍵與對應欄位與 L0 不同", v5bad.length === 0, v5bad.slice(0, 3).join(" | "));
-  const vTasks = ["L0_built", "L4_built", "L1_frame", "L2_order", "L1_static"].flatMap((arm) => sample.flatMap((s) => ORIENTS.map((o) => taskOf(arm, s, o))));
+  ck(`V5 每個臂的 setup 只在宣告的層鍵與對應欄位與 L0 不同（${sample.length} seeds × 2 方向）`, v5bad.length === 0, v5bad.slice(0, 3).join(" | "));
+  const vTasks = ["L0_built", "L4_built", "L1_frame", "L2_order", "L1_static", "L3a_skills"].flatMap((arm) => sample.flatMap((s) => ORIENTS.map((o) => taskOf(arm, s, o))));
   const res = await runStudy({ dir: VDIR, tasks: vTasks, workerFile: SELF, workerArgs: ["--ladder-worker"], meta: { ...META, validation: true }, workers: Number(val("workers", 3)), label: "challenge 階梯 validate", check: recCheck });
   if (res.halted || res.failed || res.lost) ck("驗證批次跑完", false, JSON.stringify(res));
   const R = (arm, s, o) => readKey(VDIR, arm).get(`${arm}#${s}#${o}`);
   const same = (x, y) => x && y && x.winner === y.winner && x.duration === y.duration;
   const v1 = [];
   for (const s of sample) for (const o of ORIENTS) {
-    if (!same(R("L0_built", s, o), E.get("challenge.v20", s, o))) v1.push(`L0#${s}#${o}`);
-    if (!same(R("L4_built", s, o), E.get("challenge.v21", s, o))) v1.push(`L4#${s}#${o}`);
+    const a = R("L0_built", s, o), b = R("L4_built", s, o);
+    if (!same(a, E.get("challenge.v20", s, o)) || a.engineSeed !== E.get("challenge.v20", s, o).engineSeed) v1.push(`L0#${s}#${o}`);
+    if (!same(b, E.get("challenge.v21", s, o)) || b.engineSeed !== E.get("challenge.v21", s, o).engineSeed) v1.push(`L4#${s}#${o}`);
   }
-  ck(`V1 階梯兩端＝已提交紀錄（${sample.length * 4} 場：win、duration）`, v1.length === 0, v1.slice(0, 5).join(","));
+  ck(`V1 階梯兩端＝已提交紀錄（${sample.length * 4} 場：win、duration、engine seed）`, v1.length === 0, v1.slice(0, 5).join(","));
+  //  審查 #6：L3a（技能開、成長關）從未有規則集出貨過 ⇒ 確認能跑、引擎上技能有接、被動與成長曲線沒接（即時檢查已逐場比對引擎）。
+  const v6 = sample.flatMap((s) => ORIENTS.filter((o) => { const r = R("L3a_skills", s, o); return !r || !r.engine?.skills || r.engine?.passives || r.engine?.curve; }).map((o) => `${s}#${o}`));
+  ck(`V6 L3a（技能開、成長關）可跑且引擎狀態正確（${sample.length * 2} 場，0 錯誤）`, v6.length === 0 && !(res.failed > 0), v6.slice(0, 5).join(","));
   const v2 = sample.flatMap((s) => ORIENTS.filter((o) => !same(R("L2_order", s, o), R("L1_frame", s, o))).map((o) => `${s}#${o}`));
   ck(`V2 L2（frame＋order）＝L1_frame（${sample.length * 2} 場）`, v2.length === 0, `不同 ${v2.length}：${v2.slice(0, 5).join(",")}（登記：擋下 run，L2 改成正式臂後重審）`);
   const v3 = sample.flatMap((s) => ORIENTS.filter((o) => !same(R("L1_static", s, o), R("L1_frame", s, o))).map((o) => `${s}#${o}`));
@@ -225,49 +258,70 @@ if (flag("report")) {
   if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
   const audit = auditStudy(DIR, tasks, recCheck);
   if (audit.halt) { console.error(`⛔ HALT：${audit.halt}（不判定，交 Owner）`); process.exit(5); }
+  //  審查 #3：即時檢查不合格的紀錄不得進分析。
+  if (audit.instrument.length) { console.error(`⛔ 儀器檢查不合格 ${audit.instrument.length} 筆（不判定，交 Owner）：${JSON.stringify(audit.instrument.slice(0, 3))}`); process.exit(5); }
   if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
   const E = endpoints();
   if (E.bad.length) { console.error(`端點資料缺 ${E.bad.length}`); process.exit(2); }
   const dropped = new Set(audit.errored.map((x) => x.seed));
   const data = Object.fromEntries(NEW_ARMS.map((a) => [a, readKey(DIR, a)]));
   const win = (arm, s, o) => winOf((arm === "L0" ? E.get("challenge.v20", s, o) : arm === "L4" ? E.get("challenge.v21", s, o) : data[arm].get(`${arm}#${s}#${o}`)).winner);
-  const LADDER = ["L0", "L1_frame", "L3a_skills", "L3_growth", "L4", "R_noFrame"];
-  const STEPS = [["frame@v20", "L1_frame", "L0"], ["skills (incl. order)", "L3a_skills", "L1_frame"], ["growth", "L3_growth", "L3a_skills"], ["layout", "L4", "L3_growth"], ["frame@v21", "L4", "R_noFrame"]];
+  const LADDER = ["L0", "L1_frame", "L3a_skills", "L3_growth", "L4", "R_noFrame", "Lx_layout"];
+  const STEPS = [["frame@v20", "L1_frame", "L0"], ["skills (incl. order)", "L3a_skills", "L1_frame"], ["growth", "L3_growth", "L3a_skills"], ["layout@v21", "L4", "L3_growth"], ["frame@v21", "L4", "R_noFrame"], ["layout@low", "Lx_layout", "L1_frame"]];
   const { G } = await lib();
   const keys = G.FIXTURE_KEYS;
   const pairingOf = (s) => `${keys[s % keys.length]}>${keys[(s + 2) % keys.length]}`;
   const rows = SEEDS.filter((s) => !dropped.has(s)).map((s) => {
     const r = { seed: s, layout: objectiveLayoutForSeed(s), pairing: pairingOf(s) };
-    for (const a of LADDER) { const bf = win(a, s, "forward"), br = win(a, s, "reverse"); r[`s_${a}`] = sideOf(bf, br); r[`t_${a}`] = strengthOf(bf, br); }
+    for (const a of LADDER) {
+      if (SWAPPED_ONLY.includes(a) && r.layout !== "SWAPPED") continue;
+      const bf = win(a, s, "forward"), br = win(a, s, "reverse"); r[`s_${a}`] = sideOf(bf, br); r[`t_${a}`] = strengthOf(bf, br);
+    }
     return r;
   });
-  const ci = (xs) => { const p = pairedStats(xs); return { mean: p.mean, lo: p.lo, hi: p.hi, z: p.z, n: xs.length }; };
+  const has = (r, a) => r[`s_${a}`] !== undefined;
+  const ci = (xs) => { if (!xs.length) return { mean: null, lo: null, hi: null, z: null, n: 0 }; const p = pairedStats(xs); return { mean: p.mean, lo: p.lo, hi: p.hi, z: p.z, n: xs.length }; };
   const strata = { STANDARD: rows.filter((r) => r.layout === "STANDARD"), SWAPPED: rows.filter((r) => r.layout === "SWAPPED"), ALL: rows };
-  const levels = Object.fromEntries(Object.entries(strata).map(([k, rs]) => [k, Object.fromEntries(LADDER.map((a) => [a, ci(rs.map((r) => r[`s_${a}`] - 0.5))]))]));
-  const steps = Object.fromEntries(Object.entries(strata).map(([k, rs]) => [k, Object.fromEntries(STEPS.map(([n, b, a]) => { const c = ci(rs.map((r) => r[`s_${b}`] - r[`s_${a}`])); return [n, { ...c, moves: c.lo > 0 || c.hi < 0, bonferroni: Math.abs(c.z ?? 0) >= 2.73 }]; }))]));
-  const sumCheck = Object.fromEntries(Object.entries(strata).map(([k, rs]) => { const tot = meanSd(rs.map((r) => r.s_L4 - r.s_L0)).mean, sum = STEPS.slice(0, 4).reduce((acc, [n]) => acc + steps[k][n].mean, 0); return [k, Math.abs(tot - sum) < 1e-9]; }));
+  const levels = Object.fromEntries(Object.entries(strata).map(([k, rs]) => [k, Object.fromEntries(LADDER.map((a) => [a, ci(rs.filter((r) => has(r, a)).map((r) => r[`s_${a}`] - 0.5))]))]));
+  const stepOf = (rs, b, a, key = "s") => ci(rs.filter((r) => has(r, a) && has(r, b)).map((r) => r[`${key}_${b}`] - r[`${key}_${a}`]));
+  //  標籤只用 STANDARD／SWAPPED 兩層（ALL 只是描述）；layout@low 只有 SWAPPED。
+  const steps = Object.fromEntries(Object.entries(strata).map(([k, rs]) => [k, Object.fromEntries(STEPS.filter(([n]) => !(n === "layout@low" && k === "STANDARD")).map(([n, b, a]) => { const c = stepOf(rs, b, a); return [n, { ...c, moves: c.n > 0 && (c.lo > 0 || c.hi < 0), bonferroni: Math.abs(c.z ?? 0) >= BONF_Z }]; }))]));
+  const total = Object.fromEntries(["STANDARD", "SWAPPED"].map((k) => [k, stepOf(strata[k], "L4", "L0")]));
+  const labelled = stepLabels({ STANDARD: steps.STANDARD, SWAPPED: steps.SWAPPED }, total);
+  const MAIN = ["frame@v20", "skills (incl. order)", "growth", "layout@v21"];
+  const sumCheck = Object.fromEntries(Object.entries(strata).map(([k, rs]) => { const tot = meanSd(rs.map((r) => r.s_L4 - r.s_L0)).mean, sum = MAIN.reduce((acc, n) => acc + steps[k][n].mean, 0); return [k, Math.abs(tot - sum) < 1e-9]; }));
+  const interaction = { frame: { STANDARD: stepOf(strata.STANDARD, "L4", "R_noFrame").mean - stepOf(strata.STANDARD, "L1_frame", "L0").mean, SWAPPED: stepOf(strata.SWAPPED, "L4", "R_noFrame").mean - stepOf(strata.SWAPPED, "L1_frame", "L0").mean },
+    layoutSWAPPED: steps.SWAPPED["layout@v21"].mean - steps.SWAPPED["layout@low"].mean };
   const pairings = [...new Set(rows.map((r) => r.pairing))].sort();
   const byPairing = Object.fromEntries(pairings.map((p) => {
     const rs = rows.filter((r) => r.pairing === p);
-    return [p, { n: rs.length, T: Object.fromEntries(LADDER.map((a) => [a, ci(rs.map((r) => r[`t_${a}`]))])),
-      stepsT: Object.fromEntries(STEPS.map(([n, b, a]) => { const c = ci(rs.map((r) => r[`t_${b}`] - r[`t_${a}`])); return [n, { ...c, moves: c.lo > 0 || c.hi < 0 }]; })),
-      stepsS: Object.fromEntries(STEPS.map(([n, b, a]) => [n, ci(rs.map((r) => r[`s_${b}`] - r[`s_${a}`]))])) }];
+    return [p, { n: rs.length, T: Object.fromEntries(LADDER.map((a) => [a, ci(rs.filter((r) => has(r, a)).map((r) => r[`t_${a}`]))])),
+      stepsT: Object.fromEntries(STEPS.map(([n, b, a]) => { const c = stepOf(rs, b, a, "t"); return [n, { ...c, moves: c.n > 0 && (c.lo > 0 || c.hi < 0) }]; })),
+      stepsS: Object.fromEntries(STEPS.map(([n, b, a]) => [n, stepOf(rs, b, a)])) }];
   }));
   const layoutCheckStandard = rows.filter((r) => r.layout === "STANDARD").every((r) => ["forward", "reverse"].every((o) => win("L4", r.seed, o) === win("L3_growth", r.seed, o)));
   const er = errorRule(audit.errored.length, tasks.length);
   const out = { schema: "esmo.challenge-ladder-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: FP, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     sideBiasVerdict: "STOP (unchanged; diagnostic only; no fix, no compensation authorised)",
-    seeds: rows.length, dropped: [...dropped], errored: audit.errored, outcome: er === "STOP" ? "INSTRUMENT" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "DIAGNOSED",
-    levelsS: levels, stepsS: steps, sumCheck, layoutStepZeroOnStandard: layoutCheckStandard, byPairing,
-    notes: "S in fractions of a win (x100 = pp); steps are paired per-seed differences of s; sequential attribution depends on the ladder order (frame measured at both ends)" };
+    seeds: rows.length, dropped: [...dropped], errored: audit.errored,
+    outcome: er === "STOP" ? "INSTRUMENT" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : labelled.outcome,
+    labels: labelled.labels, hints: labelled.hints, diffuseStrata: labelled.diffuseStrata, bonferroniZ: BONF_Z, mdeNote: REG.power,
+    levelsS: levels, totalS: total, stepsS: steps, sumCheck, interaction, layoutStepZeroOnStandard: layoutCheckStandard, byPairing,
+    notes: [
+      "S in fractions of a win (x100 = pp); steps are paired per-seed differences of s; sequential attribution depends on the ladder order (frame and layout measured at both ends)",
+      "'skills (incl. order)' bundles the assembly-order change: order is a no-op only without skills (V2); its effect with skills on cannot be separated (the challengeV20 order rejects skills)",
+      "'growth' is growth given skills; the order skills -> growth is fixed by dependency (passives / power curve require skills)",
+      "per-pairing steps are descriptive (no multiplicity correction)",
+    ] };
   const OUT = path.join(ROOT, "tools/fixtures/challenge_ladder_result_3aB.json");
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   const pp = (x) => (x == null ? "—" : (x * 100).toFixed(1)), c = (s) => `${pp(s.mean)}（${pp(s.lo)}..${pp(s.hi)}）`;
   for (const k of ["STANDARD", "SWAPPED"]) {
-    console.log(`${k}：S ${LADDER.map((a) => `${a} ${pp(levels[k][a].mean)}`).join("｜")}`);
-    for (const [n] of STEPS) console.log(`   ${n.padEnd(22)} ΔS ${c(steps[k][n])}${steps[k][n].moves ? " ←" : ""}`);
+    console.log(`${k}：S ${LADDER.map((a) => `${a} ${pp(levels[k][a].mean)}`).join("｜")}｜總變化 ${c(total[k])}`);
+    for (const [n] of STEPS) if (steps[k][n]) console.log(`   ${n.padEnd(22)} ΔS ${c(steps[k][n])}${steps[k][n].bonferroni ? " ←←" : steps[k][n].moves ? " ←" : ""}`);
   }
-  for (const p of pairings) { const b = byPairing[p]; console.log(`${p.padEnd(32)} T ${LADDER.map((a) => `${a} ${pp(b.T[a].mean)}`).join(" ")}｜${STEPS.map(([n]) => `${n} ${c(b.stepsT[n])}`).join("；")}`); }
+  for (const p of pairings) { const b = byPairing[p]; console.log(`${p.padEnd(32)} T ${LADDER.slice(0, 6).map((a) => `${a} ${pp(b.T[a].mean)}`).join(" ")}｜${STEPS.slice(0, 5).map(([n]) => `${n} ${c(b.stepsT[n])}`).join("；")}`); }
+  console.log(`標籤 ${JSON.stringify(labelled.labels)}；提示 ${JSON.stringify(labelled.hints)}`);
   console.log(`加總檢查 ${JSON.stringify(sumCheck)}；STANDARD 上 layout 步驟為 0：${layoutCheckStandard}；結果 ${out.outcome}（side bias STOP 不變）`);
 }

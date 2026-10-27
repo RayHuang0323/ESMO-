@@ -1,0 +1,24 @@
+{
+ "schema": "esmo.ga8-registration.v1",
+ "studyId": "ga8-fix-confirm-3aB",
+ "stage": "Phase 3a-B: confirmatory G-A8 after the template balance fix (DRAFT)",
+ "registeredAt": "2026-10-28 (draft)",
+ "status": "DRAFT, not runnable: becomes runnable only after (1) the Owner approves the template balance values, (2) the versioned change is implemented under a new semantics freeze with a newly registered v21 candidate fingerprint, (3) this file is finalised with that fingerprint and passes an independent review. Thresholds are copied from the original G-A8 registration and must not change",
+ "authority": "Owner 2026-10-28 item 1 (plan C) and item 4 (thresholds unchanged); original G-A8 registration tools/fixtures/ga8_registration_3aB.json",
+ "sameAsOriginal": "everything in tools/fixtures/ga8_registration_3aB.json (ruleset balanceTool.v21, all 21 templates as tactic-book plans with no choices vs the std plan, template blue on odd and red on even seeds, metric, thresholds, control, error rule, instrument check, no optional stopping) except the seeds and the fingerprint",
+ "seeds": {
+  "range": "43001-43400",
+  "n": 400,
+  "path": "tool (seed as-is)",
+  "rule": "reserved block G-A8.fixConfirm in tools/fixtures/study_seed_plan_3aB.json; disjoint from the original G-A8 / knob seeds (25001-25400) and the screening seeds (41001-41400) that chose the values"
+ },
+ "thresholds": {
+  "STOP (dominant)": "win rate >= 0.60 AND the lower 95% bound > 0.55",
+  "WARN": "win rate >= 0.57, or win rate <= 0.43",
+  "control": "std vs std within 0.50 +/- 0.05",
+  "PASS": "data complete, no STOP"
+ },
+ "scope": "all 21 templates, not only the changed ones: the new freeze may carry other semantic changes (e.g. a challenge fix), so every template is re-checked and a new STOP elsewhere cannot hide",
+ "fingerprint": "TBD at the fix freeze (the current 0578fa882d74b205 is the pre-fix candidate and is NOT valid for this run)",
+ "notClaimed": "a PASS here clears only G-A8; the challenge side bias STOP and the rest of the P2 re-validation are separate"
+}
