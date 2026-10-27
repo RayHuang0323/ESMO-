@@ -1,0 +1,620 @@
+{
+ "schema": "esmo.career-golden.v21",
+ "gitHead": "649805336ea80ea0ac9a31a58dd153df13cc0270",
+ "fingerprint": "0578fa882d74b205",
+ "node": "v24.18.0",
+ "cases": [
+  {
+   "id": "phase-stance:s11",
+   "seed": 11,
+   "choices": {
+    "phases": {
+     "early": {
+      "stance": "aggressive"
+     },
+     "mid": {
+      "stance": "defensive"
+     },
+     "late": {
+      "stance": "scaling"
+     }
+    }
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "df764dd9e254a295",
+   "phasesHash": "71941e3cce7036dd",
+   "finalHash": "64691fb20b0e04e5",
+   "winner": "blue",
+   "duration": 901.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "phase-stance:s23",
+   "seed": 23,
+   "choices": {
+    "phases": {
+     "early": {
+      "stance": "aggressive"
+     },
+     "mid": {
+      "stance": "defensive"
+     },
+     "late": {
+      "stance": "scaling"
+     }
+    }
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "d95c1b5233726991",
+   "phasesHash": "0526df9db56f13b0",
+   "finalHash": "b264bc6cde4885a6",
+   "winner": "red",
+   "duration": 1369.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "phase-stance:s29",
+   "seed": 29,
+   "choices": {
+    "phases": {
+     "early": {
+      "stance": "aggressive"
+     },
+     "mid": {
+      "stance": "defensive"
+     },
+     "late": {
+      "stance": "scaling"
+     }
+    }
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "89b1e63f408a9106",
+   "phasesHash": "7f3cc0300cfaaa94",
+   "finalHash": "69c3fcd76f05e681",
+   "winner": "red",
+   "duration": 1232,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  },
+  {
+   "id": "phase-grouping:s11",
+   "seed": 11,
+   "choices": {
+    "phases": {
+     "early": {
+      "grouping": "group"
+     },
+     "late": {
+      "grouping": "group"
+     }
+    }
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "324929a11e465075",
+   "phasesHash": "4c233168cba52a15",
+   "finalHash": "03137fdd66697cdf",
+   "winner": "red",
+   "duration": 1249,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "phase-grouping:s23",
+   "seed": 23,
+   "choices": {
+    "phases": {
+     "early": {
+      "grouping": "group"
+     },
+     "late": {
+      "grouping": "group"
+     }
+    }
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "2d271dcc71d5ed45",
+   "phasesHash": "d1b643f354d9e62a",
+   "finalHash": "060414bd619b7862",
+   "winner": "red",
+   "duration": 1265,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "phase-grouping:s29",
+   "seed": 29,
+   "choices": {
+    "phases": {
+     "early": {
+      "grouping": "group"
+     },
+     "late": {
+      "grouping": "group"
+     }
+    }
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "ad8a6bd53d69db7a",
+   "phasesHash": "e242299bfd4e05bb",
+   "finalHash": "99ed4cba21940641",
+   "winner": "blue",
+   "duration": 1471,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  },
+  {
+   "id": "phase-objective:s11",
+   "seed": 11,
+   "choices": {
+    "phases": {
+     "early": {
+      "objectiveOrder": "dragon"
+     },
+     "mid": {
+      "objectiveOrder": "baron"
+     }
+    }
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "800fd018f51866f0",
+   "phasesHash": "bfee26ec11e3447a",
+   "finalHash": "6f0468edb8c5c993",
+   "winner": "red",
+   "duration": 960,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "phase-objective:s23",
+   "seed": 23,
+   "choices": {
+    "phases": {
+     "early": {
+      "objectiveOrder": "dragon"
+     },
+     "mid": {
+      "objectiveOrder": "baron"
+     }
+    }
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "40c1bfd9e86c5d28",
+   "phasesHash": "5ce3d49f54b300cb",
+   "finalHash": "c34ae58f8b30f041",
+   "winner": "red",
+   "duration": 1408,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "phase-objective:s29",
+   "seed": 29,
+   "choices": {
+    "phases": {
+     "early": {
+      "objectiveOrder": "dragon"
+     },
+     "mid": {
+      "objectiveOrder": "baron"
+     }
+    }
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "53fd4401ee3ec285",
+   "phasesHash": "56c9dbafe6b32e67",
+   "finalHash": "bd90426db9de4545",
+   "winner": "red",
+   "duration": 1105,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  },
+  {
+   "id": "strong-early-mid:s11",
+   "seed": 11,
+   "choices": {
+    "phases": {
+     "early": {
+      "focusLane": "top"
+     },
+     "mid": {
+      "focusLane": "mid"
+     }
+    }
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "4c24857c76820380",
+   "phasesHash": "95abe7487c66357c",
+   "finalHash": "03137fdd66697cdf",
+   "winner": "red",
+   "duration": 1249,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "strong-early-mid:s23",
+   "seed": 23,
+   "choices": {
+    "phases": {
+     "early": {
+      "focusLane": "top"
+     },
+     "mid": {
+      "focusLane": "mid"
+     }
+    }
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "1508a4f95d9de50e",
+   "phasesHash": "a7c9edaec217c16e",
+   "finalHash": "44b127496f66ce61",
+   "winner": "blue",
+   "duration": 1159.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "strong-early-mid:s29",
+   "seed": 29,
+   "choices": {
+    "phases": {
+     "early": {
+      "focusLane": "top"
+     },
+     "mid": {
+      "focusLane": "mid"
+     }
+    }
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "764a327fe7aafc09",
+   "phasesHash": "55c7c9682a1ba3ea",
+   "finalHash": "e8e6fdb31d186cfe",
+   "winner": "red",
+   "duration": 1368.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  },
+  {
+   "id": "quick-strong-bot:s11",
+   "seed": 11,
+   "choices": {
+    "phases": {
+     "early": {
+      "focusLane": "bot"
+     },
+     "mid": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "f325a93222704124",
+   "phasesHash": "fac93f68e11441bd",
+   "finalHash": "0282f4f4f880d0cd",
+   "winner": "blue",
+   "duration": 824,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "quick-strong-bot:s23",
+   "seed": 23,
+   "choices": {
+    "phases": {
+     "early": {
+      "focusLane": "bot"
+     },
+     "mid": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "bb39bc6e39d4094a",
+   "phasesHash": "82afe8fb54527f00",
+   "finalHash": "2501f2e8968f2ced",
+   "winner": "blue",
+   "duration": 1551,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "quick-strong-bot:s29",
+   "seed": 29,
+   "choices": {
+    "phases": {
+     "early": {
+      "focusLane": "bot"
+     },
+     "mid": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "cb4ff10e3c9dbe8d",
+   "phasesHash": "0a638f78c8bd635c",
+   "finalHash": "688adabb4333be47",
+   "winner": "red",
+   "duration": 1220.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  },
+  {
+   "id": "win-snowball:s11",
+   "seed": 11,
+   "choices": {
+    "winCondition": "earlySnowball"
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "ee30fd3e8c706df7",
+   "phasesHash": "61dc4b4c7b497a34",
+   "finalHash": "b06856cf5e7dc950",
+   "winner": "red",
+   "duration": 1055.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "win-snowball:s23",
+   "seed": 23,
+   "choices": {
+    "winCondition": "earlySnowball"
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "4428ae8fff56ebd9",
+   "phasesHash": "65ad6fa52c21c68a",
+   "finalHash": "c80cea3a103d2a9e",
+   "winner": "blue",
+   "duration": 1503,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "win-snowball:s29",
+   "seed": 29,
+   "choices": {
+    "winCondition": "earlySnowball"
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "f8f09f0db5216890",
+   "phasesHash": "0de49d61f57ca6e0",
+   "finalHash": "89d3aaf4dea83e44",
+   "winner": "blue",
+   "duration": 1160,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  },
+  {
+   "id": "snowball-plus-player:s11",
+   "seed": 11,
+   "choices": {
+    "winCondition": "earlySnowball",
+    "phases": {
+     "early": {
+      "stance": "defensive"
+     }
+    }
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "6dd6b2ff46610b44",
+   "phasesHash": "a746e471055e7d43",
+   "finalHash": "3dd6f3ed31138638",
+   "winner": "red",
+   "duration": 1262,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "snowball-plus-player:s23",
+   "seed": 23,
+   "choices": {
+    "winCondition": "earlySnowball",
+    "phases": {
+     "early": {
+      "stance": "defensive"
+     }
+    }
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "93698a5cf6a7a6fa",
+   "phasesHash": "9840fba2abdb7cfc",
+   "finalHash": "a2f7ce7ca7f0c3fa",
+   "winner": "blue",
+   "duration": 941.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "snowball-plus-player:s29",
+   "seed": 29,
+   "choices": {
+    "winCondition": "earlySnowball",
+    "phases": {
+     "early": {
+      "stance": "defensive"
+     }
+    }
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "d4687aa625f5a8b9",
+   "phasesHash": "b314fac91b0cc260",
+   "finalHash": "80aaeaf806cd82dd",
+   "winner": "red",
+   "duration": 946,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  },
+  {
+   "id": "strong-plus-aggressive:s11",
+   "seed": 11,
+   "choices": {
+    "phases": {
+     "early": {
+      "stance": "aggressive",
+      "focusLane": "bot"
+     },
+     "mid": {
+      "stance": "aggressive",
+      "focusLane": "bot"
+     }
+    }
+   },
+   "opponent": "team:306d3d98",
+   "setupHash": "71d438a089317140",
+   "phasesHash": "d4929f84dfdbf9d6",
+   "finalHash": "67ae187bdd38249b",
+   "winner": "red",
+   "duration": 922,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "strong-plus-aggressive:s23",
+   "seed": 23,
+   "choices": {
+    "phases": {
+     "early": {
+      "stance": "aggressive",
+      "focusLane": "bot"
+     },
+     "mid": {
+      "stance": "aggressive",
+      "focusLane": "bot"
+     }
+    }
+   },
+   "opponent": "team:743cf0ba",
+   "setupHash": "c8add9594293b622",
+   "phasesHash": "e67b6cd11a443e42",
+   "finalHash": "063afa152c7ee14a",
+   "winner": "blue",
+   "duration": 1164,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "STANDARD"
+  },
+  {
+   "id": "strong-plus-aggressive:s29",
+   "seed": 29,
+   "choices": {
+    "phases": {
+     "early": {
+      "stance": "aggressive",
+      "focusLane": "bot"
+     },
+     "mid": {
+      "stance": "aggressive",
+      "focusLane": "bot"
+     }
+    }
+   },
+   "opponent": "team:9c2b7210",
+   "setupHash": "c4c9c7a9fb609359",
+   "phasesHash": "9caf7bfd3282145a",
+   "finalHash": "100c7d8936a0cd04",
+   "winner": "red",
+   "duration": 916.5,
+   "ruleset": "career.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "redKind": "binding",
+   "dropped": [],
+   "layout": "SWAPPED"
+  }
+ ]
+}
