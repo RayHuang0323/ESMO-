@@ -1,0 +1,58 @@
+{
+ "schema": "esmo.ga8-v20-control-registration.v1",
+ "studyId": "ga8-v20-control-3aB",
+ "stage": "Phase 3a-B P2-4b (diagnostic after the G-A8 STOP; Owner ruling 2026-10-27 items 1-6)",
+ "registeredAt": "2026-10-27",
+ "status": "registered; independent review APPROVE (round 2) 2026-10-27; written after the G-A8 result was observed (tools/fixtures/ga8_result_3aB.json, commit 0024a067) and declared as such",
+ "purpose": "Diagnose whether the five G-A8 STOP templates (and the WARN templates) already behave the same way under the v20 tool ruleset. This is a diagnostic, not evidence that can release anything: it never changes the G-A8 verdict, its thresholds or its data, and a 'pre-existing' classification is never read as PASS (Owner ruling items 1, 2, 4, 5).",
+ "authority": "Owner ruling 2026-10-27: (b)+(c); same seeds as G-A8; confirm ruleset, template and measurement comparability first; the original G-A8 thresholds must not be changed using the observed result",
+ "tool": "tools/measure_ga8_v20ctl_3aB.mjs (--comparability / --run / --report; result tools/fixtures/ga8_v20_control_result_3aB.json)",
+ "arms": {
+  "v21": "the committed G-A8 data, read only (dir of the G-A8 run; its meta must match registration 4af6afccb19ac3f4 and fingerprint 0578fa882d74b205; every record re-checked with the G-A8 instrument rule)",
+  "v20": "new: balanceTool.v20 (Director static, laneFrame legacyMirror, skills on, talents off, items standard, no player stats), same code at the frozen semantics (src unchanged since 176ccac0)"
+ },
+ "templates": "the same 21 templates of TACTIC_TEMPLATE_LIST, each a tactic-book plan with no choices (same tacticInputOf call as G-A8); std vs std is the control",
+ "templateComparabilityNote": "classic.m1-m8 and std are v20 content (MOBA_TACTICS / STANDARD_OPP_TACTIC; built from MobaTacticConfig by construction). The 12 v2.* templates are Phase 3a content that never shipped under v20: their v20 numbers are counterfactual (the same knobs under the v20 ruleset) and are labelled so in the report.",
+ "seeds": {
+  "range": "25001-25400",
+  "n": 400,
+  "path": "tool (seed as-is), identical to G-A8",
+  "side": "identical to G-A8: template on blue for odd seeds, on red for even seeds; layout by seed",
+  "reuseNote": "deliberate reuse of the G-A8 block (Owner item 2) so each seed is a paired observation; not a new evidence block, so it is not added to study_seed_plan_3aB.json studies"
+ },
+ "matches": "21 x 400 = 8,400 new v20 matches (~1 h at 3 workers); the v21 arm is not re-run",
+ "metric": "the template side's win rate (no winner at 3600 s counts 0.5), as in G-A8",
+ "comparabilityPreconditions": [
+  "C1 the v20 tool setup for a sample (template, seed) differs from the v21 one only in rulesetId, simVersion, layers.tacticalDirector and layers.laneFrame (the tactic input objects are identical); all four differences must actually appear (non-vacuous)",
+  "C2 each classic.m* template config equals mobaTacticById(m*) (the v20 tactic), and std equals STANDARD_OPP_TACTIC",
+  "C3 the v20 path at the current code is the v20 behaviour: node tools/check_match_setup_3a.mjs (run with every ESMO_BALANCE_* removed from its environment) passes 'G-A2 39/39' on the same commit. Coverage note: the G-A2 runner golden was recorded with talents on, so it does not cover the talents-off v20 path used here; the post-run C6 check (as-blue pairs d = 0 against the v21 data, which has talents off) is the indirect check for this study",
+  "C4 v20 records carry ruleset balanceTool.v20, director static, laneFrame legacyMirror, skills on, talents off",
+  "C5 the v21 arm's data is complete (8,400), passes the G-A8 instrument rule again, and the v21 flags recomputed here equal the committed ga8_result_3aB.json stops/warns",
+  "C6 (pre-run) for every template with no choices, the v21 Director's blue knobs are identical in the early, mid and late phases and equal the v20 static knobs (seed 25001, template on blue). (post-run) every as-blue pair and every std pair has d = 0 seed by seed; any non-zero one means core.v1 and static are not equivalent here => INSTRUMENT, no classification",
+  "--run refuses if any ESMO_BALANCE_* other than ESMO_BALANCE_SKILLS is set in the environment",
+  "any failing precondition => the diagnostic is NOT RUN (or not reported) and goes to the Owner"
+ ],
+ "analysis": {
+  "perTemplate": "v20 win rate with 95% CI; v20 flags use the unchanged G-A8 thresholds (>= 0.60 and lower bound > 0.55; strong WARN >= 0.57; weak WARN <= 0.43); they feed only this diagnostic's classification and never the G-A8 verdict. A flag present under v20 but not under v21 is reported as v20OnlyFlag (descriptive risk)",
+  "paired": "per seed d = win(v21) - win(v20); mean D with 95% CI (normal, sd of d / sqrt(n)); as blue only and as red only; also the discordant counts n+ (d > 0) and n- (d < 0) with a two-sided exact sign test p (ties dropped), reported next to the CI because most pairs are expected to be exactly 0; std D reported (expected exactly 0)",
+  "classification (each STOP and WARN template, decided here before the v20 run)": {
+   "PRE_EXISTING": "the v20 arm meets the same flag as v21 (STOP: >= 0.60 and lower bound > 0.55; weak WARN: <= 0.43; strong WARN: >= 0.57) AND the paired D 95% CI contains 0",
+   "PRE_EXISTING_AMPLIFIED": "the v20 arm meets the same flag AND the paired D 95% CI excludes 0 in the direction that strengthens the flag",
+   "PRE_EXISTING_REDUCED": "the v20 arm meets the same flag AND the paired D 95% CI excludes 0 in the direction that weakens it",
+   "V21_INTRODUCED": "the v20 arm does not meet the flag AND the paired D 95% CI excludes 0 in the flag's direction",
+   "UNRESOLVED": "anything else",
+   "note": "classification uses the all-pairs D as registered; D_red is reported alongside and is not used to reclassify"
+  },
+  "laneFrameNote": "With no choices, every template's v21 knobs are the same in all three phases and equal its v20 knobs (checked by C6), and the Director contract makes core.v1 with identical phases bit-identical to static. Expected: as-blue pairs and std pairs are identical seed by seed (d = 0); std has no lane asymmetry, so its red copy is unaffected by the mirror. Any non-zero one => INSTRUMENT, no classification. The whole v20/v21 difference is therefore TD-3A-23 (red lane-keyed knobs mirrored under v20's legacyMirror) acting on the template's red half; the as-red paired difference is the quantity of interest.",
+  "control": "the v20 std vs std must be within 0.50 +/- 0.05; outside => INSTRUMENT, no classification"
+ },
+ "noOptionalStopping": "classification only on complete data",
+ "errors": "errored matches are never retried or replaced, listed by seed; any errored match => the affected template is at most UNRESOLVED; more than 1% => INSTRUMENT",
+ "notClaimed": "No template is declared PASS, acceptable or releasable by this diagnostic. The G-A8 verdict stays STOP and the five STOP templates keep blocking the v21 release (Owner item 4). PRE_EXISTING means only that v20 at the same seeds shows the same flag; it is recorded as historical evidence and a fix is still proposed (Owner item 5).",
+ "followUp": "the report lists, per STOP template, the knobs that differ from std and a fix proposal for the Owner (no coefficient, template or Registry change in this step)",
+ "review": {
+  "reviewedAt": "2026-10-27",
+  "verdict": "APPROVE (round 2; two wording nits applied: C3 coverage note, classification uses all-pairs D)",
+  "round1": "APPROVE WITH CHANGES 2026-10-27 (9 findings: C3 env, laneFrame wording + C6, flag wording, discordant counts + sign test, status gate, env overrides, v21 flags vs committed result, strict C1, v20OnlyFlag) - all applied before any run"
+ }
+}
