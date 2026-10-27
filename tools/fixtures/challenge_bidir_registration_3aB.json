@@ -10,7 +10,7 @@
   "round1": "APPROVE WITH CHANGES 2026-10-27 (M1 wording of cancellation and 'side'; M2 NOT_SIDE -> SIDE_NOT_REPRODUCED + power rule INCONCLUSIVE_POWER + per-pairing side; M3 live instrument check by task arm; m1 two-unit table; m2 duration per stratum; m3 frozen draft declared; m4 reconcile note; m5 simulationVersion note) - all applied"
  },
  "owner": {
-  "confirmedAt": null
+  "confirmedAt": "2026-10-27 (Owner ruling item 1: formal 4,098-match run approved with the reviewed registration, seeds, criteria and frozen fingerprint; the result must separate team strength, side and interaction; it never lifts the STOP)"
  },
  "purpose": "Separate the side from team strength in the Challenge setting. The registered side bias study ran every pairing in one direction only (the challenger always on blue), so its blue win rate mixes the side with the challenger's strength. Here every seed is played a second time with the same two squads, the same frozen draft, the same tactics, the same player stats and loadouts, and only the sides exchanged. 'Side' here means everything that differs between blue and red: map geometry, engine processing order (TD-21, runtime29 §29) and, under challenge.v20, the legacyMirror lane frame (red lane-keyed knobs mirrored, TD-3A-23; challenge.v21 uses teamRelative).",
  "notClaimed": "This study never changes the registered side bias verdict: challenge side bias stays STOP (Owner item 3), challenge.v21 stays flag-gated and off. Its outcome only tells the Owner what the STOP is made of; no outcome is a release PASS by itself.",
