@@ -24970,3 +24970,17 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 獨立 Reviewer（P2 收尾）：APPROVE WITH CHANGES（1 Major：側偏兩欄單位四捨五入不一致；8 minor：判準措辭、challenge 佈局是 seed 分層、v2 列數、舊資料選擇性引用、相關係數共線與「高端」說法過頭、反事實但書、雙向研究限定、05 引用懸空）→ 全部採納。
 
 **未完成／風險**：見 08 同日一節。兩項 STOP（G-A8、Challenge 側偏）阻擋 v21 發布；雙向研究等 Owner 確認才開跑；偏弱模板（defensive_hold 28.5%、m8 36.3%、mid_solo_split 42.3%）列入後續平衡評估。
+
+## 2026-10-28 Phase 3a-B P2 續：Challenge 雙向研究＋G-A8 旋鈕診斷（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS）
+
+依 Owner 2026-10-27 裁定執行（核准雙向研究正式開跑、核准 G-A8 方案 A；B／C 未授權；兩項 STOP 保留）。詳細見 `review/tactic-book-3a/3a-B_P2_執行紀錄.md` §8–§10。
+
+**完成**
+- Challenge 雙向配對研究：Owner 確認 `d3ae9ae2`；新跑 4,098 場，錯誤 0，結果 `6a805453`。**SIDE_CONFIRMED ⇒ STOP 維持**：SWAPPED 側偏 v20 −1.2pp → v21 +3.1pp（惡化 +1.9pp，z 3.86）；STANDARD −2.7 → +0.8（惡化 −1.9）。v21 純藍方 +2.0pp、巨龍側 −1.2pp。另見陣容強弱大幅變動：mirror 對 topheavy −23.0pp、rotation 對 balanced +30.3pp。
+- G-A8 方案 A 旋鈕診斷：登記 `1768e753`→`e110d401`→`c7aa5b0a`（兩輪審查）；驗證 5/5（legacy 路徑 180 場與 G-A8 逐場相同）；正式 18,400 場，錯誤 0，結果 `85f173a2`。**DIAGNOSED；G-A8 維持 STOP**。m3／m7 為 KNOB_DRIVEN（邊界），m7 主要是 riskTolerance；mid_jungle_sync 旋鈕 × 內容交互；three_lane_pressure、defensive_hold 為 CONTENT_DRIVEN；m1、mid_solo_split 未判定。玩家選得到的 aggression 0.85／0.25 在 std 上沒有旗標（沒偵測到，不等於安全）。
+- 白話分析：偏向方案 C（改模板），但 `tacticTemplates.js` 是語意檔，C 與 B 一樣會換 v21 候選指紋、重做全部 P2 證據（約 10 小時以上）。
+- 獨立 Reviewer：結果與分析 APPROVE WITH CHANGES（7 Major／5 minor）全部採納。
+
+**未完成／待 Owner**：方案 C 最小版本是否核准（需事前登記、新 seeds 重跑 G-A8）；弱端模板是否一起處理；是否另立挑戰模式陣容平衡項目。兩項 STOP 在，v21 不發布。
+
+**風險**：每個診斷標籤都用 G-A8 已用過的 seeds，多個落在邊界；任何修正都要新 seeds＋原門檻。
