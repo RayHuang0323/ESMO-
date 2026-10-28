@@ -24984,3 +24984,21 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **未完成／待 Owner**：方案 C 最小版本是否核准（需事前登記、新 seeds 重跑 G-A8）；弱端模板是否一起處理；是否另立挑戰模式陣容平衡項目。兩項 STOP 在，v21 不發布。
 
 **風險**：每個診斷標籤都用 G-A8 已用過的 seeds，多個落在邊界；任何修正都要新 seeds＋原門檻。
+
+## 2026-10-29 Phase 3a-B 修正規劃：G-A8 方案 C 篩選＋Challenge 層級階梯（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS；`src/` 未改）
+
+依 Owner 2026-10-28 裁定（方案 C 原則核准、B 暫不採用；Challenge 另立側偏與陣容平衡項目；兩項 STOP 保留、門檻不放寬；本輪只做設計與必要診斷）。設計文件：`review/tactic-book-3a/3a-B_修正規劃.md`。
+
+**完成**
+- 模板共用查證：`tacticTemplates.js` 不在 v20 正式版（`1d0e219`）；classic.m1–m8 由 `MOBA_TACTICS` 派生；本分支 v20 規則集也接受 binding ⇒ 不能直接改模板或 `MOBA_TACTICS`。提出最小版本化修正：只存在 v21 規則集的 `templateBalance: "v21.b1"` 修正表（比照 laneFrame 先例），v20 規則集永不帶此鍵。
+- 研究登記＋兩輪審查（`60a1ddc1` `38251747`）；seed plan 26/26。
+- Challenge 層級階梯 18,392 場，錯誤 0（`e7da437a`）：**ATTRIBUTED**，唯一過 Bonferroni 的是 STANDARD frame@v20 +2.3pp；SWAPPED 惡化為 DIFFUSE_OR_UNDERPOWERED（skills +1.7、layout +1.7，皆含 0）。陣容翻轉：mirror 對 topheavy 來自 growth −19.3pp、rotation 對 balanced 來自 skills +33.2pp（未逐英雄量測）。v21 端拿掉 frame 幾乎無效果。
+- G-A8 候選篩選 9,200 場（新 seeds 41001–41400），錯誤 0，驗證 4/4（`a0a00956`）：**SCREENED，G-A8 維持 STOP**。m3 選出 M3_C（aggression 0.6／risk 0.5，63.0 → 54.0）；m7 重現 STOP 61.5% 但 NO_CANDIDATE；m1、mid_jungle_sync、mid_solo_split 新 seeds 未重現（但 std 控制組也回落 3pp，mid_jungle_sync／three_lane_pressure 相對 std 幾乎未回落）；defensive_hold、m8 重現 WARN 弱且 NO_CANDIDATE。
+- 修正規劃 §1–§5：逐模板處置、Challenge 根因與方案 C1–C4（不加紅藍補償）、統一驗證評估（開發期篩選 → 一次凍結 → 一次性重驗約 16–19 小時）、9 項待核准。
+- 獨立 Reviewer：APPROVE WITH CHANGES（8 Major／4 minor）全部採納（修正規劃 §6）。
+
+**驗證（實跑）**：階梯 `--report` 加總檢查 3/3、layout 在 STANDARD 為 0；篩選 `--validate` 4/4 PASS（208 場）；std 對照 51.75%（OK）。本輪未改 `src/`，未跑 build／gate（無程式變更）。
+
+**未完成／待 Owner**：m3 修正核准；m7／m8 第二輪篩選；C2 逐英雄診斷、C1 fixture 校準、C3 順序旗標；統一驗證流程；career 確認 seeds。**只修 m3 無法解除 G-A8 STOP**。
+
+**風險**：本輪長量測被記憶體保護砍 4 次（背景約 37 個 Codex node 行程），全靠同資料夾斷點續跑救回，結果無遺失。
