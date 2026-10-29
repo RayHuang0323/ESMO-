@@ -1,0 +1,211 @@
+{
+ "schema": "esmo.ga8-fix-screen-registration.v1",
+ "studyId": "ga8-fix-screen3-3aB",
+ "stage": "Phase 3a-B fix planning round 2, step 2b: G-A8 plan C third screening for classic.m7 only (content groups on top of std knobs), after the second screening found NO_CANDIDATE for m7 (Owner ruling 2026-10-29 items 1-2: no freeze until the m7 candidate is confirmed)",
+ "registeredAt": "2026-10-29",
+ "status": "registered; screening only; runnable after the independent review (review.reviewedAt + an APPROVE verdict) and a passing --validate; never changes the G-A8 STOP, never a release PASS, never a template change",
+ "authority": "Owner 2026-10-29: development-stage diagnosis, candidate screening, design, independent review and local commits may be done without asking item by item; screening uses fresh seeds, pre-registration and an independent reviewer; no semantics freeze and no full P2 re-run until the m7 candidate and the challenge side-bias plan are confirmed by the Owner; all template fixes act on v21 only",
+ "tool": "tools/measure_ga8_fix_screen_3aB.mjs --reg=tools/fixtures/ga8_fix_screen3_registration_3aB.json (--plan / --validate / --run / --report); the same instrument as rounds 1 and 2; this round adds probe v3 (see probeNote), referenceOnly and listedOrder (review round 1 #1 / #7); rounds 1 and 2 are unchanged (selftest 8/8; the round-2 --report regenerated with the modified tool is identical to the committed result except reportedAt / gitHead)",
+ "resultFile": "tools/fixtures/ga8_fix_screen3_result_3aB.json",
+ "expectedArms": 12,
+ "kinds": {
+  "classic.m7": "strong"
+ },
+ "probe": "v3",
+ "pooledWith": "tools/fixtures/ga8_fix_screen2_result_3aB.json",
+ "pooledNote": "the tool's pooled rows are written as pooledWithRound1 with fields round1 / round2; in this study round1 = the pooled file (round 2, 57001-57400) and round2 = this block (57401-57800). Pooled rows exist for STD, BASE_classic.m7 and M7_D (the arms present in both); descriptive only, never used for selection. M7_D's third descriptive point is the knob study's NEUTRAL_classic.m7 (55.75 on 25001-25400); it is quoted, not pooled. Review round 1 #8: the pooled 95% CI assumes the blocks are i.i.d. draws; the observed cross-block spread is larger than binomial, so the pooled CI is too narrow",
+ "confirmRisk": true,
+ "semantics": "src/ is not modified. Every arm is a complete MobaTacticConfig passed as a legacy tactic input on balanceTool.v21 (validated equal to the binding path by V1); the candidate configs exist only inside this registration",
+ "path": "same as G-A8 and rounds 1-2: balanceTool.v21 (Director core.v1, laneFrame teamRelative, skills on, talents off), opponent = std plan with no choices, the arm side plays blue on odd seeds and red on even seeds",
+ "seeds": {
+  "range": "57401-57800",
+  "n": 400,
+  "path": "tool (seed as-is)",
+  "rule": "fresh block G-A8.fixScreen3 of tools/fixtures/study_seed_plan_3aB.json: disjoint from G-A8 / knob study (25001-25400), round 1 (41001-41400), round 2 (57001-57400), the reserved confirmatory block 43001-43400 and every other used or reserved block. Screening seeds are never used to confirm a fix"
+ },
+ "evidenceBasis": {
+  "classic.m7": "every knob-only arm so far stays at or above the WARN line: round 1 (41001-41400, STD 51.75): BASE 61.5, M7_A 0.7/0.6 57.75, M7_B 0.65/0.55 60.25, M7_C 0.6/0.5 58.25; round 2 (57001-57400, STD 51.2): BASE 59.0, M7_D 0.5/0.5 62.5 (vs BASE +3.5, -3.1..10.1), M7_E earlyGame standard 64.5, M7_F (D + earlyGame standard) 63.0 (vs D +0.5). On the two fresh blocks, neutralising the knobs did not measurably lower m7 (round 2: M7_D - BASE +3.5, -3.1..10.1). The knob study's K / C were estimated on the block on which G-A8 selected m7 (25001-25400) and did not replicate: the identical config NEUTRAL_classic.m7 = M7_D (same fingerprint) gave 55.75 there (vs std +1.0) and 62.5 on 57001-57400 (vs std +11.25, 4.7..17.8), a cross-block difference of about 15 pp (z about 3.1); FULL fell from 67.25 to 61.5 / 59.0 (selection on the G-A8 block). So the cross-block spread of one and the same arm is larger than binomial, the confirmRisk figures are lower bounds, and this round screens content groups both on std knobs and with the shipped knobs kept. Content groups that reach the engine (toEngineTactic / toEngineTacticIdentity): (1) objectives.towerPriority 0.6 (aggro +0.003 per lane, siegeBias +0.1); (2) macro.tempo fast (gankInterval 32 s vs 45 s, invadeWithMid true); (3) lanePlan top / mid / adc aggressive (laneOffset +0.05 per lane; the gank weights 1.7 / 1.7 / 1.7 are uniform and therefore equal to std after normalisation); (4) the invade group: lanePlan.jungle invade and objectives.invadePriority 0.8 (invadeChance 0.8 vs std 0.1); (5) macro.earlyGame aggressive (phaseEngage; screened in round 2: no detectable increment, F - D +0.5). vision.enemyJungle and the dragon / baron priorities below std are not screened (enemyJungle is not read by the engine; lower objective joins are not a plausible source of strength). Cross-template hint from the committed G-A8 (25001-25400, std 54.8; descriptive, different seeds): v2.three_lane_pressure (three lanes aggressive, fast tempo, tower 0.6, invade 0.15, 0.7/0.6) 60.3 STOP; classic.m1 (mid aggressive, fast, tower 0.9) 60.3 STOP; v2.jungle_invasion (jungle invade, mid aggressive, fast, invade 0.35 => invadeChance 0.7) 53.3 no flag. This points at the lanes / tempo groups rather than the invasion, but it is not used to order or select the arms"
+ },
+ "arms": {
+  "STD": {
+   "template": "std",
+   "change": {},
+   "why": "control; must be within 0.50 +/- 0.05 (instrument sanity, as G-A8)"
+  },
+  "BASE_classic.m7": {
+   "template": "classic.m7",
+   "change": {},
+   "why": "unchanged; reproduction on fresh seeds and the paired baseline of every candidate"
+  },
+  "M7_D": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "REFERENCE ONLY (referenceOnly; review round 1 #1): round-2 candidate (62.5, NO_CANDIDATE) re-measured on a fresh block as the paired reference of the std-knob content arms; it never takes part in the selection here (re-screening a rejected arm on a new block until it passes is not allowed)"
+  },
+  "M7_G": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "objectives.towerPriority": 0.5
+   },
+   "why": "M7_D plus tower priority 0.6 -> 0.5 (siegeBias 0.1 -> 0, laneOffset -0.003 per lane). Contradicts no copy line (the evidence goal 推塔波次 6 stays reachable); the smallest content step"
+  },
+  "M7_H": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard"
+   },
+   "why": "M7_D plus tempo fast -> standard (gankInterval 32 -> 45 s, invadeWithMid true -> false). Weakens the detail line 速戰速決 but keeps the name 前期壓制, the all-lane pressure and the invasion"
+  },
+  "M7_I0": {
+   "template": "classic.m7",
+   "change": {
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "review round 1 #3: the lanes group with the shipped 0.85 / 0.85 knobs kept (laneOffset 0.067 -> 0.017 per lane). Knob neutralisation showed no decrease on two fresh blocks, so arms that keep the knobs avoid the risk-label change (高 stays). compareTo BASE. Listed before M7_I: within one content group the knob-kept arm (fewer copy changes) comes first"
+  },
+  "M7_I": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "M7_D plus the three solo / carry lanes aggressive -> standard (laneOffset 0.053 -> 0.003 per lane; gank weights uniform before and after). Contradicts the desc line 全線壓制 (one content group)"
+  },
+  "M7_J": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.jungle": "gank",
+    "objectives.invadePriority": 0.35
+   },
+   "why": "M7_D plus the invade group: jungle invade -> gank and invadePriority 0.8 -> 0.35 (invadeChance 0.8 -> 0.35; 0.35 is a shipped invadePriority (classic.m6, v2.jungle_invasion) and, with jungle gank, equals classic.m6's resolved invadeChance, so m7 keeps an invading identity at a lower rate; invadeWithMid stays true with fast tempo). Contradicts the archetype 前期入侵 most among the single groups, so it is listed after the lanes"
+  },
+  "M7_HI0": {
+   "template": "classic.m7",
+   "change": {
+    "macro.tempo": "standard",
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "review round 1 #3: tempo + lanes with the shipped knobs kept (gankInterval 45 s, invadeWithMid false, laneOffset 0.017); keeps the invasion (archetype 前期入侵) and the risk label. compareTo BASE"
+  },
+  "M7_M": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard",
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "review round 1 #4: M7_D plus tempo and lanes (H + I) with the invasion kept (invadeChance 0.8): single-group increments are probably below the MDE, and H + I is the combination that keeps the archetype 前期入侵. Listed before K (K drops the invasion)"
+  },
+  "M7_K": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard",
+    "lanePlan.jungle": "gank",
+    "objectives.invadePriority": 0.35
+   },
+   "why": "M7_D plus the whole jungle-tempo group (H + J: gankInterval 45 s, invadeChance 0.35, invadeWithMid false); the lanes and the early stance keep the 前期壓制 / 全線壓制 identity"
+  },
+  "M7_L": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard",
+    "lanePlan.jungle": "gank",
+    "objectives.invadePriority": 0.35,
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "diagnostic floor: M7_D plus groups 2, 3 and 4 together (what is left of m7 is the early aggressive stance, tower 0.6 and the objective priorities). Listed last; if it is the only qualifier the copy impact makes it a redesign question for the Owner, not a balance fix"
+  }
+ },
+ "compareTo": {
+  "M7_G": "M7_D",
+  "M7_H": "M7_D",
+  "M7_I0": "BASE_classic.m7",
+  "M7_I": "M7_D",
+  "M7_J": "M7_D",
+  "M7_HI0": "BASE_classic.m7",
+  "M7_M": "M7_D",
+  "M7_K": "M7_D",
+  "M7_L": "M7_D"
+ },
+ "candidateRules": [
+  "every candidate config passes validateMobaTacticConfig",
+  "every numeric value stays inside the range the eight classic templates and three overlays already cover (template rule 1); enum values are existing values",
+  "the resolved engine knobs of every candidate differ from every other template's resolved knobs and from every other candidate (template rule 3)",
+  "only the declared fields differ from the template (V2)"
+ ],
+ "thresholds": "the G-A8 rules, unchanged: STOP = win rate >= 0.60 and lower 95% bound > 0.55; WARN strong >= 0.57; WARN weak <= 0.43; control 0.50 +/- 0.05",
+ "selectionRule": [
+  "unchanged from rounds 1-2: a candidate qualifies only inside the band 0.43 < win rate < 0.57 (an overshoot to the weak side never qualifies)",
+  "SELECTED: the first qualifying candidate in the listed order with 0.45 <= win rate <= 0.55; a qualifying candidate only in 0.43-0.45 or 0.55-0.57 => SELECTED_BORDERLINE; none => NO_CANDIDATE",
+  "listed order (listedOrder, asserted by V2 against the arm order the tool uses): M7_G, H, I0, I, J, HI0, M, K, L (by how much of the m7 copy each group contradicts; within one content group the knob-kept arm first because it keeps the risk label; reasons in each arm's why); fixed before the run and not re-ordered after seeing results. M7_D is referenceOnly and never selected",
+  "BASE without a STOP / WARN strong label on this block => NOT_REPRODUCED (the screened candidate is still reported); it does not withdraw the committed G-A8 STOP",
+  "the selection is a proposal for the Owner, not a fix; selected values must be confirmed by the full confirmatory G-A8 on the reserved seeds 43001-43400 with the original thresholds after one Owner-approved versioned change (TEMPLATE_BALANCE v21.b1, v21 rulesets only)",
+  "review round 1 #5: a SELECTED_BORDERLINE from this round goes to the confirmatory G-A8 only on an explicit Owner decision"
+ ],
+ "report": [
+  "per arm: win rate, 95% CI, G-A8 label, blue / red halves, STANDARD / SWAPPED split, median duration; paired difference to STD for every arm",
+  "per candidate: paired difference to BASE with 95% CI; for the arms in compareTo also the paired difference to that arm (G, H, I, J, M, K, L vs M7_D: the content increment on std knobs; I0, HI0 vs BASE: the content increment with the shipped knobs)",
+  "per template: reproduction status of BASE vs the committed G-A8 label, verdict and selected / screened candidate",
+  "pooled with round 2 (descriptive only, never used for selection): STD, BASE m7 and M7_D over 800 seeds with 95% CI (see pooledNote for the field names)",
+  "multiplicity and power (review round 1 #5): 12 arms on one seed block, 9 m7 candidates, unadjusted 95% intervals. Round 2's paired differences had sd 0.66-0.69 (almost no within-seed correlation) => SE about 3.35 pp and a paired MDE about 9.3 pp (80% power, two-sided 0.05) for each candidate vs its compareTo arm, so single-group increments below about 9 pp are not resolved. If every candidate's true rate were 0.60, the chance that at least one of 9 shows < 0.57 (BORDERLINE) is about 0.65 and <= 0.55 (SELECTED) about 0.17 (independent approximation): a selection here is weak evidence and the confirmatory G-A8 decides",
+  "confirmatory risk for every candidate: the probability of >= 0.57 or <= 0.43 on 400 confirmatory seeds if the screening estimate were the true rate (normal approximation; winner's curse makes the real risk larger for a selected arm)"
+ ],
+ "validation": {
+  "V1": "the STD and BASE arms on the first 10 screening seeds reproduce the same configs through the binding path (tacticInputOf template with no choices): win and duration identical",
+  "V2": "every candidate is valid, inside the shipped range, distinct after resolution, and differs from its template only in the declared fields; every compareTo pair names two existing arms of the same template; 12 arms; the non-reference candidate order equals listedOrder; referenceOnly names a candidate arm",
+  "V3": "V3a every candidate resolves to engine knobs that differ from BASE (non-vacuous); V3a' every compareTo arm differs from its compare target on the v3 probe (the added group reaches the engine); V3b on 2 seeds per candidate the engine t=0 Director values equal the expectation"
+ },
+ "liveCheck": "every record: balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off, and the t=0 Director probe equals the arm's expectation; any mismatch => HALT",
+ "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
+ "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
+ "matches": "12 arms x 400 = 4,800 (about 1.8 h at 1.35 s per match measured in the round-2 run, 3 workers); runs after the Challenge C2 run finishes (single line)",
+ "notClaimed": "no template is changed; G-A8 stays STOP; the screening result is an expected-impact estimate for the Owner's decision",
+ "checkpointing": "per match; resume in the same folder",
+ "outOfScope": "classic.m8 has a round-2 selection (M8_C 47.3) and is not re-screened; classic.m3 has the round-2 descriptive replication (M3_C_rep 55.8); defensive_hold is a content-design question (Owner item 4); m1, three_lane_pressure, mid_jungle_sync, mid_solo_split keep the confirmatory G-A8 requirement",
+ "copyImpact": "the risk label 高 is a fixed config string (MobaTacticConfig risk; TemplateStrip.jsx / TacticScreen.jsx). Arms on std knobs (G, H, I, J, M, K, L) need an explicit v21 copy change if selected: risk label 高 -> 中 and the indicator bars move to medium; the knob-kept arms (I0, HI0) keep 高. M7_G: no copy line contradicted. M7_H: detail 速戰速決 weakened. M7_I / I0: desc 全線壓制 contradicted. M7_HI0 / M: 速戰速決 and 全線壓制 weakened, invasion kept. M7_J: archetype 前期入侵 and cons 入侵翻車 weakened (invasion still happens at 0.35); review round 1 #6: with invadeChance 0.35 the evidence goals 野區入侵 1 and 入侵擊殺 1 (MobaTacticConfig.js:157-158) will show as not reached in most matches, so J / K / L also need an evidence-goal change. M7_K: H + J. M7_L: only the name 前期壓制 (early stance) survives; a redesign question, not a balance fix. TEAM_STYLE_TACTIC maps the AI team style aggressive to m7, so a v21 m7 change also changes the career AI teams with that style on v21 (v20 untouched)",
+ "probeNote": "probe v3 (this registration): v2 (rounds 1-2 fields plus roamK / protectHp / siegeBias) plus the knobs gankInterval, invadeChance and invadeWithMid (read by the engine at LogicEngine.js 424-425 / 6650 / 6673), so the tempo and invade groups are seen live; without them M7_J would equal M7_D on the v2 probe. Records of rounds 1 and 2 keep their own probe",
+ "review": {
+  "reviewedAt": "2026-10-29",
+  "verdict": "APPROVE (round 2, independent reviewer; round 1 APPROVE WITH CHANGES 3 Major / 5 minor all applied, see round1. Round-2 nit accepted as is: the 0.65 / 0.17 multiplicity figures assume every candidate at 0.60, conservative for the knob-kept arms I0 / HI0)",
+  "round1": "2026-10-29 APPROVE WITH CHANGES (3 Major / 5 minor), all applied: #1 M7_D referenceOnly (excluded from the selection by the tool); #2 evidenceBasis rewritten (knob study K / C estimated on the selection block, not replicated; cross-block spread > binomial; confirmRisk a lower bound; NEUTRAL quoted as M7_D's third point); #3 knob-kept arms M7_I0 / M7_HI0 vs BASE; #4 M7_M = D + H + I; #5 power / multiplicity in the report, BORDERLINE needs an explicit Owner decision; #6 evidence goals in copyImpact; #7 V3a' label shows the probe version, V2 asserts listedOrder; #8 pooled CI too narrow noted"
+ },
+ "referenceOnly": [
+  "M7_D"
+ ],
+ "listedOrder": [
+  "M7_G",
+  "M7_H",
+  "M7_I0",
+  "M7_I",
+  "M7_J",
+  "M7_HI0",
+  "M7_M",
+  "M7_K",
+  "M7_L"
+ ]
+}
