@@ -25002,3 +25002,46 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **未完成／待 Owner**：m3 修正核准；m7／m8 第二輪篩選；C2 逐英雄診斷、C1 fixture 校準、C3 順序旗標；統一驗證流程；career 確認 seeds。**只修 m3 無法解除 G-A8 STOP**。
 
 **風險**：本輪長量測被記憶體保護砍 4 次（背景約 37 個 Codex node 行程），全靠同資料夾斷點續跑救回，結果無遺失。
+
+## 2026-10-29／30 Phase 3a-B 修正規劃第二輪：m7／m8 篩選、Challenge C2／C1 基線（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS；`src/` 未改；未凍結語意、未跑整套 P2 重驗）
+
+依 Owner 2026-10-29 裁定（七項）。設計文件：`review/tactic-book-3a/3a-B_修正規劃_第二輪.md`。
+
+**完成**
+- G-A8 第二輪（m7／m8＋m3 描述性複驗）：5,600 場，錯誤 0（`dc5c03ec`）。
+  - **m8 SELECTED M8_C 47.3%**（對 BASE +14.8）。
+  - m7 四個旋鈕臂都 ≥ 57.75%，NO_CANDIDATE。
+  - m3 M3_C 在新 seeds 為 55.8%，與先前一致。
+  - 旋鈕研究的 K +11.5pp 在新區塊**沒有重現**（同設定 55.75 對 62.5，z≈3.1）。
+- m7 第三輪（內容組）：登記與兩輪審查（`b5106335`）；4,800 場，錯誤 0（`3aaec879`）。
+  - **SELECTED M7_M 47.8%**（旋鈕 0.5／0.5＋節奏 standard＋三路 standard；對 BASE −19.5）。
+  - m7 的強度來自「三路 aggressive」與「高旋鈕」的組合，單獨改任一項都不夠。
+  - 採用 M 要改 v21 文案：風險高→中，削弱「速戰速決」「全線壓制」。
+- Challenge C2 逐英雄／陣容診斷：9,680 場，錯誤 0（`be02333f`），判定 DIAGNOSED。
+  - rotation 對 balanced 的翻轉由四套技能組承擔：chichuan +23、binghe +15.5、bingshuang +11.8、dadi +11.0。
+  - 隊對隊全項拉平後，mirror 對 topheavy 為 88.8%。topheavy 的整組選手數值（含不可調的 spread）約值 35pp；base／mastery 單獨的效果未量。
+  - **真鏡像**中技能層讓藍方多勝 +6.9pp（z 3.40，SKILL_LAYER_SIDE_EFFECT），集中在 topheavyDef（+16.0）；階梯真實配對的 STANDARD 技能步驟只有 +0.1。成長層無側別效應。
+  - TD-3A-23：TD3A23_CONSISTENT（對稱戰術逐場相同）。
+- 技能紅藍對稱程式審計（唯讀）：規則本身沒有側別分支；不對稱來自同 tick 結算順序，以及 `heroSkillsOn` 連帶的十個系統。
+- C1 練習對手難度階梯：登記與兩輪審查（`440f37eb`）。M0 基線 4,000 場，錯誤 0（`316132ef`），判定 BASELINE。
+  - v21 只算勝：mirror 65.5、topheavy 47.3、balanced 32.0、rotation 30.3、veteran 2.3。
+  - 除 veteran 外，比 v20 容易 +11 到 +28pp（M0 拆不出原因）。
+- career 確認研究（新 seeds 51001–55999）：登記草案與去重（`2628237d`）。
+
+**驗證（實跑）**：
+- 篩選 validate 5/5 PASS；C1 validate 6/6 PASS；C2 V1 基準臂逐場相同。
+- seed plan 31/31；篩選工具 selftest 8/8；C1 工具 selftest 7/7。
+- 本輪未改 `src/`，所以沒跑 build／gate。
+
+**未完成／待 Owner**（設計文件 §9 D1–D7）：
+- m7 M7_M 與文案改動、m8 M8_C；
+- 練習對手的區間、順序與 veteran 定位，之後才跑 S1 篩選；
+- 側偏路徑：B 校準消不掉技能層的藍方優勢；建議先核准工具層 `players` 陣列重排診斷（約 2,400 場、1 小時，不改語意）；路徑 A 需要撤銷「不加旗標、不改共用引擎」；
+- 凍結前是否篩 three_lane_pressure／m1（D8）；
+- defensive_hold 內容設計。
+
+**可否一次凍結**：G-A8 的修正可以一次涵蓋，但除非先篩 three_lane_pressure／m1，確認時很可能仍是 STOP；challenge 側偏若只走路徑 B，凍結後預期仍是 STOP。凍結後一次性重驗約 17–20 小時。
+
+**審查**：獨立 Reviewer APPROVE WITH CHANGES（6 Major／8 minor），全部採納（設計文件 §10）。
+
+**風險**：three_lane_pressure／m1 與 m7 成因相同但本輪沒有篩選，凍結後 G-A8 仍可能因它們 STOP。
