@@ -1,0 +1,194 @@
+{
+ "schema": "esmo.ga8-fix-screen-registration.v1",
+ "studyId": "ga8-fix-screen2-3aB",
+ "stage": "Phase 3a-B fix planning round 2: G-A8 plan C second screening for classic.m7 and classic.m8, plus an unbiased re-estimate of the round-1 m3 selection (Owner ruling 2026-10-29 items 1-2)",
+ "registeredAt": "2026-10-29",
+ "status": "registered; screening only; runnable after the independent review (review.reviewedAt + an APPROVE verdict) and a passing --validate; never changes the G-A8 STOP, never a release PASS, never a template change",
+ "authority": "Owner 2026-10-29: m3 0.6 / 0.5 is the v21 fix candidate (not an acceptance); finish the m7 / m8 second screening first, with fresh seeds, pre-registration and an independent reviewer; no semantics freeze and no full P2 re-run until the m7 candidate and the challenge side-bias plan are confirmed by the Owner; all template fixes act on v21 only",
+ "tool": "tools/measure_ga8_fix_screen_3aB.mjs --reg=tools/fixtures/ga8_fix_screen2_registration_3aB.json (--plan / --validate / --run / --report); the same instrument as round 1 (the --reg parameter only selects this file; round 1 behaviour unchanged, selftest 6/6)",
+ "resultFile": "tools/fixtures/ga8_fix_screen2_result_3aB.json",
+ "expectedArms": 14,
+ "kinds": {
+  "classic.m7": "strong",
+  "classic.m8": "weak",
+  "classic.m3": "strong"
+ },
+ "descriptiveOnly": [
+  "classic.m3"
+ ],
+ "probe": "v2",
+ "pooledWith": "tools/fixtures/ga8_fix_screen_result_3aB.json",
+ "confirmRisk": true,
+ "semantics": "src/ is not modified. Every arm is a complete MobaTacticConfig passed as a legacy tactic input on balanceTool.v21 (validated equal to the binding path in round 1 and again by V1 here); the candidate configs exist only inside this registration",
+ "path": "same as G-A8 and round 1: balanceTool.v21 (Director core.v1, laneFrame teamRelative, skills on, talents off), opponent = std plan with no choices, the arm side plays blue on odd seeds and red on even seeds",
+ "seeds": {
+  "range": "57001-57400",
+  "n": 400,
+  "path": "tool (seed as-is)",
+  "rule": "fresh block G-A8.fixScreen2 of tools/fixtures/study_seed_plan_3aB.json: disjoint from G-A8 (25001-25400), the knob study (same block), round 1 (41001-41400), the reserved confirmatory block 43001-43400 and every other used or reserved block. Screening seeds are never used to confirm a fix"
+ },
+ "evidenceBasis": {
+  "classic.m7": "round 1 (41001-41400, STD 51.75%): BASE 61.5% reproduces STOP; M7_A 0.7/0.6 57.8, M7_B 0.65/0.55 60.3, M7_C 0.6/0.5 58.25 (only 0.1 aggression away from M7_D), all differences to BASE include 0. Knob study (25001-25400, std 54.75%): K +11.5 (risk +9.0, aggression +2.5; aggression-neutral alone 66.5 vs full 67.25), content C +1.0 (not detected); m7 content with std knobs (NEUTRAL) 55.75%. => M7_D is the only evidence-backed candidate; realistic expectation about 53-58% on this block (not a sure qualifier). M7_E keeps the 0.85/0.85 knobs and is a content probe not expected to qualify; M7_F - M7_D measures the stance increment on top of std knobs",
+  "classic.m8": "round 1: BASE 41.0% reproduces WARN weak; M8_A 0.4/0.35 +1.5, M8_B (+jungle gank) -1.0, both include 0. Knob study: m8 knobs with std content 36.5%, m8 content with std knobs 43.25%, full m8 36.25%, std 54.75% => low knobs and the defensive content are substitutes (either alone makes it weak; interaction +11.3). A knob-only step to 0.5 / 0.5 is therefore expected near 43% (borderline) and each content arm adds one content group on top of it to locate the content share. The jungle / tempo group is the largest gank-rate difference (jungle farm gankIntervalK 1.35 x tempo slow 58 s ~ 78 s vs std 45 s), so it is screened as its own group (M8_G)",
+  "classic.m3": "round 1 SELECTED M3_C (0.6/0.5) at 54.0% as the best of three on the same seeds (winner's curse). M3_C_rep re-estimates it on fresh seeds: development evidence for whether the confirmatory G-A8 is likely to clear it, not a confirmation and not a re-selection"
+ },
+ "arms": {
+  "STD": {
+   "template": "std",
+   "change": {},
+   "why": "control; must be within 0.50 +/- 0.05 (instrument sanity, as G-A8)"
+  },
+  "BASE_classic.m7": {
+   "template": "classic.m7",
+   "change": {},
+   "why": "unchanged; reproduction on fresh seeds and the paired baseline of the m7 candidates"
+  },
+  "BASE_classic.m8": {
+   "template": "classic.m8",
+   "change": {},
+   "why": "unchanged"
+  },
+  "BASE_classic.m3": {
+   "template": "classic.m3",
+   "change": {},
+   "why": "unchanged; paired baseline of M3_C_rep"
+  },
+  "M3_C_rep": {
+   "template": "classic.m3",
+   "change": {
+    "macro.aggression": 0.6,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "the round-1 selection, re-estimated on fresh seeds (descriptive; the selection rule is applied and reported but never replaces the round-1 selection; a result >= 0.57 is reported to the Owner as a risk for the confirmatory run)"
+  },
+  "M7_D": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "listed first: the evidence-backed candidate (NEUTRAL 55.75% vs std 54.75% on the G-A8 seeds). Keeps every m7 content field (aggressive lanes, invading jungle, fast tempo, early aggressive stance, invade priority 0.8), so the name and copy direction survive; the risk label and indicator bars move to medium"
+  },
+  "M7_E": {
+   "template": "classic.m7",
+   "change": {
+    "macro.earlyGame": "standard"
+   },
+   "why": "content probe, NOT expected to qualify (keeps the 0.85/0.85 knobs that carry K +11.5): the early-game stance is the field the name (early suppression) names; listed second because it contradicts the name more than M7_D"
+  },
+  "M7_F": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.earlyGame": "standard"
+   },
+   "why": "M7_D plus the stance; can be selected only if M7_D is not inside 0.45-0.55 (the rule takes the first listed candidate inside 0.45-0.55, else the first inside 0.43-0.57); F - D is reported next to the selection"
+  },
+  "M8_C": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "the larger knob step named in the round-1 plan (knobs back to std); expected near 43% from the knob study (NEUTRAL)"
+  },
+  "M8_D": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.support": "standard"
+   },
+   "why": "M8_C plus one content group: support protect -> standard (roamK 0.5 -> 1, protectHp 0.7 -> 0.55). Content arms are ordered by how much of the m8 player copy they contradict, least first: the copy never mentions the support"
+  },
+  "M8_E": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "objectives.towerPriority": 0.5
+   },
+   "why": "M8_C plus tower priority 0.35 -> 0.5 (siegeBias -0.15 -> 0 and the lane offset term); contradicts the cons line that early towers are conceded"
+  },
+  "M8_F": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.earlyGame": "standard"
+   },
+   "why": "M8_C plus early-game stance defensive -> standard (phaseEngage / phaseJoin early term 0); contradicts the detail line (steady early defence)"
+  },
+  "M8_G": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.jungle": "gank",
+    "macro.tempo": "standard"
+   },
+   "why": "review round 2 #4: M8_C plus the jungle / tempo group (jungle farm -> gank, tempo slow -> standard: gankIntervalK 1.35 -> 1, gankInterval 58 -> 45 s, gank weights no longer x0.4), the largest gank-rate difference to std; the desc (steady development) supports farming, so it is ranked after F"
+  },
+  "M8_H": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "M8_C plus lane positions defensive -> standard on the three solo / carry lanes (laneOffset -0.05 -> 0 each; one content group); contradicts the most copy (the whole team plays back), listed last (renamed from M8_G on review round 2 when the jungle / tempo arm was inserted before it)"
+  }
+ },
+ "compareTo": {
+  "M8_D": "M8_C",
+  "M8_E": "M8_C",
+  "M8_F": "M8_C",
+  "M8_G": "M8_C",
+  "M8_H": "M8_C",
+  "M7_F": "M7_D"
+ },
+ "candidateRules": [
+  "every candidate config passes validateMobaTacticConfig",
+  "every numeric value stays inside the range the eight classic templates and three overlays already cover (template rule 1); enum values are existing values",
+  "the resolved engine knobs of every candidate differ from every other template's resolved knobs and from every other candidate (template rule 3)",
+  "only the declared fields differ from the template (V2)"
+ ],
+ "thresholds": "the G-A8 rules, unchanged: STOP = win rate >= 0.60 and lower 95% bound > 0.55; WARN strong >= 0.57; WARN weak <= 0.43; control 0.50 +/- 0.05",
+ "selectionRule": [
+  "unchanged from round 1: a candidate qualifies only inside the band 0.43 < win rate < 0.57 for both kinds (an overshoot to the other WARN side never qualifies)",
+  "SELECTED: the first qualifying candidate in the listed order with 0.45 <= win rate <= 0.55; a qualifying candidate only in 0.43-0.45 or 0.55-0.57 => SELECTED_BORDERLINE; none => NO_CANDIDATE",
+  "listed order: m7 D, E, F; m8 C, D, E, F, G, H (reasons in each arm's why); the order is fixed before the run and is not re-ordered after seeing results; order only matters when two candidates qualify",
+  "a template whose BASE arm has no flag on these seeds gets NOT_REPRODUCED (the screened candidate is still reported). For classic.m8 a NOT_REPRODUCED on this block alone does not withdraw the committed G-A8 WARN (round-1 base 41.0, knob study 36.25); the confirmatory G-A8 decides",
+  "the selection is a proposal for the Owner, not a fix; selected values must be confirmed by the full confirmatory G-A8 on the reserved seeds 43001-43400 with the original thresholds after one Owner-approved versioned change (TEMPLATE_BALANCE v21.b1, v21 rulesets only)",
+  "classic.m3 is in descriptiveOnly: the selection rule is NOT applied; M3_C_rep is reported with verdict DESCRIPTIVE_REPLICATION, selected null, a replicationFlag (RISK_FOR_CONFIRMATORY if >= 0.57, OVERSHOOT if <= 0.45, else CONSISTENT) and its confirmatory risk; it never replaces or confirms the round-1 selection"
+ ],
+ "report": [
+  "per arm: win rate, 95% CI, G-A8 label, blue / red halves, STANDARD / SWAPPED split, median duration; paired difference to STD for every arm",
+  "per candidate: paired difference to its BASE arm with 95% CI; for the arms listed in compareTo also the paired difference to that arm (descriptive content-share estimate for m8, stance increment for m7)",
+  "per template: reproduction status of BASE vs the committed G-A8 label, verdict and selected / screened candidate",
+  "pooled with round 1 (descriptive only, never used for selection): STD and BASE m3 / m7 / m8 over 800 seeds with 95% CI",
+  "multiplicity: 14 arms on one seed block (m8 has six candidates); intervals are unadjusted 95%",
+  "confirmatory risk for every candidate: the probability of >= 0.57 or <= 0.43 on 400 confirmatory seeds if the screening estimate were the true rate (normal approximation; winner's curse makes the real risk larger for a selected arm)"
+ ],
+ "validation": {
+  "V1": "the STD and every BASE arm on the first 10 screening seeds reproduce the same configs through the binding path (tacticInputOf template with no choices): win and duration identical",
+  "V2": "every candidate is valid, inside the shipped range, distinct after resolution, and differs from its template only in the declared fields; every compareTo pair names two existing arms of the same template; 14 arms",
+  "V3": "V3a every candidate resolves to engine knobs that differ from its BASE (non-vacuous); V3a' every compareTo arm differs from its compare target on the v2 probe (the added group reaches the engine); V3b on 2 seeds per candidate the engine t=0 Director values equal the expectation"
+ },
+ "liveCheck": "every record: balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off, and the t=0 Director probe equals the arm's expectation; any mismatch => HALT",
+ "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
+ "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
+ "matches": "14 arms x 400 = 5,600 (about 2.5 h at 1.63 s per match measured in --validate, 3 workers)",
+ "notClaimed": "no template is changed; G-A8 stays STOP; the screening result is an expected-impact estimate for the Owner's decision; M3_C_rep is not a confirmation",
+ "checkpointing": "per match; resume in the same folder",
+ "outOfScope": "defensive_hold is a content-design question (Owner item 4), not screened; m1, three_lane_pressure, mid_jungle_sync, mid_solo_split keep the confirmatory G-A8 requirement; m5, m6, hard_engage_stack are re-checked by the confirmatory G-A8",
+ "copyImpact": "the risk label is a fixed config string shown as is (MobaTacticConfig risk; TemplateStrip.jsx / TacticScreen.jsx) and V2 forbids changing undeclared fields, so every candidate that sets the knobs to std needs an explicit v21 copy change in the implementation: m3 (M3_C, already the round-1 candidate): the cons line 撤退門檻極低 is false at risk 0.5 and the risk label 高 should become 中; m7 M7_D / M7_F: risk label 高 -> 中 and the indicator bars move to medium; M7_E / M7_F additionally contradict the name 前期壓制 (early stance standard); m8 M8_C..M8_H: risk label 低 -> 中 and bars move; M8_D no copy line about the support; M8_E contradicts the cons line (early towers conceded); M8_F contradicts the detail line (steady early defence); M8_G contradicts the jungle farming implied by 穩健發育; M8_H contradicts the overall defensive identity",
+ "probeNote": "probe v2 (this registration): the t=0 probe also reads identity roamK, protectHp and siegeBias (read by the engine for support roaming / protection and siege choice), so M8_D (support) and M8_E (tower priority; also moves laneOffset by +0.0045 per lane through the aggro term) are seen live; round-1 records keep the round-1 probe",
+ "review": {
+  "reviewedAt": "2026-10-29",
+  "verdict": "APPROVE (round 2, independent reviewer; round 1 was APPROVE WITH CHANGES 4 Major / 5 minor, all applied: m3 descriptiveOnly (DESCRIPTIVE_REPLICATION, replicationFlag, confirmatory risk); probe v2 with roamK / protectHp / siegeBias and V3a against compareTo; copy impact corrected (fixed risk labels, m3 cons line); M8_G jungle / tempo group added and the lanes arm renamed M8_H; m7 expectation 53-58% and M7_C 58.25 stated, M7_E labelled a probe; M7_F wording; confirmatory risk per candidate and CIs on pooled rows; m8 NOT_REPRODUCED meaning; compareTo validated in V2; V1 label count. Round-2 notes applied: confirmRisk is its own registration flag; the tempo part of M8_G is seen through gankIntervalK only (accepted))"
+ }
+}
