@@ -1,0 +1,413 @@
+{
+ "schema": "esmo.challenge-c2-registration.v1",
+ "studyId": "challenge-c2-3aB",
+ "stage": "Phase 3a-B fix planning round 2: Challenge C2 per-hero / per-lineup diagnosis, skill red/blue symmetry check and the TD-3A-23 mirror re-check (Owner ruling 2026-10-29 items 3 and 5)",
+ "registeredAt": "2026-10-29",
+ "status": "registered; diagnosis only; runnable after the independent review (review.reviewedAt + an APPROVE verdict) and a passing --validate; never changes the challenge side-bias STOP, never a release PASS, never a fixture or hero change",
+ "authority": "Owner 2026-10-29: run C2 per-hero / per-lineup diagnosis and the skill red/blue symmetry check first, then design a reasonable v21 practice-opponent difficulty ladder and calibration candidates; re-check TD-3A-23; no settlement-order flag, no shared-engine change; no semantics freeze before the m7 candidate and the challenge side-bias plan are confirmed",
+ "tool": "tools/measure_challenge_c2_3aB.mjs (--plan / --selftest / --validate / --run / --report); result tools/fixtures/challenge_c2_result_3aB.json",
+ "semantics": "src/ is not modified. Every match goes through the official buildChallengeMatchSetup -> assembleMatch -> runChallenge tick loop, as the committed layer ladder. Interventions exist only in the tool: (1) contexts are the ladder's ladderSetup (copied verbatim; V1 checks it record by record); (2) a single seat's skills or growth are switched off by wrapping the assembler deps adapter (toEngineHeroSkills, or toEngineHeroPassives + toEngineHeroPowerCurve) and deleting that seat from its output (the adapters are keyed by seat and a missing seat is already legal: it is how a hero without a kit is handled); (3) equalization rewrites setup.playerSlots / setup.loadout; (4) a mirror copies one side's roster (with summoner spells), loadout, player stats and tactic to the other side",
+ "background": {
+  "ladder": "challenge_ladder_result_3aB.json (e7da437a): the pairing flips are attributed to whole layer steps, not to heroes: drill_rotation > drill_balanced 65.2 -> 95.4 at the skills step (+33.2, 29.4..36.9; includes the assembly order); drill_mirror > drill_topheavy 71.3 -> 48.2 at the growth step (-19.3, -23.9..-14.8); the skills step also shows a lineup-specific side term on mirror>topheavy (S +9.5, z 4.2, descriptive). Per pairing, the frame step is exactly 0 match by match on the two pairings whose tactics are lane-symmetric (m1 vs m6), and non-zero only where m2 or m4 plays",
+  "drafts": "the draft of every pairing is deterministic and identical under v20 and v21 (checked 2026-10-29): rotation>balanced blue chichuan / binghe / bingshuang / leiting / dadi vs red cinderfist / dadi2 / gambler / dawnstrike / fengshen; mirror>topheavy blue ironclad / duskblade / bingshuang / dawnstrike / dadi vs red cinderfist / chichuan / bingshouweis / dadi2 / stoneguard. The flips are therefore not draft changes",
+  "codeAudit": "read-only audit 2026-10-29 (design doc 3a-B_修正規劃_第二輪.md §2.1): no skill, passive or power-curve rule branches on side, seat letter, base position or a fixed forward axis; the asymmetries are evaluation-order effects (players array blue first: same-tick mutual kills resolved blue first so the red killer is already dead and loses the kill XP; the passive step resolves kills one entry at a time in push order; in-loop dashes and pulls move heroes before later (red) casters test geometry) and one A/B confound: heroSkillsOn also switches on about ten non-skill systems. Consequence: a skill context measures kits plus those systems plus their order effects; an engine with heroSkillsOn and no kit cannot be built from the tool"
+ },
+ "questions": {
+  "Q1": "which heroes' kits carry the rotation>balanced skills-step flip (single-seat skills off in v21, all ten seats)",
+  "Q2": "which heroes' growth (passive + power curve) carries the mirror>topheavy growth-step flip (single-seat growth off in v21, all ten seats)",
+  "Q3": "do the flips depend on the player-stat / mastery differences between the fixtures (equalize both teams seat by seat, in L1 and in v21; interaction I = (EQ_v21 - EQ_L1) - (v21 - L1) on the probability and the logit scale)",
+  "Q4": "skill red/blue symmetry: in a true mirror (both sides the same team, heroes, mastery, stats and tactic; STANDARD layout) does switching the skill layer on move the blue win rate (delta = S(L3a) - S(L1), S = blue win - 0.5), per lineup and pooled; and the growth layer (S(L3) - S(L3a)) for the mirror>topheavy lineups",
+  "Q5": "TD-3A-23 re-check: in the same mirrors, the frame step S(L1) - S(L0) (v20 legacyMirror -> teamRelative); lineups with a lane-symmetric tactic (m1) must be identical match by match (frame is a no-op for them, as the ladder showed); lineups with m2 / m4 show the legacy lane swap as a side term in L0"
+ },
+ "seeds": {
+  "walk": "the odd seeds 33001..lastSeed of the committed challenge side-bias walk (tools/fixtures/side_bias_result_challenge_3aB.json, 33001-37097), diagnostic reuse allowed by the seed plan (sideBias.challenge.v21 purpose); the pairing of a seed is FIXTURE_KEYS[seed % 5] > FIXTURE_KEYS[(seed + 2) % 5]",
+  "RB": {
+   "residue": 4,
+   "perArm": 200,
+   "pairing": "drill_rotation>drill_balanced"
+  },
+  "MT": {
+   "residue": 0,
+   "perArm": 300,
+   "pairing": "drill_mirror>drill_topheavy"
+  },
+  "MIR": {
+   "residue": "per lineup",
+   "perArm": 300,
+   "rule": "each mirror lineup uses the first n seeds of its pairing's residue (L1 / L3a / L3: 300; L0: 200). Lineups: the four teams of the two flipping pairings: mirror (blue of MT, m1), topheavyDef (red of MT, m4), rotation (blue of RB, m2), balancedDef (red of RB, m1)"
+  },
+  "baselineRerun": 20,
+  "baselineRule": "review #5: the baseline arms (RB_v21, RB_L1, MT_v21, MT_L1: v21 / L1 with no intervention) are re-run only on their first 20 seeds for V1; the analysis reads the committed records for every seed (v21 forward: side-bias challenge folder; L1 forward: ladder L1_frame)",
+  "orientation": "forward only (the challenger is blue). Effects are conditional on the forward seating: a knockout also removes that hero's share of the evaluation-order effects of its side, so per-hero contributions are 'this kit sitting on this side' (review #3); Q4 / Q5 are mirrors, so orientation does not exist",
+  "confirm": "never used to confirm a fix; the reserved fresh block 45001-49999 is for the confirmatory side-bias run after the freeze"
+ },
+ "arms": {
+  "RB_v21": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "baseline": true
+  },
+  "RB_L1": {
+   "group": "RB",
+   "residue": 4,
+   "context": "L1",
+   "baseline": true
+  },
+  "RB_EQ_v21": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "equalize": true,
+   "n": 200
+  },
+  "RB_EQ_L1": {
+   "group": "RB",
+   "residue": 4,
+   "context": "L1",
+   "equalize": true,
+   "n": 200
+  },
+  "RB_KOS_b1": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "b1"
+  },
+  "RB_KOS_b2": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "b2"
+  },
+  "RB_KOS_b3": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "b3"
+  },
+  "RB_KOS_b4": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "b4"
+  },
+  "RB_KOS_b5": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "b5"
+  },
+  "RB_KOS_r1": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "r1"
+  },
+  "RB_KOS_r2": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "r2"
+  },
+  "RB_KOS_r3": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "r3"
+  },
+  "RB_KOS_r4": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "r4"
+  },
+  "RB_KOS_r5": {
+   "group": "RB",
+   "residue": 4,
+   "context": "v21",
+   "koSkills": "r5"
+  },
+  "MT_v21": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "baseline": true
+  },
+  "MT_L1": {
+   "group": "MT",
+   "residue": 0,
+   "context": "L1",
+   "baseline": true
+  },
+  "MT_EQ_v21": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "equalize": true,
+   "n": 200
+  },
+  "MT_EQ_L1": {
+   "group": "MT",
+   "residue": 0,
+   "context": "L1",
+   "equalize": true,
+   "n": 200
+  },
+  "MT_KOG_b1": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "b1"
+  },
+  "MT_KOG_b2": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "b2"
+  },
+  "MT_KOG_b3": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "b3"
+  },
+  "MT_KOG_b4": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "b4"
+  },
+  "MT_KOG_b5": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "b5"
+  },
+  "MT_KOG_r1": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "r1"
+  },
+  "MT_KOG_r2": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "r2"
+  },
+  "MT_KOG_r3": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "r3"
+  },
+  "MT_KOG_r4": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "r4"
+  },
+  "MT_KOG_r5": {
+   "group": "MT",
+   "residue": 0,
+   "context": "v21",
+   "koGrowth": "r5"
+  },
+  "MIR_mirror_L1": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L1",
+   "mirror": "blue",
+   "lineup": "mirror",
+   "tactic": "m1",
+   "laneAsymmetric": false,
+   "n": 300
+  },
+  "MIR_mirror_L3a": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L3a",
+   "mirror": "blue",
+   "lineup": "mirror",
+   "tactic": "m1",
+   "laneAsymmetric": false,
+   "n": 300
+  },
+  "MIR_mirror_L3": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L3",
+   "mirror": "blue",
+   "lineup": "mirror",
+   "tactic": "m1",
+   "laneAsymmetric": false,
+   "n": 300
+  },
+  "MIR_mirror_L0": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L0",
+   "mirror": "blue",
+   "lineup": "mirror",
+   "tactic": "m1",
+   "laneAsymmetric": false,
+   "n": 200
+  },
+  "MIR_topheavyDef_L1": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L1",
+   "mirror": "red",
+   "lineup": "topheavyDef",
+   "tactic": "m4",
+   "laneAsymmetric": true,
+   "n": 300
+  },
+  "MIR_topheavyDef_L3a": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L3a",
+   "mirror": "red",
+   "lineup": "topheavyDef",
+   "tactic": "m4",
+   "laneAsymmetric": true,
+   "n": 300
+  },
+  "MIR_topheavyDef_L3": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L3",
+   "mirror": "red",
+   "lineup": "topheavyDef",
+   "tactic": "m4",
+   "laneAsymmetric": true,
+   "n": 300
+  },
+  "MIR_topheavyDef_L0": {
+   "group": "MIR",
+   "residue": 0,
+   "context": "L0",
+   "mirror": "red",
+   "lineup": "topheavyDef",
+   "tactic": "m4",
+   "laneAsymmetric": true,
+   "n": 200
+  },
+  "MIR_rotation_L1": {
+   "group": "MIR",
+   "residue": 4,
+   "context": "L1",
+   "mirror": "blue",
+   "lineup": "rotation",
+   "tactic": "m2",
+   "laneAsymmetric": true,
+   "n": 300
+  },
+  "MIR_rotation_L3a": {
+   "group": "MIR",
+   "residue": 4,
+   "context": "L3a",
+   "mirror": "blue",
+   "lineup": "rotation",
+   "tactic": "m2",
+   "laneAsymmetric": true,
+   "n": 300
+  },
+  "MIR_rotation_L0": {
+   "group": "MIR",
+   "residue": 4,
+   "context": "L0",
+   "mirror": "blue",
+   "lineup": "rotation",
+   "tactic": "m2",
+   "laneAsymmetric": true,
+   "n": 200
+  },
+  "MIR_balancedDef_L1": {
+   "group": "MIR",
+   "residue": 4,
+   "context": "L1",
+   "mirror": "red",
+   "lineup": "balancedDef",
+   "tactic": "m1",
+   "laneAsymmetric": false,
+   "n": 300
+  },
+  "MIR_balancedDef_L3a": {
+   "group": "MIR",
+   "residue": 4,
+   "context": "L3a",
+   "mirror": "red",
+   "lineup": "balancedDef",
+   "tactic": "m1",
+   "laneAsymmetric": false,
+   "n": 300
+  },
+  "MIR_balancedDef_L0": {
+   "group": "MIR",
+   "residue": 4,
+   "context": "L0",
+   "mirror": "red",
+   "lineup": "balancedDef",
+   "tactic": "m1",
+   "laneAsymmetric": false,
+   "n": 200
+  }
+ },
+ "expectedArms": 42,
+ "expectedMatches": 9680,
+ "runOrder": [
+  "RB",
+  "MT",
+  "MIR"
+ ],
+ "contexts": {
+  "v21": "the official challenge.v21 setup (frame, live order, skills, passives, power curve, layout by seed)",
+  "L0": "the official challenge.v20 setup (Director static, laneFrame legacyMirror, STANDARD)",
+  "L1": "ladder L1_frame: v20 plus the Director / laneFrame group (no skills, no growth, STANDARD)",
+  "L3a": "ladder L3a_skills: L1 plus assembly order and hero skills (no growth, STANDARD)",
+  "L3": "ladder L3_growth: L3a plus passives and power curve (STANDARD)"
+ },
+ "analysis": {
+  "Q1Q2": "per seat: contribution to its own team = (base blue win - KO blue win) for blue seats, (KO blue win - base blue win) for red seats, paired over the seeds; label MATERIAL at |z| >= 2.81 (Bonferroni, 10 seats per pairing), HINT if the unadjusted 95% interval excludes 0, else NONE; every NONE / HINT is printed with its MDE. Review #2: each seat also carries its ceiling on the probability scale (blue seats: base blue win; red seats: 1 - base blue win; RB base is about 96.5% so RB red seats are capped near 3.5 pp and a NONE there is NOT evidence of no effect) and a logit-scale contribution (paired bootstrap); a label that disagrees across scales is SCALE_DEPENDENT. Team sums: paired stats of the per-seed sum of the five seats' signed differences (assumes additivity)",
+  "Q3": "interaction I paired per seed on the probability scale, label at |z| >= 2.24 (Bonferroni, 2 pairings); the same contrast on the logit scale by paired bootstrap; disagreement => SCALE_DEPENDENT (review #3: near 96.5% the probability scale compresses, so a probability-scale I can appear with logit additivity); the equalized v21 win rate is reported as the difficulty the pairing would have without stat / mastery differences",
+  "Q4": "skill step per lineup and pooled (4 lineups x 300 = 1,200 seed pairs), label at |z| >= 2.58 (Bonferroni, 4 lineups + pooled); verdict SKILL_LAYER_SIDE_EFFECT if the pooled delta is MATERIAL, LINEUP_SPECIFIC if only lineups are, else NOT_DETECTED, always with the MDE. Growth step for the two MT lineups and pooled (600 pairs), label at |z| >= 2.39 (descriptive verdict). S per context pooled over the lineups is reported (S(L1) = the frame context's base side term)",
+  "Q5": "frame step per lineup (200 seeds), label at |z| >= 2.50 (Bonferroni, 4); verdict TD3A23_CONSISTENT if both lane-symmetric lineups (mirror, balancedDef) are identical match by match between L0 and L1, else TD3A23_RECHECK; the m2 / m4 lineups' deltas are descriptive (prediction: a non-zero side term in L0 that the teamRelative frame removes)",
+  "power": "review #4 (from the committed records: per-seed outcomes across contexts are nearly independent, sd of a paired difference about 0.65-0.70): MDE at 80% power after Bonferroni is about 10 pp for RB blue seats, structurally capped near 3.5 pp for RB red seats, about 15 pp per MT seat (300 seeds), about 7 pp for the pooled mirror skill step, about 14 pp per mirror lineup, about 9 pp for the pooled growth step; the S +9.5 lineup term that motivated Q4 is below the per-lineup MDE, so a per-lineup NOT_DETECTED is weak evidence",
+  "interpretation": [
+   "Q1 / Q2 MATERIAL heroes => candidate hero-content drivers of the flip in this draft and seating; they become candidates for a reverse-orientation or career confirmation (review #3), not a hero-balance verdict by themselves; the fixture calibration must not hide them",
+   "Q1 / Q2 no MATERIAL hero but a large team sum => diffuse kit / growth advantage of one lineup: a fixture composition question",
+   "Q3 MATERIAL and CONSISTENT across scales => the v21 layers interact with stats / mastery: the calibration must use the fixture stats, not only the draft; SCALE_DEPENDENT => no claim",
+   "Q4 SKILL_LAYER_SIDE_EFFECT => skills plus order (L3a includes assemblyOrder live) plus the gated systems move the side term in a perfectly symmetric match: consistent with the audit's order findings; the fix direction is structural (simultaneous resolution or alternating order), not a red/blue number, and needs an Owner decision because it touches the engine",
+   "Q4 NOT_DETECTED => no skill side effect above the stated MDE; the challenge side bias is then mainly the pairing / strength design and the layout term",
+   "Q5 TD3A23_CONSISTENT => the laneFrame correction acts only where a lane-asymmetric tactic plays, as designed; no further TD-3A-23 change"
+  ]
+ },
+ "validation": {
+  "V0": "arm and run-match counts equal the registration",
+  "V1a": "every analysis seed of a baseline arm has a committed record",
+  "V1": "the baseline arms reproduce the committed records match by match (winner, duration): RB_v21 / MT_v21 against the side-bias challenge forward records, RB_L1 / MT_L1 against the ladder L1_frame forward records (5 seeds each in --validate, the 20 re-run seeds in --report; any difference => INSTRUMENT)",
+  "V2-V4": "every record, read from the engine at t=0: Director mode and laneFrame as the context says (L0: static / legacyMirror; others: core.v1 / teamRelative); skills / passives / curve / layout as the context says; the skill-seat list is all ten seats minus exactly the knocked-out seat, the passive and curve seat lists likewise; a mirror has the same hero, power and max HP seat by seat, equal Director identity, and (review #1) under teamRelative equal directive(side, t) without the side field at t = 0 / 600 / 1200 (knobs are world-lane objects, so a lane-asymmetric tactic's red knobs legitimately differ), under legacyMirror equal world knobs",
+  "V5": "an equalized setup has identical stats, mastery level, powerMult and toughMult seat by seat on both sides"
+ },
+ "liveCheck": "the V2-V4 checks run on every record during --run; any mismatch => HALT",
+ "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
+ "limitations": [
+  "the skill context includes the systems that heroSkillsOn also switches on and their order effects (code audit); Q1 attributes kits relative to those systems being on; Q4 cannot separate kits from them or from the live assembly order",
+  "the settlement order itself is not varied (Owner 2026-10-29: no order flag, no engine change)",
+  "a skills knockout keeps that seat's passive and power curve, but passives triggered by casts go quiet with it; a growth knockout replaces the curve by k = 1 (it removes the curve's level, not only its shape: bingshouweis t=0 power 38.10 -> 40.82)",
+  "single-seat knockouts measure a kit's marginal value against having no kit in that seat, not against an average kit; team sums assume additivity",
+  "forward orientation only (Q1-Q3); per-hero estimates are for these two drafts and this seating only",
+  "the lineup names are the fixture whose snapshot the team comes from; the hero lists are printed in the result (review #5)",
+  "logit-scale values clamp probabilities to [0.001, 0.999]; for the RB red seats (base about 96.5%) the logit column is dominated by the clamp and is for reference only (review round 2)"
+ ],
+ "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
+ "matches": "42 arms, 9680 matches run (baselines re-run on 20 seeds only; about 4.8-5.3 h at about 1.8-2 s per challenge match, 3 workers)",
+ "notClaimed": "no hero, fixture, ruleset or engine change; the challenge side-bias STOP stays; results feed the difficulty-ladder and calibration design only",
+ "checkpointing": "per match; resume in the same folder",
+ "review": {
+  "reviewedAt": "2026-10-29",
+  "verdict": "APPROVE (round 2, independent reviewer). Round 1 APPROVE WITH CHANGES (4 Major / 5 minor), all applied: mirror symmetry by directive(side, t) without side under teamRelative (world knobs legitimately differ for lane-asymmetric tactics; the round-1 check would HALT every m2 / m4 mirror) and world knobs under legacyMirror; per-seat ceiling and logit contribution, NONE on RB red seats is not evidence of no effect; side-term cancellation wording replaced by conditional-on-forward-seating, interpretation as reverse / career confirmation candidates, logit interaction and SCALE_DEPENDENT; MDE corrected (about 2x) and printed next to NONE / HINT; baselines re-run on 20 seeds only and read from committed records; mirrors on the four teams of the two flipping pairings plus L3 growth mirrors and L0 TD-3A-23 mirrors; lineup hero lists in the result; teamSum with a valid CI; z-null guards; knockout caveats; V5 covers powerMult / toughMult. Round 2 minor applied: logit clamp note. Round 2 also confirmed from committed records that L0 and L1_frame are identical match by match on residues 1, 3, 4 (lane-symmetric red tactics), supporting the Q5 prediction"
+ }
+}
