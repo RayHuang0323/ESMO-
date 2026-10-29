@@ -1,0 +1,201 @@
+{
+ "schema": "esmo.ga8-fix-screen-registration.v1",
+ "studyId": "ga8-fix-screen4-3aB",
+ "stage": "Phase 3a-B fix planning round 3 (Owner 2026-10-30 approved D8): G-A8 plan C fourth screening for v2.three_lane_pressure and classic.m1, informed by the m7 third screening (lanes group plus high knobs) and done before any freeze so that a single freeze can clear G-A8",
+ "registeredAt": "2026-10-30",
+ "status": "registered; screening only; runnable after the independent review (review.reviewedAt + an APPROVE verdict) and a passing --validate; never changes the G-A8 STOP, never a release PASS, never a template change",
+ "authority": "Owner 2026-10-30: approve D8 - fix-candidate screening for three_lane_pressure and classic.m1, informed by the m7 diagnosis, with fresh seeds, pre-registration and an independent reviewer, to establish whether a candidate really improves balance; the thresholds must not be lowered. No src change, no freeze, no P2 re-run; D1-D4 stay pending",
+ "tool": "tools/measure_ga8_fix_screen_3aB.mjs --reg=tools/fixtures/ga8_fix_screen4_registration_3aB.json (--plan / --validate / --run / --report); the same instrument as rounds 1-3, unchanged",
+ "resultFile": "tools/fixtures/ga8_fix_screen4_result_3aB.json",
+ "expectedArms": 14,
+ "kinds": {
+  "v2.three_lane_pressure": "strong",
+  "classic.m1": "strong"
+ },
+ "probe": "v3",
+ "pooledWith": "tools/fixtures/ga8_fix_screen_result_3aB.json",
+ "pooledNote": "the tool writes the pooled rows as pooledWithRound1 (round1 = round 1 on 41001-41400, round2 = this block); pooled rows exist for STD, BASE_v2.three_lane_pressure and BASE_classic.m1; descriptive only, never used for selection; the cross-block spread has been larger than binomial (m7 BASE 59.0 vs 67.3), so the pooled 95% CI is too narrow; STD across the three blocks 51.75 / 51.25 / 45.75 is further evidence of the larger-than-binomial cross-block spread",
+ "confirmRisk": true,
+ "semantics": "src/ is not modified. Every arm is a complete MobaTacticConfig passed as a legacy tactic input on balanceTool.v21 (validated equal to the binding path by V1); the candidate configs exist only inside this registration",
+ "path": "same as G-A8 and rounds 1-2: balanceTool.v21 (Director core.v1, laneFrame teamRelative, skills on, talents off), opponent = std plan with no choices, the arm side plays blue on odd seeds and red on even seeds",
+ "seeds": {
+  "range": "57801-58200",
+  "n": 400,
+  "path": "tool (seed as-is)",
+  "rule": "fresh block G-A8.fixScreen4 of tools/fixtures/study_seed_plan_3aB.json: disjoint from G-A8 (25001-25400), rounds 1-3 (41001-41400, 57001-57800), the reserved confirmatory block 43001-43400 and every other used or reserved block. Screening seeds are never used to confirm a fix"
+ },
+ "evidenceBasis": "m7 third screening (3aaec879, descriptive): lanes standard with the shipped knobs (I0 60.8, HI0 63.7) and the knobs alone (M7_D 63.2) did not fix m7; both together did (I 44.8, M 47.8, L 49.5); invasion and tower effects were within noise. three_lane_pressure shares the lanes group, the fast tempo and early aggressive with m7 but not the invasion (jungle gank, invadePriority 0.15) and starts on lower knobs (0.7 / 0.6). classic.m1 has one aggressive lane (mid) and the highest tower priority (0.9); round 1 did not reproduce m1 (54.0 vs G-A8 60.3) and M1_A (aggression 0.55) did nothing. These are hypotheses for the arm list, not evidence of a fix",
+ "arms": {
+  "STD": {
+   "template": "std",
+   "change": {},
+   "why": "control; must be within 0.50 +/- 0.05 (instrument sanity, as G-A8)"
+  },
+  "BASE_v2.three_lane_pressure": {
+   "template": "v2.three_lane_pressure",
+   "change": {},
+   "why": "unchanged; reproduction on fresh seeds (G-A8 60.3 STOP, round 1 57.25 WARN strong) and the paired baseline of every three_lane_pressure candidate"
+  },
+  "BASE_classic.m1": {
+   "template": "classic.m1",
+   "change": {},
+   "why": "unchanged; reproduction on fresh seeds (G-A8 60.3 STOP, round 1 54.0 not reproduced) and the paired baseline of every m1 candidate"
+  },
+  "TLP_A": {
+   "template": "v2.three_lane_pressure",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "knobs only: aggression 0.7 -> 0.5, riskTolerance 0.6 -> 0.5 (the m7 knob arm M7_D did not fix m7, but three_lane_pressure starts lower than m7 0.85 / 0.85). Contradicts no copy line; the risk label 高 would move to 中 (a v21 copy change). Smallest change, listed first. Review #7: unrelated to the TLP_A name in the round-1 registration draft (deleted before that run; no data)"
+  },
+  "TLP_B": {
+   "template": "v2.three_lane_pressure",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard"
+   },
+   "why": "TLP_A plus tempo fast -> standard (gankInterval 32 -> 45 s; invadeWithMid stays false because invadePriority 0.15 < 0.3). Weakens the desc clause 打野出來抓人的次數也比平常多 (m7 analogue M7_H)"
+  },
+  "TLP_C0": {
+   "template": "v2.three_lane_pressure",
+   "change": {
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "the three lanes aggressive -> standard with the shipped knobs 0.7 / 0.6 kept (m7 analogue M7_I0, which did not fix m7 at 0.85 / 0.85). Contradicts the desc 上、中、下三路的站位都推得比平常更前面 and the cons line: the name 三路壓制 no longer describes the plan (redesign-level copy change); listed after the knob / tempo arms because it contradicts the core copy; within the lanes group the knob-kept arm first (keeps 高)"
+  },
+  "TLP_C": {
+   "template": "v2.three_lane_pressure",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "why": "lanes standard plus knobs 0.5 / 0.5 (m7 analogue M7_I 44.8 on 57401-57800, the combination that fixed m7 descriptively)"
+  },
+  "TLP_D": {
+   "template": "v2.three_lane_pressure",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard",
+    "macro.tempo": "standard"
+   },
+   "why": "TLP_C plus tempo standard (m7 analogue M7_M 47.8, the m7 selection); the largest change, listed last"
+  },
+  "M1_B": {
+   "template": "classic.m1",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "knobs only: aggression 0.65 -> 0.5, riskTolerance 0.6 -> 0.5. Round 1 M1_A (aggression 0.55 only) is not re-screened (review rule: a rejected or borderline arm is never re-screened on a new block). Review #2: riskTolerance 0.5 moves the retreat floor to the std value (retreatAt 0.238 -> 0.25), which contradicts the cons clause 撤退晚, and engageBias 0.036 -> 0 weakens the archetype 高風險快攻; risk label stays 中. Listed first because it keeps 中路, the tempo and the tower plan (the template name 速推流 and focus stay true)"
+  },
+  "M1_C": {
+   "template": "classic.m1",
+   "change": {
+    "objectives.towerPriority": 0.65
+   },
+   "why": "tower priority 0.9 -> 0.65 (a shipped value; siegeBias 0.4 -> 0.15, the largest siege bias of any template; laneOffset -0.0075 per lane) with the shipped knobs kept. m1 is the only template with a high siege bias and only one aggressive lane, so its m7 analogue is not the lanes group. Weakens 集中兵線快速推塔 and makes the evidence goal 推塔波次 8 harder; keeps 中路, the fast tempo and the knobs. Review #2: listed after M1_B although it only weakens the desc (0.65 is still above std 0.5), because it changes the plan that names the template (速推流); M1_B contradicts one cons clause but keeps the plan"
+  },
+  "M1_D": {
+   "template": "classic.m1",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "objectives.towerPriority": 0.65
+   },
+   "why": "M1_B plus M1_C (knobs and tower priority together: the m7 result was a combination of two groups that did nothing alone); review #2: also contradicts 撤退晚 and weakens 高風險快攻 (std knobs)"
+  },
+  "M1_E0": {
+   "template": "classic.m1",
+   "change": {
+    "lanePlan.mid": "standard"
+   },
+   "why": "mid aggressive -> standard with the shipped knobs kept (m7 analogue M7_I0). Contradicts focus 中路 and the detail 中路法師快速清線游走 (redesign-level copy change); listed after the arms that keep 中路"
+  },
+  "M1_E": {
+   "template": "classic.m1",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.mid": "standard"
+   },
+   "why": "mid standard plus knobs 0.5 / 0.5 (m7 analogue M7_I); review #2: also contradicts 撤退晚 and weakens 高風險快攻 (std knobs)"
+  },
+  "M1_F": {
+   "template": "classic.m1",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.mid": "standard",
+    "macro.tempo": "standard"
+   },
+   "why": "M1_E plus tempo fast -> standard (m7 analogue M7_M; gankInterval 32 -> 45 s); contradicts 高風險快攻 / 10-15分鐘滾大優勢 too; the largest change, listed last; review #2: also contradicts 撤退晚 (std knobs)"
+  }
+ },
+ "compareTo": {},
+ "candidateRules": [
+  "every candidate config passes validateMobaTacticConfig",
+  "every numeric value stays inside the range the eight classic templates and three overlays already cover (template rule 1); enum values are existing values",
+  "the resolved engine knobs of every candidate differ from every other template's resolved knobs and from every other candidate (template rule 3)",
+  "only the declared fields differ from the template (V2)"
+ ],
+ "thresholds": "the G-A8 rules, unchanged: STOP = win rate >= 0.60 and lower 95% bound > 0.55; WARN strong >= 0.57; WARN weak <= 0.43; control 0.50 +/- 0.05",
+ "selectionRule": [
+  "unchanged from rounds 1-3, per template: a candidate qualifies only inside the band 0.43 < win rate < 0.57 (an overshoot to the weak side never qualifies)",
+  "SELECTED: the first qualifying candidate in the listed order with 0.45 <= win rate <= 0.55; a qualifying candidate only in 0.43-0.45 or 0.55-0.57 => SELECTED_BORDERLINE; none => NO_CANDIDATE",
+  "listed order (listedOrder, asserted by V2): three_lane_pressure TLP_A, TLP_B, TLP_C0, TLP_C, TLP_D; m1 M1_B, M1_C, M1_D, M1_E0, M1_E, M1_F (by how much of the template copy each arm contradicts: knobs, then tempo / tower, then the lane group that defines the name; within the lanes group the knob-kept arm first); fixed before the run and not re-ordered after seeing results",
+  "review #4: when BASE is not reproduced on this block (the tool rule), the tool sets the verdict NOT_REPRODUCED and selected = null; the candidate appears only as screenedCandidate / screenedVerdict and is descriptive. Whether m1 needs a fix at all is an Owner decision from the three blocks (G-A8 60.3, round 1 54.0, this block)",
+  "a BORDERLINE or a selection that needs a redesign-level copy change (TLP_C0 / C / D, M1_E0 / E / F) goes to the Owner as an explicit decision; nothing is changed by this study",
+  "review #1 (stricter, registered before the run; the tool is unchanged): the selection rule looks at the candidate rate only, not at its difference to BASE, and both BASEs sat close to the band on their last block (three_lane_pressure 57.25, m1 54.0), so an ineffective early arm can land in 0.45-0.55 by noise. Therefore: a SELECTED or BORDERLINE candidate is reported as SHOWS_IMPROVEMENT only if its paired vsBase upper 95% bound is < 0, otherwise as IN_BAND_NOT_DISTINGUISHED_FROM_BASE; per template the report also names the first candidate in the listed order whose vsBase upper bound is < 0 (FIRST_DISTINGUISHED); if the selected candidate is not distinguished and a later one is, both go to the Owner. Only a SHOWS_IMPROVEMENT candidate is described as improving balance",
+  "review #5: three_lane_pressure has no arm that keeps its identity and its risk label together: TLP_A / B move to std knobs (高 -> 中) and TLP_C0 / C / D remove the three-lane forward stance that names the template. If TLP_A and TLP_B are not selected, every remaining fix is a redesign, not a balance adjustment, and a NO_CANDIDATE means no balance-level fix was found among these arms"
+ ],
+ "report": [
+  "per arm: win rate, 95% CI, G-A8 label, blue / red halves, STANDARD / SWAPPED split, median duration; paired difference to STD for every arm",
+  "per candidate: paired difference to its BASE with 95% CI and the confirmation risks (lower bounds)",
+  "per template: reproduction status of BASE vs the committed G-A8 label, verdict and selected / screened candidate",
+  "pooled with round 1 (descriptive only): STD and the two BASE arms over 800 seeds",
+  "multiplicity and power: 11 candidates on one block, unadjusted 95% intervals; MDE of a paired candidate - BASE difference about 9.3 pp (rounds 2-3); a selection is weak evidence and needs the confirmatory G-A8 after the freeze",
+  "review #1: per template the SHOWS_IMPROVEMENT / IN_BAND_NOT_DISTINGUISHED_FROM_BASE status of the selected or borderline candidate and the FIRST_DISTINGUISHED candidate, computed from the vsBase intervals the tool reports (written into the design doc next to the tool verdict)"
+ ],
+ "validation": {
+  "V1": "the STD and both BASE arms on the first 10 screening seeds reproduce the same configs through the binding path (tacticInputOf template with no choices): win and duration identical",
+  "V2": "every candidate is valid, inside the shipped range, distinct after resolution from every template and every other candidate, and differs from its template only in the declared fields; 14 arms; the candidate order equals listedOrder",
+  "V3": "V3a every candidate resolves to engine knobs that differ from its BASE (non-vacuous); V3b on the validate matches the t=0 Director probe (v3) equals each arm's expectation"
+ },
+ "liveCheck": "every record: balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off, and the t=0 Director probe equals the arm's expectation; any mismatch => HALT",
+ "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
+ "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
+ "matches": "14 arms x 400 = 5,600 (about 2.0 h at 1.28 s per match measured in the round-3 run, 3 workers); single line, before or after the D5 order diagnosis (one measurement at a time)",
+ "notClaimed": "no template is changed; G-A8 stays STOP; the screening result is an expected-impact estimate for the Owner decision; mid_jungle_sync (60.3 STOP) and mid_solo_split (WARN) are not screened here and keep the confirmatory G-A8 requirement",
+ "checkpointing": "per match; resume in the same folder",
+ "outOfScope": "classic.m3 / m7 / m8 have selections (M3_C, M7_M, M8_C) and are not re-screened; mid_jungle_sync is outside the Owner D8 approval (it shares the mid-aggressive group with m1; a result here is a hint for it, not a screening); defensive_hold is a content-design question",
+ "copyImpact": "risk is a fixed config string. three_lane_pressure (risk 高): TLP_A / B / C / D move to std knobs, so a v21 copy change 高 -> 中 and the indicator bars; TLP_B weakens 打野出來抓人的次數也比平常多; TLP_C0 / C / D contradict the desc and cons (三路的站位都比平常更靠前) and leave the name 三路壓制 without content: a redesign, not a balance fix. classic.m1 (risk 中): M1_B / D / E / F std knobs keep 中; M1_C / D weaken 集中兵線快速推塔 and the evidence goal 推塔波次 8; M1_E0 / E / F contradict focus 中路 and the detail; M1_F also 高風險快攻. Evidence goals: three_lane_pressure has 野區入侵 1 / 入侵擊殺 1 with invadePriority 0.15 (already rarely reached on the shipped template; unchanged by every arm). Review #3: M1_E0 / E / F also change the gank weights (mid 1.7 -> 1, the mid share of ganks about 46% -> 33%), which affects the evidence goal 中路 Gank 2; TLP_C0 / C / D lower laneOffset (about 0.061 -> 0.011 or 0 per lane), which affects the evidence goal 推塔波次 6. Review #2: the std-knob m1 arms (M1_B / D / E / F) contradict the cons clause 撤退晚 (retreatAt 0.238 -> 0.25) and weaken 高風險快攻",
+ "probeNote": "probe v3 as round 3: v2 fields plus gankInterval, invadeChance, invadeWithMid, so the tempo arms are seen live",
+ "listedOrder": [
+  "TLP_A",
+  "TLP_B",
+  "TLP_C0",
+  "TLP_C",
+  "TLP_D",
+  "M1_B",
+  "M1_C",
+  "M1_D",
+  "M1_E0",
+  "M1_E",
+  "M1_F"
+ ],
+ "review": {
+  "reviewedAt": "2026-10-30",
+  "verdict": "APPROVE WITH CHANGES (independent reviewer; 1 Major / 6 minor, all applied)",
+  "round1": "2026-10-30 APPROVE WITH CHANGES: M1 a stricter improvement criterion (vsBase upper bound < 0 => SHOWS_IMPROVEMENT, else IN_BAND_NOT_DISTINGUISHED_FROM_BASE; FIRST_DISTINGUISHED reported; both to the Owner if they differ); m2 M1_B / D / E / F copy impact corrected (撤退晚 contradicted by riskTolerance 0.5, 高風險快攻 weakened) and the M1_B / M1_C order reason stated truthfully; m3 evidence goals 中路 Gank 2 (M1_E0 / E / F) and 推塔波次 6 (TLP_C0 / C / D) added; m4 NOT_REPRODUCED wording matches the tool (selected null, screenedCandidate descriptive); m5 three_lane_pressure has no identity-keeping arm, stated; m6 review filled, files committed before a fresh --validate and --run; m7 pooled note STD 51.75 / 51.25 / 45.75 and the TLP_A name note. Verified by the reviewer: thresholds identical to the tool, no rejected arm re-screened, M1_C 0.65 is shipped (classic.m2, v2.bot_duo_pressure) and its siegeBias / laneOffset arithmetic is right (MobaTacticConfig.js 238 / 295)"
+ }
+}
