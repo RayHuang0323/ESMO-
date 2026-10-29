@@ -1,0 +1,857 @@
+{
+ "schema": "esmo.ga8-fix-screen-result.v1",
+ "registration": "tools/fixtures/ga8_fix_screen3_registration_3aB.json",
+ "registrationHash": "d28cd9aca274276d",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "be02333f8fcecea4b6efd4ca322443045107692f",
+ "reportedAt": "2026-10-29T16:45:17.372Z",
+ "ga8Verdict": "STOP (unchanged; screening only, no template changed; a selection is a proposal that must be confirmed by G-A8 on the reserved fresh seeds after an Owner-approved versioned change)",
+ "statsNote": "unadjusted 95% intervals; 12 arms on one seed block",
+ "matches": 4800,
+ "errored": [],
+ "instrument": [],
+ "control": {
+  "rate": 0.4575,
+  "ok": true
+ },
+ "outcome": "SCREENED",
+ "templates": [
+  {
+   "template": "classic.m7",
+   "kind": "strong",
+   "ga8": {
+    "rate": 0.6725,
+    "label": "STOP"
+   },
+   "base": {
+    "rate": 0.6725,
+    "lo": 0.6264508710103898,
+    "hi": 0.7185491289896102,
+    "label": "STOP",
+    "vsStd": {
+     "n": 400,
+     "mean": 0.215,
+     "sd": 0.6781775667405064,
+     "se": 0.03390887833702532,
+     "z": 6.340522321708298,
+     "lo": 0.14853859845943035,
+     "hi": 0.28146140154056964
+    }
+   },
+   "reproduced": true,
+   "candidates": [
+    {
+     "arm": "M7_D",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5
+     },
+     "rate": 0.6325,
+     "lo": 0.5851926566287842,
+     "hi": 0.6798073433712157,
+     "label": "STOP",
+     "vsBase": {
+      "n": 400,
+      "mean": -0.04,
+      "sd": 0.6815874144295593,
+      "se": 0.034079370721477965,
+      "z": -1.173730592824317,
+      "lo": -0.10679556661409681,
+      "hi": 0.026795566614096815
+     },
+     "referenceOnly": true,
+     "confirmRisk": {
+      "pStrong": 0.9952385791097023,
+      "pWeak": 0
+     }
+    },
+    {
+     "arm": "M7_G",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5,
+      "objectives.towerPriority": 0.5
+     },
+     "rate": 0.6075,
+     "lo": 0.559585981613992,
+     "hi": 0.6554140183860081,
+     "label": "STOP",
+     "vsBase": {
+      "n": 400,
+      "mean": -0.065,
+      "sd": 0.6456136945624028,
+      "se": 0.03228068472812014,
+      "z": -2.0135880185768684,
+      "lo": -0.12827014206711546,
+      "hi": -0.0017298579328845348
+     },
+     "confirmRisk": {
+      "pStrong": 0.9377208478902721,
+      "pWeak": 1.8107737531636303e-13
+     }
+    },
+    {
+     "arm": "M7_H",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5,
+      "macro.tempo": "standard"
+     },
+     "rate": 0.59,
+     "lo": 0.5417399733170546,
+     "hi": 0.6382600266829453,
+     "label": "WARN strong",
+     "vsBase": {
+      "n": 400,
+      "mean": -0.0825,
+      "sd": 0.6869304430464277,
+      "se": 0.03434652215232138,
+      "z": -2.4019899200893056,
+      "lo": -0.1498191834185499,
+      "hi": -0.015180816581450096
+     },
+     "confirmRisk": {
+      "pStrong": 0.791972340838901,
+      "pWeak": 3.871053477766395e-11
+     }
+    },
+    {
+     "arm": "M7_I0",
+     "change": {
+      "lanePlan.top": "standard",
+      "lanePlan.mid": "standard",
+      "lanePlan.adc": "standard"
+     },
+     "rate": 0.6075,
+     "lo": 0.559585981613992,
+     "hi": 0.6554140183860081,
+     "label": "STOP",
+     "vsBase": {
+      "n": 400,
+      "mean": -0.065,
+      "sd": 0.6647403246743187,
+      "se": 0.03323701623371593,
+      "z": -1.9556508786147722,
+      "lo": -0.1301445518180832,
+      "hi": 0.00014455181808321893
+     },
+     "confirmRisk": {
+      "pStrong": 0.9377208478902721,
+      "pWeak": 1.8107737531636303e-13
+     }
+    },
+    {
+     "arm": "M7_I",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5,
+      "lanePlan.top": "standard",
+      "lanePlan.mid": "standard",
+      "lanePlan.adc": "standard"
+     },
+     "rate": 0.4475,
+     "lo": 0.39870983525915715,
+     "hi": 0.49629016474084287,
+     "label": null,
+     "vsBase": {
+      "n": 400,
+      "mean": -0.225,
+      "sd": 0.6560877439943135,
+      "se": 0.03280438719971567,
+      "z": -6.858838686123976,
+      "lo": -0.2892965989114427,
+      "hi": -0.1607034010885573
+     },
+     "confirmRisk": {
+      "pStrong": 4.176174179804093e-7,
+      "pWeak": 0.2407502738454444
+     }
+    },
+    {
+     "arm": "M7_J",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5,
+      "lanePlan.jungle": "gank",
+      "objectives.invadePriority": 0.35
+     },
+     "rate": 0.62,
+     "lo": 0.5723725569305539,
+     "hi": 0.6676274430694461,
+     "label": "STOP",
+     "vsBase": {
+      "n": 400,
+      "mean": -0.0525,
+      "sd": 0.6971073422483374,
+      "se": 0.034855367112416866,
+      "z": -1.5062242733142068,
+      "lo": -0.12081651954033706,
+      "hi": 0.01581651954033706
+     },
+     "confirmRisk": {
+      "pStrong": 0.9803110277867082,
+      "pWeak": 2.4980018054066022e-15
+     }
+    },
+    {
+     "arm": "M7_HI0",
+     "change": {
+      "macro.tempo": "standard",
+      "lanePlan.top": "standard",
+      "lanePlan.mid": "standard",
+      "lanePlan.adc": "standard"
+     },
+     "rate": 0.6375,
+     "lo": 0.5903302338133284,
+     "hi": 0.6846697661866715,
+     "label": "STOP",
+     "vsBase": {
+      "n": 400,
+      "mean": -0.035,
+      "sd": 0.6632304929033296,
+      "se": 0.03316152464516648,
+      "z": -1.055440012921767,
+      "lo": -0.0999965883045263,
+      "hi": 0.029996588304526298
+     },
+     "confirmRisk": {
+      "pStrong": 0.9975095569116075,
+      "pWeak": 0
+     }
+    },
+    {
+     "arm": "M7_M",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5,
+      "macro.tempo": "standard",
+      "lanePlan.top": "standard",
+      "lanePlan.mid": "standard",
+      "lanePlan.adc": "standard"
+     },
+     "rate": 0.4775,
+     "lo": 0.4284883347218916,
+     "hi": 0.5265116652781084,
+     "label": null,
+     "vsBase": {
+      "n": 400,
+      "mean": -0.195,
+      "sd": 0.6542515668930077,
+      "se": 0.032712578344650384,
+      "z": -5.961009797073642,
+      "lo": -0.2591166535555148,
+      "hi": -0.13088334644448524
+     },
+     "confirmRisk": {
+      "pStrong": 0.00010624717187357469,
+      "pWeak": 0.02859030448726585
+     }
+    },
+    {
+     "arm": "M7_K",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5,
+      "macro.tempo": "standard",
+      "lanePlan.jungle": "gank",
+      "objectives.invadePriority": 0.35
+     },
+     "rate": 0.5875,
+     "lo": 0.5391957286404302,
+     "hi": 0.6358042713595699,
+     "label": "WARN strong",
+     "vsBase": {
+      "n": 400,
+      "mean": -0.085,
+      "sd": 0.6956902776422964,
+      "se": 0.03478451388211482,
+      "z": -2.443616153098075,
+      "lo": -0.15317764720894506,
+      "hi": -0.016822352791054956
+     },
+     "confirmRisk": {
+      "pStrong": 0.7614490907265119,
+      "pWeak": 7.869405127536311e-11
+     }
+    },
+    {
+     "arm": "M7_L",
+     "change": {
+      "macro.aggression": 0.5,
+      "macro.riskTolerance": 0.5,
+      "macro.tempo": "standard",
+      "lanePlan.jungle": "gank",
+      "objectives.invadePriority": 0.35,
+      "lanePlan.top": "standard",
+      "lanePlan.mid": "standard",
+      "lanePlan.adc": "standard"
+     },
+     "rate": 0.495,
+     "lo": 0.44594108804605154,
+     "hi": 0.5440589119539485,
+     "label": null,
+     "vsBase": {
+      "n": 400,
+      "mean": -0.1775,
+      "sd": 0.6534993523399804,
+      "se": 0.03267496761699902,
+      "z": -5.432293065461413,
+      "lo": -0.24154293652931808,
+      "hi": -0.11345706347068191
+     },
+     "confirmRisk": {
+      "pStrong": 0.0013493026044326673,
+      "pWeak": 0.004659456377503701
+     }
+    }
+   ],
+   "selected": "M7_M",
+   "verdict": "SELECTED",
+   "screenedCandidate": "M7_M",
+   "screenedVerdict": "SELECTED"
+  }
+ ],
+ "pooledWithRound1": [
+  {
+   "arm": "STD",
+   "round1": 0.5125,
+   "round2": 0.4575,
+   "pooled": 0.485,
+   "lo": 0.45036736293609736,
+   "hi": 0.5196326370639026,
+   "n": 800
+  },
+  {
+   "arm": "BASE_classic.m7",
+   "round1": 0.59,
+   "round2": 0.6725,
+   "pooled": 0.63125,
+   "lo": 0.5978168121939441,
+   "hi": 0.6646831878060558,
+   "n": 800
+  },
+  {
+   "arm": "M7_D",
+   "round1": 0.625,
+   "round2": 0.6325,
+   "pooled": 0.62875,
+   "lo": 0.5952701650709715,
+   "hi": 0.6622298349290285,
+   "n": 800
+  }
+ ],
+ "arms": [
+  {
+   "arm": "STD",
+   "template": "std",
+   "change": {},
+   "n": 400,
+   "rate": 0.4575,
+   "lo": 0.40861619038878766,
+   "hi": 0.5063838096112124,
+   "label": null,
+   "asBlue": 0.465,
+   "asRed": 0.45,
+   "standard": 0.3951219512195122,
+   "swapped": 0.5230769230769231,
+   "medianDurationMin": 18.8625
+  },
+  {
+   "arm": "BASE_classic.m7",
+   "template": "classic.m7",
+   "change": {},
+   "n": 400,
+   "rate": 0.6725,
+   "lo": 0.6264508710103898,
+   "hi": 0.7185491289896102,
+   "label": "STOP",
+   "asBlue": 0.685,
+   "asRed": 0.66,
+   "standard": 0.7024390243902439,
+   "swapped": 0.6410256410256411,
+   "medianDurationMin": 16.720833333333335,
+   "vsStd": {
+    "n": 400,
+    "mean": 0.215,
+    "sd": 0.6781775667405064,
+    "se": 0.03390887833702532,
+    "z": 6.340522321708298,
+    "lo": 0.14853859845943035,
+    "hi": 0.28146140154056964
+   }
+  },
+  {
+   "arm": "M7_D",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5
+   },
+   "n": 400,
+   "rate": 0.6325,
+   "lo": 0.5851926566287842,
+   "hi": 0.6798073433712157,
+   "label": "STOP",
+   "asBlue": 0.69,
+   "asRed": 0.575,
+   "standard": 0.6292682926829268,
+   "swapped": 0.6358974358974359,
+   "medianDurationMin": 17.091666666666665,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.04,
+    "sd": 0.6815874144295593,
+    "se": 0.034079370721477965,
+    "z": -1.173730592824317,
+    "lo": -0.10679556661409681,
+    "hi": 0.026795566614096815
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.175,
+    "sd": 0.6859674762305524,
+    "se": 0.03429837381152762,
+    "z": 5.102282719339388,
+    "lo": 0.10777518732940584,
+    "hi": 0.24222481267059415
+   }
+  },
+  {
+   "arm": "M7_G",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "objectives.towerPriority": 0.5
+   },
+   "n": 400,
+   "rate": 0.6075,
+   "lo": 0.559585981613992,
+   "hi": 0.6554140183860081,
+   "label": "STOP",
+   "asBlue": 0.6,
+   "asRed": 0.615,
+   "standard": 0.6536585365853659,
+   "swapped": 0.558974358974359,
+   "medianDurationMin": 16.920833333333334,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.065,
+    "sd": 0.6456136945624028,
+    "se": 0.03228068472812014,
+    "z": -2.0135880185768684,
+    "lo": -0.12827014206711546,
+    "hi": -0.0017298579328845348
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.15,
+    "sd": 0.7062201265667237,
+    "se": 0.035311006328336184,
+    "z": 4.247967293971705,
+    "lo": 0.08079042759646107,
+    "hi": 0.21920957240353892
+   },
+   "compareTo": "M7_D",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.025,
+    "sd": 0.6749176130915195,
+    "se": 0.033745880654575976,
+    "z": -0.740831162650662,
+    "lo": -0.09114192608296892,
+    "hi": 0.04114192608296891
+   }
+  },
+  {
+   "arm": "M7_H",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard"
+   },
+   "n": 400,
+   "rate": 0.59,
+   "lo": 0.5417399733170546,
+   "hi": 0.6382600266829453,
+   "label": "WARN strong",
+   "asBlue": 0.615,
+   "asRed": 0.565,
+   "standard": 0.5804878048780487,
+   "swapped": 0.6,
+   "medianDurationMin": 16.970833333333335,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.0825,
+    "sd": 0.6869304430464277,
+    "se": 0.03434652215232138,
+    "z": -2.4019899200893056,
+    "lo": -0.1498191834185499,
+    "hi": -0.015180816581450096
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.1325,
+    "sd": 0.6863829498790834,
+    "se": 0.03431914749395417,
+    "z": 3.8608185131446477,
+    "lo": 0.06523447091184983,
+    "hi": 0.19976552908815018
+   },
+   "compareTo": "M7_D",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.0425,
+    "sd": 0.5013203119142939,
+    "se": 0.025066015595714697,
+    "z": -1.6955227621922422,
+    "lo": -0.0916293905676008,
+    "hi": 0.006629390567600799
+   }
+  },
+  {
+   "arm": "M7_I0",
+   "template": "classic.m7",
+   "change": {
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "n": 400,
+   "rate": 0.6075,
+   "lo": 0.559585981613992,
+   "hi": 0.6554140183860081,
+   "label": "STOP",
+   "asBlue": 0.6,
+   "asRed": 0.615,
+   "standard": 0.6048780487804878,
+   "swapped": 0.6102564102564103,
+   "medianDurationMin": 17,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.065,
+    "sd": 0.6647403246743187,
+    "se": 0.03323701623371593,
+    "z": -1.9556508786147722,
+    "lo": -0.1301445518180832,
+    "hi": 0.00014455181808321893
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.15,
+    "sd": 0.6272827984834135,
+    "se": 0.03136413992417068,
+    "z": 4.782531909456345,
+    "lo": 0.08852628574862548,
+    "hi": 0.2114737142513745
+   },
+   "compareTo": "BASE_classic.m7",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.065,
+    "sd": 0.6647403246743187,
+    "se": 0.03323701623371593,
+    "z": -1.9556508786147722,
+    "lo": -0.1301445518180832,
+    "hi": 0.00014455181808321893
+   }
+  },
+  {
+   "arm": "M7_I",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "n": 400,
+   "rate": 0.4475,
+   "lo": 0.39870983525915715,
+   "hi": 0.49629016474084287,
+   "label": null,
+   "asBlue": 0.425,
+   "asRed": 0.47,
+   "standard": 0.4146341463414634,
+   "swapped": 0.48205128205128206,
+   "medianDurationMin": 17.6125,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.225,
+    "sd": 0.6560877439943135,
+    "se": 0.03280438719971567,
+    "z": -6.858838686123976,
+    "lo": -0.2892965989114427,
+    "hi": -0.1607034010885573
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": -0.01,
+    "sd": 0.7079215226319334,
+    "se": 0.03539607613159667,
+    "z": -0.28251719096833444,
+    "lo": -0.07937630921792947,
+    "hi": 0.059376309217929475
+   },
+   "compareTo": "M7_D",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.185,
+    "sd": 0.7225511750050998,
+    "se": 0.03612755875025499,
+    "z": -5.120744561759083,
+    "lo": -0.2558100151504998,
+    "hi": -0.11418998484950023
+   }
+  },
+  {
+   "arm": "M7_J",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "lanePlan.jungle": "gank",
+    "objectives.invadePriority": 0.35
+   },
+   "n": 400,
+   "rate": 0.62,
+   "lo": 0.5723725569305539,
+   "hi": 0.6676274430694461,
+   "label": "STOP",
+   "asBlue": 0.665,
+   "asRed": 0.575,
+   "standard": 0.6341463414634146,
+   "swapped": 0.6051282051282051,
+   "medianDurationMin": 17.058333333333334,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.0525,
+    "sd": 0.6971073422483374,
+    "se": 0.034855367112416866,
+    "z": -1.5062242733142068,
+    "lo": -0.12081651954033706,
+    "hi": 0.01581651954033706
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.1625,
+    "sd": 0.6798892361507007,
+    "se": 0.033994461807535035,
+    "z": 4.780190400425198,
+    "lo": 0.09587085485723133,
+    "hi": 0.22912914514276866
+   },
+   "compareTo": "M7_D",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.0125,
+    "sd": 0.4216494047800611,
+    "se": 0.021082470239003052,
+    "z": -0.5929096476026189,
+    "lo": -0.05382164166844598,
+    "hi": 0.028821641668445985
+   }
+  },
+  {
+   "arm": "M7_HI0",
+   "template": "classic.m7",
+   "change": {
+    "macro.tempo": "standard",
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "n": 400,
+   "rate": 0.6375,
+   "lo": 0.5903302338133284,
+   "hi": 0.6846697661866715,
+   "label": "STOP",
+   "asBlue": 0.61,
+   "asRed": 0.665,
+   "standard": 0.6536585365853659,
+   "swapped": 0.6205128205128205,
+   "medianDurationMin": 17.075,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.035,
+    "sd": 0.6632304929033296,
+    "se": 0.03316152464516648,
+    "z": -1.055440012921767,
+    "lo": -0.0999965883045263,
+    "hi": 0.029996588304526298
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.18,
+    "sd": 0.6955641766289605,
+    "se": 0.034778208831448026,
+    "z": 5.175654700113132,
+    "lo": 0.11183471069036187,
+    "hi": 0.2481652893096381
+   },
+   "compareTo": "BASE_classic.m7",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.035,
+    "sd": 0.6632304929033296,
+    "se": 0.03316152464516648,
+    "z": -1.055440012921767,
+    "lo": -0.0999965883045263,
+    "hi": 0.029996588304526298
+   }
+  },
+  {
+   "arm": "M7_M",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard",
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "n": 400,
+   "rate": 0.4775,
+   "lo": 0.4284883347218916,
+   "hi": 0.5265116652781084,
+   "label": null,
+   "asBlue": 0.485,
+   "asRed": 0.47,
+   "standard": 0.47804878048780486,
+   "swapped": 0.47692307692307695,
+   "medianDurationMin": 17.479166666666668,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.195,
+    "sd": 0.6542515668930077,
+    "se": 0.032712578344650384,
+    "z": -5.961009797073642,
+    "lo": -0.2591166535555148,
+    "hi": -0.13088334644448524
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.02,
+    "sd": 0.714756736926948,
+    "se": 0.0357378368463474,
+    "z": 0.5596309616048882,
+    "lo": -0.050046160218840896,
+    "hi": 0.0900461602188409
+   },
+   "compareTo": "M7_D",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.155,
+    "sd": 0.6943921450648889,
+    "se": 0.034719607253244446,
+    "z": -4.4643362141003395,
+    "lo": -0.22305043021635912,
+    "hi": -0.08694956978364089
+   }
+  },
+  {
+   "arm": "M7_K",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard",
+    "lanePlan.jungle": "gank",
+    "objectives.invadePriority": 0.35
+   },
+   "n": 400,
+   "rate": 0.5875,
+   "lo": 0.5391957286404302,
+   "hi": 0.6358042713595699,
+   "label": "WARN strong",
+   "asBlue": 0.615,
+   "asRed": 0.56,
+   "standard": 0.6048780487804878,
+   "swapped": 0.5692307692307692,
+   "medianDurationMin": 17.05,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.085,
+    "sd": 0.6956902776422964,
+    "se": 0.03478451388211482,
+    "z": -2.443616153098075,
+    "lo": -0.15317764720894506,
+    "hi": -0.016822352791054956
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.13,
+    "sd": 0.703090207298465,
+    "se": 0.03515451036492325,
+    "z": 3.6979607637975365,
+    "lo": 0.061097159684750435,
+    "hi": 0.19890284031524957
+   },
+   "compareTo": "M7_D",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.045,
+    "sd": 0.5601423020056979,
+    "se": 0.028007115100284898,
+    "z": -1.6067345686575996,
+    "lo": -0.0998939455965584,
+    "hi": 0.009893945596558401
+   }
+  },
+  {
+   "arm": "M7_L",
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.riskTolerance": 0.5,
+    "macro.tempo": "standard",
+    "lanePlan.jungle": "gank",
+    "objectives.invadePriority": 0.35,
+    "lanePlan.top": "standard",
+    "lanePlan.mid": "standard",
+    "lanePlan.adc": "standard"
+   },
+   "n": 400,
+   "rate": 0.495,
+   "lo": 0.44594108804605154,
+   "hi": 0.5440589119539485,
+   "label": null,
+   "asBlue": 0.485,
+   "asRed": 0.505,
+   "standard": 0.48292682926829267,
+   "swapped": 0.5076923076923077,
+   "medianDurationMin": 17.9,
+   "vsBase": {
+    "n": 400,
+    "mean": -0.1775,
+    "sd": 0.6534993523399804,
+    "se": 0.03267496761699902,
+    "z": -5.432293065461413,
+    "lo": -0.24154293652931808,
+    "hi": -0.11345706347068191
+   },
+   "vsStd": {
+    "n": 400,
+    "mean": 0.0375,
+    "sd": 0.7016584364229584,
+    "se": 0.035082921821147924,
+    "z": 1.0688961481365291,
+    "lo": -0.031262526769449926,
+    "hi": 0.10626252676944992
+   },
+   "compareTo": "M7_D",
+   "vsCompare": {
+    "n": 400,
+    "mean": -0.1375,
+    "sd": 0.696279946868374,
+    "se": 0.0348139973434187,
+    "z": -3.9495608230117027,
+    "lo": -0.20573543479310066,
+    "hi": -0.06926456520689936
+   }
+  }
+ ]
+}
