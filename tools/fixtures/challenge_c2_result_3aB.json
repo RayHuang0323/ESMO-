@@ -1,0 +1,1973 @@
+{
+ "schema": "esmo.challenge-c2-result.v1",
+ "registration": "tools/fixtures/challenge_c2_registration_3aB.json",
+ "registrationHash": "289155873a94da8d",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "440f37eb4e74e6f58e4a7bde215ff3b2fe92944d",
+ "reportedAt": "2026-10-29T15:00:37.387Z",
+ "sideBiasVerdict": "STOP (unchanged; diagnosis only, src/ untouched)",
+ "statsNote": "paired differences on the same seeds; Bonferroni z: hero 2.81 (10 per pairing), equalization 2.24 (2), mirror skill step 2.58 (4 lineups + pooled), mirror growth step 2.39 (2 + pooled), TD-3A-23 frame step 2.50 (4); MDE = (z + 0.84) x se; logit-scale values by paired bootstrap (2000, deterministic); forward orientation only: effects are conditional on the forward seating (the challenger is blue); logit values clamp probabilities to [0.001, 0.999], so near-ceiling rows (RB red seats, base about 96.5%) are dominated by the clamp and are for reference only",
+ "matches": 9680,
+ "errored": [],
+ "instrument": [],
+ "v1Mismatch": [],
+ "outcome": "DIAGNOSED",
+ "koSkills": {
+  "pairing": "drill_rotation>drill_balanced (v21 skills step +33.2pp)",
+  "base": "RB_v21",
+  "baseBlueWin": 0.965,
+  "rows": [
+   {
+    "arm": "RB_KOS_b1",
+    "seat": "b1",
+    "hero": "chichuan",
+    "blueWin": 0.735,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.23,
+     "sd": 0.4881510599050592,
+     "se": 0.03451749247022679,
+     "z": 6.663288192164813,
+     "lo": 0.16234571475835552,
+     "hi": 0.2976542852416445
+    },
+    "label": "MATERIAL",
+    "mde": 0.12604407550428015,
+    "ceiling": 0.965,
+    "logitContribution": {
+     "est": 2.2966393666229568,
+     "lo": 1.578185368929995,
+     "hi": 3.4965075614664793
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_b2",
+    "seat": "b2",
+    "hero": "binghe",
+    "blueWin": 0.81,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.155,
+     "sd": 0.43810349618193534,
+     "se": 0.03097859530117812,
+     "z": 5.003454756197591,
+     "lo": 0.09428195320969089,
+     "hi": 0.2157180467903091
+    },
+    "label": "MATERIAL",
+    "mde": 0.11312143860178202,
+    "ceiling": 0.965,
+    "logitContribution": {
+     "est": 1.8667698643435726,
+     "lo": 1.1300490620916732,
+     "hi": 3.0591319013655798
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_b3",
+    "seat": "b3",
+    "hero": "bingshuang",
+    "blueWin": 0.8475,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.1175,
+     "sd": 0.4163055386462416,
+     "se": 0.029437246942227574,
+     "z": 3.991541744056468,
+     "lo": 0.05980299599323395,
+     "hi": 0.17519700400676602
+    },
+    "label": "MATERIAL",
+    "mde": 0.10749305093423822,
+    "ceiling": 0.965,
+    "logitContribution": {
+     "est": 1.601653796642432,
+     "lo": 0.8163941135381882,
+     "hi": 2.840774816756791
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_b4",
+    "seat": "b4",
+    "hero": "leiting",
+    "blueWin": 0.95,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.015,
+     "sd": 0.2695147323520072,
+     "se": 0.019057569487578165,
+     "z": 0.787088826294302,
+     "lo": -0.022352836195653203,
+     "hi": 0.0523528361956532
+    },
+    "label": "NONE",
+    "mde": 0.06959062074084044,
+    "ceiling": 0.965,
+    "logitContribution": {
+     "est": 0.3723410606831319,
+     "lo": -0.608512795419236,
+     "hi": 1.4802982050101585
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_b5",
+    "seat": "b5",
+    "hero": "dadi",
+    "blueWin": 0.855,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.11,
+     "sd": 0.39836348645010583,
+     "se": 0.028168552264598516,
+     "z": 3.9050640219889847,
+     "lo": 0.05478963756138691,
+     "hi": 0.1652103624386131
+    },
+    "label": "MATERIAL",
+    "mde": 0.10286028544940795,
+    "ceiling": 0.965,
+    "logitContribution": {
+     "est": 1.5424123133333856,
+     "lo": 0.7531106453275016,
+     "hi": 2.737665121641139
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_r1",
+    "seat": "r1",
+    "hero": "cinderfist",
+    "blueWin": 0.975,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.01,
+     "sd": 0.2002510986550702,
+     "se": 0.014159890979905646,
+     "z": 0.7062201265667255,
+     "lo": -0.017753386320615065,
+     "hi": 0.03775338632061506
+    },
+    "label": "NONE",
+    "mde": 0.05170625790222346,
+    "ceiling": 0.03500000000000003,
+    "logitContribution": {
+     "est": 0.34678160628007415,
+     "lo": -0.7137664677626807,
+     "hi": 1.7512681078733179
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_r2",
+    "seat": "r2",
+    "hero": "dadi2",
+    "blueWin": 0.97,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.005,
+     "sd": 0.2350558577900309,
+     "se": 0.016620959100095162,
+     "z": 0.30082499871932017,
+     "lo": -0.027577079836186517,
+     "hi": 0.037577079836186515
+    },
+    "label": "NONE",
+    "mde": 0.0606930942499075,
+    "ceiling": 0.03500000000000003,
+    "logitContribution": {
+     "est": 0.1593186499857011,
+     "lo": -1.0065376097219327,
+     "hi": 1.417066019786644
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_r3",
+    "seat": "r3",
+    "hero": "gambler",
+    "blueWin": 0.995,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.03,
+     "sd": 0.19823340387548272,
+     "se": 0.014017218413804546,
+     "z": 2.1402249087062213,
+     "lo": 0.002526251908943091,
+     "hi": 0.0574737480910569
+    },
+    "label": "HINT",
+    "mde": 0.05118527475984868,
+    "ceiling": 0.03500000000000003,
+    "logitContribution": {
+     "est": 1.9765247848749201,
+     "lo": 0.292771141959252,
+     "hi": 4.062903036387282
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_r4",
+    "seat": "r4",
+    "hero": "dawnstrike",
+    "blueWin": 0.98,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.015,
+     "sd": 0.21213203435596475,
+     "se": 0.015000000000000034,
+     "z": 0.9999999999999977,
+     "lo": -0.014400000000000066,
+     "hi": 0.044400000000000064
+    },
+    "label": "NONE",
+    "mde": 0.05477400000000013,
+    "ceiling": 0.03500000000000003,
+    "logitContribution": {
+     "est": 0.5750402582610543,
+     "lo": -0.5750402582610543,
+     "hi": 2.348865845558052
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "RB_KOS_r5",
+    "seat": "r5",
+    "hero": "fengshen",
+    "blueWin": 0.98,
+    "baseBlueWin": 0.965,
+    "contribution": {
+     "n": 200,
+     "mean": 0.015,
+     "sd": 0.2346278995692576,
+     "se": 0.016590697884097828,
+     "z": 0.9041210987500103,
+     "lo": -0.01751776785283174,
+     "hi": 0.04751776785283174
+    },
+    "label": "NONE",
+    "mde": 0.06058259239357163,
+    "ceiling": 0.03500000000000003,
+    "logitContribution": {
+     "est": 0.5750402582610543,
+     "lo": -0.7137664677626807,
+     "hi": 2.348865845558052
+    },
+    "scale": "CONSISTENT"
+   }
+  ],
+  "teamSum": {
+   "blue": {
+    "n": 200,
+    "mean": 0.6275,
+    "sd": 1.2460969214665605,
+    "se": 0.08811235831846856,
+    "z": 7.121588979970299,
+    "lo": 0.4547997776958016,
+    "hi": 0.8002002223041983
+   },
+   "red": {
+    "n": 200,
+    "mean": 0.075,
+    "sd": 0.8906973158950874,
+    "se": 0.06298181120540727,
+    "z": 1.1908199933373924,
+    "lo": -0.04844434996259826,
+    "hi": 0.19844434996259824
+   }
+  }
+ },
+ "koGrowth": {
+  "pairing": "drill_mirror>drill_topheavy (v21 growth step -19.3pp)",
+  "base": "MT_v21",
+  "baseBlueWin": 0.5433333333333333,
+  "rows": [
+   {
+    "arm": "MT_KOG_b1",
+    "seat": "b1",
+    "hero": "ironclad",
+    "blueWin": 0.49666666666666665,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.04666666666666667,
+     "sd": 0.734588972658446,
+     "se": 0.04241151411080844,
+     "z": 1.1003301260299456,
+     "lo": -0.03645990099051787,
+     "hi": 0.1297932343238512
+    },
+    "label": "NONE",
+    "mde": 0.1548698849270281,
+    "ceiling": 0.5433333333333333,
+    "logitContribution": {
+     "est": 0.1871028058481028,
+     "lo": -0.14673408217220862,
+     "hi": 0.5236837787093594
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_b2",
+    "seat": "b2",
+    "hero": "duskblade",
+    "blueWin": 0.5316666666666666,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.011666666666666667,
+     "sd": 0.6980842554074088,
+     "se": 0.04030391327765069,
+     "z": 0.28946734244627464,
+     "lo": -0.06732900335752869,
+     "hi": 0.09066233669086203
+    },
+    "label": "NONE",
+    "mde": 0.14717376972466928,
+    "ceiling": 0.5433333333333333,
+    "logitContribution": {
+     "est": 0.04693284152753879,
+     "lo": -0.26147970005775656,
+     "hi": 0.3621555873925081
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_b3",
+    "seat": "b3",
+    "hero": "bingshuang",
+    "blueWin": 0.5466666666666666,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": -0.0033333333333333335,
+     "sd": 0.7269229294591472,
+     "se": 0.04196891490033499,
+     "z": -0.07942386266714575,
+     "lo": -0.08559240653798991,
+     "hi": 0.07892573987132326
+    },
+    "label": "NONE",
+    "mde": 0.15325368965006325,
+    "ceiling": 0.5433333333333333,
+    "logitContribution": {
+     "est": -0.013442267109508937,
+     "lo": -0.3696243176843426,
+     "hi": 0.31493912516480926
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_b4",
+    "seat": "b4",
+    "hero": "dawnstrike",
+    "blueWin": 0.47333333333333333,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.07,
+     "sd": 0.7177398565443074,
+     "se": 0.04143872993839792,
+     "z": 1.6892409613919335,
+     "lo": -0.011219910679259926,
+     "hi": 0.15121991067925994
+    },
+    "label": "NONE",
+    "mde": 0.15131766624305387,
+    "ceiling": 0.5433333333333333,
+    "logitContribution": {
+     "est": 0.28053725040434335,
+     "lo": -0.04013021753612178,
+     "hi": 0.6124890918242082
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_b5",
+    "seat": "b5",
+    "hero": "dadi",
+    "blueWin": 0.515,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.028333333333333332,
+     "sd": 0.6682207360314634,
+     "se": 0.03857974218258552,
+     "z": 0.7344096080072482,
+     "lo": -0.04728296134453429,
+     "hi": 0.10394962801120096
+    },
+    "label": "NONE",
+    "mde": 0.1408777865539293,
+    "ceiling": 0.5433333333333333,
+    "logitContribution": {
+     "est": 0.11375126525238446,
+     "lo": -0.19501170791044253,
+     "hi": 0.4239833869276645
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_r1",
+    "seat": "r1",
+    "hero": "cinderfist",
+    "blueWin": 0.6066666666666667,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.06333333333333334,
+     "sd": 0.6751604953915381,
+     "se": 0.03898040937605056,
+     "z": 1.6247477732300353,
+     "lo": -0.013068269043725753,
+     "hi": 0.13973493571039242
+    },
+    "label": "NONE",
+    "mde": 0.14234086287758624,
+    "ceiling": 0.45666666666666667,
+    "logitContribution": {
+     "est": 0.25955278763249323,
+     "lo": -0.047535314719238914,
+     "hi": 0.5805122907400134
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_r2",
+    "seat": "r2",
+    "hero": "chichuan",
+    "blueWin": 0.605,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.06166666666666667,
+     "sd": 0.6978446671625276,
+     "se": 0.04029008064388301,
+     "z": 1.5305669703599647,
+     "lo": -0.017301891395344028,
+     "hi": 0.14063522472867737
+    },
+    "label": "NONE",
+    "mde": 0.1471232584792032,
+    "ceiling": 0.45666666666666667,
+    "logitContribution": {
+     "est": 0.25257341815108214,
+     "lo": -0.07531101493069142,
+     "hi": 0.5839570766890214
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_r3",
+    "seat": "r3",
+    "hero": "bingshouweis",
+    "blueWin": 0.625,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.08166666666666667,
+     "sd": 0.6738030801787841,
+     "se": 0.03890203897220199,
+     "z": 2.0992901355382103,
+     "lo": 0.005418670281150756,
+     "hi": 0.15791466305218257
+    },
+    "label": "HINT",
+    "mde": 0.14205468551089281,
+    "ceiling": 0.45666666666666667,
+    "logitContribution": {
+     "est": 0.3370563487873533,
+     "lo": 0.03395297054879809,
+     "hi": 0.6606512679683776
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_r4",
+    "seat": "r4",
+    "hero": "dadi2",
+    "blueWin": 0.5733333333333334,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.03,
+     "sd": 0.72400317817444,
+     "se": 0.04180034298131575,
+     "z": 0.7176974603631755,
+     "lo": -0.05192867224337887,
+     "hi": 0.11192867224337887
+    },
+    "label": "NONE",
+    "mde": 0.1526381324305726,
+    "ceiling": 0.45666666666666667,
+    "logitContribution": {
+     "est": 0.12169493791519864,
+     "lo": -0.20902104948220507,
+     "hi": 0.446655593480596
+    },
+    "scale": "CONSISTENT"
+   },
+   {
+    "arm": "MT_KOG_r5",
+    "seat": "r5",
+    "hero": "stoneguard",
+    "blueWin": 0.6083333333333333,
+    "baseBlueWin": 0.5433333333333333,
+    "contribution": {
+     "n": 300,
+     "mean": 0.065,
+     "sd": 0.6731409429658776,
+     "se": 0.03886381046239079,
+     "z": 1.672507127495943,
+     "lo": -0.011173068506285952,
+     "hi": 0.14117306850628597
+    },
+    "label": "NONE",
+    "mde": 0.14191509028446622,
+    "ceiling": 0.45666666666666667,
+    "logitContribution": {
+     "est": 0.26654256445969493,
+     "lo": -0.048513959223607794,
+     "hi": 0.603396377588119
+    },
+    "scale": "CONSISTENT"
+   }
+  ],
+  "teamSum": {
+   "blue": {
+    "n": 300,
+    "mean": 0.15333333333333332,
+    "sd": 2.7528924689085597,
+    "se": 0.15893832079744502,
+    "z": 0.9647348264660803,
+    "lo": -0.1581857754296589,
+    "hi": 0.46485244209632554
+   },
+   "red": {
+    "n": 300,
+    "mean": 0.3016666666666667,
+    "sd": 2.6724465302563423,
+    "se": 0.15429377236383804,
+    "z": 1.9551447997221212,
+    "lo": -0.0007491271664558652,
+    "hi": 0.6040824604997892
+   }
+  }
+ },
+ "equalize": [
+  {
+   "group": "RB",
+   "pairing": "drill_rotation>drill_balanced",
+   "n": 200,
+   "v21": 0.965,
+   "L1": 0.625,
+   "eqV21": 0.8425,
+   "eqL1": 0.495,
+   "flip": {
+    "n": 200,
+    "mean": 0.34,
+    "sd": 0.5031558696325912,
+    "se": 0.03557849274110197,
+    "z": 9.556335128475407,
+    "lo": 0.27026615422744016,
+    "hi": 0.4097338457725599
+   },
+   "flipEq": {
+    "n": 200,
+    "mean": 0.3475,
+    "sd": 0.6204178766835645,
+    "se": 0.04387016877723077,
+    "z": 7.921100139016501,
+    "lo": 0.2615144691966277,
+    "hi": 0.43348553080337227
+   },
+   "interaction": {
+    "n": 200,
+    "mean": 0.0075,
+    "sd": 0.7869499355137055,
+    "se": 0.055645763585605745,
+    "z": 0.13478114984372455,
+    "lo": -0.10156569662778725,
+    "hi": 0.11656569662778726
+   },
+   "label": "NONE",
+   "mde": 0.17147798506540268,
+   "logitInteraction": {
+    "est": -1.1090055454160819,
+    "lo": -2.2900079786046925,
+    "hi": -0.32057917798268964
+   },
+   "scale": "SCALE_DEPENDENT"
+  },
+  {
+   "group": "MT",
+   "pairing": "drill_mirror>drill_topheavy",
+   "n": 200,
+   "v21": 0.54,
+   "L1": 0.665,
+   "eqV21": 0.8875,
+   "eqL1": 0.935,
+   "flip": {
+    "n": 200,
+    "mean": -0.125,
+    "sd": 0.6922942703676809,
+    "se": 0.048952597315358025,
+    "z": -2.553490659438073,
+    "lo": -0.22094709073810173,
+    "hi": -0.02905290926189827
+   },
+   "flipEq": {
+    "n": 200,
+    "mean": -0.0475,
+    "sd": 0.415157232429101,
+    "se": 0.029356049430925697,
+    "z": -1.618065132086888,
+    "lo": -0.10503785688461437,
+    "hi": 0.010037856884614366
+   },
+   "interaction": {
+    "n": 200,
+    "mean": 0.0775,
+    "sd": 0.8418952954151784,
+    "se": 0.05953098724371243,
+    "z": 1.3018430163559134,
+    "lo": -0.03918073499767637,
+    "hi": 0.19418073499767635
+   },
+   "label": "NONE",
+   "mde": 0.18345069029022426,
+   "logitInteraction": {
+    "est": -0.0753901009323471,
+    "lo": -1.0242546387944635,
+    "hi": 0.7955462550644983
+   },
+   "scale": "CONSISTENT"
+  }
+ ],
+ "mirror": {
+  "skillStep": {
+   "perLineup": {
+    "mirror": {
+     "n": 300,
+     "sL1": -0.015000000000000013,
+     "sL3a": 0.023333333333333317,
+     "delta": {
+      "n": 300,
+      "mean": 0.03833333333333333,
+      "sd": 0.6911024750297123,
+      "se": 0.0399008199996021,
+      "z": 0.9607154272447433,
+      "lo": -0.03987227386588678,
+      "hi": 0.11653894053255344
+     },
+     "label": "NONE",
+     "mde": 0.13652464571063855
+    },
+    "topheavyDef": {
+     "n": 300,
+     "sL1": -0.053333333333333344,
+     "sL3a": 0.10666666666666669,
+     "delta": {
+      "n": 300,
+      "mean": 0.16,
+      "sd": 0.6911286876380214,
+      "se": 0.039902333385248435,
+      "z": 4.0097905667629625,
+      "lo": 0.08179142656491308,
+      "hi": 0.23820857343508695
+     },
+     "label": "MATERIAL",
+     "mde": 0.13652982391096605
+    },
+    "rotation": {
+     "n": 300,
+     "sL1": 0.08166666666666667,
+     "sL3a": 0.08999999999999997,
+     "delta": {
+      "n": 300,
+      "mean": 0.008333333333333333,
+      "sd": 0.6981321631896231,
+      "se": 0.04030667923474646,
+      "z": 0.20674819884813445,
+      "lo": -0.07066775796676973,
+      "hi": 0.0873344246334364
+     },
+     "label": "NONE",
+     "mde": 0.1379133336696085
+    },
+    "balancedDef": {
+     "n": 300,
+     "sL1": 0.04833333333333334,
+     "sL3a": 0.1166666666666667,
+     "delta": {
+      "n": 300,
+      "mean": 0.06833333333333333,
+      "sd": 0.7126406841491509,
+      "se": 0.04114432908289913,
+      "z": 1.6608202115935047,
+      "lo": -0.012309551669148974,
+      "hi": 0.14897621833581565
+     },
+     "label": "NONE",
+     "mde": 0.14077943639004767
+    }
+   },
+   "pooled": {
+    "n": 1200,
+    "mean": 0.06875,
+    "sd": 0.6997426698460948,
+    "se": 0.02019983093995551,
+    "z": 3.4034938314266614,
+    "lo": 0.029158331357687202,
+    "hi": 0.10834166864231282
+   },
+   "pooledLabel": "MATERIAL",
+   "pooledMde": 0.06911574154415179,
+   "verdict": "SKILL_LAYER_SIDE_EFFECT"
+  },
+  "growthStep": {
+   "perLineup": {
+    "mirror": {
+     "n": 300,
+     "sL3a": 0.023333333333333317,
+     "sL3": -0.00833333333333336,
+     "delta": {
+      "n": 300,
+      "mean": -0.03166666666666667,
+      "sd": 0.7221974240375766,
+      "se": 0.04169608771761491,
+      "z": -0.7594637386876175,
+      "lo": -0.1133909985931919,
+      "hi": 0.05005766525985856
+     },
+     "label": "NONE",
+     "mde": 0.13474507706824435
+    },
+    "topheavyDef": {
+     "n": 300,
+     "sL3a": 0.10666666666666669,
+     "sL3": 0.1233333333333333,
+     "delta": {
+      "n": 300,
+      "mean": 0.016666666666666666,
+      "sd": 0.6828444018559745,
+      "se": 0.03942403992261758,
+      "z": 0.4227539009036209,
+      "lo": -0.06060445158166379,
+      "hi": 0.09393778491499712
+     },
+     "label": "NONE",
+     "mde": 0.127402727413931
+    }
+   },
+   "pooled": {
+    "n": 600,
+    "mean": -0.0075,
+    "sd": 0.7026259474547804,
+    "se": 0.028684584188396613,
+    "z": -0.26146448387541465,
+    "lo": -0.06372178500925736,
+    "hi": 0.04872178500925736
+   },
+   "pooledLabel": "NONE",
+   "pooledMde": 0.0926971022632225
+  },
+  "sideByContext": {
+   "L0": {
+    "n": 800,
+    "mean": -0.018125,
+    "sd": 0.49589956629322884,
+    "se": 0.0175326973056705,
+    "z": -1.0337827479710116,
+    "lo": -0.052489086719114175,
+    "hi": 0.01623908671911418
+   },
+   "L1": {
+    "n": 1200,
+    "mean": 0.015416666666666667,
+    "sd": 0.49515146389671544,
+    "se": 0.014293791548520295,
+    "z": 1.0785568415724247,
+    "lo": -0.01259916476843311,
+    "hi": 0.04343249810176644
+   },
+   "L3a": {
+    "n": 1200,
+    "mean": 0.08416666666666667,
+    "sd": 0.49052674336933244,
+    "se": 0.014160287366449727,
+    "z": 5.9438530086673635,
+    "lo": 0.0564125034284252,
+    "hi": 0.11192082990490813
+   },
+   "L3": {
+    "n": 600,
+    "mean": 0.0575,
+    "sd": 0.4958361683490557,
+    "se": 0.020242426807865418,
+    "z": 2.840568502273539,
+    "lo": 0.017824843456583785,
+    "hi": 0.09717515654341621
+   }
+  },
+  "td3a23": {
+   "perLineup": {
+    "mirror": {
+     "tacticAsymmetric": false,
+     "n": 200,
+     "sL0": -0.027500000000000024,
+     "sL1": -0.027500000000000024,
+     "delta": {
+      "n": 200,
+      "mean": 0,
+      "sd": 0,
+      "se": 0,
+      "z": 0,
+      "lo": 0,
+      "hi": 0
+     },
+     "label": "NONE",
+     "mde": 0,
+     "identicalMatchByMatch": true
+    },
+    "topheavyDef": {
+     "tacticAsymmetric": true,
+     "n": 200,
+     "sL0": -0.03999999999999998,
+     "sL1": -0.05499999999999999,
+     "delta": {
+      "n": 200,
+      "mean": -0.015,
+      "sd": 0.6514575849006775,
+      "se": 0.04606500759386801,
+      "z": -0.3256267779709807,
+      "lo": -0.1052874148839813,
+      "hi": 0.0752874148839813
+     },
+     "label": "NONE",
+     "mde": 0.15393082937566935,
+     "identicalMatchByMatch": false
+    },
+    "rotation": {
+     "tacticAsymmetric": true,
+     "n": 200,
+     "sL0": -0.044999999999999984,
+     "sL1": 0.05500000000000005,
+     "delta": {
+      "n": 200,
+      "mean": 0.1,
+      "sd": 0.6909319320116617,
+      "se": 0.048856265446376855,
+      "z": 2.0468203839639965,
+      "lo": 0.004241719725101373,
+      "hi": 0.19575828027489864
+     },
+     "label": "HINT",
+     "mde": 0.1632580966156129,
+     "identicalMatchByMatch": false
+    },
+    "balancedDef": {
+     "tacticAsymmetric": false,
+     "n": 200,
+     "sL0": 0.040000000000000036,
+     "sL1": 0.040000000000000036,
+     "delta": {
+      "n": 200,
+      "mean": 0,
+      "sd": 0,
+      "se": 0,
+      "z": 0,
+      "lo": 0,
+      "hi": 0
+     },
+     "label": "NONE",
+     "mde": 0,
+     "identicalMatchByMatch": true
+    }
+   },
+   "verdict": "TD3A23_CONSISTENT"
+  }
+ },
+ "arms": [
+  {
+   "arm": "RB_v21",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "baseline": true
+   },
+   "n": 200,
+   "ran": 20,
+   "blueWin": 0.965,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_L1",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "L1",
+    "baseline": true
+   },
+   "n": 200,
+   "ran": 20,
+   "blueWin": 0.625,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_EQ_v21",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "equalize": true,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.8425,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_EQ_L1",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "L1",
+    "equalize": true,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.495,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_b1",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "b1"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.735,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_b2",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "b2"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.81,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_b3",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "b3"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.8475,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_b4",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "b4"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.95,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_b5",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "b5"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.855,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_r1",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "r1"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.975,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_r2",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "r2"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.97,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_r3",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "r3"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.995,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_r4",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "r4"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.98,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "RB_KOS_r5",
+   "spec": {
+    "group": "RB",
+    "residue": 4,
+    "context": "v21",
+    "koSkills": "r5"
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.98,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "MT_v21",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "baseline": true
+   },
+   "n": 300,
+   "ran": 20,
+   "blueWin": 0.5433333333333333,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_L1",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "L1",
+    "baseline": true
+   },
+   "n": 300,
+   "ran": 20,
+   "blueWin": 0.685,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_EQ_v21",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "equalize": true,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.8875,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_EQ_L1",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "L1",
+    "equalize": true,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.935,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_b1",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "b1"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.49666666666666665,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_b2",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "b2"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.5316666666666666,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_b3",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "b3"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.5466666666666666,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_b4",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "b4"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.47333333333333333,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_b5",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "b5"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.515,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_r1",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "r1"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.6066666666666667,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_r2",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "r2"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.605,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_r3",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "r3"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.625,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_r4",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "r4"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.5733333333333334,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MT_KOG_r5",
+   "spec": {
+    "group": "MT",
+    "residue": 0,
+    "context": "v21",
+    "koGrowth": "r5"
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.6083333333333333,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MIR_mirror_L1",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L1",
+    "mirror": "blue",
+    "lineup": "mirror",
+    "tactic": "m1",
+    "laneAsymmetric": false,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.485,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "ironclad",
+    "r2": "duskblade",
+    "r3": "bingshuang",
+    "r4": "dawnstrike",
+    "r5": "dadi"
+   }
+  },
+  {
+   "arm": "MIR_mirror_L3a",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L3a",
+    "mirror": "blue",
+    "lineup": "mirror",
+    "tactic": "m1",
+    "laneAsymmetric": false,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.5233333333333333,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "ironclad",
+    "r2": "duskblade",
+    "r3": "bingshuang",
+    "r4": "dawnstrike",
+    "r5": "dadi"
+   }
+  },
+  {
+   "arm": "MIR_mirror_L3",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L3",
+    "mirror": "blue",
+    "lineup": "mirror",
+    "tactic": "m1",
+    "laneAsymmetric": false,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.49166666666666664,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "ironclad",
+    "r2": "duskblade",
+    "r3": "bingshuang",
+    "r4": "dawnstrike",
+    "r5": "dadi"
+   }
+  },
+  {
+   "arm": "MIR_mirror_L0",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L0",
+    "mirror": "blue",
+    "lineup": "mirror",
+    "tactic": "m1",
+    "laneAsymmetric": false,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.4725,
+   "roster": {
+    "b1": "ironclad",
+    "b2": "duskblade",
+    "b3": "bingshuang",
+    "b4": "dawnstrike",
+    "b5": "dadi",
+    "r1": "ironclad",
+    "r2": "duskblade",
+    "r3": "bingshuang",
+    "r4": "dawnstrike",
+    "r5": "dadi"
+   }
+  },
+  {
+   "arm": "MIR_topheavyDef_L1",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L1",
+    "mirror": "red",
+    "lineup": "topheavyDef",
+    "tactic": "m4",
+    "laneAsymmetric": true,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.44666666666666666,
+   "roster": {
+    "b1": "cinderfist",
+    "b2": "chichuan",
+    "b3": "bingshouweis",
+    "b4": "dadi2",
+    "b5": "stoneguard",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MIR_topheavyDef_L3a",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L3a",
+    "mirror": "red",
+    "lineup": "topheavyDef",
+    "tactic": "m4",
+    "laneAsymmetric": true,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.6066666666666667,
+   "roster": {
+    "b1": "cinderfist",
+    "b2": "chichuan",
+    "b3": "bingshouweis",
+    "b4": "dadi2",
+    "b5": "stoneguard",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MIR_topheavyDef_L3",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L3",
+    "mirror": "red",
+    "lineup": "topheavyDef",
+    "tactic": "m4",
+    "laneAsymmetric": true,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.6233333333333333,
+   "roster": {
+    "b1": "cinderfist",
+    "b2": "chichuan",
+    "b3": "bingshouweis",
+    "b4": "dadi2",
+    "b5": "stoneguard",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MIR_topheavyDef_L0",
+   "spec": {
+    "group": "MIR",
+    "residue": 0,
+    "context": "L0",
+    "mirror": "red",
+    "lineup": "topheavyDef",
+    "tactic": "m4",
+    "laneAsymmetric": true,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.46,
+   "roster": {
+    "b1": "cinderfist",
+    "b2": "chichuan",
+    "b3": "bingshouweis",
+    "b4": "dadi2",
+    "b5": "stoneguard",
+    "r1": "cinderfist",
+    "r2": "chichuan",
+    "r3": "bingshouweis",
+    "r4": "dadi2",
+    "r5": "stoneguard"
+   }
+  },
+  {
+   "arm": "MIR_rotation_L1",
+   "spec": {
+    "group": "MIR",
+    "residue": 4,
+    "context": "L1",
+    "mirror": "blue",
+    "lineup": "rotation",
+    "tactic": "m2",
+    "laneAsymmetric": true,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.5816666666666667,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "chichuan",
+    "r2": "binghe",
+    "r3": "bingshuang",
+    "r4": "leiting",
+    "r5": "dadi"
+   }
+  },
+  {
+   "arm": "MIR_rotation_L3a",
+   "spec": {
+    "group": "MIR",
+    "residue": 4,
+    "context": "L3a",
+    "mirror": "blue",
+    "lineup": "rotation",
+    "tactic": "m2",
+    "laneAsymmetric": true,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.59,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "chichuan",
+    "r2": "binghe",
+    "r3": "bingshuang",
+    "r4": "leiting",
+    "r5": "dadi"
+   }
+  },
+  {
+   "arm": "MIR_rotation_L0",
+   "spec": {
+    "group": "MIR",
+    "residue": 4,
+    "context": "L0",
+    "mirror": "blue",
+    "lineup": "rotation",
+    "tactic": "m2",
+    "laneAsymmetric": true,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.455,
+   "roster": {
+    "b1": "chichuan",
+    "b2": "binghe",
+    "b3": "bingshuang",
+    "b4": "leiting",
+    "b5": "dadi",
+    "r1": "chichuan",
+    "r2": "binghe",
+    "r3": "bingshuang",
+    "r4": "leiting",
+    "r5": "dadi"
+   }
+  },
+  {
+   "arm": "MIR_balancedDef_L1",
+   "spec": {
+    "group": "MIR",
+    "residue": 4,
+    "context": "L1",
+    "mirror": "red",
+    "lineup": "balancedDef",
+    "tactic": "m1",
+    "laneAsymmetric": false,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.5483333333333333,
+   "roster": {
+    "b1": "cinderfist",
+    "b2": "dadi2",
+    "b3": "gambler",
+    "b4": "dawnstrike",
+    "b5": "fengshen",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "MIR_balancedDef_L3a",
+   "spec": {
+    "group": "MIR",
+    "residue": 4,
+    "context": "L3a",
+    "mirror": "red",
+    "lineup": "balancedDef",
+    "tactic": "m1",
+    "laneAsymmetric": false,
+    "n": 300
+   },
+   "n": 300,
+   "ran": 300,
+   "blueWin": 0.6166666666666667,
+   "roster": {
+    "b1": "cinderfist",
+    "b2": "dadi2",
+    "b3": "gambler",
+    "b4": "dawnstrike",
+    "b5": "fengshen",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  },
+  {
+   "arm": "MIR_balancedDef_L0",
+   "spec": {
+    "group": "MIR",
+    "residue": 4,
+    "context": "L0",
+    "mirror": "red",
+    "lineup": "balancedDef",
+    "tactic": "m1",
+    "laneAsymmetric": false,
+    "n": 200
+   },
+   "n": 200,
+   "ran": 200,
+   "blueWin": 0.54,
+   "roster": {
+    "b1": "cinderfist",
+    "b2": "dadi2",
+    "b3": "gambler",
+    "b4": "dawnstrike",
+    "b5": "fengshen",
+    "r1": "cinderfist",
+    "r2": "dadi2",
+    "r3": "gambler",
+    "r4": "dawnstrike",
+    "r5": "fengshen"
+   }
+  }
+ ]
+}
