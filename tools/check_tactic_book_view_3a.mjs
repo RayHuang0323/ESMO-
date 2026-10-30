@@ -174,8 +174,10 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
   //  3a-B dcfa341c 起拆成兩步（先解析 liveRuleset 給對手情報共用，再取模式）；兩種寫法都必須是同一個解析呼叫、同樣的引數。
   const screenWired = (/tacticalDirectorModeOf\(resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\)\)/.test(screenSrc)
     || /const liveRuleset = useMemo\(\(\) => resolveRulesetForMode\(\{ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS \}\), \[\]\);\s*const tacticalDirector = tacticalDirectorModeOf\(liveRuleset\);/.test(screenSrc))
-    && /offeredChoicesOnly\([^)]*\{ tacticalDirector \}\)/.test(screenSrc) && (screenSrc.match(/tacticBookView\(\{[^\n]*tacticalDirector \}\)/g) ?? []).length === 2;
-  ck(`V11 每時期維度（${reqDims.length} 個）：static 下不畫；core.v1 下畫出的（共 ${shownP}）＝tacticBookOptions(core.v1)；每個非預設選項（共 ${clickedP}）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式並傳給兩個呼叫點`,
+    //  V11'（Phase 3a-B 第一階段，事前登記 stage1_release_registration_3aB 的替代斷言）：兩個呼叫點另帶**同一個**規則集解析出的模板修正表。
+    && /const templateBalance = templateBalanceOf\(liveRuleset\);/.test(screenSrc)
+    && /offeredChoicesOnly\([^)]*\{ tacticalDirector, templateBalance \}\)/.test(screenSrc) && (screenSrc.match(/tacticBookView\(\{[^\n]*tacticalDirector, templateBalance \}\)/g) ?? []).length === 2;
+  ck(`V11' 每時期維度（${reqDims.length} 個）：static 下不畫；core.v1 下畫出的（共 ${shownP}）＝tacticBookOptions(core.v1)；每個非預設選項（共 ${clickedP}）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式與模板修正表並傳給兩個呼叫點`,
     badP.length === 0 && reqDims.length === 10 && shownP > 0 && clickedP > 0 && screenWired, badP.slice(0, 4).join("；") + (screenWired ? "" : "；TacticScreen 沒接上"));
 
   //  V11b（Phase 3a-C5R 快捷）：core.v1 下 std 有「強邊（前＋中期）」一列，選項＝兩格強邊都提供的路；點「上路」⇒ 計畫恰好多兩格（前期、中期 focusLane＝top），
@@ -222,12 +224,15 @@ const designDims = CAPABILITY_ROWS.filter((r) => r.status === "design").map((r) 
     const v20 = run("career.v20"), v21 = run("career.v21"), dev = run("balanceTool.v20");
     const v20Plain = Live.buildLiveMatchSetup({ opts: { tacticPlanBinding: plain }, ruleset: RS.rulesetById("career.v20"), seed: 7, seedSource: "local" });
     const choicesOf = (r) => J(r.setup?.tactic?.blue?.binding?.plan?.choices);
-    ck("V13 本場過濾：career.v20／DEV 的 balanceTool.v20（static）⇒ 開局成功、本場 binding 拿掉每時期選擇並記在 notes、其他選擇保留；career.v21 ⇒ 原樣；沒有每時期選擇 ⇒ 同一個 binding（逐字不變）；傳入的 binding 物件沒被改",
-      v20.ok && choicesOf(v20) === J({ risk: { tolerance: "bold" } }) && v20.notes.some((n) => n.includes("phases.mid.grouping=group"))
-      && dev.ok && choicesOf(dev) === J({ risk: { tolerance: "bold" } }) && v21.ok && choicesOf(v21) === J(b.plan.choices) && v21.notes.length === 0
-      && v20Plain.ok && J(v20Plain.setup.tactic.blue.binding) === J(plain) && v20Plain.notes.length === 0 && J(b) === frozenCopy
+    //  V13'（Phase 3a-B 第一階段總開關，取代 2026-10-22 檢查 2 的 static 部分；Owner 2026-10-30 第 5 點）：static（career.v20／DEV 的 balanceTool.v20）
+    //  下**不使用**戰術書 binding——std 計畫改用標準運營並註明替換、每個選擇都列為本場拿掉；career.v21 原樣；傳入物件沒被改。
+    const stdUsed = (r) => r.ok && r.setup?.tactic?.blue?.kind === "std" && r.templateSubstitution === null && r.notes.some((n) => n.includes("tactic book not used"));
+    ck("V13' 總開關：career.v20／DEV 的 balanceTool.v20（static）⇒ 開局成功、不使用 binding（std 計畫 ⇒ 標準運營（同一個戰術，不算替換）、每個選擇列為本場拿掉）；career.v21 ⇒ 原樣；傳入的 binding 物件沒被改",
+      stdUsed(v20) && J(v20.droppedChoices.map((d) => d.dimension).sort()) === J(["phases.mid.grouping", "risk.tolerance"])
+      && stdUsed(dev) && v21.ok && choicesOf(v21) === J(b.plan.choices) && v21.notes.length === 0
+      && stdUsed(v20Plain) && J(b) === frozenCopy
       && Live.bindingForRuleset(plain, RS.rulesetById("career.v20")).binding === plain,
-      J({ v20: choicesOf(v20), dev: choicesOf(dev), v21: choicesOf(v21) }));
+      J({ v20: v20.setup?.tactic?.blue?.kind, dev: dev.setup?.tactic?.blue?.kind, v21: choicesOf(v21) }));
   }
 
   ck("W6 AppShell：戰術頁交出的 binding 進 state 與本場設定（重新整理後接得回來），再交給 GameView", shell.includes("setTacticPlanBinding(binding ?? null)") && shell.includes("tacticPlanBinding: binding ?? null") && shell.includes("tacticPlanBinding={tacticPlanBinding}") && shell.includes("setTacticPlanBinding(config.tacticPlanBinding ?? null)"));

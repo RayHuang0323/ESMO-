@@ -69,8 +69,12 @@ const result = await runGate({
     const m1 = await mount("src/GameView.jsx", "{autoStart:true,tacticPlanBinding:" + J(B_DROP) + "}");
     await sleep(6000);
     const dropT = await text("battle-dropped-note-dropped"), keepT1 = await text("battle-dropped-note-kept"), err1 = await text("battle-assembly-error");
+    const subT = await text("battle-dropped-note-substitution");
     ck("D0 旗標關、GameView 掛載成功", m1?.ok && (await flagNow()) === false);
-    ck("D1 對戰畫面顯示「本場未使用的戰術選項」並列出勝利條件＝前期滾雪球；沒有「沿用」那一行；沒有開局錯誤", (dropT ?? "").includes("本場未使用的戰術選項") && (dropT ?? "").includes("前期滾雪球") && keepT1 === null && err1 === null, J({ dropT, keepT1 }));
+    //  D1'（Phase 3a-B 第一階段總開關，Owner 2026-10-30 第 5 點；事前登記 stage1_release_registration_3aB 的替代斷言）：旗標關閉時不使用戰術書 binding——
+    //  std 計畫打的就是標準運營（不算替換，沒有 battle-dropped-note-substitution），計畫的選擇列為本場未使用；比賽照常開始。
+    ck("D1' 對戰畫面顯示「本場未使用的戰術選項」（勝利條件＝前期滾雪球）；std 計畫打的就是標準運營 ⇒ 沒有替換那一行；沒有「沿用」那一行；沒有開局錯誤",
+      subT === null && (dropT ?? "").includes("本場未使用的戰術選項") && (dropT ?? "").includes("前期滾雪球") && keepT1 === null && err1 === null, J({ subT, dropT, keepT1 }));
     await shot("d1366_battle_dropped_note");
     await mobile(); await sleep(1200);
     ck("L1[m] 390：提示沒有橫向溢出", (await overflow()) <= 0, String(await overflow()));

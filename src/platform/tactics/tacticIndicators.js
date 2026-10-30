@@ -22,7 +22,7 @@
 // ============================================================================
 import { createTacticPlan } from "./tacticPlan.js";
 import { templateById } from "./tacticTemplates.js";
-import { mergeTacticConfig, tacticBookOptions, leavesOf } from "./tacticChoiceMapping.js";
+import { choiceEngineFor, leavesOf } from "./tacticChoiceMapping.js";
 import { REPLICATION_WITHHELD } from "./capabilityRegistry.js";
 import { toEngineTactic, STANDARD_OPP_TACTIC } from "../contracts/MobaTacticConfig.js";
 import { STAT_MAP, NEUTRAL_STAT } from "../../battle/moba/mobaPlayerStats.js";
@@ -33,14 +33,17 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const fix = (v) => Math.round(v * 1e6) / 1e6 + 0;
 const isObj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
-/** binding（或 plan）→ { plan, config }；不合法 ⇒ null。 */
-function resolved(binding) {
+/**
+ * binding（或 plan）→ { plan, config }；不合法 ⇒ null。
+ * templateBalance（Phase 3a-B 第一階段）：本場規則集的模板修正表；指標從修正後的模板設定開始算（與引擎打的那一份相同）。省略 ⇒ 出貨版。
+ */
+function resolved(binding, templateBalance = null) {
   try {
     const raw = isObj(binding) && isObj(binding.plan) ? binding.plan : binding;
     const created = createTacticPlan(raw);
     if (!created.ok) return null;
     const plan = created.plan;
-    const config = mergeTacticConfig(templateById(plan.templateId), plan.overlayIds, plan.choices);
+    const config = choiceEngineFor(templateBalance).mergeConfig(templateById(plan.templateId), plan.overlayIds, plan.choices);
     return { plan, config };
   } catch {
     return null;
@@ -63,8 +66,8 @@ const ROAM_FULL = 0.7;       // 八套經典裡最高的輔助遊走率（m6）�
  * @param {object} binding  TacticPlanBinding（或 TacticPlan.v2）
  * @returns {{early:number, midControl:number, lateTeamfight:number, objectives:number, splitPressure:number, risk:number} | null}
  */
-export function planProfile(binding) {
-  const r = resolved(binding);
+export function planProfile(binding, templateBalance = null) {
+  const r = resolved(binding, templateBalance);
   if (!r) return null;
   const { macro: m, objectives: o, economy: e } = r.config;
   const knobs = toEngineTactic(r.config);
@@ -182,8 +185,8 @@ function missionsOf(config) {
  * @param {Function|object} [o.heroLookup]  (seat) → 英雄的戰鬥原型物件（getHeroCombatArchetype 的回傳）或 movementProfile 字串；可省略
  * @returns {null | Record<string, { mission:string, core:boolean, grade:"A"|"B"|"C"|"D", score:number, strongest:string|null, weakest:string|null, hero:{profile:string|null, fit:number} }>}
  */
-export function seatMissionFit({ binding, seatPlayers, heroLookup } = {}) {
-  const r = resolved(binding);
+export function seatMissionFit({ binding, seatPlayers, heroLookup, templateBalance = null } = {}) {
+  const r = resolved(binding, templateBalance);
   if (!r) return null;
   const stats = statsBySeat(seatPlayers);
   const missions = missionsOf(r.config);
@@ -232,8 +235,8 @@ export const COORDINATION = Object.freeze({
  * @returns {null | { load:number, capacity:number, over:boolean, items:Array<{id:string, weight:number}> }}
  *   capacity 由全隊 synergy 與 comms 的平均推導；沒有選手資料＝中性隊伍。
  */
-export function coordinationLoad(binding, seatPlayers) {
-  const r = resolved(binding);
+export function coordinationLoad(binding, seatPlayers, templateBalance = null) {
+  const r = resolved(binding, templateBalance);
   if (!r) return null;
   const C = COORDINATION, { macro: m, objectives: o, lanePlan: lp, economy: e } = r.config;
   const knobs = toEngineTactic(r.config);
@@ -303,13 +306,13 @@ export const CONTRADICTION_RULES = Object.freeze([
 ].map((r) => Object.freeze({ ...r, when: Object.freeze(r.when.map((w) => Object.freeze(w))), evidence: Object.freeze(r.evidence) })));
 
 /** 這份計畫在每個 live 維度的有效選擇（明確選的優先，否則是模板＋覆蓋層自己的；對不到任何選擇＝null）。 */
-export function effectiveChoices(binding) {
-  const r = resolved(binding);
+export function effectiveChoices(binding, templateBalance = null) {
+  const r = resolved(binding, templateBalance);
   if (!r) return null;
   const explicit = Object.fromEntries(leavesOf(r.plan.choices));
   const out = {};
   //  描述的是計畫本身（與規則集無關）⇒ 每時期維度（只在 Director core.v1 可選）也列出；沒選就是不覆寫的本來值。
-  for (const row of tacticBookOptions(r.plan.templateId, r.plan.overlayIds, r.plan.choices, { tacticalDirector: "core.v1" })) {
+  for (const row of choiceEngineFor(templateBalance).tacticBookOptions(r.plan.templateId, r.plan.overlayIds, r.plan.choices, { tacticalDirector: "core.v1" })) {
     out[row.dimension] = Object.hasOwn(explicit, row.dimension) ? explicit[row.dimension] : row.own;
   }
   return Object.freeze(out);
@@ -321,8 +324,10 @@ export function effectiveChoices(binding) {
  * @param {ReadonlyArray<{template:string,dimension:string,choice:string}>} withheld  預設＝Registry 的 REPLICATION_WITHHELD（測試可注入）
  */
 //  只看「沒站住」的撤下（reason not_replicated；測試注入的清單沒有 reason 時視同）：owner_hold 是複驗 confirmed、Owner 暫緩提供，證據本身成立。
-export const ruleSuppressed = (rule, templateId, withheld = REPLICATION_WITHHELD) =>
-  rule.evidence.some((e) => withheld.some((w) => (w.reason ?? "not_replicated") === "not_replicated" && w.dimension === e.dimension && w.choice === e.choice && (w.template === "*" || w.template === templateId)));
+//  templateBalance（Phase 3a-B 第一階段）：帶 templateBalance 的撤下列只在那張修正表下算數（與 replicationWithheld 同一條規則）。
+export const ruleSuppressed = (rule, templateId, withheld = REPLICATION_WITHHELD, templateBalance = null) =>
+  rule.evidence.some((e) => withheld.some((w) => (w.reason ?? "not_replicated") === "not_replicated" && w.dimension === e.dimension && w.choice === e.choice && (w.template === "*" || w.template === templateId)
+    && (w.templateBalance === undefined || w.templateBalance === templateBalance)));
 /** 在這份撤下清單下被抑制的規則 id（規則表順序；gate 用它對 REPLICATION_WITHHELD 推導出的集合）。 */
 export const suppressedRuleIds = (templateId = "std", withheld = REPLICATION_WITHHELD) => CONTRADICTION_RULES.filter((r) => ruleSuppressed(r, templateId, withheld)).map((r) => r.id);
 
@@ -330,12 +335,13 @@ export const suppressedRuleIds = (templateId = "std", withheld = REPLICATION_WIT
  * 矛盾提示。
  * @returns {Array<{ id:string, text:string }>}  規則表的順序（扣掉證據被複驗撤下的規則）；輸入不合法 ⇒ []
  */
-export function contradictions(binding, withheld = REPLICATION_WITHHELD) {
-  const eff = effectiveChoices(binding);
+//  templateBalance：矛盾判斷用本場修正表下的有效選擇（審查：畫面＝引擎；修正後的 m8 沒有「主動接戰變少」就不得提示）。
+export function contradictions(binding, withheld = REPLICATION_WITHHELD, templateBalance = null) {
+  const eff = effectiveChoices(binding, templateBalance);
   if (!eff) return [];
   const templateId = resolved(binding)?.plan?.templateId;
   return CONTRADICTION_RULES
-    .filter((rule) => !ruleSuppressed(rule, templateId, withheld))
+    .filter((rule) => !ruleSuppressed(rule, templateId, withheld, templateBalance))
     .filter((rule) => rule.when.every(([dim, choice]) => eff[dim] === choice))
     .map((rule) => Object.freeze({ id: rule.id, text: rule.text }));
 }

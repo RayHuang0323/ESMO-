@@ -21,8 +21,8 @@
 //   每一步仍要在提供清單裡（live、複驗 confirmed、沒有被量測排除或撤下）；選不進的就不選。
 // ============================================================================
 import { createTacticPlan } from "./tacticPlan.js";
-import { templateById } from "./tacticTemplates.js";
-import { tacticBookOptions, leavesOf, nestedOf } from "./tacticChoiceMapping.js";
+import { templateById, templateCopyFor } from "./tacticTemplates.js";
+import { choiceEngineFor, leavesOf, nestedOf } from "./tacticChoiceMapping.js";
 
 export const AI_COACH_VERSION = "aiCoach.v1";
 
@@ -56,14 +56,16 @@ function bestRoleOf(roster) {
  * @param {string} [a.tacticalDirector]   本場規則集的 Director 模式（"core.v1"／"static"）
  * @returns {{ ok: true, plan: object, summary: object } | { ok: false, errors: object[] }}
  */
-export function aiCoachPlan({ team, tacticalDirector = "static" } = {}) {
+//  templateBalance（Phase 3a-B 第一階段）：本場規則集的模板修正表；提供清單與「模板自己的值」用修正後的模板（與玩家的戰術書同一份）。
+//  STYLE_TEMPLATES 目前不會選到修正表裡的模板（classic.m3／m7／m8；gate 直接斷言），所以這只是讓兩邊永遠同源。
+export function aiCoachPlan({ team, tacticalDirector = "static", templateBalance = null } = {}) {
   const rule = STYLE_TEMPLATES[team?.style];
   const roster = Array.isArray(team?.roster) ? team.roster : [];
   if (!rule || roster.length === 0) return { ok: false, errors: [{ code: "ai_coach_input", field: "team", message: "AI 教練需要隊伍風格與名單" }] };
   const templateId = rule.byBest[bestRoleOf(roster)] ?? rule.otherwise;
   if (!templateById(templateId)) return { ok: false, errors: [{ code: "ai_coach_template", field: "templateId", message: `unknown template ${templateId}` }] };
   let leaves = [];
-  const offered = (dim) => tacticBookOptions(templateId, [], nestedOf(leaves), { tacticalDirector }).find((r) => r.dimension === dim) ?? null;
+  const offered = (dim) => choiceEngineFor(templateBalance).tacticBookOptions(templateId, [], nestedOf(leaves), { tacticalDirector }).find((r) => r.dimension === dim) ?? null;
   //  有直接證據的模板（EVIDENCE_TEMPLATES）、有提供（至少兩個選項，而且這個值在裡面）才選；與模板自己的值相同就不寫。
   const pick = (dim, value) => {
     if (!EVIDENCE_TEMPLATES.includes(templateId)) return false;
@@ -81,7 +83,7 @@ export function aiCoachPlan({ team, tacticalDirector = "static" } = {}) {
   }
   const created = createTacticPlan({ templateId, choices: nestedOf(leaves) });
   if (!created.ok) return { ok: false, errors: created.errors };
-  return { ok: true, plan: created.plan, summary: aiCoachSummary(created.plan) };
+  return { ok: true, plan: created.plan, summary: aiCoachSummary(created.plan, templateBalance) };
 }
 
 const LANE_WORD = Object.freeze({ top: "上路", mid: "中路", bot: "下路" });
@@ -89,13 +91,15 @@ const WIN_WORD = Object.freeze({ earlySnowball: "前期滾雪球" });
 const MISSION_WORD = Object.freeze({ roam: "輔助遊走", protect: "輔助保護核心" });
 
 /** 給玩家看的對手概要：模板名稱＋白話描述。**不含**任何權重或旋鈕數字。 */
-export function aiCoachSummary(plan) {
+export function aiCoachSummary(plan, templateBalance = null) {
   const tpl = templateById(plan?.templateId);
+  //  修正表下有修正文案的模板 ⇒ 名稱用修正後的文案（與戰術書同一份）；省略 ⇒ 與之前相同。
+  const name = tpl ? templateCopyFor(tpl.templateId, templateBalance)?.name ?? tpl.name : null;
   const L = Object.fromEntries(leavesOf(plan?.choices ?? {}));
   const notes = [];
   if (L.winCondition && WIN_WORD[L.winCondition]) notes.push(`勝利條件：${WIN_WORD[L.winCondition]}`);
   const focus = ["early", "mid"].filter((ph) => L[`phases.${ph}.focusLane`]).map((ph) => `${ph === "early" ? "前期" : "中期"}${LANE_WORD[L[`phases.${ph}.focusLane`]]}`);
   if (focus.length) notes.push(`強邊：${focus.join("、")}`);
   if (L["seats.b5.mission"] && MISSION_WORD[L["seats.b5.mission"]]) notes.push(MISSION_WORD[L["seats.b5.mission"]]);
-  return Object.freeze({ version: AI_COACH_VERSION, templateId: plan?.templateId ?? null, templateName: tpl?.name ?? null, notes: Object.freeze(notes) });
+  return Object.freeze({ version: AI_COACH_VERSION, templateId: plan?.templateId ?? null, templateName: name, notes: Object.freeze(notes) });
 }

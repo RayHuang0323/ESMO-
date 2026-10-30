@@ -28,13 +28,15 @@
 //   而且只在它真的打開了旗標沒開的層時才改用 kind:"tool" 規則集——正式規則集永遠只由旗標決定。
 // ============================================================================
 import { createMatchSetup } from "../../platform/contracts/matchSetup.js";
-import { resolveRulesetForMode, rulesetById, tacticalDirectorModeOf } from "../../platform/contracts/matchRuleset.js";
+import { resolveRulesetForMode, rulesetById, tacticalDirectorModeOf, templateBalanceOf } from "../../platform/contracts/matchRuleset.js";
 import { MEASURED_EXCLUSIONS, registryRow, rowAvailableUnder } from "../../platform/tactics/capabilityRegistry.js";
 import { createTacticPlan } from "../../platform/tactics/tacticPlan.js";
 import { leavesOf, nestedOf } from "../../platform/tactics/tacticChoiceMapping.js";
 import { bindTacticPlanToCurrentVersions } from "./tactics/tacticResolver.js";
 import { OBJECTIVE_LAYOUTS } from "../../platform/contracts/objectiveLayout.js";
-import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle } from "../../platform/contracts/MobaTacticConfig.js";
+import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle, mobaTacticById } from "../../platform/contracts/MobaTacticConfig.js";
+import { templateById, templateConfigFor, classicLegacyTemplateOf, TEMPLATE_BALANCE } from "../../platform/tactics/tacticTemplates.js";
+import { applyVariant, variantById } from "../../platform/mastery/tacticVariant.js";
 import { aiCoachPlan } from "../../platform/tactics/aiCoach.js";
 import { applyFatigueToLoadout, buildPlayerStatSlots } from "./mobaRosterAdapter.js";
 import { normalizeBuildStrategy } from "./items/buildStrategyPrep.js";
@@ -61,6 +63,46 @@ export function bindingForRuleset(binding, ruleset) {
   const created = createTacticPlan({ templateId: binding.plan.templateId, overlayIds: binding.plan.overlayIds ?? [], choices: nestedOf(kept) });
   const rebound = created.ok ? bindTacticPlanToCurrentVersions(created.plan) : null;
   return rebound ? { binding: rebound, dropped } : { binding, dropped: [] };
+}
+
+/**
+ * Phase 3a-B 第一階段（Owner 2026-10-30 第 4 點；事前登記 stage1_release_registration_3aB.json I5）：legacy 戰術（v20 戰術畫面確認的、
+ * 或 AI 教練排不出計畫時的風格模板）在帶 templateBalance 的規則集下套用模板修正表——**由 id 重建**：修正後的經典模板設定，
+ * 有變體就再套變體（修正在變體之前，與戰術書的「模板 → 覆蓋層 → 選擇」同一個順序）。結果只由 id 決定 ⇒ 套兩次＝套一次。
+ * 沒有修正表、或這個戰術不在表裡 ⇒ 原樣回傳同一個物件。tables 可注入（gate 觀察順序用）。
+ */
+export function balancedLegacyTactic(config, templateBalance, tables = TEMPLATE_BALANCE) {
+  if (!templateBalance || !config?.tacticId) return config;
+  //  審查（實作）：只有**確實是**經典模板（＋變體）的設定才重建——出貨版的，或已經是修正後的（冪等）。帶經典 tacticId 的其他設定
+  //  （例如 v2 模板的顯示物件）原樣回傳，不被換成經典。
+  const templateId = classicLegacyTemplateOf(config, null, tables) ?? classicLegacyTemplateOf(config, templateBalance, tables);
+  if (!templateId || !tables[templateBalance]?.[templateId]) return config;
+  const base = structuredClone(templateConfigFor(templateId, templateBalance, tables));
+  const variant = config.variantId ? variantById(config.variantId) : null;
+  return variant ? applyVariant(base, variant) : base;
+}
+
+/**
+ * 總開關（Owner 2026-10-30 第 5 點：戰術書納入總旗標管理；I5 情況 3）：本場規則集沒有 Director core.v1（career.v20）卻帶了戰術書 binding
+ * （在戰術書確認後、開局前旗標被關掉）⇒ 不用 binding。經典模板 ⇒ 正式站 v20 的同一個戰術（＋計畫裡的經典變體）；
+ * std 或 v2 模板（正式站 v20 沒有對應）⇒ 標準運營。計畫的每一個選擇都列為本場拿掉，並註明模板被替換，不會無聲換掉。
+ * ⚠ 這取代 2026-10-25 決策 4（v20 下保留 binding 的 static 選擇）；std／v2 的預設待 Owner 確認。
+ */
+export function v20TacticForBinding(binding) {
+  const plan = binding?.plan ?? {};
+  let leaves = [];
+  try { leaves = leavesOf(plan.choices ?? {}); } catch { leaves = []; }
+  const dropped = leaves.map(([dimension, choice]) => ({ dimension, choice: String(choice) }));
+  const tpl = templateById(plan.templateId);
+  const classic = tpl?.kind === "classic" ? mobaTacticById(tpl.legacyTacticId) : null;
+  if (classic) {
+    const v = Array.isArray(plan.overlayIds) && plan.overlayIds.length ? variantById(plan.overlayIds[0]) : null;
+    const config = v ? applyVariant(structuredClone(classic), v) : structuredClone(classic);
+    return { tactic: { kind: "legacy", config }, dropped, substitution: null };
+  }
+  //  std 計畫本來就是標準運營 ⇒ 不是「替換」（審查：避免「標準運營改用標準運營」）；v2／未知模板才註明替換。
+  const substitution = plan.templateId === "std" ? null : { fromTemplateId: plan.templateId ?? null, fromName: tpl?.name ?? null, toTacticId: STANDARD_OPP_TACTIC.tacticId, toName: STANDARD_OPP_TACTIC.name };
+  return { tactic: { kind: "std" }, dropped, substitution };
 }
 
 /** Live 一律用生涯規則集（opts.mode 是遊戲模式 "moba"，不是規則集模式；Challenge 不經過 Live hook）。 */
@@ -139,7 +181,7 @@ export function resolveLiveRuleset({ flags, persisted = null, dev = null, allowT
 
 /** T15：AI 教練的紅方 binding；排不出來 ⇒ null（呼叫端退回風格模板）並記一筆 note。 */
 function redCoachBinding(opponentTeam, ruleset, notes) {
-  const r = aiCoachPlan({ team: opponentTeam, tacticalDirector: tacticalDirectorModeOf(ruleset) });
+  const r = aiCoachPlan({ team: opponentTeam, tacticalDirector: tacticalDirectorModeOf(ruleset), templateBalance: templateBalanceOf(ruleset) });
   const binding = r.ok ? bindTacticPlanToCurrentVersions(r.plan) : null;
   if (!binding) notes.push(`tactic.red: AI coach unavailable (${r.ok ? "bind failed" : r.errors.map((e) => e.code).join(",")}); style template used`);
   return binding ? toPlainData(binding) : null;
@@ -187,15 +229,23 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
     : null;
   const talentSelections = L.battleTalents === true && roster ? normalizeTalentSelections(opts.talentSelections, roster) : null;
   const buildStrategy = L.items === true && roster ? normalizeBuildStrategy(opts.buildStrategy) : null;
-  const redTactic = opponentTeam ? mobaTacticForTeamStyle(opponentTeam.style) : STANDARD_OPP_TACTIC;
+  //  Phase 3a-B 第一階段：矩陣以本場規則集的**層**決定（不直接讀旗標）——binding 只在 Director core.v1 下使用；修正表只在帶 templateBalance 層時套用。
+  const directorOn = tacticalDirectorModeOf(rs) === "core.v1";
+  const templateBalance = templateBalanceOf(rs);
+  //  紅方退回固定戰術（AI 教練排不出來或沒有教練層）：修正表下由 id 重建一次（Owner 第 4 點）；紅方每次開局／恢復都重新推導、不落盤。
+  const redTactic = balancedLegacyTactic(opponentTeam ? mobaTacticForTeamStyle(opponentTeam.style) : STANDARD_OPP_TACTIC, templateBalance);
   //  T15：規則集的 redTactic 層是 aiCoachV1（career.v21）且有 AI 對手 ⇒ 紅方＝AI 教練賽前排的計畫（binding）。
   //  教練只讀對手隊伍自己的資料（風格、名單素質）與本場 Director 模式，不讀 opts／藍方任何東西。
   //  教練排不出來（例如對手沒有名單）⇒ 退回風格模板並記在 notes（不讓開局失敗；同一份輸入永遠得到同一個結果）。
   const redBinding = L.redTactic === "aiCoachV1" && opponentTeam ? redCoachBinding(opponentTeam, rs, notes) : null;
   const explicitLayout = OBJECTIVE_LAYOUTS.includes(opts.objectiveLayout) ? opts.objectiveLayout : null;
   //  本場規則集用不到的戰術選擇只從本場拿掉（見 bindingForRuleset）；記在 notes，存檔的戰術書不動。
-  const blueBinding = opts.tacticPlanBinding ? bindingForRuleset(toPlainData(opts.tacticPlanBinding), rs) : null;
+  const blueBinding = opts.tacticPlanBinding && directorOn ? bindingForRuleset(toPlainData(opts.tacticPlanBinding), rs) : null;
   if (blueBinding?.dropped.length) notes.push(`tactic.blue: dropped ${blueBinding.dropped.map((d) => `${d.dimension}=${d.choice}`).join(", ")} (not available under this match's ruleset; saved plan unchanged)`);
+  //  情況 3：v20 規則集＋binding ⇒ 不用 binding（總開關）。
+  const v20Fallback = opts.tacticPlanBinding && !directorOn ? v20TacticForBinding(toPlainData(opts.tacticPlanBinding)) : null;
+  if (v20Fallback) notes.push(`tactic.blue: tactic book not used under this match's ruleset (${v20Fallback.tactic.kind === "legacy" ? `classic ${v20Fallback.tactic.config.tacticId}` : v20Fallback.substitution ? `template ${v20Fallback.substitution.fromTemplateId} -> ${v20Fallback.substitution.toTacticId}` : "standard"}); saved plan unchanged`);
+  const blueLegacy = opts.tactic?.tacticId ? balancedLegacyTactic(toPlainData(opts.tactic), templateBalance) : null;
 
   const input = {
     ruleset: rs,
@@ -208,8 +258,10 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
     tactic: {
       //  Phase 3a T12：戰術書的 binding 優先；沒有 binding 才走 v1 戰術物件（舊進行中場次的恢復路徑，結果＝v20）。
       //  binding 不合法 ⇒ 組裝器照實拒絕，不退回 legacy 戰術偷偷開打。
+      //  Phase 3a-B 第一階段（I5 矩陣）：① v21＋binding ⇒ binding；③ v20＋binding ⇒ 正式站 v20 的戰術；②④ 沒有 binding ⇒ legacy（v21 下修正表重建一次）。
       blue: blueBinding ? { kind: "binding", binding: blueBinding.binding }
-        : opts.tactic?.tacticId ? { kind: "legacy", config: toPlainData(opts.tactic) } : null,
+        : v20Fallback ? v20Fallback.tactic
+        : blueLegacy ? { kind: "legacy", config: blueLegacy } : null,
       red: redBinding ? { kind: "binding", binding: redBinding } : { kind: "legacy", config: toPlainData(redTactic) },
     },
     ...(isTool
@@ -225,5 +277,5 @@ export function buildLiveMatchSetup({ opts = {}, profile = {}, heroProgress = {}
     r = createMatchSetup({ ...input, objectiveLayout: null });
   }
   //  Phase 3a-B（Owner 2026-10-25 決策 4）：本場拿掉的戰術選擇以結構化資料交給畫面（開局提示），notes 照舊。
-  return { ok: r.ok, setup: r.setup, errors: r.errors, buildStrategy, notes, droppedChoices: blueBinding?.dropped ?? [] };
+  return { ok: r.ok, setup: r.setup, errors: r.errors, buildStrategy, notes, droppedChoices: blueBinding?.dropped ?? v20Fallback?.dropped ?? [], templateSubstitution: v20Fallback?.substitution ?? null };
 }

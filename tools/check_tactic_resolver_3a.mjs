@@ -364,8 +364,10 @@ console.log("\n§D 覆蓋層與模板 base 不符（ruling D）");
   const screen = stripComments(read("src/screens/moba/TacticScreen.jsx")), mastery = stripComments(read("src/platform/mastery/clubMastery.js"));
   const callers = []; const walk = (d) => { for (const f of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) { const p = `${d}/${f.name}`; if (f.isDirectory()) walk(p); else if (/\.(js|jsx)$/.test(f.name) && /\bapplyVariant\s*\(/.test(stripComments(read(p)))) callers.push(p); } };
   walk("src");
-  ck("D1 v20 可達性：正式程式裡呼叫 applyVariant 的只有 tacticVariant.js 自己、TacticScreen（v20 唯一入口）與本 task 新增的選擇對照模組（tacticChoiceMapping，resolver 與 plan 共用）；變體清單以 baseTacticId === 所選戰術過濾",
-    J(callers.sort()) === J(["src/platform/mastery/tacticVariant.js", "src/platform/tactics/tacticChoiceMapping.js", "src/screens/moba/TacticScreen.jsx"]) && /applyVariant\(cur, activeVariant\)/.test(screen) && /variantsAvailableForTactic\(clubMastery, sel\)/.test(screen)
+  ck("D1' v20 可達性：正式程式裡呼叫 applyVariant 的只有 tacticVariant.js 自己、TacticScreen（v20 唯一入口）與本 task 新增的選擇對照模組（tacticChoiceMapping，resolver 與 plan 共用）；變體清單以 baseTacticId === 所選戰術過濾",
+    //  D1'（Phase 3a-B 第一階段，事前登記）：另加 liveMatchSetup（v20 下經典計畫的變體、修正表下經典 legacy 的重建）與 tacticTemplates（classicLegacyTemplateOf 的比對）；
+    //  兩者只套計畫或設定已經記下的變體（variantById 既有 id），v20 唯一入口（v20 畫面以 baseTacticId 過濾）不變。TacticScreenV20 是正式站畫面的逐字副本。
+    J(callers.sort()) === J(["src/battle/moba/liveMatchSetup.js", "src/platform/mastery/tacticVariant.js", "src/platform/tactics/tacticChoiceMapping.js", "src/platform/tactics/tacticTemplates.js", "src/screens/moba/TacticScreen.jsx", "src/screens/moba/TacticScreenV20.jsx"]) && /applyVariant\(cur, activeVariant\)/.test(screen) && /variantsAvailableForTactic\(clubMastery, sel\)/.test(screen)
     && /\.filter\(\(v\) => v\.baseTacticId === tacticId\)/.test(mastery), J(callers));
   ck("D1b v20 一次只套一個變體（單一 variantSel）；applyVariant 本身不檢查 base——餵錯的 base 會得到一份混合設定（不是任何合法戰術）",
     /useState\(null\)/.test(screen) && (() => {
@@ -847,12 +849,33 @@ console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境
     for (const ch of row.choices) { if (ch === own) continue; const sg = sig(ch); if (sg !== baseSig && !seen.has(sg)) { seen.add(sg); want.push(ch); } }
     const d = Choice.offeredChoiceDetail(c.tpl.templateId, row.dimension, c.overlayIds, {}, { withMeasured: false });
     const wantOrdered = row.choices.filter((x) => want.includes(x));
+    //  XP1'（Phase 3a-B 第一階段，事前登記）：計畫接受＝出貨版與每張修正表下獨立重算的提供清單之**聯集**；只在修正表下提供的選擇，
+    //  在那張表下解析時只有自己那個時期另建物件，在出貨版下是空轉（三個時期都共用整場物件）。
+    const wantBy = new Map(Templates.TEMPLATE_BALANCE_IDS.map((tb) => {
+      const bb = Choice.mergeTacticConfig(Templates.templateForBalance(c.tpl, tb), c.overlayIds, {});
+      const sgB = (ch) => { const ov = Choice.phaseOverridesOf({ [p]: { [f]: ch } }); return J(Choice.phaseProjectionOf(bb, ov.overrides[i], PROJECT)); };
+      const b0 = sgB(own), seenB = new Set([b0]), w = [own];
+      for (const ch of row.choices) { if (ch === own) continue; const sg = sgB(ch); if (sg !== b0 && !seenB.has(sg)) { seenB.add(sg); w.push(ch); } }
+      return [tb, w];
+    }));
+    const unionWant = (ch) => wantOrdered.includes(ch) || [...wantBy.values()].some((w) => w.includes(ch));
     if (!d || J(d.offered) !== J(wantOrdered) || d.own !== own) bad.push(`${c.tpl.templateId}${c.overlayIds.length ? "+" + c.overlayIds[0] : ""}|${row.dimension}: ${J(d?.offered)} ≠ ${J(wantOrdered)}`);
     for (const ch of row.choices) {
       const okOverlay = c.overlayIds.every((id) => `classic.${Overlays.overlayById(id).baseTacticId}` === c.tpl.templateId);
       const pl = Plan.createTacticPlan({ templateId: c.tpl.templateId, overlayIds: c.overlayIds, choices: Choice.nestedOf([[row.dimension, ch]]) });
-      if (pl.ok !== (okOverlay && wantOrdered.includes(ch))) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}: plan ok=${pl.ok}`);
-      if (pl.ok && ch !== own) {
+      if (pl.ok !== (okOverlay && unionWant(ch))) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}: plan ok=${pl.ok}`);
+      if (pl.ok && ch !== own && !wantOrdered.includes(ch)) {
+        //  只在修正表下提供：在那張表下只有自己那個時期另建物件；出貨版下空轉。
+        const b = R.bindTacticPlanToCurrentVersions(pl.plan);
+        for (const [tb, w] of wantBy) if (w.includes(ch)) {
+          const o2 = R.resolveTactic({ kind: "binding", binding: b }, {}, { phases: true, templateBalance: tb });
+          const ch2 = o2.ok && o2.phases.map((ph, k) => ph.knobs !== o2.knobs || ph.identity !== o2.identity ? k : null).filter((k) => k !== null);
+          if (!o2.ok || J(ch2) !== J([i])) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}@${tb}: 時期 ${J(ch2)}`);
+        }
+        const o0 = R.resolveTactic({ kind: "binding", binding: b }, {}, { phases: true });
+        if (!o0.ok || o0.phases.some((ph) => ph.knobs !== o0.knobs)) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}: 出貨版下應空轉`);
+      }
+      if (pl.ok && ch !== own && wantOrdered.includes(ch)) {
         offeredN++;
         const b = R.bindTacticPlanToCurrentVersions(pl.plan);
         const out = R.resolveTactic({ kind: "binding", binding: b }, {}, { phases: true });
@@ -863,7 +886,7 @@ console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境
       }
     }
   }
-  ck(`XP1 提供清單＝獨立重算（${cells} 格）；計畫接受恰好＝提供；每個非本來選擇解析後只有自己那個時期另建物件（${offeredN} 組）；沒要求每時期方針（static）⇒ 拒絕 phase_choices_not_allowed`,
+  ck(`XP1' 提供清單＝獨立重算（${cells} 格）；計畫接受恰好＝出貨版與修正表提供清單的聯集；每個非本來選擇解析後只有自己那個時期另建物件（${offeredN} 組）；沒要求每時期方針（static）⇒ 拒絕 phase_choices_not_allowed`,
     bad.length === 0 && cells === (21 + 3) * 9 && offeredN > 50, bad.slice(0, 4).join(" | "));
 }
 

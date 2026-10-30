@@ -24,7 +24,7 @@ import { sharedMatchAssemblerDeps } from "./battle/moba/matchAssemblerDeps.js";
 import { buildLiveMatchSetup, resolveLiveRuleset, persistedLiveConfigOf } from "./battle/moba/liveMatchSetup.js";
 //  Phase 3a-B（Owner 2026-10-25 Review 決策 4）：恢復時沿用的 binding 若含目前不提供的選擇 ⇒ 只提示，不改寫。
 import { keptUnofferedChoices } from "./screens/moba/tacticBook/tacticBookOptions.js";
-import { tacticalDirectorModeOf } from "./platform/contracts/matchRuleset.js";
+import { tacticalDirectorModeOf, templateBalanceOf } from "./platform/contracts/matchRuleset.js";
 import { matchSetupHash } from "./platform/contracts/matchSetup.js";
 //  旗標只在開局時讀一次（resolveLiveRuleset → resolveRulesetForMode），結果隨本場設定落盤。
 import { FEATURE_FLAGS } from "./featureFlags.js";
@@ -50,7 +50,7 @@ export function prepareLiveMatch(liveInputs) {
     const assembled = assembleMatch(built.setup, sharedMatchAssemblerDeps());
     if (!assembled.ok) return rejected("assembleMatch", assembled.errors, built.notes, built.droppedChoices);
     return { ok: true, stage: null, errors: [], setup: built.setup, setupHash: matchSetupHash(built.setup),
-      engine: assembled.engine, applied: assembled.applied, buildStrategy: built.buildStrategy, notes: built.notes, droppedChoices: built.droppedChoices ?? [] };
+      engine: assembled.engine, applied: assembled.applied, buildStrategy: built.buildStrategy, notes: built.notes, droppedChoices: built.droppedChoices ?? [], templateSubstitution: built.templateSubstitution ?? null };
   } catch (error) {
     return rejected("exception", [{ code: "assembly_exception", field: "$", message: String(error?.message ?? error) }]);
   }
@@ -234,9 +234,11 @@ export function useLocalServer() {
     {
       //  本場拿掉的（droppedChoices）＋本場沿用、但戰術書目前不提供的（kept；恢復中的比賽才會出現，戰術一律不改寫）。
       const blueTac = prepared.setup?.tactic?.blue;
-      const kept = blueTac?.kind === "binding" ? keptUnofferedChoices(blueTac.binding, tacticalDirectorModeOf(prepared.setup.ruleset)) : [];
+      //  Phase 3a-B 第一階段：kept 用本場規則集的修正表算（與戰術書同一份提供清單）；v20＋binding 時另帶「模板被替換」（不無聲換模板）。
+      const kept = blueTac?.kind === "binding" ? keptUnofferedChoices(blueTac.binding, tacticalDirectorModeOf(prepared.setup.ruleset), templateBalanceOf(prepared.setup.ruleset)) : [];
       const dropped = prepared.droppedChoices ?? [];
-      setDroppedNotice(dropped.length || kept.length ? { dropped, kept } : null);
+      const substitution = prepared.templateSubstitution ?? null;
+      setDroppedNotice(dropped.length || kept.length || substitution ? { dropped, kept, substitution } : null);
     }
     const eng = prepared.engine;
     const { objectiveLayout, talentSelection, replayConfig } = prepared.applied;

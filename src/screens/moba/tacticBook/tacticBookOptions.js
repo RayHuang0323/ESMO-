@@ -11,9 +11,12 @@
 //  不 import React、store、引擎。Node 可直接載入（tools/check_tactic_book_view_3a.mjs）。
 // ============================================================================
 import { createTacticPlan } from "../../../platform/tactics/tacticPlan.js";
-import { TACTIC_TEMPLATE_LIST, templateById } from "../../../platform/tactics/tacticTemplates.js";
-import { leavesOf, nestedOf, mergeTacticConfig, winConditionFill, WIN_CONDITION_DIM } from "../../../platform/tactics/tacticChoiceMapping.js";
-import { tacticBookOptions, bindTacticPlanToCurrentVersions } from "../../../battle/moba/tactics/tacticResolver.js";
+import { TACTIC_TEMPLATE_LIST, templateById, templateCopyFor, templateIdOfLegacyTactic } from "../../../platform/tactics/tacticTemplates.js";
+import { leavesOf, nestedOf, choiceEngineFor, WIN_CONDITION_DIM } from "../../../platform/tactics/tacticChoiceMapping.js";
+import { bindTacticPlanToCurrentVersions } from "../../../battle/moba/tactics/tacticResolver.js";
+//  Phase 3a-B 第一階段：templateBalance＝本場（Live 解析出的）規則集的模板修正表。戰術書的自己的值、提供清單、勝利條件展開、確認頁設定、
+//  指標都用同一張表的引擎（與引擎打的那一份相同，審查 M1）；省略 ⇒ 出貨版，與之前逐字相同。
+const tacticBookOptions = (templateId, overlayIds, choices, opts = {}) => choiceEngineFor(opts?.templateBalance ?? null).tacticBookOptions(templateId, overlayIds, choices, opts);
 import { planProfile, seatMissionFit, coordinationLoad, contradictions, PROFILE_AXES, SEATS } from "../../../platform/tactics/tacticIndicators.js";
 import { aiCoachPlan } from "../../../platform/tactics/aiCoach.js";
 import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle } from "../../../platform/contracts/MobaTacticConfig.js";
@@ -106,9 +109,11 @@ export const MISSION_LABELS = Object.freeze({
 export const SEAT_LABELS = Object.freeze({ b1: "上路", b2: "打野", b3: "中路", b4: "射手", b5: "輔助" });
 
 /** 模板列：依分類分組（經典八套、標準、v2 五類）。 */
-export function templateGroups() {
+export function templateGroups(templateBalance = null) {
   const groups = [];
-  const push = (id, label, list) => { if (list.length) groups.push({ id, label, templates: list.map((t) => ({ templateId: t.templateId, name: t.name, desc: t.desc, kind: t.kind, legacyTacticId: t.legacyTacticId, risk: t.config.risk ?? null, emoji: t.kind === "v2" ? null : t.config.emoji ?? null })) }); };
+  //  Phase 3a-B 第一階段：修正表下有修正文案的模板 ⇒ 名稱／描述／風險用修正後的文案（templateCopyFor）；其餘與之前相同。
+  const copyOf = (t) => templateCopyFor(t.templateId, templateBalance);
+  const push = (id, label, list) => { if (list.length) groups.push({ id, label, templates: list.map((t) => { const c = copyOf(t); return { templateId: t.templateId, name: c.name, desc: c.desc, kind: t.kind, legacyTacticId: t.legacyTacticId, risk: c.risk ?? null, emoji: t.kind === "v2" ? null : t.config.emoji ?? null }; }) }); };
   push("classic", "經典", TACTIC_TEMPLATE_LIST.filter((t) => t.kind === "classic"));
   for (const cat of [...new Set(TACTIC_TEMPLATE_LIST.filter((t) => t.kind === "v2").map((t) => t.category))]) {
     push(`v2:${cat}`, cat, TACTIC_TEMPLATE_LIST.filter((t) => t.kind === "v2" && t.category === cat));
@@ -172,7 +177,8 @@ export function offeredChoicesOnly(templateId, overlayIds = [], choices = {}, op
  * @param {string} [o.tacticalDirector]  目前規則集的 Director 模式（缺少 ≡ "static"＝v20：不畫需要每時期方針的維度）
  * @returns {{ok:true, plan, binding, config, dimensions, groups, profile, seats, load, contradictions} | {ok:false, errors}}
  */
-export function tacticBookView({ templateId, overlayIds = [], choices = {}, seatPlayers = null, heroLookup = null, tacticalDirector = "static" } = {}) {
+export function tacticBookView({ templateId, overlayIds = [], choices = {}, seatPlayers = null, heroLookup = null, tacticalDirector = "static", templateBalance = null } = {}) {
+  const tableEngine = choiceEngineFor(templateBalance);
   const created = createTacticPlan({ templateId, overlayIds, choices });
   if (!created.ok) return { ok: false, errors: created.errors };
   const plan = created.plan;
@@ -180,11 +186,11 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
   if (!binding) return { ok: false, errors: [{ code: "bind_failed", field: "", message: "這份計畫無法綁定目前的資料版本" }] };
   const tpl = templateById(plan.templateId);
   //  勝利條件（Phase 3a-C6）：引擎吃的是展開後的選擇 ⇒ 設定與畫面上的值都用展開後的；被勝利條件填的格標 fromWinCondition（玩家點了就變成明確選擇）。
-  const fill = winConditionFill(plan.templateId, plan.overlayIds, plan.choices);
-  const config = mergeTacticConfig(tpl, plan.overlayIds, fill.choices);
+  const fill = tableEngine.winConditionFill(plan.templateId, plan.overlayIds, plan.choices);
+  const config = tableEngine.mergeConfig(tpl, plan.overlayIds, fill.choices);
   const explicit = Object.fromEntries(leavesOf(plan.choices));
   const filledBy = Object.fromEntries(fill.filled);
-  const dimensions = tacticBookOptions(plan.templateId, plan.overlayIds, plan.choices, { tacticalDirector })
+  const dimensions = tacticBookOptions(plan.templateId, plan.overlayIds, plan.choices, { tacticalDirector, templateBalance })
     //  只有一個可選（＝模板自己的值）的維度不畫：沒有東西可以選。
     .filter((row) => row.offered.length >= 2)
     .map((row) => {
@@ -216,15 +222,15 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
     });
   }
   const groups = DIMENSION_GROUPS.map((g) => ({ ...g, dimensions: dimensions.filter((d) => d.group === g.id) })).filter((g) => g.dimensions.length);
-  const profile = planProfile(binding);
+  const profile = planProfile(binding, templateBalance);
   return {
     ok: true, plan, binding, config, dimensions, groups,
     //  勝利條件實際填了哪些格、哪些格因玩家已選（explicit）或模板本來就是（already）而沒填。
     winCondition: fill.winCondition ? { id: fill.winCondition, label: choiceLabel(WIN_CONDITION_DIM, fill.winCondition), filled: fill.filled, skipped: fill.skipped } : null,
     profile: PROFILE_AXES.map((axis) => ({ axis, label: PROFILE_AXIS_LABELS[axis], value: profile[axis] })),
-    seats: (() => { const fit = seatMissionFit({ binding, seatPlayers, heroLookup }); return SEATS.map((seat) => ({ seat, label: SEAT_LABELS[seat], missionLabel: MISSION_LABELS[fit[seat].mission] ?? fit[seat].mission, ...fit[seat] })); })(),
-    load: coordinationLoad(binding, seatPlayers),
-    contradictions: contradictions(binding),
+    seats: (() => { const fit = seatMissionFit({ binding, seatPlayers, heroLookup, templateBalance }); return SEATS.map((seat) => ({ seat, label: SEAT_LABELS[seat], missionLabel: MISSION_LABELS[fit[seat].mission] ?? fit[seat].mission, ...fit[seat] })); })(),
+    load: coordinationLoad(binding, seatPlayers, templateBalance),
+    contradictions: contradictions(binding, undefined, templateBalance),
   };
 }
 
@@ -237,14 +243,18 @@ export const TEAM_STYLE_LABELS = Object.freeze({ aggressive: "積極進攻", def
  * @param {{ team: object|null, tacticalDirector?: string }} a
  * @returns {{ hasOpponent: boolean, teamName: string|null, styleLabel: string|null, planName: string, notes: string[], source: "aiCoach"|"styleTemplate"|"standard" }}
  */
-export function opponentIntelOf({ team = null, tacticalDirector = "static", redTactic = "styleTemplate" } = {}) {
+export function opponentIntelOf({ team = null, tacticalDirector = "static", redTactic = "styleTemplate", templateBalance = null } = {}) {
   if (!team) return Object.freeze({ hasOpponent: false, teamName: null, styleLabel: null, planName: STANDARD_OPP_TACTIC.name, notes: Object.freeze([]), source: "standard" });
   const base = { hasOpponent: true, teamName: team.name ?? null, styleLabel: TEAM_STYLE_LABELS[team.style] ?? null };
   if (redTactic === "aiCoachV1") {
-    const r = aiCoachPlan({ team, tacticalDirector });
+    const r = aiCoachPlan({ team, tacticalDirector, templateBalance });
     if (r.ok) return Object.freeze({ ...base, planName: r.summary.templateName, notes: r.summary.notes, source: "aiCoach" });
   }
-  return Object.freeze({ ...base, planName: mobaTacticForTeamStyle(team.style).name, notes: Object.freeze([]), source: "styleTemplate" });
+  //  退回風格模板：修正表下用經典模板的修正文案名稱（與開局套用的修正同源）。
+  const styleTactic = mobaTacticForTeamStyle(team.style);
+  const styleTpl = templateIdOfLegacyTactic(styleTactic.tacticId);
+  const planName = (styleTpl ? templateCopyFor(styleTpl, templateBalance)?.name : null) ?? styleTactic.name;
+  return Object.freeze({ ...base, planName, notes: Object.freeze([]), source: "styleTemplate" });
 }
 
 // ── Phase 3a-B（Owner 2026-10-25 決策 4）：存進戰術書之前就講清楚會發生什麼 ──────────────────────────────
@@ -268,7 +278,7 @@ export function tacticBookSaveState({ loadedEntryId = null, droppedCount = 0, cu
 //  恢復進行中的比賽時，戰術一律沿用存檔裡的 binding（包含後來被撤下的選擇，例如後期強邊），**不重新組裝、不改寫**，否則賽果會變。
 //  這裡只找出「binding 裡有、但戰術書目前不再提供」的選擇，讓畫面說明「本場沿用開局時的設定」。判斷與戰術書畫面同一套提供清單。
 /** @returns {Array<{dimension:string, choice:string}>} */
-export function keptUnofferedChoices(binding, tacticalDirector = "static") {
+export function keptUnofferedChoices(binding, tacticalDirector = "static", templateBalance = null) {
   const plan = binding?.plan;
   if (!plan?.templateId) return [];
   let leaves;
@@ -277,7 +287,7 @@ export function keptUnofferedChoices(binding, tacticalDirector = "static") {
   for (const [dim, v] of leaves) {
     const others = nestedOf(leaves.filter(([d]) => d !== dim));
     let row = null;
-    try { row = tacticBookOptions(plan.templateId, plan.overlayIds ?? [], others, { tacticalDirector }).find((r) => r.dimension === dim) ?? null; } catch { row = null; }
+    try { row = tacticBookOptions(plan.templateId, plan.overlayIds ?? [], others, { tacticalDirector, templateBalance }).find((r) => r.dimension === dim) ?? null; } catch { row = null; }
     if (!row || row.offered.length < 2 || !row.offered.includes(String(v))) out.push({ dimension: dim, choice: String(v) });
   }
   return out;

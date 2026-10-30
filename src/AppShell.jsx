@@ -27,6 +27,14 @@ import MatchmakingScreen from "./screens/moba/MatchmakingScreen.jsx";
 import BanPickScreen from "./screens/moba/BanPickScreen.jsx";
 import CodexScreen from "./screens/moba/CodexScreen.jsx";
 import TacticScreen from "./screens/moba/TacticScreen.jsx";
+//  Phase 3a-B 第一階段總開關（Owner 2026-10-30 第 5 點：戰術書納入總旗標管理）：Live 規則集是 static（career.v20）⇒ 正式站 v20 的戰術畫面
+//  （逐字副本，不產生戰術書 binding）；Director core.v1（career.v21）⇒ 戰術書。判斷用開局時同一個解析函式（tools/check_stage1_split_3aB S9）。
+import TacticScreenV20 from "./screens/moba/TacticScreenV20.jsx";
+import { FEATURE_FLAGS } from "./featureFlags.js";
+import { resolveRulesetForMode, tacticalDirectorModeOf } from "./platform/contracts/matchRuleset.js";
+import { LIVE_RULESET_MODE } from "./battle/moba/liveMatchSetup.js";
+const LIVE_TACTIC_BOOK_ON = tacticalDirectorModeOf(resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS })) === "core.v1";
+const LiveTacticScreen = LIVE_TACTIC_BOOK_ON ? TacticScreen : TacticScreenV20;
 import LoadingScreen from "./screens/moba/LoadingScreen.jsx";
 import GameView from "./GameView.jsx";
 //  Rift 載入修正：確定進入 MOBA 選角才背景下載 Rift 330 地圖（不在首頁下載）。
@@ -337,7 +345,7 @@ export default function AppShell() {
       {screen === "matchmaking" && <MatchmakingScreen onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "banpick" }); setScreen("banpick"); }} onBack={go("lineup")} />}
       {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { draft: d } }); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
       {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
-      {screen === "tactic" && <TacticScreen roster={battleRoster} draft={draft} onBuildStrategyChange={(s) => useProfileStore.getState().setActiveMatchContext({ config: { buildStrategy: s } })} onNext={(t, s, talents, binding) => { setTactic(t); setTacticPlanBinding(binding ?? null); setBuildStrategy(s ?? null); setTalentSelections(talents ?? null); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { tactic: t, tacticPlanBinding: binding ?? null, ...(s ? { buildStrategy: s } : {}), ...(talents ? { talentSelections: talents } : {}) } }); setScreen("loading"); }} onBack={go("banpick")} />}
+      {screen === "tactic" && <LiveTacticScreen roster={battleRoster} draft={draft} onBuildStrategyChange={(s) => useProfileStore.getState().setActiveMatchContext({ config: { buildStrategy: s } })} onNext={(t, s, talents, binding) => { const hadBinding = useProfileStore.getState().matchmaking?.session?.activeMatch?.config?.tacticPlanBinding != null; setTactic(t); setTacticPlanBinding(binding ?? null); setBuildStrategy(s ?? null); setTalentSelections(talents ?? null); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { tactic: t, ...(binding || hadBinding ? { tacticPlanBinding: binding ?? null } : {}), ...(s ? { buildStrategy: s } : {}), ...(talents ? { talentSelections: talents } : {}) } }); setScreen("loading"); }} onBack={go("banpick")} />}
       {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} buildStrategy={buildStrategy} roster={battleRoster} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("battle"); }} />}
       {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} tacticPlanBinding={tacticPlanBinding} buildStrategy={buildStrategy} talentSelections={talentSelections} roster={battleRoster} onContinue={home} />}
 

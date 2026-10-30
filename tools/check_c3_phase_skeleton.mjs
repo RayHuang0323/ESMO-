@@ -302,17 +302,18 @@ try {
   const c20 = RS.MATCH_RULESETS["career.v20"], b20 = RS.MATCH_RULESETS["balanceTool.v20"];
   const omit = (o, ...ks) => { const rest = { ...o }; for (const k of ks) delete rest[k]; return rest; };
   //  C3-1 laneFrame 起 v21 的層另帶 laneFrame "teamRelative"（只有這兩個 v21 新鍵；其餘層與 v20 逐字相同）。
-  const V21_KEYS = ["tacticalDirector", "laneFrame"];
+  //  Phase 3a-B 第一階段（RS1'／RS2'／RS7'，事前登記 stage1_release_registration_3aB）：v21 另帶 templateBalance "v21.b1"。
+  const V21_KEYS = ["tacticalDirector", "laneFrame", "templateBalance"];
   //  Phase 3a-B T15（事前登記 tools/fixtures/ai_coach_registration_3aB.json）：career.v21 的 redTactic 改成 aiCoachV1（career.v20 仍是 styleTemplate）；
   //  其餘層與 v20 逐字相同的要求不變。balanceTool.v21 的 redTactic 仍是 std（RS2 原樣）。
   const C21_KEYS = [...V21_KEYS, "redTactic"];
-  ck("RS1 career.v21＝career.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋redTactic aiCoachV1（T15）、simVersion moba-sim.v21、正式；releaseRequirements＝v20 的＋mobaTacticalDirectorV21",
-    c21.kind === "production" && c21.simVersion === "moba-sim.v21" && c21.layers.tacticalDirector === "core.v1" && c21.layers.laneFrame === "teamRelative"
+  ck("RS1' career.v21＝career.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋redTactic aiCoachV1（T15）＋templateBalance v21.b1（第一階段）、simVersion moba-sim.v21、正式；releaseRequirements＝v20 的＋mobaTacticalDirectorV21",
+    c21.kind === "production" && c21.simVersion === "moba-sim.v21" && c21.layers.tacticalDirector === "core.v1" && c21.layers.laneFrame === "teamRelative" && c21.layers.templateBalance === "v21.b1"
     && c21.layers.redTactic === "aiCoachV1" && c20.layers.redTactic === "styleTemplate"
     && L.stableStringify(omit(c21.layers, ...C21_KEYS)) === L.stableStringify(omit(c20.layers, "redTactic"))
     && J(c21.releaseRequirements) === J([...c20.releaseRequirements, "mobaTacticalDirectorV21"]) && RS.validateRuleset(c21).ok);
-  ck("RS2 balanceTool.v21＝balanceTool.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative、工具、不需旗標",
-    b21.kind === "tool" && b21.layers.tacticalDirector === "core.v1" && b21.layers.laneFrame === "teamRelative" && L.stableStringify(omit(b21.layers, ...V21_KEYS)) === L.stableStringify(b20.layers)
+  ck("RS2' balanceTool.v21＝balanceTool.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋templateBalance v21.b1（第一階段）、工具、不需旗標",
+    b21.kind === "tool" && b21.layers.templateBalance === "v21.b1" && b21.layers.tacticalDirector === "core.v1" && b21.layers.laneFrame === "teamRelative" && L.stableStringify(omit(b21.layers, ...V21_KEYS)) === L.stableStringify(b20.layers)
     && b21.releaseRequirements.length === 0 && RS.validateRuleset(b21).ok);
   const v = (r) => RS.validateRuleset(r);
   const noFlag = { ...c21, releaseRequirements: c21.releaseRequirements.filter((f) => f !== "mobaTacticalDirectorV21") };
@@ -342,19 +343,21 @@ try {
     ck("RS6b 旗標關（＋challenge 旗標開）的輸出串雜湊＝check_match_ruleset_3a R17 釘的 11093581c4605dae（C3-1 之前的值）",
       createHash("sha256").update(outs.join("\n")).digest("hex").slice(0, 16) === "11093581c4605dae");
   }
-  ck("RS7 旗標開 ⇒ career.v21（其餘層照旗標關閉；releaseRequirements 末尾多列 mobaTacticalDirectorV21），每一種都通過 validateRuleset 與 createMatchSetup",
+  ck("RS7' 旗標開 ⇒ career.v21（帶 templateBalance v21.b1；其餘層照旗標關閉；releaseRequirements 末尾多列 mobaTacticalDirectorV21），每一種都通過 validateRuleset 與 createMatchSetup",
     combos.every((f) => { const r = RS.resolveRulesetForMode({ mode: "career", flags: { ...f, mobaTacticalDirectorV21: true } });
       const r20 = RS.resolveRulesetForMode({ mode: "career", flags: f });
-      return r.rulesetId === "career.v21" && r.layers.tacticalDirector === "core.v1" && r.layers.laneFrame === "teamRelative" && r.layers.redTactic === "aiCoachV1"
+      return r.rulesetId === "career.v21" && r.layers.tacticalDirector === "core.v1" && r.layers.laneFrame === "teamRelative" && r.layers.redTactic === "aiCoachV1" && r.layers.templateBalance === "v21.b1"
         && L.stableStringify(omit(r.layers, ...C21_KEYS)) === L.stableStringify(omit(r20.layers, "redTactic"))
         && J(r.releaseRequirements) === J([...r20.releaseRequirements, "mobaTacticalDirectorV21"]) && Object.isFrozen(r) && v(r).ok
         && createMatchSetup({ ruleset: r, seed: 1, meta: { seedSource: "local" } }).ok; }));
   //  Phase 3a-B T16（Owner 2026-10-25 決策 6）：challenge.v21 出現了（D-16 結案）。旗標關 ⇒ 仍是 challenge.v20（正式站照舊，RS6b 雜湊不變）；
   //  旗標開＋技能旗標開 ⇒ challenge.v21；只開 Director、技能關 ⇒ challenge.v20（challenge.v21 的技能層是固定的，不能被關成半套）。
-  ck("RS8 challenge 模式：正式旗標 ⇒ challenge.v20；旗標開（技能旗標開）⇒ challenge.v21；旗標開但技能關 ⇒ challenge.v20",
+  //  RS8'（第一階段，Owner 2026-10-30 第 5 點）：challenge.v21 另外要求 mobaChallengeV21；只開 Director（第一階段）⇒ 仍是 challenge.v20。
+  ck("RS8' challenge 模式：正式旗標 ⇒ challenge.v20；只開 Director（第一階段）⇒ challenge.v20；Director＋技能＋Challenge 旗標都開 ⇒ challenge.v21；技能關 ⇒ challenge.v20",
     RS.resolveRulesetForMode({ mode: "challenge", flags: FEATURE_FLAGS }).rulesetId === "challenge.v20"
-    && RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true } }).rulesetId === (FEATURE_FLAGS.heroSkillsV1 === true ? "challenge.v21" : "challenge.v20")
-    && RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true, heroSkillsV1: false } }).rulesetId === "challenge.v20");
+    && RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true } }).rulesetId === "challenge.v20"
+    && RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true, mobaChallengeV21: true } }).rulesetId === (FEATURE_FLAGS.heroSkillsV1 === true ? "challenge.v21" : "challenge.v20")
+    && RS.resolveRulesetForMode({ mode: "challenge", flags: { ...FEATURE_FLAGS, mobaTacticalDirectorV21: true, mobaChallengeV21: true, heroSkillsV1: false } }).rulesetId === "challenge.v20");
   const setupCodes = (r) => { const x = createMatchSetup({ ruleset: r, seed: 1, meta: { seedSource: "local" } }); return x.ok ? [] : x.errors.map((e) => `${e.code}@${e.field}`); };
   //  career.v20＋core.v1 沒列旗標時先被 RS-1 擋（ruleset_invalid@ruleset）；補上旗標後仍被層鍵鎖定擋下。
   const c20With = (m, reqs = c20.releaseRequirements) => ({ ...c20, layers: { ...c20.layers, tacticalDirector: m }, releaseRequirements: reqs });
@@ -433,7 +436,7 @@ try {
   //  C3-1 laneFrame：預期改變的 id 只來自事前登記檔（不在這裡另寫一份清單）。
   //  Phase 3a-B T15：再加上 AI 教練的事前登記（tools/fixtures/ai_coach_registration_3aB.json）——比對用兩份的聯集。
   const EXPECTED_CHANGED = new Set(LF.V21_EXPECTED_CHANGED);
-  ck(`G1b 事前登記的改變清單：laneFrame ${LF.C3_EXPECTED_CHANGED.length} 個（登記總數 ${LF.C3_TOTAL_EXPECTED}）＋ AI 教練 ${LF.AI_COACH_EXPECTED_CHANGED.length} 個 ＝ 聯集 ${EXPECTED_CHANGED.size} 個 id，全部是本段重跑的 live／runner 案`,
+  ck(`G1b 事前登記的改變清單：laneFrame ${LF.C3_EXPECTED_CHANGED.length} 個（登記總數 ${LF.C3_TOTAL_EXPECTED}）＋ AI 教練 ${LF.AI_COACH_EXPECTED_CHANGED.length} 個 ＋ 模板修正表 ${LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.length} 個（由修正表推導，第一階段登記）＝ 聯集 ${EXPECTED_CHANGED.size} 個 id，全部是本段重跑的 live／runner 案`,
     LF.C3_EXPECTED_CHANGED.length === LF.C3_TOTAL_EXPECTED && [...EXPECTED_CHANGED].every((id) => specs.some((s) => s.id === id)));
   let callsDiff = 0, withMatch = 0, coreOk = 0, r4Ok = 0;
   for (const spec of specs) {
@@ -442,7 +445,7 @@ try {
     const inputDiffs = run ? [] : [...(((w.bindingHash ?? null) !== (g.bindingHash ?? null)) ? [`bindingHash ${w.bindingHash} -> ${g.bindingHash}`] : []),
       ...(L.stableStringify(w.params) !== L.stableStringify(g.params) ? ["params differ"] : [])];
     if (EXPECTED_CHANGED.has(spec.id))
-      ck(`G ${spec.id}　登記的改變案（${LF.C3_EXPECTED_CHANGED.includes(spec.id) ? "紅方不對稱 teamRelative" : ""}${LF.C3_EXPECTED_CHANGED.includes(spec.id) && LF.AI_COACH_EXPECTED_CHANGED.includes(spec.id) ? "＋" : ""}${LF.AI_COACH_EXPECTED_CHANGED.includes(spec.id) ? "AI 教練紅方" : ""}）：v21 規則集下 digest／streamHash／resultHash 至少一欄改變；輸入（params／bindingHash）不變`,
+      ck(`G ${spec.id}　登記的改變案（${LF.C3_EXPECTED_CHANGED.includes(spec.id) ? "紅方不對稱 teamRelative" : ""}${LF.C3_EXPECTED_CHANGED.includes(spec.id) && LF.AI_COACH_EXPECTED_CHANGED.includes(spec.id) ? "＋" : ""}${LF.AI_COACH_EXPECTED_CHANGED.includes(spec.id) ? "AI 教練紅方" : ""}${LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.includes(spec.id) ? "模板修正表 v21.b1" : ""}）：v21 規則集下 digest／streamHash／resultHash 至少一欄改變；輸入（params／bindingHash）不變`,
         !run && diffs.length > 0 && inputDiffs.length === 0, run ?? (diffs.length ? diffs.join("; ") : "三欄都沒變") + (inputDiffs.length ? `; ${inputDiffs.join("; ")}` : ""));
     else
       ck(`G ${spec.id}　v21 規則集下 digest＋streamHash＋resultHash＝fixture`, !run && diffs.length === 0 && inputDiffs.length === 0, [...(run ? [run] : diffs), ...inputDiffs].join("; "));

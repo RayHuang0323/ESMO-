@@ -22,7 +22,7 @@
 // ============================================================================
 import React, { useMemo, useState } from "react";
 import { featureEnabled, FEATURE_FLAGS } from "../../featureFlags.js";
-import { resolveRulesetForMode, tacticalDirectorModeOf } from "../../platform/contracts/matchRuleset.js";
+import { resolveRulesetForMode, tacticalDirectorModeOf, templateBalanceOf } from "../../platform/contracts/matchRuleset.js";
 import { LIVE_RULESET_MODE } from "../../battle/moba/liveMatchSetup.js";
 import { itemsDevRequested } from "../../ui/itemsDevFlag.js";
 import { heroById } from "../../data/heroDatabase.js";
@@ -48,7 +48,7 @@ import { fitScore, fitGrade } from "./tacticFit.js";
 import { GC } from "../../ui/theme.js";
 //  Phase 3a T13：戰術書。模板、可調選項與指標全部由 view-model（tacticBookOptions.js）轉述 Registry／resolver／指標模組，
 //  本畫面只保存「選了哪個模板、疊了哪個變體、調了哪些選項」三個狀態，送出時交出 binding。
-import { templateById } from "../../platform/tactics/tacticTemplates.js";
+import { templateById, templateConfigFor, TEMPLATE_COPY } from "../../platform/tactics/tacticTemplates.js";
 import { buildPlayerStatSlots } from "../../battle/moba/mobaRosterAdapter.js";
 import { getHeroCombatArchetype } from "../../data/heroCombatArchetypes.js";
 import { templateGroups, tacticBookView, withChoice, offeredChoicesOnly, dimensionLabel, choiceLabel } from "./tacticBook/tacticBookOptions.js";
@@ -63,7 +63,6 @@ import { opponentIntelOf, tacticBookSaveState } from "./tacticBook/tacticBookOpt
 import OpponentIntelPanel from "./tacticBook/OpponentIntelPanel.jsx";
 import ConfirmPanel from "./tacticBook/ConfirmPanel.jsx";
 
-const TEMPLATE_GROUPS = templateGroups();
 const DEFAULT_TEMPLATE_ID = `classic.${MOBA_TACTICS[0].tacticId}`;
 
 const riskC = (r) => (r === "高" ? GC.red : r === "中" ? GC.gold : GC.green);
@@ -110,13 +109,22 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const [loadedEntryId, setLoadedEntryId] = useState(null);
   const template = templateById(templateId) ?? templateById(DEFAULT_TEMPLATE_ID);
   const sel = template.legacyTacticId;
+  //  Phase 3a-C／3a-B 第一階段：與開局時 liveMatchSetup 用同一個解析函式。本畫面只在 Director core.v1（career.v21）下出現（AppShell 的總開關）；
+  //  templateBalance＝這個規則集的模板修正表：模板起點、提供清單、指標與文案都用它（畫面＝引擎打的那一份）。
+  const liveRuleset = useMemo(() => resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS }), []);
+  const tacticalDirector = tacticalDirectorModeOf(liveRuleset);
+  const templateBalance = templateBalanceOf(liveRuleset);
+  const templateGroupsView = useMemo(() => templateGroups(templateBalance), [templateBalance]);
+  //  修正表下有修正文案的模板 ⇒ 顯示欄位（名稱、風險、重點、描述、優勢、缺點）換成修正文案；只給畫面看，引擎設定不帶它（I1）。
+  const copyOver = templateBalance ? TEMPLATE_COPY[templateBalance]?.[template.templateId] ?? null : null;
+  const withCopy = (cfg) => (copyOver && cfg ? { ...cfg, ...copyOver } : cfg);
   const allPlayers = useProfileStore((s) => s.players) ?? [];
   const lineup = useProfileStore((s) => s.lineup) ?? null;
   //  Club Assets v1：讀合併權威（發展樹 ＋ 總教練），不自己合併。
   const developmentEffects = useProfileStore((s) => s.clubCapabilities()).total;
   const starters = useMemo(() => allPlayers.filter((p) => p.status === "主力"), [allPlayers]);
   //  模板的設定就是一份 MobaTacticConfig（經典模板＝MOBA_TACTICS 的那一筆，逐欄相同）。
-  const cur = template.config;
+  const cur = useMemo(() => withCopy(templateConfigFor(template.templateId, templateBalance)), [template.templateId, templateBalance]);
 
   //  ── 變體選擇 ────────────────────────────────────────────────────────
   //  `null` = 基礎戰術。m1–m8 永遠可選，這個狀態只決定「要不要疊一層變體」。
@@ -127,10 +135,10 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   //    也不解鎖任何戰術（那是 tacticVariant 的責任）。
   const tacticInsightRows = useMemo(() => MOBA_TACTICS.map((t) => ({
     id: t.tacticId,
-    name: t.name ?? t.tacticId,
+    name: (templateBalance ? TEMPLATE_COPY[templateBalance]?.[`classic.${t.tacticId}`]?.name : null) ?? t.name ?? t.tacticId,
     games: clubMastery?.tacticUsage?.moba?.[t.tacticId] ?? 0,
     intent: clubMastery?.tacticIntent?.moba?.[t.tacticId] ?? 0,
-  })), [clubMastery]);
+  })), [clubMastery, templateBalance]);
   //  變體（覆蓋層）只屬於它的經典模板：v2／標準模板沒有變體列。
   const variantInfo = useMemo(
     () => (template.kind === "classic" ? variantsAvailableForTactic(clubMastery, sel) : { variants: [] }),
@@ -154,22 +162,21 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const seatPlayers = useMemo(() => buildPlayerStatSlots(allPlayers, "blue", lineup), [allPlayers, lineup]);
   //  Phase 3a-C：每時期的選擇（集結、物件優先）只在 v21 規則集（Director core.v1）可用——與開局時 liveMatchSetup 用同一個解析函式，
   //  旗標關閉（v20）⇒ 戰術書不畫這些維度，舊計畫裡帶著的也先拿掉（否則組裝器會拒絕整份戰術）。
-  const liveRuleset = useMemo(() => resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS }), []);
-  const tacticalDirector = tacticalDirectorModeOf(liveRuleset);
   const book = useMemo(() => {
     const heroLookup = (seat) => { const id = talentRosterForBook?.[seat]?.heroId; return id ? getHeroCombatArchetype(id) : null; };
     const overlayIds = activeVariant ? [activeVariant.variantId] : [];
     //  先拿掉目前不提供的選擇（從戰術書載入的舊計畫可能帶著後來被量測排除的選項；換變體後也可能有選項不再提供）
     //  ⇒ 送出去的計畫永遠與畫面上看得到的選項一致。
-    const kept = offeredChoicesOnly(template.templateId, overlayIds, choices, { tacticalDirector });
-    const view = tacticBookView({ templateId: template.templateId, overlayIds, choices: kept.choices, seatPlayers, heroLookup, tacticalDirector });
+    const kept = offeredChoicesOnly(template.templateId, overlayIds, choices, { tacticalDirector, templateBalance });
+    const view = tacticBookView({ templateId: template.templateId, overlayIds, choices: kept.choices, seatPlayers, heroLookup, tacticalDirector, templateBalance });
     //  仍不合法 ⇒ 退回「模板＋變體、沒有額外選擇」，不送出不合法的計畫。
     return view.ok ? { view, choices: kept.choices, dropped: kept.dropped }
-      : { view: tacticBookView({ templateId: template.templateId, overlayIds, choices: {}, seatPlayers, heroLookup, tacticalDirector }), choices: {}, dropped: kept.dropped };
-  }, [template.templateId, activeVariant, choices, seatPlayers, talentRosterForBook, tacticalDirector]);
+      : { view: tacticBookView({ templateId: template.templateId, overlayIds, choices: {}, seatPlayers, heroLookup, tacticalDirector, templateBalance }), choices: {}, dropped: kept.dropped };
+  }, [template.templateId, activeVariant, choices, seatPlayers, talentRosterForBook, tacticalDirector, templateBalance]);
   const bookView = book.view.ok ? book.view : null;
   //  真正生效的那一份：有戰術書的解析結果就用它（模板＋變體＋選擇，與引擎吃到的同一個合併函式）；否則是 v20 的基礎路徑。
-  const applied = bookView ? bookView.config : baseApplied;
+  //  顯示用的欄位（LoadingScreen／HUD 讀 tactic.name／desc／detail）換成修正文案；數值欄位不動（開局走 binding；legacy 退路由 id 重建）。
+  const applied = bookView ? withCopy(bookView.config) : baseApplied;
   const binding = bookView ? bookView.binding : null;
   const changedCount = bookView ? bookView.dimensions.filter((d) => d.explicit && !d.quick).length : 0;
   const chooseTemplate = (id) => { setTemplateId(id); setChoices({}); setVariantSel(null); setBookNote(null); setLoadedEntryId(null); };
@@ -182,7 +189,8 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const activeBookId = binding ? (savedBook.find((e) => e.id === binding.planHash)?.id ?? null) : null;
   const saveToBook = () => {
     if (!bookView || saveBlocked) return;
-    const r = useProfileStore.getState().saveTacticPlan(bookView.plan, { name: bookName });
+    //  沒輸入名稱 ⇒ 用畫面上的模板名稱（修正表下是 v21 文案；審查：存檔預設名稱與 placeholder 一致）。
+    const r = useProfileStore.getState().saveTacticPlan(bookView.plan, { name: bookName.trim() || cur.name });
     setBookNote(r.ok ? { ok: true, text: r.replaced ? `已更新「${r.entry.name}」` : `已存成「${r.entry.name}」` } : { ok: false, text: r.errors[0]?.message ?? "存不進去" });
     //  Phase 3a-B（審查）：存好之後，目前這份就是剛存的那一份（另存的副本可以照常改名，不會被當成「與別份重複」）。
     if (r.ok) { setBookName(""); setLoadedEntryId(r.entry.id); }
@@ -207,7 +215,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
   const filteredCopy = saveState.copy, dupEntry = saveState.duplicate, bookFull = saveState.full, saveBlocked = saveState.blocked;
   //  T13：對手情報（賽前、合法資訊）。v21（Director core.v1）＝AI 教練賽前排的計畫概要；v20＝風格模板名稱。沒有對手 ⇒ 標準運營。
   const opponentId = useProfileStore((s) => s.matchmaking?.launch?.opponentId ?? null);
-  const intel = useMemo(() => opponentIntelOf({ team: opponentId ? aiTeamById(opponentId) : null, tacticalDirector, redTactic: liveRuleset.layers.redTactic }), [opponentId, tacticalDirector, liveRuleset]);
+  const intel = useMemo(() => opponentIntelOf({ team: opponentId ? aiTeamById(opponentId) : null, tacticalDirector, redTactic: liveRuleset.layers.redTactic, templateBalance }), [opponentId, tacticalDirector, liveRuleset, templateBalance]);
   const fitOf = (id) => fitGrade(fitScore(templateById(id).config, starters));
 
   const curFit = fitScore(cur, starters);
@@ -254,12 +262,12 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
           </div>
         )}
         {step === "confirm" && bookView && (
-          <ConfirmPanel templateName={template.name} variantName={activeVariant?.name ?? null} dimensions={bookView.dimensions} dropped={book.dropped}
+          <ConfirmPanel templateName={copyOver?.name ?? template.name} variantName={activeVariant?.name ?? null} dimensions={bookView.dimensions} dropped={book.dropped}
             profile={bookView.profile} intel={intel} onEdit={() => setStep("book")} onGo={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections, binding)} />
         )}
         {step === "book" && (<>
         {/* 模板列：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容；上方是「我的戰術書」 */}
-        <TemplateStrip groups={TEMPLATE_GROUPS} selectedId={template.templateId} onSelect={chooseTemplate} fitOf={fitOf}
+        <TemplateStrip groups={templateGroupsView} selectedId={template.templateId} onSelect={chooseTemplate} fitOf={fitOf}
           columns="repeat(auto-fill,minmax(min(190px,100%),1fr))"
           book={savedBook} activeBookId={activeBookId} onLoadBook={loadFromBook} onDeleteBook={deleteFromBook} />
 

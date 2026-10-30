@@ -30,7 +30,7 @@ import {
 import { applyVariant, variantById } from "../mastery/tacticVariant.js";
 import { stableStringify } from "../contracts/squadSnapshot.js";
 import { CAPABILITY_STATUS, registryRow, liveRows, measuredExclusion, replicationWithheld, rowAvailableUnder } from "./capabilityRegistry.js";
-import { TACTIC_TEMPLATES, templateById } from "./tacticTemplates.js";
+import { TACTIC_TEMPLATES, templateById, templateForBalance, TEMPLATE_BALANCE } from "./tacticTemplates.js";
 import { overlayById } from "./tacticOverlays.js";
 
 export const TACTIC_RESOLVER_VERSION = "tacticResolver.v1";
@@ -275,8 +275,13 @@ export const touchedFieldsOf = (row) => [row.target, row.onLeaveInvade?.target, 
 const LANE_POS = { top: "top", mid: "mid", bot: "adc" };
 const splitLanesOf = (cfg) => ["top", "mid", "adc"].filter((p) => cfg.lanePlan?.[p] === "split");
 
-/** 建一個選擇引擎實例。`mapping` 可換（gate 植入有問題的對照表做對照組）。 */
-export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHASE_CHOICE_MAPPING } = {}) {
+/**
+ * 建一個選擇引擎實例。`mapping` 可換（gate 植入有問題的對照表做對照組）。
+ * `templateBalance`（Phase 3a-B 第一階段）：模板修正表 id（null＝出貨版）。這個實例的**每一個**模板起點（自己的選擇、提供清單、勝利條件展開、
+ * 合併、確認頁設定、指標）都從修正後的模板設定開始；對照表的上下限（tplConfig：std、classic.m2）是對照表常數，永遠用出貨版。
+ * `tables` 可注入（gate 用植入的修正表觀察順序）。
+ */
+export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHASE_CHOICE_MAPPING, templateBalance = null, tables = TEMPLATE_BALANCE } = {}) {
   const rowOf = (dim) => (typeof dim === "string" && Object.hasOwn(mapping.rows ?? {}, dim) ? mapping.rows[dim] : null);
   const phasePhaseRows = phaseMapping.rows ?? {};
   const phaseRowOf = (dim) => (typeof dim === "string" && Object.hasOwn(phasePhaseRows, dim) ? phasePhaseRows[dim] : null);
@@ -311,7 +316,7 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
 
   /** 模板 → 覆蓋層（v20 的 applyVariant）→ 選擇。**不做任何檢查**。 */
   function mergeConfig(tpl, overlayIds, choices) {
-    let cfg = structuredClone(tpl.config);
+    let cfg = structuredClone(templateForBalance(tpl, templateBalance, tables).config);
     for (const id of overlayIds ?? []) cfg = applyVariant(cfg, variantById(id));
     for (const [dim, v] of leavesOf(choices)) cfg = applyChoice(cfg, dim, v) ?? cfg;
     return cfg;
@@ -354,9 +359,9 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     for (const c of order) {
       if (c === own) { const s = sigOf(applyChoice(base, dim, c) ?? base); seen.set(s, c); kept.add(c); continue; }
       //  G-A7：量測不到實際效果的選擇（Registry 的 MEASURED_EXCLUSIONS，逐模板或 "*"＝全部模板）不提供；不佔用旋鈕組的「已見」位置。
-      if (useMeasured && measuredExclusion(templateId, dim, c, mode)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      if (useMeasured && measuredExclusion(templateId, dim, c, mode, templateBalance)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
       //  複驗撤下（REPLICATION_WITHHELD，獨立於量測排除表）：先查量測排除（reason 不變），沒命中才查這張。
-      if (useMeasured) { const rw = replicationWithheld(templateId, dim, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
+      if (useMeasured) { const rw = replicationWithheld(templateId, dim, c, templateBalance); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
       if (c === "split" && otherSplit) { withheld.push({ choice: c, reason: "second_split_lane" }); continue; }
       const next = applyChoice(base, dim, c);
       if (!next) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
@@ -393,8 +398,8 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     const seen = new Map(), kept = new Set(), withheld = [];
     for (const c of order) {
       if (c === own) { seen.set(baseSig, c); kept.add(c); continue; }
-      if (useMeasured && measuredExclusion(tpl.templateId, dim, c, mode)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
-      if (useMeasured) { const rw = replicationWithheld(tpl.templateId, dim, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
+      if (useMeasured && measuredExclusion(tpl.templateId, dim, c, mode, templateBalance)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      if (useMeasured) { const rw = replicationWithheld(tpl.templateId, dim, c, templateBalance); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
       if (!Object.hasOwn(row.values, c)) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
       const s = sigWith(c);
       if (s === null) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
@@ -443,8 +448,8 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     seen.set(stableStringify(others), own);
     for (const c of live.choices.filter((x) => x !== own)) {
       if (mode !== null && mode !== WIN_CONDITION_MODE) { withheld.push({ choice: c, reason: "requires_director" }); continue; }
-      if (useMeasured && measuredExclusion(tpl.templateId, WIN_CONDITION_DIM, c, mode)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
-      if (useMeasured) { const rw = replicationWithheld(tpl.templateId, WIN_CONDITION_DIM, c); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
+      if (useMeasured && measuredExclusion(tpl.templateId, WIN_CONDITION_DIM, c, mode, templateBalance)) { withheld.push({ choice: c, reason: "no_measured_effect" }); continue; }
+      if (useMeasured) { const rw = replicationWithheld(tpl.templateId, WIN_CONDITION_DIM, c, templateBalance); if (rw) { withheld.push({ choice: c, reason: rw.reason }); continue; } }
       if (!Object.hasOwn(WIN_CONDITION_PRESETS, c)) { withheld.push({ choice: c, reason: "unmapped" }); continue; }
       //  量測排除只決定「提供給玩家挑哪些」（同 offeredDetail 的 withMeasured）；plan 層驗證用 withMeasured:false，已存的計畫不會因後來的量測結論失效。
       const f = winConditionFill(tpl.templateId, overlayIds, nestedOf([...others, [WIN_CONDITION_DIM, c]]), { withMeasured: useMeasured });
@@ -532,16 +537,43 @@ export function makeChoiceEngine({ mapping = CHOICE_MAPPING, phaseMapping = PHAS
     });
   }
 
-  return { applyChoice, mergeConfig, ownChoiceOf, offeredChoices, offeredDetail, problemsOf, planProblems, tacticBookOptions, winConditionFill, effectiveChoices };
+  return { templateBalance, applyChoice, mergeConfig, ownChoiceOf, offeredChoices, offeredDetail, problemsOf, planProblems, tacticBookOptions, winConditionFill, effectiveChoices };
 }
 
-const DEFAULT = makeChoiceEngine();
+/**
+ * 同一份對照表的「出貨版＋每一張修正表」引擎組（Phase 3a-B 第一階段，審查 M1／第 2 輪 M1）。
+ * `planProblemsUnion`＝計畫合法性（與規則集無關）：在出貨版**或**任一張修正表下沒有問題就合法；全部都有問題 ⇒ 回出貨版的錯誤。
+ * 所以存好的計畫、binding、planHash 都不因規則集改變；在另一個設定下是空轉的選擇，解析時就照空轉套用。
+ * createTacticPlan 與 Resolver 的再驗證用**同一個**函式（植入對照表的實例用它自己那一組）。
+ */
+export function makeChoiceEngines({ mapping = CHOICE_MAPPING, phaseMapping = PHASE_CHOICE_MAPPING, tables = TEMPLATE_BALANCE } = {}) {
+  const shipped = makeChoiceEngine({ mapping, phaseMapping, tables });
+  const byBalance = new Map([[null, shipped]]);
+  for (const id of Object.keys(tables)) byBalance.set(id, makeChoiceEngine({ mapping, phaseMapping, templateBalance: id, tables }));
+  const engineFor = (templateBalance = null) => byBalance.get(templateBalance ?? null) ?? null;
+  function planProblemsUnion(tpl, overlayIds, choices) {
+    const first = shipped.planProblems(tpl, overlayIds, choices);
+    if (!first.length) return first;
+    for (const [id, e] of byBalance) {
+      if (id === null || !tables[id]?.[tpl?.templateId]) continue;   // 這張表沒有修正這個模板 ⇒ 與出貨版相同，不必再算
+      if (!e.planProblems(tpl, overlayIds, choices).length) return [];
+    }
+    return first;
+  }
+  return { shipped, engineFor, planProblemsUnion };
+}
+
+const ENGINES = makeChoiceEngines();
+const DEFAULT = ENGINES.shipped;
+/** 這張修正表（null＝出貨版）的選擇引擎；未登錄的 id ⇒ null。 */
+export const choiceEngineFor = ENGINES.engineFor;
 export const applyChoice = DEFAULT.applyChoice;
 export const mergeTacticConfig = DEFAULT.mergeConfig;
 export const offeredChoices = DEFAULT.offeredChoices;
 export const offeredChoiceDetail = DEFAULT.offeredDetail;
 export const tacticBookOptions = DEFAULT.tacticBookOptions;
-export const tacticPlanProblems = DEFAULT.planProblems;
+/** 計畫合法性（與規則集無關；出貨版或任一張修正表下合法即合法）。 */
+export const tacticPlanProblems = ENGINES.planProblemsUnion;
 /** 勝利條件展開（Phase 3a-C6）：{ choices, winCondition, filled, skipped }。 */
 export const winConditionFill = DEFAULT.winConditionFill;
 /** 引擎實際用的選擇（展開勝利條件後的巢狀選擇）。 */

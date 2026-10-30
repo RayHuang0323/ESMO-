@@ -260,6 +260,9 @@ for (const t of TEMPLATE_IDS) {
     //  兩層：結構上提供（旋鈕不同、不撞、不是第二條帶線路）＝createTacticPlan 接受；
     //  玩家看到的清單＝結構上提供 ∖ 量測排除表 ∖ 複驗撤下清單（被排除的選擇，已存的計畫仍可解析，只是不再提供挑選）。
     const structural = offeredChoices(t, o.dimension, [], {}, { withMeasured: false });
+    //  U1'（Phase 3a-B 第一階段，事前登記 stage1_release_registration_3aB secondPassReplacements）：計畫接受＝出貨版與每張修正表下
+    //  「結構上提供」的**聯集**（聯集合法性規則）；提供清單本身仍逐設定、出貨版不變。
+    const structuralAny = [...new Set([...structural, ...Templates.TEMPLATE_BALANCE_IDS.flatMap((tb) => Mapping.choiceEngineFor(tb).offeredChoices(t, o.dimension, [], {}, { withMeasured: false }))])];
     //  勝利條件（量測前審查 F4）：計畫層只要求認得的預設（含 none），展開後再照常驗；提供清單另外要求完整組合。
     //  ⇒ 結構上提供的一定被接受，但接受的不一定提供（例如第二條帶線路時只填得到部分格）；玩家清單少掉的，原因一定是
     //  勝利條件本身被撤下，或勝利條件本身在這個模板被量測排除（量測排除表有這一列），
@@ -282,13 +285,13 @@ for (const t of TEMPLATE_IDS) {
     }
     for (const c of row.choices) {
       const ok = createTacticPlan({ templateId: t, choices: nested(o.dimension, c) }).ok;
-      if (structural.includes(c) !== ok) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:structural=${structural.includes(c)} plan=${ok}`); }
+      if (structuralAny.includes(c) !== ok) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:structural(union)=${structuralAny.includes(c)} plan=${ok}`); }
       const gone = (Registry.measuredExclusion(t, o.dimension, c) !== null || Registry.replicationWithheld(t, o.dimension, c) !== null) && c !== Mapping.offeredChoiceDetail(t, o.dimension, [], {}, { withMeasured: false }).own;
       if (o.offered.includes(c) !== (structural.includes(c) && !gone)) { uiOk = false; uiBad.push(`${t}/${o.dimension}=${c}:UI清單≠結構提供∖排除表∖複驗撤下`); }
     }
   }
 }
-ck("U1 tacticBookOptions(模板) ＝ 每個 live 維度的 offeredChoices ⊆ Registry choices；＝（結構上提供 ∖ 量測排除表 ∖ 複驗撤下清單）；結構上提供的選擇 createTacticPlan 接受、沒提供的拒絕（21 模板）", uiOk, uiBad.slice(0, 4).join(" "));
+ck("U1' tacticBookOptions(模板) ＝ 每個 live 維度的 offeredChoices ⊆ Registry choices；＝（結構上提供 ∖ 量測排除表 ∖ 複驗撤下清單）；在出貨版或任一張修正表下結構上提供的選擇 createTacticPlan 接受、都沒提供的拒絕（21 模板；聯集合法性）", uiOk, uiBad.slice(0, 4).join(" "));
 ck("U2 UI 清單只含 live 維度（design 維度永遠不會出現）", TEMPLATE_IDS.every((t) => tacticBookOptions(t, [], {}, { tacticalDirector: "core.v1" }).every((o) => Registry.registryRow(o.dimension)?.status === "live")));
 ck("U5 v20（static，預設）下 UI 清單＝live 列扣掉需要 Director 的每時期型（旗標關閉時看不到、也送不出每時期選擇）",
   TEMPLATE_IDS.every((t) => J(tacticBookOptions(t).map((o) => o.dimension)) === J(live.filter((r) => r.requires === null).map((r) => r.dimension))

@@ -32,13 +32,13 @@ import {
 import { variantById } from "../../../platform/mastery/tacticVariant.js";
 import { stableStringify } from "../../../platform/contracts/squadSnapshot.js";
 import { liveRows } from "../../../platform/tactics/capabilityRegistry.js";
-import { TACTIC_TEMPLATES_VERSION, templateById } from "../../../platform/tactics/tacticTemplates.js";
+import { TACTIC_TEMPLATES_VERSION, templateById, classicLegacyTemplateOf, isTemplateBalanceId, TEMPLATE_COPY } from "../../../platform/tactics/tacticTemplates.js";
 import { TACTIC_OVERLAYS_VERSION } from "../../../platform/tactics/tacticOverlays.js";
 import {
   createTacticPlan, tacticPlanHash, bindTacticPlan, TACTIC_PLAN_BINDING_VERSION, TACTIC_PLAN_VERSION,
 } from "../../../platform/tactics/tacticPlan.js";
 import {
-  CHOICE_MAPPING, TACTIC_RESOLVER_VERSION, TACTIC_CHOICE_ERROR, makeChoiceEngine,
+  CHOICE_MAPPING, TACTIC_RESOLVER_VERSION, TACTIC_CHOICE_ERROR, makeChoiceEngines,
   PHASE_CHOICE_MAPPING, PHASE_CHOICE_ERROR, phaseOverridesOf, phaseProjectionOf, leavesOf, nestedOf,
 } from "../../../platform/tactics/tacticChoiceMapping.js";
 
@@ -60,6 +60,7 @@ export const TACTIC_RESOLVER_ERROR = Object.freeze({
   PROJECTION_FAILED: "projection_failed",
   INTERNAL_ERROR: "resolver_internal_error",
   PHASE_CHOICES_NOT_ALLOWED: "phase_choices_not_allowed",
+  TEMPLATE_BALANCE_UNKNOWN: "template_balance_unknown",
   ...TACTIC_CHOICE_ERROR,
   ...PHASE_CHOICE_ERROR,
 });
@@ -84,15 +85,21 @@ const internal = (e) => fail(err(E.INTERNAL_ERROR, "", `resolver 內部錯誤：
  * 預設匯出的函式都是用 CHOICE_MAPPING 建出來的那一個。
  */
 export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
-  const engine = makeChoiceEngine({ mapping });
+  //  Phase 3a-B 第一階段：同一份對照表的出貨版＋每張修正表引擎。計畫合法性用聯集（與規則集無關）；合併與勝利條件展開用本場修正表的引擎。
+  const engines = makeChoiceEngines({ mapping });
+  const engine = engines.shipped;
+  //  修正表下有文案的模板 ⇒ 賽果／重播看到的名稱用修正後的文案（只有帶 templateBalance 的規則集；其餘逐字不變）。
+  const copyNameOf = (templateId, templateBalance) => (templateBalance && templateId ? TEMPLATE_COPY[templateBalance]?.[templateId]?.name ?? null : null);
   const BINDING_FIELDS = ["schema", "plan", "planHash", "legacyTacticId", "resolverVersion", "templatesVersion", "overlaysVersion"];
 
   /**
    * TacticPlanBinding → { ok, config, meta, errors }。config 是 frozen 的 MobaTacticConfig（還沒投影）。
    * 不信任 binding：重新驗證 plan、核對雜湊與版本、標準形，語意檢查（覆蓋層歸屬、帶線、提供清單）與 createTacticPlan 同一份。
    */
-  function resolveBindingConfig(binding) {
+  function resolveBindingConfig(binding, templateBalance = null) {
     try {
+      const tableEngine = engines.engineFor(templateBalance);
+      if (!tableEngine) return fail(err(E.TEMPLATE_BALANCE_UNKNOWN, "templateBalance", `不認得的模板修正表：${show(templateBalance)}`));
       if (!isPlainObject(binding)) return fail(err(E.BINDING_INVALID, "binding", "binding 必須是物件"));
       const extra = Object.keys(binding).filter((k) => !BINDING_FIELDS.includes(k));
       if (extra.length) return fail(err(E.BINDING_UNKNOWN_FIELD, `binding.${extra[0]}`, `不認得的欄位：${show(extra[0])}`));
@@ -116,19 +123,19 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       if (binding.legacyTacticId !== tpl.legacyTacticId) return fail(err(E.LEGACY_ID_MISMATCH, "binding.legacyTacticId", `legacyTacticId 應為 ${tpl.legacyTacticId}`));
 
       //  實例自己的對照表再驗一次（預設實例＝createTacticPlan 剛驗過的同一份；植入對照表的實例會以自己的表為準）
-      const problems = engine.planProblems(tpl, plan.overlayIds, plan.choices);
+      const problems = engines.planProblemsUnion(tpl, plan.overlayIds, plan.choices);
       if (problems.length) return fail(...problems.map((e) => err(e.code, `binding.plan.${e.field}`, e.message)));
 
       //  勝利條件（Phase 3a-C6）只是「替玩家沒選的維度預填既有選擇」：先展開，之後整條路與玩家自己選那些選擇完全相同。
-      const effective = engine.effectiveChoices(plan.templateId, plan.overlayIds, plan.choices);
-      const merged = engine.mergeConfig(tpl, plan.overlayIds, effective);
+      const effective = tableEngine.effectiveChoices(plan.templateId, plan.overlayIds, plan.choices);
+      const merged = tableEngine.mergeConfig(tpl, plan.overlayIds, effective);
       const overlayName = plan.overlayIds.length ? (variantById(plan.overlayIds[0])?.name ?? null) : null;
       const config = deepFreeze(merged);
       //  每時期的選擇（PHASE_CHOICE_MAPPING 的維度）不進整場設定；另外交給 resolveTactic 建每時期方針。沒有就不帶這個鍵。
       const phaseLeaves = leavesOf(effective).filter(([dim]) => Object.hasOwn(PHASE_CHOICE_MAPPING.rows, dim));
       return deepFreeze({
         ok: true, errors: [], config,
-        meta: { tacticId: config.tacticId, tacticName: config.name ?? null, playbookName: overlayName ?? tpl.name, templateId: plan.templateId, version: CANONICAL_TACTIC_VERSION },
+        meta: { tacticId: config.tacticId, tacticName: copyNameOf(plan.templateId, templateBalance) ?? config.name ?? null, playbookName: overlayName ?? copyNameOf(plan.templateId, templateBalance) ?? tpl.name, templateId: plan.templateId, version: CANONICAL_TACTIC_VERSION },
         ...(phaseLeaves.length ? { phaseChoices: nestedOf(phaseLeaves).phases } : {}),
       });
     } catch (e) {
@@ -157,6 +164,9 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       };
       for (const k of Object.keys(A)) if (adapters && adapters[k] !== undefined) A[k] = adapters[k];
       const wantIdentity = opts?.identity !== false;
+      //  Phase 3a-B 第一階段：本場規則集的模板修正表（組裝器只在規則集帶 templateBalance 層時傳；省略 ⇒ 與之前逐字相同）。
+      const templateBalance = opts?.templateBalance ?? null;
+      if (templateBalance !== null && !isTemplateBalanceId(templateBalance)) return fail(err(E.TEMPLATE_BALANCE_UNKNOWN, "templateBalance", `不認得的模板修正表：${show(templateBalance)}`));
       if (!isPlainObject(input)) return fail(err(E.INVALID_INPUT, "", "戰術輸入必須是物件"));
       //  legacy 輸入的 phaseChoices（量測工具用）：只在呼叫端明確允許時接受（組裝器只對工具規則集允許）；其他輸入種類不得帶。
       let phaseChoices = null;
@@ -170,12 +180,15 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
         const c = input.config;
         if (!isPlainObject(c) || typeof c.tacticId !== "string" || !c.tacticId) return fail(err(E.LEGACY_CONFIG_INVALID, "config", "legacy 戰術需要含 tacticId 的 config"));
         source = structuredClone(c);          // 與 v20 組裝器相同：投影收到的是副本，呼叫端的 setup 不會被碰到
-        meta = { tacticId: source.tacticId, tacticName: source.name ?? null, playbookName: source.variantName ?? source.name ?? null, templateId: null, version: A.MOBA_TACTIC_VERSION };
+        //  legacy 設定原樣投影（修正在建 setup 時就套好了，見 liveMatchSetup.js）；名稱在修正表下用經典模板的修正文案。
+        //  審查（實作）：只有確實是「修正後的經典（＋變體）」才改名；修正表下仍打出貨版設定的 legacy（例如工具規則集）保留原名。
+        const legacyCopy = templateBalance ? copyNameOf(classicLegacyTemplateOf(source, templateBalance), templateBalance) : null;
+        meta = { tacticId: source.tacticId, tacticName: legacyCopy ?? source.name ?? null, playbookName: source.variantName ?? legacyCopy ?? source.name ?? null, templateId: null, version: A.MOBA_TACTIC_VERSION };
       } else if (input.kind === "std") {
         source = A.STANDARD_OPP_TACTIC;       // 不複製：v20 把注入的那一份物件直接交給投影（平衡工具的 provenance 檢查靠參考相等）
         meta = { tacticId: source.tacticId, tacticName: source.name ?? null, playbookName: source.name ?? null, templateId: null, version: A.MOBA_TACTIC_VERSION };
       } else if (input.kind === "binding") {
-        const r = resolveBindingConfig(input.binding);
+        const r = resolveBindingConfig(input.binding, templateBalance);
         if (!r.ok) return r;
         source = structuredClone(r.config);
         meta = { ...r.meta, version: A.MOBA_TACTIC_VERSION };
@@ -223,7 +236,7 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
     resolverVersion: TACTIC_RESOLVER_VERSION, templatesVersion: TACTIC_TEMPLATES_VERSION, overlaysVersion: TACTIC_OVERLAYS_VERSION,
   });
 
-  return { ...engine, resolveBindingConfig, resolveTactic, bindPlan };
+  return { ...engine, engineFor: engines.engineFor, planProblemsUnion: engines.planProblemsUnion, resolveBindingConfig, resolveTactic, bindPlan };
 }
 
 const DEFAULT = makeResolver();

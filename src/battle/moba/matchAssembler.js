@@ -51,7 +51,7 @@
 // ============================================================================
 import { BUILD_STRATEGIES } from "./items/buildPolicy.js";
 import { MATCH_SETUP_VERSION, fnv1a64Hex } from "../../platform/contracts/matchSetup.js";
-import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME } from "../../platform/contracts/matchRuleset.js";
+import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME, templateBalanceOf } from "../../platform/contracts/matchRuleset.js";
 import { stableStringify } from "../../platform/contracts/squadSnapshot.js";
 
 export const MATCH_ASSEMBLER_VERSION = "MatchAssembler.v1";
@@ -139,6 +139,8 @@ export function assembleMatch(setup, deps = {}) {
   //  Phase 3a-C3-1：Director 模式（ruleset 的 tacticalDirector 層；缺少 ≡ static）。只有 core.v1 會向 Resolver 要每時期方針、
   //  並把它交給 configureMatch（新鍵 `phases`）；static ⇒ 不要求、不傳這個鍵（configureMatch 的引數與 C3-1 之前逐字相同）。
   const directorMode = tacticalDirectorModeOf(ruleset);
+  //  Phase 3a-B 第一階段：模板修正表（只有帶 templateBalance 層的規則集；缺少 ⇒ resolveTactic 的引數與之前逐字相同）。
+  const templateBalance = templateBalanceOf(ruleset);
   const wantPhases = directorMode === "core.v1";
   //  C3-1 laneFrame（TD-3A-23 §2.4-6）：只有 ruleset 帶 laneFrame 層時才把它放進 configureMatch 的引數；層不存在 ⇒ **整個鍵不出現**
   //  （stableStringify 會把值為 undefined 的鍵寫成 null ⇒ v20 每一案的 configureMatch 引數雜湊都會變）。
@@ -230,13 +232,15 @@ export function assembleMatch(setup, deps = {}) {
         //  static ⇒ opts 與 C3-1 之前逐字相同（不帶 phases 鍵）；core.v1 ⇒ 另要求每時期方針。
         //  Phase 3a-C：legacy 輸入的 phaseChoices 只在工具規則集允許（setup 已擋正式規則集；這裡再明確交代一次，不靠預設）。
         //  沒帶 phaseChoices 的輸入 ⇒ opts 與之前逐字相同。
-        const extra = t.phaseChoices !== undefined ? { allowPhaseChoices: isTool } : {};
+        const extra = { ...(t.phaseChoices !== undefined ? { allowPhaseChoices: isTool } : {}), ...(templateBalance ? { templateBalance } : {}) };
         //  static 沒有每時期方針 ⇒ phaseChoices 會被默默忽略；開局前就拒絕，不讓量測以為量到了每時期行為。
         if (t.phaseChoices !== undefined && !wantPhases) { err("tactic_rejected", `tactic.${side}.phaseChoices`, "[phase_choices_need_director] phaseChoices need the tactical director core.v1"); continue; }
         const r = wantPhases ? A.resolveTactic(t, A, { identity: !!L.tacticIdentity, phases: true, ...extra }) : A.resolveTactic(t, A, { identity: !!L.tacticIdentity, ...extra });
         if (r?.ok === true) {
           const config = structuredClone(r.config), knobs = structuredClone(r.knobs), identity = L.tacticIdentity ? structuredClone(r.identity) : null;
           snap = { ok: true, config, knobs, identity };
+          //  修正表下的顯示名稱（resolver meta；有修正文案的模板＝修正後的名稱）。沒有修正表 ⇒ 不帶這個鍵，名稱照舊取 config.name。
+          if (templateBalance) snap.tacticName = typeof r.meta?.tacticName === "string" ? r.meta.tacticName : null;
           //  每時期方針的副本：與整場同一個物件的那幾份，指向**同一份**副本（knobs／identity），不另外複製——
           //  物件參照是承重的（R-4），下面 match() 交給引擎時也以單次 structuredClone 保留這個共用關係。
           if (wantPhases) snap.phases = Array.isArray(r.phases) && r.phases.length === 3
@@ -321,6 +325,8 @@ export function assembleMatch(setup, deps = {}) {
   }
 
   const blueCfg = resolved.blue?.config ?? null;
+  //  賽果／重播的戰術名稱：修正表下取 resolver 的名稱（v21 文案），否則與之前相同取 config.name。
+  const blueTacticName = templateBalance && typeof resolved.blue?.tacticName === "string" ? resolved.blue.tacticName : blueCfg?.name;
   let tacticMeta = null, itemsApplied = false;
 
   const STEPS = {
@@ -374,7 +380,7 @@ export function assembleMatch(setup, deps = {}) {
       if (!E.match) return;
       const redCfg = resolved.red.config;
       tacticMeta = isTool ? null
-        : { tacticId: blueCfg.tacticId, tacticName: blueCfg.name, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
+        : { tacticId: blueCfg.tacticId, tacticName: blueTacticName, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
       if (wantPhases) {
         //  C3-1 core.v1：整場 knobs／identity 與每時期方針**一次** structuredClone ⇒ 副本裡「同一個物件」的關係原樣保留
         //  （三個時期沒有差異時，phases.<side>[i].knobs 就是 blue／red 那一份；Director 依參照反查 identity，R-4）。
@@ -421,7 +427,7 @@ export function assembleMatch(setup, deps = {}) {
       tacticMeta,
       //  與 useLocalServer:188-191 beginReplayCapture 的 `config` 相同形狀。
       replayConfig: {
-        ...(blueCfg?.tacticId ? { tacticId: blueCfg.tacticId, tacticName: blueCfg.name ?? null } : {}),
+        ...(blueCfg?.tacticId ? { tacticId: blueCfg.tacticId, tacticName: blueTacticName ?? null } : {}),
         ...(talentSelection ? { battleTalentIds: Object.fromEntries(Object.entries(talentSelection.players).map(([seat, row]) => [seat, row.id])) } : {}),
       },
       configured,

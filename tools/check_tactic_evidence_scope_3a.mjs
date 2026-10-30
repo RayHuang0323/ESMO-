@@ -105,11 +105,15 @@ const frozen = J(b);
 const run = (bind, id) => Live.buildLiveMatchSetup({ opts: { tacticPlanBinding: bind }, ruleset: RS.rulesetById(id), seed: 7, seedSource: "local" });
 const v20 = run(b, "career.v20"), v21 = run(b, "career.v21"), v20p = run(plain, "career.v20");
 const choicesOf = (r) => J(r.setup?.tactic?.blue?.binding?.plan?.choices);
-ck("E5 開局：career.v20 拿掉中期 aggressive（記在 notes）、其他保留；career.v21 原樣；只有 v20 證據成立的選擇（前期 aggressive）⇒ 同一個 binding；傳入物件沒被改",
-  v20.ok && choicesOf(v20) === J({ risk: { tolerance: "bold" } }) && v20.notes.some((n) => n.includes("phases.mid.stance=aggressive"))
-  && v21.ok && choicesOf(v21) === J(b.plan.choices) && v20p.ok && J(v20p.setup.tactic.blue.binding) === J(plain) && v20p.notes.length === 0 && J(b) === frozen
+//  E5'（Phase 3a-B 第一階段總開關，Owner 2026-10-30 第 5 點；事前登記 stage1_release_registration_3aB 的替代斷言）：career.v20 下**根本不使用**戰術書 binding
+//  （std 計畫 ⇒ 標準運營＋替換提示、每個選擇列為本場拿掉）；career.v21 原樣。跨版本證據隔離本身（bindingForRuleset 依 scope 拿掉 v20 沒有證據的選擇）
+//  在函式層照舊成立，只是它現在只在 Director core.v1 的場次被呼叫。
+ck("E5' 開局：career.v20 不使用 binding（std 計畫 ⇒ 標準運營、每個選擇列為本場拿掉）；career.v21 原樣；bindingForRuleset 的 scope 隔離在函式層照舊（v20 拿掉中期 aggressive、只有 v20 證據成立的選擇 ⇒ 同一個 binding）；傳入物件沒被改",
+  v20.ok && v20.setup?.tactic?.blue?.kind === "std" && v20.templateSubstitution === null && J(v20.droppedChoices.map((d) => d.dimension).sort()) === J(["phases.mid.stance", "risk.tolerance"])
+  && v21.ok && choicesOf(v21) === J(b.plan.choices) && v20p.ok && v20p.setup?.tactic?.blue?.kind === "std" && J(b) === frozen
+  && J(Live.bindingForRuleset(b, RS.rulesetById("career.v20")).dropped) === J([{ dimension: "phases.mid.stance", choice: "aggressive" }])
   && Live.bindingForRuleset(plain, RS.rulesetById("career.v20")).binding === plain,
-  J({ v20: choicesOf(v20), v21: choicesOf(v21) }));
+  J({ v20: v20.setup?.tactic?.blue?.kind, v21: choicesOf(v21) }));
 
 //  E6：v20 規則集的 Director 模式是 static（v20 不會走到 v21 的提供規則）；計畫本身與模式無關（createTacticPlan 接受，本場再過濾）。
 ck("E6 v20 規則集（career.v20／balanceTool.v20）的 Director 模式＝static；v21＝core.v1；不帶模式的查詢只套不分模式的排除",

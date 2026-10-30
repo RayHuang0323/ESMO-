@@ -99,6 +99,15 @@ export const FEATURE_FLAGS = Object.freeze({
    * 只有 Owner 能決定打開（RS-1：`career.v21` 的 releaseRequirements 列了這個旗標）。
    */
   mobaTacticalDirectorV21: false,
+
+  /**
+   * Challenge v21（Phase 3a-B 第一階段，Owner 2026-10-30 第 5 點：Live 戰術 v21 與 Challenge v21 分開控制）。
+   *
+   * **正式站預設 OFF。** Challenge 要改用 `challenge.v21`，必須 `mobaTacticalDirectorV21`、`heroSkillsV1` 與這個旗標**三者都開**
+   * （`resolveRulesetForMode`）。第一階段只開 `mobaTacticalDirectorV21` ⇒ Challenge 照舊 `challenge.v20`：新挑戰記 `moba-sim.v20`，
+   * 正式站既有的挑戰照常可重播。只有 Owner 能決定打開（第二階段）。
+   */
+  mobaChallengeV21: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */

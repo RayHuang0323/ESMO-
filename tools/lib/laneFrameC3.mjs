@@ -26,8 +26,17 @@ export const C3_TOTAL_EXPECTED = C3.totalExpected;
  */
 export const AI_COACH_REGISTRATION = Object.freeze(JSON.parse(fs.readFileSync(path.join(ROOT, "tools", "fixtures", "ai_coach_registration_3aB.json"), "utf8")));
 export const AI_COACH_EXPECTED_CHANGED = Object.freeze(AI_COACH_REGISTRATION.goldenExpectedChanges.changedSetMustEqualExactly.map((x) => x.id));
-/** 兩份登記的聯集（career.v21 重跑 v21-A 時應改變的全部 id）。 */
-export const V21_EXPECTED_CHANGED = Object.freeze([...new Set([...C3_EXPECTED_CHANGED, ...AI_COACH_EXPECTED_CHANGED])]);
+/**
+ * Phase 3a-B 第一階段（事前登記 tools/fixtures/stage1_release_registration_3aB.json 的 quickRegression.secondPassReplacements）：
+ * career.v21 帶模板修正表 v21.b1 ⇒ v21-A fixture 裡「被修正表改到的模板」的 bind-template 案也恰好要改變。
+ * 這一份**由修正表推導**（不是看結果寫的清單）：fixture 的 binding-template 案中，params.templateId 在 TEMPLATE_BALANCE["v21.b1"] 裡的那些。
+ */
+const { TEMPLATE_BALANCE } = await import("../../src/platform/tactics/tacticTemplates.js");
+const V21A_FIXTURE = JSON.parse(fs.readFileSync(path.join(ROOT, "tools", "fixtures", "match_golden_v21a.json"), "utf8"));
+export const TEMPLATE_BALANCE_EXPECTED_CHANGED = Object.freeze(V21A_FIXTURE.cases
+  .filter((c) => c.group === "binding-template" && Object.hasOwn(TEMPLATE_BALANCE["v21.b1"], c.params?.templateId)).map((c) => c.id));
+/** 三份登記的聯集（career.v21 重跑 v21-A 時應改變的全部 id）。 */
+export const V21_EXPECTED_CHANGED = Object.freeze([...new Set([...C3_EXPECTED_CHANGED, ...AI_COACH_EXPECTED_CHANGED, ...TEMPLATE_BALANCE_EXPECTED_CHANGED])]);
 
 /**
  * 改變集合比對（純函式）。

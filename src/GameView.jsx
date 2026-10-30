@@ -340,6 +340,12 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, width: "min(420px, calc(100% - 32px))", boxSizing: "border-box",
             background: "rgba(10,16,28,0.94)", border: "1px solid rgba(251,191,36,0.6)", borderRadius: 10, padding: "8px 12px", color: "#fde68a", fontSize: 12, lineHeight: 1.6, display: "flex", gap: 8, alignItems: "flex-start" }}>
           <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
+            {/* Phase 3a-B 第一階段：本場規則集沒有戰術書（旗標關閉）而存的是 std／v2 模板 ⇒ 明講換成哪一個戰術，不無聲換模板。 */}
+            {droppedNotice.substitution && (
+              <span data-testid="battle-dropped-note-substitution" style={{ display: "block" }}>
+                本場規則未開放戰術書：「{droppedNotice.substitution.fromName ?? droppedNotice.substitution.fromTemplateId}」改用「{droppedNotice.substitution.toName}」（戰術書裡的計畫不變）
+              </span>
+            )}
             {droppedNotice.dropped.length > 0 && (
               <span data-testid="battle-dropped-note-dropped" style={{ display: "block" }}>
                 本場未使用的戰術選項：{droppedNotice.dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（本場規則不提供；戰術書裡的計畫不變）

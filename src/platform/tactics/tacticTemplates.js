@@ -19,7 +19,9 @@
 //  模板物件一律 deep-frozen；`config` 是自己的深拷貝，不是 MOBA_TACTICS 的共用物件。
 //  Task 9 的 Resolver 讀 `config` 當起點，再套覆蓋層與選擇對照表。
 // ============================================================================
-import { MOBA_TACTICS, STANDARD_OPP_TACTIC, mobaTacticById } from "../contracts/MobaTacticConfig.js";
+import { MOBA_TACTICS, STANDARD_OPP_TACTIC, mobaTacticById, toEngineTactic, toEngineTacticIdentity } from "../contracts/MobaTacticConfig.js";
+import { stableStringify } from "../contracts/squadSnapshot.js";
+import { applyVariant, variantById } from "../mastery/tacticVariant.js";
 
 export const TACTIC_TEMPLATES_VERSION = "tacticTemplates.v1";
 
@@ -224,3 +226,86 @@ export const templateById = (id) => (typeof id === "string" && Object.hasOwn(TAC
 /** 經典戰術 id（m1…m8／std）→ 對應的模板 id；不是經典 id 回 null。 */
 export const templateIdOfLegacyTactic = (tacticId) =>
   ALL.find((t) => (t.kind === "classic" || t.kind === "std") && t.legacyTacticId === tacticId)?.templateId ?? null;
+
+//  ── v21 模板修正表（Phase 3a-B 第一階段，Owner 2026-10-30 第 2、3 點）────────────────────────────
+//  只有帶 `templateBalance` 層的規則集（career.v21／balanceTool.v21）讀得到；v20 規則集永遠不帶這一層 ⇒ v20 逐位元不變。
+//  上面的模板物件（tacticTemplates.v1）與 MOBA_TACTICS 一個字都不改：修正是「讀取時套上去」的另一份資料。
+//   · TEMPLATE_BALANCE：只有數值／列舉欄位，而且是**絕對值** ⇒ 套兩次＝套一次（AI 退回固定戰術時不會疊加）。
+//     值＝篩選選出的臂（ga8_fix_screen_registration_3aB M3_C、screen3 M7_M、screen2 M8_C）。
+//     ⚠ 不得出現 lanePlan 的 split、carryPriority（席位優先）、std 或 classic.m2：計畫合法性的聯集規則與對照表的上下限依賴這一點。
+//   · TEMPLATE_COPY：只給畫面看的文案，**永遠不進引擎設定**。m7 文案逐字照 Owner；detail 沿用 desc（Owner 未指定，待確認）。
+export const TEMPLATE_BALANCE = deepFreeze({
+  "v21.b1": {
+    "classic.m3": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 },
+    "classic.m7": {
+      "macro.aggression": 0.5, "macro.riskTolerance": 0.5, "macro.tempo": "standard",
+      "lanePlan.top": "standard", "lanePlan.mid": "standard", "lanePlan.adc": "standard",
+    },
+    "classic.m8": { "macro.aggression": 0.5, "macro.riskTolerance": 0.5 },
+  },
+});
+export const TEMPLATE_COPY = deepFreeze({
+  "v21.b1": {
+    "classic.m7": {
+      name: "前期野區入侵", risk: "中", focus: "打野",
+      desc: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
+      detail: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
+      cons: "入侵失利可能讓隊伍失去前期節奏",
+    },
+  },
+});
+export const TEMPLATE_BALANCE_IDS = Object.freeze(Object.keys(TEMPLATE_BALANCE));
+
+const withFields = (config, fields) => {
+  const out = structuredClone(config);
+  for (const [path, v] of Object.entries(fields)) {
+    const keys = path.split(".");
+    let o = out;
+    for (const k of keys.slice(0, -1)) o = o[k];
+    o[keys[keys.length - 1]] = v;
+  }
+  return out;
+};
+
+/** 這張修正表（null＝出貨版）下的模板設定。沒有修正項 ⇒ 出貨版的那一份物件本身（不複製）。tables 可注入（gate 用）。 */
+export function templateConfigFor(templateId, templateBalance = null, tables = TEMPLATE_BALANCE) {
+  const tpl = templateById(templateId);
+  if (!tpl) return null;
+  const fields = templateBalance ? tables[templateBalance]?.[templateId] : null;
+  return fields ? deepFreeze(withFields(tpl.config, fields)) : tpl.config;
+}
+/**
+ * 這張修正表下的模板物件（config 換成修正後的設定；其他欄位不動）。沒有修正項 ⇒ 原模板物件本身。
+ * 修正值套在**傳進來的** tpl.config 上（審查：gate 植入的模板設定不得被換回登錄的那一份）。
+ */
+export function templateForBalance(tplOrId, templateBalance = null, tables = TEMPLATE_BALANCE) {
+  const tpl = typeof tplOrId === "string" ? templateById(tplOrId) : tplOrId;
+  const fields = tpl && templateBalance ? tables[templateBalance]?.[tpl.templateId] : null;
+  if (!fields) return tpl;
+  return deepFreeze({ ...tpl, config: deepFreeze(withFields(tpl.config, fields)) });
+}
+
+const engineSig = (cfg) => stableStringify([toEngineTactic(cfg), toEngineTacticIdentity(cfg)]);
+/**
+ * legacy 戰術設定是不是「這張修正表下的經典模板（＋它記下的變體）」？是 ⇒ 回經典模板 id，否則 null。
+ * 用引擎投影比對（顯示欄位不算）。legacy 設定只有在**確實是**經典＋變體時才重建或改名（審查：v2 的顯示物件也帶經典 tacticId，不得被換成經典）。
+ */
+export function classicLegacyTemplateOf(config, templateBalance = null, tables = TEMPLATE_BALANCE) {
+  const templateId = templateIdOfLegacyTactic(config?.tacticId);
+  if (!templateId || templateById(templateId)?.kind !== "classic") return null;
+  const variant = config.variantId ? variantById(config.variantId) : null;
+  if (config.variantId && !variant) return null;
+  const base = structuredClone(templateConfigFor(templateId, templateBalance, tables));
+  return engineSig(variant ? applyVariant(base, variant) : base) === engineSig(config) ? templateId : null;
+}
+/** 畫面文案：這張修正表下有文案就回修正後的 { name, risk, focus, desc, detail, cons }，否則回模板自己的。 */
+export function templateCopyFor(templateId, templateBalance = null) {
+  const tpl = templateById(templateId);
+  if (!tpl) return null;
+  const c = tpl.config;
+  const base = { name: tpl.name, risk: c.risk ?? null, focus: c.focus ?? null, desc: tpl.desc, detail: c.detail ?? tpl.desc, cons: tpl.cons ?? null };
+  const over = templateBalance ? TEMPLATE_COPY[templateBalance]?.[templateId] : null;
+  return over ? { ...base, ...over } : base;
+}
+/** 已登錄的修正表 id（null＝出貨版）。 */
+export const isTemplateBalanceId = (id) => typeof id === "string" && Object.hasOwn(TEMPLATE_BALANCE, id);

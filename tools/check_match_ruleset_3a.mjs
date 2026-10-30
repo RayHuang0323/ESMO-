@@ -70,16 +70,21 @@ ck("R14 resolveRulesetForMode 保留 assemblyOrder（旗標只關布林層）", 
     !!c21 && c21.kind === "production" && c21.simVersion === "moba-sim.v21" && L.heroSkills === true && L.heroPassives === true && L.heroPowerCurve === true && L.battleTalents === false && L.items === false
     && L.objectiveLayout === "bySeed" && L.playerStatSides === "both" && L.assemblyOrder === "live" && L.tacticalDirector === "core.v1" && L.laneFrame === "teamRelative"
     && JSON.stringify(c21.releaseRequirements) === JSON.stringify(["heroSkillsV1", "mobaTacticalDirectorV21"]) && JSON.stringify(TACTIC_KINDS_BY_RULESET["challenge.v21"]) === JSON.stringify(["legacy", "std"]));
-  const on = { heroSkillsV1: true, mobaTacticalDirectorV21: true };
-  ck("R19 challenge 模式：旗標關 ⇒ challenge.v20（同一個物件）；Director＋技能旗標都開 ⇒ challenge.v21；只開 Director、技能關 ⇒ 仍是 challenge.v20",
+  //  R19'／R20'（Phase 3a-B 第一階段，Owner 2026-10-30 第 5 點；事前登記 stage1_release_registration_3aB 的替代斷言）：challenge.v21 另外要求
+  //  mobaChallengeV21。第一階段旗標（Director＋技能開、Challenge 未開）⇒ 仍是 challenge.v20、新挑戰記 moba-sim.v20；三者都開 ⇒ challenge.v21。
+  const stage1 = { heroSkillsV1: true, mobaTacticalDirectorV21: true };
+  const on = { ...stage1, mobaChallengeV21: true };
+  ck("R19' challenge 模式：旗標關 ⇒ challenge.v20（同一個物件）；Director＋技能＋Challenge 三個旗標都開 ⇒ challenge.v21；第一階段（Challenge 未開）或技能關 ⇒ 仍是 challenge.v20",
     resolveRulesetForMode({ mode: "challenge", flags: FEATURE_FLAGS }) === MATCH_RULESETS["challenge.v20"] && resolveRulesetForMode({ mode: "challenge", flags: on }) === c21
+    && resolveRulesetForMode({ mode: "challenge", flags: stage1 }) === MATCH_RULESETS["challenge.v20"]
     && resolveRulesetForMode({ mode: "challenge", flags: { ...on, heroSkillsV1: false } }) === MATCH_RULESETS["challenge.v20"]);
-  ck("R20 每場挑戰的規則集由記下的版本凍結：v20 ⇒ challenge.v20、v21 ⇒ challenge.v21、其他 ⇒ null；正式旗標下新挑戰記 moba-sim.v20",
+  ck("R20' 每場挑戰的規則集由記下的版本凍結：v20 ⇒ challenge.v20、v21 ⇒ challenge.v21、其他 ⇒ null；正式旗標與第一階段旗標下新挑戰記 moba-sim.v20，三者都開才記 v21",
     challengeRulesetForVersion("moba-sim.v20") === MATCH_RULESETS["challenge.v20"] && challengeRulesetForVersion("moba-sim.v21") === c21 && challengeRulesetForVersion("moba-sim.v19") === null
-    && challengeSimulationVersionFor(FEATURE_FLAGS) === "moba-sim.v20" && challengeSimulationVersionFor(on) === "moba-sim.v21");
+    && challengeSimulationVersionFor(FEATURE_FLAGS) === "moba-sim.v20" && challengeSimulationVersionFor(stage1) === "moba-sim.v20" && challengeSimulationVersionFor(on) === "moba-sim.v21");
   //  審查（3a-B）：兩份 v21 正式規則集也逐字釘住（整份進 setup 雜湊；改任何一層都必須看得見地改這裡）。
+  //  Phase 3a-B 第一階段：career.v21 多了 templateBalance "v21.b1"（事前登記的預期變動）；challenge.v21 逐字不變。
   const V21_PINNED = {
-    "career.v21": '{"kind":"production","layers":{"assemblyOrder":"live","battleTalents":true,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":true,"laneFrame":"teamRelative","objectiveLayout":"bySeed","playerStatSides":"blue","redTactic":"aiCoachV1","tacticIdentity":true,"tacticalDirector":"core.v1"},"releaseRequirements":["heroSkillsV1","heroBattleTalentsV1","itemsV1","mobaTacticalDirectorV21"],"rulesetId":"career.v21","simVersion":"moba-sim.v21","version":"MatchRuleset.v1"}',
+    "career.v21": '{"kind":"production","layers":{"assemblyOrder":"live","battleTalents":true,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":true,"laneFrame":"teamRelative","objectiveLayout":"bySeed","playerStatSides":"blue","redTactic":"aiCoachV1","tacticIdentity":true,"tacticalDirector":"core.v1","templateBalance":"v21.b1"},"releaseRequirements":["heroSkillsV1","heroBattleTalentsV1","itemsV1","mobaTacticalDirectorV21"],"rulesetId":"career.v21","simVersion":"moba-sim.v21","version":"MatchRuleset.v1"}',
     "challenge.v21": '{"kind":"production","layers":{"assemblyOrder":"live","battleTalents":false,"heroPassives":true,"heroPowerCurve":true,"heroSkills":true,"items":false,"laneFrame":"teamRelative","objectiveLayout":"bySeed","playerStatSides":"both","redTactic":"snapshot","tacticIdentity":true,"tacticalDirector":"core.v1"},"releaseRequirements":["heroSkillsV1","mobaTacticalDirectorV21"],"rulesetId":"challenge.v21","simVersion":"moba-sim.v21","version":"MatchRuleset.v1"}',
   };
   for (const [id, lit] of Object.entries(V21_PINNED)) ck(`R22 ${id} 逐字釘住`, stableStringify(MATCH_RULESETS[id]) === lit);

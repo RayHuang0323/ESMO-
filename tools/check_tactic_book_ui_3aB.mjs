@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { opponentIntelOf, tacticBookSaveState, keptUnofferedChoices } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
 import { aiCoachPlan } from "../src/platform/tactics/aiCoach.js";
 import { AI_TEAMS } from "../src/platform/competition/aiTeams.js";
-import { mobaTacticForTeamStyle } from "../src/platform/contracts/MobaTacticConfig.js";
+import { mobaTacticForTeamStyle, mobaTacticById, toEngineTactic, toEngineTacticIdentity } from "../src/platform/contracts/MobaTacticConfig.js";
 import { buildLiveMatchSetup, resolveLiveRuleset } from "../src/battle/moba/liveMatchSetup.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
 import { createTacticPlan } from "../src/platform/tactics/tacticPlan.js";
@@ -86,10 +86,20 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
   const b20 = buildLiveMatchSetup(inputs(FLAGS_V20)), b21 = buildLiveMatchSetup(inputs(FLAGS_V21));
   const p20 = prepareLiveMatch(inputs(FLAGS_V20));
   const dims = (b20.droppedChoices ?? []).map((d) => `${d.dimension}=${d.choice}`).sort();
-  ck(`U5 旗標關：本場拿掉的 v21 專用選擇以結構化資料回傳（${dims.join("、")}）；prepareLiveMatch 原樣交出；旗標開 ⇒ 空`,
-    b20.ok && J(dims) === J(["phases.early.focusLane=bot", "winCondition=earlySnowball"]) && p20.ok && J(p20.droppedChoices) === J(b20.droppedChoices) && b21.ok && b21.droppedChoices.length === 0);
-  const uls = stripComments(read("src/useLocalServer.js"));
-  ck("U5b useLocalServer 把 droppedChoices 交給畫面（droppedNotice），不只寫主控台", uls.includes("const dropped = prepared.droppedChoices ?? [];") && uls.includes("setDroppedNotice(dropped.length || kept.length ? { dropped, kept } : null)") && uls.includes("droppedNotice, dismissDroppedNotice"));
+  //  U5'／U5b'（Phase 3a-B 第一階段總開關，Owner 2026-10-30 第 5 點；事前登記 stage1_release_registration_3aB 的替代斷言，取代 2026-10-25 決策 4 的 v20 部分）：
+  //  旗標關（career.v20）下**不使用** binding：std 計畫 ⇒ 標準運營＋模板替換提示、計畫的每個選擇都列為本場拿掉；經典計畫 ⇒ 正式站同一個經典戰術；旗標開 ⇒ 原樣、沒有提示。
+  const classicB = bindTacticPlanToCurrentVersions(createTacticPlan({ templateId: "classic.m4", choices: { teamfight: { posture: "passive" } } }).plan);
+  const c20 = buildLiveMatchSetup({ ...inputs(FLAGS_V20), opts: { ...inputs(FLAGS_V20).opts, tacticPlanBinding: classicB } });
+  ck(`U5' 旗標關：不使用 binding——std 計畫 ⇒ 標準運營（不算替換）、本場拿掉計畫的每個選擇（${dims.join("、")}）；經典計畫 ⇒ 正式站的經典戰術；prepareLiveMatch 原樣交出；旗標開 ⇒ 空`,
+    b20.ok && b20.setup.tactic.blue.kind === "std" && b20.templateSubstitution === null && J(dims) === J(["phases.early.focusLane=bot", "winCondition=earlySnowball"])
+    && p20.ok && J(p20.droppedChoices) === J(b20.droppedChoices) && J(p20.templateSubstitution) === J(b20.templateSubstitution)
+    && c20.ok && c20.setup.tactic.blue.kind === "legacy" && c20.setup.tactic.blue.config.tacticId === "m4" && JSON.stringify([toEngineTactic(c20.setup.tactic.blue.config), toEngineTacticIdentity(c20.setup.tactic.blue.config)]) === JSON.stringify([toEngineTactic(mobaTacticById("m4")), toEngineTacticIdentity(mobaTacticById("m4"))]) && c20.templateSubstitution === null && J(c20.droppedChoices) === J([{ dimension: "teamfight.posture", choice: "passive" }])
+    && b21.ok && b21.droppedChoices.length === 0 && b21.templateSubstitution === null);
+  const uls = stripComments(read("src/useLocalServer.js")), gvs = stripComments(read("src/GameView.jsx"));
+  ck("U5b' useLocalServer 把 droppedChoices 與模板替換交給畫面（droppedNotice），GameView 畫出替換提示，不只寫主控台",
+    uls.includes("const dropped = prepared.droppedChoices ?? [];") && uls.includes("const substitution = prepared.templateSubstitution ?? null;")
+    && uls.includes("setDroppedNotice(dropped.length || kept.length || substitution ? { dropped, kept, substitution } : null)") && uls.includes("droppedNotice, dismissDroppedNotice")
+    && gvs.includes('data-testid="battle-dropped-note-substitution"'));
 }
 
 // ── U6 恢復中的比賽：沿用的 binding 裡目前不提供的選擇（Owner 2026-10-25 Review 決策 4：只提示，不改寫）──

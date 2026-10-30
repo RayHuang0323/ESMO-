@@ -442,9 +442,11 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
  * mode＝目前規則集的 Director 模式（"static"＝v20 類、"core.v1"＝v21）：帶 scope 的列只在同一個模式生效。
  * 省略 mode ⇒ 只看不分模式的列（計畫本身與規則集無關：與 Registry requires 相同，計畫可以存，本場／畫面再依模式過濾）。
  */
-export const measuredExclusion = (template, dimension, choice, mode = null) =>
-  MEASURED_EXCLUSIONS.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)
-    && (x.scope === undefined || x.scope === mode)) ?? null;
+//  Phase 3a-B 第一階段（審查第 2 輪 M4）：列可帶 templateBalance（模板修正表 id）⇒ 只在那張表下生效；不帶的列（目前全部）任何設定下都生效，
+//  所以出貨版 m3／m7／m8 上量到的排除在 v21.b1 下照舊保守撤下，直到凍結前以新 seeds 重新判定。templateBalance 省略 ≡ 出貨版（null）。
+export const measuredExclusion = (template, dimension, choice, mode = null, templateBalance = null, rows = MEASURED_EXCLUSIONS) =>
+  rows.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)
+    && (x.scope === undefined || x.scope === mode) && (x.templateBalance === undefined || x.templateBalance === templateBalance)) ?? null;
 
 /**
  * 複驗後撤下的選擇（Owner 裁示：邊際選項要用新 seeds、紅藍雙方複驗；證據不足的不再提供）。**獨立於 MEASURED_EXCLUSIONS**：
@@ -485,8 +487,9 @@ export const REPLICATION_WITHHELD = deepFreeze([
   oh("phases.late.focusLane", "bot", "ganksOwnPerMin.bot.late", { n: 232, rel: 0.928504, z: 7.537307 }, { n: 232, rel: 0.693154, z: 5.954301 }),
 ]);
 /** 這個（模板, 維度, 選擇）被複驗撤下嗎？回傳該列或 null。 */
-export const replicationWithheld = (template, dimension, choice) =>
-  REPLICATION_WITHHELD.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)) ?? null;
+export const replicationWithheld = (template, dimension, choice, templateBalance = null, rows = REPLICATION_WITHHELD) =>
+  rows.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)
+    && (x.templateBalance === undefined || x.templateBalance === templateBalance)) ?? null;
 
 /**
  * 以 n=400 新 seeds 紅藍複驗**取代** n=40 真實性列的選擇（Phase 3a-C3-2 收尾，2026-10-22 Owner 核准六個時期姿態）。

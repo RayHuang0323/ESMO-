@@ -32,6 +32,12 @@ export const LANE_FRAMES = Object.freeze(["legacyMirror", "teamRelative"]);
 export const DEFAULT_LANE_FRAME = "legacyMirror";
 /** 讀取 ruleset 的 laneFrame 層；缺少 ≡ "legacyMirror"。 */
 export const laneFrameOf = (r) => r?.layers?.laneFrame ?? DEFAULT_LANE_FRAME;
+//  Phase 3a-B 第一階段（Owner 2026-10-30 第 2 點；事前登記 tools/fixtures/stage1_release_registration_3aB.json）：可選層 templateBalance
+//  ＝模板修正表 id（platform/tactics/tacticTemplates.js 的 TEMPLATE_BALANCE；本檔不 import 它，gate 斷言兩份清單相同）。
+//  缺少 ≡ 出貨版模板。只有 career.v21／balanceTool.v21 帶；三份 v20 規則集與 challenge.v21（第二階段）永不帶 ⇒ 它們的 setup 雜湊逐位元不變。
+export const TEMPLATE_BALANCES = Object.freeze(["v21.b1"]);
+/** 讀取 ruleset 的 templateBalance 層；缺少 ≡ null（出貨版模板）。 */
+export const templateBalanceOf = (r) => r?.layers?.templateBalance ?? null;
 /** 正式規則集 releaseRequirements 只能列這些正式旗標（DEV 網址開關、未登錄的名字一律拒絕）。 */
 export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
@@ -52,10 +58,10 @@ export const MATCH_RULESETS = Object.freeze({
   //  Phase 3a-B T15（Owner 2026-10-25 決策 5；事前登記 tools/fixtures/ai_coach_registration_3aB.json）：career.v21 的紅方戰術＝AI 教練 v1
   //  （redTactic "aiCoachV1"：賽前依 AI 隊伍自己的風格與選手素質、只用戰術書會提供的選項排計畫；platform/tactics/aiCoach.js）。
   "career.v21": R({ rulesetId: "career.v21", kind: "production", simVersion: "moba-sim.v21",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "aiCoachV1", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "aiCoachV1", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative", templateBalance: "v21.b1" },
     releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1", "mobaTacticalDirectorV21"] }),
   "balanceTool.v21": R({ rulesetId: "balanceTool.v21", kind: "tool", simVersion: "moba-sim.v21",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative", templateBalance: "v21.b1" },
     releaseRequirements: [] }),
   //  Phase 3a-B T16（正式架構 §3 補充 1 的表；Owner 2026-10-25 決策 6）：技能／被動／曲線 ON、天賦 OFF（Challenge 沒有天賦選擇資料）、
   //  裝備 OFF（featureFlags 的 Competitive／Challenge 邊界）、佈局 bySeed、組裝順序＝Live、Director core.v1、laneFrame teamRelative
@@ -86,9 +92,12 @@ export const TACTIC_KINDS_BY_RULESET = Object.freeze({
 //  releaseRequirements 末尾多列 mobaTacticalDirectorV21）；旗標不是 true ⇒ 與 C3-1 之前逐字相同的 career.v20 輸出。
 //  T16：challenge 模式在 mobaTacticalDirectorV21 與 heroSkillsV1 都是 true 時改用 challenge.v21（整份原樣回傳：它的層是固定的，
 //  沒有要被旗標關掉的布林層——技能要開就必須兩個旗標都開，否則整場回到 challenge.v20）；否則與 T16 之前相同的 challenge.v20。
+//  Phase 3a-B 第一階段（Owner 2026-10-30 第 5 點：Live 戰術 v21 與 Challenge v21 分開控制）：challenge.v21 另外要求 mobaChallengeV21
+//  （預設關 ⇒ 只開 mobaTacticalDirectorV21 時 Challenge 仍是 challenge.v20）。只改這個解析分支；challenge.v21 物件逐位元不變
+//  （它的 releaseRequirements 因此不列 mobaChallengeV21——改物件會改每一份 challenge.v21 的 setup 雜湊）。
 export function resolveRulesetForMode({ mode, flags }) {
   const on = (f) => flags?.[f] === true;
-  if (mode === "challenge") return MATCH_RULESETS[on("mobaTacticalDirectorV21") && on("heroSkillsV1") ? "challenge.v21" : "challenge.v20"];
+  if (mode === "challenge") return MATCH_RULESETS[on("mobaTacticalDirectorV21") && on("heroSkillsV1") && on("mobaChallengeV21") ? "challenge.v21" : "challenge.v20"];
   const director = on("mobaTacticalDirectorV21");
   const base = MATCH_RULESETS[director ? "career.v21" : "career.v20"];
   const skills = on("heroSkillsV1");
@@ -124,6 +133,8 @@ export function validateRuleset(r) {
   if (r?.layers && "tacticalDirector" in r.layers && !TACTICAL_DIRECTOR_MODES.includes(r.layers.tacticalDirector)) errors.push("tacticalDirector");
   //  C3-1 laneFrame：可選層——有這個鍵就必須是 LANE_FRAMES 之一（缺少 ≡ "legacyMirror"）。
   if (r?.layers && "laneFrame" in r.layers && !LANE_FRAMES.includes(r.layers.laneFrame)) errors.push("laneFrame");
+  //  Phase 3a-B 第一階段：可選層 templateBalance——有這個鍵就必須是已登錄的修正表 id（缺少 ≡ 出貨版模板）。
+  if (r?.layers && "templateBalance" in r.layers && !TEMPLATE_BALANCES.includes(r.layers.templateBalance)) errors.push("templateBalance");
 
   // RS-1: For production rulesets, every enabled layer must have its flag in releaseRequirements
   if (r?.kind === "production") {

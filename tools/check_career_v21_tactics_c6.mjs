@@ -25,6 +25,7 @@ import { createTacticPlan } from "../src/platform/tactics/tacticPlan.js";
 import { bindTacticPlanToCurrentVersions, effectiveTacticChoices } from "../src/battle/moba/tactics/tacticResolver.js";
 import { withChoice, QUICK_STRONG_SIDE } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
 import { aiTeamById } from "../src/platform/competition/aiTeams.js";
+import { leavesOf as leavesOfPlan } from "../src/platform/tactics/tacticChoiceMapping.js";
 import { hookSeed, appRoster } from "./lib/liveGolden.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -90,11 +91,14 @@ ck("V3b 強邊＋前期／中期積極＋前期滾雪球同時選用 ⇒ 組裝�
   comboRun.plan !== null && comboRun.built.notes.every((n) => !/dropped/.test(n)) && J(comboRun.plan) === J(comboManual.plan), comboRun.built.notes.join(" | "));
 
 // ── V4 旗標關：v21 專用選擇從本場拿掉 ───────────────────────────────────────
+//  V4'（Phase 3a-B 第一階段總開關，Owner 2026-10-30 第 5 點；事前登記 stage1_release_registration_3aB 的替代斷言，取代 2026-10-25 決策 4 的 v20 部分）：
+//  旗標關（career.v20）下**不使用**戰術書 binding——這份 std 計畫改用標準運營（模板替換寫進 notes 與 templateSubstitution），計畫的**每一個**選擇都列為本場拿掉；Director 是 static。
 const offRun = assemble(bindingOf(combo), FLAGS_V20);
-const dropNote = offRun.built.notes.find((n) => /^tactic\.blue: dropped/.test(n)) ?? "";
-ck("V4 旗標關（career.v20）：同一份計畫的 v21 專用選擇（勝利條件、強邊）從本場拿掉並記在 notes；中期積極因跨版本證據隔離（static 排除）也拿掉；前期積極保留；Director 是 static",
-  offRun.asm?.ok === true && offRun.asm.engine.director.mode === "static" && /winCondition=earlySnowball/.test(dropNote) && /phases\.early\.focusLane=bot/.test(dropNote)
-  && /phases\.mid\.focusLane=bot/.test(dropNote) && /phases\.mid\.stance=aggressive/.test(dropNote) && !/phases\.early\.stance/.test(dropNote), dropNote);
+const offDims = (offRun.built.droppedChoices ?? []).map((d) => d.dimension).sort();
+const wantDims = leavesOfPlan(combo).map(([d]) => d).sort();
+ck("V4' 旗標關（career.v20）：不使用戰術書 binding（std 計畫 ⇒ 標準運營，同一個戰術不算替換）；計畫的每一個選擇（勝利條件、強邊、前／中期積極）都列為本場拿掉；Director 是 static",
+  offRun.asm?.ok === true && offRun.asm.engine.director.mode === "static" && offRun.built.setup?.tactic?.blue?.kind === "std"
+  && offRun.built.templateSubstitution === null && offRun.built.notes.some((n) => /tactic book not used/.test(n)) && J(offDims) === J(wantDims), J({ offDims, wantDims }));
 
 // ── V5 被撤下的勝利條件：舊計畫不失效 ───────────────────────────────────────
 const oc = { winCondition: "objectiveControl" };
