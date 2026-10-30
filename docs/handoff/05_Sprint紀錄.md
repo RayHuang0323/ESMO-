@@ -25045,3 +25045,33 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **審查**：獨立 Reviewer APPROVE WITH CHANGES（6 Major／8 minor），全部採納（設計文件 §10）。
 
 **風險**：three_lane_pressure／m1 與 m7 成因相同但本輪沒有篩選，凍結後 G-A8 仍可能因它們 STOP。
+
+## 2026-10-30 Phase 3a-B 修正規劃第三輪：D5 結算順序診斷、D8 three_lane_pressure／m1 篩選（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS；`src/` 未改；未凍結語意、未跑正式 P2 重驗）
+
+依 Owner 2026-10-30 核准 D5＋D8。設計文件：`review/tactic-book-3a/3a-B_修正規劃_第三輪.md`。
+
+**完成**：
+- 工具與登記（`1a1a09f2`）：`tools/measure_challenge_order_3aB.mjs`（新）、`challenge_order_registration_3aB.json`、`ga8_fix_screen4_registration_3aB.json`、seed plan 新增兩個區塊。兩份登記都經獨立審查（D5 3 Major／5 minor、D8 1 Major／6 minor，全部採納）。
+- D8 第四輪篩選（`cb867eca`）：seeds 57801–58200，5,600 場，錯誤 0。
+  - three_lane_pressure：BASE 60.0 STOP 已重現。工具 SELECTED TLP_C0 54.8，但對 BASE −5.3（−12.2..+1.7）未能分開；清楚改善的是 TLP_C 47.5（三路 standard＋旋鈕 0.5／0.5，−12.5，−19.2..−5.8）。兩者都屬重新設計。
+  - classic.m1：BASE 59.8 WARN strong（差一勝即 STOP）。SELECTED M1_F 52.5（中路 standard＋旋鈕＋節奏），對 BASE −7.3（−14.0..−0.5）顯示改善，但校正多重比較後不成立，也屬重新設計。
+  - 只調旋鈕的臂都未能與 BASE 分開（同 m7）。
+- D5 結算順序診斷（`ac3e9e46`）：6,160 場，錯誤 0，V1 重建臂逐場與 C2 相同。判定 **INCONCLUSIVE**。
+  - 新 seeds 上鏡像技能步驟：藍在前 +4.8（HINT；C2 篩選值 +6.9）、紅在前 +2.9。
+  - 順序成分 O +0.9（−1.9..+3.7）NONE；位置成分 P +3.9（+1.1..+6.6，z 2.77）HINT；先處理者優勢約 0。
+  - C2 的陣容分布（topheavyDef +16.0）沒有重現。L1→L1o 組裝順序步驟逐場相同（實測為 0）。
+- 設計文件獨立審查：APPROVE WITH CHANGES（3 Major／10 minor），全部採納。
+
+**驗證（實跑）**：
+- D8 validate 5/5 PASS；D5 validate 6/6 PASS、selftest 6/6；seed plan 33/33 PASS。
+- 兩次 `--report` 都在無錯誤、無遺失下產出結果檔。
+- 本輪未改 `src/`，所以沒跑 build／gate。
+
+**結論與建議（Owner 決定）**：
+- 側偏：`players` 順序只解釋很小一部分，**不建議修改引擎結算順序**；challenge 側偏 STOP 維持，剩下的來源是位置（版圖）或未反轉的藍方固定結構，本研究分不開（可選 P-1：SWAPPED 雙向四臂約 4,800 場）。
+- G-A8：three_lane_pressure 建議列為內容設計問題（D9 ②）；m1 建議不修、接受確認風險（D10 ②）。
+- 一次凍結：**尚不具備**。不再需要等引擎修正；剩下的是 Owner 決策 D1、D2、D4、D9–D12，以及 C1 S1（1.0–2.2 小時）。照建議凍結時，G-A8 確認至少一個 STOP 約七成至七成五，challenge 側偏預期仍 STOP。
+
+**未完成／待 Owner**：D1–D4（保留）、D9–D12（新增），見設計文件 §3.2。
+
+**風險**：mid_jungle_sync（原 60.3 STOP）從未篩選；D5 期間電腦睡眠約 6.5 小時，行程未中斷、結果不受影響。
