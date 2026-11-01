@@ -222,7 +222,28 @@
         "discoveredAfter": false,
         "what": "the rest of the first regression batch matched predictions: check_match_setup_3a 153/153, challenge golden 6/6, challenge setup 65/65, b1b, b1c, b1d, live setup 119/119, AI coach 11/11, resolver 139/139, assembler 227/227, book UI 9/9, book view 25/25, save 39/39, registry 35/35, ruleset 51/51, skeleton 171/171, laneframe 55/55, indicators 59/59, evidence scope 7/7; career golden red on setup hash and truth T2 stale, as predicted"
       }
-    ]
+    ],
+    "exclusionApplication": {
+      "registeredBefore": "any row or gate edit, while stage 2 was still running (no stage-2 result seen). Stage-1 results were already known; this entry fixes the mechanism, the row contents come mechanically from the two result files",
+      "design": "existing keyed rows measured by P6 get templateBalance null. New rows live in a separate table BALANCE_EXCLUSIONS in capabilityRegistry.js, not in MEASURED_EXCLUSIONS, because check_tactic_truth_3a T9 requires MEASURED_EXCLUSIONS to equal the rows derived from the truth fixture (the same reason REPLICATION_WITHHELD is its own table). measuredExclusion consults BALANCE_EXCLUSIONS only under its templateBalance",
+      "predictions": {
+        "redByDesign": [
+          "check_stage1_split_3aB S13 (\"no row is keyed\") => S13a: exactly the P6 existing rows carry templateBalance null, S13b: BALANCE_EXCLUSIONS equals what the two result files derive, row by row, S13c: under the shipped config every offer list of every template is unchanged, S13d: behaviour rows as before"
+        ],
+        "unchanged": [
+          "check_match_setup_3a 153/153",
+          "check_challenge_golden_v21, check_challenge_setup_3a",
+          "check_tactic_truth_3a: only T2 stale, T9 and T10 unchanged",
+          "check_tactic_registry_3a 35/35",
+          "check_tactic_replication_3a",
+          "check_tactic_book_view_3a 25/25",
+          "check_tactic_evidence_scope_3a 7/7",
+          "check_tactic_resolver_3a 139/139",
+          "check_tactic_indicators_3a 59/59"
+        ],
+        "unknownInAdvance": "check_tactic_resolver_3a XP1 (table-only counts) and browser_check_tactic_book_v21 may touch rows; anything red that is not listed here is logged in predictionOutcome with discoveredAfter"
+      }
+    }
   },
   "honestLedgerOfEarlierDifferences": {
     "note": "Owner 2026-11-01: differences found after the fact must not read as predictions. This separates what was truly predicted from what was registered only after being observed",
