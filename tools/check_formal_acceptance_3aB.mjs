@@ -134,6 +134,10 @@ const oneMatch = (toolFile, args, task) => new Promise((resolve) => {
   const g = await oneMatch("measure_ga8_3aB.mjs", ["--ga8-worker", reg(FORMAL.ga8.file)], { id: "classic.m7#25001", key: "classic.m7", seed: 25001, template: "classic.m7" });
   const gr = g.rec;
   ck("W1 G-A8 worker（m7，已觀察的 25001）：balanceTool.v21、core.v1、修正表真的進了引擎（tableApplied）", gr?.ruleset === "balanceTool.v21" && gr?.director === "core.v1" && gr?.laneFrame === "teamRelative" && gr?.tableApplied === true, J(g.error ?? { t: gr?.tableApplied, d: gr?.duration }));
+  //  藍紅都要實跑：只驗藍方時，紅方的誤判要到正式 G-A8 第 2 個 seed 才會出現（凍結彩排抓到）。表內與表外模板都驗。
+  const redCases = [];
+  for (const [tpl, seed] of [["classic.m7", 25002], ["classic.m2", 25002], ["std", 25004]]) { const m = await oneMatch("measure_ga8_3aB.mjs", ["--ga8-worker", reg(FORMAL.ga8.file)], { id: `${tpl}#${seed}`, key: tpl, seed, template: tpl }); redCases.push([tpl, m.rec?.side, m.rec?.tableApplied, m.error ?? null]); }
+  ck("W1a G-A8 worker 模板打紅方（已觀察的偶數 seed）：表內 m7、表外 m2、std 的 tableApplied 都成立", redCases.every(([, s, t]) => s === "red" && t === true), J(redCases));
   const { resolveTactic } = await import("../src/battle/moba/tactics/tacticResolver.js");
   const { tacticInputOf } = await import("./lib/tacticTruthSim.mjs");
   const m7 = tacticInputOf({ templateId: "classic.m7", choices: {} });

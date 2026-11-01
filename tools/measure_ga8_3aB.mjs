@@ -32,13 +32,16 @@ if (flag("ga8-worker")) {
   const { objectiveLayoutForSeed } = await imp("src/platform/contracts/objectiveLayout.js");
   const M = await modules();
   const { resolveTactic } = await imp("src/battle/moba/tactics/tacticResolver.js");
+  const { createTacticalDirector } = await imp("src/battle/moba/tactics/tacticalDirector.js");
+  //  紅方：引擎拿到的是轉成世界路名的那一份（laneFrame teamRelative），要用同一個轉換比（凍結彩排抓到：只比原始旋鈕，模板打紅方就誤判）。
+  const engineKnobs = (K, side, laneFrame) => (side === "blue" ? K : createTacticalDirector({ blue: K, red: K, laneFrame }).knobs("red"));
   process.on("message", async (t) => {
     try {
       const plan = tacticInputOf({ templateId: t.template, choices: {} }), std = tacticInputOf({ templateId: "std", choices: {} });
       const blueIsTemplate = t.seed % 2 === 1;
       const { e } = configure(t.seed, "standard", M, 1, null, { blue: blueIsTemplate ? plan : std, red: blueIsTemplate ? std : plan }, "balanceTool.v21");
       const side = blueIsTemplate ? "blue" : "red";
-      const tableApplied = REG.templateBalance ? JSON.stringify(e.director.knobs(side)) === JSON.stringify(resolveTactic(plan, {}, { phases: true, templateBalance: REG.templateBalance }).phases[0].knobs) : undefined;
+      const tableApplied = REG.templateBalance ? JSON.stringify(e.director.knobs(side)) === JSON.stringify(engineKnobs(resolveTactic(plan, {}, { phases: true, templateBalance: REG.templateBalance }).phases[0].knobs, side, e.director.laneFrame)) : undefined;
       for (let i = 1; i * 0.5 <= 3600 && !e.over; i++) e.tick(0.5);
       const win = e.over && (e.winner === "blue" || e.winner === "red") ? (e.winner === side ? 1 : 0) : 0.5;
       process.send({ type: "done", id: t.id, rec: { seed: t.seed, template: t.template, side, layout: objectiveLayoutForSeed(t.seed), ruleset: "balanceTool.v21",

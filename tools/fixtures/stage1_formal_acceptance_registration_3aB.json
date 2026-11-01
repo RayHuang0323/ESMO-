@@ -249,7 +249,8 @@
   "the independent Reviewer confirms all formal tools, seeds, thresholds and the baseline (Owner 2026-11-02), and the Owner is asked to approve the freeze",
   "the Owner approves. Only then: register the v21 candidate fingerprint in simulationVersion.js in one visible commit (the freeze commit)",
   "fill `fingerprint` in the five confirm registrations with it, change their status to start with \"registered\", fill review of exclusion_v21b1_confirm_registration_3aB.json after the Reviewer confirms them with the freeze in hand. check_formal_acceptance_3aB R1 and X1 are red by design from this point; their post-freeze form is registered with this step: every status starts with \"registered\", every fingerprint equals the frozen one, --run gets past the registration checks",
-  "step 1 onward of `order`. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point"
+  "step 1 onward of `order`. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point",
+  "after each --report, commit its result file before the next study: the tools refuse to start on a dirty tree (found by the freeze rehearsal). A result is committed as it is, whatever its verdict"
  ],
  "ownerInstruction20261102b": {
   "verbatimKeyLines": [
