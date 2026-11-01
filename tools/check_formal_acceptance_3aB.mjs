@@ -7,7 +7,8 @@
 //    R  五份確認登記：凍結前不可執行、結果路徑獨立且不存在、門檻與原始登記逐欄相同
 //    S  Seeds：每份都等於 study_seed_plan 的保留區段、彼此不重疊、沒有結果檔
 //    P  計畫規模：工具 --plan 算出來的場數
-//    X  拒跑：每支工具帶確認登記 --run 一定拒絕，而且不建立資料夾
+//    X  拒跑：每支工具帶確認登記 --preflight 一定拒絕（走與 --run 同一段檢查，但絕不開跑）。⚠ 這支 gate 不得 spawn --run：登記填完之後那就是真的開跑（審查 B1）
+//       凍結前後都能跑：偵測到五份登記都已填好 ⇒ 改查「已填好」的形式
 //    W  每支工具的 worker 實跑一場（只用原始研究已觀察過的 seed）：儀器檢查通過，修正表真的進了引擎
 //    B  verify 基準已由機械產生，commit 是分支點
 //    G  P7 的 gate 清單與工具都存在
@@ -37,6 +38,11 @@ const FORMAL = {
   confirm: { file: "exclusion_v21b1_confirm_registration_3aB.json", original: null, block: "exclusion.v21b1.confirm", range: (r) => r.seeds.range, step: (r) => r.seeds.step, tool: "measure_exclusion_v21b1_3aB" },
 };
 for (const f of Object.values(FORMAL)) f.reg = R(f.file);
+const filled = Object.values(FORMAL).filter((f) => /^registered/.test(f.reg.status)).length;
+const POST_FREEZE = filled === Object.keys(FORMAL).length;
+ck(`G0 確認登記的狀態一致（${POST_FREEZE ? "五份都已填好" : "五份都還沒填"}）：不得只填一部分`, filled === 0 || POST_FREEZE, `${filled} 份已填`);
+const { SIMULATION_SEMANTICS_FINGERPRINTS, MOBA_SIMULATION_VERSION } = await import("../src/platform/contracts/simulationVersion.js");
+const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
 
 // ── D 決策與缺口 ─────────────────────────────────────────────────────────────
 {
@@ -54,8 +60,9 @@ for (const f of Object.values(FORMAL)) f.reg = R(f.file);
 {
   for (const [id, f] of Object.entries(FORMAL)) {
     const r = f.reg;
-    ck(`R1 ${id}：凍結前 READY_FOR_FREEZE、指紋 TBD_AT_FREEZE；結果路徑在登記裡、與原始結果不同、不存在`,
-      /^READY_FOR_FREEZE/.test(r.status) && r.fingerprint === "TBD_AT_FREEZE" && /^tools\/fixtures\/.+_result_3aB\.json$/.test(r.result) && !fs.existsSync(path.join(ROOT, r.result)) && !/^tools\/fixtures\/(ga8|e1|e2|side_bias)_result/.test(r.result), r.result);
+    const pathOk = /^tools\/fixtures\/.+_result_3aB\.json$/.test(r.result) && !/^tools\/fixtures\/(ga8|e1|e2|side_bias)_result/.test(r.result);
+    if (POST_FREEZE) ck(`R1 ${id}：凍結後 registered、指紋＝目前登記的指紋；結果路徑在登記裡、與原始結果不同`, r.fingerprint === FP_NOW && pathOk, r.result);
+    else ck(`R1 ${id}：凍結前 READY_FOR_FREEZE、指紋 TBD_AT_FREEZE；結果路徑在登記裡、與原始結果不同、不存在`, /^READY_FOR_FREEZE/.test(r.status) && r.fingerprint === "TBD_AT_FREEZE" && pathOk && !fs.existsSync(path.join(ROOT, r.result)), r.result);
   }
   const fieldsSame = (cur, orig, fields, map = (x) => x) => fields.filter((k) => !same(cur[k], map(orig[k])));
   const ga8 = FORMAL.ga8.reg, ga8o = R(FORMAL.ga8.original);
@@ -74,7 +81,9 @@ for (const f of Object.values(FORMAL)) f.reg = R(f.file);
   const c = FORMAL.confirm.reg, r1 = R("exclusion_v21b1_result_3aB.json").rows, r2 = R("exclusion_v21b1_stage2_result_3aB.json").rows;
   const want = r1.filter((x) => x.verdict === "pass" || (x.verdict === "marginal" && r2.find((y) => y.template === x.template && y.dimension === x.dimension && y.choice === x.choice)?.verdict === "confirmed")).map((x) => ({ template: x.template, dimension: x.dimension, choice: x.choice, metric: x.metric, direction: x.direction }));
   ck("R6 step 4b：清單＝P6 提供的 13 個選擇（由兩份結果檔推出）；門檻與 P6 第二階段同一條（z ≥ 3、rel ≥ 0.05、紅藍都要）", same(c.plan.items, want) && want.length === 13 && /z >= 3 and relative effect >= 0.05/.test(c.decisionRule.confirmed) && /BOTH/.test(c.decisionRule.confirmed));
-  ck("R7 step 4b：沒站住＝失敗（回報，不改列）；有錯誤場次＝不判定；review 留到凍結", /not edited/.test(c.decisionRule.overall.FAILED) && /no verdict/.test(c.decisionRule.overall.INCONCLUSIVE) && c.review === null);
+  ck("R7 step 4b：沒站住＝失敗（回報，不改列）；有錯誤場次＝不判定；review 留到凍結", /not edited/.test(c.decisionRule.overall.FAILED) && /no verdict/.test(c.decisionRule.overall.INCONCLUSIVE) && (POST_FREEZE || c.review === null));
+  const pre = ["sideBias", "e1", "e2", "confirm"].map((id) => FORMAL[id].reg.requiresResult);
+  ck("R8 其他四份都要求 G-A8 確認結果先提交且判定 PASS（工具強制，不靠流程）；G-A8 自己沒有前置", pre.every((p) => p?.file === FORMAL.ga8.reg.result && p?.verdict === "PASS") && !FORMAL.ga8.reg.requiresResult);
 }
 
 // ── S Seeds ──────────────────────────────────────────────────────────────────
@@ -111,11 +120,17 @@ for (const f of Object.values(FORMAL)) f.reg = R(f.file);
   const tmp = path.join(os.tmpdir(), `esmo-formal-never-${process.pid}`);
   const bad = [];
   for (const [id, f] of Object.entries(FORMAL)) {
-    const r = tool(f, id === "confirm" ? "--confirm-run" : "--run", `--dir=${tmp}`);
-    if (r.status !== 2) bad.push(`${id} exit ${r.status}`);
+    const r = tool(f, id === "confirm" ? "--confirm-preflight" : "--preflight", `--dir=${tmp}`);
+    const said = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+    if (POST_FREEZE) {
+      //  凍結後：可以開跑、結果已存在、或前置還沒好，都是正確的回答；重點是什麼都沒有開跑。
+      if (!(r.status === 0 && /preflight/.test(said)) && !(r.status === 2 && /確認登記不能開跑/.test(said))) bad.push(`${id} exit ${r.status}`);
+    } else if (r.status !== 2 || !/登記檔不是 registered|確認登記不能開跑/.test(said)) bad.push(`${id} exit ${r.status}：${said.slice(0, 60)}`);
     if (fs.existsSync(tmp)) bad.push(`${id} 建了資料夾`);
   }
-  ck("X1 五支工具帶確認登記 --run 都拒絕（exit 2）、沒有建立資料夾：凍結前開不了跑", !bad.length, bad.join(" | "));
+  ck(POST_FREEZE ? "X1 五支工具 --preflight：回答可以開跑或說明拒絕原因，沒有開跑、沒有建立資料夾" : "X1 五支工具帶確認登記 --preflight 都拒絕（exit 2，原因是登記還沒填）、沒有建立資料夾：凍結前開不了跑", !bad.length, bad.join(" | "));
+  const selfSrc = fs.readFileSync(fileURLToPath(import.meta.url), "utf8");
+  ck("X1b 這支 gate 不會 spawn 開跑旗標（否則登記填完之後就是真的開跑）", ![["--", "run"], ["--", "confirm-run"]].some(([a, b]) => selfSrc.includes(`"${a}${b}"`)));
   const g = spawnSync(process.execPath, ["tools/measure_ga8_3aB.mjs", "--reg=../evil.json", "--plan"], { cwd: ROOT, encoding: "utf8" });
   ck("X2 --reg 只收 tools/fixtures/ 底下的 json", g.status === 2);
 }
@@ -163,6 +178,32 @@ const oneMatch = (toolFile, args, task) => new Promise((resolve) => {
     ck("B1 verify 基準存在：commit＝分支點、每段都有結果、失敗段都有文字", b.commit === base && b.totals.segments === b.passing.length + b.skipped.length + b.failing.length && b.failing.every((x) => x.id && typeof x.failureText === "string"), `${b.commit.slice(0, 8)} 通過 ${b.totals.pass}／跳過 ${b.totals.skip}／失敗 ${b.totals.fail}`);
     const last = execFileSync("git", ["log", "--format=%H", "--", "tools/fixtures/stage1_verify_baseline_3aB.json"], { cwd: ROOT, encoding: "utf8" }).trim().split("\n").filter(Boolean);
     ck("B2 verify 基準提交後沒有被改過（只有一個 commit）", last.length <= 1, `${last.length} commit`);
+    const logsF = FX("stage1_verify_baseline_logs_3aB.json");
+    ck("B3 失敗行基準存在、commit 相同、每個失敗段都有失敗行", fs.existsSync(logsF) && (() => { const l = JSON.parse(fs.readFileSync(logsF, "utf8")); return l.commit === b.commit && b.failing.every((x) => l.segments[x.id]?.length > 0); })());
+    //  --compare 的負向對照：用基準自己造一份狀態與 log，相同要過；多一條失敗行、少一段、過期都要被抓到。
+    if (fs.existsSync(logsF)) {
+      const l = JSON.parse(fs.readFileSync(logsF, "utf8"));
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "esmo-compare-"));
+      const logDir = path.join(dir, "logs"); fs.mkdirSync(logDir);
+      const now = new Date().toISOString();
+      const baseRuns = () => Object.fromEntries([...b.passing.map((id) => [id, { status: "PASS", finishedAt: now }]), ...b.failing.map((x) => [x.id, { status: "FAIL", finishedAt: now, tail: x.failureText }])]);
+      for (const x of b.failing) fs.writeFileSync(path.join(logDir, `${x.id}.log`), l.segments[x.id].join("\n"));
+      const run = (runs) => { const sf = path.join(dir, "state.json"); fs.writeFileSync(sf, J({ runs })); return spawnSync(process.execPath, ["tools/record_verify_baseline_3aB.mjs", "--compare", "--after=HEAD", `--state=${sf}`, `--logs=${logDir}`], { cwd: ROOT, encoding: "utf8" }); };
+      const okRun = run(baseRuns());
+      const victim = b.failing.find((x) => x.id === "stats28") ?? b.failing[0];
+      const original = fs.readFileSync(path.join(logDir, `${victim.id}.log`), "utf8");
+      fs.writeFileSync(path.join(logDir, `${victim.id}.log`), `${original}\n❌ 99) 一條新的紅燈`);
+      const extra = run(baseRuns());
+      fs.writeFileSync(path.join(logDir, `${victim.id}.log`), original);
+      const lessRuns = baseRuns(); delete lessRuns[b.passing[0]];
+      const less = run(lessRuns);
+      const staleRuns = baseRuns(); staleRuns[b.passing[0]].finishedAt = "2020-01-01T00:00:00.000Z";
+      const stale = run(staleRuns);
+      const passToFail = baseRuns(); passToFail[b.passing[0]] = { status: "FAIL", finishedAt: now, tail: "x" };
+      const newRed = run(passToFail);
+      fs.rmSync(dir, { recursive: true, force: true });
+      ck("B4 --compare 負向對照：與基準相同 ⇒ 過；已紅的段多一條失敗行、少跑一段、過期的結果、本來綠的段變紅 ⇒ 都 exit 1", okRun.status === 0 && extra.status === 1 && /一條新的紅燈/.test(extra.stdout) && less.status === 1 && stale.status === 1 && newRed.status === 1, J([okRun.status, extra.status, less.status, stale.status, newRed.status]));
+    }
   }
 }
 

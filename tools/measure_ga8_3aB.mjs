@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
-import { regRelOf, formalResultOf, formalRunRefusal } from "./lib/formalRegistration.mjs";
+import { regRelOf, formalResultOf, formalRunRefusal, formalReportRefusal, sameStudyMeta } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -79,16 +79,18 @@ if (!DIR) { console.error("需要 --dir"); process.exit(2); }
 const SV = await imp("src/platform/contracts/simulationVersion.js");
 const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: SV.SIMULATION_SEMANTICS_FINGERPRINTS[SV.MOBA_SIMULATION_VERSION] };
 
-if (flag("run")) {
+if (flag("run") || flag("preflight")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
-  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
+  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL, regRel: REG_REL, toolRel: "tools/measure_ga8_3aB.mjs" }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   if (provenance().dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--ga8-worker", ...(IS_FORMAL ? [`--reg=${REG_REL}`] : [])], meta: META, workers: Number(val("workers", 3)), label: "G-A8", check: recCheck });
+  if (flag("preflight")) { console.log("preflight：可以開跑（沒有跑任何場次）"); process.exit(0); }
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--ga8-worker", ...(IS_FORMAL ? [`--reg=${REG_REL}`] : [])], meta: IS_FORMAL ? { ...META, gitHead: provenance().gitHead } : META, workers: Number(val("workers", 3)), label: "G-A8", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 if (flag("report")) {
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
-  if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  if (!sameStudyMeta(m.meta, META, IS_FORMAL)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  if (IS_FORMAL) { const no = formalReportRefusal(m.meta, "tools/measure_ga8_3aB.mjs"); if (no.length) { console.error(`不判定：${no.join("；")}`); process.exit(2); } }
   const audit = auditStudy(DIR, tasks, recCheck);
   if (audit.halt) { console.error(`⛔ HALT：${audit.halt}（不判定，交 Owner）`); process.exit(5); }
   if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
@@ -110,13 +112,13 @@ if (flag("report")) {
   const verdict = instrument || stops.length ? "STOP" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "PASS";
   const out = { schema: "esmo.ga8-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     matches: tasks.length, errored: audit.errored, control: ctl, instrumentStop: instrument, rows, stops, warns, verdict,
-    notes: ["the template is on the dragon side in about 52.5% of seeds (odd seeds STANDARD 109 / even seeds SWAPPED 101); the std control absorbs this; per-template dragonSideShare reported", "checkpointing is per match (finer than the 250-match batches in the plan)"] };
+    ...(IS_FORMAL ? { notClaimed: REG.notClaimed } : {}), notes: [IS_FORMAL ? REG.sideBalanceNote : "the template is on the dragon side in about 52.5% of seeds (odd seeds STANDARD 109 / even seeds SWAPPED 101); the std control absorbs this; per-template dragonSideShare reported", "checkpointing is per match (finer than the 250-match batches in the plan)"] };
   const OUT = path.join(ROOT, OUT_REL);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   for (const r of rows) console.log(`${r.template.padEnd(24)} ${(r.rate * 100).toFixed(1)}%（${(r.lo * 100).toFixed(1)}–${(r.hi * 100).toFixed(1)}）藍 ${(r.asBlue * 100).toFixed(1)} 紅 ${(r.asRed * 100).toFixed(1)}　中位 ${r.medianDurationMin.toFixed(1)} 分${r.stop ? " STOP" : r.warn ? " WARN" : ""}`);
   console.log(`對照 std vs std ${(ctl.rate * 100).toFixed(1)}%${instrument ? " ⇒ STOP(INSTRUMENT)" : ""}；STOP：${stops.join("；") || "無"}；WARN：${warns.join("；") || "無"}`);
   console.log(`G-A8 判定：${verdict}`);
-  process.exit(verdict === "STOP" ? 5 : 0);
+  process.exit(verdict === "STOP" ? 5 : IS_FORMAL && verdict === "INCONCLUSIVE" ? 6 : 0);
 }
 console.error("用法見檔頭"); process.exit(2);

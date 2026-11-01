@@ -38,7 +38,7 @@
     "career.v20",
     "career.v21"
    ],
-   "entry": "prepareLiveMatch (formal live entry) via tools/lib/careerLiveInputs.mjs: golden live inputs, mirroredRoster(seed), blue = std tactic-book binding with no choices, opponent AI_TEAMS[seed % 7]; career.v21 red = AI coach v1 (with the frozen TEMPLATE_BALANCE layer if the freeze includes it), career.v20 red = style template",
+   "entry": "prepareLiveMatch (formal live entry) via tools/lib/careerLiveInputs.mjs: golden live inputs, mirroredRoster(seed), blue = std tactic-book binding with no choices, opponent AI_TEAMS[seed % 7]; career.v21 red = AI coach v1 (the ruleset carries TEMPLATE_BALANCE v21.b1), career.v20 red = style template",
    "seeds": {
     "block": "sideBias.career.fixConfirm of tools/fixtures/study_seed_plan_3aB.json",
     "range": "51001-55999",
@@ -66,5 +66,10 @@
    "arms"
   ],
   "note": "check_formal_acceptance_3aB compares these field by field with the original. Thresholds are the original's text, replacing the draft's paraphrase"
+ },
+ "requiresResult": {
+  "file": "tools/fixtures/ga8_fix_confirm_result_3aB.json",
+  "verdict": "PASS",
+  "why": "stopRules.ga8: the confirmatory G-A8 runs FIRST and a STOP halts every other formal measurement; INCONCLUSIVE goes to the Owner. Enforced by the tool, not by procedure"
  }
 }

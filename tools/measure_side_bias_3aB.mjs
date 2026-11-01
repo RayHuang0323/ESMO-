@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, pairedStats, ROOT } from "./lib/studyRunner.mjs";
-import { regRelOf, formalResultOf, formalRunRefusal } from "./lib/formalRegistration.mjs";
+import { regRelOf, formalResultOf, formalRunRefusal, formalReportRefusal, sameStudyMeta } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -125,15 +125,16 @@ const invalidSeeds = () => {
   return bad;
 };
 
-if (flag("run")) {
+if (flag("run") || flag("preflight")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
-  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
+  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL, regRel: REG_REL, toolRel: "tools/measure_side_bias_3aB.mjs" }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   if (fs.existsSync(path.join(DIR, "HALT"))) { console.error("資料夾有 HALT：不得續跑"); process.exit(5); }
   const prov = provenance();
   if (prov.dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
+  if (flag("preflight")) { console.log("preflight：可以開跑（沒有跑任何場次）"); process.exit(0); }
   for (let round = 0; round < 5; round++) {
     const w = walk(invalidSeeds());
-    const res = await runStudy({ dir: DIR, tasks: tasksFor(w.seeds), workerFile: SELF, workerArgs: ["--sb-worker"], meta: META, workers: Number(val("workers", 3)), label: `side bias ${PATH}` });
+    const res = await runStudy({ dir: DIR, tasks: tasksFor(w.seeds), workerFile: SELF, workerArgs: ["--sb-worker"], meta: IS_FORMAL ? { ...META, gitHead: provenance().gitHead } : META, workers: Number(val("workers", 3)), label: `side bias ${PATH}` });
     if (res.stopped) process.exit(3);
     if (res.lost) continue;
     const bad = invalidSeeds(), walked = walk(bad).seeds.length;
@@ -145,7 +146,8 @@ if (flag("run")) {
 
 if (flag("report")) {
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
-  if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  if (!sameStudyMeta(m.meta, META, IS_FORMAL)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  if (IS_FORMAL) { const no = formalReportRefusal(m.meta, "tools/measure_side_bias_3aB.mjs"); if (no.length) { console.error(`不判定：${no.join("；")}`); process.exit(2); } }
   if (fs.existsSync(path.join(DIR, "HALT"))) { console.error("資料夾有 HALT：不判定，交 Owner"); process.exit(5); }
   const bad = invalidSeeds(), w = walk(bad);
   const data = Object.fromEntries(P.arms.map((a) => [a, readKey(DIR, a)]));
@@ -175,6 +177,8 @@ if (flag("report")) {
         pairingNote: "challenger = FIXTURE_KEYS[seed % 5], defender = FIXTURE_KEYS[(seed + 2) % 5]: every fixture is challenger and defender equally often, but each pairing is one-directional, so blue (challenger) strength is not fully separated from the side" };
   const out = { schema: "esmo.side-bias-result.v1", path: PATH, registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     seedsWalked: w.seeds.length, lastSeed: w.seeds[w.seeds.length - 1], invalidSeeds: [...bad], perLayout: per, ...sideSplit, byOpponent: byOpp, verdict };
+  //  登記的報告項目：與已提交的 27001–31999 結果對照（描述用，不合併、不進判定）。
+  if (IS_FORMAL) { const old = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/side_bias_result_career_3aB.json"), "utf8")); out.descriptiveComparison = { file: "tools/fixtures/side_bias_result_career_3aB.json", note: "descriptive only, never pooled, never used for the verdict", perLayout: Object.fromEntries(["STANDARD", "SWAPPED"].map((L) => [L, { blueWin20: old.perLayout[L].blueWin20, blueWin21: old.perLayout[L].blueWin21, worsePp: old.perLayout[L].worsePp }])) }; }
   const OUT = path.join(ROOT, OUT_REL);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
@@ -182,6 +186,6 @@ if (flag("report")) {
   if (PATH === "career") console.log(`純藍方優勢 ${(out.pureBlueAdvantage.v20 * 100).toFixed(1)} → ${(out.pureBlueAdvantage.v21 * 100).toFixed(1)}pp；巨龍側優勢 ${(out.dragonSideAdvantage.v20 * 100).toFixed(1)} → ${(out.dragonSideAdvantage.v21 * 100).toFixed(1)}pp`);
   else console.log(`challenge.v20（一律 STANDARD）藍方勝率 ${(out.v20StandardOnlyBlueRate * 100).toFixed(1)}%；challenge.v21 純藍方 ${(out.pureBlueAdvantage.v21 * 100).toFixed(1)}pp、巨龍側 ${(out.dragonSideAdvantage.v21 * 100).toFixed(1)}pp`);
   console.log(`side bias ${PATH} 判定：${verdict}`);
-  process.exit(verdict === "STOP" ? 5 : 0);
+  process.exit(verdict === "STOP" ? 5 : IS_FORMAL && verdict === "INCONCLUSIVE" ? 6 : 0);
 }
 console.error("用法見檔頭"); process.exit(2);

@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, pairedStats, meanSd, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
-import { regRelOf, formalResultOf, formalRunRefusal } from "./lib/formalRegistration.mjs";
+import { regRelOf, formalResultOf, formalRunRefusal, formalReportRefusal, sameStudyMeta } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -67,16 +67,18 @@ const DIR = val("dir");
 if (!DIR) { console.error("需要 --dir"); process.exit(2); }
 const SV = await imp("src/platform/contracts/simulationVersion.js");
 const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: SV.SIMULATION_SEMANTICS_FINGERPRINTS[SV.MOBA_SIMULATION_VERSION] };
-if (flag("run")) {
+if (flag("run") || flag("preflight")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
-  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
+  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL, regRel: REG_REL, toolRel: "tools/measure_e2_3aB.mjs" }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   if (provenance().dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e2-worker", ...(IS_FORMAL ? [`--reg=${REG_REL}`] : [])], meta: META, workers: Number(val("workers", 3)), label: "E2", check: recCheck });
+  if (flag("preflight")) { console.log("preflight：可以開跑（沒有跑任何場次）"); process.exit(0); }
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e2-worker", ...(IS_FORMAL ? [`--reg=${REG_REL}`] : [])], meta: IS_FORMAL ? { ...META, gitHead: provenance().gitHead } : META, workers: Number(val("workers", 3)), label: "E2", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 if (flag("report")) {
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
-  if (JSON.stringify(m.meta) !== JSON.stringify(META)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  if (!sameStudyMeta(m.meta, META, IS_FORMAL)) { console.error("資料夾的登記／指紋與目前不同：不判定"); process.exit(2); }
+  if (IS_FORMAL) { const no = formalReportRefusal(m.meta, "tools/measure_e2_3aB.mjs"); if (no.length) { console.error(`不判定：${no.join("；")}`); process.exit(2); } }
   const audit = auditStudy(DIR, tasks, recCheck);
   if (audit.halt) { console.error(`⛔ HALT：${audit.halt}（不判定，交 Owner）`); process.exit(5); }
   if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
@@ -99,6 +101,6 @@ if (flag("report")) {
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   for (const a of arms) console.log(`${a.id}：${a.verdict}　${a.claims.map((c) => `${c.metric} rel ${c.rel == null ? "—" : (c.rel * 100).toFixed(1) + "%"} z ${c.z == null ? "—" : c.z.toFixed(2)}（n ${c.n}）${c.verdict}`).join("；")}`);
   console.log(`E2 總判定：${overall}`);
-  process.exit(overall === "STOP" ? 5 : 0);
+  process.exit(overall === "STOP" ? 5 : IS_FORMAL && overall === "INCONCLUSIVE" ? 6 : 0);
 }
 console.error("用法見檔頭"); process.exit(2);

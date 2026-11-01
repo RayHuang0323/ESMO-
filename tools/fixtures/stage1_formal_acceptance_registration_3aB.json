@@ -55,7 +55,7 @@
   {
    "step": 6,
    "what": "gates",
-   "tool": "the frozen list in gateList, run one by one on a single line, plus node tools/verify.mjs (full), compared with node tools/record_verify_baseline_3aB.mjs --compare, and browser_check_exit_flush, browser_check_cloud_save_ui",
+   "tool": "the frozen list in gateList, run one by one on a single line, plus node tools/verify.mjs (full), compared with node tools/record_verify_baseline_3aB.mjs --compare --after=<freeze commit> (every failure line of every failing segment against the baseline, every segment present and finished after the freeze commit), and browser_check_exit_flush, browser_check_cloud_save_ui",
    "pass": "no verify segment fails that is not failing on the frozen verify baseline (compared by segment name and failure text), and every other gate of gateList is green except exactly the names in knownDebts. Any other red fails this step, whatever the handoff documents say by then"
   },
   {
@@ -85,15 +85,42 @@
   }
  ],
  "runnablePreconditions": [
-  "ga8_fix_confirm_registration_3aB.json finalised with the frozen fingerprint and an independent review (a DRAFT today; its control line must be restored verbatim: \"outside => STOP(INSTRUMENT)\"); tools/measure_ga8_3aB.mjs accepts it (a --reg parameter)",
-  "sidebias_career_fixconfirm_registration_3aB.json finalised; tools/measure_side_bias_3aB.mjs accepts a --reg parameter",
-  "tools/measure_e1_3aB.mjs and tools/measure_e2_3aB.mjs accept a --reg parameter and fixConfirm registrations exist for the reserved blocks (both refuse to run today: their result files exist)",
-  "tools/lib/tacticTruthPlan.mjs computes own, delta and claim of table templates with the table of the row's ruleset (today buildPlan uses the shipped engine, so classic.m8 phase batches run on the table with shipped own and delta), and classic.m3 / m7 / m8 rows that only make sense under the table are handled there",
-  "check_tactic_truth_3a exKey includes templateBalance, and its exclusion check knows that a row keyed null or \"v21.b1\" is decided by P6 + step 4b (added before the freeze so it enters the fingerprint)",
-  "the P6 tool extended for step 4b (blue and red arms, reserved block), with its own registration",
-  "the flag rollback drill gate written and reviewed",
-  "moba-sim v21 candidate fingerprint re-registered at the freeze (the current 0578fa882d74b205 was registered before stage 1)",
-  "the verify baseline run and committed (see verifyBaseline)"
+  {
+   "item": "ga8_fix_confirm_registration_3aB.json final text, measure_ga8_3aB.mjs --reg",
+   "status": "done; the fingerprint is filled at the freeze"
+  },
+  {
+   "item": "sidebias_career_fixconfirm_registration_3aB.json final text, measure_side_bias_3aB.mjs --reg",
+   "status": "done; the fingerprint is filled at the freeze"
+  },
+  {
+   "item": "measure_e1_3aB.mjs and measure_e2_3aB.mjs --reg, fix-confirm registrations on the reserved blocks",
+   "status": "done; the fingerprint is filled at the freeze"
+  },
+  {
+   "item": "tools/lib/tacticTruthPlan.mjs computes own, delta and claim with the table of the row's ruleset",
+   "status": "done; the 163 batches did not change"
+  },
+  {
+   "item": "check_tactic_truth_3a exKey includes templateBalance; rows decided by P6 + step 4b are handled",
+   "status": "done; T8b pins the five classic.m8 rows it reaches, T8c pins the boundary"
+  },
+  {
+   "item": "the P6 tool extended for step 4b with its own registration",
+   "status": "done"
+  },
+  {
+   "item": "the flag rollback drill gate",
+   "status": "done: check_stage1_rollback_drill_3aB"
+  },
+  {
+   "item": "the verify baseline",
+   "status": "done: stage1_verify_baseline_3aB.json and stage1_verify_baseline_logs_3aB.json at 1d0e219a"
+  },
+  {
+   "item": "moba-sim v21 candidate fingerprint re-registered",
+   "status": "NOT done: at the freeze only, after the Owner approves"
+  }
  ],
  "notInStage1": "Challenge side-bias confirmation 45001-49999, C1 calibration, challenge.v21 golden: stage 2. v21 post-match evidence goals: need their own formal evidence (Owner 2026-11-01 item 4); until then rebalanced templates show unscored counts",
  "neverClaimed": "passing stage 1 is not a pass of the original P2 acceptance, of G-A8 by exclusion, or of the Challenge side bias",
@@ -226,7 +253,7 @@
    "W2": "career side bias: sidebias_career_fixconfirm_registration_3aB.json in the shape the tool reads (paths.career), result path; measure_side_bias_3aB.mjs --reg",
    "W3": "E1 and E2: new e1_fix_confirm_registration_3aB.json (66001-67200, safety 66001-66400) and e2_fix_confirm_registration_3aB.json (67501-68299 odd), everything else copied; measure_e1_3aB.mjs and measure_e2_3aB.mjs --reg, workers receive --reg too",
    "W4": "tools/lib/tacticTruthPlan.mjs: own, delta, claim and weak selection of a row use the template table of the ruleset the row is measured on. Rows measured on balanceTool.v20 are unchanged",
-   "W5": "check_tactic_truth_3a: exKey includes templateBalance. Truth rows of a table template on a table-carrying ruleset are recorded and do not derive an exclusion. A table template row measured on balanceTool.v20 derives a row keyed null",
+   "W5": "check_tactic_truth_3a: exKey includes templateBalance. Truth rows of a table template on a table-carrying ruleset are recorded and do not derive an exclusion. A table template row measured on balanceTool.v20 derives a row keyed null only if P6 decided that choice; otherwise it derives an unkeyed row as before",
    "W6": "step 4b: exclusion_v21b1_confirm_registration_3aB.json and --confirm-* in measure_exclusion_v21b1_3aB.mjs: the 13 choices P6 offers, blue and red against control, 65101-65500, the replication rule, about 12,800 matches",
    "W7": "tools/check_stage1_rollback_drill_3aB.mjs: the cases of step 8, flag off and on",
    "W8": "verify baseline: a full tools/verify.mjs on 1d0e219 (git merge-base of origin/main and this branch) in a separate worktree, recorded by tools/record_verify_baseline_3aB.mjs into tools/fixtures/stage1_verify_baseline_3aB.json, never edited afterwards",
@@ -246,11 +273,11 @@
   "finalStep": "an independent Reviewer confirms all formal tools, seeds, thresholds and the baseline, then the Owner is asked to approve the semantics freeze. No long P2 measurement, no golden re-recording, no push, deploy or main; G-A8 and the Challenge STOP stay"
  },
  "freezeProcedure": [
-  "the independent Reviewer confirms all formal tools, seeds, thresholds and the baseline (Owner 2026-11-02), and the Owner is asked to approve the freeze",
+  "the independent Reviewer confirms all formal tools, seeds, thresholds and the baseline (Owner 2026-11-02), and the Owner is asked to approve the freeze. The request shows decisions 2 and 3 of ownerDecisions again, labelled as the implementer's reading, so the Owner can correct them, and the open items of openOwnerDecisions",
   "the Owner approves. Only then: register the v21 candidate fingerprint in simulationVersion.js in one visible commit (the freeze commit)",
-  "fill `fingerprint` in the five confirm registrations with it, change their status to start with \"registered\", fill review of exclusion_v21b1_confirm_registration_3aB.json after the Reviewer confirms them with the freeze in hand. check_formal_acceptance_3aB R1 and X1 are red by design from this point; their post-freeze form is registered with this step: every status starts with \"registered\", every fingerprint equals the frozen one, --run gets past the registration checks",
-  "step 1 onward of `order`. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point",
-  "after each --report, commit its result file before the next study: the tools refuse to start on a dirty tree (found by the freeze rehearsal). A result is committed as it is, whatever its verdict"
+  "fill `fingerprint` in the five confirm registrations with it, change their status to start with \"registered\", fill review of exclusion_v21b1_confirm_registration_3aB.json after the Reviewer confirms them with the freeze in hand, and commit. check_formal_acceptance_3aB detects this state: from here it never spawns a run, and it checks with --preflight only",
+  "step 1 onward of `order`. Every other formal measurement refuses until the G-A8 confirm result is committed with verdict PASS. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point",
+  "after each --report, and after the 4a re-measure, commit the result file before the next study: the tools refuse to start on a dirty tree (found by the freeze rehearsal). A result is committed as it is, whatever its verdict"
  ],
  "ownerInstruction20261102b": {
   "verbatimKeyLines": [
@@ -286,5 +313,25 @@
    "notRehearsed": "the truth re-measure (about 70 minutes on seeds 1-40) and the 15-18 h run are not started; the truth plan is checked by the 163 batch comparison"
   },
   "stopConditions": "a new regression, contaminated evidence, or a need to change an acceptance criterion stops the related work and is reported to the Owner; none of them is released here"
- }
+ },
+ "openOwnerDecisions": [
+  {
+   "id": "step4-conflict-definition",
+   "question": "step 4 says a truth row of a table template that \"contradicts a P6 row\" is a failed check, and also that those rows \"do not decide\". \"Contradicts\" is not defined and no tool implements it. It must be defined before anyone sees a 4a number, or the definition is post hoc",
+   "recommendation": "contradicts = verdict reversed (z <= -2 against the claim) on a choice P6 offers. n=40 no_effect or marginal is not a contradiction, because n=40 has low power and P6 plus 4b are the deciding evidence",
+   "why": "changes an acceptance criterion: not decided here (Owner 2026-11-02: stop and report)"
+  },
+  {
+   "id": "truth-and-replay-before-the-freeze",
+   "question": "truth 4a and the evidence replay would first run after about 10 h of reserved seeds. A non-table row that flips would need a row change, a new fingerprint and a new ruling with those blocks already observed. check_tactic_truth_3a --measure --preview (about 70 min, observed seeds 1-40, writes outside the repo, T1 refuses its output) and the replay could run first",
+   "recommendation": "yes, after the conflict definition above and before the freeze request. Not started: it shows the 4a numbers, so it must come after the definition, and it is longer than the small dry-run authorised",
+   "why": "not started here for those two reasons"
+  },
+  {
+   "id": "replication-minimum-n",
+   "question": "the 4b rule (the same as P6 stage 2) has no minimum n: a choice could be confirmed on few valid pairs if the metric is often null. Every one of the 13 items had n >= 100 or 400 per side in P6, so the risk is low. A floor only tightens, but it adds to the registered rule",
+   "recommendation": "optional: n >= 200 per side, the floor E2 already uses. Not added here",
+   "why": "adds to a registered rule: not decided here"
+  }
+ ]
 }

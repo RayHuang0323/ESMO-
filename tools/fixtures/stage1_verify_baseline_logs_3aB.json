@@ -1,0 +1,262 @@
+{
+ "schema": "esmo.verify-baseline-logs.v1",
+ "commit": "1d0e219aae20a946bbc04d36349cb988e6e5ba7b",
+ "purpose": "every failure line of every failing baseline segment, from the full logs of the baseline run; worktree paths, milliseconds and CR removed. Companion of stage1_verify_baseline_3aB.json, which stays as written. Never edited afterwards",
+ "segments": {
+  "ability_p02": [
+   "❌ 6) 傷害式仍是 `p.power * dt * ...`，沒有夾帶能力係數"
+  ],
+  "active_match_r63": [
+   "❌ 9) CS fast finish 從目前 frame 到最後 frame"
+  ],
+  "controls29b3": [
+   "❌ 2) complete match 會進入 Result（分塊+途中 snapshot 與自然跑完逐位元同結果：true；終局可建 BattleResult：winner=red）",
+   "❌ 16) Minimap 與主場景座標一致（雙方都讀 gameData 常數：FOUNTAIN/PITS/CAMPS/snap.objectives；引擎目標座標 == gameData）"
+  ],
+  "cs_accuracy_calibration_r43": [
+   "Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_accuracy_measurement_r24": [
+   "CS Accuracy Measurement / Calibration Readiness R24: FAIL Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_accuracy_semantics_r25": [
+   "CS Accuracy Semantic Audit / Minimal Correction R25: FAIL Error: [CURRENT_SOURCE_SHA256]"
+  ],
+  "cs_adaptability_measurement_r34": [
+   "CS Adaptability Measurement / Calibration Readiness R34: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_apm_calibration_r40": [
+   "Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_apm_measurement_r21": [
+   "CS APM Measurement / Calibration Readiness R21: FAIL Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_batch_calibration_r45": [
+   "CS Batch Calibration R45: FAIL Error: [MARKER] signature"
+  ],
+  "cs_bomb_result_semantics_r11": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_calibration_readiness_r17": [
+   "Error: [LIVE_FPS_SOURCE_SHA256]"
+  ],
+  "cs_clutch_measurement_r30": [
+   "CS Clutch Measurement / Calibration Readiness R30: FAIL Error: [CURRENT_SOURCE_SHA256]"
+  ],
+  "cs_clutch_r4": [
+   "CS True Clutch R4: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_clutch_resilience_semantics_r32": [
+   "function fail(code, detail = \"\") { throw new Error(`[${code}]${detail ? `\\n${detail}` : \"\"}`); }",
+   "Error: [PRODUCTION_SOURCE_CHANGED]"
+  ],
+  "cs_comms_measurement_r36": [
+   "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_courage_calibration_r41": [
+   "Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_courage_measurement_r23": [
+   "CS Courage Measurement / Calibration Readiness R23: FAIL Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_decision_measurement_r26": [
+   "CS Decision Measurement / Calibration Readiness R26: FAIL Error: [CURRENT_SOURCE_SHA256]"
+  ],
+  "cs_decision_semantics_r27": [
+   "CS Decision Semantic Audit / Minimal Correction R27: FAIL Error: [CURRENT_SOURCE_SHA256]"
+  ],
+  "cs_defuse_r6": [
+   "CS Defuse R6: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_determinism_migration_r10": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_flash_attribution_r12": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_focus_measurement_r28": [
+   "CS Focus Measurement / Calibration Readiness R28: FAIL Error: [CURRENT_SOURCE_SHA256]"
+  ],
+  "cs_focus_semantic_correction_r44": [
+   "CS Focus Semantic Correction Readiness R44: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_he_gameplay_r14": [
+   "Error: [SOURCE_PROVENANCE_MISMATCH]"
+  ],
+  "cs_identity_consumers_r47": [
+   "CS Identity Consumers R47: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_instrument_r2": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_leadership_measurement_r36": [
+   "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_learning_lifecycle_r16b": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_learning_measurement_r37": [
+   "if (count !== 1) throw new Error(`[R15_LEGACY_${label}] expected=1 actual=${count}`);",
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_local_causal_framework_r22": [
+   "Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_mapaware_measurement_r37": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_mapaware_semantics_r18b": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_measure_r1": [
+   "CS Measurement R1: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_molly_gameplay_r15": [
+   "Error: [SOURCE_PROVENANCE_MISMATCH]"
+  ],
+  "cs_player_smoke_los_r13": [
+   "Error: [SOURCE_PROVENANCE_MISMATCH]"
+  ],
+  "cs_positioning_calibration_r42": [
+   "Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_positioning_measurement_r20": [
+   "CS Positioning Measurement Completion R20: FAIL Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_reflex_calibration_r39": [
+   "Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_reflex_read_chain_r19": [
+   "Error: [LIVE_SOURCE_SHA256]"
+  ],
+  "cs_resilience_measurement_r31": [
+   "CS Resilience Measurement / Calibration Readiness R31: FAIL Error: [CURRENT_SOURCE_SHA256]"
+  ],
+  "cs_result_metrics_r8": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_retreat_r5": [
+   "CS Retreat R5: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_stat_wiring_r3": [
+   "CS Stat Wiring R3: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_synergy_measurement_r36": [
+   "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_synergy_semantics_r16a": [
+   "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_tactical_iq_measurement_r35": [
+   "CS TacticalIQ Measurement / Semantic Readiness R35: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "cs_team_identity_consumers_r48": [
+   "CS Team Identity Consumers R48: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  ],
+  "growth_ui_p1": [
+   "❌ §8d S28 傷害式紅線仍然成立",
+   "🔴 P1 成長可視化：79/80 通過"
+  ],
+  "hero_skills_phase1": [
+   "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+   "+   '   if (!snap.over) throw new Error(\"snapshotToBattleResult: snapshot 尚未終局（over=false）\");\\n' +",
+   "code: 'ERR_ASSERTION',",
+   "'   if (!snap.over) throw new Error(\"snapshotToBattleResult: snapshot 尚未終局（over=false）\");\\n' +"
+  ],
+  "hero_skills_round2": [
+   "PASS linghun:R bounded / finite / deterministic / selective fusion",
+   "PASS R has separate windup / main burst / aftermath silhouettes",
+   "PASS dash actor moves and lands, reduced motion stays at origin",
+   "PASS canonical origin/target frame rotates symmetrically for both sides",
+   "PASS compat adapter never leaks preview choreography into real attacks",
+   "Hero Skills Round 2: PASS 410/410"
+  ],
+  "milestone_b4": [
+   "AssertionError [ERR_ASSERTION]: a solo minion must need eight hits to die",
+   "code: 'ERR_ASSERTION',"
+  ],
+  "milestone_e": [
+   "❌ 40) 未改 BattleResult.v2 契約（先發指派靠 lineup 解析，不塞新欄位）",
+   "❌ 41) 換人鈕觸控區 ≥40px，且不是覆蓋在選手列上的絕對定位",
+   "❌ 43) 先發列＝flex 列（選手列 flex:1 可壓縮 + 固定寬換人鈕），維持既有 320px 防護"
+  ],
+  "milestone_f": [
+   "❌ 30) BattleResult.v2 契約未動"
+  ],
+  "milestone_g": [
+   "❌ 11) 英雄技能明示為靜態資料，不顯示假 CD",
+   "❌ 20) 放寬的是 zoom 下限，不是相機設計包絡（最遠不超過 distMax 太多）　→ {\"farthest\":1700,\"distMax\":560}",
+   "❌ 28) 未改 BattleResult.v2 與 Milestone E 名單資料流"
+  ],
+  "milestone_h": [
+   "❌ 29) 未改 Replay contract 與 BattleResult.v2"
+  ],
+  "milestone_j": [
+   "❌ 6) 一場比賽中至少七種技能真的被放出來（淨化需要被減速，另行驗證）　→ {\"smite\":39,\"ghost\":12,\"heal\":7,\"flash\":14,\"ignite\":7,\"barrier\":10}",
+   "❌ 31) 技能層沒有改變陣營勝負分佈（基準 9/6、技能層 7/8）　→ {\"baseWins\":{\"blue\":9,\"red\":6},\"wins\":{\"blue\":7,\"red\":8}}",
+   "❌ FAIL  37/39"
+  ],
+  "milestone_j_close": [
+   "❌ 24)〔原始碼〕按鈕掛了可驗收錨點",
+   "❌ 26) 終局 snapshot 能產出正式 BattleResult（不繞過結算）　→ \"BattleResult.v3\"",
+   "❌ FAIL  33/35"
+  ],
+  "p06b_browser_presence": [
+   "FAIL Team Development can be upgraded through real UI",
+   "FAIL Team Development upgrade survives browser reload :: {\"reopenedAfterReload\":false,\"rank\":0,\"effect\":false}",
+   "FAIL Player Profile exposes four real tabs :: {\"fullProfileClicked\":false,\"count\":0,\"detail\":false}",
+   "FAIL browser product presence at 390px :: {\"width\":390,\"development\":true,\"active\":true,\"overflow\":6,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":360,\"scrollWidth\":378,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\\nCL\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":338,\"scrollWidth\":342,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":107,\"scrollWidth\":111,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":362,\"scrollWidth\":864,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}",
+   "FAIL browser product presence at 360px :: {\"width\":360,\"development\":true,\"active\":true,\"overflow\":8,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":338,\"scrollWidth\":356,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\\nCLUB XP\\n0 / \"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":316,\"scrollWidth\":320,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":102,\"scrollWidth\":106,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 則未讀訊息等待決定\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 點可以投入團隊成長\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":340,\"scrollWidth\":813,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}",
+   "P0.6B browser product-presence: 7/12 FAIL"
+  ],
+  "pacing29b1": [
+   "❌ 1) 5/10/15/20 分擊殺分布落在 S29B1 規格（v3 p50：5分0、10分0、15分4、20分11、終局13、時長20.6分）",
+   "❌ 3) 首殺時間分布合理（p10=499s、p50=626s、p90=852s；需 p10≥45、p50∈[90,420]）",
+   "❌ 15) Minimap 與世界座標一致（三個視圖都讀 snapshot.objectives / objectivesMeta / PITS，動態座標 + gameData 出生點同源；無硬編碼副本）",
+   "❌ 25) v3 陣列順序不決定勝負（P0 防線：40 seeds 正序藍勝 18/40、反序 25/40，位移 18pp ≤ 15；兩者皆在 30–70%）"
+  ],
+  "player_ui_r62": [
+   "if (!ok) throw new Error(`[${code}]${detail ? ` ${detail}` : \"\"}`);",
+   "Error: [STATUS_UNAVAILABLE_MAPPING]"
+  ],
+  "progress25": [
+   "❌ 13) 不修改 BattleResult.v2（schema 字串與 players 欄位仍在）"
+  ],
+  "q5_history": [
+   "✅ 7f) 畫面不自己判能不能換季（吃 Store 的 canRoll）",
+   "✅ 7g) 畫面不自己算賽季天數（吃 Store 的 seasonDay）",
+   "✅ 7h) **賽事頁不再拿絕對遊戲日對 84 天**",
+   "✅ 7i) 經濟週期標籤不再顯示 S 號（全案唯一的賽季在賽事頁）",
+   "✅ 7j) 換季不自動發生（要玩家按；Store 沒有把它掛在推進天數上）",
+   "69/69 通過"
+  ],
+  "q7b_season_state_v2": [
+   "TypeError: Cannot read properties of undefined (reading 'id')"
+  ],
+  "quality_p03": [
+   "❌ §2a 傷害式仍是 `p.power * dt * R.dmgK * ...`",
+   "❌ §4-4d 對照組死亡數大致對稱（無系統性偏袒）　死亡 A=8.15 B=4.8　 A=11.35 B=10.1",
+   "❌ §4-5c 等級差距不誇張（≤ 2.5 級）　差 2.75 級",
+   "❌ §4-5d 對照組經濟與等級大致對稱　藍 13.3　紅 12.070000000000002",
+   "❌ §4-6f 既有陣營偏斜已記錄（技能層 baseline 藍方勝率 < 50%，非 P0-3 造成）　⚠ 技術債：技能層陣營平衡，另案處理",
+   "🔴 P0-3 戰鬥品質層：48/53 通過"
+  ],
+  "r61_ui_fixture": [
+   "if (!value) throw new Error(`FAIL ${label}`);",
+   "Error: FAIL 四分類與 20 節點"
+  ],
+  "stats28": [
+   "❌ 18) Progress 冪等不受影響（同 tx 二次套用 ⇒ alreadyApplied，不重複發獎）"
+  ],
+  "tactic24": [
+   "❌ m6 全圖游走 Gank 次數 > m4 龍堆運營（40 seeds 平均 4.2 vs 4.3 = ×0.97；門檻 ×1.15）",
+   "❌ BattleResult.v2 結構未變（schema/mode/winner/players 完整）"
+  ],
+  "team_development_recovery": [
+   "FAIL 4 分類 / 20 節點　nodes=18 categories=4",
+   "FAIL 首頁主要入口磚為「戰隊發展」",
+   "FAIL talentPick 路由仍保留給相容流程",
+   "違反 3 條：4 分類 / 20 節點、首頁主要入口磚為「戰隊發展」、talentPick 路由仍保留給相容流程"
+  ]
+ }
+}

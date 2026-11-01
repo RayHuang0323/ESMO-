@@ -63,7 +63,7 @@ const plan = (templateId, choices = {}) => { const r = createTacticPlan({ templa
 const bind = (p) => bindTacticPlanToCurrentVersions(p);
 const SEED = 3;
 const optsOf = ({ tacticPlanBinding = null, tactic = null, resume = null } = {}) => ({
-  seed: SEED, roster: appRoster(G.liveRosters[String(SEED)]), sessionId: "rollback-drill", mode: "moba",
+  seed: SEED, roster: appRoster(G.liveRosters[String(SEED)]), sessionId: "rollback-drill", mode: "moba", buildStrategy: "scaling",
   ...(tacticPlanBinding ? { tacticPlanBinding } : {}), ...(tactic ? { tactic } : {}), ...(resume ?? {}),
 });
 const start = ({ flags, persisted = null, ...o }) => {

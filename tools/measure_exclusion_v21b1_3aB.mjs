@@ -21,7 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
-import { formalRunRefusal } from "./lib/formalRegistration.mjs";
+import { formalRunRefusal, formalReportRefusal } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -135,7 +135,7 @@ export const meetsReplication = (st, direction) => {
 };
 
 //  儀器檢查（審查 m7，不跑對局）：對照組真的是修正表的設定、與出貨版不同；每個臂經 Resolver（同 binding 路徑）得到的旋鈕＝修正表引擎的投影。
-async function instrumentProblems(items) {
+async function instrumentProblems(items, sides = ["blue"]) {
   process.env.ESMO_BALANCE_SKILLS = "on";
   const { tacticInputOf } = await imp("tools/lib/tacticTruthSim.mjs");
   const { resolveTactic } = await imp("src/battle/moba/tactics/tacticResolver.js");
@@ -152,10 +152,13 @@ async function instrumentProblems(items) {
   }
   for (const b of items.filter((x) => x.metric)) {
     //  複審：臂也走對局的組裝路徑，看引擎 t＝0 實際拿到的旋鈕。
-    const { e } = configure(1, "standard", M, 1, null, { blue: tacticInputOf({ templateId: b.template, choices: nestedOf([[b.dimension, b.choice]]) }), red: tacticInputOf(null) }, RULESET);
     const arm = projected(engine, b.template, nestedOf([[b.dimension, b.choice]]));
     const early = arm.phases?.[0] ?? arm;
-    if (e.director.knobs("blue").retreatAt !== early.knobs.retreatAt || (e.director.identity("blue")?.engageBias ?? 0) !== (early.identity?.engageBias ?? 0)) bad.push(`engine ${b.template} ${b.dimension}=${b.choice}`);
+    for (const side of sides) {
+      const input = tacticInputOf({ templateId: b.template, choices: nestedOf([[b.dimension, b.choice]]) }), std = tacticInputOf(null);
+      const { e } = configure(1, "standard", M, 1, null, side === "blue" ? { blue: input, red: std } : { blue: std, red: input }, RULESET);
+      if (e.director.knobs(side).retreatAt !== early.knobs.retreatAt || (e.director.identity(side)?.engageBias ?? 0) !== (early.identity?.engageBias ?? 0)) bad.push(`engine ${side} ${b.template} ${b.dimension}=${b.choice}`);
+    }
     const r = resolveTactic(tacticInputOf({ templateId: b.template, choices: nestedOf([[b.dimension, b.choice]]) }), {}, { phases: true, templateBalance: TB });
     const want = projected(engine, b.template, nestedOf([[b.dimension, b.choice]]));
     if (!r.ok || J(r.knobs) !== J(want.knobs) || J(r.identity) !== J(want.identity) || J(r.phases.map((p) => [p.knobs, p.identity])) !== J(want.phases.map((p) => [p.knobs, p.identity]))) bad.push(`arm ${b.template} ${b.dimension}=${b.choice}`);
@@ -217,7 +220,7 @@ const codeMovedSinceRegistration = () => {
   return git(`git diff --name-only ${regCommit} HEAD -- src tools/lib tools/balance tools/measure_exclusion_v21b1_3aB.mjs`);
 };
 // ── 正式驗收 step 4b：P6 提供的每個選擇，新 seeds、紅藍雙方（登記 exclusion_v21b1_confirm_registration_3aB.json；只在凍結後才能跑）──────────
-if (flag("confirm-plan") || flag("confirm-run") || flag("confirm-report")) {
+if (flag("confirm-plan") || flag("confirm-run") || flag("confirm-report") || flag("confirm-preflight")) {
   const CREG_REL = "tools/fixtures/exclusion_v21b1_confirm_registration_3aB.json";
   const CREG_TEXT = fs.readFileSync(path.join(ROOT, CREG_REL), "utf8").replace(/\r\n/g, "\n"), CREG = JSON.parse(CREG_TEXT);
   const R1 = JSON.parse(fs.readFileSync(path.join(ROOT, STAGE1_RESULT), "utf8")), R2 = JSON.parse(fs.readFileSync(path.join(ROOT, STAGE2_RESULT), "utf8"));
@@ -236,15 +239,15 @@ if (flag("confirm-plan") || flag("confirm-run") || flag("confirm-report")) {
   if (!DIRC) { console.error("需要 --dir"); process.exit(2); }
   const FPC = SV.SIMULATION_SEMANTICS_FINGERPRINTS[SV.MOBA_SIMULATION_VERSION];
   const STABLEC = { registration: sha16(CREG_TEXT), plan: sha16(J(CREG.plan.items)), range: CREG.seeds.range, simVersion: SIM, fingerprint: FPC };
-  if (flag("confirm-run")) {
-    const no = formalRunRefusal(CREG, { fingerprint: FPC, resultRel: CREG.result });
+  if (flag("confirm-run") || flag("confirm-preflight")) {
+    const no = formalRunRefusal(CREG, { fingerprint: FPC, resultRel: CREG.result, regRel: CREG_REL, toolRel: "tools/measure_exclusion_v21b1_3aB.mjs" });
     if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); }
     if (!/^APPROVE/.test(CREG.review?.verdict ?? "")) { console.error("登記沒有 APPROVE 的獨立審查：不得開跑"); process.exit(2); }
-    { const c0 = git(`git log -1 --format=%H -- ${CREG_REL}`), moved = git(`git diff --name-only ${c0} HEAD -- src tools/lib tools/balance tools/measure_exclusion_v21b1_3aB.mjs`); if (moved) { console.error(`登記之後程式變了：${moved}`); process.exit(2); } }
     const prov = provenance();
     if (prov.dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
-    const inst = await instrumentProblems(offeredByP6);
+    const inst = await instrumentProblems(offeredByP6, sidesC);
     if (inst.length) { console.error(`儀器檢查失敗：${inst.join(" ¦ ")}`); process.exit(2); }
+    if (flag("confirm-preflight")) { console.log("preflight：可以開跑（沒有跑任何場次）"); process.exit(0); }
     const res = await runStudy({ dir: DIRC, tasks: tc, workerFile: SELF, workerArgs: ["--exclusion-worker"], meta: { ...STABLEC, gitHead: prov.gitHead }, workers: Number(val("workers", 3)), label: "step 4b（P6 選項紅藍確認）", check: recCheck });
     process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
   }
@@ -252,6 +255,7 @@ if (flag("confirm-plan") || flag("confirm-run") || flag("confirm-report")) {
   if (fs.existsSync(path.join(ROOT, CREG.result))) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   const mc = JSON.parse(fs.readFileSync(path.join(DIRC, "meta.json"), "utf8"));
   if (Object.entries(STABLEC).some(([k, v]) => mc.meta[k] !== v)) { console.error("資料夾的登記與目前不同：不判定"); process.exit(2); }
+  { const no = formalReportRefusal(mc.meta, "tools/measure_exclusion_v21b1_3aB.mjs"); if (no.length) { console.error(`不判定：${no.join("；")}`); process.exit(2); } }
   const auditC = auditStudy(DIRC, tc, recCheck);
   if (auditC.instrument.length) { console.error(`⛔ 紀錄與任務不符：${auditC.instrument.slice(0, 3).join(" ¦ ")}（不判定）`); process.exit(5); }
   if (auditC.halt) { console.error(`⛔ HALT：${auditC.halt}`); process.exit(5); }
@@ -352,6 +356,7 @@ if (flag("stage2-run") || flag("stage2-report")) {
     const res = await runStudy({ dir: DIR, tasks: t2, workerFile: SELF, workerArgs: ["--exclusion-worker"], meta: { ...STABLE2, gitHead: provenance().gitHead }, workers: Number(val("workers", 3)), label: "P6 第二階段（邊際紅藍複驗）", check: recCheck });
     process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
   }
+  if (fs.existsSync(path.join(ROOT, STAGE2_RESULT))) { console.error(`⛔ ${STAGE2_RESULT} 已存在：研究已結束，不重算`); process.exit(5); }
   const { metricValue, pairStats } = await imp("tools/lib/tacticTruthSim.mjs");
   const m2 = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (Object.entries(STABLE2).some(([k, v]) => m2.meta[k] !== v)) { console.error("資料夾的登記與目前不同：不判定"); process.exit(2); }

@@ -398,7 +398,7 @@ async function main() {
     ck("T4 事前登記：每一列的指標／方向／本來選擇／模板與 Registry 現在的 gate 相同，指標都是已知指標",
       fx.rows.every((r) => { const b = planRows.find((x) => x.key === r.key); return b && r.metric === b.metric && r.direction === b.direction && r.own === b.own && r.template === b.template && isKnownMetric(r.metric); }));
     const coveredByEx = (r) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template));
-    ck("T5 每一列都有 40 個配對；有效配對 ≥ 20（不足的列必須是已被排除或被 n=400 複驗取代的選擇）", fx.rows.every((r) => r.pairs?.length === SEEDS.length && (r.n >= 20 || coveredByEx(r) || superseded(r) || tableOnTable(r))), fx.rows.filter((r) => r.n < 20).map((r) => `${r.key}:n=${r.n}${coveredByEx(r) ? "(已排除)" : ""}`).join(" "));
+    ck("T5 每一列都有 40 個配對；有效配對 ≥ 20（不足的列必須是已被排除或被 n=400 複驗取代的選擇；修正表模板在帶修正表的規則集量的列只記錄，step 4）", fx.rows.every((r) => r.pairs?.length === SEEDS.length && (r.n >= 20 || coveredByEx(r) || superseded(r) || tableOnTable(r))), fx.rows.filter((r) => r.n < 20).map((r) => `${r.key}:n=${r.n}${coveredByEx(r) ? "(已排除)" : ""}`).join(" "));
     ck("T6 z、均值、差、sd、判定都能由原始配對值重算出來（表上的數字不是手填的）",
       fx.rows.every((r) => { const st = statsOfPairs(r.pairs); return ["n", "meanA", "meanB", "diff", "sd", "z"].every((k) => st[k] === r[k]) && verdictOf(st, r.direction) === r.verdict; }));
     const prim = fx.rows.filter((r) => r.role === "primary");
@@ -407,7 +407,18 @@ async function main() {
       prim.every((r) => isOk(r.verdict) || exStd.has(`${r.dimension}=${r.choice}`) || superseded(r)), prim.filter((r) => !isOk(r.verdict) && !exStd.has(`${r.dimension}=${r.choice}`) && !superseded(r)).map((r) => `${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
     const weak = fx.rows.filter((r) => r.role === "weak");
     const exTpl = (r) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template));
-    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除（n=400 複驗只涵蓋 std，不豁免弱點模板）", weak.every((r) => isOk(r.verdict) || exTpl(r) || tableOnTable(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r) && !tableOnTable(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
+    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除（n=400 複驗只涵蓋 std，不豁免弱點模板；修正表模板在帶修正表的規則集量的列只記錄，step 4）", weak.every((r) => isOk(r.verdict) || exTpl(r) || tableOnTable(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r) && !tableOnTable(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
+    //  只記錄的範圍（審查）：判斷式是通用的，這裡把它實際碰到的列釘住；多出來就紅。沒有登記的擴大不得靠這個豁免。
+    const recordedOnly = planRows.filter((r) => r.role === "weak" && tableOnTable(r)).map((r) => `${r.template}|${r.dimension}|${r.choice}`).sort();
+    ck("T8b 只記錄的列恰好是 classic.m8 的 5 列（前中後期集結、中後期物件優先）", J(recordedOnly) === J(["classic.m8|phases.early.grouping|group", "classic.m8|phases.late.grouping|group", "classic.m8|phases.late.objectiveOrder|baron", "classic.m8|phases.mid.grouping|group", "classic.m8|phases.mid.objectiveOrder|baron"]), J(recordedOnly));
+    //  負向對照：同一條推導，表外的弱點列失敗 ⇒ 照舊推出排除；修正表模板在 v20 量的列失敗 ⇒ P6 判過的帶 null，沒判過的不帶；在修正表上量的列失敗 ⇒ 不推出。
+    {
+      const fake = (template, dimension, choice) => [{ role: "primary", template: "std", dimension, choice, verdict: "pass", key: "p", metric: "m", n: 40, z: 5 }, { role: "weak", template, dimension, choice, verdict: "no_effect", key: "w", metric: "m", n: 40, z: 0.5 }];
+      const one = (t, d, c) => deriveExclusions(fake(t, d, c)).filter((x) => x.template === t);
+      const outside = one("classic.m2", "phases.mid.objectiveOrder", "dragon"), v20P6 = one("classic.m3", "objectives.tower", "high"), v20NotP6 = one("classic.m7", "lanes.top.stance", "split"), onTable = one("classic.m8", "phases.mid.grouping", "group");
+      ck("T8c 推導的邊界：表外模板照舊推出；修正表模板在 v20 量且 P6 判過 ⇒ 帶 null；沒判過 ⇒ 不帶；在修正表上量 ⇒ 不推出",
+        outside.length === 1 && !("templateBalance" in outside[0]) && v20P6.length === 1 && v20P6[0].templateBalance === null && v20NotP6.length === 1 && !("templateBalance" in v20NotP6[0]) && onTable.length === 0, J({ outside, v20P6, v20NotP6, onTable }));
+    }
     const derived = deriveExclusions(fx.rows);
     const sameSet = (a, b) => J([...a].sort()) === J([...b].sort());
     ck("T9 MEASURED_EXCLUSIONS ＝ 結果表推出來的排除（逐筆相同，不多不少；含 templateBalance；修正表模板在帶修正表的規則集量的列除外，step 4）", sameSet(derived.map(exKey), exclusionsOfTruth(ctx.exclusions).map(exKey)), `${derived.length} 筆`);

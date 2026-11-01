@@ -1,6 +1,6 @@
 {
  "baseline": "1d0e219aae20a946bbc04d36349cb988e6e5ba7b",
- "gitHead": "e22bafe0544cc6a2eb744c4b90f6df8ea01fd58f",
+ "gitHead": "64920cebace929974e24a191e452c3fd7f4c5c6f",
  "counts": {
   "passBoth": 34,
   "preexisting": 67,
@@ -45,7 +45,9 @@
    "ms": 524,
    "finishedAt": "2026-11-01T18:54:07.103Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_reflex_calibration_r39.mjs:66:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_reflex_calibration_r39.mjs:246:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_reflex_calibration_r39.mjs:287:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_apm_calibration_r40",
@@ -53,7 +55,9 @@
    "ms": 431,
    "finishedAt": "2026-11-01T18:54:07.547Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_apm_calibration_r40.mjs:59:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_apm_calibration_r40.mjs:123:50)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_apm_calibration_r40.mjs:130:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_courage_calibration_r41",
@@ -61,7 +65,9 @@
    "ms": 434,
    "finishedAt": "2026-11-01T18:54:07.994Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_courage_calibration_r41.mjs:57:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_courage_calibration_r41.mjs:98:50)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_courage_calibration_r41.mjs:104:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_positioning_calibration_r42",
@@ -69,7 +75,9 @@
    "ms": 428,
    "finishedAt": "2026-11-01T18:54:08.435Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_positioning_calibration_r42.mjs:53:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_positioning_calibration_r42.mjs:73:72)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_positioning_calibration_r42.mjs:74:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_accuracy_calibration_r43",
@@ -77,7 +85,9 @@
    "ms": 443,
    "finishedAt": "2026-11-01T18:54:08.891Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_calibration_r43.mjs:53:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_calibration_r43.mjs:124:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_calibration_r43.mjs:137:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_focus_semantic_correction_r44",
@@ -85,7 +95,9 @@
    "ms": 424,
    "finishedAt": "2026-11-01T18:54:09.328Z",
    "cls": "preexisting",
-   "text": "    at csR44R43Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:274:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_focus_semantic_correction_r44.mjs:88:67)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_focus_semantic_correction_r44.mjs:102:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Focus Semantic Correction Readiness R44: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_batch_calibration_r45",
@@ -93,7 +105,9 @@
    "ms": 1491,
    "finishedAt": "2026-11-01T18:54:10.832Z",
    "cls": "preexisting",
-   "text": "CS Batch Calibration R45: FAIL Error: [MARKER] signature\n    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_batch_calibration_r45.mjs:68:55)\n    at TransformPluginContext.transform (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_batch_calibration_r45.mjs:85:477)\n    at PluginContainer.transform (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/worktrees/cs-fps-major-upgrade/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49100:19)\n    at loadAndTransform (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/worktrees/cs-fps-major-upgrade/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:49)\n    at async instantiateModule (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/worktrees/cs-fps-major-upgrade/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:52923:44)"
+   "failureLines": [
+    "CS Batch Calibration R45: FAIL Error: [MARKER] signature"
+   ]
   },
   {
    "id": "cs_identity_consumers_r47",
@@ -101,7 +115,9 @@
    "ms": 418,
    "finishedAt": "2026-11-01T18:54:11.382Z",
    "cls": "preexisting",
-   "text": "    at csR48R47Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:224:14)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_identity_consumers_r47.mjs:245:18)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_identity_consumers_r47.mjs:310:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Identity Consumers R47: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_team_identity_consumers_r48",
@@ -109,7 +125,9 @@
    "ms": 422,
    "finishedAt": "2026-11-01T18:54:11.816Z",
    "cls": "preexisting",
-   "text": "    at csR48R47Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:224:14)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_identity_consumers_r48.mjs:213:25)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_identity_consumers_r48.mjs:277:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Team Identity Consumers R48: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_reflex_read_chain_r19",
@@ -117,7 +135,9 @@
    "ms": 421,
    "finishedAt": "2026-11-01T18:54:12.249Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_reflex_read_chain_r19.mjs:74:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_reflex_read_chain_r19.mjs:223:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_reflex_read_chain_r19.mjs:252:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_learning_lifecycle_r16b",
@@ -125,7 +145,9 @@
    "ms": 77,
    "finishedAt": "2026-11-01T18:54:12.339Z",
    "cls": "preexisting",
-   "text": "    at readSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_learning_lifecycle_r16b.mjs:75:26)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_learning_lifecycle_r16b.mjs:195:19)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_learning_lifecycle_r16b.mjs:228:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_mapaware_semantics_r18b",
@@ -133,7 +155,9 @@
    "ms": 425,
    "finishedAt": "2026-11-01T18:54:12.776Z",
    "cls": "preexisting",
-   "text": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_mapaware_semantics_r18b.mjs:257:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_mapaware_semantics_r18b.mjs:314:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_learning_measurement_r37",
@@ -141,7 +165,10 @@
    "ms": 119,
    "finishedAt": "2026-11-01T18:54:12.907Z",
    "cls": "preexisting",
-   "text": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_learning_measurement_r37.mjs:63:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+   "failureLines": [
+    "if (count !== 1) throw new Error(`[R15_LEGACY_${label}] expected=1 actual=${count}`);",
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_matchup_acceptance_r57",
@@ -177,7 +204,12 @@
    "ms": 87,
    "finishedAt": "2026-11-01T19:16:55.917Z",
    "cls": "preexisting",
-   "text": "════════════════════════════════════════\nUI Recovery Contract:    VIOLATED　(11/14)\nPersistence Integration: INTEGRATED\nGameplay Consumers:      NOT YET INTEGRATED\nTeam Development recovery contract: VIOLATED\n違反 3 條：4 分類 / 20 節點、首頁主要入口磚為「戰隊發展」、talentPick 路由仍保留給相容流程"
+   "failureLines": [
+    "FAIL 4 分類 / 20 節點　nodes=18 categories=4",
+    "FAIL 首頁主要入口磚為「戰隊發展」",
+    "FAIL talentPick 路由仍保留給相容流程",
+    "違反 3 條：4 分類 / 20 節點、首頁主要入口磚為「戰隊發展」、talentPick 路由仍保留給相容流程"
+   ]
   },
   {
    "id": "team_development_v15",
@@ -192,7 +224,10 @@
    "ms": 66,
    "finishedAt": "2026-11-01T19:16:57.152Z",
    "cls": "preexisting",
-   "text": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_r61_ui_fixture.mjs:39:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+   "failureLines": [
+    "if (!value) throw new Error(`FAIL ${label}`);",
+    "Error: FAIL 四分類與 20 節點"
+   ]
   },
   {
    "id": "player_ui_r62",
@@ -200,7 +235,10 @@
    "ms": 87,
    "finishedAt": "2026-11-01T19:16:57.253Z",
    "cls": "preexisting",
-   "text": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_r62_player_ui_fixture.mjs:99:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+   "failureLines": [
+    "if (!ok) throw new Error(`[${code}]${detail ? ` ${detail}` : \"\"}`);",
+    "Error: [STATUS_UNAVAILABLE_MAPPING]"
+   ]
   },
   {
    "id": "active_match_r63",
@@ -208,7 +246,9 @@
    "ms": 2071,
    "finishedAt": "2026-11-01T19:16:59.338Z",
    "cls": "preexisting",
-   "text": "✅ 10) CS result id 不再使用 Date/random，normal / fast / restore 可比對同一結果\n✅ 11) MOBA / CS 共用 1×/2×/4× 與快速完成 presentation\n✅ 12) Store 只有既有 matchmaking session 內保存 snapshot，無第二結果交易\n✅ 13) leave / refresh cleanup 會 pause，完成後 terminal 不會被覆寫\nR63 Active Match focused: 12/13 通過\n⚠ Node 無法證明真機觸控／視覺；需人工驗收 320/360/390/430 與瀏覽器 refresh。"
+   "failureLines": [
+    "❌ 9) CS fast finish 從目前 frame 到最後 frame"
+   ]
   },
   {
    "id": "r63_competition_integration",
@@ -223,7 +263,14 @@
    "ms": 67245,
    "finishedAt": "2026-11-01T19:18:07.076Z",
    "cls": "preexisting",
-   "text": "PASS browser creates a real ActiveMatch.v1 :: active:session:moba:24f1621d\nPASS ActiveMatch card survives browser reload\nPASS ActiveMatch resume returns to business route\nFAIL browser product presence at 390px :: {\"width\":390,\"development\":true,\"active\":true,\"overflow\":6,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":360,\"scrollWidth\":378,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\\nCL\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":338,\"scrollWidth\":342,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":107,\"scrollWidth\":111,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":362,\"scrollWidth\":864,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}\nFAIL browser product presence at 360px :: {\"width\":360,\"development\":true,\"active\":true,\"overflow\":8,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":338,\"scrollWidth\":356,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\\nCLUB XP\\n0 / \"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":316,\"scrollWidth\":320,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":102,\"scrollWidth\":106,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 則未讀訊息等待決定\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 點可以投入團隊成長\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":340,\"scrollWidth\":813,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}\nP0.6B browser product-presence: 7/12 FAIL"
+   "failureLines": [
+    "FAIL Team Development can be upgraded through real UI",
+    "FAIL Team Development upgrade survives browser reload :: {\"reopenedAfterReload\":false,\"rank\":0,\"effect\":false}",
+    "FAIL Player Profile exposes four real tabs :: {\"fullProfileClicked\":false,\"count\":0,\"detail\":false}",
+    "FAIL browser product presence at 390px :: {\"width\":390,\"development\":true,\"active\":true,\"overflow\":6,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":360,\"scrollWidth\":378,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\\nCL\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":338,\"scrollWidth\":342,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":107,\"scrollWidth\":111,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":362,\"scrollWidth\":864,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}",
+    "FAIL browser product presence at 360px :: {\"width\":360,\"development\":true,\"active\":true,\"overflow\":8,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":338,\"scrollWidth\":356,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\\nCLUB XP\\n0 / \"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":316,\"scrollWidth\":320,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":102,\"scrollWidth\":106,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 則未讀訊息等待決定\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 點可以投入團隊成長\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":340,\"scrollWidth\":813,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}",
+    "P0.6B browser product-presence: 7/12 FAIL"
+   ]
   },
   {
    "id": "cs_mapaware_measurement_r37",
@@ -231,7 +278,9 @@
    "ms": 781,
    "finishedAt": "2026-11-01T19:18:07.870Z",
    "cls": "preexisting",
-   "text": "    at loadApi (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_mapaware_measurement_r37.mjs:34:71)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_mapaware_measurement_r37.mjs:48:21)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_mapaware_measurement_r37.mjs:74:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_clutch_measurement_r30",
@@ -239,7 +288,9 @@
    "ms": 432,
    "finishedAt": "2026-11-01T19:18:08.315Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_clutch_measurement_r30.mjs:183:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_clutch_measurement_r30.mjs:352:56)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_clutch_measurement_r30.mjs:372:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Clutch Measurement / Calibration Readiness R30: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_resilience_measurement_r31",
@@ -247,7 +298,9 @@
    "ms": 439,
    "finishedAt": "2026-11-01T19:18:08.767Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_resilience_measurement_r31.mjs:65:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_resilience_measurement_r31.mjs:117:186)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_resilience_measurement_r31.mjs:123:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Resilience Measurement / Calibration Readiness R31: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_clutch_resilience_semantics_r32",
@@ -255,7 +308,10 @@
    "ms": 79,
    "finishedAt": "2026-11-01T19:18:08.860Z",
    "cls": "preexisting",
-   "text": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_clutch_resilience_semantics_r32.mjs:158:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+   "failureLines": [
+    "function fail(code, detail = \"\") { throw new Error(`[${code}]${detail ? `\\n${detail}` : \"\"}`); }",
+    "Error: [PRODUCTION_SOURCE_CHANGED]"
+   ]
   },
   {
    "id": "cs_adaptability_measurement_r34",
@@ -263,7 +319,9 @@
    "ms": 449,
    "finishedAt": "2026-11-01T19:18:09.322Z",
    "cls": "preexisting",
-   "text": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_adaptability_measurement_r34.mjs:104:33)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_adaptability_measurement_r34.mjs:206:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Adaptability Measurement / Calibration Readiness R34: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_tactical_iq_measurement_r35",
@@ -271,7 +329,9 @@
    "ms": 447,
    "finishedAt": "2026-11-01T19:18:09.782Z",
    "cls": "preexisting",
-   "text": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_tactical_iq_measurement_r35.mjs:118:33)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_tactical_iq_measurement_r35.mjs:182:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS TacticalIQ Measurement / Semantic Readiness R35: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_synergy_semantics_r16a",
@@ -279,7 +339,9 @@
    "ms": 461,
    "finishedAt": "2026-11-01T19:18:10.257Z",
    "cls": "preexisting",
-   "text": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_synergy_semantics_r16a.mjs:261:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_synergy_semantics_r16a.mjs:410:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_comms_measurement_r36",
@@ -287,7 +349,9 @@
    "ms": 433,
    "finishedAt": "2026-11-01T19:18:10.704Z",
    "cls": "preexisting",
-   "text": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_stats_measurement_r36.mjs:189:99)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_stats_measurement_r36.mjs:218:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_leadership_measurement_r36",
@@ -295,7 +359,9 @@
    "ms": 433,
    "finishedAt": "2026-11-01T19:18:11.151Z",
    "cls": "preexisting",
-   "text": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_stats_measurement_r36.mjs:189:99)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_stats_measurement_r36.mjs:218:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_synergy_measurement_r36",
@@ -303,7 +369,9 @@
    "ms": 421,
    "finishedAt": "2026-11-01T19:18:11.596Z",
    "cls": "preexisting",
-   "text": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_stats_measurement_r36.mjs:189:99)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_team_stats_measurement_r36.mjs:218:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "milestone_b4",
@@ -311,7 +379,10 @@
    "ms": 1643,
    "finishedAt": "2026-11-01T19:18:13.251Z",
    "cls": "preexisting",
-   "text": "  expected: 8,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.18.0\r"
+   "failureLines": [
+    "AssertionError [ERR_ASSERTION]: a solo minion must need eight hits to die",
+    "code: 'ERR_ASSERTION',"
+   ]
   },
   {
    "id": "milestone_j_close",
@@ -319,7 +390,11 @@
    "ms": 7951,
    "finishedAt": "2026-11-01T19:18:21.225Z",
    "cls": "preexisting",
-   "text": "── §4 邊界 ──\n✅ 29) 引擎仍然決定性（同 seed 兩次逐值相同）\n✅ 30) 未啟用技能層時第二格仍是舊行為（本輪沒動到 opt-in 邊界）\n✅ 31) 英雄池仍是 100 名\n✅ 32) 本輪沒有動到地圖幾何（塔位不變）\n❌ FAIL  33/35"
+   "failureLines": [
+    "❌ 24)〔原始碼〕按鈕掛了可驗收錨點",
+    "❌ 26) 終局 snapshot 能產出正式 BattleResult（不繞過結算）　→ \"BattleResult.v3\"",
+    "❌ FAIL  33/35"
+   ]
   },
   {
    "id": "milestone_j",
@@ -327,7 +402,11 @@
    "ms": 93219,
    "finishedAt": "2026-11-01T19:19:54.467Z",
    "cls": "preexisting",
-   "text": "✅ 34) 沒有任何定位因分類規則被隱藏（六個分頁都有人）\n✅ 35) 技能層沒有引入任何傷害乘數（點燃是獨立傷害源，非乘進普攻）\n✅ 36) toEngineSpells 對沒有技能資料的名單回 null（呼叫端就不會啟用這一層）\n✅ 37) toEngineSpells 會擋掉不合法的配置（技能數不對或未知 id）\n✅ 38) 地圖幾何未被本階段動到（塔位仍來自地圖呈現座標）\n❌ FAIL  37/39"
+   "failureLines": [
+    "❌ 6) 一場比賽中至少七種技能真的被放出來（淨化需要被減速，另行驗證）　→ {\"smite\":39,\"ghost\":12,\"heal\":7,\"flash\":14,\"ignite\":7,\"barrier\":10}",
+    "❌ 31) 技能層沒有改變陣營勝負分佈（基準 9/6、技能層 7/8）　→ {\"baseWins\":{\"blue\":9,\"red\":6},\"wins\":{\"blue\":7,\"red\":8}}",
+    "❌ FAIL  37/39"
+   ]
   },
   {
    "id": "milestone_i_close",
@@ -349,7 +428,9 @@
    "ms": 6969,
    "finishedAt": "2026-11-01T19:20:08.357Z",
    "cls": "preexisting",
-   "text": "✅ 27) 未改公平性／節奏常數表\n✅ 28) 地圖幾何與碰撞來源完全不參與英雄定位層\n❌ 29) 未改 Replay contract 與 BattleResult.v2\n✅ 30) 英雄層與既有的戰術／能力層並存（三層各自獨立開關）\n30/31 通過\n{\"milestone\":\"H\",\"version\":\"MobaHeroProfile.v1\",\"arches\":6,\"optIn\":true,\"damageUntouched\":true}"
+   "failureLines": [
+    "❌ 29) 未改 Replay contract 與 BattleResult.v2"
+   ]
   },
   {
    "id": "milestone_g",
@@ -357,7 +438,11 @@
    "ms": 152,
    "finishedAt": "2026-11-01T19:20:08.521Z",
    "cls": "preexisting",
-   "text": "✅ 27) 未改 Replay contract\n❌ 28) 未改 BattleResult.v2 與 Milestone E 名單資料流\n✅ 29) 面板疊層收斂在 battleLayout 的 Z 表（不散落魔術數字）\n✅ 30) 英雄面板疊在世界標籤之上、仍低於終局與重播\n27/30 通過\n{\"milestone\":\"G\",\"zoom\":{\"ZOOM_MIN\":0.35,\"ZOOM_MAX\":9,\"farthestDist\":1700,\"closestDist\":66.1},\"presentationOnly\":true,\"browserVerified\":\"tools/shot_milestone_g.mjs\"}"
+   "failureLines": [
+    "❌ 11) 英雄技能明示為靜態資料，不顯示假 CD",
+    "❌ 20) 放寬的是 zoom 下限，不是相機設計包絡（最遠不超過 distMax 太多）　→ {\"farthest\":1700,\"distMax\":560}",
+    "❌ 28) 未改 BattleResult.v2 與 Milestone E 名單資料流"
+   ]
   },
   {
    "id": "milestone_f",
@@ -365,7 +450,9 @@
    "ms": 7541,
    "finishedAt": "2026-11-01T19:20:16.076Z",
    "cls": "preexisting",
-   "text": "✅ 27) Replay contract 未改（版本字串與既有欄位）\n✅ 28) Milestone E 的名單資料流未動\n✅ 29) 地圖幾何與碰撞來源未動\n❌ 30) BattleResult.v2 契約未動\n29/30 通過\n{\"milestone\":\"F\",\"knobs\":{\"fightHoldT\":3,\"fightMaxDur\":20,\"fightMinDur\":2,\"fightHoldAfterT\":240,\"initiativeWindow\":22,\"initiativeAfterT\":240,\"initiativeHpMin\":0.42,\"initiativeRespondRange\":48,\"heroTowerGroupMin\":3,\"heroTowerGroupK\":0.62},\"engineOnlyV3\":true,\"browserVerified\":false}"
+   "failureLines": [
+    "❌ 30) BattleResult.v2 契約未動"
+   ]
   },
   {
    "id": "milestone_e",
@@ -373,7 +460,11 @@
    "ms": 172,
    "finishedAt": "2026-11-01T19:20:16.260Z",
    "cls": "preexisting",
-   "text": "❌ 43) 先發列＝flex 列（選手列 flex:1 可壓縮 + 固定寬換人鈕），維持既有 320px 防護\n✅ 44) 新增的天賦區塊在既有捲動容器內，沒有新增固定定位或新的 z-index 層\n✅ 45) 重播播報列單行省略（長字串不撐破手機寬度）\n✅ 46) 賽後新面板沿用既有 Panel 版型與 flexWrap 欄位（手機自動換行，不新增水平捲動）\n46/49 通過\n{\"milestone\":\"E\",\"lineup\":{\"version\":\"MatchLineup.v1\",\"seats\":[\"b1\",\"b2\",\"b3\",\"b4\",\"b5\"],\"rookieSeat\":\"b3\"},\"replay\":{\"version\":\"MobaReplay.v1\",\"addedOptionalFields\":[\"ps\",\"tb\"],\"legacyPlayable\":true},\"engineTouched\":false,\"browserVerified\":false}"
+   "failureLines": [
+    "❌ 40) 未改 BattleResult.v2 契約（先發指派靠 lineup 解析，不塞新欄位）",
+    "❌ 41) 換人鈕觸控區 ≥40px，且不是覆蓋在選手列上的絕對定位",
+    "❌ 43) 先發列＝flex 列（選手列 flex:1 可壓縮 + 固定寬換人鈕），維持既有 320px 防護"
+   ]
   },
   {
    "id": "tactic24",
@@ -402,7 +493,9 @@
    "ms": 474,
    "finishedAt": "2026-11-01T19:30:43.146Z",
    "cls": "preexisting",
-   "text": "CS Measurement R1: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   "failureLines": [
+    "CS Measurement R1: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_instrument_r2",
@@ -410,7 +503,9 @@
    "ms": 484,
    "finishedAt": "2026-11-01T19:30:43.644Z",
    "cls": "preexisting",
-   "text": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_instrumentation_r2.mjs:252:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_instrumentation_r2.mjs:426:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_stat_wiring_r3",
@@ -418,7 +513,9 @@
    "ms": 440,
    "finishedAt": "2026-11-01T19:30:44.098Z",
    "cls": "preexisting",
-   "text": "CS Stat Wiring R3: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   "failureLines": [
+    "CS Stat Wiring R3: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_clutch_r4",
@@ -426,7 +523,9 @@
    "ms": 444,
    "finishedAt": "2026-11-01T19:30:44.555Z",
    "cls": "preexisting",
-   "text": "CS True Clutch R4: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   "failureLines": [
+    "CS True Clutch R4: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_retreat_r5",
@@ -434,7 +533,9 @@
    "ms": 447,
    "finishedAt": "2026-11-01T19:30:45.015Z",
    "cls": "preexisting",
-   "text": "CS Retreat R5: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   "failureLines": [
+    "CS Retreat R5: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_defuse_r6",
@@ -442,7 +543,9 @@
    "ms": 440,
    "finishedAt": "2026-11-01T19:30:45.467Z",
    "cls": "preexisting",
-   "text": "CS Defuse R6: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   "failureLines": [
+    "CS Defuse R6: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_result_metrics_r8",
@@ -450,7 +553,9 @@
    "ms": 453,
    "finishedAt": "2026-11-01T19:30:45.936Z",
    "cls": "preexisting",
-   "text": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_result_metrics_r8.mjs:545:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_result_metrics_r8.mjs:717:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_determinism_migration_r10",
@@ -458,7 +563,9 @@
    "ms": 446,
    "finishedAt": "2026-11-01T19:30:46.403Z",
    "cls": "preexisting",
-   "text": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_determinism_migration_r10.mjs:387:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_determinism_migration_r10.mjs:512:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_bomb_result_semantics_r11",
@@ -466,7 +573,9 @@
    "ms": 445,
    "finishedAt": "2026-11-01T19:30:46.861Z",
    "cls": "preexisting",
-   "text": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_bomb_result_semantics_r11.mjs:259:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_bomb_result_semantics_r11.mjs:377:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_flash_attribution_r12",
@@ -474,7 +583,9 @@
    "ms": 450,
    "finishedAt": "2026-11-01T19:30:47.325Z",
    "cls": "preexisting",
-   "text": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_flash_attribution_r12.mjs:416:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_flash_attribution_r12.mjs:532:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
   },
   {
    "id": "cs_player_smoke_los_r13",
@@ -482,7 +593,9 @@
    "ms": 440,
    "finishedAt": "2026-11-01T19:30:47.778Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_player_smoke_los_r13.mjs:121:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_player_smoke_los_r13.mjs:684:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_player_smoke_los_r13.mjs:876:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [SOURCE_PROVENANCE_MISMATCH]"
+   ]
   },
   {
    "id": "cs_he_gameplay_r14",
@@ -490,7 +603,9 @@
    "ms": 442,
    "finishedAt": "2026-11-01T19:30:48.234Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_he_gameplay_r14.mjs:145:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_he_gameplay_r14.mjs:726:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_he_gameplay_r14.mjs:913:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [SOURCE_PROVENANCE_MISMATCH]"
+   ]
   },
   {
    "id": "cs_molly_gameplay_r15",
@@ -498,7 +613,9 @@
    "ms": 451,
    "finishedAt": "2026-11-01T19:30:48.706Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_molly_gameplay_r15.mjs:106:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_molly_gameplay_r15.mjs:777:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_molly_gameplay_r15.mjs:998:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [SOURCE_PROVENANCE_MISMATCH]"
+   ]
   },
   {
    "id": "cs_calibration_readiness_r17",
@@ -506,7 +623,9 @@
    "ms": 73,
    "finishedAt": "2026-11-01T19:30:48.792Z",
    "cls": "preexisting",
-   "text": "    at verifySourceAndEvidence (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_calibration_readiness_r17.mjs:206:3)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_calibration_readiness_r17.mjs:277:26)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_calibration_readiness_r17.mjs:297:3\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_FPS_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_positioning_measurement_r20",
@@ -514,7 +633,9 @@
    "ms": 420,
    "finishedAt": "2026-11-01T19:30:49.230Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_positioning_measurement_r20.mjs:149:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_positioning_measurement_r20.mjs:563:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_positioning_measurement_r20.mjs:634:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Positioning Measurement Completion R20: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_apm_measurement_r21",
@@ -522,7 +643,9 @@
    "ms": 431,
    "finishedAt": "2026-11-01T19:30:49.674Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_apm_measurement_r21.mjs:172:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_apm_measurement_r21.mjs:768:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_apm_measurement_r21.mjs:959:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS APM Measurement / Calibration Readiness R21: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_local_causal_framework_r22",
@@ -530,7 +653,9 @@
    "ms": 79,
    "finishedAt": "2026-11-01T19:30:49.767Z",
    "cls": "preexisting",
-   "text": "    at verifyProvenance (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_local_causal_framework_r22.mjs:144:3)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_local_causal_framework_r22.mjs:342:18)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_local_causal_framework_r22.mjs:364:7\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_courage_measurement_r23",
@@ -538,7 +663,9 @@
    "ms": 440,
    "finishedAt": "2026-11-01T19:30:50.221Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_courage_measurement_r23.mjs:156:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_courage_measurement_r23.mjs:355:93)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_courage_measurement_r23.mjs:382:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Courage Measurement / Calibration Readiness R23: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_accuracy_measurement_r24",
@@ -546,7 +673,9 @@
    "ms": 443,
    "finishedAt": "2026-11-01T19:30:50.682Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_measurement_r24.mjs:161:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_measurement_r24.mjs:704:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_measurement_r24.mjs:964:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Accuracy Measurement / Calibration Readiness R24: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_accuracy_semantics_r25",
@@ -554,7 +683,9 @@
    "ms": 445,
    "finishedAt": "2026-11-01T19:30:51.141Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_semantics_r25.mjs:65:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_semantics_r25.mjs:242:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_accuracy_semantics_r25.mjs:301:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Accuracy Semantic Audit / Minimal Correction R25: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_decision_measurement_r26",
@@ -562,7 +693,9 @@
    "ms": 458,
    "finishedAt": "2026-11-01T19:30:51.612Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_decision_measurement_r26.mjs:151:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_decision_measurement_r26.mjs:425:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_decision_measurement_r26.mjs:532:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Decision Measurement / Calibration Readiness R26: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_decision_semantics_r27",
@@ -570,7 +703,9 @@
    "ms": 445,
    "finishedAt": "2026-11-01T19:30:52.072Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_decision_semantics_r27.mjs:75:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_decision_semantics_r27.mjs:306:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_decision_semantics_r27.mjs:390:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Decision Semantic Audit / Minimal Correction R27: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "cs_focus_measurement_r28",
@@ -578,7 +713,9 @@
    "ms": 435,
    "finishedAt": "2026-11-01T19:30:52.520Z",
    "cls": "preexisting",
-   "text": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_focus_measurement_r28.mjs:152:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_focus_measurement_r28.mjs:426:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_cs_focus_measurement_r28.mjs:535:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   "failureLines": [
+    "CS Focus Measurement / Calibration Readiness R28: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
   },
   {
    "id": "progress25",
@@ -586,7 +723,9 @@
    "ms": 415,
    "finishedAt": "2026-11-01T19:30:52.953Z",
    "cls": "preexisting",
-   "text": "MOBA 失敗      |   80000 |    45 |   23.2\nCS 勝利        |  430000 |   243 |   55.0\nCS 失敗        |   80000 |    19 |   23.4\nMOBA 高表現(b3 carry) XP=71　低表現(b5 support) XP=50　隊均=55.2\nCS   高表現(b2 AWP)   XP=71　低表現(b5 IGL)     XP=45　隊均=55.0\n勝負差距：MOBA 均XP 55.2 vs 23.2　CS 均XP 55.0 vs 23.4"
+   "failureLines": [
+    "❌ 13) 不修改 BattleResult.v2（schema 字串與 players 欄位仍在）"
+   ]
   },
   {
    "id": "experience26",
@@ -608,7 +747,9 @@
    "ms": 351692,
    "finishedAt": "2026-11-01T19:36:54.238Z",
    "cls": "preexisting",
-   "text": "=== 固定比較 seed=4242、戰術 速推流、只改 b3 天賦 ===\nA 無天賦   b3 mods{join 0.041 obj 0.041 retreat 0.003 lane 0.005} │ KDA 3/2/0 撤退 11 團戰 30 目標 88 │ 隊 會戰 14 分推 0 龍爭 5 │ blue 7:7\nB 操作天賦 b3 mods{join 0.044 obj 0.041 retreat 0.011 lane 0.004} │ KDA 3/2/0 撤退 11 團戰 30 目標 88 │ 隊 會戰 14 分推 0 龍爭 5 │ blue 7:7\nC 戰術天賦 b3 mods{join 0.045 obj 0.051 retreat 0.009 lane 0.003} │ KDA 3/0/0 撤退 9 團戰 18 目標 95 │ 隊 會戰 10 分推 0 龍爭 3 │ blue 8:2\nD 團隊天賦 b3 mods{join 0.045 obj 0.046 retreat 0.003 lane 0.005} │ KDA 3/2/0 撤退 11 團戰 30 目標 88 │ 隊 會戰 14 分推 0 龍爭 5 │ blue 7:7\n多 seed 行為差異：B 9/12、C 8/12、D 10/12 seed（Support 8、Jungle 11）"
+   "failureLines": [
+    "❌ 18) Progress 冪等不受影響（同 tx 二次套用 ⇒ alreadyApplied，不重複發獎）"
+   ]
   },
   {
    "id": "growth_p0",
@@ -623,7 +764,9 @@
    "ms": 136906,
    "finishedAt": "2026-11-01T19:39:11.289Z",
    "cls": "preexisting",
-   "text": "✅ 6c) 戰力仍由本場等級導出（既有機制未變）\n── 機制摘要 ──────────────────────────────────────────────────\n   能力 → 本場經驗速率（accuracy/apm/focus/mapAware/learning），限幅 0.94–1.06\n   全 100 分 ⇒ ×1.06｜全 70 分 ⇒ ×1｜全 40 分 ⇒ ×0.94\n   其餘交給引擎既有的 mlv → power/HP 曲線；傷害式一行未動\n19/20 通過"
+   "failureLines": [
+    "❌ 6) 傷害式仍是 `p.power * dt * ...`，沒有夾帶能力係數"
+   ]
   },
   {
    "id": "quality_p03",
@@ -631,7 +774,14 @@
    "ms": 188589,
    "finishedAt": "2026-11-01T19:42:19.901Z",
    "cls": "preexisting",
-   "text": "✅ §4-6e 中性對照組與未注入 baseline **每一場勝負都相同**（沒有新增偏斜）　baseline 藍勝 15/20、對照組藍勝 15/20\n❌ §4-6f 既有陣營偏斜已記錄（技能層 baseline 藍方勝率 < 50%，非 P0-3 造成）　⚠ 技術債：技能層陣營平衡，另案處理\n══ §5 可重現性 ══\n✅ §5a 同 seed ＋ 同能力 ⇒ 逐位元相同（6 seeds）　6/6\n✅ §5b 能力對調 ⇒ 優勢跟著換邊（兩邊都是高能力方領先）　藍高時 +2.86 級　紅高時 +1.9 級\n🔴 P0-3 戰鬥品質層：48/53 通過"
+   "failureLines": [
+    "❌ §2a 傷害式仍是 `p.power * dt * R.dmgK * ...`",
+    "❌ §4-4d 對照組死亡數大致對稱（無系統性偏袒）　死亡 A=8.15 B=4.8　 A=11.35 B=10.1",
+    "❌ §4-5c 等級差距不誇張（≤ 2.5 級）　差 2.75 級",
+    "❌ §4-5d 對照組經濟與等級大致對稱　藍 13.3　紅 12.070000000000002",
+    "❌ §4-6f 既有陣營偏斜已記錄（技能層 baseline 藍方勝率 < 50%，非 P0-3 造成）　⚠ 技術債：技能層陣營平衡，另案處理",
+    "🔴 P0-3 戰鬥品質層：48/53 通過"
+   ]
   },
   {
    "id": "growth_ui_p1",
@@ -639,7 +789,10 @@
    "ms": 1584,
    "finishedAt": "2026-11-01T19:42:21.510Z",
    "cls": "preexisting",
-   "text": "✅ §9d 膠囊不被文字撐破（nowrap 膠囊 ＋ 可換行外層）\n✅ §9e 長文字有省略處理\n✅ §9f 結算面板的選手列可換行\n✅ §9g 結算面板的選手名有寬度上限與省略號\n✅ §9h 名單卡的成長提示列可換行且可收縮\n🔴 P1 成長可視化：79/80 通過"
+   "failureLines": [
+    "❌ §8d S28 傷害式紅線仍然成立",
+    "🔴 P1 成長可視化：79/80 通過"
+   ]
   },
   {
    "id": "regress",
@@ -696,7 +849,9 @@
    "ms": 105,
    "finishedAt": "2026-11-01T19:45:23.085Z",
    "cls": "preexisting",
-   "text": "                                                                                    ^\r\n\r\nTypeError: Cannot read properties of undefined (reading 'id')\r\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-tactical-ai-p2/tools/check_season_state_v2_migration_q7b.mjs:44:85\r\n\r\nNode.js v24.18.0\r"
+   "failureLines": [
+    "TypeError: Cannot read properties of undefined (reading 'id')"
+   ]
   },
   {
    "id": "m2_season_state_v2_sealing",
@@ -718,7 +873,12 @@
    "ms": 222,
    "finishedAt": "2026-11-01T19:45:24.183Z",
    "cls": "preexisting",
-   "text": "  expected: '',\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.18.0\r"
+   "failureLines": [
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+    "+   '   if (!snap.over) throw new Error(\"snapshotToBattleResult: snapshot 尚未終局（over=false）\");\\n' +",
+    "code: 'ERR_ASSERTION',",
+    "'   if (!snap.over) throw new Error(\"snapshotToBattleResult: snapshot 尚未終局（over=false）\");\\n' +"
+   ]
   },
   {
    "id": "hero_presentation_l",
@@ -733,7 +893,12 @@
    "ms": 292235,
    "finishedAt": "2026-11-01T19:50:27.524Z",
    "cls": "preexisting",
-   "text": "21/25 通過\n=== v2（S29A）vs v3（S29B1）· 各 20 seeds（戰術 M1）===\nv1: 5分p50=1 10分p50=6 15分p50=17(p90=24) 20分p50=26 終局p50=30 時長p50=20.4分（最短7.3） 擊殺曲線g3-g5=綠 過早結束下限=紅\nv2: 5分p50=2 10分p50=10 15分p50=14(p90=29) 20分p50=14 終局p50=14 時長p50=13.3分（最短10.8） 擊殺曲線g3-g5=綠 過早結束下限=紅\nv3(混合40): 5分p50=0 10分p50=0 15分p50=4(p90=6) 20分p50=11 終局p50=13 時長p50=20.6分（最短14.7） 擊殺曲線g3-g5=紅 過早結束下限=綠\n⚠ 視覺（3D 低模外觀 / HUD 版面 / 手機實機 FPS）→ 無瀏覽器，未實測（見交付報告）"
+   "failureLines": [
+    "❌ 1) 5/10/15/20 分擊殺分布落在 S29B1 規格（v3 p50：5分0、10分0、15分4、20分11、終局13、時長20.6分）",
+    "❌ 3) 首殺時間分布合理（p10=499s、p50=626s、p90=852s；需 p10≥45、p50∈[90,420]）",
+    "❌ 15) Minimap 與世界座標一致（三個視圖都讀 snapshot.objectives / objectivesMeta / PITS，動態座標 + gameData 出生點同源；無硬編碼副本）",
+    "❌ 25) v3 陣列順序不決定勝負（P0 防線：40 seeds 正序藍勝 18/40、反序 25/40，位移 18pp ≤ 15；兩者皆在 30–70%）"
+   ]
   },
   {
    "id": "presentation29b2",
@@ -748,7 +913,10 @@
    "ms": 15526,
    "finishedAt": "2026-11-01T19:50:49.054Z",
    "cls": "preexisting",
-   "text": "✅    全場觀測：seed 42 完成回城 67 次（需 ≥5）；視覺（aura/badge/傳送閃光）接 state 與 recallEvents\n❌ 16) Minimap 與主場景座標一致（雙方都讀 gameData 常數：FOUNTAIN/PITS/CAMPS/snap.objectives；引擎目標座標 == gameData）\n16/18 通過\n⚠ 未實測（無瀏覽器/真機）：FPS、觸控手勢（上滑/下滑/點英雄/雙擊）、\n  手機 320/360/390/430 視覺、地圖可讀性體感、回城/泉水特效外觀、\n  Debug 快速完成比賽的實際 UI 流程 —— 需 Ray 依人工驗收清單實測"
+   "failureLines": [
+    "❌ 2) complete match 會進入 Result（分塊+途中 snapshot 與自然跑完逐位元同結果：true；終局可建 BattleResult：winner=red）",
+    "❌ 16) Minimap 與主場景座標一致（雙方都讀 gameData 常數：FOUNTAIN/PITS/CAMPS/snap.objectives；引擎目標座標 == gameData）"
+   ]
   },
   {
    "id": "fairness_p0a",
@@ -805,7 +973,10 @@
    "ms": 1344,
    "finishedAt": "2026-11-01T19:54:01.813Z",
    "cls": "needsReading_passedOnBaseline",
-   "text": "✅ §H 拒絕理由明講是版本不符（不是靜默重算）　這場使用 moba-sim.v1 的模擬語意，目前是 moba-sim.v21，不可重播\n✅ §H 目前版本自己可重播\n✅ ChallengeInstance 會記錄 simulationVersion\n✅ 雙方快照版本不一致時拒絕建立 challenge\n✅ 跨版本一律拒絕重播（不做相容性推測）\nsimulationVersion Gate：82/83 FAIL"
+   "failureLines": [
+    "❌ 語意指紋與目前版本登記的一致　登記 0578fa882d74b205 ≠ 實際 0cc52b48cfb9348a",
+    "simulationVersion Gate：82/83 FAIL"
+   ]
   },
   {
    "id": "live_setup_3a",
@@ -834,7 +1005,10 @@
    "ms": 13890,
    "finishedAt": "2026-11-01T19:58:47.949Z",
    "cls": "needsReading_newSegment",
-   "text": "✅ N3h 舊格式結果表（有 engineHash、沒有 loadedFiles）⇒ 過期，原因是 \"fixture predates dependency-based staleness; re-run --measure\"（沒有讓舊表通過的相容路徑）\n✅ N4 少一列 ⇒ 被抓到\n✅ N5 改掉事前登記的方向 ⇒ 被抓到\n✅ N6 一個選擇完全沒效果（配對全相等）但沒進排除表 ⇒ 被抓到\n✅ N7 排除表多一筆沒有量測支持的（拿一個通過的選擇冒充被排除）⇒ 被抓到\nTactic Truth 3a：33/34 FAIL"
+   "failureLines": [
+    "❌ T2 結果表沒有過期：模擬版本、Registry live 列、對照表、解析結果、模板版本、量測程式的雜湊相同；記錄的載入檔都在且內容相同；探針沒載入新檔案　過期：loaded file changed src/battle/moba/matchAssembler.js；loaded file changed src/platform/contracts/matchRuleset.js；loaded file changed src/platform/tactics/tacticTemplates.js",
+    "Tactic Truth 3a：33/34 FAIL"
+   ]
   },
   {
    "id": "tactic_indicators_3a",
@@ -884,7 +1058,49 @@
    "ms": 269245,
    "finishedAt": "2026-11-01T20:03:54.709Z",
    "cls": "needsReading_newSegment",
-   "text": "  104/109 bind-red:red-mid_jungle_sync:s23 256s\n  105/109 bind-red:red-mid_jungle_sync:s7 258s\n  106/109 bind-red:red-std_mid.split:s29 261s\n  107/109 bind-red:red-std_mid.split:s11 263s\n  108/109 bind-red:both-bot_duo_vs_top_split:s3 266s\n  109/109 bind-red:both-bot_duo_vs_top_split:s19 268s"
+   "failureLines": [
+    "❌ C bind-template:v2.three_lane_pressure:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.three_lane_pressure:s19: digest 1222.5:blue:33:4:42740:28328 -> 1219.0:blue:22:10:37381:31333; streamHash 20545148 -> 49baa434; resultHash 1d77b52d -> aac0b32d; configure calls differ at #8",
+    "❌ C bind-template:v2.three_lane_pressure:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.three_lane_pressure:s3: digest 1340.5:red:11:20:33452:39444 -> 892.0:red:7:6:23674:25538; streamHash 2dc7af62 -> ff574f1a; resultHash cd068089 -> 0cef3214; configure calls differ at #8",
+    "❌ C bind-template:v2.jungle_invasion:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.jungle_invasion:s23: digest 1355.0:blue:21:17:38744:35919 -> 932.5:red:8:10:24997:27347; streamHash ecdb59fd -> 7906e169; resultHash d304585f -> 5825423d; configure calls differ at #8",
+    "❌ C bind-template:v2.jungle_invasion:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.jungle_invasion:s7: digest 985.0:blue:9:5:27849:24880 -> 1325.0:red:17:15:34893:36041; streamHash 2483897e -> 1a711400; resultHash 6c4536aa -> 8f7c2456; configure calls differ at #8",
+    "❌ C bind-template:v2.bot_duo_pressure:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.bot_duo_pressure:s29: digest 932.0:red:2:15:22069:30123 -> 1048.0:red:6:19:25065:33497; streamHash e99175d -> 1dc1ee0; resultHash f864affc -> 72a42e84; configure calls differ at #8",
+    "❌ C bind-template:v2.bot_duo_pressure:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.bot_duo_pressure:s11: digest 863.5:red:3:9:21587:26601 -> 1578.5:red:22:31:42832:48321; streamHash 758a97d3 -> 898af023; resultHash 3ec71c83 -> 1909a64a; configure calls differ at #8",
+    "❌ C bind-template:v2.mid_jungle_sync:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_jungle_sync:s3: digest 1293.0:red:14:17:34703:37270 -> 892.0:red:7:6:23674:25538; streamHash cf3d5b42 -> ff574f1a; resultHash 02ff29f6 -> 0cef3214; configure calls differ at #8",
+    "❌ C bind-template:v2.mid_jungle_sync:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_jungle_sync:s19: digest 904.5:red:3:4:21802:24430 -> 1219.0:blue:22:10:37381:31333; streamHash e1780b9c -> 49baa434; resultHash 9203ea11 -> aac0b32d; configure calls differ at #8",
+    "❌ C bind-template:v2.support_roamer:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.support_roamer:s7: digest 910.0:red:5:7:22490:26186 -> 1325.0:red:17:15:34893:36041; streamHash 4da79efd -> 1a711400; resultHash c17676bc -> 8f7c2456; configure calls differ at #8",
+    "❌ C bind-template:v2.support_roamer:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.support_roamer:s23: digest 1003.0:blue:7:7:27984:25616 -> 932.5:red:8:10:24997:27347; streamHash 3354a75 -> 7906e169; resultHash 0ccf9983 -> 5825423d; configure calls differ at #8",
+    "❌ C bind-template:v2.dragon_pit_macro:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.dragon_pit_macro:s11: digest 1409.5:blue:28:14:44108:37260 -> 1578.5:red:22:31:42832:48321; streamHash eafd66cc -> 898af023; resultHash 9e4b03f2 -> 1909a64a; configure calls differ at #8",
+    "❌ C bind-template:v2.dragon_pit_macro:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.dragon_pit_macro:s29: digest 876.0:red:3:8:20204:26255 -> 1048.0:red:6:19:25065:33497; streamHash 4c957f9a -> 1dc1ee0; resultHash fd923a0a -> 72a42e84; configure calls differ at #8",
+    "❌ C bind-template:v2.top_solo_split:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.top_solo_split:s19: digest 859.0:blue:5:5:22646:24025 -> 1219.0:blue:22:10:37381:31333; streamHash f8859c96 -> 49baa434; resultHash 012f86b2 -> aac0b32d; configure calls differ at #8",
+    "❌ C bind-template:v2.top_solo_split:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.top_solo_split:s3: digest 1196.5:red:5:17:27743:37194 -> 892.0:red:7:6:23674:25538; streamHash 3cffc33f -> ff574f1a; resultHash bf162dcd -> 0cef3214; configure calls differ at #8",
+    "❌ C bind-template:v2.mid_solo_split:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_solo_split:s23: digest 879.0:red:7:7:25003:23942 -> 932.5:red:8:10:24997:27347; streamHash 8e81d954 -> 7906e169; resultHash bb6158c7 -> 5825423d; configure calls differ at #8",
+    "❌ C bind-template:v2.mid_solo_split:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_solo_split:s7: digest 866.0:red:9:5:22583:23936 -> 1325.0:red:17:15:34893:36041; streamHash 646b83eb -> 1a711400; resultHash 332932d8 -> 8f7c2456; configure calls differ at #8",
+    "❌ C bind-template:v2.hard_engage_stack:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.hard_engage_stack:s29: digest 994.5:red:2:11:23391:29637 -> 1048.0:red:6:19:25065:33497; streamHash d8e27945 -> 1dc1ee0; resultHash 78772264 -> 72a42e84; configure calls differ at #8",
+    "❌ C bind-template:v2.hard_engage_stack:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.hard_engage_stack:s11: digest 1375.0:red:16:23:35336:40667 -> 1578.5:red:22:31:42832:48321; streamHash 5b9a88d0 -> 898af023; resultHash 6b46286e -> 1909a64a; configure calls differ at #8",
+    "❌ C bind-template:v2.protect_core_scaling:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.protect_core_scaling:s3: digest 809.5:red:2:3:19400:22536 -> 892.0:red:7:6:23674:25538; streamHash 76773f3e -> ff574f1a; resultHash 5f72f8ef -> 0cef3214; configure calls differ at #8",
+    "❌ C bind-template:v2.protect_core_scaling:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.protect_core_scaling:s19: digest 996.5:blue:12:8:28985:26702 -> 1219.0:blue:22:10:37381:31333; streamHash ae48ee47 -> 49baa434; resultHash e2fbdced -> aac0b32d; configure calls differ at #8",
+    "❌ C bind-template:v2.standard_macro:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.standard_macro:s7: digest 917.0:red:10:2:25380:23800 -> 1325.0:red:17:15:34893:36041; streamHash a723af8 -> 1a711400; resultHash 554c7ba6 -> 8f7c2456; configure calls differ at #8",
+    "❌ C bind-template:v2.standard_macro:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.standard_macro:s23: digest 985.0:blue:12:2:30061:22677 -> 932.5:red:8:10:24997:27347; streamHash 8aa9e4e8 -> 7906e169; resultHash 626107c8 -> 5825423d; configure calls differ at #8",
+    "❌ C bind-template:v2.defensive_hold:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.defensive_hold:s11: digest 1462.5:blue:22:17:42553:40437 -> 1578.5:red:22:31:42832:48321; streamHash b59b9403 -> 898af023; resultHash 018ef58d -> 1909a64a; configure calls differ at #8",
+    "❌ C bind-template:v2.defensive_hold:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.defensive_hold:s29: digest 907.5:red:0:16:22093:29708 -> 1048.0:red:6:19:25065:33497; streamHash 7b5e818b -> 1dc1ee0; resultHash 15a27469 -> 72a42e84; configure calls differ at #8",
+    "❌ C bind-choice:jungle.focus=farm:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=farm:s3: configure calls differ at #8",
+    "❌ C bind-choice:jungle.focus=farm:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=farm:s19: digest 904.0:red:11:2:26129:24035 -> 1219.0:blue:22:10:37381:31333; streamHash fcb7073d -> 49baa434; resultHash fe5de597 -> aac0b32d; configure calls differ at #8",
+    "❌ C bind-choice:jungle.focus=invade:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=invade:s7: configure calls differ at #8",
+    "❌ C bind-choice:jungle.focus=invade:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=invade:s23: configure calls differ at #8",
+    "❌ C bind-choice:lanes.mid.stance=split:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:lanes.mid.stance=split:s11: digest 892.5:blue:4:7:24645:24927 -> 1578.5:red:22:31:42832:48321; streamHash d7a07f5c -> 898af023; resultHash 2d90c994 -> 1909a64a; configure calls differ at #8",
+    "❌ C bind-choice:lanes.mid.stance=split:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:lanes.mid.stance=split:s29: digest 942.5:red:2:14:21460:30248 -> 1048.0:red:6:19:25065:33497; streamHash fda1bcb2 -> 1dc1ee0; resultHash 8e1d3db1 -> 72a42e84; configure calls differ at #8",
+    "❌ C bind-choice:seats.b5.mission=roam:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=roam:s19: configure calls differ at #8",
+    "❌ C bind-choice:seats.b5.mission=roam:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=roam:s3: digest 818.0:red:3:3:20639:22752 -> 892.0:red:7:6:23674:25538; streamHash 4cbb6c75 -> ff574f1a; resultHash e7b720b2 -> 0cef3214; configure calls differ at #8",
+    "❌ C bind-choice:seats.b5.mission=protect:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=protect:s23: digest 932.5:red:8:11:24922:27699 -> 932.5:red:8:10:24997:27347; streamHash 6fabc230 -> 7906e169; resultHash a3f4ddce -> 5825423d; configure calls differ at #8",
+    "❌ C bind-choice:seats.b5.mission=protect:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=protect:s7: configure calls differ at #8",
+    "❌ C bind-choice:teamfight.posture=passive:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=passive:s29: digest 997.5:blue:3:10:24324:28438 -> 1048.0:red:6:19:25065:33497; streamHash 807af700 -> 1dc1ee0; resultHash 67aeeb1f -> 72a42e84; configure calls differ at #8",
+    "❌ C bind-choice:teamfight.posture=passive:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=passive:s11: digest 1389.5:red:10:27:34766:42495 -> 1578.5:red:22:31:42832:48321; streamHash 3a1dfbf1 -> 898af023; resultHash 5df4871e -> 1909a64a; configure calls differ at #8",
+    "❌ C bind-choice:teamfight.posture=aggressive:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=aggressive:s3: digest 1139.5:red:7:15:28754:34308 -> 892.0:red:7:6:23674:25538; streamHash 8f488b9b -> ff574f1a; resultHash e828f329 -> 0cef3214; configure calls differ at #8",
+    "❌ C bind-choice:teamfight.posture=aggressive:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=aggressive:s19: digest 1014.0:red:11:12:26736:30103 -> 1219.0:blue:22:10:37381:31333; streamHash 913459be -> 49baa434; resultHash 2f9864df -> aac0b32d; configure calls differ at #8",
+    "❌ C bind-choice:objectives.tower=high:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:objectives.tower=high:s7: digest 1439.5:blue:14:21:36900:40369 -> 1325.0:red:17:15:34893:36041; streamHash 7eea3494 -> 1a711400; resultHash 9120cae3 -> 8f7c2456; configure calls differ at #8",
+    "❌ C bind-choice:objectives.tower=high:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:objectives.tower=high:s23: digest 824.0:blue:0:7:21031:23984 -> 932.5:red:8:10:24997:27347; streamHash d4361602 -> 7906e169; resultHash 4a852919 -> 5825423d; configure calls differ at #8",
+    "Match Golden v21-A：97/137 FAIL"
+   ]
   },
   {
    "id": "tactical_director_3c",
