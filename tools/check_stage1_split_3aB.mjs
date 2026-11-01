@@ -15,7 +15,7 @@
 //    S10 存檔：tacticBook 仍是雲端切片；帶修正表模板與 v21 選擇的計畫讀回原樣
 //    S11 畫面＝引擎：m3／m7／m8 在出貨版與 v21.b1 下，畫面上每個維度的值＝解析後的引擎設定；提供的非預設選項都不是空轉
 //    S12 名稱：career.v21 下 m7 的賽果／重播名稱是「前期野區入侵」；v20 不變
-//    S13 排除表：目前每一列都不帶 templateBalance（兩種設定下都生效，保守）；查表條件含 templateBalance
+//    S13a–e 排除表：P6 判定過的列只在出貨版生效、修正表下的列在 BALANCE_EXCLUSIONS（與結果檔逐欄相同）；出貨版提供清單逐位元不變；查表條件含 templateBalance
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
@@ -28,15 +28,15 @@ import { TACTIC_TEMPLATE_LIST, templateById, TEMPLATE_BALANCE, TEMPLATE_BALANCE_
 import { stableStringify } from "../src/platform/contracts/squadSnapshot.js";
 import { resolveTactic, resolveTacticBinding, bindTacticPlanToCurrentVersions } from "../src/battle/moba/tactics/tacticResolver.js";
 import { createTacticPlan } from "../src/platform/tactics/tacticPlan.js";
-import { choiceEngineFor, leavesOf, nestedOf } from "../src/platform/tactics/tacticChoiceMapping.js";
+import { choiceEngineFor, leavesOf, nestedOf, WIN_CONDITION_PRESETS } from "../src/platform/tactics/tacticChoiceMapping.js";
 import { buildLiveMatchSetup, resolveLiveRuleset, balancedLegacyTactic, v20TacticForBinding, liveTacticDisplayOf } from "../src/battle/moba/liveMatchSetup.js";
 import { mobaResultToTransaction } from "../src/platform/progress/adapters/mobaProgressAdapter.js";
 import { snapshotToBattleResult } from "../src/battle/battleResult.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
 import { STYLE_TEMPLATES, aiCoachSummary } from "../src/platform/tactics/aiCoach.js";
 import { contradictions, effectiveChoices } from "../src/platform/tactics/tacticIndicators.js";
-import { templateGroups, tacticBookView, opponentIntelOf } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
-import { MEASURED_EXCLUSIONS, REPLICATION_WITHHELD, measuredExclusion, replicationWithheld } from "../src/platform/tactics/capabilityRegistry.js";
+import { templateGroups, tacticBookView, opponentIntelOf, offeredChoicesOnly, keptUnofferedChoices } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
+import { MEASURED_EXCLUSIONS, BALANCE_EXCLUSIONS, REPLICATION_WITHHELD, liveRows, measuredExclusion, replicationWithheld } from "../src/platform/tactics/capabilityRegistry.js";
 import { applyVariant, variantById, variantsOfBaseTactic } from "../src/platform/mastery/tacticVariant.js";
 import { normalizeTacticBook, addTacticPlan } from "../src/platform/tactics/tacticBook.js";
 import { stripComments } from "./lib/stripComments.mjs";
@@ -317,18 +317,81 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
     asmSrc.includes('templateBalance && typeof resolved.blue?.tacticName === "string" ? resolved.blue.tacticName : blueCfg?.name') && p21.ok && p21.applied.tacticMeta?.tacticName === OWNER_M7_COPY.name && p21.applied.replayConfig?.tacticName === OWNER_M7_COPY.name
     && p20.ok && p20.applied.replayConfig?.tacticName === "前期壓制" && p20l.ok && p20l.applied.tacticMeta?.tacticName === "前期壓制", J([p21.applied?.tacticMeta?.tacticName, p20.applied?.replayConfig?.tacticName]));
 }
+//  修正表下的勝利條件（展開＋提供清單，21 模板）：審查指出登記的「套用後要釘住」只釘了出貨版。套用前後逐格相同（0 格改變），雜湊在 a3e3fa73 的傾印上算。
+const TABLE_WC_HASH = "9c766baa4750461c";
+const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
 // ── S13 排除表 ───────────────────────────────────────────────────────────────
 {
-  const keyed = [...MEASURED_EXCLUSIONS, ...REPLICATION_WITHHELD].filter((x) => "templateBalance" in x).length;
-  const diff = MEASURED_EXCLUSIONS.filter((x) => measuredExclusion(x.template === "*" ? "classic.m7" : x.template, x.dimension, x.choice, x.scope ?? null, TB) !== measuredExclusion(x.template === "*" ? "classic.m7" : x.template, x.dimension, x.choice, x.scope ?? null, null)).length;
-  //  行為測試（植入的列）：帶 templateBalance 的列只在那張表下生效；不帶的列兩種設定下都生效（量測排除與複驗撤下同一條規則）。
-  const rowsM = [{ template: "classic.m7", dimension: "lanes.top.stance", choice: "aggressive", templateBalance: TB }, { template: "classic.m7", dimension: "jungle.tempo", choice: "slow" }];
+  //  登記：stage1_release_registration_3aB.json 的 ownerReview20261101.exclusionApplication（S13 依設計會紅 ⇒ S13a–d 取代）。
+  const P6_1 = JSON.parse(read("tools/fixtures/exclusion_v21b1_result_3aB.json")).rows, P6_2 = JSON.parse(read("tools/fixtures/exclusion_v21b1_stage2_result_3aB.json")).rows;
+  const stage2Of = (r) => P6_2.find((x) => x.template === r.template && x.dimension === r.dimension && x.choice === r.choice);
+  const offeredByStudy = (r) => r.verdict === "pass" || (r.verdict === "marginal" && stage2Of(r)?.verdict === "confirmed");
+  const key = (x) => `${x.template}|${x.dimension}|${x.choice}`;
+  //  S13a：帶 null 的列＝這個研究選到的既有列（A_keyed_row），不多不少；REPLICATION_WITHHELD 一列都不帶。
+  const nullRows = MEASURED_EXCLUSIONS.filter((x) => x.templateBalance === null).map(key).sort();
+  const keyedInStudy = P6_1.filter((r) => r.reasons.includes("A_keyed_row")).map(key).sort();
+  const otherKeyed = MEASURED_EXCLUSIONS.filter((x) => "templateBalance" in x && x.templateBalance !== null).length + REPLICATION_WITHHELD.filter((x) => "templateBalance" in x).length;
+  ck("S13a 排除表：帶 templateBalance:null 的既有列＝P6 重新判定過的列（4 列），其他列與 REPLICATION_WITHHELD 都不帶",
+    J(nullRows) === J(keyedInStudy) && nullRows.length === 4 && otherKeyed === 0, J({ nullRows, keyedInStudy, otherKeyed }));
+  //  S13b：BALANCE_EXCLUSIONS＝兩份結果檔推出來的列（逐欄）；每一列結果在 v21.b1／core.v1 下的提供與否都照判定。
+  const reasonOf = (r) => r.verdict === "marginal" ? "not_replicated" : r.verdict === "no_effect" ? "no_measured_effect" : r.verdict === "reversed" ? "reversed_effect" : "unmeasurable";
+  const derived = P6_1.filter((r) => !offeredByStudy(r)).map((r) => {
+    const base = { template: r.template, dimension: r.dimension, choice: r.choice, reason: reasonOf(r) };
+    if (r.verdict === "marginal") { const s = stage2Of(r), pick = (a) => ({ n: a.n, rel: a.rel, z: a.z }); return { ...base, verdict: s.verdict, metric: s.metric, blue: pick(s.blue), red: pick(s.red), templateBalance: TB }; }
+    return { ...base, metric: r.metric ?? null, n: r.n, z: r.z ?? null, templateBalance: TB };
+  });
+  const canon = (rows) => rows.map((x) => stableStringify(x)).sort();
+  const eng = choiceEngineFor(TB), wrong = [];
+  for (const r of P6_1) {
+    const d = eng.offeredDetail(r.template, r.dimension, [], {}, { tacticalDirector: "core.v1" });
+    const on = d.offered.includes(r.choice);
+    if (on !== offeredByStudy(r)) wrong.push(`${key(r)} offered=${on}`);
+  }
+  ck(`S13b 排除表：BALANCE_EXCLUSIONS＝兩份 P6 結果檔逐欄推出的 ${derived.length} 列；P6 ${P6_1.length} 列在 v21.b1／core.v1 下提供與否都照判定`,
+    J(canon(BALANCE_EXCLUSIONS)) === J(canon(derived)) && !wrong.length && BALANCE_EXCLUSIONS.every((x) => x.templateBalance === TB), J({ wrong, table: canon(BALANCE_EXCLUSIONS), derived: canon(derived) }));
+  //  S13c：出貨版（沒有修正表）每個模板×每個 live 維度×三種模式的提供清單與勝利條件展開，與套用排除列之前（a3e3fa73 上算的）逐位元相同。
+  const shipped = {}, e0 = choiceEngineFor(null);
+  for (const mode of ["static", "core.v1", null]) for (const t of TACTIC_TEMPLATE_LIST) {
+    for (const row of liveRows()) { const d = e0.offeredDetail(t.templateId, row.dimension, [], {}, mode ? { tacticalDirector: mode } : {}); shipped[`offer|null|${mode}|${t.templateId}|${row.dimension}`] = d ? { offered: d.offered, own: d.own, withheld: d.withheld } : null; }
+    if (mode === "core.v1") for (const wc of Object.keys(WIN_CONDITION_PRESETS)) { const f = e0.winConditionFill(t.templateId, [], { winCondition: wc }); shipped[`fill|null|${t.templateId}|${wc}`] = { filled: f.filled, skipped: f.skipped }; }
+  }
+  const shippedHash = createHash("sha256").update(stableStringify(shipped)).digest("hex").slice(0, 16);
+  ck(`S13c 排除表：出貨版 ${Object.keys(shipped).length} 格提供清單與勝利條件展開，與套用排除列之前逐位元相同（${SHIPPED_OFFERS_HASH}）`, shippedHash === SHIPPED_OFFERS_HASH, shippedHash);
+  //  S13c2：v21.b1 下每個模板的勝利條件展開與提供清單（玩家戰術書與引擎共用），之後任何改動都要看得見地改這個雜湊。
+  const tableWc = {}, eT = choiceEngineFor(TB);
+  for (const t of TACTIC_TEMPLATE_LIST) {
+    const d = eT.offeredDetail(t.templateId, "winCondition", [], {}, { tacticalDirector: "core.v1" });
+    tableWc[`offer|v21.b1|core.v1|${t.templateId}|winCondition`] = d ? { offered: d.offered, own: d.own, withheld: d.withheld } : null;
+    for (const wc of Object.keys(WIN_CONDITION_PRESETS)) { const f = eT.winConditionFill(t.templateId, [], { winCondition: wc }); tableWc[`fill|v21.b1|${t.templateId}|${wc}`] = { filled: f.filled, skipped: f.skipped }; }
+  }
+  const tableWcHash = createHash("sha256").update(stableStringify(tableWc)).digest("hex").slice(0, 16);
+  ck(`S13c2 排除表：v21.b1 下 ${Object.keys(tableWc).length} 格勝利條件展開與提供清單，與套用排除列之前逐位元相同（${TABLE_WC_HASH}）`, tableWcHash === TABLE_WC_HASH, tableWcHash);
+  //  S13d：行為（植入的列）：帶 templateBalance 的只在那個設定下生效（含 null）；不帶的兩種設定都生效（量測排除與複驗撤下同一條規則）。
+  const rowsM = [{ template: "classic.m7", dimension: "lanes.top.stance", choice: "aggressive", templateBalance: TB }, { template: "classic.m7", dimension: "jungle.tempo", choice: "slow" }, { template: "classic.m7", dimension: "risk.tolerance", choice: "bold", templateBalance: null }];
   const rowsR = [{ template: "*", dimension: "teamfight.posture", choice: "passive", reason: "not_replicated", templateBalance: TB }];
   const behave = !!measuredExclusion("classic.m7", "lanes.top.stance", "aggressive", null, TB, rowsM) && measuredExclusion("classic.m7", "lanes.top.stance", "aggressive", null, null, rowsM) === null
     && !!measuredExclusion("classic.m7", "jungle.tempo", "slow", null, TB, rowsM) && !!measuredExclusion("classic.m7", "jungle.tempo", "slow", null, null, rowsM)
-    && !!replicationWithheld("classic.m3", "teamfight.posture", "passive", TB, rowsR) && replicationWithheld("classic.m3", "teamfight.posture", "passive", null, rowsR) === null;
-  ck("S13 排除表：目前每一列都不帶 templateBalance（兩種設定下照舊生效，保守撤下直到凍結前重新判定）；植入的列實測：帶 templateBalance 的只在那張表下生效、不帶的兩種設定都生效",
-    keyed === 0 && diff === 0 && behave);
+    && measuredExclusion("classic.m7", "risk.tolerance", "bold", null, TB, rowsM) === null && !!measuredExclusion("classic.m7", "risk.tolerance", "bold", null, null, rowsM)
+    && !!replicationWithheld("classic.m3", "teamfight.posture", "passive", TB, rowsR) && replicationWithheld("classic.m3", "teamfight.posture", "passive", null, rowsR) === null
+    //  查表預設走兩張表：m3 團戰姿態只在 v21.b1 下被撤、推塔高只在出貨版下被撤。
+    && !!measuredExclusion("classic.m3", "teamfight.posture", "passive", null, TB) && measuredExclusion("classic.m3", "teamfight.posture", "passive", null, null) === null
+    && measuredExclusion("classic.m3", "objectives.tower", "high", null, TB) === null && !!measuredExclusion("classic.m3", "objectives.tower", "high", null, null);
+  ck("S13d 排除表：植入的列與實際的列都實測：帶 templateBalance 的只在那個設定下生效（含 null）、不帶的兩種設定都生效", behave);
+  //  S13e：撤下不會弄壞存檔：帶著已撤選項的計畫仍可解析（恢復比賽沿用開局設定）、畫面不列出、載入時拿掉、恢復時說明；出貨版同一份計畫不受影響。
+  const savedM3 = { teamfight: { posture: "passive" } }, savedB = bind("classic.m3", savedM3);
+  const savedR = resolveTactic({ kind: "binding", binding: savedB }, {}, { phases: true, templateBalance: TB });
+  const savedV = tacticBookView({ templateId: "classic.m3", choices: savedM3, tacticalDirector: "core.v1", templateBalance: TB });
+  const dropped = offeredChoicesOnly("classic.m3", [], savedM3, { tacticalDirector: "core.v1", templateBalance: TB });
+  const kept = keptUnofferedChoices(savedB, "core.v1", TB), kept0 = keptUnofferedChoices(savedB, "core.v1", null);
+  //  矛盾提示靠畫面先過 offeredChoicesOnly 才不會講沒量過的效果（審查 minor 5）：照畫面的順序跑一次，釘住這個順序。
+  const contraSaved = { teamfight: { posture: "passive" }, objectives: { tower: "high" } };
+  const screenChoices = offeredChoicesOnly("classic.m3", [], contraSaved, { tacticalDirector: "core.v1", templateBalance: TB }).choices;
+  const contraView = tacticBookView({ templateId: "classic.m3", choices: screenChoices, tacticalDirector: "core.v1", templateBalance: TB });
+  ck("S13e2 排除表：m3 存檔帶團戰保守＋推塔高，照畫面的順序（先 offeredChoicesOnly 再 tacticBookView）沒有矛盾提示；推塔高留著、姿態被拿掉",
+    contraView.ok && contraView.contradictions.length === 0 && J(screenChoices) === J({ objectives: { tower: "high" } }), J({ screenChoices, c: contraView.contradictions }));
+  ck("S13e 排除表：存檔裡帶 m3 團戰姿態的計畫在 v21.b1 下仍可解析；戰術書不列該維度、載入時拿掉、恢復比賽時標成沿用；出貨版不受影響",
+    savedR?.ok === true && savedV.ok && !savedV.dimensions.some((d) => d.dimension === "teamfight.posture") && J(dropped.dropped) === J([{ dimension: "teamfight.posture", choice: "passive" }])
+    && J(kept) === J([{ dimension: "teamfight.posture", choice: "passive" }]) && kept0.length === 0, J({ ok: savedR?.ok, dropped: dropped.dropped, kept, kept0 }));
 }
 
 // ── S14 矛盾提示＝引擎（實作審查 M1） ─────────────────────────────────────────

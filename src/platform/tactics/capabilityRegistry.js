@@ -385,6 +385,8 @@ export const liveCapabilities = (simVersion = CAPABILITY_SIM_VERSION_3A) => live
 //  scope（Phase 3a-C，Owner 2026-10-23 跨版本證據隔離）：省略＝所有規則集；"static"＝只在 Director static（v20 類規則集）生效——
 //  v20 的真實性列（balanceTool.v20 量的）失敗、但同一選擇被 v21 的 n=400 複驗取代時，v21 證據只能開放到 v21，v20 照 v20 證據不提供。
 const ex = (template, dimension, choice, reason, metric, n, z, scope) => ({ template, dimension, choice, reason, metric, n, z, ...(scope ? { scope } : {}) });
+//  Phase 3a-B 第一階段 P6：出貨版量到的列，模板修正表下已由新 seeds 重新判定（tools/fixtures/exclusion_v21b1_result_3aB.json）⇒ 只在沒有修正表時生效。
+const exShipped = (...args) => ({ ...ex(...args), templateBalance: null });
 export const MEASURED_EXCLUSIONS = deepFreeze([
   //  時期姿態 8 列（fightEntriesPerMin.<p>，n=40）已由 n=400 紅藍複驗取代（REPLICATION_CONFIRMED／REPLICATION_WITHHELD；Phase 3a-C3-2 收尾）；
   //  舊列與舊結果表保留在 git 歷史（commit 0efb759 的 tools/fixtures/tactic_truth_3a.json），不刪不改證據本身。
@@ -417,13 +419,13 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("*", "objectives.baron", "low", "no_measured_effect", "objectiveFightEntriesPerMin.baron", 40, -0.88),
   ex("*", "objectives.baron", "high", "reversed_effect", "objectiveFightEntriesPerMin.baron", 40, -2.03),
   ex("*", "objectives.tower", "low", "no_measured_effect", "siegeWindowsPerMin", 40, 0.87),
-  ex("classic.m3", "objectives.tower", "high", "no_measured_effect", "siegeWindowsPerMin", 40, 1.97),
+  exShipped("classic.m3", "objectives.tower", "high", "no_measured_effect", "siegeWindowsPerMin", 40, 1.97),
   //  Phase 3a-C3-3／C4 每時期型（2026-10-23 真實性表重測，balanceTool.v21，n=40）：n=400 複驗只涵蓋 std ⇒ 弱點模板由 n=40 列決定，只對該模板不提供。
-  ex("classic.m8", "phases.mid.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.mid", 40, 0.7),
-  ex("classic.m8", "phases.late.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.late", 27, 1.13),
+  exShipped("classic.m8", "phases.mid.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.mid", 40, 0.7),
+  exShipped("classic.m8", "phases.late.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.late", 27, 1.13),
   ex("classic.m2", "phases.early.objectiveOrder", "dragon", "no_measured_effect", "contestShare.dragon.early", 40, 1.78),
   ex("classic.m2", "phases.mid.objectiveOrder", "dragon", "no_measured_effect", "contestShare.dragon.mid", 40, 1.75),
-  ex("classic.m8", "phases.mid.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.mid", 40, 0),
+  exShipped("classic.m8", "phases.mid.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.mid", 40, 0),
   ex("classic.m2", "phases.mid.objectiveOrder", "towers", "no_measured_effect", "siegeWindowsPerMin.mid", 40, 1.11),
   ex("classic.m2", "phases.late.objectiveOrder", "dragon", "no_measured_effect", "contestShare.dragon.late", 27, 0.57),
   ex("classic.m8", "phases.late.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.late", 22, 0),
@@ -438,13 +440,28 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
   ex("v2.mid_solo_split", "winCondition", "midSplitPressure", "no_measured_effect", "seatFightEntriesPerMin.b3.mid+late", 40, 1.24),
 ]);
 /**
+ * 模板修正表下才生效的排除列（Phase 3a-B 第一階段 P6）。**獨立於 MEASURED_EXCLUSIONS**：那張表必須與真實性結果表逐筆相同（check_tactic_truth_3a T9），
+ * 這張表由 tools/fixtures/exclusion_v21b1_result_3aB.json（seeds 65001–65100）與 exclusion_v21b1_stage2_result_3aB.json（seeds 65501–65900，紅藍）推出，
+ * tools/check_stage1_split_3aB.mjs S13b 逐列比對。凍結前的開發期量測：正式效力要等凍結後的確認（正式驗收 step 4b）。
+ * m3 的團戰姿態：修正後的數值不落在任何選項上，沒有事前登記的指標可以量 ⇒ reason unmeasurable、n 0；不臨時發明指標。
+ */
+export const BALANCE_EXCLUSIONS = deepFreeze([
+  { ...ex("classic.m3", "teamfight.posture", "passive", "unmeasurable", null, 0, null), templateBalance: "v21.b1" },
+  { ...ex("classic.m3", "teamfight.posture", "standard", "unmeasurable", null, 0, null), templateBalance: "v21.b1" },
+  { ...ex("classic.m3", "teamfight.posture", "aggressive", "unmeasurable", null, 0, null), templateBalance: "v21.b1" },
+  { ...ex("classic.m8", "phases.late.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.late", 70, 0.87288), templateBalance: "v21.b1" },
+  { ...ex("classic.m8", "phases.mid.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.mid", 100, -0.376339), templateBalance: "v21.b1" },
+  { template: "classic.m8", dimension: "phases.mid.grouping", choice: "group", reason: "not_replicated", verdict: "not_replicated", metric: "joinGoGeneralStartsPerMin.mid", blue: { n: 400, rel: 0.042536, z: 2.193149 }, red: { n: 400, rel: 0.072589, z: 3.560399 }, templateBalance: "v21.b1" },
+]);
+const EXCLUSION_ROWS = Object.freeze([...MEASURED_EXCLUSIONS, ...BALANCE_EXCLUSIONS]);
+/**
  * 這個（模板, 維度, 選擇）被量測排除嗎？回傳該列或 null。
  * mode＝目前規則集的 Director 模式（"static"＝v20 類、"core.v1"＝v21）：帶 scope 的列只在同一個模式生效。
  * 省略 mode ⇒ 只看不分模式的列（計畫本身與規則集無關：與 Registry requires 相同，計畫可以存，本場／畫面再依模式過濾）。
  */
-//  Phase 3a-B 第一階段（審查第 2 輪 M4）：列可帶 templateBalance（模板修正表 id）⇒ 只在那張表下生效；不帶的列（目前全部）任何設定下都生效，
-//  所以出貨版 m3／m7／m8 上量到的排除在 v21.b1 下照舊保守撤下，直到凍結前以新 seeds 重新判定。templateBalance 省略 ≡ 出貨版（null）。
-export const measuredExclusion = (template, dimension, choice, mode = null, templateBalance = null, rows = MEASURED_EXCLUSIONS) =>
+//  Phase 3a-B 第一階段（審查第 2 輪 M4）：列可帶 templateBalance（模板修正表 id；null＝只在沒有修正表時）⇒ 只在那個設定下生效；不帶的列任何設定下都生效。
+//  templateBalance 省略 ≡ 出貨版（null）。
+export const measuredExclusion = (template, dimension, choice, mode = null, templateBalance = null, rows = EXCLUSION_ROWS) =>
   rows.find((x) => x.dimension === dimension && x.choice === choice && (x.template === "*" || x.template === template)
     && (x.scope === undefined || x.scope === mode) && (x.templateBalance === undefined || x.templateBalance === templateBalance)) ?? null;
 

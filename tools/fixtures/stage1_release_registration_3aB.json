@@ -242,7 +242,40 @@
           "check_tactic_indicators_3a 59/59"
         ],
         "unknownInAdvance": "check_tactic_resolver_3a XP1 (table-only counts) and browser_check_tactic_book_v21 may touch rows; anything red that is not listed here is logged in predictionOutcome with discoveredAfter"
-      }
+      },
+      "applied": {
+        "at": "2026-11-02, on top of a3e3fa73",
+        "rows": "exShipped (templateBalance null): m3 objectives.tower=high, m8 phases.mid.grouping=group, m8 phases.late.grouping=group, m8 phases.mid.objectiveOrder=baron. BALANCE_EXCLUSIONS (v21.b1): m3 teamfight.posture passive / standard / aggressive (unmeasurable, n 0), m8 phases.late.grouping=group (no_measured_effect, n 70, z 0.87288), m8 phases.mid.objectiveOrder=baron (no_measured_effect, n 100, z -0.376339), m8 phases.mid.grouping=group (not_replicated; n, rel and z per side as in REPLICATION_WITHHELD, not one top-level n and z: a literal deviation from the wording of the application rule, pinned by S13b)",
+        "playerVisibleUnderTable": "exactly two: classic.m3 teamfight.posture loses all three options (the dimension is no longer drawn), classic.m3 objectives.tower gains high. classic.m7 and classic.m8 offers do not change, because their keyed rows withheld those choices before too",
+        "winConditionExpansions": "none change on any template: 84 cells under v21.b1 (63 fills, 21 offer lists) identical before and after, pinned by S13c2",
+        "shippedConfig": "1827 cells identical before and after, pinned by S13c"
+      },
+      "outcome": [
+        {
+          "discoveredAfter": false,
+          "what": "S13 replaced by S13a-d as registered. Every gate listed under predictions.unchanged matched: check_match_setup_3a 153/153, challenge golden 6/6, challenge setup 65/65, registry 35/35, replication 53/53, book view 25/25, evidence scope 7/7, resolver 139/139, indicators 59/59; truth 33/34, T2 only"
+        },
+        {
+          "discoveredAfter": false,
+          "what": "unknownInAdvance: check_tactic_resolver_3a passed unchanged; browser_check_tactic_book_v21 is reported with the browser batch of this round"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "check_simulation_version_gate 82/83 (fingerprint 0578fa882d74b205 against the current value) was not in predictions.unchanged nor redByDesign of this entry. The general prediction of the first stage-1 registration covers it (the semantics files change, re-registered only at the freeze), but this gate was not run in the earlier batches of this round and was not run on a3e3fa73, so \"already red before the rows\" is an inference"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "review of the applied rows, APPROVE WITH CHANGES, one Major: the P6 registration says the win-condition effect is pinned after the rows are applied, and S13c only pinned the shipped config. S13c2 added. Minors applied: S13e2 pins the screen order that keeps contradiction hints off withdrawn choices, --report refuses once the result file exists, the P7 sentence on what a row change moves was corrected. Left as is, reported: withheld.reason is hard-coded no_measured_effect in offeredDetail (tacticChoiceMapping.js), so unmeasurable and not_replicated rows report that reason internally; nothing shows it to players, and changing it would move the shipped fill cells"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "the P6 tool selftest S8 was a false red from the moment it was added (it matched its own source text). It was first run after both P6 stages, so the selftest did not guard the P6 runs; the worker flag itself is verified by the source and the live record check. Fixed, 10/10"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "commit 4371147b and the progress report to the Owner say stage 1 had 10 pass. The result file has 11 (19 rows: 11 pass, 3 marginal, 2 no effect, 3 no claim). History is not rewritten; the record uses 11"
+        }
+      ]
     }
   },
   "honestLedgerOfEarlierDifferences": {

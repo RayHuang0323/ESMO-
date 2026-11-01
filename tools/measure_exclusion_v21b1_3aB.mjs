@@ -183,7 +183,7 @@ if (flag("selftest")) {
     ["passive", "standard", "aggressive"].every((c) => { const x = has("classic.m3", "teamfight.posture", c); return x && x.metric === null; }) && !!has("classic.m8", "teamfight.posture", "aggressive")?.metric,
     J(["passive", "standard", "aggressive"].map((c) => has("classic.m3", "teamfight.posture", c)?.reasons ?? null)));
   const runnerSrc = fs.readFileSync(path.join(ROOT, "tools/balance/moba_items_balance_runner.mjs"), "utf8"), selfSrc = fs.readFileSync(SELF, "utf8");
-  ck("S8 worker 旗標不與 balance runner 的 --worker 撞名（撞名會多送 ready、任務錯位）", runnerSrc.includes('process.argv.includes("--worker")') && !/workerArgs: \["--worker"\]/.test(selfSrc) && !selfSrc.includes('if (flag("worker"))'));
+  ck("S8 worker 旗標不與 balance runner 的 --worker 撞名（撞名會多送 ready、任務錯位）", runnerSrc.includes('process.argv.includes("--worker")') && !/workerArgs: \["--worker"\]/.test(selfSrc) && !selfSrc.includes(["if (flag(", '"worker"', "))"].join("")));
   const inst = await instrumentProblems(PLAN);
   ck("S7 儀器檢查：對照組＝修正表設定且與出貨版不同；每個臂的 Resolver 旋鈕＝修正表引擎的投影", inst.length === 0, inst.slice(0, 5).join(" ¦ "));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
@@ -233,6 +233,8 @@ if (flag("run")) {
 }
 
 if (flag("report")) {
+  //  審查 minor 4：結果檔提交後不得重算（排除列套用後 offeredToday 會變，第二階段比對的雜湊也會變）。
+  if (fs.existsSync(path.join(ROOT, STAGE1_RESULT))) { console.error(`⛔ ${STAGE1_RESULT} 已存在：研究已結束，不重算`); process.exit(5); }
   const { metricValue, pairStats } = await imp("tools/lib/tacticTruthSim.mjs");
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (Object.entries(STABLE).some(([k, v]) => m.meta[k] !== v)) { console.error("資料夾的登記／清單與目前不同：不判定"); process.exit(2); }

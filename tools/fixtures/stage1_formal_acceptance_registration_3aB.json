@@ -43,7 +43,7 @@
    "tool": "4a: node tools/check_tactic_truth_3a.mjs --measure --workers=3 --dir=<new folder outside the repo>, then the quick mode; evidence replay as registered in evidence_carryforward_3a.json. 4b: the P6 tool extended with blue and red arms",
    "pass": "4a: T-gates green under the frozen plan. Truth rows of classic.m3 / m7 / m8 under the table are recorded and do not decide those choices: P6 plus 4b do, the same superseding role the n=400 replication has over the n=40 std rows, registered here before any of them is run. 4b: every choice offered on classic.m3 / m7 / m8 by P6 (stage-1 pass or stage-2 confirmed) meets the replication rule (z >= 3 and rel >= 0.05 in the claimed direction) on BOTH sides. P6 alone is a pre-freeze development result and never supports a release by itself",
    "seeds": "4a: 1-40 as registered in TRUTH_GATE. 4b: 65101-65500 (reserved exclusion.v21b1.confirm), n=400 per side",
-   "conflict": "a choice P6 offered that fails 4b, or a truth-table row of a table template that contradicts a P6 row, is a failed check (stopRules.anyOtherRed): reported, never resolved by quietly editing a row, because a row change alters the behaviour hash of the freeze"
+   "conflict": "a choice P6 offered that fails 4b, or a truth-table row of a table template that contradicts a P6 row, is a failed check (stopRules.anyOtherRed): reported, never resolved by quietly editing a row, because a row change alters the semantic fingerprint of the freeze (capabilityRegistry.js is a semantics file; registryHash, mappingHash and resolvedHash do not include exclusions)"
   },
   {
    "step": 5,
@@ -98,7 +98,19 @@
  "notInStage1": "Challenge side-bias confirmation 45001-49999, C1 calibration, challenge.v21 golden: stage 2. v21 post-match evidence goals: need their own formal evidence (Owner 2026-11-01 item 4); until then rebalanced templates show unscored counts",
  "neverClaimed": "passing stage 1 is not a pass of the original P2 acceptance, of G-A8 by exclusion, or of the Challenge side bias",
  "effort": "about 15-18 hours single line (workers <= 3), by earlier measurements of these studies; not measured for this freeze",
- "review": null,
+ "review": {
+  "verdict": "two independent rounds, both APPROVE WITH CHANGES, all changes applied; no further round was run after them. This approves the specification, not the runs: runnablePreconditions are still open",
+  "rounds": [
+   {
+    "round": 1,
+    "verdict": "APPROVE WITH CHANGES; M3, M4, M5 and minors m5, m6 applied here"
+   },
+   {
+    "round": 2,
+    "verdict": "APPROVE WITH CHANGES; applied here: verify baseline, truth rows of table templates, Owner decision on table template + choice"
+   }
+  ]
+ },
  "gateList": [
   "check_simulation_version_gate",
   "check_match_ruleset_3a",
@@ -167,6 +179,8 @@
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
  "ownerDecisionsBeforeFreeze": [
-  "G-A8 tests each template without choices. E1 / E2 arms were not designed around table templates plus choices, so a table template combined with a choice may never get a win-rate test. The Owner decides, before the freeze, whether stage 1 adds such a test or accepts this gap"
+  "G-A8 tests each template without choices. E1 / E2 arms were not designed around table templates plus choices, so a table template combined with a choice may never get a win-rate test. The Owner decides, before the freeze, whether stage 1 adds such a test or accepts this gap",
+  "classic.m3 teamfight.posture: P6 withdrew the whole dimension under v21.b1 because the template value sits on no option and there is no registered claim to measure. The Owner confirms this, or registers a claim and a new measurement",
+  "scope question, pre-existing: only the three table templates show the unscored execution panel. Templates outside the table that carry choices are still graded with v20 evidence goals under v21. The Owner decides whether that stays for stage 1"
  ]
 }

@@ -155,6 +155,7 @@ const result = await runGate({
       const t3 = await pickTpl("classic.m3");
       ck("B2 m3：中風險、v21 優勢與缺點；沒有已刪除的句子", (t3 ?? "").includes(`${COPY.m3.risk}風險`) && (t3 ?? "").includes(COPY.m3.detail) && (t3 ?? "").includes(COPY.m3.cons) && !/撤退門檻極低|崩盤|刺客切後排/.test(t3 ?? ""));
       await shot("stage1_b_m3_copy");
+      ck("B2b m3 選項（P6）：團戰姿態整個維度不顯示、推塔高有提供", await ev(`return !document.querySelector('[data-testid="tb-dim-teamfight.posture"]') && !!document.querySelector('[data-testid="tb-choice-objectives.tower-high"]');`) === true);
       const t8 = await pickTpl("classic.m8");
       const m8cons = await ev("return JSON.stringify([...document.querySelectorAll('span')].some(s=>s.innerText==='缺點：'));");
       ck("B3 m8：中風險、v21 優勢；缺點整行不顯示；沒有已刪除的句子", (t8 ?? "").includes(`${COPY.m8.risk}風險`) && (t8 ?? "").includes(COPY.m8.detail) && !m8cons && !/全讓|20 分鐘|一波定勝/.test(t8 ?? ""), String(m8cons));
