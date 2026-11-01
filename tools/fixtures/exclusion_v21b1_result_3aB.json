@@ -1,0 +1,390 @@
+{
+ "schema": "ExclusionV21b1Result.v1",
+ "at": "2026-11-01T15:38:25.864Z",
+ "run": {
+  "registration": "01427ae41908a8c8",
+  "plan": "e41c59ab484d33be",
+  "simVersion": "tacticTruthSim.v6",
+  "gitHead": "ec05757a0769302cbfcaef8b254095f8ac263485",
+  "fingerprint": "0578fa882d74b205"
+ },
+ "seeds": "65001-65100",
+ "errored": 0,
+ "errorRule": null,
+ "rule": {
+  "passZ": 3,
+  "marginalZ": 2
+ },
+ "rows": [
+  {
+   "template": "classic.m7",
+   "dimension": "lanes.mid.stance",
+   "choice": "split",
+   "own": "standard",
+   "metric": "seatFightEntriesPerMin.b3",
+   "direction": "down",
+   "delta": 1.2,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.765104,
+   "meanChoice": 0.678937,
+   "diff": -0.086167,
+   "rel": -0.112621,
+   "z": -3.174484,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m3",
+   "dimension": "teamfight.posture",
+   "choice": "passive",
+   "own": null,
+   "metric": null,
+   "direction": null,
+   "delta": 0.084,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 0,
+   "verdict": "no_claim"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "teamfight.posture",
+   "choice": "passive",
+   "own": "standard",
+   "metric": "engageDecisionsPerMin",
+   "direction": "down",
+   "delta": 0.06,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 6.084863,
+   "meanChoice": 5.458874,
+   "diff": -0.625989,
+   "rel": -0.102876,
+   "z": -5.48305,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "teamfight.posture",
+   "choice": "passive",
+   "own": "standard",
+   "metric": "engageDecisionsPerMin",
+   "direction": "down",
+   "delta": 0.06,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 5.097202,
+   "meanChoice": 4.866333,
+   "diff": -0.230869,
+   "rel": -0.045293,
+   "z": -2.275775,
+   "verdict": "marginal"
+  },
+  {
+   "template": "classic.m3",
+   "dimension": "teamfight.posture",
+   "choice": "standard",
+   "own": null,
+   "metric": null,
+   "direction": null,
+   "delta": 0.024,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 0,
+   "verdict": "no_claim"
+  },
+  {
+   "template": "classic.m3",
+   "dimension": "teamfight.posture",
+   "choice": "aggressive",
+   "own": null,
+   "metric": null,
+   "direction": null,
+   "delta": 0.06,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 0,
+   "verdict": "no_claim"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "teamfight.posture",
+   "choice": "aggressive",
+   "own": "standard",
+   "metric": "engageDecisionsPerMin",
+   "direction": "up",
+   "delta": 0.084,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 6.084863,
+   "meanChoice": 6.634579,
+   "diff": 0.549715,
+   "rel": 0.090341,
+   "z": 4.155621,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "teamfight.posture",
+   "choice": "aggressive",
+   "own": "standard",
+   "metric": "engageDecisionsPerMin",
+   "direction": "up",
+   "delta": 0.084,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 5.097202,
+   "meanChoice": 5.859956,
+   "diff": 0.762754,
+   "rel": 0.149642,
+   "z": 7.080427,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m3",
+   "dimension": "objectives.tower",
+   "choice": "high",
+   "own": "standard",
+   "metric": "siegeWindowsPerMin",
+   "direction": "up",
+   "delta": 0.4,
+   "reasons": [
+    "A_keyed_row",
+    "B_weak_now"
+   ],
+   "offeredToday": false,
+   "n": 100,
+   "meanControl": 0.315456,
+   "meanChoice": 0.39839,
+   "diff": 0.082935,
+   "rel": 0.262904,
+   "z": 3.674078,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "phases.early.grouping",
+   "choice": "group",
+   "own": "standard",
+   "metric": "joinGoGeneralStartsPerMin.early",
+   "direction": "up",
+   "delta": 0.045,
+   "reasons": [
+    "B_weak_now"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.188947,
+   "meanChoice": 0.203962,
+   "diff": 0.015016,
+   "rel": 0.07947,
+   "z": 2.633221,
+   "verdict": "marginal"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "phases.mid.grouping",
+   "choice": "group",
+   "own": "standard",
+   "metric": "joinGoGeneralStartsPerMin.mid",
+   "direction": "up",
+   "delta": 0.045,
+   "reasons": [
+    "A_keyed_row",
+    "B_weak_now"
+   ],
+   "offeredToday": false,
+   "n": 100,
+   "meanControl": 0.199573,
+   "meanChoice": 0.220302,
+   "diff": 0.020729,
+   "rel": 0.103866,
+   "z": 2.318026,
+   "verdict": "marginal"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "phases.late.grouping",
+   "choice": "group",
+   "own": "standard",
+   "metric": "joinGoGeneralStartsPerMin.late",
+   "direction": "up",
+   "delta": 0.045,
+   "reasons": [
+    "A_keyed_row",
+    "B_weak_now"
+   ],
+   "offeredToday": false,
+   "n": 70,
+   "meanControl": 0.133434,
+   "meanChoice": 0.136534,
+   "diff": 0.0031,
+   "rel": 0.023233,
+   "z": 0.87288,
+   "verdict": "no_effect"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "phases.mid.objectiveOrder",
+   "choice": "baron",
+   "own": "none",
+   "metric": "contestShare.baron.mid",
+   "direction": "up",
+   "delta": 0.04,
+   "reasons": [
+    "A_keyed_row",
+    "B_weak_now",
+    "C_weakest_under_table"
+   ],
+   "offeredToday": false,
+   "n": 100,
+   "meanControl": 0.975,
+   "meanChoice": 0.97,
+   "diff": -0.005,
+   "rel": -0.005128,
+   "z": -0.376339,
+   "verdict": "no_effect"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "phases.early.focusLane",
+   "choice": "top",
+   "own": "none",
+   "metric": "ganksOwnPerMin.top.early",
+   "direction": "up",
+   "delta": 1,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.037539,
+   "meanChoice": 0.085089,
+   "diff": 0.04755,
+   "rel": 1.266669,
+   "z": 5.482516,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "phases.early.focusLane",
+   "choice": "mid",
+   "own": "none",
+   "metric": "ganksOwnPerMin.mid.early",
+   "direction": "up",
+   "delta": 1,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.015016,
+   "meanChoice": 0.052555,
+   "diff": 0.037539,
+   "rel": 2.500003,
+   "z": 5.542933,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "phases.early.focusLane",
+   "choice": "bot",
+   "own": "none",
+   "metric": "ganksOwnPerMin.bot.early",
+   "direction": "up",
+   "delta": 1,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.157664,
+   "meanChoice": 0.380396,
+   "diff": 0.222732,
+   "rel": 1.412699,
+   "z": 13.865349,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "phases.mid.focusLane",
+   "choice": "top",
+   "own": "none",
+   "metric": "ganksOwnPerMin.top.mid",
+   "direction": "up",
+   "delta": 1,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.06415,
+   "meanChoice": 0.161191,
+   "diff": 0.097042,
+   "rel": 1.512746,
+   "z": 7.682179,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "phases.mid.focusLane",
+   "choice": "mid",
+   "own": "none",
+   "metric": "ganksOwnPerMin.mid.mid",
+   "direction": "up",
+   "delta": 1,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.065596,
+   "meanChoice": 0.131283,
+   "diff": 0.065687,
+   "rel": 1.001385,
+   "z": 5.95363,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m7",
+   "dimension": "phases.mid.focusLane",
+   "choice": "bot",
+   "own": "none",
+   "metric": "ganksOwnPerMin.bot.mid",
+   "direction": "up",
+   "delta": 1,
+   "reasons": [
+    "D_newly_offered"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 0.114407,
+   "meanChoice": 0.229545,
+   "diff": 0.115138,
+   "rel": 1.006395,
+   "z": 7.884937,
+   "verdict": "pass"
+  }
+ ]
+}
