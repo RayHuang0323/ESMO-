@@ -32,8 +32,9 @@ import { choiceEngineFor, leavesOf, nestedOf } from "../src/platform/tactics/tac
 import { buildLiveMatchSetup, resolveLiveRuleset, balancedLegacyTactic, v20TacticForBinding } from "../src/battle/moba/liveMatchSetup.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
 import { STYLE_TEMPLATES, aiCoachSummary } from "../src/platform/tactics/aiCoach.js";
+import { contradictions, effectiveChoices } from "../src/platform/tactics/tacticIndicators.js";
 import { templateGroups, tacticBookView, opponentIntelOf } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
-import { MEASURED_EXCLUSIONS, REPLICATION_WITHHELD, measuredExclusion } from "../src/platform/tactics/capabilityRegistry.js";
+import { MEASURED_EXCLUSIONS, REPLICATION_WITHHELD, measuredExclusion, replicationWithheld } from "../src/platform/tactics/capabilityRegistry.js";
 import { applyVariant, variantById, variantsOfBaseTactic } from "../src/platform/mastery/tacticVariant.js";
 import { normalizeTacticBook, addTacticPlan } from "../src/platform/tactics/tacticBook.js";
 import { stripComments } from "./lib/stripComments.mjs";
@@ -180,8 +181,8 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
     c3.ok && c3.setup.tactic.blue.kind === "legacy" && sig(c3.setup.tactic.blue.config) === sig(m7) && J(c3.droppedChoices) === J([{ dimension: "teamfight.posture", choice: "passive" }]) && c3.templateSubstitution === null);
   const stdB = bind("std", { winCondition: "earlySnowball" }), v2B = bind("v2.jungle_invasion");
   const c3s = buildLiveMatchSetup(liveInputs({ flags: F20, tacticPlanBinding: stdB })), c3v = buildLiveMatchSetup(liveInputs({ flags: F20, tacticPlanBinding: v2B }));
-  ck("S6 ③ v20＋std／v2 binding ⇒ 藍方＝標準運營，提示帶「模板被替換」（沒有選擇的 v2 計畫也不會無聲換掉）",
-    c3s.ok && c3s.setup.tactic.blue.kind === "std" && c3s.templateSubstitution?.fromTemplateId === "std" && c3v.ok && c3v.setup.tactic.blue.kind === "std" && c3v.droppedChoices.length === 0 && c3v.templateSubstitution?.fromTemplateId === "v2.jungle_invasion" && c3v.templateSubstitution.toName === STANDARD_OPP_TACTIC.name);
+  ck("S6 ③ v20＋std／v2 binding ⇒ 藍方＝標準運營；std 計畫本來就是標準運營（不算替換、選擇列為本場拿掉）；v2 計畫帶「模板被替換」（沒有選擇的 v2 計畫也不會無聲換掉）",
+    c3s.ok && c3s.setup.tactic.blue.kind === "std" && c3s.templateSubstitution === null && J(c3s.droppedChoices) === J([{ dimension: "winCondition", choice: "earlySnowball" }]) && c3v.ok && c3v.setup.tactic.blue.kind === "std" && c3v.droppedChoices.length === 0 && c3v.templateSubstitution?.fromTemplateId === "v2.jungle_invasion" && c3v.templateSubstitution.toName === STANDARD_OPP_TACTIC.name);
   const p3 = prepareLiveMatch(liveInputs({ flags: F20, tacticPlanBinding: v2B }));
   ck("S6 ③ prepareLiveMatch 把模板替換交給畫面（templateSubstitution）", p3.ok && p3.templateSubstitution?.fromTemplateId === "v2.jungle_invasion");
   const c4 = buildLiveMatchSetup(liveInputs({ flags: F20, tactic: m7 }));
@@ -246,12 +247,13 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
   const plans = [createTacticPlan({ templateId: "classic.m7", overlayIds: [], choices: { phases: { early: { focusLane: "top" } } } }).plan, createTacticPlan({ templateId: "classic.m3", overlayIds: [], choices: {} }).plan];
   for (const p of plans) { const r = addTacticPlan(book, { plan: p }); book = r.ok ? r.book : book; }
   const again = normalizeTacticBook(JSON.parse(J(book)));
-  ck("S10 tacticBook 仍是雲端存檔切片；帶修正表模板與 v21 選擇的計畫存檔→讀回原樣（與旗標無關、不會被丟到 unreadable）",
-    bundle.includes(`"tacticBook"`) && book.plans.length === 2 && J(again.plans) === J(book.plans) && !again.unreadable);
+  const bookSrc = stripComments(read("src/platform/tactics/tacticBook.js"));
+  ck("S10 tacticBook 仍是雲端存檔切片；帶修正表模板與 v21 選擇的計畫存檔→讀回原樣、不會被丟到 unreadable；存檔切片本身不讀旗標或規則集（兩種旗標狀態下是同一段程式）",
+    !/featureFlags|FEATURE_FLAGS|matchRuleset/.test(bookSrc) && bundle.includes(`"tacticBook"`) && book.plans.length === 2 && J(again.plans) === J(book.plans) && !again.unreadable);
 }
 // ── S11 畫面＝引擎 ───────────────────────────────────────────────────────────
 {
-  const bad = []; let checked = 0;
+  const bad = []; let checked = 0, pairsN = 0, phaseN = 0;
   for (const id of ["classic.m3", "classic.m7", "classic.m8"]) for (const tb of [null, TB]) {
     const mode = tb ? "core.v1" : "static";
     const engine = choiceEngineFor(tb);
@@ -259,7 +261,14 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
     const base = viewOf({});
     if (!base.ok) { bad.push(`${id}/${tb}/base`); continue; }
     const plans = [{}];
-    for (const d of base.dimensions.filter((x) => !x.quick && !x.dimension.startsWith("phases.") && x.dimension !== "winCondition")) for (const c of d.choices) if (!c.isTemplateDefault) plans.push(nestedOf([[d.dimension, c.id]]));
+    const singles = [];
+    for (const d of base.dimensions.filter((x) => !x.quick && !x.dimension.startsWith("phases.") && x.dimension !== "winCondition")) for (const c of d.choices) if (!c.isTemplateDefault) singles.push([d.dimension, c.id]);
+    for (const s of singles) plans.push(nestedOf([s]));
+    //  兩兩組合（不同維度）：先建立計畫；建不起來的組合（例如第二條帶線路）不是畫面做得出的狀態。
+    for (let a = 0; a < singles.length; a++) for (let z = a + 1; z < singles.length; z++) {
+      if (singles[a][0] === singles[z][0]) continue;
+      if (createTacticPlan({ templateId: id, overlayIds: [], choices: nestedOf([singles[a], singles[z]]) }).ok) { plans.push(nestedOf([singles[a], singles[z]])); pairsN++; }
+    }
     for (const choices of plans) {
       const v = viewOf(choices);
       if (!v.ok) { bad.push(`${id}/${tb}/${J(choices)}/view`); continue; }
@@ -279,8 +288,21 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
         if (!rb?.ok || !ra?.ok || sig(rb.config) === sig(ra.config)) bad.push(`${id}/${tb}/${d.dimension}=${c.id} no-op`);
       }
     }
+    //  每時期維度（只在 core.v1）：提供的非預設選項以 Resolver 的每時期方針解析，該時期的旋鈕真的改變（不是空轉）。
+    if (tb) for (const d of base.dimensions.filter((x) => !x.quick && x.dimension.startsWith("phases."))) for (const c of d.choices) {
+      if (c.id === d.own) continue;
+      phaseN++;
+      const idx = ["early", "mid", "late"].indexOf(d.dimension.split(".")[1]);
+      const pl = createTacticPlan({ templateId: id, overlayIds: [], choices: nestedOf([[d.dimension, c.id]]) });
+      const out = pl.ok ? resolveTactic({ kind: "binding", binding: bindTacticPlanToCurrentVersions(pl.plan) }, {}, { phases: true, templateBalance: tb }) : null;
+      //  phases.<p>.stance 是整場對照表的維度（改的是整場設定）；其他 phases.* 是每時期方針。兩者擇一改變才不是空轉。
+      const none = resolveTactic({ kind: "binding", binding: bind(id) }, {}, { phases: true, templateBalance: tb });
+      const wholeChanged = out?.ok && none.ok && J([out.knobs, out.identity]) !== J([none.knobs, none.identity]);
+      const phaseChanged = out?.ok && (out.phases[idx].knobs !== out.knobs || out.phases[idx].identity !== out.identity);
+      if (!out?.ok || !(wholeChanged || phaseChanged)) bad.push(`${id}/${tb}/${d.dimension}=${c.id} phase no-op`);
+    }
   }
-  ck(`S11 畫面＝引擎：m3／m7／m8 × 出貨版／v21.b1 × 單一選擇，畫面上的值＝解析後的引擎設定（${checked} 格）；提供的非預設選項都改變旋鈕`, !bad.length && checked > 0, bad.slice(0, 6).join(" | "));
+  ck(`S11 畫面＝引擎：m3／m7／m8 × 出貨版／v21.b1 × 單一選擇＋兩兩組合（${pairsN} 組），畫面上的值＝解析後的引擎設定（${checked} 格）；提供的非預設選項都改變旋鈕；時期維度的非預設選項（${phaseN} 個）解析後整場設定或該時期方針真的改變`, !bad.length && checked > 0 && pairsN > 0 && phaseN > 0, bad.slice(0, 6).join(" | "));
 }
 // ── S12 名稱 ─────────────────────────────────────────────────────────────────
 {
@@ -288,18 +310,47 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
   const p21 = prepareLiveMatch(liveInputs({ flags: F21, tacticPlanBinding: bind("classic.m7") }));
   const p20 = prepareLiveMatch(liveInputs({ flags: F20, tacticPlanBinding: bind("classic.m7") }));
   const p20l = prepareLiveMatch(liveInputs({ flags: F20, tactic: mobaTacticById("m7") }));
-  ck("S12 名稱：career.v21 下 m7 的賽果（tacticMeta）與重播（replayConfig）名稱＝前期野區入侵；career.v20 ⇒ 前期壓制",
-    p21.ok && p21.applied.tacticMeta?.tacticName === OWNER_M7_COPY.name && p21.applied.replayConfig?.tacticName === OWNER_M7_COPY.name
+  const asmSrc = stripComments(read("src/battle/moba/matchAssembler.js"));
+  ck("S12 名稱：career.v21 下 m7 的賽果（tacticMeta）與重播（replayConfig）名稱＝前期野區入侵；career.v20 ⇒ 前期壓制；沒有 templateBalance 層的規則集（含兩份 Challenge，S7b）名稱一律取 config.name",
+    asmSrc.includes('templateBalance && typeof resolved.blue?.tacticName === "string" ? resolved.blue.tacticName : blueCfg?.name') && p21.ok && p21.applied.tacticMeta?.tacticName === OWNER_M7_COPY.name && p21.applied.replayConfig?.tacticName === OWNER_M7_COPY.name
     && p20.ok && p20.applied.replayConfig?.tacticName === "前期壓制" && p20l.ok && p20l.applied.tacticMeta?.tacticName === "前期壓制", J([p21.applied?.tacticMeta?.tacticName, p20.applied?.replayConfig?.tacticName]));
 }
 // ── S13 排除表 ───────────────────────────────────────────────────────────────
 {
   const keyed = [...MEASURED_EXCLUSIONS, ...REPLICATION_WITHHELD].filter((x) => "templateBalance" in x).length;
   const diff = MEASURED_EXCLUSIONS.filter((x) => measuredExclusion(x.template === "*" ? "classic.m7" : x.template, x.dimension, x.choice, x.scope ?? null, TB) !== measuredExclusion(x.template === "*" ? "classic.m7" : x.template, x.dimension, x.choice, x.scope ?? null, null)).length;
-  const reg = stripComments(read("src/platform/tactics/capabilityRegistry.js"));
-  ck("S13 排除表：目前每一列都不帶 templateBalance（兩種設定下照舊生效，保守撤下直到凍結前重新判定）；查表條件含 templateBalance",
-    keyed === 0 && diff === 0 && (reg.match(/x\.templateBalance === undefined \|\| x\.templateBalance === templateBalance/g) ?? []).length === 2);
+  //  行為測試（植入的列）：帶 templateBalance 的列只在那張表下生效；不帶的列兩種設定下都生效（量測排除與複驗撤下同一條規則）。
+  const rowsM = [{ template: "classic.m7", dimension: "lanes.top.stance", choice: "aggressive", templateBalance: TB }, { template: "classic.m7", dimension: "jungle.tempo", choice: "slow" }];
+  const rowsR = [{ template: "*", dimension: "teamfight.posture", choice: "passive", reason: "not_replicated", templateBalance: TB }];
+  const behave = !!measuredExclusion("classic.m7", "lanes.top.stance", "aggressive", null, TB, rowsM) && measuredExclusion("classic.m7", "lanes.top.stance", "aggressive", null, null, rowsM) === null
+    && !!measuredExclusion("classic.m7", "jungle.tempo", "slow", null, TB, rowsM) && !!measuredExclusion("classic.m7", "jungle.tempo", "slow", null, null, rowsM)
+    && !!replicationWithheld("classic.m3", "teamfight.posture", "passive", TB, rowsR) && replicationWithheld("classic.m3", "teamfight.posture", "passive", null, rowsR) === null;
+  ck("S13 排除表：目前每一列都不帶 templateBalance（兩種設定下照舊生效，保守撤下直到凍結前重新判定）；植入的列實測：帶 templateBalance 的只在那張表下生效、不帶的兩種設定都生效",
+    keyed === 0 && diff === 0 && behave);
 }
 
+// ── S14 矛盾提示＝引擎（實作審查 M1） ─────────────────────────────────────────
+{
+  const b = bind("classic.m8", { objectives: { tower: "high" } });
+  const c21 = contradictions(b, undefined, TB).map((x) => x.id), c20 = contradictions(b).map((x) => x.id);
+  const view21 = tacticBookView({ templateId: "classic.m8", choices: { objectives: { tower: "high" } }, tacticalDirector: "core.v1", templateBalance: TB });
+  const eff21 = effectiveChoices(b, TB);
+  ck("S14 矛盾提示用本場修正表下的有效選擇：m8＋推塔高在 v21.b1 下團戰姿態是 standard ⇒ 沒有「主動接戰變少」；出貨版下有；戰術書畫面（v21）與函式一致",
+    !c21.includes("siege_vs_passive_fights") && c20.includes("siege_vs_passive_fights") && eff21["teamfight.posture"] === "standard" && J(view21.contradictions.map((x) => x.id)) === J(c21), J({ c21, c20 }));
+}
+// ── S15 存檔預設名稱（實作審查 minor 4） ───────────────────────────────────────
+{
+  const ts = stripComments(read("src/screens/moba/TacticScreen.jsx"));
+  ck("S15 沒輸入名稱存戰術書 ⇒ 用畫面上的模板名稱（v21 下 m7＝前期野區入侵，與 placeholder 同一個 cur.name）", ts.includes("saveTacticPlan(bookView.plan, { name: bookName.trim() || cur.name })") && ts.includes("placeholder={cur.name}"));
+}
+// ── S16 legacy 只在確實是經典（＋變體）時重建／改名（實作審查 minor 6） ──────────────────
+{
+  const v2cfg = templateById("v2.jungle_invasion").config;
+  const keep = balancedLegacyTactic(v2cfg, TB) === v2cfg;
+  const shippedName = resolveTactic({ kind: "legacy", config: mobaTacticById("m7") }, {}, { templateBalance: TB }).meta.tacticName;
+  const balancedName = resolveTactic({ kind: "legacy", config: balancedLegacyTactic(mobaTacticById("m7"), TB) }, {}, { templateBalance: TB }).meta.tacticName;
+  ck("S16 帶經典 tacticId 但不是經典的設定（v2 野區入侵）不被換成經典 m7；修正表下仍打出貨版 m7 的 legacy 保留原名「前期壓制」，修正後的 m7 才叫「前期野區入侵」",
+    keep && shippedName === "前期壓制" && balancedName === OWNER_M7_COPY.name, J({ keep, shippedName, balancedName }));
+}
 console.log(`\nStage-1 Split 3a-B：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
 process.exit(fail ? 1 : 0);

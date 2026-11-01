@@ -200,7 +200,8 @@ const SIX = [plan("classic.m1"), plan("classic.m2"), plan("classic.m3"), plan("s
     && withChoice.applied.replayConfig?.tacticId === "std");
   //  M10（實作審查 M3）：修正表以外的經典模板，career.v21 的 binding 解析＝同一個經典的 legacy 旋鈕（修正表不碰它）。
   const r21 = resolveTactic({ kind: "binding", binding }, {}, { templateBalance: "v21.b1" }), rLeg = resolveTactic({ kind: "legacy", config: mobaTacticById(tid) });
-  ck(`M10 career.v21：修正表以外的 classic.${tid} 的 binding 解析＝legacy ${tid} 的旋鈕與 identity`, r21.ok && rLeg.ok && J([r21.knobs, r21.identity]) === J([rLeg.knobs, rLeg.identity]));
+  const { TEMPLATE_BALANCE } = await import("../src/platform/tactics/tacticTemplates.js");
+  ck(`M10 career.v21：修正表以外的 classic.${tid} 的 binding 解析＝legacy ${tid} 的旋鈕與 identity（前置：classic.${tid} 不在修正表）`, !(`classic.${tid}` in TEMPLATE_BALANCE["v21.b1"]) && r21.ok && rLeg.ok && J([r21.knobs, r21.identity]) === J([rLeg.knobs, rLeg.identity]));
   ck("M7 沒有 binding 也沒有戰術 ⇒ 藍方 null（＝v20 行為）", (() => { const r = prepareLiveMatch(withOpts({ tactic: undefined })); return r.ok && r.setup.tactic.blue === null; })());
 
   const hook = stripComments(fs.readFileSync(path.join(ROOT, "src/useLocalServer.js"), "utf8"));

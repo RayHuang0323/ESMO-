@@ -837,7 +837,7 @@ console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境
     ...Templates.TACTIC_TEMPLATE_LIST.map((tpl) => ({ tpl, overlayIds: [] })),
     ...Overlays.TACTIC_OVERLAYS.map((o) => ({ tpl: Templates.TACTIC_TEMPLATES[`classic.${o.baseTacticId}`], overlayIds: [o.overlayId] })),
   ];
-  const bad = []; let cells = 0, offeredN = 0;
+  const bad = []; let cells = 0, offeredN = 0, tableOnlyN = 0; const tableOnlyIds = [];
   for (const c of contextsP) for (const row of phaseRows) {
     cells++;
     const [, p, f] = row.dimension.split("."), i = ["early", "mid", "late"].indexOf(p);
@@ -865,6 +865,7 @@ console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境
       const pl = Plan.createTacticPlan({ templateId: c.tpl.templateId, overlayIds: c.overlayIds, choices: Choice.nestedOf([[row.dimension, ch]]) });
       if (pl.ok !== (okOverlay && unionWant(ch))) bad.push(`${c.tpl.templateId}|${row.dimension}=${ch}: plan ok=${pl.ok}`);
       if (pl.ok && ch !== own && !wantOrdered.includes(ch)) {
+        tableOnlyN++; tableOnlyIds.push(`${c.tpl.templateId}${c.overlayIds.length ? "+" + c.overlayIds[0] : ""}|${row.dimension}=${ch}`);
         //  只在修正表下提供：在那張表下只有自己那個時期另建物件；出貨版下空轉。
         const b = R.bindTacticPlanToCurrentVersions(pl.plan);
         for (const [tb, w] of wantBy) if (w.includes(ch)) {
@@ -887,7 +888,7 @@ console.log("\n§XP 每時期型（Phase 3a-C）：21 模板＋3 覆蓋層情境
     }
   }
   ck(`XP1' 提供清單＝獨立重算（${cells} 格）；計畫接受恰好＝出貨版與修正表提供清單的聯集；每個非本來選擇解析後只有自己那個時期另建物件（${offeredN} 組）；沒要求每時期方針（static）⇒ 拒絕 phase_choices_not_allowed`,
-    bad.length === 0 && cells === (21 + 3) * 9 && offeredN > 50, bad.slice(0, 4).join(" | "));
+    bad.length === 0 && cells === (21 + 3) * 9 && offeredN > 50 && tableOnlyN > 0 && tableOnlyIds.includes("classic.m7|phases.early.focusLane=top"), bad.slice(0, 4).join(" | ") + ` 只在修正表下提供 ${tableOnlyN}：${tableOnlyIds.slice(0, 4).join("、")}`);
 }
 
 console.log(`\ntacticResolver.v1（3a T9）：${pass}/${pass + fail}${fail ? "　FAIL" : "　OK"}`);

@@ -437,7 +437,7 @@ try {
   //  Phase 3a-B T15：再加上 AI 教練的事前登記（tools/fixtures/ai_coach_registration_3aB.json）——比對用兩份的聯集。
   const EXPECTED_CHANGED = new Set(LF.V21_EXPECTED_CHANGED);
   ck(`G1b 事前登記的改變清單：laneFrame ${LF.C3_EXPECTED_CHANGED.length} 個（登記總數 ${LF.C3_TOTAL_EXPECTED}）＋ AI 教練 ${LF.AI_COACH_EXPECTED_CHANGED.length} 個 ＋ 模板修正表 ${LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.length} 個（由修正表推導，第一階段登記）＝ 聯集 ${EXPECTED_CHANGED.size} 個 id，全部是本段重跑的 live／runner 案`,
-    LF.C3_EXPECTED_CHANGED.length === LF.C3_TOTAL_EXPECTED && [...EXPECTED_CHANGED].every((id) => specs.some((s) => s.id === id)));
+    LF.C3_EXPECTED_CHANGED.length === LF.C3_TOTAL_EXPECTED && LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.length === 6 && [...EXPECTED_CHANGED].every((id) => specs.some((s) => s.id === id)));
   let callsDiff = 0, withMatch = 0, coreOk = 0, r4Ok = 0;
   for (const spec of specs) {
     const w = want.get(spec.id), g = observed.find((o) => o.id === spec.id), run = failedRun.get(spec.id);

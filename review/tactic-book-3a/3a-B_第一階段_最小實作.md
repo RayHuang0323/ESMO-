@@ -4,7 +4,7 @@
 - 分支：`feature/moba-phase3a-stage1`（本機，從 `feature/moba-phase3a` 的登記 commit `f3986c44` 分出；未 push／deploy／整合 main，未碰 CS）
 - 依據：Owner 2026-10-30 第三次裁定（六項決策；下一步＝第一階段發布規格的事前登記、獨立審查、最小實作與快速回歸）
 - 事前登記：`tools/fixtures/stage1_release_registration_3aB.json`（`f3986c44`）
-- 新 gate：`tools/check_stage1_split_3aB.mjs`（S1–S13，41 條）
+- 新 gate：`tools/check_stage1_split_3aB.mjs`（S1–S16，44 條）
 
 ## 0. Owner 裁定與本輪對應
 
@@ -23,7 +23,8 @@
 |---|---|
 | 第一階段登記（第 1 輪） | APPROVE WITH CHANGES：5 Major／8 minor，全部採納。最重要的是 M1：原設計會讓戰術書顯示的值與引擎實際打的值不同（例：v21 下 m7 實際是標準站位，畫面卻顯示「積極」） |
 | 第一階段登記（第 2 輪，針對 M1 重審） | APPROVE WITH CHANGES：4 Major／7 minor，全部採納（聯集合法性也要用在 Resolver 的再驗證、v21 名稱要經組裝器進賽果、std／v2 計畫在 v20 下的處理、排除表依修正表區分） |
-| 實作程式碼審查 | IMPL_REVIEW |
+| 實作審查（第 1 次） | APPROVE WITH CHANGES：3 Major／7 minor，全部採納（矛盾提示改用修正表引擎、skeleton 漏跑、戰術存檔三條斷言變空轉、存檔預設名稱、std 不算替換、legacy 只在確實是經典＋變體時重建／改名、植入模板設定不被覆蓋）。修 gate 之前先把替代斷言登記在 `424d93ad` |
+| 實作審查（第 2 次） | APPROVE WITH CHANGES：5 minor，全部採納（推導清單釘 6 個、XP1′ 計數並點名 m7 案例、M10 前置條件、賽後執行度目標列入凍結前提、提交） |
 
 ## 2. 實作內容（`src/` 共 16 個檔，另新增 1 個畫面檔）
 
@@ -72,61 +73,65 @@
 - 引擎設定不帶文案（S8b）。
 - m3、m8 的文案**沒有改**（Owner 只定了 m7）：m3 的缺點「撤退門檻極低」在 risk 0.5 下不成立、風險標示「高」；m8 風險標示「低」——需 Owner 定稿（凍結前提）。
 
-## 3. 快速回歸（改動前基準 vs 改動後，同一台機器單線）
 
-| gate | 改動前 | 改動後 | 判讀 |
-|---|---|---|---|
-| `npm run build` | — | built in 19.44s | 通過 |
-| **check_stage1_split_3aB（新）** | — | **41/41** | 通過 |
-| check_match_setup_3a（含 **v20 黃金 39 案**） | 153/153 | **153/153** | v20 不變 |
-| check_challenge_golden_v21 | 6/6 | 6/6 | Challenge 不變 |
-| check_challenge_setup_3a | 65/65 | 65/65 | 不變 |
-| check_player_challenge_slice1–8 | 108／79／100／60／71／30／35／122 | 相同 | 不變（slice3 §③ 是已知 flaky 統計 gate，這次兩次都 100） |
-| check_save_bundle_b1b／hardening_b1c／cloud_save_b1d | 86／76／126 | 相同 | 存檔不變 |
-| check_live_setup_3a／ai_coach_3a／balance_runner_setup_3a | 119／11／122 | 相同 | 不變 |
-| check_tactical_director_3c／directive_3c／tactic_plan_3a／tactic_replication_3a | 97／61／219／53 | 相同 | 不變 |
-| regress／regress2 | 15/15／8/8 | 相同 | 不變（不是戰術改動的證據） |
-| check_match_ruleset_3a | 51/51 | 48/51 → 替代斷言後 **51/51** | 預期（R19／R20／R22） |
-| check_tactic_book_view_3a | 25/25 | 23/25 → **25/25** | V11 預期；V13 未事前列出（§4） |
-| check_tactic_book_ui_3aB | 9/9 | 8/9 → **9/9** | U5b 未事前列出（U5 同族） |
-| check_tactic_evidence_scope_3a | 7/7 | 6/7 → **7/7** | E5 預期 |
-| check_tactic_save_3a | 38/38 | 35/38 → **38/38** | **M1／M4／M5 未事前列出**（§4） |
-| check_career_v21_tactics_c6 | 6/6 | 5/6 → **6/6** | **V4 未事前列出**（§4） |
-| check_tactic_truth_3a | 34/34 | 33/34 | T2 過期：預期（matchAssembler.js、matchRuleset.js 改了），凍結時整輪重測 |
-| check_career_golden_v21 | 5/5 | 4/5 | setup 雜湊改變（gate 列出 phase-stance s11／s23／s29）：career.v21 多了一層，預期；**未重錄** |
-| check_match_golden_v21a | 137/137 | 97/137 | **40 案改變，事前預測錯誤**（§4）；**未重錄** |
-| verify --only=tactic24,runtime29 | — | tactic24 29/29（668 秒）、runtime29 flat 35/35（102 秒） | 通過 |
-| 瀏覽器 gate | — | **未跑** | 見 §5 |
+## 3. 快速回歸（改動前基準 vs 改動後；基準在 `f3986c44` 的臨時 worktree 上跑，同一台機器單線）
 
-## 4. 與事前登記不一致的地方（照實記錄）
+| 類別 | gate | 改動前 | 改動後（最終） | 判讀 |
+|---|---|---|---|---|
+| build | `npm run build` | — | built in 22.92s | 通過 |
+| 新 gate | check_stage1_split_3aB | — | **44/44** | 通過 |
+| **v20** | check_match_setup_3a（含 **v20 黃金 39 案**） | 153/153 | **153/153** | v20 不變 |
+| Challenge | check_challenge_golden_v21／challenge_setup_3a／player_challenge_slice1–8／challenge_snapshot_fatigue_g4 | 全綠 | 全綠 | Challenge 不變（slice3 §③ 是已登記 flaky，兩次都 100） |
+| 存檔 | check_save_bundle_b1b／save_hardening_b1c／cloud_save_b1d | 86／76／126 | 相同 | 存檔不變 |
+| Live／AI | check_live_setup_3a／ai_coach_3a／balance_runner_setup_3a | 119／11／122 | 相同 | 不變 |
+| Phase 3a | tactical_director_3c 97、directive_3c 61、tactic_plan_3a 219、replication_3a 53、indicators_3a 59、match_assembler_3a 227、setup_contract_3a 85、tactical_ai_p1 20、p2 33、phase_bucket_c3 23、phase_choices_c3 24、phase_study_c3 10、win_condition_c6 11、c7_diag_3c 9、study_seed_plan 34 | 全綠 | 相同 | 不變 |
+| 替代斷言後恢復 | match_ruleset_3a 51、tactic_book_view_3a 25、tactic_book_ui_3aB 9、tactic_evidence_scope_3a 7、tactic_save_3a 39、career_v21_tactics_c6 6、tactic_registry_3a 35、tactic_resolver_3a 139、c3_phase_skeleton 171、laneframe_c3 55 | 全綠 | 全綠（替代斷言後） | 見 §4 |
+| verify | tactic24／runtime29 | — | 29/29／flat 35/35 | 通過 |
+| regress | regress／regress2 | 15/15／8/8 | 相同 | 不變（不是戰術改動的證據） |
+| 預期紅（未重錄） | check_match_golden_v21a | 137/137 | 97/137 | 40 案（§4-1），兩次執行同一批 |
+| 預期紅（未重錄） | check_career_golden_v21 | 5/5 | 4/5 | career.v21 多一層 ⇒ setup 雜湊 |
+| 預期過期 | check_tactic_truth_3a | 34/34 | 33/34 | T2：語意檔改了，凍結時整輪重測 |
+| 既有紅（不是回歸） | check_tactical_identity_v17 E1／E5、check_hero_skills_phase1 | 紅 | 紅 | 改動前基準就是紅 |
+| **瀏覽器** | browser_check_tactic_book_v21（旗標開，桌機＋390） | — | **30/30** | 通過 |
+| **瀏覽器** | browser_check_tactic_book_3a（元件在 static 下） | — | **31/31** | 通過 |
+| **瀏覽器** | browser_check_battle_notices_3aB（D1′） | — | **11/11** | 通過 |
 
-1. **v21a 黃金 40 案的範圍預測錯了。** 登記寫「只有 career.v21／balanceTool.v21 的案例可能改變」。實際改變的是 `bind-template`（12 個 v2 模板 × 2 seeds＝24 案）與 `bind-choice`（16 案）：它們跑的是 **Live 路徑、career.v20 規則集、帶戰術書 binding**——本分支 Task 12 才有的組合（正式站 v20 從未出現）。總開關讓 career.v20 不再使用 binding，所以這 40 案現在打的是經典戰術或標準運營（同一個 seed 上不同模板結果相同，正是「binding 被忽略」的特徵）。經典模板與 std 的 binding 案、正式站 v20 的 39 案、工具路徑的 12 案都沒變。
-2. **四支 gate 的紅燈沒有在登記裡逐條列出**：check_tactic_book_view_3a V13、check_tactic_book_ui_3aB U5b、check_tactic_save_3a M1／M4／M5、check_career_v21_tactics_c6 V4。它們都在驗「career.v20 下仍使用戰術書 binding」（2026-10-25 決策 4 的行為），被總開關取代。替代斷言照登記的同一條規則（case ③）改寫，並保留原本仍然適用的保護：被竄改的 binding 在 career.v21 下照樣被拒絕開局（M5'）、Resolver 的 scope 隔離在函式層照舊（E5'）。
-3. 瀏覽器 gate `browser_check_battle_notices_3aB` 的 D 已改成 D1'（多驗模板替換提示），**沒有在瀏覽器跑過**。
+## 4. 與事前登記不一致的地方，以及怎麼處理（照實記錄）
 
-## 5. 未驗證的項目
+1. **v21a 黃金 40 案的範圍預測錯了**：登記寫「只有 career.v21／balanceTool.v21 的案例會變」；實際變的是 Live 路徑、**career.v20＋戰術書 binding** 的 `bind-template`（12 個 v2 模板 × 2）與 `bind-choice`（16 案）——本分支才有、正式站沒有的組合。總開關讓 career.v20 不用 binding，所以它們改打經典戰術或標準運營。正式站 v20 的 39 案、經典模板與 std 的 binding 案、工具路徑都沒變。**未重錄**。
+2. **第一次回歸沒有涵蓋所有 Phase 3a gate**（實作審查 M2）：補跑完整清單後找到 15 條新紅（skeleton 11、laneframe 1、registry 1、resolver 2），全部是改動的直接結果；替代斷言**先登記（`424d93ad`）後改 gate**：
+   - skeleton／laneframe：預期改變集合多一份「由修正表推導」的 6 案（m3／m7／m8 的 bind-template），仍要求**完全相同**，並釘住 6 個；
+   - registry U1′／resolver XP1′：計畫接受＝出貨版與修正表結構提供的聯集（m7 前期強邊上路是點名案例）；
+   - resolver D1′：變體函式多兩個合法呼叫端（liveMatchSetup、tacticTemplates），只套計畫或設定已記下的變體。
+3. **登記沒逐條列出、但同一條核准規則造成的替代斷言**：V13′、U5b′、M1′／M4′／M5′、V4′；實作審查指出 M6／M2／P1 變空轉，已改在 career.v21 下測並新增 M10。
+4. 新規則：std 計畫在 v20 下打的就是標準運營，不算「替換」（只列出拿掉的選擇）；v2 計畫才顯示替換。
 
-- 瀏覽器：戰術書 v21 在真實 build 開旗標（桌機＋390px）、旗標關閉時的 v20 戰術畫面、對戰中的替換提示（D1'）、讀取畫面與 HUD 的 v21 文案——**全部未經瀏覽器實測**，只有程式與資料層的 gate（S8、S9、S11、S12）。
-- 15–18 小時正式驗證（G-A8 確認、E1、E2、career 側偏、證據重播、真實性表、黃金重錄）：依 Owner 指示未啟動。
+## 5. 仍未驗證的項目
+
+- 瀏覽器沒有直接看到：v2 計畫在旗標關閉時的「替換」那一行（390px）、讀取畫面與對戰 HUD 上的 m7 v21 文案（node gate S8／S12／S15 有驗）、旗標關閉時經 AppShell 進到 v20 戰術畫面的完整流程（S9 以逐字副本＋解析函式驗）。
+- 15–18 小時正式驗證：依 Owner 指示未啟動。
 
 ## 6. 是否具備一次語意凍結與正式重驗的條件
 
-**結論：實作與快速回歸已經就緒，但還不具備凍結條件。** 剩下的是 Owner 決策與兩項開發期工作：
+**結論：實作、快速回歸與兩次實作審查都完成；凍結前只剩 Owner 決策與兩項開發期工作。**
 
 | # | 凍結前提 | 狀態 |
 |---|---|---|
-| P1 | m3、m8 的 v21 文案（m3 缺點「撤退門檻極低」、風險標示；m8 風險標示） | **待 Owner**（硬前提） |
+| P1 | m3、m8 的 v21 文案（m3 缺點「撤退門檻極低」在 risk 0.5 下不成立、風險標示；m8 風險標示） | **待 Owner**（硬前提） |
 | P2 | m7 的 detail 沿用描述；career.v21 下賽果／重播顯示 v21 名稱 | **待 Owner 確認** |
 | P3 | 總開關取代 2026-10-25 決策 4（career.v20 下不再使用戰術書 binding） | **待 Owner 確認** |
-| P4 | career.v20 下 std／v2 計畫的處理（改用標準運營＋替換提示） | **待 Owner 確認**（目前的預設） |
-| P5 | m3／m7／m8 現有量測排除列在 v21.b1 下重新判定（新 seeds、事前登記的開發期量測），避免正式真實性重測翻動提供清單、逼出第二次凍結 | 未做（開發期，需登記） |
-| P6 | 瀏覽器實測：戰術書 v21（開旗標）、旗標關閉的 v20 畫面、替換提示 | 未做 |
-| P7 | 第一階段正式驗收規格（G-A8 確認先跑；STOP 即停止發布並回報）事前登記＋獨立審查 | 草案在登記檔 `formalAcceptance`，未另行登記 |
-| P8 | v21a／career 黃金重錄（凍結後、Owner 同意） | 依規定凍結後才做 |
+| P4 | career.v20 下 std／v2 計畫的處理（std＝標準運營、v2＝標準運營＋替換提示） | **待 Owner 確認** |
+| P5 | 賽後「戰術執行」仍用 v20 的證據目標（例：m7 推塔波次 6）而名稱是 v21 的——v21 要不要有自己的證據目標 | **待 Owner**（第二次審查提出） |
+| P6 | m3／m7／m8 現有量測排除列在 v21.b1 下重新判定（新 seeds、事前登記的開發期量測） | 未做 |
+| P7 | 第一階段正式驗收規格（G-A8 確認先跑；STOP 即停止發布並回報）另行事前登記＋獨立審查 | 草案在登記檔 `formalAcceptance` |
+| P8 | v21a／career 黃金重錄 | 依規定凍結後、Owner 同意才做 |
 
-- 凍結時要做的事：重新登記 v21 候選指紋 → 真實性表整輪重測（約 70 分）→ 黃金重錄（Owner 同意）→ 一次性正式重驗（約 15–18 小時，G-A8 確認先跑）。
-- 預期風險不變：確認性 G-A8 至少一個模板判 STOP 約 36–57%（three_lane_pressure、m1 不修，mid_jungle_sync 不修）；若 STOP 就停止發布並回報（Owner 第 6 點）。
+- 凍結時：重新登記 v21 候選指紋 → 真實性表整輪重測（約 70 分）→ 黃金重錄（Owner 同意）→ 一次性正式重驗（約 15–18 小時，G-A8 確認先跑）。
+- 預期風險不變：確認性 G-A8 至少一個模板判 STOP 約 36–57%；若 STOP 就停止發布並回報（Owner 第 6 點）。
 
-## 7. 獨立審查紀錄
+## 7. 本輪 commit（本機分支 `feature/moba-phase3a-stage1`）
 
-REVIEW_SECTION
+- `f3986c44` 第一階段事前登記（兩輪審查）
+- `424d93ad` 實作審查結論與第二輪替代斷言（先於改 gate）
+- `9a98e36e` 實作與第一批替代斷言（WIP）
+- 本文件與最終修正的 commit（見 05）

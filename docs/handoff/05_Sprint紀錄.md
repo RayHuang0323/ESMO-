@@ -25103,3 +25103,28 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 - 確認性 G-A8 至少一個 STOP 約四成到接近六成（36–57%）。
 - 與目前 origin/main（含 CS Major v1.0）尚未合併驗證。
 - 第二階段改 Challenge 語意檔要升 v22。
+
+## 2026-10-30／11-01 Phase 3a-B 第一階段：發布規格登記與最小實作（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未跑正式 P2 重驗、未啟用發布旗標）
+
+依 Owner 2026-10-30 第三次裁定與後續指示。文件：`review/tactic-book-3a/3a-B_第一階段_最小實作.md`；登記：`tools/fixtures/stage1_release_registration_3aB.json`。
+
+**完成**：
+- 事前登記＋兩輪獨立審查（`f3986c44`）。
+- 最小實作（`src/` 16 檔＋新畫面檔 TacticScreenV20.jsx）：
+  - 版本化修正表 `TEMPLATE_BALANCE["v21.b1"]`（m3 0.6／0.5、m7 M7_M、m8 0.5／0.5），只有 career.v21／balanceTool.v21 的 `templateBalance` 層讀得到；v20 規則集與 challenge.v21 逐位元不變。
+  - 選擇引擎、指標、矛盾提示、確認頁、名稱都用本場修正表；計畫合法性改聯集。
+  - 新旗標 `mobaChallengeV21`（預設關）：只開 Live v21 時 Challenge 仍是 v20。
+  - 總開關：旗標關 ⇒ 正式站 v20 戰術畫面逐字副本、不用戰術書 binding；Live 2×2 矩陣依本場規則集。
+  - AI 退回固定戰術：由 id 重建、只套一次；m7 v21 文案（前期野區入侵）。
+- 兩次實作審查（3 Major／7 minor；5 minor），全部採納；第二批替代斷言先登記（`424d93ad`）再改 gate。
+
+**驗證（實跑）**：
+- build ✓；新 gate check_stage1_split_3aB 44/44。
+- v20 黃金（check_match_setup_3a）153/153、Challenge 黃金／組裝／slice1–8、存檔 b1b／b1c／b1d、live／AI 教練／balance runner、Phase 3a 全部 gate、skeleton 171、laneframe 55、resolver 139、verify tactic24 29/29＋runtime29 35/35、regress 15/15、regress2 8/8：全綠。
+- 瀏覽器：tactic_book_v21 30/30、tactic_book_3a 31/31、battle_notices 11/11。
+- 預期紅、未重錄：v21a 黃金 40 案（career.v20＋binding 的 bind-* 案）、career 黃金 setup 雜湊；真實性表 T2 過期（凍結時重測）。
+- 既有紅（改動前基準就紅）：tactical_identity_v17 E1／E5、hero_skills_phase1。
+
+**待 Owner（凍結前提）**：m3／m8 v21 文案；m7 detail 與 v21 名稱進賽果；總開關取代 10-25 決策 4；v20 下 std／v2 計畫處理；賽後執行度目標是否 v21 化。開發期：m3／m7／m8 量測排除列在 v21.b1 重新判定；第一階段正式驗收另行登記。
+
+**風險**：確認性 G-A8 至少一個 STOP 約 36–57%（STOP 即停止發布並回報）；瀏覽器沒直接看到 v2 替換那一行與讀取畫面／HUD 的 v21 文案。
