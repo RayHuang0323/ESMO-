@@ -2,7 +2,7 @@
  "schema": "Stage1FormalAcceptanceRegistration.v1",
  "studyId": "stage1.formalAcceptance",
  "registeredAt": "2026-11-01",
- "status": "registered, NOT runnable: runs only after (1) the Owner approves the single semantics freeze, (2) the freeze commit and the frozen fingerprint exist, (3) every item of runnablePreconditions is done, (4) an independent review of this file with the freeze in hand. No measurement of this spec has been run. It never enables a release flag and it does not authorise push, deploy or main",
+ "status": "registered, NOT runnable: runs only after (1) the Owner approves the single semantics freeze, (2) the freeze commit and the frozen fingerprint exist, (3) every item of runnablePreconditions is done, (4) an independent Reviewer has confirmed every formal tool, seed block, threshold and the baseline, before the Owner is asked to approve the freeze (Owner 2026-11-02), and again with the freeze in hand for the fingerprint fields. No measurement of this spec has been run. It never enables a release flag and it does not authorise push, deploy or main",
  "authority": "Owner 2026-11-01 item 5 (P7), 2026-10-30 third ruling items 5-6",
  "scope": "stage 1 only: Live tactics v21 (career.v21 with template table v21.b1), Challenge stays on v20. Flags under test: mobaTacticalDirectorV21 on, heroSkillsV1 as the career.v21 requirements say, mobaChallengeV21 OFF",
  "stopRules": {
@@ -178,9 +178,69 @@
   }
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
- "ownerDecisionsBeforeFreeze": [
-  "G-A8 tests each template without choices. E1 / E2 arms were not designed around table templates plus choices, so a table template combined with a choice may never get a win-rate test. The Owner decides, before the freeze, whether stage 1 adds such a test or accepts this gap",
-  "classic.m3 teamfight.posture: P6 withdrew the whole dimension under v21.b1 because the template value sits on no option and there is no registered claim to measure. The Owner confirms this, or registers a claim and a new measurement",
-  "scope question, pre-existing: only the three table templates show the unscored execution panel. Templates outside the table that carry choices are still graded with v20 evidence goals under v21. The Owner decides whether that stays for stage 1"
- ]
+ "ownerInstruction20261102": {
+  "verbatim": "補充：三項 Owner 決策請明確記入登記檔。未做的勝率組合只能列為已知驗證缺口，不可視為 PASS。8 項工作完成後，先由獨立 Reviewer 確認所有正式驗收工具、Seeds、門檻與基準，再回報我核准語意凍結。不要自行進入長時間 P2 量測，也不要重錄 Golden、Push、Deploy 或整合 main。G-A8 和 Challenge STOP 繼續保留。"
+ },
+ "ownerDecisions": [
+  {
+   "item": 1,
+   "question": "G-A8 tests each template without choices. E1 / E2 arms were not designed around table templates plus choices, so a table template combined with a choice may never get a win-rate test. The Owner decides, before the freeze, whether stage 1 adds such a test or accepts this gap",
+   "decision": "no win-rate test is added to stage 1 for a table template combined with a choice. The gap is accepted as a KNOWN VERIFICATION GAP and is never counted as a PASS",
+   "source": "stated by the Owner, 2026-11-02"
+  },
+  {
+   "item": 2,
+   "question": "classic.m3 teamfight.posture: P6 withdrew the whole dimension under v21.b1 because the template value sits on no option and there is no registered claim to measure. The Owner confirms this, or registers a claim and a new measurement",
+   "decision": "confirmed: classic.m3 teamfight.posture stays withdrawn under v21.b1; no claim is invented and no new measurement is added",
+   "source": "the recommendation of the 2026-11-02 report. The Owner asked for the three decisions to be recorded and stated only item 1 in words; item 2 is the implementer's reading, shown to the Owner in the reply and again at the freeze approval, where the Owner can correct it. It keeps the current behaviour"
+  },
+  {
+   "item": 3,
+   "question": "scope question, pre-existing: only the three table templates show the unscored execution panel. Templates outside the table that carry choices are still graded with v20 evidence goals under v21. The Owner decides whether that stays for stage 1",
+   "decision": "stays for stage 1: templates outside the table that carry choices keep the v20 evidence goals under v21; only rebalanced templates show the unscored panel. The stage-1 document states it",
+   "source": "the recommendation of the 2026-11-02 report. The Owner asked for the three decisions to be recorded and stated only item 1 in words; item 3 is the implementer's reading, shown to the Owner in the reply and again at the freeze approval, where the Owner can correct it. It keeps the current behaviour"
+  }
+ ],
+ "knownVerificationGaps": [
+  {
+   "id": "table-template-plus-choice-win-rate",
+   "what": "classic.m3 / m7 / m8 under v21.b1 combined with a choice have no win-rate test: G-A8 tests each template without choices, and the E1 / E2 arms use std",
+   "status": "NOT TESTED",
+   "notAPass": true,
+   "consequence": "no report, gate or release note may describe these combinations as passed or as safe by win rate. Step 4b measures behaviour only",
+   "authority": "Owner 2026-11-02"
+  }
+ ],
+ "preFreezeWork": {
+  "registeredAt": "2026-11-02, before any tool edit of this work (the verify baseline started in parallel, it edits nothing here)",
+  "common": [
+   "tools take --reg=<file under tools/fixtures>; without --reg they behave exactly as before and keep their original registration and result file",
+   "with --reg, --run refuses unless: registration status starts with \"registered\", its fingerprint equals the current simulation fingerprint, its result file does not exist, the tree is clean. The result path comes from the registration. Thresholds stay where they are: copied verbatim, checked by a new gate against the original registration",
+   "until the freeze the confirm registrations stay status READY_FOR_FREEZE with fingerprint TBD, so every --run refuses. The new gate asserts that refusal",
+   "no reserved seed is run by this work. Any smoke of a tool uses a seed of the block the study already observed"
+  ],
+  "items": {
+   "W1": "G-A8: ga8_fix_confirm_registration_3aB.json final text (control line verbatim from ga8_registration_3aB.json), result path, instrument check that the template table is really applied; measure_ga8_3aB.mjs --reg",
+   "W2": "career side bias: sidebias_career_fixconfirm_registration_3aB.json in the shape the tool reads (paths.career), result path; measure_side_bias_3aB.mjs --reg",
+   "W3": "E1 and E2: new e1_fix_confirm_registration_3aB.json (66001-67200, safety 66001-66400) and e2_fix_confirm_registration_3aB.json (67501-68299 odd), everything else copied; measure_e1_3aB.mjs and measure_e2_3aB.mjs --reg, workers receive --reg too",
+   "W4": "tools/lib/tacticTruthPlan.mjs: own, delta, claim and weak selection of a row use the template table of the ruleset the row is measured on. Rows measured on balanceTool.v20 are unchanged",
+   "W5": "check_tactic_truth_3a: exKey includes templateBalance. Truth rows of a table template on a table-carrying ruleset are recorded and do not derive an exclusion. A table template row measured on balanceTool.v20 derives a row keyed null",
+   "W6": "step 4b: exclusion_v21b1_confirm_registration_3aB.json and --confirm-* in measure_exclusion_v21b1_3aB.mjs: the 13 choices P6 offers, blue and red against control, 65101-65500, the replication rule, about 12,800 matches",
+   "W7": "tools/check_stage1_rollback_drill_3aB.mjs: the cases of step 8, flag off and on",
+   "W8": "verify baseline: a full tools/verify.mjs on 1d0e219 (git merge-base of origin/main and this branch) in a separate worktree, recorded by tools/record_verify_baseline_3aB.mjs into tools/fixtures/stage1_verify_baseline_3aB.json, never edited afterwards",
+   "W9": "tools/check_formal_acceptance_3aB.mjs: mechanical cross-check of all of the above (seeds disjoint and reserved, thresholds verbatim, refusal before the freeze, decisions and the gap recorded, one worker smoke per tool on an already observed seed)"
+  },
+  "predictions": {
+   "unchanged": [
+    "v20 golden 153/153",
+    "challenge golden and setup",
+    "check_stage1_split_3aB",
+    "selftests of the four measure tools",
+    "check_study_seed_plan_3aB"
+   ],
+   "expectedToChange": "W4 changes the plan on rows with a table template, so check_tactic_truth_3a may gain reds next to T2 until the 4a re-measure. The exact difference is computed after the edit and logged as observed, not as predicted",
+   "unknown": "whether weak selection moves away from a template outside the table; if it does, the exclusion rows of that template lose their support at 4a. That is reported, not resolved quietly"
+  },
+  "finalStep": "an independent Reviewer confirms all formal tools, seeds, thresholds and the baseline, then the Owner is asked to approve the semantics freeze. No long P2 measurement, no golden re-recording, no push, deploy or main; G-A8 and the Challenge STOP stay"
+ }
 }
