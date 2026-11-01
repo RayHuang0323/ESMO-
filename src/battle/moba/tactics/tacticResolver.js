@@ -32,7 +32,7 @@ import {
 import { variantById } from "../../../platform/mastery/tacticVariant.js";
 import { stableStringify } from "../../../platform/contracts/squadSnapshot.js";
 import { liveRows } from "../../../platform/tactics/capabilityRegistry.js";
-import { TACTIC_TEMPLATES_VERSION, templateById, classicLegacyTemplateOf, isTemplateBalanceId, TEMPLATE_COPY } from "../../../platform/tactics/tacticTemplates.js";
+import { TACTIC_TEMPLATES_VERSION, templateById, classicLegacyTemplateOf, isRebalancedTemplate, isTemplateBalanceId, TEMPLATE_COPY } from "../../../platform/tactics/tacticTemplates.js";
 import { TACTIC_OVERLAYS_VERSION } from "../../../platform/tactics/tacticOverlays.js";
 import {
   createTacticPlan, tacticPlanHash, bindTacticPlan, TACTIC_PLAN_BINDING_VERSION, TACTIC_PLAN_VERSION,
@@ -135,7 +135,7 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
       const phaseLeaves = leavesOf(effective).filter(([dim]) => Object.hasOwn(PHASE_CHOICE_MAPPING.rows, dim));
       return deepFreeze({
         ok: true, errors: [], config,
-        meta: { tacticId: config.tacticId, tacticName: copyNameOf(plan.templateId, templateBalance) ?? config.name ?? null, playbookName: overlayName ?? copyNameOf(plan.templateId, templateBalance) ?? tpl.name, templateId: plan.templateId, version: CANONICAL_TACTIC_VERSION },
+        meta: { tacticId: config.tacticId, tacticName: copyNameOf(plan.templateId, templateBalance) ?? config.name ?? null, playbookName: overlayName ?? copyNameOf(plan.templateId, templateBalance) ?? tpl.name, templateId: plan.templateId, version: CANONICAL_TACTIC_VERSION, ...(isRebalancedTemplate(plan.templateId, templateBalance) ? { rebalanced: true } : {}) },
         ...(phaseLeaves.length ? { phaseChoices: nestedOf(phaseLeaves).phases } : {}),
       });
     } catch (e) {
@@ -182,8 +182,9 @@ export function makeResolver({ mapping = CHOICE_MAPPING } = {}) {
         source = structuredClone(c);          // 與 v20 組裝器相同：投影收到的是副本，呼叫端的 setup 不會被碰到
         //  legacy 設定原樣投影（修正在建 setup 時就套好了，見 liveMatchSetup.js）；名稱在修正表下用經典模板的修正文案。
         //  審查（實作）：只有確實是「修正後的經典（＋變體）」才改名；修正表下仍打出貨版設定的 legacy（例如工具規則集）保留原名。
-        const legacyCopy = templateBalance ? copyNameOf(classicLegacyTemplateOf(source, templateBalance), templateBalance) : null;
-        meta = { tacticId: source.tacticId, tacticName: legacyCopy ?? source.name ?? null, playbookName: source.variantName ?? legacyCopy ?? source.name ?? null, templateId: null, version: A.MOBA_TACTIC_VERSION };
+        const legacyTemplate = templateBalance ? classicLegacyTemplateOf(source, templateBalance) : null;
+        const legacyCopy = templateBalance ? copyNameOf(legacyTemplate, templateBalance) : null;
+        meta = { tacticId: source.tacticId, tacticName: legacyCopy ?? source.name ?? null, playbookName: source.variantName ?? legacyCopy ?? source.name ?? null, templateId: null, version: A.MOBA_TACTIC_VERSION, ...(isRebalancedTemplate(legacyTemplate, templateBalance) ? { rebalanced: true } : {}) };
       } else if (input.kind === "std") {
         source = A.STANDARD_OPP_TACTIC;       // 不複製：v20 把注入的那一份物件直接交給投影（平衡工具的 provenance 檢查靠參考相等）
         meta = { tacticId: source.tacticId, tacticName: source.name ?? null, playbookName: source.name ?? null, templateId: null, version: A.MOBA_TACTIC_VERSION };

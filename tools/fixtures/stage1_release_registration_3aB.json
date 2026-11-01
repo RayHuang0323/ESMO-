@@ -178,7 +178,7 @@
       "I10_evidence": "resolver meta gets rebalanced: true ONLY under a table and only when the table changes that template (binding template, or a legacy config that is exactly the rebalanced classic + variant). The assembler adds evidenceGoals: \"unscored\" to tacticMeta only then. BattleEndScreen shows the counts without goals, marks and score, with the reason. mobaProgressAdapter reports tacticIntent false for such a match, so a v20 goal never writes into clubMastery (found while tracing the goals: BattleEndScreen.jsx:256 was registered earlier, the mastery write at mobaProgressAdapter.js:134 was NOT in any earlier registration). tacticIntentOf itself is unchanged; usage is still counted",
       "I11_display": "liveTacticDisplayOf({tactic, tacticPlanBinding, ruleset}) in liveMatchSetup.js follows the Live matrix; AppShell passes it to LoadingScreen and GameView (displayTactic, HUD only; the start input stays tactic + binding). This REVERSES the accepted non-equivalence for flag-flip windows (2) and (3), which earlier allowed a stored display object to name a tactic that does not play: Owner 2026-10-30 continuation item 2 requires names to match the effective setup. When the flag does not change, the object returned is the same tactic or carries the same display values",
       "I12_gate": "tools/browser_check_stage1_flows_3aB.mjs: the three browser items owed from the last report, through the real AppShell flow; check_stage1_split_3aB gains S17-S20 (copy, unscored, mastery, display matrix)",
-      "I13_exclusions": "exclusion rows change only as exclusion_v21b1_registration_3aB.json says, applied after its result"
+      "I13_exclusions": "exclusion rows change only as exclusion_v21b1_registration_3aB.json says, applied in a later commit from its result file"
     },
     "predictions": {
       "note": "written before running anything on the new code. Whatever differs from these is logged in predictionOutcome with discoveredAfter, never added here",
@@ -199,16 +199,38 @@
       "expectedEdits": [
         "check_stage1_split_3aB S8 and S9b are extended, not relaxed"
       ],
-      "afterExclusions": "check_tactic_registry_3a and check_tactic_book_view_3a may need replacement assertions if a row gains a templateBalance key; each is registered before editing that gate"
-    }
+      "afterExclusions": "check_stage1_split_3aB S13 goes red by design (it pins that no row is keyed); check_tactic_registry_3a and check_tactic_book_view_3a may need replacement assertions if they count rows; each is registered before editing that gate"
+    },
+    "predictionOutcome": [
+      {
+        "discoveredAfter": true,
+        "what": "the first browser run of tools/browser_check_stage1_flows_3aB.mjs found a white screen: liveDisplayTactic was declared before the tactic state in AppShell (temporal dead zone). No Node gate could see it. Fixed before anything was committed"
+      },
+      {
+        "discoveredAfter": true,
+        "what": "mobaProgressAdapter.js:134 (v20 goals writing tacticIntent into clubMastery) was not in any registration before de8e5da7; found while tracing the panel goals"
+      },
+      {
+        "discoveredAfter": true,
+        "what": "the first revision of P6 tightened the offer bar to z >= 3 and rel >= 0.05 for marginals. Review round 2 found this conflicts with the Owner 2026-10-13 ruling (do not just switch to z >= 3; re-verify marginals red and blue). Corrected to the original rule plus a stage-2 replication before any match was run"
+      },
+      {
+        "discoveredAfter": true,
+        "what": "predictions.unchanged listed check_club_mastery_v1 as if green. It is 264/265: \"送出的是套用後的 config（onNext(applied)）\" matches source text that is absent on origin/main and 103f2795 too. Not a regression of this round; the prediction assumed green without checking. The gate is not edited"
+      },
+      {
+        "discoveredAfter": false,
+        "what": "the rest of the first regression batch matched predictions: check_match_setup_3a 153/153, challenge golden 6/6, challenge setup 65/65, b1b, b1c, b1d, live setup 119/119, AI coach 11/11, resolver 139/139, assembler 227/227, book UI 9/9, book view 25/25, save 39/39, registry 35/35, ruleset 51/51, skeleton 171/171, laneframe 55/55, indicators 59/59, evidence scope 7/7; career golden red on setup hash and truth T2 stale, as predicted"
+      }
+    ]
   },
   "honestLedgerOfEarlierDifferences": {
     "note": "Owner 2026-11-01: differences found after the fact must not read as predictions. This separates what was truly predicted from what was registered only after being observed",
     "predictedInAdvance": [
-      "check_match_ruleset_3a R19 / R20 / R22 pin changes",
-      "check_tactic_book_ui_3aB U5 (review M3)",
-      "check_tactic_book_view_3a V11 / V13 and check_tactic_save_3a replacements of review round 2",
-      "career.v21 and balanceTool.v21 setup hash changes"
+      "check_match_ruleset_3a: \"R22 and siblings\" only. R19 and R20 are not named in any of the four commits; they count as covered by \"siblings\", no stronger",
+      "check_tactic_book_ui_3aB U5 (review M3), at f3986c44",
+      "career.v21 and balanceTool.v21 setup hash changes",
+      "check_tactic_book_view_3a V11, at f3986c44"
     ],
     "discoveredAfterTheFact": [
       {
@@ -227,7 +249,16 @@
       {
         "what": "check_tactic_resolver_3a D1 / XP1 and check_career_v21_tactics_c6 V4: same class",
         "predictionWas": "AFTER_OBSERVATION"
+      },
+      {
+        "what": "check_tactic_book_view_3a V13: no mention at f3986c44, first registered at 424d93ad",
+        "predictionWas": "AFTER_OBSERVATION"
+      },
+      {
+        "what": "check_tactic_save_3a replacements M1 M2 M4 M5 M6 M10 P1: f3986c44 only lists this gate under mustPass; the replacements come from implementation review M3 and were registered at 424d93ad",
+        "predictionWas": "AFTER_OBSERVATION"
       }
-    ]
+    ],
+    "correction": "the first version of this ledger (de8e5da7) listed V13 and the save replacements as predicted in advance. The independent review checked git history and found that wrong; corrected here. V11 was registered at f3986c44 and stays predicted"
   }
 }

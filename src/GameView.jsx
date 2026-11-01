@@ -179,7 +179,7 @@ function Minimap({ mobile = false }) {
 
 const fmtClock = (sec) => { const t = Math.max(0, Math.floor(Number(sec) || 0)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
 
-export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, tacticPlanBinding = null, buildStrategy = null, talentSelections = null }) {
+export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, displayTactic = null, tacticPlanBinding = null, buildStrategy = null, talentSelections = null }) {
   // Sprint19【C】：draft（Ban/Pick 結果）仍僅作 Presentation 傳遞。
   // Sprint24【D 升級】：tactic = MobaTacticConfig.v1 → start({tactic}) → engine.configureMatch
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
@@ -280,7 +280,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
       <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} playbackRate={rate} fogSide="blue" renderPaused={!!resumeProgress} />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
-      <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue}
+      <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={displayTactic ?? tactic} onContinue={onContinue}
         blueName={teamName} redName={oppName} />
 
       {/* Start / Stop / 鏡頭切換 */}

@@ -29,7 +29,9 @@ import { stableStringify } from "../src/platform/contracts/squadSnapshot.js";
 import { resolveTactic, resolveTacticBinding, bindTacticPlanToCurrentVersions } from "../src/battle/moba/tactics/tacticResolver.js";
 import { createTacticPlan } from "../src/platform/tactics/tacticPlan.js";
 import { choiceEngineFor, leavesOf, nestedOf } from "../src/platform/tactics/tacticChoiceMapping.js";
-import { buildLiveMatchSetup, resolveLiveRuleset, balancedLegacyTactic, v20TacticForBinding } from "../src/battle/moba/liveMatchSetup.js";
+import { buildLiveMatchSetup, resolveLiveRuleset, balancedLegacyTactic, v20TacticForBinding, liveTacticDisplayOf } from "../src/battle/moba/liveMatchSetup.js";
+import { mobaResultToTransaction } from "../src/platform/progress/adapters/mobaProgressAdapter.js";
+import { snapshotToBattleResult } from "../src/battle/battleResult.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
 import { STYLE_TEMPLATES, aiCoachSummary } from "../src/platform/tactics/aiCoach.js";
 import { contradictions, effectiveChoices } from "../src/platform/tactics/tacticIndicators.js";
@@ -351,6 +353,61 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
   const balancedName = resolveTactic({ kind: "legacy", config: balancedLegacyTactic(mobaTacticById("m7"), TB) }, {}, { templateBalance: TB }).meta.tacticName;
   ck("S16 帶經典 tacticId 但不是經典的設定（v2 野區入侵）不被換成經典 m7；修正表下仍打出貨版 m7 的 legacy 保留原名「前期壓制」，修正後的 m7 才叫「前期野區入侵」",
     keep && shippedName === "前期壓制" && balancedName === OWNER_M7_COPY.name, J({ keep, shippedName, balancedName }));
+}
+// ── S17 m3／m8 文案（Owner 2026-11-01 第 1 點；逐句理由見登記 I9） ───────────────────
+{
+  const m3 = templateCopyFor("classic.m3", TB), m8 = templateCopyFor("classic.m8", TB), s3 = templateCopyFor("classic.m3"), s8 = templateCopyFor("classic.m8");
+  ck("S17a v21.b1：m3、m8 風險＝中；名稱與重點（定位）不變", m3.risk === "中" && m8.risk === "中" && m3.name === "強開團" && m8.name === "後期決戰" && m3.focus === "輔助" && m8.focus === "下路", J({ m3, m8 }));
+  const banned = /撤退門檻極低|崩盤|一波決勝|刺客切後排|強控|全讓|20 分鐘|一波定勝|決勝/;
+  ck("S17b v21.b1：已登記要刪的句子都不在文案裡；m8 缺點整行拿掉（null）", ![m3.desc, m3.detail, m3.cons, m8.desc, m8.detail].some((x) => banned.test(x ?? "")) && m8.cons === null, J({ m3, m8 }));
+  ck("S17c 只刪不寫：v21 文案的每個逗號分句都在出貨版同一欄出現過", [["desc", m3, s3], ["detail", m3, s3], ["cons", m3, s3], ["desc", m8, s8], ["detail", m8, s8]].every(([k, a, z]) => a[k].split(/[，；]/).every((p) => z[k].includes(p))));
+  ck("S17d 出貨版文案（v20）不變；文案不進引擎設定", s3.risk === "高" && s8.risk === "低" && s3.cons.includes("撤退門檻極低") && sig(templateConfigFor("classic.m3", TB)) === sig({ ...templateConfigFor("classic.m3", TB), ...TEMPLATE_COPY[TB]["classic.m3"] }));
+}
+// ── S18 賽後不拿 v20 目標替 v21 評分（Owner 2026-11-01 第 4 點） ─────────────────────
+{
+  const F20 = { ...golden.featureFlags }, F21 = { ...golden.featureFlags, mobaTacticalDirectorV21: true };
+  const meta = (inp) => prepareLiveMatch(liveInputs(inp)).applied?.tacticMeta ?? null;
+  const on = ["m3", "m7", "m8"].map((id) => meta({ flags: F21, tacticPlanBinding: bind(`classic.${id}`) })?.evidenceGoals);
+  const legacyOn = meta({ flags: F21, tactic: mobaTacticById("m7") })?.evidenceGoals;
+  const other = ["m1", "m4"].map((id) => meta({ flags: F21, tacticPlanBinding: bind(`classic.${id}`) }));
+  const off = [meta({ flags: F20, tactic: mobaTacticById("m7") }), meta({ flags: F20, tacticPlanBinding: bind("classic.m7") })];
+  ck("S18a career.v21 下 m3／m7／m8（binding 或重建的 legacy）的賽果帶 evidenceGoals unscored", on.every((x) => x === "unscored") && legacyOn === "unscored", J({ on, legacyOn }));
+  ck("S18b 修正表沒動的模板、career.v20：tacticMeta 沒有這個鍵（形狀與改動前相同）", [...other, ...off].every((m) => m && !("evidenceGoals" in m)), J([...other, ...off]));
+  const end = stripComments(read("src/battle/ui/BattleEndScreen.jsx"));
+  ck("S18c 賽後面板在 unscored 時走另一支：沒有目標、沒有打勾、沒有執行度", end.includes('result.tactic.evidenceGoals === "unscored"') && end.includes('data-testid="tactic-exec-unscored"'));
+  const toTx = (tactic) => { const br = snapshotToBattleResult({ over: true, winner: "blue", ts: 1800, bK: 1, rK: 0, bGold: 1, rGold: 0, towers: {}, players: [{ id: "b1", team: "blue", k: 1, d: 0, a: 0, gold: 1, dmg: 1 }], tacticMeta: tactic, tacticExec: { blue: { groupedFights: 99, baronContests: 99, gankKills: 99, towerPushes: 99, invadeAttempts: 99, topGanks: 99, midGanks: 99, botGanks: 99, dragonContests: 99, splitPushActions: 99, supportRoams: 99, invadeKills: 99 }, red: {} } }); return mobaResultToTransaction(br, { players: [], matchSource: "competitive" }); };
+  const t20 = toTx({ tacticId: "m3", tacticName: "強開團", version: 1 }), t21 = toTx({ tacticId: "m3", tacticName: "強開團", version: 1, evidenceGoals: "unscored" });
+  ck("S18d 專精 intent：同一份全達標的計數，v20 記 intent；unscored 不記（v20 目標不寫進存檔），使用次數的 tacticId 照帶", t20?.metadata?.tacticIntent === true && t21?.metadata?.tacticIntent === false && t21?.metadata?.tacticId === "m3", J([t20?.metadata?.tacticIntent, t21?.metadata?.tacticIntent]));
+}
+// ── S19 讀取畫面／HUD 的顯示＝本場實際打的（矩陣每一格；登記 I11） ──────────────────
+{
+  const F20 = { ...golden.featureFlags }, F21 = { ...golden.featureFlags, mobaTacticalDirectorV21: true };
+  const rsOf = (flags) => resolveLiveRuleset({ flags }).ruleset;
+  const staleV21 = { ...templateConfigFor("classic.m7", TB), ...TEMPLATE_COPY[TB]["classic.m7"] };
+  const cases = [
+    ["v21＋m7 binding", F21, { tactic: staleV21, tacticPlanBinding: bind("classic.m7") }],
+    ["v21＋m3 binding", F21, { tactic: templateConfigFor("classic.m3", TB), tacticPlanBinding: bind("classic.m3") }],
+    ["v21＋v2 binding", F21, { tactic: templateById("v2.jungle_invasion").config, tacticPlanBinding: bind("v2.jungle_invasion") }],
+    ["v21＋std binding", F21, { tactic: STANDARD_OPP_TACTIC, tacticPlanBinding: bind("std") }],
+    ["v21＋legacy 出貨版 m7（v20 畫面確認後開旗標）", F21, { tactic: mobaTacticById("m7") }],
+    ["v21＋legacy m1", F21, { tactic: mobaTacticById("m1") }],
+    ["v20＋m7 binding（戰術書確認後關旗標）", F20, { tactic: staleV21, tacticPlanBinding: bind("classic.m7") }],
+    ["v20＋v2 binding", F20, { tactic: templateById("v2.jungle_invasion").config, tacticPlanBinding: bind("v2.jungle_invasion") }],
+    ["v20＋std binding", F20, { tactic: STANDARD_OPP_TACTIC, tacticPlanBinding: bind("std") }],
+    ["v20＋legacy m7", F20, { tactic: mobaTacticById("m7") }],
+  ];
+  const bad = cases.filter(([, flags, inp]) => {
+    const d = liveTacticDisplayOf({ ...inp, ruleset: rsOf(flags) });
+    const m = prepareLiveMatch(liveInputs({ flags, ...inp })).applied?.tacticMeta;
+    return !d || !m || d.name !== m.tacticName;
+  }).map(([n, flags, inp]) => `${n}: ${liveTacticDisplayOf({ ...inp, ruleset: rsOf(flags) })?.name} vs ${prepareLiveMatch(liveInputs({ flags, ...inp })).applied?.tacticMeta?.tacticName}`);
+  ck(`S19a 顯示名稱＝引擎拿到的名稱（${cases.length} 格）`, !bad.length, bad.join(" ¦ "));
+  const leg = mobaTacticById("m7");
+  ck("S19b 旗標關、沒有 binding：回傳同一個物件（v20 顯示逐位元不變）；什麼都沒有 ⇒ null", liveTacticDisplayOf({ tactic: leg, ruleset: rsOf(F20) }) === leg && liveTacticDisplayOf({ ruleset: rsOf(F20) }) === null);
+  const same = TACTIC_TEMPLATE_LIST.filter((t) => t.kind === "classic" && !(t.templateId in TEMPLATE_BALANCE[TB])).filter((t) => { const d = liveTacticDisplayOf({ tactic: t.config, tacticPlanBinding: bind(t.templateId), ruleset: rsOf(F21) }); return ["name", "risk", "focus", "desc", "detail", "emoji"].some((k) => d[k] !== t.config[k]); }).map((t) => t.templateId);
+  ck("S19c 旗標沒變（v21、修正表沒動的經典模板）：顯示欄位與確認時的設定相同", !same.length, same.join(","));
+  const shell = stripComments(read("src/AppShell.jsx"));
+  ck("S19d AppShell：讀取畫面與 HUD 用顯示物件；開局輸入仍是 tactic＋binding", shell.includes("<LoadingScreen draft={draft} tactic={liveDisplayTactic}") && shell.includes("<GameView autoStart draft={draft} tactic={tactic} displayTactic={liveDisplayTactic} tacticPlanBinding={tacticPlanBinding}"));
 }
 console.log(`\nStage-1 Split 3a-B：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
 process.exit(fail ? 1 : 0);

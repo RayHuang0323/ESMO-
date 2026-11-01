@@ -35,7 +35,7 @@ import { leavesOf, nestedOf } from "../../platform/tactics/tacticChoiceMapping.j
 import { bindTacticPlanToCurrentVersions } from "./tactics/tacticResolver.js";
 import { OBJECTIVE_LAYOUTS } from "../../platform/contracts/objectiveLayout.js";
 import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle, mobaTacticById } from "../../platform/contracts/MobaTacticConfig.js";
-import { templateById, templateConfigFor, classicLegacyTemplateOf, TEMPLATE_BALANCE } from "../../platform/tactics/tacticTemplates.js";
+import { templateById, templateConfigFor, classicLegacyTemplateOf, templateCopyFor, TEMPLATE_BALANCE } from "../../platform/tactics/tacticTemplates.js";
 import { applyVariant, variantById } from "../../platform/mastery/tacticVariant.js";
 import { aiCoachPlan } from "../../platform/tactics/aiCoach.js";
 import { applyFatigueToLoadout, buildPlayerStatSlots } from "./mobaRosterAdapter.js";
@@ -103,6 +103,27 @@ export function v20TacticForBinding(binding) {
   //  std 計畫本來就是標準運營 ⇒ 不是「替換」（審查：避免「標準運營改用標準運營」）；v2／未知模板才註明替換。
   const substitution = plan.templateId === "std" ? null : { fromTemplateId: plan.templateId ?? null, fromName: tpl?.name ?? null, toTacticId: STANDARD_OPP_TACTIC.tacticId, toName: STANDARD_OPP_TACTIC.name };
   return { tactic: { kind: "std" }, dropped, substitution };
+}
+
+/**
+ * 畫面顯示用的戰術物件：讀取畫面與 HUD 顯示的名稱、描述＝本場規則集下實際打的那一份（Owner 2026-10-30 後續第 2 點）。規則與 buildLiveMatchSetup 的矩陣相同。
+ * 旗標沒有在確認與開局之間改變時，顯示值與傳入的 tactic 相同；沒有 binding 且不在修正表的 legacy ⇒ 回傳同一個物件。只給畫面用，開局輸入仍是 tactic＋binding。
+ */
+export function liveTacticDisplayOf({ tactic = null, tacticPlanBinding = null, ruleset = null } = {}) {
+  const templateBalance = templateBalanceOf(ruleset);
+  const overCopy = (cfg, templateId) => {
+    const c = templateCopyFor(templateId, templateBalance);
+    return c ? { ...cfg, name: c.name, risk: c.risk, focus: c.focus, desc: c.desc, detail: c.detail, cons: c.cons } : cfg;
+  };
+  if (tacticPlanBinding) {
+    if (tacticalDirectorModeOf(ruleset) === "core.v1") return overCopy(tactic ?? {}, tacticPlanBinding.plan?.templateId);
+    const f = v20TacticForBinding(tacticPlanBinding);
+    return f.tactic.kind === "legacy" ? f.tactic.config : STANDARD_OPP_TACTIC;
+  }
+  if (!tactic?.tacticId || !templateBalance) return tactic;
+  const balanced = balancedLegacyTactic(tactic, templateBalance);
+  const templateId = classicLegacyTemplateOf(balanced, templateBalance);
+  return templateId ? overCopy(balanced, templateId) : balanced;
 }
 
 /** Live 一律用生涯規則集（opts.mode 是遊戲模式 "moba"，不是規則集模式；Challenge 不經過 Live hook）。 */

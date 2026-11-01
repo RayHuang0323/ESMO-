@@ -233,7 +233,8 @@ export const templateIdOfLegacyTactic = (tacticId) =>
 //   · TEMPLATE_BALANCE：只有數值／列舉欄位，而且是**絕對值** ⇒ 套兩次＝套一次（AI 退回固定戰術時不會疊加）。
 //     值＝篩選選出的臂（ga8_fix_screen_registration_3aB M3_C、screen3 M7_M、screen2 M8_C）。
 //     ⚠ 不得出現 lanePlan 的 split、carryPriority（席位優先）、std 或 classic.m2：計畫合法性的聯集規則與對照表的上下限依賴這一點。
-//   · TEMPLATE_COPY：只給畫面看的文案，**永遠不進引擎設定**。m7 文案逐字照 Owner；detail 沿用 desc（Owner 未指定，待確認）。
+//   · TEMPLATE_COPY：只給畫面看的文案，**永遠不進引擎設定**。m7 文案逐字照 Owner，detail 沿用 desc（Owner 2026-11-01 第 2 點）。
+//     m3／m8（Owner 2026-11-01 第 1 點）：風險改中、定位不變；只刪不符合新數值或沒有證據的句子，不新增宣稱（逐句理由見 stage1_release_registration_3aB.json I9）。
 export const TEMPLATE_BALANCE = deepFreeze({
   "v21.b1": {
     "classic.m3": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 },
@@ -246,12 +247,14 @@ export const TEMPLATE_BALANCE = deepFreeze({
 });
 export const TEMPLATE_COPY = deepFreeze({
   "v21.b1": {
+    "classic.m3": { risk: "中", desc: "先手開團強起會戰", detail: "輔助/坦克先手開團", cons: "吃溝通與先手品質" },
     "classic.m7": {
       name: "前期野區入侵", risk: "中", focus: "打野",
       desc: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
       detail: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
       cons: "入侵失利可能讓隊伍失去前期節奏",
     },
+    "classic.m8": { risk: "中", desc: "穩健發育拖到後期", detail: "前期穩健防守", cons: null },
   },
 });
 export const TEMPLATE_BALANCE_IDS = Object.freeze(Object.keys(TEMPLATE_BALANCE));
@@ -307,5 +310,8 @@ export function templateCopyFor(templateId, templateBalance = null) {
   const over = templateBalance ? TEMPLATE_COPY[templateBalance]?.[templateId] : null;
   return over ? { ...base, ...over } : base;
 }
+/** 這個模板在這張修正表裡有修正項嗎？（有 ⇒ 賽後不拿出貨版的 evidence 目標評分，Owner 2026-11-01 第 4 點） */
+export const isRebalancedTemplate = (templateId, templateBalance = null, tables = TEMPLATE_BALANCE) =>
+  !!templateBalance && !!templateId && Object.hasOwn(tables[templateBalance] ?? {}, templateId);
 /** 已登錄的修正表 id（null＝出貨版）。 */
 export const isTemplateBalanceId = (id) => typeof id === "string" && Object.hasOwn(TEMPLATE_BALANCE, id);

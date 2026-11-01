@@ -131,7 +131,8 @@ export function mobaResultToTransaction(br, ctx = {}) {
       //  與 `br.tacticExecution`（引擎真實執行統計）。這裡只轉述，
       //  判定門檻與 fail-closed 規則住在 `mastery/clubMasteryState.js`。
       tacticId: br.tactic?.tacticId ?? null,
-      tacticIntent: tacticIntentOf("moba", br.tactic?.tacticId, br.tacticExecution?.blue).intent,
+      //  v21 修正過的模板：出貨版的目標不適用，不寫進專精的 intent（使用次數照記；Owner 2026-11-01 第 4 點）。
+      tacticIntent: br.tactic?.evidenceGoals === "unscored" ? false : tacticIntentOf("moba", br.tactic?.tacticId, br.tacticExecution?.blue).intent,
     },
   });
 }

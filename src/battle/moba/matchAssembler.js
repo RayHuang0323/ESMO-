@@ -241,6 +241,8 @@ export function assembleMatch(setup, deps = {}) {
           snap = { ok: true, config, knobs, identity };
           //  修正表下的顯示名稱（resolver meta；有修正文案的模板＝修正後的名稱）。沒有修正表 ⇒ 不帶這個鍵，名稱照舊取 config.name。
           if (templateBalance) snap.tacticName = typeof r.meta?.tacticName === "string" ? r.meta.tacticName : null;
+          //  修正表改過的模板：出貨版的 evidence 目標不適用（Owner 2026-11-01 第 4 點）。其他情況不帶這個鍵，tacticMeta 逐字照舊。
+          if (templateBalance && r.meta?.rebalanced === true) snap.rebalanced = true;
           //  每時期方針的副本：與整場同一個物件的那幾份，指向**同一份**副本（knobs／identity），不另外複製——
           //  物件參照是承重的（R-4），下面 match() 交給引擎時也以單次 structuredClone 保留這個共用關係。
           if (wantPhases) snap.phases = Array.isArray(r.phases) && r.phases.length === 3
@@ -380,7 +382,7 @@ export function assembleMatch(setup, deps = {}) {
       if (!E.match) return;
       const redCfg = resolved.red.config;
       tacticMeta = isTool ? null
-        : { tacticId: blueCfg.tacticId, tacticName: blueTacticName, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId };
+        : { tacticId: blueCfg.tacticId, tacticName: blueTacticName, version: A.MOBA_TACTIC_VERSION, opponentTacticId: redCfg.tacticId, ...(resolved.blue?.rebalanced === true ? { evidenceGoals: "unscored" } : {}) };
       if (wantPhases) {
         //  C3-1 core.v1：整場 knobs／identity 與每時期方針**一次** structuredClone ⇒ 副本裡「同一個物件」的關係原樣保留
         //  （三個時期沒有差異時，phases.<side>[i].knobs 就是 blue／red 那一份；Director 依參照反查 identity，R-4）。

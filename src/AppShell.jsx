@@ -32,7 +32,7 @@ import TacticScreen from "./screens/moba/TacticScreen.jsx";
 import TacticScreenV20 from "./screens/moba/TacticScreenV20.jsx";
 import { FEATURE_FLAGS } from "./featureFlags.js";
 import { resolveRulesetForMode, tacticalDirectorModeOf } from "./platform/contracts/matchRuleset.js";
-import { LIVE_RULESET_MODE } from "./battle/moba/liveMatchSetup.js";
+import { LIVE_RULESET_MODE, liveTacticDisplayOf, resolveLiveRuleset } from "./battle/moba/liveMatchSetup.js";
 const LIVE_TACTIC_BOOK_ON = tacticalDirectorModeOf(resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS })) === "core.v1";
 const LiveTacticScreen = LIVE_TACTIC_BOOK_ON ? TacticScreen : TacticScreenV20;
 import LoadingScreen from "./screens/moba/LoadingScreen.jsx";
@@ -154,6 +154,12 @@ export default function AppShell() {
   }, []);
   const [tacticPlanBinding, setTacticPlanBinding] = useState(null);   // Phase 3a T12：戰術書的 TacticPlanBinding（恢復時從本場設定帶回；T13 的戰術書畫面才會設定它）
   const [tactic, setTactic] = useState(null);   // S19：TacticScreen 選定戰術（純展示，不影響引擎）
+  //  讀取畫面與 HUD 顯示本場實際打的戰術（與開局同一個解析函式；恢復時沿用落盤的規則集）。旗標沒變 ⇒ 顯示值與 tactic 相同。
+  const liveDisplayTactic = useMemo(() => {
+    if (!tactic && !tacticPlanBinding) return null;
+    const persisted = useProfileStore.getState().matchmaking?.session?.activeMatch?.config?.ruleset ?? null;
+    return liveTacticDisplayOf({ tactic, tacticPlanBinding, ruleset: resolveLiveRuleset({ flags: FEATURE_FLAGS, persisted }).ruleset });
+  }, [tactic, tacticPlanBinding]);
   const [buildStrategy, setBuildStrategy] = useState(null); // Item System M3d：本場出裝策略（itemsV1 開啟時才非 null；存檔在 activeMatch.config）
   const [talentSelections, setTalentSelections] = useState(null); // 本場英雄戰鬥天賦；與選手成長天賦分開。
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
@@ -346,8 +352,8 @@ export default function AppShell() {
       {screen === "banpick" && <BanPickScreen onNext={(d) => { setDraft(d); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { draft: d } }); setScreen("tactic"); }} onBack={go("matchmaking")} onCodex={go("codex")} />}
       {screen === "codex" && <CodexScreen onBack={go("banpick")} />}
       {screen === "tactic" && <LiveTacticScreen roster={battleRoster} draft={draft} onBuildStrategyChange={(s) => useProfileStore.getState().setActiveMatchContext({ config: { buildStrategy: s } })} onNext={(t, s, talents, binding) => { const hadBinding = useProfileStore.getState().matchmaking?.session?.activeMatch?.config?.tacticPlanBinding != null; setTactic(t); setTacticPlanBinding(binding ?? null); setBuildStrategy(s ?? null); setTalentSelections(talents ?? null); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { tactic: t, ...(binding || hadBinding ? { tacticPlanBinding: binding ?? null } : {}), ...(s ? { buildStrategy: s } : {}), ...(talents ? { talentSelections: talents } : {}) } }); setScreen("loading"); }} onBack={go("banpick")} />}
-      {screen === "loading" && <LoadingScreen draft={draft} tactic={tactic} buildStrategy={buildStrategy} roster={battleRoster} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("battle"); }} />}
-      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} tacticPlanBinding={tacticPlanBinding} buildStrategy={buildStrategy} talentSelections={talentSelections} roster={battleRoster} onContinue={home} />}
+      {screen === "loading" && <LoadingScreen draft={draft} tactic={liveDisplayTactic} buildStrategy={buildStrategy} roster={battleRoster} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("battle"); }} />}
+      {screen === "battle" && <GameView autoStart draft={draft} tactic={tactic} displayTactic={liveDisplayTactic} tacticPlanBinding={tacticPlanBinding} buildStrategy={buildStrategy} talentSelections={talentSelections} roster={battleRoster} onContinue={home} />}
 
       {/* ── Sprint21 經營模組 ── */}
       {screen === "inbox" && <InboxScreen onBack={home} onNav={(t) => setScreen(t)} />}
