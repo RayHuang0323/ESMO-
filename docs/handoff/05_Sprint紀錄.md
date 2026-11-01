@@ -25148,3 +25148,20 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **未完成**：凍結前 3 項 Owner 決策與 8 項開發工作（文件 §6）。P8 未執行。
 
 **風險**：確認性 G-A8 至少一個 STOP 約 36–57%。與目前 origin/main 尚未合併驗證。
+
+## 2026-11-02 Phase 3a-B 第一階段：凍結前 8 項工作與 Freeze Readiness Gate（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未改 CS；未凍結、未重錄 Golden、未跑正式 P2、旗標全關）
+
+報告：`review/tactic-book-3a/3a-B_最終凍結就緒報告.md`。
+
+**完成**：
+- 三項 Owner 決策與已知驗證缺口入檔（勝率組合 NOT TESTED、不算 PASS；第 2、3 項標明是實作者解讀）。
+- 8 項工作：G-A8／career 側偏／E1／E2 確認登記與 `--reg`；真實性計畫用修正表（163 批不變）；`exKey` 納入 templateBalance；step 4b 工具與登記；旗標回滾演練 gate；verify 基準（`1d0e219a`）。
+- Freeze Readiness Gate：118 段逐段比對基準、四次彩排（只用已觀察 Seeds）、兩輪獨立審查（APPROVE WITH CHANGES，工具缺陷都已修）。
+
+**驗證（實跑）**：verify 比對：既有失敗 67 段（失敗行、狀態、tail 相同）、新回歸 0、環境問題 0、基準之外 3 段（全部登記到凍結）。正式 gate 清單 48 支 43 綠，5 紅都已登記。formal acceptance 45/45、回滾演練 15/15、split 62/62、v20 黃金 153/153、Challenge 全綠。
+
+**事後才發現、已修的工具缺陷**：見報告 §6。最嚴重的是核對 gate 在登記填完後會真的啟動正式量測、verify 比對看不到已紅段裡的新紅燈、G-A8 紅方檢查誤判（會讓正式 G-A8 在第 2 個 seed 中止）。
+
+**未完成**：Owner 5 項決定（`openOwnerDecisions`）；真實性表預演與證據重播（等「矛盾」定義後才能看數字，所以沒跑）；P8；凍結。
+
+**風險**：確認性 G-A8 至少一個 STOP 約 36–57%。與目前 origin/main 尚未合併驗證。
