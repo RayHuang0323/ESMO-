@@ -204,6 +204,18 @@
   {
    "round": 2,
    "verdict": "APPROVE WITH CHANGES; applied here: verify baseline, truth rows of table templates, Owner decision on table template + choice"
+  },
+  {
+   "round": 3,
+   "at": "2026-11-02",
+   "scope": "all formal tools, seeds, thresholds, baseline at 64920ceb",
+   "verdict": "APPROVE WITH CHANGES (2 Blockers, 4 Majors, minors). Thresholds, hypotheses, seeds, STOP rules and flags hold. Tool defects applied; the items that touch an acceptance criterion are in openOwnerDecisions, not decided"
+  },
+  {
+   "round": 4,
+   "at": "2026-11-02",
+   "scope": "the fixes of round 3 at 2896325c",
+   "verdict": "APPROVE WITH CHANGES (0 Blockers, 2 Majors, minors), conditional on rehearsal section F, which passed. Applied; no further review round was run on these last fixes"
   }
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
@@ -276,8 +288,9 @@
   "the independent Reviewer confirms all formal tools, seeds, thresholds and the baseline (Owner 2026-11-02), and the Owner is asked to approve the freeze. The request shows decisions 2 and 3 of ownerDecisions again, labelled as the implementer's reading, so the Owner can correct them, and the open items of openOwnerDecisions",
   "the Owner approves. Only then: register the v21 candidate fingerprint in simulationVersion.js in one visible commit (the freeze commit)",
   "fill `fingerprint` in the five confirm registrations with it, change their status to start with \"registered\", fill review of exclusion_v21b1_confirm_registration_3aB.json after the Reviewer confirms them with the freeze in hand, and commit. check_formal_acceptance_3aB detects this state: from here it never spawns a run, and it checks with --preflight only",
-  "step 1 onward of `order`. Every other formal measurement refuses until the G-A8 confirm result is committed with verdict PASS. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point",
-  "after each --report, and after the 4a re-measure, commit the result file before the next study: the tools refuse to start on a dirty tree (found by the freeze rehearsal). A result is committed as it is, whatever its verdict"
+  "step 1 onward of `order`. Side bias, E1, E2 and step 4b refuse until the G-A8 confirm result is committed with verdict PASS. The 4a re-measure and the evidence replay have no such tool check (their seeds are not reserved): they follow this order by procedure. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point",
+  "after each --report, and after the 4a re-measure, commit the result file before the next study: the tools refuse to start on a dirty tree (found by the freeze rehearsal). A result is committed as it is, whatever its verdict",
+  "no commit on this branch while a study is unfinished: a resume refuses when the commit recorded in the folder differs from HEAD, and it fails closed. A result commit is the only commit between studies"
  ],
  "ownerInstruction20261102b": {
   "verbatimKeyLines": [
@@ -332,6 +345,18 @@
    "question": "the 4b rule (the same as P6 stage 2) has no minimum n: a choice could be confirmed on few valid pairs if the metric is often null. Every one of the 13 items had n >= 100 or 400 per side in P6, so the risk is low. A floor only tightens, but it adds to the registered rule",
    "recommendation": "optional: n >= 200 per side, the floor E2 already uses. Not added here",
    "why": "adds to a registered rule: not decided here"
+  },
+  {
+   "id": "verify-blind-in-crash-early-segments",
+   "question": "the verify comparison cannot see a change inside 51 of the 70 segments that fail on the baseline, because they crash before doing real work: 46 CS segments (source hash or legacy block guards, 0 checks reached) and milestone_b4, player_ui_r62, q7b_season_state_v2, r61_ui_fixture (0 checks), hero_skills_phase1 (9 checks before the crash). The other 19 run to the end and are covered line by line",
+   "recommendation": "accept for stage 1 and state it in the release record: no CS file changed and the gateList covers the tactics, saves and Challenge directly. Repairing those verifiers is separate work, and CS is verify-only on this branch",
+   "why": "it limits what step 6 can prove: the Owner accepts it or orders otherwise"
+  },
+  {
+   "id": "inconclusive-halts-other-measurements",
+   "question": "stopRules says a G-A8 STOP halts every other formal measurement and an INCONCLUSIVE makes the release decision wait for the Owner. The tools now refuse the other measurements on anything but verdict PASS, so an INCONCLUSIVE G-A8 also halts them. That is tighter than the text about INCONCLUSIVE",
+   "recommendation": "keep: an INCONCLUSIVE G-A8 goes to the Owner before more reserved seeds are spent",
+   "why": "a tightening already built in; the Owner may ask to relax it, which means editing four registrations before the freeze"
   }
  ]
 }

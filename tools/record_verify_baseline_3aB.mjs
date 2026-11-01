@@ -73,17 +73,19 @@ if (flag("record-logs")) {
 /** 比對的共同部分：每個失敗段對基準的結果。 */
 function compareAll(state, logDir) {
   const base = JSON.parse(fs.readFileSync(OUT, "utf8")), logs = JSON.parse(fs.readFileSync(OUT_LOGS, "utf8")).segments;
-  const baseFail = new Set(base.failing.map((f) => f.id)), basePass = new Set(base.passing);
+  const baseFail = new Map(base.failing.map((f) => [f.id, f])), basePass = new Set(base.passing);
   const rows = Object.entries(state.runs ?? {}).map(([id, r]) => {
     const failing = isFailing(r), sig = failing ? signatureOf(logDir, id, r.tail) : null;
-    const same = failing && baseFail.has(id) && sig !== null && JSON.stringify(sig) === JSON.stringify(logs[id]);
+    //  失敗行、狀態、tail 都要相同：同一批失敗行之後才當掉或逾時，失敗行相同但狀態或 tail 不同（審查 MA2）。
+    const baseRow = baseFail.get(id);
+    const same = failing && !!baseRow && sig !== null && JSON.stringify(sig) === JSON.stringify(logs[id]) && r.status === baseRow.status && sameText(r.tail) === sameText(baseRow.failureText);
     const cls = !failing ? (baseFail.has(id) ? "fixedHere" : basePass.has(id) ? "passBoth" : "newSegmentPass")
       : baseFail.has(id) ? (same ? "preexisting" : "preexistingChangedText")
       : basePass.has(id) ? "needsReading_passedOnBaseline" : "needsReading_newSegment";
-    const extra = failing && baseFail.has(id) && !same ? { onlyHere: (sig ?? ["(沒有 log)"]).filter((l) => !logs[id].includes(l)).slice(0, 8), onlyBaseline: logs[id].filter((l) => !(sig ?? []).includes(l)).slice(0, 8) } : {};
+    const extra = failing && baseFail.has(id) && !same ? { onlyHere: [...(sig ?? ["(沒有 log)"]).filter((l) => !logs[id].includes(l)).slice(0, 8), ...(r.status !== baseRow.status ? [`狀態 ${r.status}（基準 ${baseRow.status}）`] : []), ...(sameText(r.tail) !== sameText(baseRow.failureText) ? [`tail 不同：${sameText(r.tail).split("\n").filter(Boolean).slice(-1)[0]}`] : [])], onlyBaseline: logs[id].filter((l) => !(sig ?? []).includes(l)).slice(0, 8) } : {};
     return { id, status: r.status, ms: r.ms, finishedAt: r.finishedAt, cls, ...(failing ? { failureLines: sig } : {}), ...extra };
   });
-  const missing = [...basePass, ...baseFail].filter((id) => !state.runs?.[id]);
+  const missing = [...basePass, ...baseFail.keys()].filter((id) => !state.runs?.[id]);
   return { base, rows, missing };
 }
 

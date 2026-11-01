@@ -53,6 +53,9 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   ck("D2 未做的勝率組合是已知驗證缺口：NOT TESTED、notAPass，不可視為 PASS", gap?.status === "NOT TESTED" && gap?.notAPass === true && /never counted as a PASS/.test(d[0]?.decision ?? ""));
   ck("D3 step 4b 的登記也聲明不是勝率結論、指回這個缺口", /known verification gap and not a pass/.test(FORMAL.confirm.reg.notClaimed ?? ""));
   ck("D4 Owner 2026-11-02 指示逐字保存：先獨立 Reviewer、再回報核准凍結；STOP 保留", /獨立 Reviewer/.test(P7.ownerInstruction20261102?.verbatim ?? "") && /STOP 繼續保留/.test(P7.ownerInstruction20261102?.verbatim ?? "") && /independent Reviewer/.test(P7.status));
+  const decidedIds = new Set([...(P7.openOwnerDecisions ?? []), ...d].map((x) => x.id).filter(Boolean));
+  const needIds = ["step4-conflict-definition", "truth-and-replay-before-the-freeze", "replication-minimum-n", "verify-blind-in-crash-early-segments", "inconclusive-halts-other-measurements"];
+  ck("D4b 待 Owner 決定的 5 項都還在（待決或已決），不會無聲消失", needIds.every((id) => decidedIds.has(id)), needIds.filter((id) => !decidedIds.has(id)).join());
   ck("D5 STOP 規則原文還在：G-A8 0.60／0.55、STOP 後不放寬、不換 seeds、Challenge STOP 保留", /win rate >= 0.60 AND the lower 95% bound > 0.55/.test(P7.stopRules.ga8) && /No relaxed threshold, no new seeds, no template dropped/.test(P7.stopRules.ga8) && /stays/.test(P7.stopRules.challenge));
 }
 
@@ -83,7 +86,7 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   ck("R6 step 4b：清單＝P6 提供的 13 個選擇（由兩份結果檔推出）；門檻與 P6 第二階段同一條（z ≥ 3、rel ≥ 0.05、紅藍都要）", same(c.plan.items, want) && want.length === 13 && /z >= 3 and relative effect >= 0.05/.test(c.decisionRule.confirmed) && /BOTH/.test(c.decisionRule.confirmed));
   ck("R7 step 4b：沒站住＝失敗（回報，不改列）；有錯誤場次＝不判定；review 留到凍結", /not edited/.test(c.decisionRule.overall.FAILED) && /no verdict/.test(c.decisionRule.overall.INCONCLUSIVE) && (POST_FREEZE || c.review === null));
   const pre = ["sideBias", "e1", "e2", "confirm"].map((id) => FORMAL[id].reg.requiresResult);
-  ck("R8 其他四份都要求 G-A8 確認結果先提交且判定 PASS（工具強制，不靠流程）；G-A8 自己沒有前置", pre.every((p) => p?.file === FORMAL.ga8.reg.result && p?.verdict === "PASS") && !FORMAL.ga8.reg.requiresResult);
+  ck("R8 其他四份都要求 G-A8 確認結果先提交且判定 PASS（工具強制，不靠流程）；G-A8 自己沒有前置", pre.every((p) => p?.file === FORMAL.ga8.reg.result && p?.verdict === "PASS" && p?.registration === `tools/fixtures/${FORMAL.ga8.file}`) && !FORMAL.ga8.reg.requiresResult);
 }
 
 // ── S Seeds ──────────────────────────────────────────────────────────────────
@@ -130,7 +133,7 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   }
   ck(POST_FREEZE ? "X1 五支工具 --preflight：回答可以開跑或說明拒絕原因，沒有開跑、沒有建立資料夾" : "X1 五支工具帶確認登記 --preflight 都拒絕（exit 2，原因是登記還沒填）、沒有建立資料夾：凍結前開不了跑", !bad.length, bad.join(" | "));
   const selfSrc = fs.readFileSync(fileURLToPath(import.meta.url), "utf8");
-  ck("X1b 這支 gate 不會 spawn 開跑旗標（否則登記填完之後就是真的開跑）", ![["--", "run"], ["--", "confirm-run"]].some(([a, b]) => selfSrc.includes(`"${a}${b}"`)));
+  ck("X1b 這支 gate 不會 spawn 開跑旗標（否則登記填完之後就是真的開跑）", ![["--", "run"], ["--", "confirm-run"]].some(([a, b]) => ['"', "'", "`"].some((q) => selfSrc.includes(`${q}${a}${b}${q}`) || selfSrc.includes(`${q}${a}${b} `))));
   const g = spawnSync(process.execPath, ["tools/measure_ga8_3aB.mjs", "--reg=../evil.json", "--plan"], { cwd: ROOT, encoding: "utf8" });
   ck("X2 --reg 只收 tools/fixtures/ 底下的 json", g.status === 2);
 }
@@ -201,8 +204,14 @@ const oneMatch = (toolFile, args, task) => new Promise((resolve) => {
       const stale = run(staleRuns);
       const passToFail = baseRuns(); passToFail[b.passing[0]] = { status: "FAIL", finishedAt: now, tail: "x" };
       const newRed = run(passToFail);
+      const timeoutRuns = baseRuns(); timeoutRuns[victim.id].status = "TIMEOUT";
+      const timedOut = run(timeoutRuns);
+      const tailRuns = baseRuns(); tailRuns[victim.id].tail = `${victim.failureText}\nRangeError: Maximum call stack size exceeded`;
+      const crashed = run(tailRuns);
       fs.rmSync(dir, { recursive: true, force: true });
-      ck("B4 --compare 負向對照：與基準相同 ⇒ 過；已紅的段多一條失敗行、少跑一段、過期的結果、本來綠的段變紅 ⇒ 都 exit 1", okRun.status === 0 && extra.status === 1 && /一條新的紅燈/.test(extra.stdout) && less.status === 1 && stale.status === 1 && newRed.status === 1, J([okRun.status, extra.status, less.status, stale.status, newRed.status]));
+      ck("B4 --compare 負向對照：與基準相同 ⇒ 過；已紅的段多一條失敗行、改成逾時、尾端改成當掉、少跑一段、過期的結果、本來綠的段變紅 ⇒ 都 exit 1", okRun.status === 0 && extra.status === 1 && /一條新的紅燈/.test(extra.stdout) && timedOut.status === 1 && crashed.status === 1 && less.status === 1 && stale.status === 1 && newRed.status === 1, J([okRun.status, extra.status, timedOut.status, crashed.status, less.status, stale.status, newRed.status]));
+      const logCommits = execFileSync("git", ["log", "--format=%H", "--", "tools/fixtures/stage1_verify_baseline_logs_3aB.json"], { cwd: ROOT, encoding: "utf8" }).trim().split("\n").filter(Boolean);
+      ck("B5 失敗行基準提交後沒有被改過（只有一個 commit）", logCommits.length <= 1, `${logCommits.length} commit`);
     }
   }
 }

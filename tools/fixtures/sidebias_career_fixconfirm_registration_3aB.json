@@ -70,6 +70,7 @@
  "requiresResult": {
   "file": "tools/fixtures/ga8_fix_confirm_result_3aB.json",
   "verdict": "PASS",
-  "why": "stopRules.ga8: the confirmatory G-A8 runs FIRST and a STOP halts every other formal measurement; INCONCLUSIVE goes to the Owner. Enforced by the tool, not by procedure"
+  "why": "stopRules.ga8: the confirmatory G-A8 runs FIRST and a STOP halts every other formal measurement; INCONCLUSIVE goes to the Owner. Enforced by the tool, not by procedure",
+  "registration": "tools/fixtures/ga8_fix_confirm_registration_3aB.json"
  }
 }

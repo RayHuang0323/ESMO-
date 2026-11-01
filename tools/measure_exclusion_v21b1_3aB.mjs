@@ -140,6 +140,7 @@ async function instrumentProblems(items, sides = ["blue"]) {
   const { tacticInputOf } = await imp("tools/lib/tacticTruthSim.mjs");
   const { resolveTactic } = await imp("src/battle/moba/tactics/tacticResolver.js");
   const { modules, configure } = await imp("tools/balance/moba_items_balance_runner.mjs");
+  const { createTacticalDirector } = await imp("src/battle/moba/tactics/tacticalDirector.js");
   const M = await modules();
   const bad = [];
   for (const t of TEMPLATES) {
@@ -157,7 +158,9 @@ async function instrumentProblems(items, sides = ["blue"]) {
     for (const side of sides) {
       const input = tacticInputOf({ templateId: b.template, choices: nestedOf([[b.dimension, b.choice]]) }), std = tacticInputOf(null);
       const { e } = configure(1, "standard", M, 1, null, side === "blue" ? { blue: input, red: std } : { blue: std, red: input }, RULESET);
-      if (e.director.knobs(side).retreatAt !== early.knobs.retreatAt || (e.director.identity(side)?.engageBias ?? 0) !== (early.identity?.engageBias ?? 0)) bad.push(`engine ${side} ${b.template} ${b.dimension}=${b.choice}`);
+      //  完整旋鈕（紅方用引擎那一份的世界路名）：只比 retreatAt、engageBias 的話，大多數選擇掉了也看不出來（審查 m3）。
+      const wantK = side === "blue" ? early.knobs : createTacticalDirector({ blue: early.knobs, red: early.knobs, laneFrame: e.director.laneFrame }).knobs("red");
+      if (J(e.director.knobs(side)) !== J(wantK) || (e.director.identity(side)?.engageBias ?? 0) !== (early.identity?.engageBias ?? 0)) bad.push(`engine ${side} ${b.template} ${b.dimension}=${b.choice}`);
     }
     const r = resolveTactic(tacticInputOf({ templateId: b.template, choices: nestedOf([[b.dimension, b.choice]]) }), {}, { phases: true, templateBalance: TB });
     const want = projected(engine, b.template, nestedOf([[b.dimension, b.choice]]));
@@ -189,7 +192,7 @@ if (flag("selftest")) {
     J(["passive", "standard", "aggressive"].map((c) => has("classic.m3", "teamfight.posture", c)?.reasons ?? null)));
   const runnerSrc = fs.readFileSync(path.join(ROOT, "tools/balance/moba_items_balance_runner.mjs"), "utf8"), selfSrc = fs.readFileSync(SELF, "utf8");
   ck("S8 worker 旗標不與 balance runner 的 --worker 撞名（撞名會多送 ready、任務錯位）", runnerSrc.includes('process.argv.includes("--worker")') && !/workerArgs: \["--worker"\]/.test(selfSrc) && !selfSrc.includes(["if (flag(", '"worker"', "))"].join("")));
-  const inst = await instrumentProblems(PLAN);
+  const inst = await instrumentProblems(PLAN, ["blue", "red"]);
   ck("S7 儀器檢查：對照組＝修正表設定且與出貨版不同；每個臂的 Resolver 旋鈕＝修正表引擎的投影", inst.length === 0, inst.slice(0, 5).join(" ¦ "));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);

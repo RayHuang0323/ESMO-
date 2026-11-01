@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { ROOT, provenance } from "./studyRunner.mjs";
+import { ROOT, provenance, sha16 } from "./studyRunner.mjs";
 
 const git = (...a) => execFileSync("git", a, { cwd: ROOT, encoding: "utf8" }).trim();
 
@@ -36,6 +36,7 @@ function prerequisiteRefusal(REG, fingerprint) {
   const r = JSON.parse(fs.readFileSync(file, "utf8"));
   const out = [];
   if (r.fingerprint !== fingerprint) out.push(`前置結果的指紋 ${r.fingerprint} ≠ 目前 ${fingerprint}`);
+  if (r.registration !== pre.registration || r.registrationHash !== sha16(fs.readFileSync(path.join(ROOT, pre.registration), "utf8"))) out.push(`前置結果不是這份登記產生的：${pre.registration}`);
   if (r.verdict !== pre.verdict) out.push(`前置結果判定 ${r.verdict}，要 ${pre.verdict}：其他正式量測不得開始，交 Owner`);
   return out;
 }

@@ -101,7 +101,7 @@ const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: F
 
 if (flag("run") || flag("preflight")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered：不得執行"); process.exit(2); }
-  if (fs.existsSync(path.join(ROOT, OUT_REL))) { console.error("結果檔已存在：這些 seeds 已觀察過"); process.exit(2); }
+  if (!IS_FORMAL && fs.existsSync(path.join(ROOT, OUT_REL))) { console.error("結果檔已存在：這些 seeds 已觀察過"); process.exit(2); }
   if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: FP, resultRel: OUT_REL, regRel: REG_REL, toolRel: "tools/measure_e1_3aB.mjs" }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   const prov = provenance();
   if (prov.dirtyFilesUnderSrcTools) { console.error(`src／tools 有 ${prov.dirtyFilesUnderSrcTools} 個未提交變更`); process.exit(2); }
