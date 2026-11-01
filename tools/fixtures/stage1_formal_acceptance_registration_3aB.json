@@ -250,5 +250,40 @@
   "the Owner approves. Only then: register the v21 candidate fingerprint in simulationVersion.js in one visible commit (the freeze commit)",
   "fill `fingerprint` in the five confirm registrations with it, change their status to start with \"registered\", fill review of exclusion_v21b1_confirm_registration_3aB.json after the Reviewer confirms them with the freeze in hand. check_formal_acceptance_3aB R1 and X1 are red by design from this point; their post-freeze form is registered with this step: every status starts with \"registered\", every fingerprint equals the frozen one, --run gets past the registration checks",
   "step 1 onward of `order`. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point"
- ]
+ ],
+ "ownerInstruction20261102b": {
+  "verbatimKeyLines": [
+   "今晚授權完成以下後續任務，不需逐項詢問。先讓正在執行的 verify 基準完整結束，完成原定 8 項凍結前工作、必要驗證、文件與本機 Commit。",
+   "接著執行下一階段「Freeze Readiness Gate」",
+   "使用實際產生的基準，逐段比對目前分支的 verify 結果，區分既有失敗、新回歸及環境問題；不得直接把紅燈視為既有債。",
+   "全面檢查正式驗收的登記、工具、Seeds 去重、--reg、exKey、templateBalance、P6 step 4b、旗標回滾及 STOP 條件是否一致。",
+   "執行必要的工具自測、快速 Gate 與小規模 dry-run；不得消耗正式確認保留 Seeds。",
+   "交給獨立 Reviewer 審查，修正明確的工具缺陷與本次新增回歸，不放寬斷言、門檻或修改已登記的研究假說。",
+   "更新 05／08、Roadmap、SDD 與交接紀錄，完成本機 Commit，產出「Phase 3a-B 最終凍結就緒報告」。",
+   "不正式凍結語意、不重錄 Golden、不啟動正式 P2 長量測。G-A8 與 Challenge STOP 保留，旗標全關。不修改 CS；歷史 CS 驗證結果只做唯讀基準分析。不 Push、不 Deploy、不整合 main。",
+   "全部完成後停下等待 Owner Review。若出現新回歸、證據污染或需要變更驗收標準，立即停止相關工作並回報，不自行放行。"
+  ]
+ },
+ "freezeReadinessGate": {
+  "registeredAt": "2026-11-02, before the branch verify run and before any dry-run",
+  "verifyComparison": {
+   "run": "one full node tools/verify.mjs on this branch after the baseline is recorded and committed, single line; older entries of the git-ignored state file are not reused because src changed since they were written",
+   "classes": {
+    "preexisting": "fails on the baseline with the same failure text",
+    "preexistingChangedText": "fails on the baseline but with a different text: read one by one, it is not excused by name alone",
+    "newRegression": "passes on the baseline and fails here, for a reason traced to this branch: stops the related work and is reported",
+    "environment": "fails here for a reason traced to the machine (timeout, memory, browser). Only a re-run of that segment alone may reclassify it, and the first failure stays in the record",
+    "newSegment": "a segment that does not exist on the baseline: its failure is not excused by the baseline, it is read one by one",
+    "fixedHere": "fails on the baseline, passes here: listed, not a claim of anything"
+   },
+   "rule": "a red is never excused because a document calls it debt; every failing segment gets a class with the evidence"
+  },
+  "dryRun": {
+   "what": "a rehearsal of the freeze procedure in a throwaway detached git worktree, with a throwaway commit that is on no branch and is never merged. There: register the fingerprint computed at that commit, fill the confirm registrations, shrink their seed ranges to blocks already observed, and run --run plus --report of every tool end to end",
+   "seeds": "G-A8 25001-25002, career 27001 onward (target 2 per layout), E1 21001-21004, E2 23001-23005, step 4b 65001-65002. No reserved block is touched; check_formal_acceptance_3aB S1-S3 keep guarding the real registrations",
+   "notEvidence": "the rehearsal numbers are not results of anything and stay out of the repo. They only show the tools work end to end. This branch keeps fingerprint 0578fa882d74b205 and READY_FOR_FREEZE: it is not a freeze",
+   "notRehearsed": "the truth re-measure (about 70 minutes on seeds 1-40) and the 15-18 h run are not started; the truth plan is checked by the 163 batch comparison"
+  },
+  "stopConditions": "a new regression, contaminated evidence, or a need to change an acceptance criterion stops the related work and is reported to the Owner; none of them is released here"
+ }
 }
