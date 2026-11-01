@@ -1,0 +1,279 @@
+{
+ "schema": "ExclusionV21b1Registration.v1",
+ "studyId": "exclusion.v21b1",
+ "registeredAt": "2026-11-01",
+ "status": "registered before any match of this study was run; development measurement, NOT a formal acceptance and NOT a G-A8 result",
+ "authority": "Owner 2026-11-01 item 5 (P6: fresh-seed development exclusion study)",
+ "question": "Which choices should be offered on classic.m3 / m7 / m8 under template table v21.b1? The current rows were measured on the shipped configs of those templates.",
+ "scope": {
+  "templates": [
+   "classic.m3",
+   "classic.m7",
+   "classic.m8"
+  ],
+  "ruleset": "balanceTool.v21",
+  "templateBalance": "v21.b1",
+  "selectionRule": "mechanical, from code, no results seen: every live (dimension, choice) with a registered claim that is structurally offered on the template under v21.b1, not covered by an unscoped template \"*\" row, and at least one of: A an existing row keyed to that template; B it is the weak batch of the current truth plan; C it has the smallest knob delta among non-std templates under v21.b1 (same formula as the truth plan); D it is newly offered under v21.b1 compared to the shipped config",
+  "outOfScope": "\"*\" rows: std-level decisions (n=400 replication or std primary rows), unchanged by a template fix. classic.m7 lanes.top.stance=split and classic.m8 phases.late.objectiveOrder=baron are keyed rows also covered by a \"*\" not_replicated row, so they stay withheld whatever this study would say and are not measured"
+ },
+ "seeds": {
+  "range": "65001-65100",
+  "n": 100,
+  "step": 1,
+  "note": "fresh block never used by any study; tool path, each seed its own effectiveSeed"
+ },
+ "design": "same as truth-table weak batches: blue = the template with the choice, red = std, control = the template with no choice on the same seed, mirrored roster, items standard, skills on; blue arm only (red replication is out of scope for a development study)",
+ "decisionRule": {
+  "metricAndDirection": "the registered claim of the row given the template's own choice under v21.b1 (claimFor), never chosen after seeing data",
+  "offer": "paired z in the claimed direction >= 2 with n >= 20 (TRUTH_GATE.minZ)",
+  "noEffect": "|z| < 2: row keyed templateBalance \"v21.b1\" with reason no_measured_effect",
+  "reversed": "z against the direction <= -2: row keyed \"v21.b1\", reason reversed_effect",
+  "unmeasurable": "n < 20 or z null: withheld, reason unmeasurable",
+  "noRetries": "no re-run, no seed swap, no metric swap, no seed dropped; errored seeds follow errorRule (> 1% STOP)"
+ },
+ "application": {
+  "shippedRows": "an existing keyed row whose choice is offered by this study gets templateBalance null: it keeps withholding on shipped configs (v20 and any table-less path, unchanged) and no longer applies under v21.b1. A row still failing stays unkeyed",
+  "newRows": "every failing choice without a row gets a new row keyed \"v21.b1\"",
+  "v20": "must leave the v20 offer lists, v20 golden and Challenge byte-identical; verified by a gate"
+ },
+ "limits": "multiple comparisons are not corrected, same as the truth table; a development decision. The formal truth-table re-run after the freeze is registered separately (stage1_formal_acceptance_registration_3aB.json)",
+ "plan": {
+  "count": 20,
+  "controls": 3,
+  "matches": 2300,
+  "items": [
+   {
+    "template": "classic.m3",
+    "dimension": "phases.mid.stance",
+    "choice": "standard",
+    "own": "aggressive",
+    "metric": "phaseEngageDecisionsPerMin.mid",
+    "direction": "down",
+    "reasons": [
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "lanes.top.stance",
+    "choice": "standard",
+    "own": "defensive",
+    "metric": "laneForward.top",
+    "direction": "up",
+    "reasons": [
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m3",
+    "dimension": "seats.b5.mission",
+    "choice": "standard",
+    "own": "roam",
+    "metric": "supportRoamsPerMin",
+    "direction": "down",
+    "reasons": [
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "teamfight.posture",
+    "choice": "passive",
+    "own": "standard",
+    "metric": "engageDecisionsPerMin",
+    "direction": "down",
+    "reasons": [
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "teamfight.posture",
+    "choice": "passive",
+    "own": "standard",
+    "metric": "engageDecisionsPerMin",
+    "direction": "down",
+    "reasons": [
+     "D_newly_offered"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "teamfight.posture",
+    "choice": "aggressive",
+    "own": "standard",
+    "metric": "engageDecisionsPerMin",
+    "direction": "up",
+    "reasons": [
+     "C_weakest_under_table",
+     "D_newly_offered"
+    ]
+   },
+   {
+    "template": "classic.m3",
+    "dimension": "teamfight.grouping",
+    "choice": "standard",
+    "own": "tight",
+    "metric": "fightEntriesPerMinAll",
+    "direction": "down",
+    "reasons": [
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "objectives.baron",
+    "choice": "standard",
+    "own": "low",
+    "metric": "objectiveFightEntriesPerMin.baron",
+    "direction": "up",
+    "reasons": [
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "objectives.tower",
+    "choice": "standard",
+    "own": "low",
+    "metric": "siegeWindowsPerMin",
+    "direction": "up",
+    "reasons": [
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m3",
+    "dimension": "objectives.tower",
+    "choice": "high",
+    "own": "standard",
+    "metric": "siegeWindowsPerMin",
+    "direction": "up",
+    "reasons": [
+     "A_keyed_row",
+     "B_weak_now",
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "phases.early.grouping",
+    "choice": "group",
+    "own": "standard",
+    "metric": "joinGoGeneralStartsPerMin.early",
+    "direction": "up",
+    "reasons": [
+     "B_weak_now",
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "phases.mid.grouping",
+    "choice": "group",
+    "own": "standard",
+    "metric": "joinGoGeneralStartsPerMin.mid",
+    "direction": "up",
+    "reasons": [
+     "A_keyed_row",
+     "B_weak_now",
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "phases.late.grouping",
+    "choice": "group",
+    "own": "standard",
+    "metric": "joinGoGeneralStartsPerMin.late",
+    "direction": "up",
+    "reasons": [
+     "A_keyed_row",
+     "B_weak_now",
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "phases.mid.objectiveOrder",
+    "choice": "baron",
+    "own": "none",
+    "metric": "contestShare.baron.mid",
+    "direction": "up",
+    "reasons": [
+     "A_keyed_row",
+     "B_weak_now",
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.early.focusLane",
+    "choice": "top",
+    "own": "none",
+    "metric": "ganksOwnPerMin.top.early",
+    "direction": "up",
+    "reasons": [
+     "D_newly_offered"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.early.focusLane",
+    "choice": "mid",
+    "own": "none",
+    "metric": "ganksOwnPerMin.mid.early",
+    "direction": "up",
+    "reasons": [
+     "D_newly_offered"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.early.focusLane",
+    "choice": "bot",
+    "own": "none",
+    "metric": "ganksOwnPerMin.bot.early",
+    "direction": "up",
+    "reasons": [
+     "D_newly_offered"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.mid.focusLane",
+    "choice": "top",
+    "own": "none",
+    "metric": "ganksOwnPerMin.top.mid",
+    "direction": "up",
+    "reasons": [
+     "D_newly_offered"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.mid.focusLane",
+    "choice": "mid",
+    "own": "none",
+    "metric": "ganksOwnPerMin.mid.mid",
+    "direction": "up",
+    "reasons": [
+     "D_newly_offered"
+    ]
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.mid.focusLane",
+    "choice": "bot",
+    "own": "none",
+    "metric": "ganksOwnPerMin.bot.mid",
+    "direction": "up",
+    "reasons": [
+     "D_newly_offered"
+    ]
+   }
+  ]
+ },
+ "expectedEffort": "about 2300 matches, single line, workers 3",
+ "review": null
+}

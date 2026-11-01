@@ -1,0 +1,94 @@
+{
+ "schema": "Stage1FormalAcceptanceRegistration.v1",
+ "studyId": "stage1.formalAcceptance",
+ "registeredAt": "2026-11-01",
+ "status": "registered, NOT runnable: runs only after (1) the Owner approves the single semantics freeze, (2) the freeze commit, fingerprint and golden re-recording exist, (3) the runnable preconditions below are done and an independent review of this file with the freeze in hand. No measurement of this spec has been run. It never enables a release flag by itself",
+ "authority": "Owner 2026-11-01 item 5 (P7), 2026-10-30 third ruling items 5-6",
+ "scope": "stage 1 only: Live tactics v21 (career.v21 with template table v21.b1), Challenge stays on v20. Flags under test: mobaTacticalDirectorV21 on, heroSkillsV1 as the career.v21 requirements say, mobaChallengeV21 OFF",
+ "stopRules": {
+  "ga8": "the confirmatory G-A8 runs FIRST. Thresholds copied from the original registration, unchanged: STOP when win rate >= 0.60 AND lower 95% bound > 0.55 for any of the 21 templates. A STOP halts every other formal measurement and the release; it is reported to the Owner. No relaxed threshold, no new seeds, no template dropped, no scope change after the fact",
+  "challenge": "the Challenge side-bias STOP stays. Stage 1 does not measure it and never claims it passed",
+  "anyOtherRed": "any other pre-registered check that fails stops the release decision and is reported; it may only be fixed through a new Owner-approved freeze, which restarts every step from step 1 on the new fingerprint",
+  "optionalStopping": "each study runs to its registered n; no peeking decision; errored seeds follow errorRule (> 1% STOP); an interrupted run resumes in the same folder on the same fingerprint"
+ },
+ "order": [
+  {
+   "step": 1,
+   "what": "G-A8 confirmatory re-run",
+   "tool": "node tools/measure_ga8_3aB.mjs with tools/fixtures/ga8_fix_confirm_registration_3aB.json",
+   "seeds": "43001-43400",
+   "scope": "all 21 templates vs std, no template excluded",
+   "pass": "data complete and no STOP; WARN rows are reported, they do not block"
+  },
+  {
+   "step": 2,
+   "what": "career side bias",
+   "tool": "node tools/measure_side_bias_3aB.mjs with tools/fixtures/sidebias_career_fixconfirm_registration_3aB.json",
+   "seeds": "51001-55999 (odd, walked)",
+   "pass": "the thresholds written in that registration, unchanged"
+  },
+  {
+   "step": 3,
+   "what": "E1 and E2",
+   "tool": "node tools/measure_e1_3aB.mjs; node tools/measure_e2_3aB.mjs",
+   "note": "E2 is career.v21 with the AI coach through the formal live entry; seeds only from blocks the seed plan assigns, re-registered with the frozen fingerprint before running; the registrations must name which seeds are fresh for the freeze",
+   "pass": "thresholds of e1_registration_3aB.json and e2_registration_3aB.json, unchanged"
+  },
+  {
+   "step": 4,
+   "what": "truth table full re-run and evidence replay",
+   "tool": "node tools/check_tactic_truth_3a.mjs --measure --workers=3 --dir=<new folder outside the repo>, then the quick mode; evidence replay as registered in evidence_carryforward_3a.json",
+   "pass": "T-gates green; rows keyed templateBalance \"v21.b1\" and rows keyed null are supported by exclusion_v21b1_result_3aB.json (P6), the same superseding role as the n=400 replication has for the n=40 std rows"
+  },
+  {
+   "step": 5,
+   "what": "golden re-recording review (P8)",
+   "tool": "check_match_golden_v21a, check_career_golden_v21",
+   "rule": "Owner principle 2026-11-01 item 6: only after the freeze; the old fixtures are kept (a new file or versioned name, never overwritten); every changed case is listed and reviewed case by case; the provenance constants change visibly",
+   "pass": "each case explained by the registered list; v20 golden 39 cases and the Challenge goldens byte-identical"
+  },
+  {
+   "step": 6,
+   "what": "gates",
+   "tool": "Phase 3a gates, check_stage1_split_3aB, node tools/verify.mjs (full), regress, regress2, check_save_bundle_b1b, check_save_hardening_b1c, check_cloud_save_b1d, check_club_mastery_v1, browser_check_exit_flush, browser_check_cloud_save_ui",
+   "pass": "green except the debts already recorded in CLAUDE.md and 08 (listed by name in the report, never re-labelled)"
+  },
+  {
+   "step": 7,
+   "what": "Challenge isolation under the stage-1 flags",
+   "tool": "check_challenge_golden_v21, check_challenge_setup_3a, player challenge slices 1-8, browser challenge gates; replay of existing v20 challenges",
+   "pass": "unchanged from v20"
+  },
+  {
+   "step": 8,
+   "what": "flag rollback drill",
+   "tool": "a new gate registered with the freeze",
+   "cases": "a stage-1 save with tactic-book plans; an in-progress career.v21 match; the confirmed-not-started states of matrix cases (2) and (3); each loaded with the flag off and on",
+   "pass": "no damage; in-progress matches resume byte-identical on their persisted ruleset; plans kept (the book is never deleted, Owner 2026-11-01 item 3). Code rollback is not supported (it would delete tacticBook) and is excluded by the release manual"
+  },
+  {
+   "step": 9,
+   "what": "browser with the real flag",
+   "tool": "browser_check_stage1_flows_3aB, browser_check_tactic_book_v21, browser_check_tactic_book_3a, browser_check_battle_notices_3aB, desktop + 390 px; a flag-off tactic screen compared with production",
+   "pass": "all green"
+  },
+  {
+   "step": 10,
+   "what": "integration",
+   "tool": "merge with the current origin/main on a separate branch (CS Major v1.0 inside; CS verify-only), re-run build, regress, regress2, v20 golden and the split gate; production gates after a deploy the Owner orders",
+   "pass": "green; needs an explicit Owner order, this spec does not authorise push, deploy or main"
+  }
+ ],
+ "runnablePreconditions": [
+  "ga8_fix_confirm_registration_3aB.json finalised with the frozen fingerprint and an independent review (it is a DRAFT today)",
+  "sidebias_career_fixconfirm_registration_3aB.json finalised; tools/measure_side_bias_3aB.mjs accepts a --reg parameter (part of the freeze work)",
+  "tools/measure_ga8_3aB.mjs accepts the confirm registration, or a --reg parameter is added before the freeze",
+  "check_tactic_truth_3a recognises exclusion_v21b1_result_3aB.json as the superseding source for rows carrying a templateBalance key (added before the freeze so it enters the fingerprint)",
+  "the flag rollback drill gate written and reviewed",
+  "moba-sim v21 candidate fingerprint re-registered at the freeze (the current 0578fa882d74b205 was registered before stage 1)"
+ ],
+ "notInStage1": "Challenge side-bias confirmation 45001-49999, C1 calibration, challenge.v21 golden: stage 2. v21 post-match evidence goals: need their own formal evidence (Owner 2026-11-01 item 4); until then rebalanced templates show unscored counts",
+ "neverClaimed": "passing stage 1 is not a pass of the original P2 acceptance, of G-A8 by exclusion, or of the Challenge side bias",
+ "effort": "about 15-18 hours single line (workers <= 3), by earlier measurements of these studies; not measured for this freeze",
+ "review": null
+}
