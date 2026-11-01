@@ -30,13 +30,14 @@ const RULESET = "balanceTool.v21", TB = "v21.b1", TEMPLATES = ["classic.m3", "cl
 const PASS_Z = 3, MARGINAL_Z = 2, REPL_Z = 3, REPL_REL = 0.05;
 const J = JSON.stringify;
 
-if (flag("worker")) {
+//  ⚠ 旗標不得叫 --worker：balance runner 看到 --worker 會在 import 時多送一次 ready，任務就錯位（第一次開跑踩過，整批作廢）。
+if (flag("exclusion-worker")) {
   process.env.ESMO_BALANCE_SKILLS = "on";
   const { runTruthMatch } = await imp("tools/lib/tacticTruthSim.mjs");
   process.on("message", async (t) => {
     try {
       const rec = await runTruthMatch(t.seed, { blue: t.blue ?? null, red: t.red ?? null, items: "standard", ruleset: RULESET });
-      process.send({ type: "done", id: t.id, rec });
+      process.send({ type: "done", id: t.id, rec: { ...rec, taskId: t.id } });
     } catch (err) { process.send({ type: "error", id: t.id, error: String(err?.stack ?? err) }); }
   });
   process.send({ type: "ready" });
@@ -181,6 +182,8 @@ if (flag("selftest")) {
   ck("S6 審查 M1 的漏網都進清單：m3 teamfight.posture 三個選項（沒有宣稱、判不提供）；m8 teamfight.posture=aggressive（有宣稱）",
     ["passive", "standard", "aggressive"].every((c) => { const x = has("classic.m3", "teamfight.posture", c); return x && x.metric === null; }) && !!has("classic.m8", "teamfight.posture", "aggressive")?.metric,
     J(["passive", "standard", "aggressive"].map((c) => has("classic.m3", "teamfight.posture", c)?.reasons ?? null)));
+  const runnerSrc = fs.readFileSync(path.join(ROOT, "tools/balance/moba_items_balance_runner.mjs"), "utf8"), selfSrc = fs.readFileSync(SELF, "utf8");
+  ck("S8 worker 旗標不與 balance runner 的 --worker 撞名（撞名會多送 ready、任務錯位）", runnerSrc.includes('process.argv.includes("--worker")') && !/workerArgs: \["--worker"\]/.test(selfSrc) && !selfSrc.includes('if (flag("worker"))'));
   const inst = await instrumentProblems(PLAN);
   ck("S7 儀器檢查：對照組＝修正表設定且與出貨版不同；每個臂的 Resolver 旋鈕＝修正表引擎的投影", inst.length === 0, inst.slice(0, 5).join(" ¦ "));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
@@ -201,6 +204,8 @@ const tasks = BATCHES.flatMap((b) => SEEDS.map((s) => ({ id: `${b.key}#${s}`, ke
 const SV = await imp("src/platform/contracts/simulationVersion.js");
 const SIM = (await imp("tools/lib/tacticTruthSim.mjs")).TRUTH_SIM_VERSION;
 const STABLE = { registration: sha16(REG_TEXT), plan: sha16(J(ITEMS)), simVersion: SIM };
+//  即時檢查：紀錄裡的 seed 與 worker 回報的任務都要等於這一場（錯位就停，不讓結果對到別的場次）。
+const recCheck = (rec, t) => [...(rec?.seed === t.seed ? [] : [`seed ${rec?.seed} != ${t.seed}`]), ...(rec?.taskId === t.id ? [] : [`task ${rec?.taskId} != ${t.id}`])];
 const STAGE1_RESULT = "tools/fixtures/exclusion_v21b1_result_3aB.json", STAGE2_RESULT = "tools/fixtures/exclusion_v21b1_stage2_result_3aB.json";
 //  複審：開跑時 src、量測程式必須與登記檔最後一次提交時相同（不能換一個資料夾用別的程式重跑）。
 const { execSync } = await import("node:child_process");
@@ -223,7 +228,7 @@ if (flag("run")) {
   if (inst.length) { console.error(`儀器檢查失敗：${inst.join(" ¦ ")}`); process.exit(2); }
   //  gitHead、指紋進 meta（審查 M7）：中斷後換了程式再續跑會被 runStudy 擋下。
   const META = { ...STABLE, gitHead: prov.gitHead, fingerprint: SV.SIMULATION_SEMANTICS_FINGERPRINTS[SV.MOBA_SIMULATION_VERSION] };
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--worker"], meta: META, workers: Number(val("workers", 3)), label: "P6 排除列重新判定" });
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--exclusion-worker"], meta: META, workers: Number(val("workers", 3)), label: "P6 排除列重新判定", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 
@@ -231,7 +236,8 @@ if (flag("report")) {
   const { metricValue, pairStats } = await imp("tools/lib/tacticTruthSim.mjs");
   const m = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (Object.entries(STABLE).some(([k, v]) => m.meta[k] !== v)) { console.error("資料夾的登記／清單與目前不同：不判定"); process.exit(2); }
-  const audit = auditStudy(DIR, tasks);
+  const audit = auditStudy(DIR, tasks, recCheck);
+  if (audit.instrument.length) { console.error(`⛔ 紀錄與任務不符：${audit.instrument.slice(0, 3).join(" ¦ ")}（不判定）`); process.exit(5); }
   if (audit.halt) { console.error(`⛔ HALT：${audit.halt}`); process.exit(5); }
   if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
   const errRule = errorRule(audit.errored.length, tasks.length);
@@ -279,13 +285,14 @@ if (flag("stage2-run") || flag("stage2-report")) {
     if (provenance().dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
     if (fs.existsSync(path.join(ROOT, STAGE2_RESULT))) { console.error("第二階段結果檔已存在：這些 seeds 已觀察過"); process.exit(2); }
     console.log(`第二階段：邊際 ${marg.length} 項，${t2.length} 場`);
-    const res = await runStudy({ dir: DIR, tasks: t2, workerFile: SELF, workerArgs: ["--worker"], meta: { ...STABLE2, gitHead: provenance().gitHead }, workers: Number(val("workers", 3)), label: "P6 第二階段（邊際紅藍複驗）" });
+    const res = await runStudy({ dir: DIR, tasks: t2, workerFile: SELF, workerArgs: ["--exclusion-worker"], meta: { ...STABLE2, gitHead: provenance().gitHead }, workers: Number(val("workers", 3)), label: "P6 第二階段（邊際紅藍複驗）", check: recCheck });
     process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
   }
   const { metricValue, pairStats } = await imp("tools/lib/tacticTruthSim.mjs");
   const m2 = JSON.parse(fs.readFileSync(path.join(DIR, "meta.json"), "utf8"));
   if (Object.entries(STABLE2).some(([k, v]) => m2.meta[k] !== v)) { console.error("資料夾的登記與目前不同：不判定"); process.exit(2); }
-  const audit = auditStudy(DIR, t2);
+  const audit = auditStudy(DIR, t2, recCheck);
+  if (audit.instrument.length) { console.error(`⛔ 紀錄與任務不符：${audit.instrument.slice(0, 3).join(" ¦ ")}（不判定）`); process.exit(5); }
   if (audit.halt) { console.error(`⛔ HALT：${audit.halt}`); process.exit(5); }
   if (audit.missing) { console.log(`資料未完整：還有 ${audit.missing} 場（不判定）`); process.exit(6); }
   const errRule = errorRule(audit.errored.length, t2.length);

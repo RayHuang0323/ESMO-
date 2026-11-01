@@ -2,7 +2,7 @@
  "schema": "ExclusionV21b1Registration.v1",
  "studyId": "exclusion.v21b1",
  "registeredAt": "2026-11-01",
- "status": "registered before any match of this study was run; revised after review rounds 1 and 2 (no match run yet); development measurement, NOT a formal acceptance and NOT a G-A8 result",
+ "status": "registered before the first match; revised after review rounds 1 and 2; first run invalidated by a tool defect, see instrumentFailures (no verdict was produced or seen); development measurement, NOT a formal acceptance and NOT a G-A8 result",
  "authority": "Owner 2026-11-01 item 5 (P6: fresh-seed development exclusion study)",
  "question": "Which choices should be offered on classic.m3 / m7 / m8 under template table v21.b1? The current rows were measured on the shipped configs of those templates.",
  "scope": {
@@ -313,5 +313,14 @@
    "verdict": "APPROVE WITH CHANGES; applied: stage 1 back to the truth rule and stage 2 red and blue replication (the z >= 3 bar of round 1 conflicted with the Owner 2026-10-13 ruling), C only when table-only, arms through the assembly path in the instrument check, code-moved guard, report listings"
   }
  ],
- "reportListings": "the stage-1 report prints every option offered today that the study does not offer. Applying the rows also lists every win-condition expansion that changes on classic.m3 / m7 / m8 (before / after of winConditionFill) in the stage-1 doc"
+ "reportListings": "the stage-1 report prints every option offered today that the study does not offer. Applying the rows also lists every win-condition expansion that changes on classic.m3 / m7 / m8 (before / after of winConditionFill) in the stage-1 doc",
+ "instrumentFailures": [
+  {
+   "at": "2026-11-01",
+   "commit": "d10603fa",
+   "what": "the first stage-1 run (1897 of 1900 written) stored every record under the wrong task: the worker flag --worker collided with the balance runner, which sends an extra ready on import when it sees --worker, so the parent fed a second task before the first finished. Line one of the control batch: id seed 65005, record seed 65002. Three matches went missing, one per worker",
+   "detection": "--report refused because of the missing matches, before computing any verdict. No verdict, z or per-choice number was produced or read. One control record was printed while diagnosing (duration, kills, fight counts of one match)",
+   "treatment": "all data of that folder discarded. Same seeds, same batches, same rule, in a new folder, after renaming the flag and adding a live check that the record seed and the echoed task id equal the task. This is a repair of the instrument, not a retry after seeing an outcome"
+  }
+ ]
 }
