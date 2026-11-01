@@ -7,6 +7,7 @@
 //  node tools/measure_exclusion_v21b1_3aB.mjs --selftest
 //  node tools/measure_exclusion_v21b1_3aB.mjs --run --dir=<repo 外新資料夾> [--workers=3]   要 APPROVE 的獨立審查、登記清單與重算相同、src／tools 乾淨、儀器檢查通過
 //  node tools/measure_exclusion_v21b1_3aB.mjs --report --dir=<同一個>                        寫 tools/fixtures/exclusion_v21b1_result_3aB.json
+//  node tools/measure_exclusion_v21b1_3aB.mjs --confirm-plan | --confirm-run --dir=<repo 外新資料夾> [--workers=3] | --confirm-report --dir=<同一個>   正式驗收 step 4b（凍結後才能跑）
 //  node tools/measure_exclusion_v21b1_3aB.mjs --stage2-run --dir=<另一個> [--workers=3]      第一階段的邊際項：新 seeds、紅藍雙方（結果檔要先提交）
 //  node tools/measure_exclusion_v21b1_3aB.mjs --stage2-report --dir=<同一個>                 寫 tools/fixtures/exclusion_v21b1_stage2_result_3aB.json
 //
@@ -20,6 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
+import { formalRunRefusal } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
@@ -214,6 +216,66 @@ const codeMovedSinceRegistration = () => {
   const regCommit = git(`git log -1 --format=%H -- ${REG_REL}`);
   return git(`git diff --name-only ${regCommit} HEAD -- src tools/lib tools/balance tools/measure_exclusion_v21b1_3aB.mjs`);
 };
+// ── 正式驗收 step 4b：P6 提供的每個選擇，新 seeds、紅藍雙方（登記 exclusion_v21b1_confirm_registration_3aB.json；只在凍結後才能跑）──────────
+if (flag("confirm-plan") || flag("confirm-run") || flag("confirm-report")) {
+  const CREG_REL = "tools/fixtures/exclusion_v21b1_confirm_registration_3aB.json";
+  const CREG_TEXT = fs.readFileSync(path.join(ROOT, CREG_REL), "utf8").replace(/\r\n/g, "\n"), CREG = JSON.parse(CREG_TEXT);
+  const R1 = JSON.parse(fs.readFileSync(path.join(ROOT, STAGE1_RESULT), "utf8")), R2 = JSON.parse(fs.readFileSync(path.join(ROOT, STAGE2_RESULT), "utf8"));
+  const offeredByP6 = R1.rows.filter((r) => r.verdict === "pass" || (r.verdict === "marginal" && R2.rows.find((x) => keyOfPlan(x) === keyOfPlan(r))?.verdict === "confirmed"))
+    .map((r) => ({ template: r.template, dimension: r.dimension, choice: r.choice, metric: r.metric, direction: r.direction }));
+  if (J(offeredByP6) !== J(CREG.plan.items)) { console.error("登記的清單與 P6 結果檔推出的不同：不得使用"); process.exit(2); }
+  const [AC, BC] = CREG.seeds.range.split("-").map(Number);
+  const SC = Array.from({ length: BC - AC + 1 }, (_, i) => AC + i);
+  const sidesC = ["blue", "red"], tplsC = [...new Set(offeredByP6.map((r) => r.template))], tc = [];
+  for (const side of sidesC) {
+    for (const t of tplsC) for (const s of SC) tc.push({ id: `c|${side}|control|${t}#${s}`, key: `c|${side}|control|${t}`, seed: s, [side]: { templateId: t, choices: {} } });
+    for (const r of offeredByP6) for (const s of SC) tc.push({ id: `c|${side}|${keyOfPlan(r)}#${s}`, key: `c|${side}|${keyOfPlan(r)}`, seed: s, [side]: armOf(r) });
+  }
+  if (flag("confirm-plan")) { console.log(`step 4b：${offeredByP6.length} 個選擇＋${tplsC.length} 組對照 × 紅藍 × ${SC.length} seeds ＝ ${tc.length} 場（${CREG.seeds.range}）`); process.exit(0); }
+  const DIRC = val("dir");
+  if (!DIRC) { console.error("需要 --dir"); process.exit(2); }
+  const FPC = SV.SIMULATION_SEMANTICS_FINGERPRINTS[SV.MOBA_SIMULATION_VERSION];
+  const STABLEC = { registration: sha16(CREG_TEXT), plan: sha16(J(CREG.plan.items)), range: CREG.seeds.range, simVersion: SIM, fingerprint: FPC };
+  if (flag("confirm-run")) {
+    const no = formalRunRefusal(CREG, { fingerprint: FPC, resultRel: CREG.result });
+    if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); }
+    if (!/^APPROVE/.test(CREG.review?.verdict ?? "")) { console.error("登記沒有 APPROVE 的獨立審查：不得開跑"); process.exit(2); }
+    { const c0 = git(`git log -1 --format=%H -- ${CREG_REL}`), moved = git(`git diff --name-only ${c0} HEAD -- src tools/lib tools/balance tools/measure_exclusion_v21b1_3aB.mjs`); if (moved) { console.error(`登記之後程式變了：${moved}`); process.exit(2); } }
+    const prov = provenance();
+    if (prov.dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
+    const inst = await instrumentProblems(offeredByP6);
+    if (inst.length) { console.error(`儀器檢查失敗：${inst.join(" ¦ ")}`); process.exit(2); }
+    const res = await runStudy({ dir: DIRC, tasks: tc, workerFile: SELF, workerArgs: ["--exclusion-worker"], meta: { ...STABLEC, gitHead: prov.gitHead }, workers: Number(val("workers", 3)), label: "step 4b（P6 選項紅藍確認）", check: recCheck });
+    process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
+  }
+  const { metricValue, pairStats } = await imp("tools/lib/tacticTruthSim.mjs");
+  if (fs.existsSync(path.join(ROOT, CREG.result))) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
+  const mc = JSON.parse(fs.readFileSync(path.join(DIRC, "meta.json"), "utf8"));
+  if (Object.entries(STABLEC).some(([k, v]) => mc.meta[k] !== v)) { console.error("資料夾的登記與目前不同：不判定"); process.exit(2); }
+  const auditC = auditStudy(DIRC, tc, recCheck);
+  if (auditC.instrument.length) { console.error(`⛔ 紀錄與任務不符：${auditC.instrument.slice(0, 3).join(" ¦ ")}（不判定）`); process.exit(5); }
+  if (auditC.halt) { console.error(`⛔ HALT：${auditC.halt}`); process.exit(5); }
+  if (auditC.missing) { console.log(`資料未完整：還有 ${auditC.missing} 場（不判定）`); process.exit(6); }
+  const errC = errorRule(auditC.errored.length, tc.length);
+  const badSeeds = new Set(auditC.errored.map((x) => x.seed)), SOK = SC.filter((s) => !badSeeds.has(s));
+  const r6 = (x) => (x === null || x === undefined ? null : Math.round(x * 1e6) / 1e6);
+  const rowsC = offeredByP6.map((r) => {
+    const sides = {};
+    for (const side of sidesC) {
+      const trt = readKey(DIRC, `c|${side}|${keyOfPlan(r)}`), ctl = readKey(DIRC, `c|${side}|control|${r.template}`);
+      const st = pairStats(SOK.map((s) => [r6(metricValue(ctl.get(`c|${side}|control|${r.template}#${s}`), side, r.metric)), r6(metricValue(trt.get(`c|${side}|${keyOfPlan(r)}#${s}`), side, r.metric))]));
+      sides[side] = { n: st.n, rel: r6(st.rel), z: r6(st.z), meets: meetsReplication(st, r.direction) };
+    }
+    return { ...r, ...sides, verdict: errC ? "undecided" : sides.blue.meets && sides.red.meets ? "confirmed" : "not_replicated" };
+  });
+  //  有任何一項沒站住 ⇒ 不是通過（登記 step 4 conflict：回報 Owner，不悄悄改排除列）；有出錯的場次 ⇒ 不判定。
+  const overall = errC === "STOP" ? "STOP" : errC ? "INCONCLUSIVE" : rowsC.every((r) => r.verdict === "confirmed") ? "PASS" : "FAILED";
+  fs.writeFileSync(path.join(ROOT, CREG.result), JSON.stringify({ schema: "ExclusionV21b1ConfirmResult.v1", at: new Date().toISOString(), registration: CREG_REL, run: mc.meta, seeds: CREG.seeds.range, errored: auditC.errored.length, errorRule: errC, rule: { minZ: REPL_Z, minRel: REPL_REL, sides: sidesC }, rows: rowsC, overall }, null, 1) + "\n");
+  for (const r of rowsC) console.log(`${r.verdict.padEnd(15)} ${r.template} ${r.dimension}=${r.choice} 藍 z=${r.blue.z} rel=${r.blue.rel}／紅 z=${r.red.z} rel=${r.red.rel}`);
+  console.log(`step 4b 判定：${overall}`);
+  process.exit(overall === "PASS" ? 0 : overall === "INCONCLUSIVE" ? 6 : 5);
+}
+
 const DIR = val("dir");
 if (!DIR) { console.error("需要 --dir"); process.exit(2); }
 

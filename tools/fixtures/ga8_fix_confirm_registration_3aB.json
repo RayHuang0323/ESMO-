@@ -1,24 +1,57 @@
 {
  "schema": "esmo.ga8-registration.v1",
  "studyId": "ga8-fix-confirm-3aB",
- "stage": "Phase 3a-B: confirmatory G-A8 after the template balance fix (DRAFT)",
- "registeredAt": "2026-10-28 (draft)",
- "status": "DRAFT, not runnable: becomes runnable only after (1) the Owner approves the template balance values, (2) the versioned change is implemented under a new semantics freeze with a newly registered v21 candidate fingerprint, (3) this file is finalised with that fingerprint and passes an independent review. Thresholds are copied from the original G-A8 registration and must not change",
- "authority": "Owner 2026-10-28 item 1 (plan C) and item 4 (thresholds unchanged); original G-A8 registration tools/fixtures/ga8_registration_3aB.json",
- "sameAsOriginal": "everything in tools/fixtures/ga8_registration_3aB.json (ruleset balanceTool.v21, all 21 templates as tactic-book plans with no choices vs the std plan, template blue on odd and red on even seeds, metric, thresholds, control, error rule, instrument check, no optional stopping) except the seeds and the fingerprint",
+ "stage": "Phase 3a-B stage 1 formal acceptance step 1: confirmatory G-A8 after the template balance fix",
+ "registeredAt": "2026-11-02 (draft 2026-10-28)",
+ "status": "READY_FOR_FREEZE: text final, NOT runnable. Becomes runnable only after (1) the Owner approves the single semantics freeze (Owner 2026-11-02), (2) `fingerprint` is filled with the frozen v21 candidate fingerprint and this status is changed to start with \"registered\", (3) an independent Reviewer confirms this file with the freeze in hand. Until then --run refuses. Nothing here may change after the first match",
+ "authority": "Owner 2026-10-28 item 1 and item 4 (thresholds unchanged), Owner 2026-10-30 third ruling item 6 (a STOP stops the release; no relaxed threshold, no new seeds, no scope change), stage1_formal_acceptance_registration_3aB.json step 1",
+ "tool": "node tools/measure_ga8_3aB.mjs --reg=tools/fixtures/ga8_fix_confirm_registration_3aB.json (--plan / --run / --report)",
+ "ruleset": "balanceTool.v21 (tool path: Director core.v1, laneFrame teamRelative, skills on, talents off, items standard, no player stats) — the plans themselves are compared, not the AI coach or player stats",
+ "templates": "all 21 templates of TACTIC_TEMPLATE_LIST (8 classic, std, 12 v2), each as a tactic-book plan with no choices; std vs std is the control",
+ "opponent": "std template plan with no choices",
  "seeds": {
   "range": "43001-43400",
   "n": 400,
-  "path": "tool (seed as-is)",
-  "rule": "reserved block G-A8.fixConfirm in tools/fixtures/study_seed_plan_3aB.json; disjoint from the original G-A8 / knob seeds (25001-25400) and the screening seeds (41001-41400) that chose the values"
+  "path": "tool (seed as-is; tools/check_study_seed_plan_3aB.mjs, reserved block G-A8.fixConfirm)",
+  "side": "the template plays blue on odd seeds and red on even seeds (200 / 200), so the map side cancels; layout by seed (report STANDARD/SWAPPED split)",
+  "rule": "disjoint from the original G-A8 and knob seeds (25001-25400) and the screening seeds (41001-41400) that chose the values"
  },
+ "matches": "21 x 400 = 8,400 (~3 h, 3 workers)",
+ "metric": "the template side's win rate; a match with no winner at 3600 s counts 0.5",
  "thresholds": {
   "STOP (dominant)": "win rate >= 0.60 AND the lower 95% bound > 0.55",
-  "WARN": "win rate >= 0.57, or win rate <= 0.43",
-  "control": "std vs std within 0.50 +/- 0.05",
+  "WARN": "win rate >= 0.57, or win rate <= 0.43 (a dominated plan is reported; it is not a release blocker by itself)",
+  "control": "std vs std must have a win rate within 0.50 +/- 0.05 (instrument sanity); outside => STOP(INSTRUMENT)",
   "PASS": "data complete, no STOP"
  },
- "scope": "all 21 templates, not only the changed ones: the new freeze may carry other semantic changes (e.g. a challenge fix), so every template is re-checked and a new STOP elsewhere cannot hide",
- "fingerprint": "TBD at the fix freeze (the current 0578fa882d74b205 is the pre-fix candidate and is NOT valid for this run)",
- "notClaimed": "a PASS here clears only G-A8; the challenge side bias STOP and the rest of the P2 re-validation are separate"
+ "report": [
+  "per template: win rate, 95% CI, as blue / as red, STANDARD / SWAPPED split",
+  "median match duration per template (20-40 min long-term target, report only)"
+ ],
+ "noOptionalStopping": "verdicts only on complete data",
+ "notClaimed": "no claim that a template is favourable; a STOP means a template must not ship as-is and goes to the Owner (no coefficient change without the Owner). A PASS here clears only G-A8 for the frozen stage-1 semantics; the Challenge side-bias STOP and the rest of the acceptance are separate, and templates combined with choices are not tested here (knownVerificationGaps)",
+ "errors": "errored matches are never retried or replaced and are listed by seed; any errored match => at most INCONCLUSIVE; more than 1% errored => STOP(INSTRUMENT)",
+ "instrumentCheck": "every record (live and at report time): balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off; any failure => HALT / STOP(INSTRUMENT). Added for this registration: the knobs the engine holds at t = 0 equal the knobs the resolver gives under templateBalance",
+ "sideBalanceNote": "odd seeds: template on blue; even seeds: on red. Because the layout is by seed, the template is on the dragon side in 201/400 = 50.25% of these seeds; the std vs std control absorbs a common side effect; each template's dragonSideShare is reported",
+ "checkpointing": "per match (finer than the plan's 250-match batches)",
+ "result": "tools/fixtures/ga8_fix_confirm_result_3aB.json",
+ "templateBalance": "v21.b1",
+ "scope": "all 21 templates, not only the changed ones: every template is re-checked and a new STOP elsewhere cannot hide. No template is dropped after the fact",
+ "fingerprint": "TBD_AT_FREEZE",
+ "copiedFrom": {
+  "file": "tools/fixtures/ga8_registration_3aB.json",
+  "unchangedFields": [
+   "ruleset",
+   "templates",
+   "opponent",
+   "matches",
+   "metric",
+   "thresholds",
+   "report",
+   "noOptionalStopping",
+   "errors",
+   "checkpointing"
+  ],
+  "note": "check_formal_acceptance_3aB compares these field by field with the original"
+ }
 }

@@ -6,17 +6,19 @@
 //  node tools/measure_side_bias_3aB.mjs --path=career|challenge --run --dir=<repo 外> [--workers=3]   可續跑；無效 seed 會自動往後補
 //  node tools/measure_side_bias_3aB.mjs --path=career|challenge --report --dir=<同一個>               寫 tools/fixtures/side_bias_result_<path>_3aB.json
 //  node tools/measure_side_bias_3aB.mjs --selftest
+//  帶 --reg=<tools/fixtures/…json>：讀確認登記（只有登記裡有的 path），結果寫到登記的 result；凍結前一定拒跑（tools/lib/formalRegistration.mjs）。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, pairedStats, ROOT } from "./lib/studyRunner.mjs";
+import { regRelOf, formalResultOf, formalRunRefusal } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
 const flag = (k) => args.includes(`--${k}`);
 const val = (k, d = null) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
-const REG_REL = "tools/fixtures/side_bias_registration_3aB.json";
+const DEFAULT_REG = "tools/fixtures/side_bias_registration_3aB.json", REG_REL = regRelOf(args, DEFAULT_REG), IS_FORMAL = REG_REL !== DEFAULT_REG;
 const REG_TEXT = fs.readFileSync(path.join(ROOT, REG_REL), "utf8"), REG = JSON.parse(REG_TEXT);
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const DT = 0.5;
@@ -92,6 +94,8 @@ if (flag("selftest")) {
 const PATH = val("path");
 if (!["career", "challenge"].includes(PATH)) { console.error("需要 --path=career|challenge"); process.exit(2); }
 const P = REG.paths[PATH];
+if (!P) { console.error(`${REG_REL} 沒有 path ${PATH}`); process.exit(2); }
+const OUT_REL = IS_FORMAL ? formalResultOf(REG, REG_REL) : `tools/fixtures/side_bias_result_${PATH}_3aB.json`;
 const { objectiveLayoutForSeed } = await imp("src/platform/contracts/objectiveLayout.js");
 const [S0, S1] = P.seeds.range.split("-").map(Number);
 /** 依序走奇數 seed，直到兩種配置的「有效」seed 都達標；invalid＝已知無效的 seed（補上同配置的下一個）。 */
@@ -123,6 +127,7 @@ const invalidSeeds = () => {
 
 if (flag("run")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
+  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   if (fs.existsSync(path.join(DIR, "HALT"))) { console.error("資料夾有 HALT：不得續跑"); process.exit(5); }
   const prov = provenance();
   if (prov.dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
@@ -170,7 +175,7 @@ if (flag("report")) {
         pairingNote: "challenger = FIXTURE_KEYS[seed % 5], defender = FIXTURE_KEYS[(seed + 2) % 5]: every fixture is challenger and defender equally often, but each pairing is one-directional, so blue (challenger) strength is not fully separated from the side" };
   const out = { schema: "esmo.side-bias-result.v1", path: PATH, registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     seedsWalked: w.seeds.length, lastSeed: w.seeds[w.seeds.length - 1], invalidSeeds: [...bad], perLayout: per, ...sideSplit, byOpponent: byOpp, verdict };
-  const OUT = path.join(ROOT, `tools/fixtures/side_bias_result_${PATH}_3aB.json`);
+  const OUT = path.join(ROOT, OUT_REL);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   for (const L of ["STANDARD", "SWAPPED"]) { const v = per[L]; console.log(`${L}：n ${v.n}，藍勝 ${a20} ${(v.blueWin20 * 100).toFixed(1)}% → ${a21} ${(v.blueWin21 * 100).toFixed(1)}%，worse ${v.worsePp.toFixed(2)}pp，z ${v.z.toFixed(2)}，時長比 ${v.durRatio.toFixed(3)}${v.stop ? " STOP" : v.warn ? " WARN" : ""}`); }

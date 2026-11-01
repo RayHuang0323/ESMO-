@@ -7,18 +7,21 @@
 //  node tools/measure_e1_3aB.mjs --report --dir=<同一個>                  資料完整才判定並寫 tools/fixtures/e1_result_3aB.json（已存在就拒寫）
 //  node tools/measure_e1_3aB.mjs --selftest
 //  登記檔 status 必須是 registered；src／tools 必須乾淨（已 commit）。所有門檻讀登記檔，程式不另寫一份。
+//  帶 --reg=<tools/fixtures/…json>：讀確認登記（worker 也帶），結果寫到登記的 result；凍結前一定拒跑（tools/lib/formalRegistration.mjs）。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, pairedStats, meanSd, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
+import { regRelOf, formalResultOf, formalRunRefusal } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
 const flag = (k) => args.includes(`--${k}`);
 const val = (k, d = null) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
-const REG_REL = "tools/fixtures/e1_registration_3aB.json", OUT_REL = "tools/fixtures/e1_result_3aB.json";
+const DEFAULT_REG = "tools/fixtures/e1_registration_3aB.json", REG_REL = regRelOf(args, DEFAULT_REG), IS_FORMAL = REG_REL !== DEFAULT_REG;
 const REG_TEXT = fs.readFileSync(path.join(ROOT, REG_REL), "utf8"), REG = JSON.parse(REG_TEXT);
+const OUT_REL = IS_FORMAL ? formalResultOf(REG, REG_REL) : "tools/fixtures/e1_result_3aB.json";
 export const METRICS = Object.freeze(["goldLeadAt.early", "goldLeadAt.mid", "ownGoldAt.early", "win", "durationMin", "ganksPerMin.early", "ganksPerMin.mid", "ganksOwnPerMin.bot.early",
   "contestShare.dragon.early", "captureShare.dragon.early+mid+late", "deathsAt.jungle.early", "deathsPerMin.jungle.early", "deathsAt.adc+sup.early", "deathsPerMin.adc+sup.early"]);
 const range = (r) => { const [a, b] = r.split("-").map(Number); return Array.from({ length: b - a + 1 }, (_, i) => a + i); };
@@ -72,7 +75,7 @@ if (flag("selftest")) {
   let pass = 0, fail = 0;
   const ck = (l, ok) => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}`); };
   const noise = (n, mu, sd, s = 1) => Array.from({ length: n }, (_, i) => mu + sd * Math.sin(i * 12.9898 + s) * 1.7);
-  ck("S1 登記檔 status＝registered、margin 150、主比較兩個", /^registered/.test(REG.status) && REG.primary.margin === 150 && REG.primary.comparisons.length === 2);
+  ck(`S1 登記檔 status＝${IS_FORMAL ? "registered 或 READY_FOR_FREEZE" : "registered"}、margin 150、主比較兩個`, (IS_FORMAL ? /^(registered|READY_FOR_FREEZE)/ : /^registered/).test(REG.status) && REG.primary.margin === 150 && REG.primary.comparisons.length === 2);
   ck("S2 TOST：差 0、窄 ⇒ PASS；差 400、窄 ⇒ STOP；差 140、寬 ⇒ INCONCLUSIVE", tost(noise(1200, 0, 300), 150).verdict === "PASS" && tost(noise(1200, 400, 300), 150).verdict === "STOP" && tost(noise(60, 140, 900), 150).verdict === "INCONCLUSIVE");
   ck("S3 比值 CI：對照 1、處理 2.2 ⇒ 下界 > 2；處理 1.95 ⇒ ratio ≥ 1.9 但下界 < 2", (() => { const a = ratioCi(noise(400, 1, 0.3).map((c) => [c, c * 2.2])); const b = ratioCi(noise(400, 1, 0.3).map((c, i) => [c, c * 1.95 + Math.sin(i) * 0.5])); return a.lo > 2 && b.ratio >= 1.9 && b.lo < 2; })());
   ck("S4 死亡：低事件數（對照 0.2）＋ 0.3 增加 ⇒ 警戒；一般事件（對照 1.0）＋ 0.4 增加（40%）⇒ 不警戒", (() => {
@@ -99,9 +102,10 @@ const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: F
 if (flag("run")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered：不得執行"); process.exit(2); }
   if (fs.existsSync(path.join(ROOT, OUT_REL))) { console.error("結果檔已存在：這些 seeds 已觀察過"); process.exit(2); }
+  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: FP, resultRel: OUT_REL }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   const prov = provenance();
   if (prov.dirtyFilesUnderSrcTools) { console.error(`src／tools 有 ${prov.dirtyFilesUnderSrcTools} 個未提交變更`); process.exit(2); }
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e1-worker"], meta: META, workers: Number(val("workers", 3)), label: "E1", check: recCheck });
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e1-worker", ...(IS_FORMAL ? [`--reg=${REG_REL}`] : [])], meta: META, workers: Number(val("workers", 3)), label: "E1", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 

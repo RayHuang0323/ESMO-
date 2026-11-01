@@ -17,7 +17,7 @@
   {
    "step": 1,
    "what": "G-A8 confirmatory re-run",
-   "tool": "node tools/measure_ga8_3aB.mjs with tools/fixtures/ga8_fix_confirm_registration_3aB.json",
+   "tool": "node tools/measure_ga8_3aB.mjs --reg=tools/fixtures/ga8_fix_confirm_registration_3aB.json (--run --dir=<new folder outside the repo> --workers=3, then --report --dir=<same>)",
    "seeds": "43001-43400",
    "scope": "all 21 templates vs std, no template excluded",
    "pass": "data complete, control inside 0.50 +/- 0.05 and no STOP. PASS as defined in the original registration: data complete, no STOP"
@@ -25,22 +25,22 @@
   {
    "step": 2,
    "what": "career side bias",
-   "tool": "node tools/measure_side_bias_3aB.mjs with tools/fixtures/sidebias_career_fixconfirm_registration_3aB.json",
+   "tool": "node tools/measure_side_bias_3aB.mjs --reg=tools/fixtures/sidebias_career_fixconfirm_registration_3aB.json --path=career (--run, then --report)",
    "seeds": "51001-55999 (odd, walked)",
    "pass": "the thresholds written in that registration, unchanged"
   },
   {
    "step": 3,
    "what": "E1 and E2",
-   "tool": "node tools/measure_e1_3aB.mjs --reg=<fixConfirm registration>; node tools/measure_e2_3aB.mjs --reg=<fixConfirm registration>",
-   "note": "E2 is career.v21 with the AI coach through the formal live entry. Both tools refuse to run today because their result files exist: see runnablePreconditions",
+   "tool": "node tools/measure_e1_3aB.mjs --reg=tools/fixtures/e1_fix_confirm_registration_3aB.json; node tools/measure_e2_3aB.mjs --reg=tools/fixtures/e2_fix_confirm_registration_3aB.json (--run, then --report)",
+   "note": "E2 is career.v21 with the AI coach through the formal live entry",
    "pass": "thresholds of e1_registration_3aB.json and e2_registration_3aB.json, unchanged. An E2 INCONCLUSIVE goes to the Owner, it is not a pass",
    "seeds": "E1 66001-67200 (reserved E1.fixConfirm); E2 67501-68299 odd (reserved E2.fixConfirm). The original blocks 21001-22200 and 23001-23799 were observed at the old fingerprint"
   },
   {
    "step": 4,
    "what": "4a truth table full re-run and evidence replay; 4b red and blue confirmation of the P6 offers",
-   "tool": "4a: node tools/check_tactic_truth_3a.mjs --measure --workers=3 --dir=<new folder outside the repo>, then the quick mode; evidence replay as registered in evidence_carryforward_3a.json. 4b: the P6 tool extended with blue and red arms",
+   "tool": "4a: node tools/check_tactic_truth_3a.mjs --measure --workers=3 --dir=<new folder outside the repo>, then the quick mode; evidence replay as registered in evidence_carryforward_3a.json. 4b: node tools/measure_exclusion_v21b1_3aB.mjs --confirm-run --dir=<new folder> --workers=3, then --confirm-report --dir=<same> (registration exclusion_v21b1_confirm_registration_3aB.json)",
    "pass": "4a: T-gates green under the frozen plan. Truth rows of classic.m3 / m7 / m8 under the table are recorded and do not decide those choices: P6 plus 4b do, the same superseding role the n=400 replication has over the n=40 std rows, registered here before any of them is run. 4b: every choice offered on classic.m3 / m7 / m8 by P6 (stage-1 pass or stage-2 confirmed) meets the replication rule (z >= 3 and rel >= 0.05 in the claimed direction) on BOTH sides. P6 alone is a pre-freeze development result and never supports a release by itself",
    "seeds": "4a: 1-40 as registered in TRUTH_GATE. 4b: 65101-65500 (reserved exclusion.v21b1.confirm), n=400 per side",
    "conflict": "a choice P6 offered that fails 4b, or a truth-table row of a table template that contradicts a P6 row, is a failed check (stopRules.anyOtherRed): reported, never resolved by quietly editing a row, because a row change alters the semantic fingerprint of the freeze (capabilityRegistry.js is a semantics file; registryHash, mappingHash and resolvedHash do not include exclusions)"
@@ -55,7 +55,7 @@
   {
    "step": 6,
    "what": "gates",
-   "tool": "the frozen list in gateList, run one by one on a single line, plus node tools/verify.mjs (full) and browser_check_exit_flush, browser_check_cloud_save_ui",
+   "tool": "the frozen list in gateList, run one by one on a single line, plus node tools/verify.mjs (full), compared with node tools/record_verify_baseline_3aB.mjs --compare, and browser_check_exit_flush, browser_check_cloud_save_ui",
    "pass": "no verify segment fails that is not failing on the frozen verify baseline (compared by segment name and failure text), and every other gate of gateList is green except exactly the names in knownDebts. Any other red fails this step, whatever the handoff documents say by then"
   },
   {
@@ -67,7 +67,7 @@
   {
    "step": 8,
    "what": "flag rollback drill",
-   "tool": "a new gate registered with the freeze",
+   "tool": "node tools/check_stage1_rollback_drill_3aB.mjs",
    "cases": "a stage-1 save with tactic-book plans; an in-progress career.v21 match; the confirmed-not-started states of matrix cases (2) and (3); each loaded with the flag off and on",
    "pass": "no damage; in-progress matches resume byte-identical on their persisted ruleset; plans kept (the book is never deleted, Owner 2026-11-01 item 3). Code rollback is not supported (it would delete tacticBook) and is excluded by the release manual"
   },
@@ -155,7 +155,9 @@
   "check_player_challenge_slice8",
   "check_match_golden_v21a",
   "check_stage1_split_3aB",
-  "check_club_mastery_v1"
+  "check_club_mastery_v1",
+  "check_stage1_rollback_drill_3aB",
+  "check_formal_acceptance_3aB"
  ],
  "gateListNote": "the 42 Node gates of the P2 run (handoff 05, 2026-10-2x line \"Node gate 42 支\"), written out by name, plus the stage-1 split gate and check_club_mastery_v1. The first entry is the gate that record calls \"version 83\"; the name is checked when the freeze registers this file",
  "knownDebts": [
@@ -242,5 +244,11 @@
    "unknown": "whether weak selection moves away from a template outside the table; if it does, the exclusion rows of that template lose their support at 4a. That is reported, not resolved quietly"
   },
   "finalStep": "an independent Reviewer confirms all formal tools, seeds, thresholds and the baseline, then the Owner is asked to approve the semantics freeze. No long P2 measurement, no golden re-recording, no push, deploy or main; G-A8 and the Challenge STOP stay"
- }
+ },
+ "freezeProcedure": [
+  "the independent Reviewer confirms all formal tools, seeds, thresholds and the baseline (Owner 2026-11-02), and the Owner is asked to approve the freeze",
+  "the Owner approves. Only then: register the v21 candidate fingerprint in simulationVersion.js in one visible commit (the freeze commit)",
+  "fill `fingerprint` in the five confirm registrations with it, change their status to start with \"registered\", fill review of exclusion_v21b1_confirm_registration_3aB.json after the Reviewer confirms them with the freeze in hand. check_formal_acceptance_3aB R1 and X1 are red by design from this point; their post-freeze form is registered with this step: every status starts with \"registered\", every fingerprint equals the frozen one, --run gets past the registration checks",
+  "step 1 onward of `order`. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point"
+ ]
 }

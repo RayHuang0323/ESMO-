@@ -3,21 +3,26 @@
 //  tools/measure_ga8_3aB.mjs — Phase 3a-B P2-4：G-A8 主導計畫掃描（登記 tools/fixtures/ga8_registration_3aB.json）
 //
 //  node tools/measure_ga8_3aB.mjs --plan | --run --dir=<repo 外> [--workers=3] | --report --dir=<同一個> | --selftest
+//  帶 --reg=<tools/fixtures/…json>：讀確認登記（例如 ga8_fix_confirm_registration_3aB.json），結果寫到登記的 result；凍結前一定拒跑（tools/lib/formalRegistration.mjs）。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
+import { regRelOf, formalResultOf, formalRunRefusal } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
 const flag = (k) => args.includes(`--${k}`);
 const val = (k, d = null) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
-const REG_REL = "tools/fixtures/ga8_registration_3aB.json";
+const DEFAULT_REG = "tools/fixtures/ga8_registration_3aB.json", REG_REL = regRelOf(args, DEFAULT_REG), IS_FORMAL = REG_REL !== DEFAULT_REG;
 const REG_TEXT = fs.readFileSync(path.join(ROOT, REG_REL), "utf8"), REG = JSON.parse(REG_TEXT);
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 /** 儀器檢查（--run 即時、--report 全部重查；審查 M1）。 */
-const recCheck = (r) => (r.director === "core.v1" && r.laneFrame === "teamRelative" && r.ruleset === "balanceTool.v21" && r.layers?.heroSkills && !r.layers?.battleTalents ? [] : ["instrument mismatch"]);
+const recCheck = (r) => [...(r.director === "core.v1" && r.laneFrame === "teamRelative" && r.ruleset === "balanceTool.v21" && r.layers?.heroSkills && !r.layers?.battleTalents ? [] : ["instrument mismatch"]),
+  //  確認登記多查一條：引擎 t＝0 拿到的旋鈕＝修正表解析出的旋鈕（登記 templateBalance；修正表沒進引擎就不是在測修正後的模板）。
+  ...(REG.templateBalance && r.tableApplied !== true ? ["template table not applied"] : [])];
+const OUT_REL = IS_FORMAL ? formalResultOf(REG, REG_REL) : "tools/fixtures/ga8_result_3aB.json";
 
 if (flag("ga8-worker")) {
   process.env.ESMO_BALANCE_SKILLS = "on";
@@ -26,16 +31,18 @@ if (flag("ga8-worker")) {
   const { tacticInputOf } = await imp("tools/lib/tacticTruthSim.mjs");
   const { objectiveLayoutForSeed } = await imp("src/platform/contracts/objectiveLayout.js");
   const M = await modules();
+  const { resolveTactic } = await imp("src/battle/moba/tactics/tacticResolver.js");
   process.on("message", async (t) => {
     try {
       const plan = tacticInputOf({ templateId: t.template, choices: {} }), std = tacticInputOf({ templateId: "std", choices: {} });
       const blueIsTemplate = t.seed % 2 === 1;
       const { e } = configure(t.seed, "standard", M, 1, null, { blue: blueIsTemplate ? plan : std, red: blueIsTemplate ? std : plan }, "balanceTool.v21");
-      for (let i = 1; i * 0.5 <= 3600 && !e.over; i++) e.tick(0.5);
       const side = blueIsTemplate ? "blue" : "red";
+      const tableApplied = REG.templateBalance ? JSON.stringify(e.director.knobs(side)) === JSON.stringify(resolveTactic(plan, {}, { phases: true, templateBalance: REG.templateBalance }).phases[0].knobs) : undefined;
+      for (let i = 1; i * 0.5 <= 3600 && !e.over; i++) e.tick(0.5);
       const win = e.over && (e.winner === "blue" || e.winner === "red") ? (e.winner === side ? 1 : 0) : 0.5;
       process.send({ type: "done", id: t.id, rec: { seed: t.seed, template: t.template, side, layout: objectiveLayoutForSeed(t.seed), ruleset: "balanceTool.v21",
-        layers: { heroSkills: !!M.skills, heroPassives: !!M.passives, heroPowerCurve: !!M.curves, battleTalents: !!M.talents }, director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null, win, duration: e.t } });
+        layers: { heroSkills: !!M.skills, heroPassives: !!M.passives, heroPowerCurve: !!M.curves, battleTalents: !!M.talents }, director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null, win, duration: e.t, ...(tableApplied === undefined ? {} : { tableApplied }) } });
     } catch (e) { process.send({ type: "error", id: t.id, error: String(e?.stack ?? e) }); }
   });
   process.send({ type: "ready" });
@@ -53,7 +60,7 @@ if (flag("selftest")) {
   const ck = (l, ok) => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}`); };
   const ws = (n, p) => Array.from({ length: n }, (_, i) => ((i * 37) % 100 < p * 100 ? 1 : 0));
   ck("S1 0.50 ⇒ 不 STOP 不 WARN；0.65 ⇒ STOP；0.58 ⇒ WARN 不 STOP；0.42 ⇒ WARN", !templateVerdict(ws(400, 0.5)).stop && !templateVerdict(ws(400, 0.5)).warn && templateVerdict(ws(400, 0.65)).stop && templateVerdict(ws(400, 0.58)).warn && !templateVerdict(ws(400, 0.58)).stop && templateVerdict(ws(400, 0.42)).warn);
-  ck("S2 登記：seeds 25001–25400、閾值 0.60／0.55", REG.seeds.range === "25001-25400" && /0\.60/.test(REG.thresholds["STOP (dominant)"]));
+  ck(`S2 登記：seeds ${IS_FORMAL ? "43001–43400" : "25001–25400"}、閾值 0.60／0.55`, REG.seeds.range === (IS_FORMAL ? "43001-43400" : "25001-25400") && /0\.60/.test(REG.thresholds["STOP (dominant)"]));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
 }
@@ -71,8 +78,9 @@ const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: S
 
 if (flag("run")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
+  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   if (provenance().dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--ga8-worker"], meta: META, workers: Number(val("workers", 3)), label: "G-A8", check: recCheck });
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--ga8-worker", ...(IS_FORMAL ? [`--reg=${REG_REL}`] : [])], meta: META, workers: Number(val("workers", 3)), label: "G-A8", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 if (flag("report")) {
@@ -100,7 +108,7 @@ if (flag("report")) {
   const out = { schema: "esmo.ga8-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     matches: tasks.length, errored: audit.errored, control: ctl, instrumentStop: instrument, rows, stops, warns, verdict,
     notes: ["the template is on the dragon side in about 52.5% of seeds (odd seeds STANDARD 109 / even seeds SWAPPED 101); the std control absorbs this; per-template dragonSideShare reported", "checkpointing is per match (finer than the 250-match batches in the plan)"] };
-  const OUT = path.join(ROOT, "tools/fixtures/ga8_result_3aB.json");
+  const OUT = path.join(ROOT, OUT_REL);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   for (const r of rows) console.log(`${r.template.padEnd(24)} ${(r.rate * 100).toFixed(1)}%（${(r.lo * 100).toFixed(1)}–${(r.hi * 100).toFixed(1)}）藍 ${(r.asBlue * 100).toFixed(1)} 紅 ${(r.asRed * 100).toFixed(1)}　中位 ${r.medianDurationMin.toFixed(1)} 分${r.stop ? " STOP" : r.warn ? " WARN" : ""}`);

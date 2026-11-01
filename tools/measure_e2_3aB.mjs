@@ -3,18 +3,21 @@
 //  tools/measure_e2_3aB.mjs — Phase 3a-B P2-3：E2 career.v21 正式入口的行為驗收（登記 tools/fixtures/e2_registration_3aB.json）
 //
 //  node tools/measure_e2_3aB.mjs --plan | --run --dir=<repo 外> [--workers=3] | --report --dir=<同一個> | --selftest
+//  帶 --reg=<tools/fixtures/…json>：讀確認登記（worker 也帶），結果寫到登記的 result；凍結前一定拒跑（tools/lib/formalRegistration.mjs）。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runStudy, readKey, provenance, sha16, pairedStats, meanSd, auditStudy, errorRule, ROOT } from "./lib/studyRunner.mjs";
+import { regRelOf, formalResultOf, formalRunRefusal } from "./lib/formalRegistration.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
 const flag = (k) => args.includes(`--${k}`);
 const val = (k, d = null) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
-const REG_REL = "tools/fixtures/e2_registration_3aB.json";
+const DEFAULT_REG = "tools/fixtures/e2_registration_3aB.json", REG_REL = regRelOf(args, DEFAULT_REG), IS_FORMAL = REG_REL !== DEFAULT_REG;
 const REG_TEXT = fs.readFileSync(path.join(ROOT, REG_REL), "utf8"), REG = JSON.parse(REG_TEXT);
+const OUT_REL = IS_FORMAL ? formalResultOf(REG, REG_REL) : "tools/fixtures/e2_result_3aB.json";
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 /** 每一筆紀錄的儀器檢查（--run 即時、--report 全部重查；審查 M1）。藍方的選擇必須真的進了本場（droppedChoices 為空；審查 minor）。 */
 const recCheck = (r) => [...(r.ruleset === "career.v21" && r.directorMode === "core.v1" && r.laneFrame === "teamRelative" && r.engineSeed === r.seed && r.redKind === "binding" && r.tool === "phaseStudySim.v3" ? [] : ["instrument mismatch"]),
@@ -51,7 +54,7 @@ if (flag("selftest")) {
   const ck = (l, ok) => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}`); };
   const mk = (n, eff, noise = 0.3) => Array.from({ length: n }, (_, i) => { const c = 1 + Math.sin(i * 1.3) * noise; return [c, c * (1 + eff) + Math.cos(i * 2.1) * 0.05]; });
   ck("S1 +15% ⇒ PASS；−15% ⇒ STOP；+1% ⇒ INCONCLUSIVE；150 對 ⇒ UNMEASURABLE", claimVerdict(mk(400, 0.15), "up").verdict === "PASS" && claimVerdict(mk(400, -0.15), "up").verdict === "STOP" && claimVerdict(mk(400, 0.01), "up").verdict === "INCONCLUSIVE" && claimVerdict(mk(150, 0.2), "up").verdict === "UNMEASURABLE");
-  ck("S2 登記：只走奇數 23001–23799、4 臂", REG.seeds.range === "23001-23799" && REG.seeds.step === 2 && REG.arms.length === 4);
+  ck(`S2 登記：只走奇數 ${IS_FORMAL ? "67501–68299" : "23001–23799"}、4 臂`, REG.seeds.range === (IS_FORMAL ? "67501-68299" : "23001-23799") && REG.seeds.step === 2 && REG.arms.length === 4);
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
 }
@@ -66,8 +69,9 @@ const SV = await imp("src/platform/contracts/simulationVersion.js");
 const META = { study: REG.studyId, registration: sha16(REG_TEXT), fingerprint: SV.SIMULATION_SEMANTICS_FINGERPRINTS[SV.MOBA_SIMULATION_VERSION] };
 if (flag("run")) {
   if (!/^registered/.test(REG.status)) { console.error("登記檔不是 registered"); process.exit(2); }
+  if (IS_FORMAL) { const no = formalRunRefusal(REG, { fingerprint: META.fingerprint, resultRel: OUT_REL }); if (no.length) { console.error(`確認登記不能開跑：${no.join("；")}`); process.exit(2); } }
   if (provenance().dirtyFilesUnderSrcTools) { console.error("src／tools 有未提交變更"); process.exit(2); }
-  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e2-worker"], meta: META, workers: Number(val("workers", 3)), label: "E2", check: recCheck });
+  const res = await runStudy({ dir: DIR, tasks, workerFile: SELF, workerArgs: ["--e2-worker", ...(IS_FORMAL ? [`--reg=${REG_REL}`] : [])], meta: META, workers: Number(val("workers", 3)), label: "E2", check: recCheck });
   process.exit(res.halted ? 5 : res.stopped ? 3 : res.failed || res.lost ? 6 : 0);
 }
 if (flag("report")) {
@@ -90,7 +94,7 @@ if (flag("report")) {
   const overall = instrumentStop || arms.some((a) => a.verdict === "STOP") ? "STOP" : arms.every((a) => a.verdict === "PASS") && !er ? "PASS" : "INCONCLUSIVE";
   const out = { schema: "esmo.e2-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: META.fingerprint, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), ctrlBlueWinRate: meanSd(SEEDS.map((s) => recV("ctrl", s, "win")).filter(fin)).mean, arms, overall };
-  const OUT = path.join(ROOT, "tools/fixtures/e2_result_3aB.json");
+  const OUT = path.join(ROOT, OUT_REL);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
   for (const a of arms) console.log(`${a.id}：${a.verdict}　${a.claims.map((c) => `${c.metric} rel ${c.rel == null ? "—" : (c.rel * 100).toFixed(1) + "%"} z ${c.z == null ? "—" : c.z.toFixed(2)}（n ${c.n}）${c.verdict}`).join("；")}`);

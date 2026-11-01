@@ -2,31 +2,17 @@
  "schema": "esmo.side-bias-registration.v1",
  "studyId": "side-bias-career-fixconfirm-3aB",
  "stage": "Phase 3a-B fix freeze, confirmatory re-run (C stage of the one-freeze flow): career side bias on fresh seeds",
- "registeredAt": "2026-10-29",
- "status": "DRAFT, not runnable: becomes runnable only after (1) the Owner confirms the m7 candidate and the challenge side-bias plan, (2) the single semantics freeze, (3) `fingerprint` is filled with the frozen v21 candidate fingerprint, (4) an independent review of this registration with the freeze in hand, and (5) the tool accepts this registration (today tools/measure_side_bias_3aB.mjs reads only tools/fixtures/side_bias_registration_3aB.json; a --reg parameter is part of the freeze work). Nothing here may change after the first match except owner.confirmedAt",
- "authority": "Owner 2026-10-29 item 6: approve 'screening -> one semantics freeze -> one re-validation'; the career confirmatory study uses fresh seeds and must be registered and de-duplicated first",
+ "registeredAt": "2026-11-02 (draft 2026-10-29)",
+ "authority": "Owner 2026-10-29 item 6: approve 'screening -> one semantics freeze -> one re-validation'; the career confirmatory study uses fresh seeds and must be registered and de-duplicated first; stage1_formal_acceptance_registration_3aB.json step 2",
  "basis": "identical design, metric, comparison and thresholds to the committed career side-bias study (tools/fixtures/side_bias_registration_3aB.json, paths.career; result tools/fixtures/side_bias_result_career_3aB.json PASS at fingerprint 0578fa882d74b205); only the seed block, the v21 arm's fingerprint and this status differ",
- "tool": "tools/measure_side_bias_3aB.mjs --path=career (after the --reg parameter is added); result tools/fixtures/sidebias_career_fixconfirm_result_3aB.json",
+ "tool": "node tools/measure_side_bias_3aB.mjs --reg=tools/fixtures/sidebias_career_fixconfirm_registration_3aB.json --path=career (--plan / --run / --report)",
  "metric": "blue win rate per layout; a match with no winner at the cap counts 0.5; bias(arm, layout) = blueWinRate - 0.5",
- "comparison": "the frozen career.v21 arm against career.v20 on the same seeds (paired); worse_pp = (|bias_v21| - |bias_v20|) x 100 per layout; paired per-seed d = (win_v21 - win_v20) x s, s = the sign of the larger |bias| of the two arms; z = mean(d) / (sd(d)/sqrt(n))",
+ "comparison": "the v21 arm against the v20 arm on the same seeds (paired); worse_pp = (|bias_v21| - |bias_v20|) x 100 per layout; paired per-seed d = (win_v21 - win_v20) x s, s = the sign of the larger |bias| of the two arms (so a flip to the other side that grows the bias counts as worsening); z = mean(d) / (sd(d)/sqrt(n))",
  "thresholds": {
   "STOP": "in either layout: worse_pp >= 5, or z >= 3 in the worsening direction",
   "WARN": "in either layout: worse_pp >= 3, or |median duration v21 / median duration v20 - 1| > 0.10",
   "PASS": "data complete, no STOP and no WARN",
   "INCONCLUSIVE": "the walk ends at the limit without both layouts reaching the target, or more than 2% invalid seeds (circuit breaker => STOP)"
- },
- "seeds": {
-  "block": "sideBias.career.fixConfirm of tools/fixtures/study_seed_plan_3aB.json",
-  "range": "51001-55999",
-  "step": 2,
-  "targetPerLayout": 1000,
-  "stopRule": "walk odd seeds ascending; include every seed; stop after the first seed at which both layouts (objectiveLayoutForSeed(effectiveSeed)) have >= 1000 valid seeds; expected stop 55017 (STANDARD 1000 / SWAPPED 1009, check_study_seed_plan_3aB L1)",
-  "walkLimit": 55999,
-  "deduplication": "checked 2026-10-29 by tools/check_study_seed_plan_3aB.mjs (27/27): the block shares no effectiveSeed with any other study, used range or reserved range (U1, U2, E2, E3); career effectiveSeed = (seed>>>0)|1, so only odd seeds are walked (E1: identity, no duplicates); AI_TEAMS[seed % 7] covers every opponent team 357-358 times (O1). Disjoint from the committed career study (27001-31999), whose result informed the design and is therefore not reused for confirmation"
- },
- "paths": {
-  "entry": "prepareLiveMatch (formal live entry) via tools/lib/careerLiveInputs.mjs: golden live inputs, mirroredRoster(seed), blue = std tactic-book binding with no choices, opponent AI_TEAMS[seed % 7]; career.v21 red = AI coach v1 (with the frozen TEMPLATE_BALANCE layer if the freeze includes it), career.v20 red = style template",
-  "valid": "both arms produced a record; ruleset = the arm; engine seed = effectiveSeed; career.v21 has Director core.v1 and laneFrame teamRelative"
  },
  "report": [
   "blue win rate and bias per arm and layout",
@@ -36,9 +22,49 @@
   "per-opponent breakdown",
   "descriptive comparison with the committed 27001-31999 result (never pooled, never used for the verdict)"
  ],
- "noOptionalStopping": "the walk stops only by the stop rule; no interim look at the verdict",
+ "noOptionalStopping": "verdicts only on complete data",
  "errors": "errored matches are never retried; more than 2% invalid seeds => circuit breaker STOP",
- "fingerprint": "TO BE FILLED AT THE FREEZE (the v21 candidate fingerprint of the single freeze; today's 0578fa882d74b205 is NOT valid for this study because the freeze changes semantics files)",
  "costs": "about 4,018 matches (2 arms x 2,009 seeds if the walk stops at 55017 as expected), about 1.5-1.8 h single line",
- "owner": { "confirmedAt": null }
+ "owner": {
+  "confirmedAt": null
+ },
+ "status": "READY_FOR_FREEZE: text final, NOT runnable. Becomes runnable only after (1) the Owner approves the single semantics freeze (Owner 2026-11-02), (2) `fingerprint` is filled with the frozen v21 candidate fingerprint and this status is changed to start with \"registered\", (3) an independent Reviewer confirms this file with the freeze in hand. Until then --run refuses. Nothing here may change after the first match",
+ "result": "tools/fixtures/sidebias_career_fixconfirm_result_3aB.json",
+ "circuitBreaker": "more than 2% invalid seeds after >= 100 walked => STOP(CIRCUIT_BREAKER), Owner decides",
+ "halt": "a HALT file in the data folder blocks --run and --report until the Owner decides",
+ "paths": {
+  "career": {
+   "arms": [
+    "career.v20",
+    "career.v21"
+   ],
+   "entry": "prepareLiveMatch (formal live entry) via tools/lib/careerLiveInputs.mjs: golden live inputs, mirroredRoster(seed), blue = std tactic-book binding with no choices, opponent AI_TEAMS[seed % 7]; career.v21 red = AI coach v1 (with the frozen TEMPLATE_BALANCE layer if the freeze includes it), career.v20 red = style template",
+   "seeds": {
+    "block": "sideBias.career.fixConfirm of tools/fixtures/study_seed_plan_3aB.json",
+    "range": "51001-55999",
+    "step": 2,
+    "targetPerLayout": 1000,
+    "stopRule": "walk odd seeds ascending; include every seed; stop after the first seed at which both layouts (objectiveLayoutForSeed(effectiveSeed)) have >= 1000 valid seeds; expected stop 55017 (STANDARD 1000 / SWAPPED 1009, check_study_seed_plan_3aB L1)",
+    "walkLimit": 55999,
+    "deduplication": "checked 2026-10-29 by tools/check_study_seed_plan_3aB.mjs (27/27): the block shares no effectiveSeed with any other study, used range or reserved range (U1, U2, E2, E3); career effectiveSeed = (seed>>>0)|1, so only odd seeds are walked (E1: identity, no duplicates); AI_TEAMS[seed % 7] covers every opponent team 357-358 times (O1). Disjoint from the committed career study (27001-31999), whose result informed the design and is therefore not reused for confirmation"
+   },
+   "valid": "both arms produced a record; ruleset = the arm; engine seed = effectiveSeed; career.v21 has Director core.v1 and laneFrame teamRelative"
+  }
+ },
+ "fingerprint": "TBD_AT_FREEZE",
+ "copiedFrom": {
+  "file": "tools/fixtures/side_bias_registration_3aB.json",
+  "unchangedFields": [
+   "metric",
+   "comparison",
+   "thresholds",
+   "circuitBreaker",
+   "halt",
+   "noOptionalStopping"
+  ],
+  "unchangedPathFields": [
+   "arms"
+  ],
+  "note": "check_formal_acceptance_3aB compares these field by field with the original. Thresholds are the original's text, replacing the draft's paraphrase"
+ }
 }

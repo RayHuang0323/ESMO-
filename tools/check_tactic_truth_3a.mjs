@@ -69,6 +69,8 @@ async function main() {
   const Registry = await import("../src/platform/tactics/capabilityRegistry.js");
   const Mapping = await import("../src/platform/tactics/tacticChoiceMapping.js");
   const Plan = await import("./lib/tacticTruthPlan.mjs");
+  const { TEMPLATE_BALANCE } = await import("../src/platform/tactics/tacticTemplates.js");
+  const P6_DECIDED = new Set(JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/exclusion_v21b1_result_3aB.json"), "utf8")).rows.map((r) => `${r.template}|${r.dimension}|${r.choice}`));
   const { TRUTH_GATE } = Registry;
   const SEEDS = Array.from({ length: TRUTH_GATE.seedTo - TRUTH_GATE.seedFrom + 1 }, (_, i) => TRUTH_GATE.seedFrom + i);
 
@@ -118,13 +120,20 @@ async function main() {
     //  涵蓋清單直接讀複驗結果檔，不讀 Registry（Registry 不能自己宣告被取代）。
     const reasonOf = (v) => (v === "reversed" ? "reversed_effect" : v === "unmeasurable" ? "unmeasurable" : "no_measured_effect");
     const prim = rows.filter((r) => r.role === "primary");
+    //  Phase 3a-B 第一階段：修正表模板的弱點列。在帶修正表的規則集量的 ⇒ 照常記錄、不推出排除（由 P6＋正式驗收 step 4b 決定，登記 stage1_formal_acceptance_registration_3aB.json step 4）；
+    //  在 balanceTool.v20 量的 ⇒ 打的是出貨版模板，推出的排除只在沒有修正表時生效（templateBalance null）。
+    const weakExclusion = (w) => {
+      if (tableOnTable(w)) return null;
+      const reDecided = P6_DECIDED.has(`${w.template}|${w.dimension}|${w.choice}`);
+      return { template: w.template, dimension: w.dimension, choice: w.choice, reason: reasonOf(w.verdict), metric: w.metric, n: w.n, z: w.z === null ? null : Number(w.z.toFixed(2)), ...(reDecided ? { templateBalance: null } : {}) };
+    };
     for (const p of prim) {
       if (!isOk(p.verdict) && !superseded(p)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)) });
       else {
         //  被 v21 複驗取代、但 v20 也能選且 v20 的 n=40 列沒過 ⇒ 只在 static 排除（v21 照複驗提供）。
         if (!isOk(p.verdict) && !p.ruleset && staticOffer(p.dimension)) out.push({ template: "*", dimension: p.dimension, choice: p.choice, reason: reasonOf(p.verdict), metric: p.metric, n: p.n, z: p.z === null ? null : Number(p.z.toFixed(2)), scope: "static" });
         const w = rows.find((r) => r.role === "weak" && r.dimension === p.dimension && r.choice === p.choice);
-        if (w && !isOk(w.verdict)) out.push({ template: w.template, dimension: w.dimension, choice: w.choice, reason: reasonOf(w.verdict), metric: w.metric, n: w.n, z: w.z === null ? null : Number(w.z.toFixed(2)) });
+        if (w && !isOk(w.verdict)) { const ex = weakExclusion(w); if (ex) out.push(ex); }
       }
     }
     return out;
@@ -133,7 +142,13 @@ async function main() {
     const p = rows.find((x) => x.role === "primary" && x.dimension === r.dimension && x.choice === r.choice);
     return p && isOk(p.verdict) !== isOk(r.verdict) ? { dimension: r.dimension, choice: r.choice, blue: p.verdict, red: r.verdict, zBlue: p.z, zRed: r.z } : null;
   }).filter(Boolean);
-  const exKey = (x) => `${x.template}|${x.dimension}|${x.choice}|${x.reason}|${x.scope ?? "*"}`;
+  const exKey = (x) => `${x.template}|${x.dimension}|${x.choice}|${x.reason}|${x.scope ?? "*"}|${"templateBalance" in x ? x.templateBalance : "*"}`;
+  //  結果表自己存的 exclusionsDerived 是量測當時算的（凍結後 4a 重測才會帶 templateBalance）：T9b 只比到 scope；templateBalance 由 T9 與 check_stage1_split_3aB S13a 把關。
+  const exKeyStored = (x) => `${x.template}|${x.dimension}|${x.choice}|${x.reason}|${x.scope ?? "*"}`;
+  //  修正表模板在帶修正表的規則集量的列與排除列（step 4）：結果表照常記錄，不推出排除、也不要求排除表的列有結果表支持。
+  //  這些列的證據是沒有修正表時量的（git 歷史），現在的結果表在修正表下量同一格；是否提供由 P6＋step 4b 決定（列內容由 check_stage1_split_3aB S13a、S13b 釘住）。
+  const tableOnTable = (x) => !!Plan.templateBalanceOfRow(Registry.registryRow(x.dimension)) && Object.keys(TEMPLATE_BALANCE).some((id) => Object.hasOwn(TEMPLATE_BALANCE[id], x.template));
+  const exclusionsOfTruth = (rows) => rows.filter((x) => !tableOnTable(x));
   //  v20 能選的維度（static 下可用）：v21 的複驗不能替它開放（跨版本證據隔離）。
   const staticOffer = (dim) => { const row = Registry.registryRow(dim); return !!row && Registry.rowAvailableUnder(row, "static"); };
 
@@ -345,14 +360,14 @@ async function main() {
         for (const k of ["n", "meanA", "meanB", "diff", "sd", "z"]) if (st[k] !== r[k]) P("recompute", `${r.key}：${k} 與原始配對值重算不符（${r[k]} vs ${st[k]}）`);
         if (verdictOf(st, r.direction) !== r.verdict) P("verdict", `${r.key}：判定與重算不符`);
         //  有效配對不足的列只有在「該選擇已被排除」時才可接受（例如後期階段不足 60 秒的場次太多，而 std 上這個選擇本來就已排除）
-        if (r.verdict === "unmeasurable" && !superseded(r) && !ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template))) P("unmeasurable", `${r.key}：有效配對 ${r.n} 不足，且該選擇沒有被排除`);
+        if (r.verdict === "unmeasurable" && !superseded(r) && !tableOnTable(r) && !ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template))) P("unmeasurable", `${r.key}：有效配對 ${r.n} 不足，且該選擇沒有被排除`);
       }
       //  每個選擇通過，或已被排除
       const exInTable = new Set(ctx.exclusions.map(exKey));
       const derived = deriveExclusions(fx.rows);
       for (const x of derived) if (!exInTable.has(exKey(x))) P("exclusion", `${x.dimension}=${x.choice} 在 ${x.template} 量測失敗（${x.reason}, z=${x.z}），但 MEASURED_EXCLUSIONS 沒有它`);
       const derivedKeys = new Set(derived.map(exKey));
-      for (const x of ctx.exclusions) if (!derivedKeys.has(exKey(x))) P("exclusion", `MEASURED_EXCLUSIONS 有 ${x.template}/${x.dimension}=${x.choice}，但結果表沒有支持它的量測`);
+      for (const x of exclusionsOfTruth(ctx.exclusions)) if (!derivedKeys.has(exKey(x))) P("exclusion", `MEASURED_EXCLUSIONS 有 ${x.template}/${x.dimension}=${x.choice}，但結果表沒有支持它的量測`);
       return problems;
     }
 
@@ -383,7 +398,7 @@ async function main() {
     ck("T4 事前登記：每一列的指標／方向／本來選擇／模板與 Registry 現在的 gate 相同，指標都是已知指標",
       fx.rows.every((r) => { const b = planRows.find((x) => x.key === r.key); return b && r.metric === b.metric && r.direction === b.direction && r.own === b.own && r.template === b.template && isKnownMetric(r.metric); }));
     const coveredByEx = (r) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template));
-    ck("T5 每一列都有 40 個配對；有效配對 ≥ 20（不足的列必須是已被排除或被 n=400 複驗取代的選擇）", fx.rows.every((r) => r.pairs?.length === SEEDS.length && (r.n >= 20 || coveredByEx(r) || superseded(r))), fx.rows.filter((r) => r.n < 20).map((r) => `${r.key}:n=${r.n}${coveredByEx(r) ? "(已排除)" : ""}`).join(" "));
+    ck("T5 每一列都有 40 個配對；有效配對 ≥ 20（不足的列必須是已被排除或被 n=400 複驗取代的選擇）", fx.rows.every((r) => r.pairs?.length === SEEDS.length && (r.n >= 20 || coveredByEx(r) || superseded(r) || tableOnTable(r))), fx.rows.filter((r) => r.n < 20).map((r) => `${r.key}:n=${r.n}${coveredByEx(r) ? "(已排除)" : ""}`).join(" "));
     ck("T6 z、均值、差、sd、判定都能由原始配對值重算出來（表上的數字不是手填的）",
       fx.rows.every((r) => { const st = statsOfPairs(r.pairs); return ["n", "meanA", "meanB", "diff", "sd", "z"].every((k) => st[k] === r[k]) && verdictOf(st, r.direction) === r.verdict; }));
     const prim = fx.rows.filter((r) => r.role === "primary");
@@ -392,11 +407,11 @@ async function main() {
       prim.every((r) => isOk(r.verdict) || exStd.has(`${r.dimension}=${r.choice}`) || superseded(r)), prim.filter((r) => !isOk(r.verdict) && !exStd.has(`${r.dimension}=${r.choice}`) && !superseded(r)).map((r) => `${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
     const weak = fx.rows.filter((r) => r.role === "weak");
     const exTpl = (r) => ctx.exclusions.some((x) => x.dimension === r.dimension && x.choice === r.choice && (x.template === "*" || x.template === r.template));
-    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除（n=400 複驗只涵蓋 std，不豁免弱點模板）", weak.every((r) => isOk(r.verdict) || exTpl(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
+    ck("T8 弱點模板（旋鈕差距最小）上每個選擇：通過，或已對該模板排除（n=400 複驗只涵蓋 std，不豁免弱點模板）", weak.every((r) => isOk(r.verdict) || exTpl(r) || tableOnTable(r)), weak.filter((r) => !isOk(r.verdict) && !exTpl(r) && !tableOnTable(r)).map((r) => `${r.template}/${r.dimension}=${r.choice}(z=${r.z})`).join(" "));
     const derived = deriveExclusions(fx.rows);
     const sameSet = (a, b) => J([...a].sort()) === J([...b].sort());
-    ck("T9 MEASURED_EXCLUSIONS ＝ 結果表推出來的排除（逐筆相同，不多不少）", sameSet(derived.map(exKey), ctx.exclusions.map(exKey)), `${derived.length} 筆`);
-    ck("T9b 結果表自己記的 exclusionsDerived 與重算相同", sameSet((fx.exclusionsDerived ?? []).map(exKey), derived.map(exKey)));
+    ck("T9 MEASURED_EXCLUSIONS ＝ 結果表推出來的排除（逐筆相同，不多不少；含 templateBalance；修正表模板在帶修正表的規則集量的列除外，step 4）", sameSet(derived.map(exKey), exclusionsOfTruth(ctx.exclusions).map(exKey)), `${derived.length} 筆`);
+    ck("T9b 結果表自己記的 exclusionsDerived 與重算相同", sameSet(exclusionsOfTruth(fx.exclusionsDerived ?? []).map(exKeyStored), derived.map(exKeyStored)));
     //  排除表 ↔ offeredChoices
     const withheldOk = ctx.exclusions.every((x) => Plan.TEMPLATE_IDS.filter((t) => x.template === "*" || x.template === t).every((t) => {
       const d = Mapping.offeredChoiceDetail(t, x.dimension, [], {}, x.scope ? { tacticalDirector: x.scope } : {});

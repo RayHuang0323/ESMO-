@@ -1,0 +1,112 @@
+{
+ "schema": "esmo.career-behaviour-registration.v1",
+ "studyId": "e2-career-v21-behaviour-fix-confirm-3aB",
+ "stage": "Phase 3a-B stage 1 formal acceptance step 3: E2 re-run on the frozen semantics, fresh seeds",
+ "registeredAt": "2026-11-02",
+ "status": "READY_FOR_FREEZE: text final, NOT runnable. Becomes runnable only after (1) the Owner approves the single semantics freeze (Owner 2026-11-02), (2) `fingerprint` is filled with the frozen v21 candidate fingerprint and this status is changed to start with \"registered\", (3) an independent Reviewer confirms this file with the freeze in hand. Until then --run refuses. Nothing here may change after the first match",
+ "authority": "3a-B kickoff checklist §5 (structure ✅ / behaviour ❌ / outcome ❌) and Owner 2026-10-25 P2 authorisation: the n=400 evidence was measured on balanceTool.v21 (red std, no player stats); career.v21 differs (red = AI coach, blue player stats, items/talents per flags), so the effect must be checked through the formal entry. Re-run: stage1_formal_acceptance_registration_3aB.json step 3; the original block 23001-23799 was observed at the old fingerprint",
+ "question": "Do the live v21 choices, entered through the formal career path (prepareLiveMatch with career.v21), still move the registered behaviour in the registered direction on the player's side?",
+ "tool": "node tools/measure_e2_3aB.mjs --reg=tools/fixtures/e2_fix_confirm_registration_3aB.json (--plan / --run / --report); instrument and inputs as in the original registration",
+ "seeds": {
+  "range": "67501-68299",
+  "step": 2,
+  "n": 400,
+  "path": "career: odd seeds only, every seed its own effectiveSeed (check_study_seed_plan_3aB E2); reserved block E2.fixConfirm of tools/fixtures/study_seed_plan_3aB.json",
+  "opponents": "AI_TEAMS[seed % 7] (57-58 matches per team)"
+ },
+ "ruleset": "career.v21 resolved from the golden featureFlags + mobaTacticalDirectorV21 = true; the run fails if another ruleset resolves",
+ "arms": [
+  {
+   "id": "ctrl",
+   "choices": {},
+   "role": "control"
+  },
+  {
+   "id": "aggressiveEarly",
+   "choices": {
+    "phases": {
+     "early": {
+      "stance": "aggressive"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "engageDecisionsPerMin.early",
+     "direction": "up"
+    },
+    {
+     "metric": "engageStartsPerMin.early",
+     "direction": "up"
+    }
+   ],
+   "evidence": "C3-2 rev1 confirmed"
+  },
+  {
+   "id": "snowball",
+   "choices": {
+    "winCondition": "earlySnowball"
+   },
+   "claims": [
+    {
+     "metric": "engageDecisionsPerMin.early",
+     "direction": "up"
+    },
+    {
+     "metric": "contestShare.dragon.early",
+     "direction": "up"
+    }
+   ],
+   "evidence": "C6 confirmed"
+  },
+  {
+   "id": "quickStrongBot",
+   "choices": {
+    "phases": {
+     "early": {
+      "focusLane": "bot"
+     },
+     "mid": {
+      "focusLane": "bot"
+     }
+    }
+   },
+   "claims": [
+    {
+     "metric": "ganksOwnPerMin.bot.early",
+     "direction": "up"
+    }
+   ],
+   "evidence": "C5R quick preset confirmed"
+  }
+ ],
+ "matches": "4 arms x 400 = 1,600 matches (~40 min, 3 workers)",
+ "side": "blue only: in career the player is blue and red is the AI coach; no red-side treatment exists in career",
+ "rules": {
+  "claim": "same-seed pairs on blue (treatment minus control); valid pairs need both values; at least 200 valid pairs, otherwise the claim is UNMEASURABLE",
+  "PASS": "every claim: sign matches the direction, directed z >= 3 and |rel| >= 0.05",
+  "STOP": "any claim reversed (directed z <= -3)",
+  "INCONCLUSIVE": "otherwise (including UNMEASURABLE); never reported as PASS, the Owner decides",
+  "reportOnly": "effect size next to the balanceTool.v21 evidence; win rate, duration and gold lead (no win-rate claim)"
+ },
+ "rerun": "re-run whenever the AI coach or the career.v21 assembly changes (the red side is part of the condition)",
+ "errors": "errored matches are never retried or replaced and are listed by seed; any errored match => at most INCONCLUSIVE; more than 1% of the planned matches errored => STOP(INSTRUMENT)",
+ "instrumentCheck": "every record (live and again at report time): career.v21, Director core.v1, laneFrame teamRelative, engine seed = seed, red = AI coach binding, phaseStudySim.v3, empty selfCheck, and no blue choice dropped (droppedChoices empty); any failure => HALT / STOP(INSTRUMENT)",
+ "result": "tools/fixtures/e2_fix_confirm_result_3aB.json",
+ "fingerprint": "TBD_AT_FREEZE",
+ "copiedFrom": {
+  "file": "tools/fixtures/e2_registration_3aB.json",
+  "unchangedFields": [
+   "question",
+   "ruleset",
+   "arms",
+   "matches",
+   "side",
+   "rules",
+   "rerun",
+   "errors",
+   "instrumentCheck"
+  ],
+  "note": "check_formal_acceptance_3aB compares these field by field with the original"
+ }
+}
