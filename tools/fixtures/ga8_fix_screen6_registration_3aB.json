@@ -89,7 +89,6 @@
   "HE_R": {
    "template": "v2.hard_engage_stack",
    "change": {
-    "macro.aggression": 0.7,
     "macro.riskTolerance": 0.5
    },
    "why": "risk only: retreatAt .226 -> .25, commitShift -.04 -> 0, floor shift -.02 -> 0. Aggression stays, so the engage bias the name 抱團強開 is about stays. The knob study favours risk over aggression in 3 of 4 templates (m3 56.3 vs 59.0, m7 60.0 vs 66.5, three_lane 55.3 vs 59.3; m1 is the reverse)"
@@ -113,7 +112,6 @@
   "TLP_R": {
    "template": "v2.three_lane_pressure",
    "change": {
-    "macro.aggression": 0.7,
     "macro.riskTolerance": 0.5
    },
    "why": "risk only, listed first: the only lane-preserving knob change with an in-band reading so far (55.3 on 25001-25400, n=400, reused seeds, Krisk +3.6) and 0 copy-gate violations. Lanes, stance, tempo and ganks all stay"
@@ -139,7 +137,6 @@
   "M6_R": {
    "template": "classic.m6",
    "change": {
-    "macro.aggression": 0.7,
     "macro.riskTolerance": 0.5
    },
    "why": "risk only. Mid forward, jungle gank toward mid, support roam, fast tempo and invade with mid are all kept"

@@ -36,7 +36,8 @@ function knobProbe(e, side, v2 = false) {
   if (v2) return { ...knobProbe(e, side, false), roamK: I?.roamK ?? null, protectHp: I?.protectHp ?? null, siegeBias: I?.siegeBias ?? null };
   //  審查 #7：也看內容欄位會改到的旋鈕（打野抓人、時期接戰／參團、龍／巴龍參與），否則只改列舉欄位的候選在探針上看不出差別。
   return { retreatAt: K.retreatAt, laneOffsetValues: Object.values(K.laneOffset ?? {}).sort((a, b) => a - b), engageBias: I?.engageBias ?? 0, retreatFloorShift: I?.retreatFloorShift ?? 0, commitShift: I?.commitShift ?? 0,
-    gankWeights: JSON.stringify(K.gankWeights ?? null), gankIntervalK: I?.gankIntervalK ?? null, phaseEngage: JSON.stringify(I?.phaseEngage ?? null), phaseJoin: JSON.stringify(I?.phaseJoin ?? null), dragonJoin: K.dragonJoin ?? null, baronJoin: K.baronJoin ?? null };
+    //  紅方在 teamRelative 下，引擎拿到的是世界路名（上下路對調）；這裡換回設定的路名再比（第六輪 m5 的抓人權重不對稱才碰到）。
+    gankWeights: JSON.stringify(K.gankWeights && side === "red" && e.director.laneFrame === "teamRelative" ? { top: K.gankWeights.bot, mid: K.gankWeights.mid, bot: K.gankWeights.top } : K.gankWeights ?? null), gankIntervalK: I?.gankIntervalK ?? null, phaseEngage: JSON.stringify(I?.phaseEngage ?? null), phaseJoin: JSON.stringify(I?.phaseJoin ?? null), dragonJoin: K.dragonJoin ?? null, baronJoin: K.baronJoin ?? null };
 }
 
 if (flag("screen-worker")) {
