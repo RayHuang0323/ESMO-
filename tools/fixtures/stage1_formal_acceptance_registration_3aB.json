@@ -2,7 +2,7 @@
  "schema": "Stage1FormalAcceptanceRegistration.v1",
  "studyId": "stage1.formalAcceptance",
  "registeredAt": "2026-11-01",
- "status": "FROZEN at 7a6e9736 with fingerprint 0cc52b48cfb9348a, Owner approval 2026-11-02. The formal runs start only after the independent Reviewer confirms the frozen fingerprint, seeds, tools and criteria. It never enables a release flag and it does not authorise push, deploy or main",
+ "status": "HALTED: G-A8 STOP at the formal run. FROZEN at 7a6e9736 with fingerprint 0cc52b48cfb9348a, Owner approval 2026-11-02. The formal runs start only after the independent Reviewer confirms the frozen fingerprint, seeds, tools and criteria. It never enables a release flag and it does not authorise push, deploy or main",
  "authority": "Owner 2026-11-01 item 5 (P7), 2026-10-30 third ruling items 5-6",
  "scope": "stage 1 only: Live tactics v21 (career.v21 with template table v21.b1), Challenge stays on v20. Flags under test: mobaTacticalDirectorV21 on, heroSkillsV1 as the career.v21 requirements say, mobaChallengeV21 OFF",
  "stopRules": {
@@ -627,5 +627,44 @@
   "fingerprint": "0cc52b48cfb9348a",
   "previous": "0578fa882d74b205",
   "srcSinceDiagnostics": "the only src change after the pre-freeze diagnostics (cc54e232) is the registered constant and its comment in simulationVersion.js; the computed fingerprint is the same value the diagnostics ran under"
+ },
+ "formalOutcome": {
+  "at": "2026-11-03",
+  "ga8": {
+   "verdict": "STOP",
+   "result": "tools/fixtures/ga8_fix_confirm_result_3aB.json",
+   "commit": "84ad5014",
+   "ranAt": "b5c0ad4d",
+   "matches": 8400,
+   "errored": 0,
+   "control": 0.5275,
+   "stops": [
+    "v2.hard_engage_stack 62.3%, lower bound 57.5%",
+    "v2.three_lane_pressure 61.3%, lower bound 56.5%",
+    "classic.m6 60.8%, lower bound 56.0%"
+   ],
+   "warns": [
+    "classic.m5 59.5%",
+    "classic.m3 59.0%",
+    "classic.m1 58.5%",
+    "classic.m8 42.0%",
+    "v2.support_roamer 40.5%",
+    "v2.defensive_hold 24.8%"
+   ]
+  },
+  "halted": "every other formal measurement stopped under stopRules.ga8 and Owner approval item 4; the tools refuse, verified after the result commit. No new seeds, no threshold change, no re-run",
+  "seedBlocks": {
+   "observed": [
+    "43001-43400"
+   ],
+   "notObserved": [
+    "51001-55999",
+    "66001-67200",
+    "67501-68299",
+    "65101-65500"
+   ]
+  },
+  "next": "a new Owner ruling. stopRules.anyOtherRed: any change needs a new ruling and a new freeze, and that ruling decides the seed policy",
+  "record": "review/tactic-book-3a/3a-B_正式驗收紀錄.md"
  }
 }
