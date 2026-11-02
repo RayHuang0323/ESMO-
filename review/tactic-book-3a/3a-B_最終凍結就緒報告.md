@@ -5,6 +5,8 @@
 - 依據：Owner 2026-11-02 兩次指示（登記檔 `ownerInstruction20261102`、`ownerInstruction20261102b`）
 - 登記：`tools/fixtures/stage1_formal_acceptance_registration_3aB.json`
 
+> **更新：** §2 的 5 項已由 Owner 裁定。最新狀態與建議在 `review/tactic-book-3a/3a-B_最終凍結建議.md`。下面保留當時的內容。
+
 ## 1. 結論
 
 **技術面已就緒；還不具備正式凍結條件，差 Owner 的 5 項決定與第 2、3 項決策的確認。**

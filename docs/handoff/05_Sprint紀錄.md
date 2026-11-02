@@ -25165,3 +25165,21 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **未完成**：Owner 5 項決定（`openOwnerDecisions`）；真實性表預演與證據重播（等「矛盾」定義後才能看數字，所以沒跑）；P8；凍結。
 
 **風險**：確認性 G-A8 至少一個 STOP 約 36–57%。與目前 origin/main 尚未合併驗證。
+
+## 2026-11-02 晚 Phase 3a-B 第一階段：Owner 五項決策落實、凍結前診斷（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未重錄 Golden、未跑正式 P2、旗標全關）
+
+文件：`review/tactic-book-3a/3a-B_最終凍結建議.md`。
+
+**完成**：
+- Owner 五項決策與三項確認入檔，先經獨立審查（APPROVE WITH CHANGES），修正都在有任何預演數字之前提交。
+- 真實性表 4a 預演（6,520 場，已觀察 seeds 1–40）：判定 OK。147 列 142 列逐位元相同，只有事前登記的 m8 5 列變動，無 CONTRADICTION。只作診斷。
+- 證據重播：2,600／2,600 相同。只作診斷，沒有跑 `--report`。
+- 新工具：`tools/lib/p6Contradiction.mjs`、`tools/check_truth_preview_3aB.mjs`；step 4b 加每側 n ≥ 200。
+
+**驗證（實跑）**：52 支 gate：47 綠，5 紅都已登記。formal acceptance 49/49、回滾演練 15/15、split 62/62、v20 黃金 153/153、Challenge 全綠、瀏覽器 6 支全綠、build ✓。14,746 筆紀錄 0 筆落在保留區段。
+
+**建議**：核准語意凍結並跑正式驗收（約 17 小時）。這不是發布建議；確認性 G-A8 至少一個 STOP 約 36–57%。
+
+**更正**：先前估「真實性表預演約 70 分鐘」是錯的，實測約 128 分鐘。
+
+**待 Owner**：核准凍結；確認三項解讀（「停止調查」＝停止並回報、4b 混合情況判 FAILED、矛盾只算同模板的列）。
