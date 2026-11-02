@@ -7,7 +7,8 @@
 //
 //  結果只作開發期診斷，不是正式證據：不寫 tools/fixtures，預演檔本身 schema 就進不了快速模式（T1）。
 //    CONTRADICTION  P6 提供的選擇在預演出現反向效果（tools/lib/p6Contradiction.mjs）
-//    INCONSISTENT   事前預測不會變的列變了（修正表模板在帶修正表的規則集量的 m8 那 5 列與它的對照以外）、預測會有的列不見了或多出來
+//    INCONSISTENT   事前預測不會變的列變了（修正表模板在帶修正表的規則集量的 m8 那 5 列與它的對照以外）、預測會有的列不見了或多出來、帶線表或紅藍不對稱表變了、
+//                   那 5 列一列都沒變（修正表根本沒進 worker）
 //    OK             都沒有
 //  exit：0 OK／5 CONTRADICTION 或 INCONSISTENT（停止並回報 Owner，不改門檻或假說）。
 // ============================================================================
@@ -15,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { p6OfferedKeys, truthRowsOfOffered, contradictionsOf } from "./lib/p6Contradiction.mjs";
+import * as Prov from "./lib/tacticMeasureProvenance.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -35,7 +37,8 @@ export function diagnose(preview, fixture, offered) {
   const sameSplit = J(preview.splitStayOut) === J(fixture.splitStayOut), sameAsym = J(preview.asymmetries) === J(fixture.asymmetries);
   const offeredRows = truthRowsOfOffered(preview.rows, offered);
   const contradictions = contradictionsOf(preview.rows, offered);
-  const inconsistent = missing.length > 0 || extra.length > 0 || unexpected.length > 0;
+  const expectedChanged = changed.filter((k) => expected.has(k));
+  const inconsistent = missing.length > 0 || extra.length > 0 || unexpected.length > 0 || !sameSplit || !sameAsym || expectedChanged.length === 0;
   const verdict = contradictions.length ? "CONTRADICTION" : inconsistent ? "INCONSISTENT" : "OK";
   return { verdict, rows: preview.rows.length, identical: [...P.keys()].filter((k) => F.has(k) && !changed.includes(k)).length, changed, unexpected, missing, extra, sameSplit, sameAsym, contradictions,
     offeredRows: offeredRows.map((r) => ({ key: r.key, z: r.z, verdict: r.verdict, n: r.n })),
@@ -48,8 +51,11 @@ if (flag("selftest")) {
   const row = (key, template, dimension, choice, verdict, z = 1) => ({ key, template, dimension, choice, verdict, z, n: 40, pairs: [[1, 2]], metric: "m", direction: "up", own: "x", meanA: 1, meanB: 2, diff: 1, sd: 1 });
   const offered = new Set(["classic.m8|phases.early.grouping|group"]);
   const base = () => ({ rows: [row(EXPECTED_TO_CHANGE[0], "classic.m8", "phases.early.grouping", "group", "marginal", 2.1), row("primary|std|a|b|blue", "std", "a", "b", "pass", 5), row("weak|classic.m2|c|d|blue", "classic.m2", "c", "d", "fail", 0.1)], splitStayOut: {}, asymmetries: [] });
-  const d = (mut) => { const p = base(); mut(p); return diagnose(p, base(), offered); };
-  ck("S1 完全相同 ⇒ OK", d(() => {}).verdict === "OK");
+  //  預演裡 m8 的列一定帶修正表：預設讓第 0 列的配對值不同（一列都沒變 ⇒ 修正表沒進 worker，見 S9）。
+  const d = (mut) => { const p = base(); p.rows[0].pairs = [[1, 3]]; mut(p); return diagnose(p, base(), offered); };
+  ck("S1 只有登記的列變 ⇒ OK", d(() => {}).verdict === "OK");
+  ck("S9 登記的 5 列一列都沒變 ⇒ INCONSISTENT（修正表沒進 worker）", diagnose(base(), base(), offered).verdict === "INCONSISTENT");
+  ck("S10 帶線表或紅藍不對稱表變了 ⇒ INCONSISTENT（這些欄位不在 pairs 裡）", d((p) => { p.splitStayOut = { x: 1 }; }).verdict === "INCONSISTENT" && d((p) => { p.asymmetries = [{ x: 1 }]; }).verdict === "INCONSISTENT");
   ck("S2 P6 提供的選擇 z ≤ −2（reversed）⇒ CONTRADICTION", (() => { const r = d((p) => { p.rows[0].verdict = "reversed"; p.rows[0].z = -2; }); return r.verdict === "CONTRADICTION" && r.contradictions.length === 1; })());
   ck("S3 無效果與邊際不算矛盾：P6 提供的選擇變成 fail 或 marginal ⇒ 不是 CONTRADICTION；在登記會變的列內 ⇒ OK", d((p) => { p.rows[0].verdict = "fail"; p.rows[0].z = 0.5; }).verdict === "OK" && d((p) => { p.rows[0].verdict = "marginal"; p.rows[0].z = 2.5; }).verdict === "OK");
   ck("S4 表外的列反向不算 P6 矛盾，但數字變了 ⇒ INCONSISTENT", (() => { const r = d((p) => { p.rows[2].verdict = "reversed"; p.rows[2].z = -3; }); return r.verdict === "INCONSISTENT" && r.contradictions.length === 0 && r.unexpected.length === 1; })());
@@ -67,6 +73,9 @@ const pf = val("preview");
 if (!pf) { console.error("需要 --preview=<tactic_truth_preview.json>"); process.exit(2); }
 const preview = JSON.parse(fs.readFileSync(pf, "utf8"));
 if (preview.schema !== "TacticTruth.preview.v1") { console.error(`不是預演檔：${preview.schema}`); process.exit(2); }
+//  預演的資料夾可以續跑、沒有綁程式：預演檔記的雜湊與載入檔要等於現在的程式，否則不判定。
+const stale = Prov.stalenessReasons(preview.meta, { hashes: await Prov.currentHashes() });
+if (stale.length) { console.error(`預演是在別的程式下量的，不判定：${stale.slice(0, 5).join("；")}`); process.exit(2); }
 const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/tactic_truth_3a.json"), "utf8"));
 const res = diagnose(preview, fixture, p6OfferedKeys());
 const to = val("out");

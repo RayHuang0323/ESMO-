@@ -12,8 +12,8 @@
   "challenge": "the Challenge side-bias STOP stays. Stage 1 does not measure it and never claims it passed",
   "anyOtherRed": "any other pre-registered check that fails stops the release decision and is reported. There is no automatic fix and no automatic restart: any change needs a new Owner ruling and a new freeze, and that ruling decides the seed policy for every observed block (43001-43400 and the others of this spec are observed once run). This spec authorises neither re-using them nor drawing new ones",
   "optionalStopping": "each study runs to its registered n; no peeking decision; errored seeds follow errorRule (> 1% STOP); an interrupted run resumes in the same folder on the same fingerprint",
-  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the related work for investigation and goes to the Owner. No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: of the 13 choices P6 offers, the truth table has rows for two (classic.m3 objectives.tower=high measured on balanceTool.v20, classic.m8 phases.early.grouping=group measured under the table); the other 11 have no row and are decided by P6 plus 4b alone",
-  "ga8Prerequisite": "only a G-A8 PASS lets the other formal measurements proceed automatically; STOP and INCONCLUSIVE both stop and go to the Owner (Owner Review 2026-11-02 decision 5). Enforced through requiresResult in the four confirm registrations"
+  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the related work and goes to the Owner. Reading of 停止調查, to be confirmed by the Owner: stop and report, investigate only on the Owner's go-ahead. No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: of the 13 choices P6 offers, the truth table has rows on the offered template for two (classic.m3 objectives.tower=high measured on balanceTool.v20 with the shipped template, classic.m8 phases.early.grouping=group measured under the table). The other 11 have no row on the offered template and are decided by P6 plus 4b alone. Rows of the same choice on std or another template are not a CONTRADICTION",
+  "ga8Prerequisite": "only a G-A8 PASS lets the other formal measurements proceed automatically; STOP and INCONCLUSIVE both stop and go to the Owner (Owner Review 2026-11-02 decision 5). Enforced through requiresResult in the four confirm registrations. The 4a re-measure and the formal evidence replay have no tool check (their seeds are not reserved): they follow the order by procedure. A CONTRADICTION at 4a does not make 4b refuse by itself either: the order stops by procedure and the tools do not enforce that part"
  },
  "order": [
   {
@@ -58,7 +58,7 @@
    "step": 6,
    "what": "gates",
    "tool": "the frozen list in gateList, run one by one on a single line, plus node tools/verify.mjs (full), compared with node tools/record_verify_baseline_3aB.mjs --compare --after=<freeze commit> (every failure line of every failing segment against the baseline, every segment present and finished after the freeze commit), and browser_check_exit_flush, browser_check_cloud_save_ui",
-   "pass": "no verify segment fails that is not failing on the frozen verify baseline (compared by segment name and failure text), and every other gate of gateList is green except exactly the names in knownDebts. Any other red fails this step, whatever the handoff documents say by then"
+   "pass": "no verify segment fails that is not failing on the frozen verify baseline (compared by segment name and failure text), and every other gate of gateList is green except exactly the names in knownDebts. Any other red fails this step, whatever the handoff documents say by then. The known limits of this comparison are in knownVerificationGaps (51 crash-early segments): they are accepted debt and never a pass"
   },
   {
    "step": 7,
@@ -223,7 +223,7 @@
    "round": 5,
    "at": "2026-11-02",
    "scope": "the five Owner decisions as recorded, before any preview number",
-   "verdict": "pending"
+   "verdict": "APPROVE WITH CHANGES (0 Blockers, 1 Major, minors): the criteria, seeds, write guards and predictions hold; the diagnostic fixes applied before any preview number existed. Readings for the Owner are listed in the report"
   }
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
@@ -421,10 +421,11 @@
    "prediction": "the plan has 147 rows. 142 are byte-identical to the committed fixture (n, means, sd, z, verdict, pairs). Only the five classic.m8 weak rows under the table may change. splitStayOut and the asymmetry table are identical",
    "predictionBasis": "stage 1 changed nothing for templates outside the table and nothing on balanceTool.v20; computed from the code, no preview number has been seen",
    "outcomes": {
-    "OK": "prediction holds and no CONTRADICTION",
+    "OK": "prediction holds, at least one of the five rows changed, and no CONTRADICTION",
     "CONTRADICTION": "stopRules.contradiction",
-    "INCONSISTENT": "a row outside the five changed, or a row is missing or extra. Stop and report"
-   }
+    "INCONSISTENT": "a row outside the five changed, a row is missing or extra, splitStayOut or the asymmetry table changed, or none of the five changed (the table did not reach the worker). Stop and report"
+   },
+   "folder": "a new folder; the diagnostic refuses a preview whose hashes or loaded files differ from the current code. No commit under src or tools while it runs"
   },
   "evidenceReplay": {
    "command": "node tools/replay_evidence_carryforward_3a.mjs --run --dir=<new folder outside the repo> --workers=3. Exit 0 all identical, 5 different. --report is NOT run: it would overwrite the committed tools/fixtures/evidence_carryforward_3a.json",
@@ -436,6 +437,8 @@
     "different": "evidence inconsistent: stop and report"
    }
   },
-  "stop": "a CONTRADICTION or an inconsistency stops the work and goes to the Owner. No threshold or hypothesis is changed. The two runs are sequential on one line, truth first, and a stop in the first does not start the second"
+  "stop": "a CONTRADICTION or an inconsistency stops the work and goes to the Owner. No threshold or hypothesis is changed. The two runs are sequential on one line, truth first, and a stop in the first does not start the second",
+  "notIndependent": "the formal 4a uses the same seeds and is deterministic, so an OK here makes the formal rows foreseeable. The formal T14 is a re-check, not a new sample",
+  "nodeVersion": "the fixtures do not record the Node version (v24.18.0 now). If every row differs, check that first; the action is still stop and report"
  }
 }
