@@ -47,15 +47,19 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
 // ── D 決策與缺口 ─────────────────────────────────────────────────────────────
 {
   const d = P7.ownerDecisions ?? [];
-  ck("D1 三項 Owner 決策都寫在登記檔，每項都有結論與來源；舊的待決清單已移除", d.length === 3 && d.map((x) => x.item).join() === "1,2,3" && d.every((x) => x.decision && x.source && x.question) && !("ownerDecisionsBeforeFreeze" in P7));
-  ck("D1b 第 2、3 項如實標明是建議＋實作者的解讀，不是 Owner 逐字裁定（第 1 項才是）", /stated by the Owner/.test(d[0]?.source ?? "") && [d[1], d[2]].every((x) => /implementer's reading/.test(x?.source ?? "")));
+  ck("D1 八項 Owner 決策都寫在登記檔，每項都有結論與來源；舊的待決清單已移除", d.map((x) => x.item).join() === "1,2,3,4,5,6,7,8" && d.every((x) => x.decision && x.source && x.question) && !("ownerDecisionsBeforeFreeze" in P7) && !("openOwnerDecisions" in P7));
+  ck("D1b 八項決策的來源都是 Owner 明確裁定（第 2、3 項已於 Owner Review 確認，不再是解讀）", d.length === 8 && d.every((x) => /stated by the Owner/.test(x.source)) && !d.some((x) => /implementer/.test(x.source)));
   const gap = (P7.knownVerificationGaps ?? []).find((g) => g.id === "table-template-plus-choice-win-rate");
   ck("D2 未做的勝率組合是已知驗證缺口：NOT TESTED、notAPass，不可視為 PASS", gap?.status === "NOT TESTED" && gap?.notAPass === true && /never counted as a PASS/.test(d[0]?.decision ?? ""));
+  const gaps = Object.fromEntries((P7.knownVerificationGaps ?? []).map((g) => [g.id, g]));
+  ck("D2b verify 51 段盲區是技術債、不算 PASS（CS 46＋其他 5）；表外模板賽後目標標明未重新校準、不算 PASS", gaps["verify-blind-in-crash-early-segments"]?.notAPass === true && gaps["verify-blind-in-crash-early-segments"]?.segments?.cs === 46 && gaps["verify-blind-in-crash-early-segments"]?.segments?.other?.length === 5 && gaps["non-table-templates-evidence-goals-not-recalibrated"]?.status === "NOT RE-CALIBRATED" && gaps["non-table-templates-evidence-goals-not-recalibrated"]?.notAPass === true);
+  ck("D2c CONTRADICTION 判準與 G-A8 STOP 分開記錄：z <= -2、無效果與邊際不算；G-A8 只有 PASS 才放行", /z <= -2/.test(P7.stopRules.contradiction ?? "") && /No effect and marginal are not a contradiction/.test(P7.stopRules.contradiction ?? "") && /separately from a G-A8 STOP/.test(P7.stopRules.contradiction ?? "") && /STOP and INCONCLUSIVE both stop/.test(P7.stopRules.ga8Prerequisite ?? ""));
+  ck("D2d 凍結前診斷的登記：不是正式證據、只用已觀察 seeds、重播不跑 --report、預測先寫好", /NOT formal confirming evidence/.test(P7.preFreezeDiagnostic?.status ?? "") && /--report is NOT run/.test(P7.preFreezeDiagnostic?.evidenceReplay?.command ?? "") && /142 are byte-identical/.test(P7.preFreezeDiagnostic?.truthPreview?.prediction ?? ""));
   ck("D3 step 4b 的登記也聲明不是勝率結論、指回這個缺口", /known verification gap and not a pass/.test(FORMAL.confirm.reg.notClaimed ?? ""));
   ck("D4 Owner 2026-11-02 指示逐字保存：先獨立 Reviewer、再回報核准凍結；STOP 保留", /獨立 Reviewer/.test(P7.ownerInstruction20261102?.verbatim ?? "") && /STOP 繼續保留/.test(P7.ownerInstruction20261102?.verbatim ?? "") && /independent Reviewer/.test(P7.status));
-  const decidedIds = new Set([...(P7.openOwnerDecisions ?? []), ...d].map((x) => x.id).filter(Boolean));
+  const decidedIds = new Set(d.map((x) => x.id).filter(Boolean));
   const needIds = ["step4-conflict-definition", "truth-and-replay-before-the-freeze", "replication-minimum-n", "verify-blind-in-crash-early-segments", "inconclusive-halts-other-measurements"];
-  ck("D4b 待 Owner 決定的 5 項都還在（待決或已決），不會無聲消失", needIds.every((id) => decidedIds.has(id)), needIds.filter((id) => !decidedIds.has(id)).join());
+  ck("D4b 五項都已由 Owner 裁定，記在 ownerDecisions", needIds.every((id) => decidedIds.has(id)), needIds.filter((id) => !decidedIds.has(id)).join());
   ck("D5 STOP 規則原文還在：G-A8 0.60／0.55、STOP 後不放寬、不換 seeds、Challenge STOP 保留", /win rate >= 0.60 AND the lower 95% bound > 0.55/.test(P7.stopRules.ga8) && /No relaxed threshold, no new seeds, no template dropped/.test(P7.stopRules.ga8) && /stays/.test(P7.stopRules.challenge));
 }
 
@@ -84,6 +88,7 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   const c = FORMAL.confirm.reg, r1 = R("exclusion_v21b1_result_3aB.json").rows, r2 = R("exclusion_v21b1_stage2_result_3aB.json").rows;
   const want = r1.filter((x) => x.verdict === "pass" || (x.verdict === "marginal" && r2.find((y) => y.template === x.template && y.dimension === x.dimension && y.choice === x.choice)?.verdict === "confirmed")).map((x) => ({ template: x.template, dimension: x.dimension, choice: x.choice, metric: x.metric, direction: x.direction }));
   ck("R6 step 4b：清單＝P6 提供的 13 個選擇（由兩份結果檔推出）；門檻與 P6 第二階段同一條（z ≥ 3、rel ≥ 0.05、紅藍都要）", same(c.plan.items, want) && want.length === 13 && /z >= 3 and relative effect >= 0.05/.test(c.decisionRule.confirmed) && /BOTH/.test(c.decisionRule.confirmed));
+  ck("R7b step 4b：每側 n ≥ 200 才能確認；不足 INCONCLUSIVE；overall 不會因樣本不足變成 PASS", c.decisionRule.minValidPairsPerSide === 200 && /forbidden/.test(c.decisionRule.minValidPairsAuthority) && /fewer than 200/.test(c.decisionRule.overall.INCONCLUSIVE));
   ck("R7 step 4b：沒站住＝失敗（回報，不改列）；有錯誤場次＝不判定；review 留到凍結", /not edited/.test(c.decisionRule.overall.FAILED) && /no verdict/.test(c.decisionRule.overall.INCONCLUSIVE) && (POST_FREEZE || c.review === null));
   const pre = ["sideBias", "e1", "e2", "confirm"].map((id) => FORMAL[id].reg.requiresResult);
   ck("R8 其他四份都要求 G-A8 確認結果先提交且判定 PASS（工具強制，不靠流程）；G-A8 自己沒有前置", pre.every((p) => p?.file === FORMAL.ga8.reg.result && p?.verdict === "PASS" && p?.registration === `tools/fixtures/${FORMAL.ga8.file}`) && !FORMAL.ga8.reg.requiresResult);

@@ -134,6 +134,13 @@ export const meetsReplication = (st, direction) => {
   return st.z * sg >= REPL_Z && st.rel * sg >= REPL_REL;
 };
 
+/** step 4b 一列的判定（Owner Review 2026-11-02 決策 3）：有足夠樣本而沒過 ⇒ not_replicated；有一側樣本不足 ⇒ inconclusive；兩側都夠且都過 ⇒ confirmed。 */
+export const confirmRowVerdict = (blue, red, directionMeets, minN) => {
+  const ok = (s) => s.n >= minN;
+  if ([blue, red].some((s) => ok(s) && !directionMeets(s))) return "not_replicated";
+  if (![blue, red].every(ok)) return "inconclusive";
+  return "confirmed";
+};
 //  儀器檢查（審查 m7，不跑對局）：對照組真的是修正表的設定、與出貨版不同；每個臂經 Resolver（同 binding 路徑）得到的旋鈕＝修正表引擎的投影。
 async function instrumentProblems(items, sides = ["blue"]) {
   process.env.ESMO_BALANCE_SKILLS = "on";
@@ -178,6 +185,8 @@ if (flag("selftest")) {
   ck("S2 方向向下鏡像；n<20 或 z=null ⇒ unmeasurable", v(-3, "down") === "pass" && v(5, "up", 19) === "unmeasurable" && v(null) === "unmeasurable");
   ck("S2b 第二階段（一側）：z≥3 且 rel≥0.05 才算；方向向下鏡像；rel 沒有 ⇒ 不算", meetsReplication({ z: 3, rel: 0.05 }, "up") && !meetsReplication({ z: 3, rel: 0.049 }, "up") && !meetsReplication({ z: 2.99, rel: 0.5 }, "up") && meetsReplication({ z: -3, rel: -0.05 }, "down") && !meetsReplication({ z: 3, rel: null }, "up"));
   const dups = new Set(PLAN.map((b) => `${b.template}|${b.dimension}|${b.choice}`));
+  { const meets = (s) => s.meets, v = (bn, bm, rn, rm) => confirmRowVerdict({ n: bn, meets: bm }, { n: rn, meets: rm }, meets, 200);
+    ck("S2c step 4b 的 n 門檻：兩側 n≥200 且都過 ⇒ confirmed；剛好 200 算夠；199 ⇒ inconclusive（就算那側的數字過了）；夠樣本而沒過 ⇒ not_replicated，即使另一側樣本不足", v(400, true, 400, true) === "confirmed" && v(200, true, 200, true) === "confirmed" && v(199, true, 400, true) === "inconclusive" && v(400, true, 199, true) === "inconclusive" && v(400, false, 199, true) === "not_replicated" && v(400, true, 400, false) === "not_replicated" && v(100, false, 100, false) === "inconclusive"); }
   ck("S3 項目不重複；都在 m3／m7／m8；指標與方向同時有或同時沒有", dups.size === PLAN.length && PLAN.every((b) => TEMPLATES.includes(b.template) && !!b.metric === !!b.direction));
   const keyedAll = [...MEASURED_EXCLUSIONS, ...REPLICATION_WITHHELD].filter((x) => TEMPLATES.includes(x.template));
   const inPlan = (x) => PLAN.some((b) => b.template === x.template && b.dimension === x.dimension && b.choice === x.choice);
@@ -273,11 +282,11 @@ if (flag("confirm-plan") || flag("confirm-run") || flag("confirm-report") || fla
       const st = pairStats(SOK.map((s) => [r6(metricValue(ctl.get(`c|${side}|control|${r.template}#${s}`), side, r.metric)), r6(metricValue(trt.get(`c|${side}|${keyOfPlan(r)}#${s}`), side, r.metric))]));
       sides[side] = { n: st.n, rel: r6(st.rel), z: r6(st.z), meets: meetsReplication(st, r.direction) };
     }
-    return { ...r, ...sides, verdict: errC ? "undecided" : sides.blue.meets && sides.red.meets ? "confirmed" : "not_replicated" };
+    return { ...r, ...sides, verdict: errC ? "undecided" : confirmRowVerdict(sides.blue, sides.red, (s) => s.meets, CREG.decisionRule.minValidPairsPerSide) };
   });
   //  有任何一項沒站住 ⇒ 不是通過（登記 step 4 conflict：回報 Owner，不悄悄改排除列）；有出錯的場次 ⇒ 不判定。
-  const overall = errC === "STOP" ? "STOP" : errC ? "INCONCLUSIVE" : rowsC.every((r) => r.verdict === "confirmed") ? "PASS" : "FAILED";
-  fs.writeFileSync(path.join(ROOT, CREG.result), JSON.stringify({ schema: "ExclusionV21b1ConfirmResult.v1", at: new Date().toISOString(), registration: CREG_REL, run: mc.meta, seeds: CREG.seeds.range, errored: auditC.errored.length, errorRule: errC, rule: { minZ: REPL_Z, minRel: REPL_REL, sides: sidesC }, rows: rowsC, overall }, null, 1) + "\n");
+  const overall = errC === "STOP" ? "STOP" : errC ? "INCONCLUSIVE" : rowsC.some((r) => r.verdict === "not_replicated") ? "FAILED" : rowsC.some((r) => r.verdict === "inconclusive") ? "INCONCLUSIVE" : "PASS";
+  fs.writeFileSync(path.join(ROOT, CREG.result), JSON.stringify({ schema: "ExclusionV21b1ConfirmResult.v1", at: new Date().toISOString(), registration: CREG_REL, run: mc.meta, seeds: CREG.seeds.range, errored: auditC.errored.length, errorRule: errC, rule: { minZ: REPL_Z, minRel: REPL_REL, sides: sidesC, minValidPairsPerSide: CREG.decisionRule.minValidPairsPerSide }, notClaimed: CREG.notClaimed, rows: rowsC, overall }, null, 1) + "\n");
   for (const r of rowsC) console.log(`${r.verdict.padEnd(15)} ${r.template} ${r.dimension}=${r.choice} 藍 z=${r.blue.z} rel=${r.blue.rel}／紅 z=${r.red.z} rel=${r.red.rel}`);
   console.log(`step 4b 判定：${overall}`);
   process.exit(overall === "PASS" ? 0 : overall === "INCONCLUSIVE" ? 6 : 5);

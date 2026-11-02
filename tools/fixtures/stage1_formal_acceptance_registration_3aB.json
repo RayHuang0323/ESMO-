@@ -11,7 +11,9 @@
   "inconclusive": "INCONCLUSIVE, undecided or data-incomplete in any step is NOT a pass: the release decision waits for the Owner",
   "challenge": "the Challenge side-bias STOP stays. Stage 1 does not measure it and never claims it passed",
   "anyOtherRed": "any other pre-registered check that fails stops the release decision and is reported. There is no automatic fix and no automatic restart: any change needs a new Owner ruling and a new freeze, and that ruling decides the seed policy for every observed block (43001-43400 and the others of this spec are observed once run). This spec authorises neither re-using them nor drawing new ones",
-  "optionalStopping": "each study runs to its registered n; no peeking decision; errored seeds follow errorRule (> 1% STOP); an interrupted run resumes in the same folder on the same fingerprint"
+  "optionalStopping": "each study runs to its registered n; no peeking decision; errored seeds follow errorRule (> 1% STOP); an interrupted run resumes in the same folder on the same fingerprint",
+  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the related work for investigation and goes to the Owner. No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: of the 13 choices P6 offers, the truth table has rows for two (classic.m3 objectives.tower=high measured on balanceTool.v20, classic.m8 phases.early.grouping=group measured under the table); the other 11 have no row and are decided by P6 plus 4b alone",
+  "ga8Prerequisite": "only a G-A8 PASS lets the other formal measurements proceed automatically; STOP and INCONCLUSIVE both stop and go to the Owner (Owner Review 2026-11-02 decision 5). Enforced through requiresResult in the four confirm registrations"
  },
  "order": [
   {
@@ -41,9 +43,9 @@
    "step": 4,
    "what": "4a truth table full re-run and evidence replay; 4b red and blue confirmation of the P6 offers",
    "tool": "4a: node tools/check_tactic_truth_3a.mjs --measure --workers=3 --dir=<new folder outside the repo>, then the quick mode; evidence replay as registered in evidence_carryforward_3a.json. 4b: node tools/measure_exclusion_v21b1_3aB.mjs --confirm-run --dir=<new folder> --workers=3, then --confirm-report --dir=<same> (registration exclusion_v21b1_confirm_registration_3aB.json)",
-   "pass": "4a: T-gates green under the frozen plan. Truth rows of classic.m3 / m7 / m8 under the table are recorded and do not decide those choices: P6 plus 4b do, the same superseding role the n=400 replication has over the n=40 std rows, registered here before any of them is run. 4b: every choice offered on classic.m3 / m7 / m8 by P6 (stage-1 pass or stage-2 confirmed) meets the replication rule (z >= 3 and rel >= 0.05 in the claimed direction) on BOTH sides. P6 alone is a pre-freeze development result and never supports a release by itself",
+   "pass": "4a: T-gates green under the frozen plan, T14 included. Truth rows of classic.m3 / m7 / m8 under the table are recorded and do not decide those choices except through stopRules.contradiction: P6 plus 4b do, the same superseding role the n=400 replication has over the n=40 std rows, registered here before any of them is run. 4b: every choice offered on classic.m3 / m7 / m8 by P6 (stage-1 pass or stage-2 confirmed) has n >= 200 valid pairs and meets the replication rule (z >= 3 and rel >= 0.05 in the claimed direction) on BOTH sides. P6 alone is a pre-freeze development result and never supports a release by itself",
    "seeds": "4a: 1-40 as registered in TRUTH_GATE. 4b: 65101-65500 (reserved exclusion.v21b1.confirm), n=400 per side",
-   "conflict": "a choice P6 offered that fails 4b, or a truth-table row of a table template that contradicts a P6 row, is a failed check (stopRules.anyOtherRed): reported, never resolved by quietly editing a row, because a row change alters the semantic fingerprint of the freeze (capabilityRegistry.js is a semantics file; registryHash, mappingHash and resolvedHash do not include exclusions)"
+   "conflict": "a choice P6 offered that fails 4b is a failed check (stopRules.anyOtherRed). A truth-table row that contradicts a P6 row is CONTRADICTION (stopRules.contradiction). Either is reported, never resolved by quietly editing a row, because a row change alters the semantic fingerprint of the freeze (capabilityRegistry.js is a semantics file; registryHash, mappingHash and resolvedHash do not include exclusions)"
   },
   {
    "step": 5,
@@ -216,6 +218,12 @@
    "at": "2026-11-02",
    "scope": "the fixes of round 3 at 2896325c",
    "verdict": "APPROVE WITH CHANGES (0 Blockers, 2 Majors, minors), conditional on rehearsal section F, which passed. Applied; no further review round was run on these last fixes"
+  },
+  {
+   "round": 5,
+   "at": "2026-11-02",
+   "scope": "the five Owner decisions as recorded, before any preview number",
+   "verdict": "pending"
   }
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
@@ -227,19 +235,54 @@
    "item": 1,
    "question": "G-A8 tests each template without choices. E1 / E2 arms were not designed around table templates plus choices, so a table template combined with a choice may never get a win-rate test. The Owner decides, before the freeze, whether stage 1 adds such a test or accepts this gap",
    "decision": "no win-rate test is added to stage 1 for a table template combined with a choice. The gap is accepted as a KNOWN VERIFICATION GAP and is never counted as a PASS",
-   "source": "stated by the Owner, 2026-11-02"
+   "source": "stated by the Owner, 2026-11-02; confirmed by Owner Review 2026-11-02"
   },
   {
    "item": 2,
    "question": "classic.m3 teamfight.posture: P6 withdrew the whole dimension under v21.b1 because the template value sits on no option and there is no registered claim to measure. The Owner confirms this, or registers a claim and a new measurement",
    "decision": "confirmed: classic.m3 teamfight.posture stays withdrawn under v21.b1; no claim is invented and no new measurement is added",
-   "source": "the recommendation of the 2026-11-02 report. The Owner asked for the three decisions to be recorded and stated only item 1 in words; item 2 is the implementer's reading, shown to the Owner in the reply and again at the freeze approval, where the Owner can correct it. It keeps the current behaviour"
+   "source": "stated by the Owner, Owner Review 2026-11-02"
   },
   {
    "item": 3,
    "question": "scope question, pre-existing: only the three table templates show the unscored execution panel. Templates outside the table that carry choices are still graded with v20 evidence goals under v21. The Owner decides whether that stays for stage 1",
-   "decision": "stays for stage 1: templates outside the table that carry choices keep the v20 evidence goals under v21; only rebalanced templates show the unscored panel. The stage-1 document states it",
-   "source": "the recommendation of the 2026-11-02 report. The Owner asked for the three decisions to be recorded and stated only item 1 in words; item 3 is the implementer's reading, shown to the Owner in the reply and again at the freeze approval, where the Owner can correct it. It keeps the current behaviour"
+   "decision": "stays for stage 1: templates outside the table that carry choices keep the v20 evidence goals under v21 for now, stated as NOT RE-CALIBRATED; only rebalanced templates show the unscored panel",
+   "source": "stated by the Owner, Owner Review 2026-11-02"
+  },
+  {
+   "item": 4,
+   "id": "step4-conflict-definition",
+   "question": "step 4 says a truth row of a table template that \"contradicts a P6 row\" is a failed check, and also that those rows \"do not decide\". \"Contradicts\" is not defined and no tool implements it. It must be defined before anyone sees a 4a number, or the definition is post hoc",
+   "decision": "a choice P6 offers whose truth-table row shows a reversed effect, z <= -2, is CONTRADICTION: stop and investigate. No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP",
+   "source": "stated by the Owner, Owner Review 2026-11-02"
+  },
+  {
+   "item": 5,
+   "id": "truth-and-replay-before-the-freeze",
+   "question": "truth 4a and the evidence replay would first run after about 10 h of reserved seeds. A non-table row that flips would need a row change, a new fingerprint and a new ruling with those blocks already observed. check_tactic_truth_3a --measure --preview (about 70 min, observed seeds 1-40, writes outside the repo, T1 refuses its output) and the replay could run first",
+   "decision": "approved: the truth 4a preview and the evidence replay run before the freeze, on observed seeds only, as a development diagnostic and never as formal confirming evidence",
+   "source": "stated by the Owner, Owner Review 2026-11-02"
+  },
+  {
+   "item": 6,
+   "id": "replication-minimum-n",
+   "question": "the 4b rule (the same as P6 stage 2) has no minimum n: a choice could be confirmed on few valid pairs if the metric is often null. Every one of the 13 items had n >= 100 or 400 per side in P6, so the risk is low. A floor only tightens, but it adds to the registered rule",
+   "decision": "step 4b: each side needs n >= 200 valid pairs to confirm; below that the item is INCONCLUSIVE. Checked as achievable first. Lowering the floor after the fact is forbidden",
+   "source": "stated by the Owner, Owner Review 2026-11-02"
+  },
+  {
+   "item": 7,
+   "id": "verify-blind-in-crash-early-segments",
+   "question": "the verify comparison cannot see a change inside 51 of the 70 segments that fail on the baseline, because they crash before doing real work: 46 CS segments (source hash or legacy block guards, 0 checks reached) and milestone_b4, player_ui_r62, q7b_season_state_v2, r61_ui_fixture (0 checks), hero_skills_phase1 (9 checks before the crash). The other 19 run to the end and are covered line by line",
+   "decision": "accepted for stage 1 as technical debt. It is not a PASS (knownVerificationGaps)",
+   "source": "stated by the Owner, Owner Review 2026-11-02"
+  },
+  {
+   "item": 8,
+   "id": "inconclusive-halts-other-measurements",
+   "question": "stopRules says a G-A8 STOP halts every other formal measurement and an INCONCLUSIVE makes the release decision wait for the Owner. The tools now refuse the other measurements on anything but verdict PASS, so an INCONCLUSIVE G-A8 also halts them. That is tighter than the text about INCONCLUSIVE",
+   "decision": "only a G-A8 PASS lets the other formal measurements proceed automatically. STOP and INCONCLUSIVE both stop and go to the Owner",
+   "source": "stated by the Owner, Owner Review 2026-11-02"
   }
  ],
  "knownVerificationGaps": [
@@ -250,6 +293,32 @@
    "notAPass": true,
    "consequence": "no report, gate or release note may describe these combinations as passed or as safe by win rate. Step 4b measures behaviour only",
    "authority": "Owner 2026-11-02"
+  },
+  {
+   "id": "verify-blind-in-crash-early-segments",
+   "what": "the verify comparison cannot see a change inside 51 of the 70 segments that fail on the baseline, because they crash before doing real work: 46 CS segments (source hash or legacy block guards, 0 checks reached) and milestone_b4, player_ui_r62, q7b_season_state_v2, r61_ui_fixture (0 checks), hero_skills_phase1 (9 checks before the crash). The other 19 run to the end and are covered line by line",
+   "status": "ACCEPTED TECHNICAL DEBT",
+   "notAPass": true,
+   "consequence": "step 6 cannot prove anything inside these 51 segments; no report may describe them as passed",
+   "segments": {
+    "cs": 46,
+    "other": [
+     "milestone_b4",
+     "player_ui_r62",
+     "q7b_season_state_v2",
+     "r61_ui_fixture",
+     "hero_skills_phase1"
+    ]
+   },
+   "authority": "Owner Review 2026-11-02 decision 4"
+  },
+  {
+   "id": "non-table-templates-evidence-goals-not-recalibrated",
+   "what": "templates outside the table that carry choices are graded after a match with the v20 evidence goals under v21",
+   "status": "NOT RE-CALIBRATED",
+   "notAPass": true,
+   "consequence": "those post-match scores are not evidence that the v21 goals are right; every report states this",
+   "authority": "Owner Review 2026-11-02"
   }
  ],
  "preFreezeWork": {
@@ -285,7 +354,7 @@
   "finalStep": "an independent Reviewer confirms all formal tools, seeds, thresholds and the baseline, then the Owner is asked to approve the semantics freeze. No long P2 measurement, no golden re-recording, no push, deploy or main; G-A8 and the Challenge STOP stay"
  },
  "freezeProcedure": [
-  "the independent Reviewer confirms all formal tools, seeds, thresholds and the baseline (Owner 2026-11-02), and the Owner is asked to approve the freeze. The request shows decisions 2 and 3 of ownerDecisions again, labelled as the implementer's reading, so the Owner can correct them, and the open items of openOwnerDecisions",
+  "the independent Reviewer confirms all formal tools, seeds, thresholds and the baseline (Owner 2026-11-02), the diagnostics of preFreezeDiagnostic are reported, and the Owner is asked to approve the freeze",
   "the Owner approves. Only then: register the v21 candidate fingerprint in simulationVersion.js in one visible commit (the freeze commit)",
   "fill `fingerprint` in the five confirm registrations with it, change their status to start with \"registered\", fill review of exclusion_v21b1_confirm_registration_3aB.json after the Reviewer confirms them with the freeze in hand, and commit. check_formal_acceptance_3aB detects this state: from here it never spawns a run, and it checks with --preflight only",
   "step 1 onward of `order`. Side bias, E1, E2 and step 4b refuse until the G-A8 confirm result is committed with verdict PASS. The 4a re-measure and the evidence replay have no such tool check (their seeds are not reserved): they follow this order by procedure. The golden re-recording (step 5) needs its own go-ahead from the Owner at that point",
@@ -327,36 +396,46 @@
   },
   "stopConditions": "a new regression, contaminated evidence, or a need to change an acceptance criterion stops the related work and is reported to the Owner; none of them is released here"
  },
- "openOwnerDecisions": [
-  {
-   "id": "step4-conflict-definition",
-   "question": "step 4 says a truth row of a table template that \"contradicts a P6 row\" is a failed check, and also that those rows \"do not decide\". \"Contradicts\" is not defined and no tool implements it. It must be defined before anyone sees a 4a number, or the definition is post hoc",
-   "recommendation": "contradicts = verdict reversed (z <= -2 against the claim) on a choice P6 offers. n=40 no_effect or marginal is not a contradiction, because n=40 has low power and P6 plus 4b are the deciding evidence",
-   "why": "changes an acceptance criterion: not decided here (Owner 2026-11-02: stop and report)"
+ "ownerReview20261102c": {
+  "verbatim": [
+   "Owner Review：核准最終凍結前五項決策。",
+   "1. step 4 矛盾定義：P6 已提供選擇在真實性表出現反向效果 z ≤ −2，判 CONTRADICTION 並停止調查；無效果與邊際不直接判矛盾。與 G-A8 STOP 分開記錄。",
+   "2. 核准凍結前執行真實性表 4a 預演及證據重播，只使用已觀察 Seeds，結果只作開發期診斷，不作正式確認證據。",
+   "3. step 4b 每側有效樣本 n ≥ 200 才能確認 PASS；不足為 INCONCLUSIVE。先確認現有研究可達成，禁止事後降低門檻。",
+   "4. 第一階段接受 verify 51 段既有驗證盲區，列為技術債，不得視為 PASS。",
+   "5. G-A8 只有 PASS 才能自動進行其他正式量測；STOP／INCONCLUSIVE 都停止並交 Owner。",
+   "另外確認：m3 團戰姿態維持撤下。表外模板賽後暫沿用 v20 目標，列明未重新校準。修正表模板＋玩家選擇的勝率組合仍為 NOT TESTED，不算 PASS。",
+   "請先將以上判準記入登記並由獨立 Reviewer 審查，再執行 4a 開發期預演與證據重播。",
+   "若預演發現矛盾或證據不一致，停止並回報，不自行改門檻或研究假說。",
+   "本輪仍不正式凍結、不重錄 Golden、不消耗確認保留 Seeds、不啟動 P2 正式長測。不 Push、不 Deploy、不整合 main、不碰 CS，發布旗標維持關閉。完成後停止等待 Owner Review。"
+  ]
+ },
+ "preFreezeDiagnostic": {
+  "authority": "Owner Review 2026-11-02 decision 2",
+  "registeredAt": "2026-11-02, before either run, and reviewed before either run",
+  "status": "development diagnostic, NOT formal confirming evidence, not a substitute for step 4a or for the replay at the frozen fingerprint",
+  "truthPreview": {
+   "command": "node tools/check_tactic_truth_3a.mjs --measure --preview --workers=3 --dir=<new folder outside the repo>, then node tools/check_truth_preview_3aB.mjs --preview=<dir>/tactic_truth_preview.json --out=<dir>/diagnostic.json",
+   "seeds": "1-40, observed by every earlier truth run; no reserved block",
+   "writes": "only inside --dir. Never tools/fixtures/tactic_truth_3a.json: the preview schema is refused by T1",
+   "prediction": "the plan has 147 rows. 142 are byte-identical to the committed fixture (n, means, sd, z, verdict, pairs). Only the five classic.m8 weak rows under the table may change. splitStayOut and the asymmetry table are identical",
+   "predictionBasis": "stage 1 changed nothing for templates outside the table and nothing on balanceTool.v20; computed from the code, no preview number has been seen",
+   "outcomes": {
+    "OK": "prediction holds and no CONTRADICTION",
+    "CONTRADICTION": "stopRules.contradiction",
+    "INCONSISTENT": "a row outside the five changed, or a row is missing or extra. Stop and report"
+   }
   },
-  {
-   "id": "truth-and-replay-before-the-freeze",
-   "question": "truth 4a and the evidence replay would first run after about 10 h of reserved seeds. A non-table row that flips would need a row change, a new fingerprint and a new ruling with those blocks already observed. check_tactic_truth_3a --measure --preview (about 70 min, observed seeds 1-40, writes outside the repo, T1 refuses its output) and the replay could run first",
-   "recommendation": "yes, after the conflict definition above and before the freeze request. Not started: it shows the 4a numbers, so it must come after the definition, and it is longer than the small dry-run authorised",
-   "why": "not started here for those two reasons"
+  "evidenceReplay": {
+   "command": "node tools/replay_evidence_carryforward_3a.mjs --run --dir=<new folder outside the repo> --workers=3. Exit 0 all identical, 5 different. --report is NOT run: it would overwrite the committed tools/fixtures/evidence_carryforward_3a.json",
+   "seeds": "samples of the six committed n=400 studies, all observed; no reserved block",
+   "scope": "all 130 arms use the std plan (no table template); 2,600 matches",
+   "prediction": "2,600 of 2,600 identical to the raw records, as at fingerprint 0578fa882d74b205",
+   "outcomes": {
+    "identical": "evidence carries forward as a diagnostic; the formal replay still runs at the frozen fingerprint",
+    "different": "evidence inconsistent: stop and report"
+   }
   },
-  {
-   "id": "replication-minimum-n",
-   "question": "the 4b rule (the same as P6 stage 2) has no minimum n: a choice could be confirmed on few valid pairs if the metric is often null. Every one of the 13 items had n >= 100 or 400 per side in P6, so the risk is low. A floor only tightens, but it adds to the registered rule",
-   "recommendation": "optional: n >= 200 per side, the floor E2 already uses. Not added here",
-   "why": "adds to a registered rule: not decided here"
-  },
-  {
-   "id": "verify-blind-in-crash-early-segments",
-   "question": "the verify comparison cannot see a change inside 51 of the 70 segments that fail on the baseline, because they crash before doing real work: 46 CS segments (source hash or legacy block guards, 0 checks reached) and milestone_b4, player_ui_r62, q7b_season_state_v2, r61_ui_fixture (0 checks), hero_skills_phase1 (9 checks before the crash). The other 19 run to the end and are covered line by line",
-   "recommendation": "accept for stage 1 and state it in the release record: no CS file changed and the gateList covers the tactics, saves and Challenge directly. Repairing those verifiers is separate work, and CS is verify-only on this branch",
-   "why": "it limits what step 6 can prove: the Owner accepts it or orders otherwise"
-  },
-  {
-   "id": "inconclusive-halts-other-measurements",
-   "question": "stopRules says a G-A8 STOP halts every other formal measurement and an INCONCLUSIVE makes the release decision wait for the Owner. The tools now refuse the other measurements on anything but verdict PASS, so an INCONCLUSIVE G-A8 also halts them. That is tighter than the text about INCONCLUSIVE",
-   "recommendation": "keep: an INCONCLUSIVE G-A8 goes to the Owner before more reserved seeds are spent",
-   "why": "a tightening already built in; the Owner may ask to relax it, which means editing four registrations before the freeze"
-  }
- ]
+  "stop": "a CONTRADICTION or an inconsistency stops the work and goes to the Owner. No threshold or hypothesis is changed. The two runs are sequential on one line, truth first, and a stop in the first does not start the second"
+ }
 }

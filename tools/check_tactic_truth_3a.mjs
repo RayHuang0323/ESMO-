@@ -36,6 +36,7 @@ import path from "node:path";
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as Prov from "./lib/tacticMeasureProvenance.mjs";
+import { p6OfferedKeys, contradictionsOf, truthRowsOfOffered } from "./lib/p6Contradiction.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SELF = fileURLToPath(import.meta.url);
@@ -419,6 +420,8 @@ async function main() {
       ck("T8c 推導的邊界：表外模板照舊推出；修正表模板在 v20 量且 P6 判過 ⇒ 帶 null；沒判過 ⇒ 不帶；在修正表上量 ⇒ 不推出",
         outside.length === 1 && !("templateBalance" in outside[0]) && v20P6.length === 1 && v20P6[0].templateBalance === null && v20NotP6.length === 1 && !("templateBalance" in v20NotP6[0]) && onTable.length === 0, J({ outside, v20P6, v20NotP6, onTable }));
     }
+    //  step 4 的 CONTRADICTION（Owner Review 2026-11-02 決策 1）：與 G-A8 STOP 分開記錄；無效果與邊際不算。
+    { const off = p6OfferedKeys(), hit = contradictionsOf(fx.rows, off); ck(`T14 P6 提供的 ${off.size} 個選擇沒有 CONTRADICTION（真實性表碰得到 ${truthRowsOfOffered(fx.rows, off).length} 列，反向 z ≤ −2 才算）`, hit.length === 0, J(hit)); }
     const derived = deriveExclusions(fx.rows);
     const sameSet = (a, b) => J([...a].sort()) === J([...b].sort());
     ck("T9 MEASURED_EXCLUSIONS ＝ 結果表推出來的排除（逐筆相同，不多不少；含 templateBalance；修正表模板在帶修正表的規則集量的列除外，step 4）", sameSet(derived.map(exKey), exclusionsOfTruth(ctx.exclusions).map(exKey)), `${derived.length} 筆`);
