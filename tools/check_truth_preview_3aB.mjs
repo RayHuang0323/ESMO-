@@ -3,6 +3,7 @@
 //  tools/check_truth_preview_3aB.mjs — 凍結前的真實性表預演診斷（Owner Review 2026-11-02 決策 2；登記 stage1_formal_acceptance_registration_3aB.json preFreezeDiagnostic）
 //
 //    node tools/check_truth_preview_3aB.mjs --preview=<tactic_truth_preview.json> [--out=<json>]   比對預演與已提交的結果表，判矛盾與不一致
+//    node tools/check_truth_preview_3aB.mjs --formal --baseline=<凍結 commit>    正式 4a 之後：工作區的 tools/fixtures/tactic_truth_3a.json 對凍結 commit 的那一份，同一套判定
 //    node tools/check_truth_preview_3aB.mjs --selftest
 //
 //  結果只作開發期診斷，不是正式證據：不寫 tools/fixtures，預演檔本身 schema 就進不了快速模式（T1）。
@@ -14,6 +15,7 @@
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { p6OfferedKeys, truthRowsOfOffered, contradictionsOf } from "./lib/p6Contradiction.mjs";
 import * as Prov from "./lib/tacticMeasureProvenance.mjs";
@@ -69,21 +71,34 @@ if (flag("selftest")) {
   process.exit(fail ? 1 : 0);
 }
 
-const pf = val("preview");
-if (!pf) { console.error("需要 --preview=<tactic_truth_preview.json>"); process.exit(2); }
-const preview = JSON.parse(fs.readFileSync(pf, "utf8"));
-if (preview.schema !== "TacticTruth.preview.v1") { console.error(`不是預演檔：${preview.schema}`); process.exit(2); }
+const FORMAL = flag("formal");
+const FIXTURE_REL = "tools/fixtures/tactic_truth_3a.json";
+let preview;
+if (FORMAL) {
+  preview = JSON.parse(fs.readFileSync(path.join(ROOT, FIXTURE_REL), "utf8"));
+  if (preview.schema !== "TacticTruth.v1") { console.error(`不是正式結果表：${preview.schema}`); process.exit(2); }
+} else {
+  const pf = val("preview");
+  if (!pf) { console.error("需要 --preview=<tactic_truth_preview.json> 或 --formal --baseline=<commit>"); process.exit(2); }
+  preview = JSON.parse(fs.readFileSync(pf, "utf8"));
+  if (preview.schema !== "TacticTruth.preview.v1") { console.error(`不是預演檔：${preview.schema}`); process.exit(2); }
+}
 //  預演的資料夾可以續跑、沒有綁程式：預演檔記的雜湊與載入檔要等於現在的程式，否則不判定。
 const stale = Prov.stalenessReasons(preview.meta, { hashes: await Prov.currentHashes() });
-if (stale.length) { console.error(`預演是在別的程式下量的，不判定：${stale.slice(0, 5).join("；")}`); process.exit(2); }
-const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/tactic_truth_3a.json"), "utf8"));
+if (stale.length) { console.error(`${FORMAL ? "結果表" : "預演"}是在別的程式下量的，不判定：${stale.slice(0, 5).join("；")}`); process.exit(2); }
+let fixture;
+if (FORMAL) {
+  const rev = val("baseline");
+  if (!rev) { console.error("--formal 需要 --baseline=<凍結 commit>（重測之前的那一份結果表）"); process.exit(2); }
+  fixture = JSON.parse(execFileSync("git", ["show", `${rev}:${FIXTURE_REL}`], { cwd: ROOT, encoding: "utf8", maxBuffer: 1 << 28 }));
+} else fixture = JSON.parse(fs.readFileSync(path.join(ROOT, FIXTURE_REL), "utf8"));
 const res = diagnose(preview, fixture, p6OfferedKeys());
 const to = val("out");
-if (to) { if (path.resolve(to).toLowerCase().includes(`${path.sep}tools${path.sep}fixtures`)) { console.error("診斷不得寫進 tools/fixtures"); process.exit(2); } fs.writeFileSync(to, `${J({ notEvidence: "development diagnostic before the freeze (Owner Review 2026-11-02 decision 2); not a formal confirmation", ...res }, null, 1)}\n`); }
+if (to) { if (path.resolve(to).toLowerCase().includes(`${path.sep}tools${path.sep}fixtures`)) { console.error("診斷不得寫進 tools/fixtures"); process.exit(2); } fs.writeFileSync(to, `${J({ ...(FORMAL ? { formal: true, baseline: val("baseline") } : { notEvidence: "development diagnostic before the freeze (Owner Review 2026-11-02 decision 2); not a formal confirmation" }), ...res }, null, 1)}\n`); }
 console.log(`預演 ${res.rows} 列：逐位元相同 ${res.identical}、變了 ${res.changed.length}（預期內 ${res.changed.length - res.unexpected.length}、預期外 ${res.unexpected.length}）、少 ${res.missing.length}、多 ${res.extra.length}`);
 for (const k of res.unexpected.slice(0, 20)) console.log(`  預期外：${k}`);
 for (const r of res.expectedRows) console.log(`  ${r.key}：z ${r.before?.z} ${r.before?.verdict} → z ${r.preview?.z} ${r.preview?.verdict}（n ${r.preview?.n}）`);
 console.log(`P6 提供的選擇在表上的列：${res.offeredRows.map((r) => `${r.key} z ${r.z} ${r.verdict}`).join("；")}`);
 console.log(`矛盾：${res.contradictions.length ? J(res.contradictions) : "無"}；splitStayOut ${res.sameSplit ? "相同" : "不同"}；紅藍不對稱表 ${res.sameAsym ? "相同" : "不同"}`);
-console.log(`診斷（不是正式證據）：${res.verdict}`);
+console.log(`${FORMAL ? "正式 4a 判定" : "診斷（不是正式證據）"}：${res.verdict}`);
 process.exit(res.verdict === "OK" ? 0 : 5);

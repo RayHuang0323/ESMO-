@@ -282,7 +282,8 @@ if (flag("confirm-plan") || flag("confirm-run") || flag("confirm-report") || fla
       const st = pairStats(SOK.map((s) => [r6(metricValue(ctl.get(`c|${side}|control|${r.template}#${s}`), side, r.metric)), r6(metricValue(trt.get(`c|${side}|${keyOfPlan(r)}#${s}`), side, r.metric))]));
       sides[side] = { n: st.n, rel: r6(st.rel), z: r6(st.z), meets: meetsReplication(st, r.direction) };
     }
-    return { ...r, ...sides, verdict: errC ? "undecided" : confirmRowVerdict(sides.blue, sides.red, (s) => s.meets, CREG.decisionRule.minValidPairsPerSide) };
+    //  Owner 核准 2026-11-02 判定 2：一側樣本足夠且明確沒過 ⇒ FAILED；另一側若樣本不足要明確記錄。
+    return { ...r, ...sides, insufficientSides: sidesC.filter((s) => sides[s].n < CREG.decisionRule.minValidPairsPerSide), verdict: errC ? "undecided" : confirmRowVerdict(sides.blue, sides.red, (s) => s.meets, CREG.decisionRule.minValidPairsPerSide) };
   });
   //  有任何一項沒站住 ⇒ 不是通過（登記 step 4 conflict：回報 Owner，不悄悄改排除列）；有出錯的場次 ⇒ 不判定。
   const overall = errC === "STOP" ? "STOP" : errC ? "INCONCLUSIVE" : rowsC.some((r) => r.verdict === "not_replicated") ? "FAILED" : rowsC.some((r) => r.verdict === "inconclusive") ? "INCONCLUSIVE" : "PASS";

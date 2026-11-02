@@ -12,8 +12,9 @@
   "challenge": "the Challenge side-bias STOP stays. Stage 1 does not measure it and never claims it passed",
   "anyOtherRed": "any other pre-registered check that fails stops the release decision and is reported. There is no automatic fix and no automatic restart: any change needs a new Owner ruling and a new freeze, and that ruling decides the seed policy for every observed block (43001-43400 and the others of this spec are observed once run). This spec authorises neither re-using them nor drawing new ones",
   "optionalStopping": "each study runs to its registered n; no peeking decision; errored seeds follow errorRule (> 1% STOP); an interrupted run resumes in the same folder on the same fingerprint",
-  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the related work and goes to the Owner. Reading of 停止調查, to be confirmed by the Owner: stop and report, investigate only on the Owner's go-ahead. No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: of the 13 choices P6 offers, the truth table has rows on the offered template for two (classic.m3 objectives.tower=high measured on balanceTool.v20 with the shipped template, classic.m8 phases.early.grouping=group measured under the table). The other 11 have no row on the offered template and are decided by P6 plus 4b alone. Rows of the same choice on std or another template are not a CONTRADICTION",
-  "ga8Prerequisite": "only a G-A8 PASS lets the other formal measurements proceed automatically; STOP and INCONCLUSIVE both stop and go to the Owner (Owner Review 2026-11-02 decision 5). Enforced through requiresResult in the four confirm registrations. The 4a re-measure and the formal evidence replay have no tool check (their seeds are not reserved): they follow the order by procedure. A CONTRADICTION at 4a does not make 4b refuse by itself either: the order stops by procedure and the tools do not enforce that part"
+  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the formal measurement and is reported; the investigation is not widened without approval (Owner approval 2026-11-02). No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: of the 13 choices P6 offers, the truth table has rows on the offered template for two (classic.m3 objectives.tower=high measured on balanceTool.v20 with the shipped template, classic.m8 phases.early.grouping=group measured under the table). The other 11 have no row on the offered template and are decided by P6 plus 4b alone. Rows of the same choice on std or another template are not a CONTRADICTION",
+  "ga8Prerequisite": "only a G-A8 PASS lets the other formal measurements proceed automatically; STOP and INCONCLUSIVE both stop and go to the Owner (Owner Review 2026-11-02 decision 5). Enforced through requiresResult in the four confirm registrations. The 4a re-measure and the formal evidence replay have no tool check (their seeds are not reserved): they follow the order by procedure. A CONTRADICTION at 4a does not make 4b refuse by itself either: the order stops by procedure and the tools do not enforce that part",
+  "evidenceInconsistency": "an unexpected change on another template, a missing or extra truth row, a change in the split or asymmetry tables, none of the five registered rows changing, or a replay difference is an evidence inconsistency: it stops the formal measurement and is reported (Owner approval 2026-11-02). Checked after the formal 4a by node tools/check_truth_preview_3aB.mjs --formal --baseline=<freeze commit>, and by the replay itself"
  },
  "order": [
   {
@@ -283,6 +284,27 @@
    "question": "stopRules says a G-A8 STOP halts every other formal measurement and an INCONCLUSIVE makes the release decision wait for the Owner. The tools now refuse the other measurements on anything but verdict PASS, so an INCONCLUSIVE G-A8 also halts them. That is tighter than the text about INCONCLUSIVE",
    "decision": "only a G-A8 PASS lets the other formal measurements proceed automatically. STOP and INCONCLUSIVE both stop and go to the Owner",
    "source": "stated by the Owner, Owner Review 2026-11-02"
+  },
+  {
+   "item": 9,
+   "id": "contradiction-stops-measurement",
+   "question": "what does 停止調查 mean",
+   "decision": "a CONTRADICTION or an evidence anomaly stops the formal measurement and is reported; the investigation is not widened without approval",
+   "source": "stated by the Owner, approval 2026-11-02"
+  },
+  {
+   "item": 10,
+   "id": "4b-mixed-case",
+   "question": "one side has enough pairs and misses the rule, the other has too few",
+   "decision": "FAILED. The side with too few pairs is recorded explicitly (insufficientSides in each row)",
+   "source": "stated by the Owner, approval 2026-11-02"
+  },
+  {
+   "item": 11,
+   "id": "contradiction-same-template",
+   "question": "does a reversal on another template count",
+   "decision": "CONTRADICTION is limited to the same template. An unexpected change on another template is blocked under the evidence inconsistency rule",
+   "source": "stated by the Owner, approval 2026-11-02"
   }
  ],
  "knownVerificationGaps": [
@@ -549,5 +571,45 @@
    "reservedSeeds": "scan of 14,746 recorded matches of the preview, the replay, the four rehearsals and P6: 0 in a reserved block"
   }
  },
- "effortMeasured": "about 17 h single line by the 1.1-1.4 s per match measured on 2026-11-02: G-A8 8,400, career 4,018, E1 8,400, E2 1,600, truth 6,520 (the preview took about 128 min, not the 70 min estimated earlier), replay 2,600, 4b 12,800, plus gates, verify and browser"
+ "effortMeasured": "about 17 h single line by the 1.1-1.4 s per match measured on 2026-11-02: G-A8 8,400, career 4,018, E1 8,400, E2 1,600, truth 6,520 (the preview took about 128 min, not the 70 min estimated earlier), replay 2,600, 4b 12,800, plus gates, verify and browser",
+ "ownerApproval20261102": {
+  "verbatim": [
+   "Owner 正式核准 Phase 3a-B Stage 1 語意凍結及有條件正式驗收。",
+   "先確認並登記三項判定：1. CONTRADICTION 或證據異常：停止正式量測並回報，未經核准不擴大調查。2. 4b 一側有效樣本足夠且明確未通過必要條件，即判 FAILED；另一側若樣本不足須明確記錄。3. CONTRADICTION 限同模板；其他模板的預期外變動依證據不一致規則阻擋。",
+   "執行順序：1. 確認最新 HEAD、工作目錄及研究證據，建立正式凍結 Commit，登記新的 v21 語意指紋。2. 完成五份確認登記，交獨立 Reviewer 審查凍結指紋、Seeds、工具與判準。若有實質問題先停止，不消耗保留 Seeds。3. 審查通過後，正式執行 G-A8 確認研究 8,400 場。4. G-A8 只有 PASS 才可依事前登記繼續其他正式量測；STOP 或 INCONCLUSIVE 立即停止並回報，不重抽 Seeds、不調整門檻。5. 其他量測若出現失敗、矛盾或證據不一致，也應停止後續量測並回報。6. 使用 checkpoint、單線執行長量測，保留完整 log，更新 05／08、Roadmap、SDD 及驗收紀錄。",
+   "本次授權不包含 Golden 重錄、Push、Deploy、main 整合、開啟發布旗標或修改 CS。Challenge v21 STOP 繼續保留，第一階段仍維持 Challenge v20。全部通過後提交正式驗收報告，停止等待 Owner Release Review。"
+  ]
+ },
+ "formalRunPolicy": {
+  "registeredAt": "2026-11-02, before the freeze commit",
+  "authority": "Owner approval 2026-11-02, items 4 and 5",
+  "mode": "one study at a time on one line, workers 3, a new folder outside the repo per study, full logs kept. Interrupted studies resume in the same folder with no commit in between",
+  "afterEachStudy": {
+   "G-A8": "continue only on verdict PASS. WARN rows are listed and are not a STOP (original registration). STOP or INCONCLUSIVE: stop and report; no new seeds, no threshold change",
+   "career side bias": "continue on PASS or WARN (WARN is not a failure in its registration; every WARN is listed for the Owner). STOP or INCONCLUSIVE: stop and report",
+   "E1": "continue on PASS. WARN lines are listed. STOP or INCONCLUSIVE: stop and report",
+   "E2": "continue on PASS. STOP or INCONCLUSIVE: stop and report (step 3: an E2 INCONCLUSIVE goes to the Owner)",
+   "truth 4a": "quick mode T-gates, then tools/check_truth_preview_3aB.mjs --formal. CONTRADICTION or INCONSISTENT: stop and report",
+   "evidence replay": "all identical to continue. Any difference: stop and report",
+   "step 4b": "PASS to continue. FAILED, INCONCLUSIVE or STOP: stop and report"
+  },
+  "notInThisAuthorisation": "golden re-recording (step 5), push, deploy, main integration (step 10), enabling a release flag, changing CS. Challenge v21 STOP stays; stage 1 stays on Challenge v20"
+ },
+ "freezePrediction": {
+  "registeredAt": "2026-11-02, before the freeze commit, from reading the gates; verified by running the gate list at the frozen state before any reserved seed",
+  "fingerprint": "0cc52b48cfb9348a is what the code computes today; the freeze registers it",
+  "becomesGreen": [
+   "check_simulation_version_gate"
+  ],
+  "becomesRedByDesign": [
+   "check_challenge_golden_v21 P2: the fixture fingerprint must equal the registered v21 fingerprint. Its cases are challenge.v21 and stage 1 keeps Challenge on v20. Making P2 green means re-recording and re-pinning, which is golden work and is not authorised. The gate is not edited. Its case comparisons must stay green",
+   "check_career_golden_v21 P2, next to the setup hash that is already red"
+  ],
+  "staysRed": [
+   "check_tactic_truth_3a T2 until the formal 4a",
+   "check_match_golden_v21a 40 cases",
+   "check_club_mastery_v1 (known debt)"
+  ],
+  "consequence": "step 6 says any other red fails. With no golden re-recording authorised, the goldens and P2 stay red at the end of this run, so step 6 can not be complete here. The acceptance report lists exactly those reds and leaves them to the Owner Release Review; they are not called a pass"
+ }
 }
