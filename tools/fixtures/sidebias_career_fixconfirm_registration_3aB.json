@@ -28,7 +28,7 @@
  "owner": {
   "confirmedAt": null
  },
- "status": "READY_FOR_FREEZE: text final, NOT runnable. Becomes runnable only after (1) the Owner approves the single semantics freeze (Owner 2026-11-02), (2) `fingerprint` is filled with the frozen v21 candidate fingerprint and this status is changed to start with \"registered\", (3) an independent Reviewer confirms this file with the freeze in hand. Until then --run refuses. Nothing here may change after the first match",
+ "status": "registered (Owner approval 2026-11-02; frozen fingerprint 0cc52b48cfb9348a at freeze commit 7a6e9736). Nothing here may change after the first match",
  "result": "tools/fixtures/sidebias_career_fixconfirm_result_3aB.json",
  "circuitBreaker": "more than 2% invalid seeds after >= 100 walked => STOP(CIRCUIT_BREAKER), Owner decides",
  "halt": "a HALT file in the data folder blocks --run and --report until the Owner decides",
@@ -51,7 +51,7 @@
    "valid": "both arms produced a record; ruleset = the arm; engine seed = effectiveSeed; career.v21 has Director core.v1 and laneFrame teamRelative"
   }
  },
- "fingerprint": "TBD_AT_FREEZE",
+ "fingerprint": "0cc52b48cfb9348a",
  "copiedFrom": {
   "file": "tools/fixtures/side_bias_registration_3aB.json",
   "unchangedFields": [

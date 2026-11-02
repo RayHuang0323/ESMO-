@@ -2,7 +2,7 @@
  "schema": "Stage1FormalAcceptanceRegistration.v1",
  "studyId": "stage1.formalAcceptance",
  "registeredAt": "2026-11-01",
- "status": "registered, NOT runnable: runs only after (1) the Owner approves the single semantics freeze, (2) the freeze commit and the frozen fingerprint exist, (3) every item of runnablePreconditions is done, (4) an independent Reviewer has confirmed every formal tool, seed block, threshold and the baseline, before the Owner is asked to approve the freeze (Owner 2026-11-02), and again with the freeze in hand for the fingerprint fields. No measurement of this spec has been run. It never enables a release flag and it does not authorise push, deploy or main",
+ "status": "FROZEN at 7a6e9736 with fingerprint 0cc52b48cfb9348a, Owner approval 2026-11-02. The formal runs start only after the independent Reviewer confirms the frozen fingerprint, seeds, tools and criteria. It never enables a release flag and it does not authorise push, deploy or main",
  "authority": "Owner 2026-11-01 item 5 (P7), 2026-10-30 third ruling items 5-6",
  "scope": "stage 1 only: Live tactics v21 (career.v21 with template table v21.b1), Challenge stays on v20. Flags under test: mobaTacticalDirectorV21 on, heroSkillsV1 as the career.v21 requirements say, mobaChallengeV21 OFF",
  "stopRules": {
@@ -611,5 +611,12 @@
    "check_club_mastery_v1 (known debt)"
   ],
   "consequence": "step 6 says any other red fails. With no golden re-recording authorised, the goldens and P2 stay red at the end of this run, so step 6 can not be complete here. The acceptance report lists exactly those reds and leaves them to the Owner Release Review; they are not called a pass"
+ },
+ "freeze": {
+  "approvedBy": "Owner, 2026-11-02",
+  "commit": "7a6e9736c1c7b8c68f60e0181eb1e7d3f2b05520",
+  "fingerprint": "0cc52b48cfb9348a",
+  "previous": "0578fa882d74b205",
+  "srcSinceDiagnostics": "the only src change after the pre-freeze diagnostics (cc54e232) is the registered constant and its comment in simulationVersion.js; the computed fingerprint is the same value the diagnostics ran under"
  }
 }
