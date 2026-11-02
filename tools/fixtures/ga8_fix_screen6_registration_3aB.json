@@ -44,9 +44,9 @@
   "n": 800,
   "path": "tool (seed as-is)",
   "rule": "fresh block G-A8.fixScreen6 of tools/fixtures/study_seed_plan_3aB.json: development only, disjoint from every used or reserved block. Not 43001-43400 (observed), and none of the unused formal blocks 51001-55999, 66001-67200, 67501-68299, 65101-65500, which stay reserved. Screening seeds are never used to confirm a fix",
-  "whyN800": "the earlier rounds used n=400, where the paired MDE is about 9.5 pp, larger than the 5 pp these fixes need. n=800 brings it to about 6.8 pp and the rate interval to about +/-3.4 pp"
+  "whyN800": "the earlier rounds used n=400, where the paired MDE is about 9.5 pp, larger than the 5 pp these fixes need. n=800 brings it to about 6.8 pp and the rate interval to about +/-3.4 pp. It is still not enough for a 5 pp effect: power at n=800 is about 55% for 5 pp, 70% for 6 pp, 83% for 7 pp; 80% power at 5 pp would need about 1,450 per arm. n is not raised: the study is bounded and a fresh confirmation is still required later"
  },
- "diagnosis": "review/tactic-book-3a/3a-B_平衡修正研究.md section 2. Summary, from committed results and the engine, no match run: (1) across 42 template-block points the win rate relative to std correlates with aggression r=0.90, R2 0.81 (observational: aggressive templates also carry aggressive content). (2) Experimentally on std content, the knob study gives about +1.1 pp per +0.1 aggression (0.4..1.9) and +1.5 pp per +0.1 risk (0.4..2.5). (3) The engine: engageBias and phaseEngage add to the fight-entry score, riskTolerance lowers the emergency retreat floor and the commit threshold; neither changes damage, and neither has an explicit cost (LogicEngine.js 3040, 3046, 2714). (4) All three formal STOP templates sit at aggression 0.7 and risk 0.6-0.7: the two knob slopes alone predict about +5 pp, close to the +6..+7 pp they sit above std. (5) three_lane_pressure differs: knob study K +3.25 not distinguished, label CONTENT_DRIVEN, and round 4 needed the lanes to separate, which the Owner has ruled out as the fix. These are hypotheses for the arm list, not evidence of a fix",
+ "diagnosis": "review/tactic-book-3a/3a-B_平衡修正研究.md section 2, from committed results and the engine, no match run. Across 42 template-block points the win rate relative to std correlates with aggression r=0.90 (R2 0.81), observational: aggression and risk correlate at r=0.93 and aggressive content comes with them, and the slope 5.9 pp per 0.1 is about five times the experimental one. The knob study on std content: +1.1 pp per +0.1 aggression (0.4..1.9), +1.5 pp per +0.1 risk (0.4..2.5), mostly from below neutral; above neutral the curve is close to flat and not monotonic. Direct arm: std content at 0.7 / 0.6 reads +5.0 (-1.3..+11.3). Knob-only fixes worked on one of five templates so far (m3, which started at 0.8 / 0.8). Win rate does not track kills: FULL m7 wins 67.3 with kill difference -1.92; on the risk scan kills fall while towers lost fall too, which points at map and tower hold. The engine has no per-tactic penalty term for these knobs, but real costs exist (recent-death block, team-behind shift, tower fire, kill gold, respawn). These are hypotheses for the arm list, not evidence of a fix",
  "arms": {
   "STD": {
    "template": "std",
@@ -86,13 +86,13 @@
    },
    "why": "the frozen v21.b1 table values of classic.m3; formal WARN 59.0, screen 54.0; a fresh read of the STOP risk only, no candidate"
   },
-  "HE_A": {
+  "HE_R": {
    "template": "v2.hard_engage_stack",
    "change": {
-    "macro.aggression": 0.6,
-    "macro.riskTolerance": 0.6
+    "macro.aggression": 0.7,
+    "macro.riskTolerance": 0.5
    },
-   "why": "smallest step on both knobs: engageBias .048 -> .024, retreatAt .226 -> .238, commitShift -.04 -> -.02. grouping .9, the mid-game stance, baron priority and support protect are all kept"
+   "why": "risk only: retreatAt .226 -> .25, commitShift -.04 -> 0, floor shift -.02 -> 0. Aggression stays, so the engage bias the name 抱團強開 is about stays. The knob study favours risk over aggression in 3 of 4 templates (m3 56.3 vs 59.0, m7 60.0 vs 66.5, three_lane 55.3 vs 59.3; m1 is the reverse)"
   },
   "HE_B": {
    "template": "v2.hard_engage_stack",
@@ -100,7 +100,7 @@
     "macro.aggression": 0.6,
     "macro.riskTolerance": 0.5
    },
-   "why": "the same knob pair as the frozen classic.m3 fix, on its sibling template: retreatAt .25, commitShift 0. Identity kept as HE_A"
+   "why": "the same knob pair as the frozen classic.m3 fix, on its sibling template (m3 moved further, from 0.8 / 0.8). Adds the aggression step to HE_R. Locked identity kept"
   },
   "HE_C": {
    "template": "v2.hard_engage_stack",
@@ -108,7 +108,15 @@
     "macro.aggression": 0.5,
     "macro.riskTolerance": 0.5
    },
-   "why": "both knobs neutral, end point of the knob route: only the content (grouping, mid-game stance, baron, support) is left above std"
+   "why": "both knobs neutral, end point of the knob route: only grouping, the mid-game stance, baron and support are left above std. The copy gate says the mid engage sentence falls below strength. Whether that is still 強開 is an identity question: an Owner decision arm"
+  },
+  "TLP_R": {
+   "template": "v2.three_lane_pressure",
+   "change": {
+    "macro.aggression": 0.7,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "risk only, listed first: the only lane-preserving knob change with an in-band reading so far (55.3 on 25001-25400, n=400, reused seeds, Krisk +3.6) and 0 copy-gate violations. Lanes, stance, tempo and ganks all stay"
   },
   "TLP_E": {
    "template": "v2.three_lane_pressure",
@@ -117,7 +125,7 @@
     "macro.riskTolerance": 0.5,
     "macro.earlyGame": "standard"
    },
-   "why": "round 4 TLP_A (knobs 0.5 / 0.5) was 57.8, not distinguished. This also neutralises the early stance, the other input of the engage channel. All three forward lanes, the fast tempo and the gank pressure stay"
+   "why": "round 4 TLP_A (knobs 0.5 / 0.5) was 57.8, not distinguished. This also neutralises the early stance, the other input of the engage channel; the sentence 前期隊伍更敢主動接戰 goes. All three forward lanes, the fast tempo and the gank pressure stay"
   },
   "TLP_F": {
    "template": "v2.three_lane_pressure",
@@ -126,25 +134,15 @@
     "macro.riskTolerance": 0.4,
     "macro.earlyGame": "standard"
    },
-   "why": "a trade-off inside the identity: the team keeps all three lanes forward but is less keen to start fights and leaves them earlier (engageBias -.024, retreatAt .262). Three lanes, tempo and ganks stay"
+   "why": "the only arm that pairs forward lanes with sub-neutral knobs: engageBias -.024, retreatAt .262. Lanes stay forward (0.049) and it reads as positional pressure rather than fight pressure, a small score shift, not a refusal to fight. An Owner decision arm: it changes how the template plays"
   },
-  "TLP_G": {
-   "template": "v2.three_lane_pressure",
-   "change": {
-    "macro.aggression": 0.4,
-    "macro.riskTolerance": 0.4,
-    "macro.earlyGame": "standard",
-    "macro.tempo": "standard"
-   },
-   "why": "TLP_F plus tempo standard: gank interval 32 -> 45. Three forward lanes stay, but the sentence 打野出來抓人的次數也比平常多 no longer holds: the largest identity change allowed, listed last, and an Owner decision if it is the only one that works"
-  },
-  "M6_A": {
+  "M6_R": {
    "template": "classic.m6",
    "change": {
-    "macro.aggression": 0.6,
-    "macro.riskTolerance": 0.6
+    "macro.aggression": 0.7,
+    "macro.riskTolerance": 0.5
    },
-   "why": "smallest step. Mid forward, jungle gank toward mid, support roam, fast tempo and invade with mid are all kept"
+   "why": "risk only. Mid forward, jungle gank toward mid, support roam, fast tempo and invade with mid are all kept"
   },
   "M6_B": {
    "template": "classic.m6",
@@ -152,7 +150,7 @@
     "macro.aggression": 0.6,
     "macro.riskTolerance": 0.5
    },
-   "why": "the same knob pair as the frozen classic.m3 fix. Identity kept as M6_A"
+   "why": "the same knob pair as the frozen classic.m3 fix. Adds the aggression step to M6_R. Locked identity kept"
   },
   "M6_C": {
    "template": "classic.m6",
@@ -160,7 +158,7 @@
     "macro.aggression": 0.5,
     "macro.riskTolerance": 0.5
    },
-   "why": "both knobs neutral, end point of the knob route. Identity kept as M6_A"
+   "why": "both knobs neutral, end point of the knob route. Locked identity kept"
   },
   "M5_A": {
    "template": "classic.m5",
@@ -185,7 +183,7 @@
    "lanePlan.top",
    "lanePlan.mid",
    "lanePlan.adc",
-   "lanePlan.jungle",
+   "macro.tempo",
    "lanePlan.support"
   ],
   "v2.hard_engage_stack": [
@@ -213,7 +211,116 @@
    "objectives.towerPriority"
   ]
  },
- "identityRule": "Owner item 4. These fields may not change in any arm, checked by --validate V2c. three_lane_pressure keeps all three forward lanes in every arm, so TLP_C / TLP_C0 / TLP_D of round 4 are not candidates here. Whether a candidate still plays like the template is also a product judgement for the Owner, and copyImpact lists what the player-facing text would have to change",
+ "ownerDecisionArms": [
+  "HE_C",
+  "TLP_F"
+ ],
+ "bonferroniZ": 2.84,
+ "earlierReads": {
+  "v2.hard_engage_stack": [
+   {
+    "block": "25001-25400",
+    "rate": 0.575,
+    "n": 400
+   },
+   {
+    "block": "43001-43400",
+    "rate": 0.6225,
+    "n": 400
+   }
+  ],
+  "v2.three_lane_pressure": [
+   {
+    "block": "25001-25400",
+    "rate": 0.6025,
+    "n": 400
+   },
+   {
+    "block": "41001-41400",
+    "rate": 0.5725,
+    "n": 400
+   },
+   {
+    "block": "57801-58200",
+    "rate": 0.6,
+    "n": 400
+   },
+   {
+    "block": "43001-43400",
+    "rate": 0.6125,
+    "n": 400
+   }
+  ],
+  "classic.m6": [
+   {
+    "block": "25001-25400",
+    "rate": 0.59,
+    "n": 400
+   },
+   {
+    "block": "43001-43400",
+    "rate": 0.6075,
+    "n": 400
+   }
+  ],
+  "classic.m5": [
+   {
+    "block": "25001-25400",
+    "rate": 0.5975,
+    "n": 400
+   },
+   {
+    "block": "43001-43400",
+    "rate": 0.595,
+    "n": 400
+   }
+  ],
+  "classic.m1": [
+   {
+    "block": "25001-25400",
+    "rate": 0.6025,
+    "n": 400
+   },
+   {
+    "block": "41001-41400",
+    "rate": 0.54,
+    "n": 400
+   },
+   {
+    "block": "57801-58200",
+    "rate": 0.5975,
+    "n": 400
+   },
+   {
+    "block": "43001-43400",
+    "rate": 0.585,
+    "n": 400
+   }
+  ],
+  "classic.m3": [
+   {
+    "block": "41001-41400",
+    "rate": 0.54,
+    "n": 400
+   },
+   {
+    "block": "round 2 M3_C_rep",
+    "rate": 0.5575,
+    "n": 400
+   },
+   {
+    "block": "43001-43400",
+    "rate": 0.59,
+    "n": 400
+   }
+  ]
+ },
+ "nearStopJoint": [
+  "classic.m5",
+  "classic.m1",
+  "classic.m3"
+ ],
+ "identityRule": "Owner item 4. These fields may not change in any arm, checked by --validate V2c. three_lane_pressure keeps all three forward lanes and the fast tempo behind its gank pressure in every arm, so TLP_C / TLP_C0 / TLP_D of round 4 are not candidates here. Whether a candidate still plays like the template is also a product judgement for the Owner, and copyImpact lists what the player-facing text would have to change",
  "v21OnlyRule": "an accepted candidate could only ship as a new versioned table entry read by career.v21 / balanceTool.v21 only. v20 rulesets carry no table, so classic.m6, m5 and m1 stay byte-identical under v20; the v20 golden checks that. This round changes no table",
  "candidateRules": [
   "every candidate config passes validateMobaTacticConfig",
@@ -225,20 +332,20 @@
  "thresholds": "the G-A8 rules, unchanged: STOP = win rate >= 0.60 and lower 95% bound > 0.55; WARN strong >= 0.57; WARN weak <= 0.43; control 0.50 +/- 0.05",
  "selectionRule": [
   "unchanged from rounds 1-5: a candidate qualifies only inside the band 0.43 < win rate < 0.57; SELECTED = the first qualifying candidate in the listed order with 0.45 <= win rate <= 0.55; qualifying only in 0.43-0.45 or 0.55-0.57 => SELECTED_BORDERLINE; none => NO_CANDIDATE",
-  "listed order (listedOrder, asserted by V2), by size of change: HE_A, HE_B, HE_C; TLP_E, TLP_F, TLP_G; M6_A, M6_B, M6_C; M5_A; M1_B. Fixed before the run",
+  "listed order (listedOrder, asserted by V2), one knob per step: HE_R, HE_B, HE_C; TLP_R, TLP_E, TLP_F; M6_R, M6_B, M6_C; M5_A; M1_B. Fixed before the run. The first solid arm wins, so a small noise difference can pick the larger identity change; all arms are shown and the Owner sees it",
   "SHOWS_IMPROVEMENT = paired vsBase upper 95% bound < 0, unadjusted. FIRST_DISTINGUISHED = the first candidate in the listed order with that property. The report also gives a Bonferroni label over the 11 candidates (|z| >= 2.84), descriptive only",
   "BASE not reproduced on this block: the formal STOP stands regardless, so the candidate is still assessed (screenedCandidate, boundedOutcome). The formal G-A8 result is not re-judged",
-  "boundedOutcome, computed by the tool for each template, fixed before the run. REASONABLE = the screened candidate SHOWS_IMPROVEMENT, or FIRST_DISTINGUISHED is inside the band. Otherwise NO_REASONABLE_CANDIDATE. A BORDERLINE arm always goes to the Owner as an explicit decision",
-  "study outcome: CANDIDATES_FOR_ALL_STOPS when all of stopTargets are REASONABLE; otherwise PRODUCT_DECISION_NEEDED, with the templates listed. INSTRUMENT (control out of range or more than 1% errors) or INCONCLUSIVE: stop and report; only the Owner may re-run this same registration unchanged. Whatever the outcome this is the last round; nothing is added after seeing data",
+  "boundedOutcome, computed by the tool for each template, fixed before the run. REASONABLE = the screened candidate SHOWS_IMPROVEMENT, or FIRST_DISTINGUISHED is inside the band. If that arm is in ownerDecisionArms: REASONABLE_OWNER_DECISION. Otherwise IN_BAND_UNDISTINGUISHED when the screened candidate is in the band but the interval crosses 0 (lack of power, not proof of no effect), else NO_REASONABLE_CANDIDATE. A BORDERLINE arm always goes to the Owner as an explicit decision",
+  "study outcome: CANDIDATES_FOR_ALL_STOPS when all of stopTargets are REASONABLE; CANDIDATES_WITH_OWNER_DECISION when all are reasonable and at least one needs an owner decision arm; otherwise PRODUCT_DECISION_NEEDED, with the templates listed. INSTRUMENT (control out of range or more than 1% errors) or INCONCLUSIVE: stop and report. An out-of-range control is terminal for this block, because the seeds are deterministic. Whatever the outcome this is the last round; nothing is added after seeing data",
   "the tool outcome is a proposal: an accepted candidate is a v21 fix candidate only, by Owner decision including its copy, and needs a new freeze and a new formal acceptance on fresh confirmation seeds"
  ],
- "nearStopAnalysis": "classic.m5, m1 and m3: BASE arms give a new read; pooled with earlier blocks in the report (descriptive) and turned into a chance of a STOP at n=400. M5_A and M1_B are one bounded arm each. classic.m3 gets no candidate: its frozen fix stays as it is",
- "defensiveHoldAnalysis": "no arm. Rounds 1-2 already tried it (DH_A, DH_B, DH_C and others, none improved). Analysis only, from committed results: review/tactic-book-3a/3a-B_平衡修正研究.md section 3",
+ "nearStopAnalysis": "classic.m5, m1 and m3: BASE arms give a new read; the tool pools it with earlierReads, n-weighted (descriptive), and gives the chance of a STOP at n=400 as P(rate >= 0.60). M5_A and M1_B are one bounded arm each. classic.m3 gets no candidate: its frozen fix stays as it is",
+ "defensiveHoldAnalysis": "no arm. Round 1 tried DH_A, DH_B and DH_C, none improved, but they never touched its defensive lanes or stances. Analysis only, from committed results: review/tactic-book-3a/3a-B_平衡修正研究.md section 3",
  "report": [
   "per arm: win rate, 95% CI, G-A8 label, blue / red, STANDARD / SWAPPED, median duration, paired difference to STD; mechanism means (kill difference, gold lead at 10 and 20 min, towers taken and lost)",
-  "per candidate: paired difference to BASE with 95% CI, Bonferroni label, confirmation risks",
+  "per candidate: paired difference to BASE with 95% CI, Bonferroni label (tool, |z| >= 2.84 over 11 candidates, descriptive), confirmation risks",
   "per template: BASE against the formal result; verdict, screened candidate, boundedOutcome",
-  "multiplicity and power: 11 candidates on one block, unadjusted 95% intervals; paired sd about 0.69 gives an MDE of about 6.8 pp at n=800, so a NO_REASONABLE_CANDIDATE can be a false negative and a SELECTED rate carries winner's curse"
+  "multiplicity and power: 11 candidates on one block, unadjusted 95% intervals; paired sd about 0.69 gives an MDE of about 6.8 pp at n=800, so a NO_REASONABLE_CANDIDATE or IN_BAND_UNDISTINGUISHED can be a false negative and a SELECTED rate carries winner's curse. Stated before the run, from a Monte Carlo of this rule: P(CANDIDATES_FOR_ALL_STOPS) is about 0.41 under the doc's slopes, 0.93 under m3-like strong effects, 0.04 under m7-like weak effects, 0.00 under no effect. Screened rates run about 1.7-2.4 pp below the truth"
  ],
  "validation": {
   "V1": "the STD and BASE arms on the first 10 screening seeds reproduce the same configs through the binding path: win and duration identical (BASE_classic.m3 against the frozen table)",
@@ -250,12 +357,12 @@
  "liveCheck": "every record: balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off, and the t=0 Director probe equals the arm's expectation; any mismatch => HALT",
  "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
  "fingerprint": "0cc52b48cfb9348a (frozen at 7a6e9736; the tool refuses to run on another fingerprint)",
- "matches": "18 arms x 800 = 14,400 (about 5.5 h at 1.37 s per match measured in the formal G-A8, 3 workers); single line; resumes in the same folder",
+ "matches": "18 arms x 800 = 14,400 (about 5.5 h at the 1.37 s per match of the formal G-A8, 3 workers; not measured for this study); single line; resumes in the same folder",
  "notClaimed": "no template is changed; the formal G-A8 stays STOP and its evidence stays as it is; no fix is confirmed by this study; a candidate says nothing about a table template combined with a player choice (NOT TESTED)",
  "checkpointing": "per match; resume in the same folder; no commit while it runs",
  "outOfScope": "other templates, the two knobs of templates not listed, every locked field, the engine, thresholds, the frozen table entries, Challenge. A cost on the engage channel in the engine is out of scope: it would be a shared engine change",
  "copyImpact": {
-  "HE_A": [
+  "HE_R": [
    "desc：commit 主張 higher，效果表是 same（「投入團戰的門檻也稍微比較低」）",
    "cons：retreat 主張 lower，效果表是 same（「隊伍撤退的時機比平常稍微晚一點」）",
    "cons：commit 主張 higher，效果表是 same（「投入團戰的門檻也比平常稍微低一些」）",
@@ -274,30 +381,32 @@
    "cons：commit 主張 higher，效果表是 same（「投入團戰的門檻也比平常稍微低一些」）",
    "cons：這個模板沒有任何代價列，cons 只能是「這套打法沒有特別明顯的短處，但也不代表比較強。」"
   ],
+  "TLP_R": [],
   "TLP_E": [
    "desc：engage.early 主張 higher，效果表是 same（「前期隊伍更敢主動接戰」）"
   ],
   "TLP_F": [
    "desc：engage.early 主張 higher，效果表是 same（「前期隊伍更敢主動接戰」）"
-  ],
-  "TLP_G": [
-   "desc：gank.freq 主張 higher，效果表是 same（「打野出來抓人的次數也比平常多」）",
-   "desc：engage.early 主張 higher，效果表是 same（「前期隊伍更敢主動接戰」）"
   ]
  },
- "copyImpactNote": "measured with the copy-gate rules (tools/lib/tacticEffectSheet.mjs) for the v2 templates: the sentences of today's copy that the candidate no longer supports. Empty = none. classic templates are not covered by this gate: their v21 copy would go through TEMPLATE_COPY as for m3, m7, m8; risk labels are an Owner decision. A knob step on hard_engage_stack also changes the career.v21 AI coach (skirmish style uses it): STYLE_TEMPLATES no longer stays clear of the table, so the split gate S5 assertion, E2 and the career side bias all see it",
+ "copyImpactNote": "measured with the copy-gate rules (tools/lib/tacticEffectSheet.mjs) for the v2 templates: the sentences of today's copy that the candidate no longer supports. Empty = none. classic templates are not covered by this gate: their v21 copy would go through TEMPLATE_COPY as for m3, m7, m8 (m1 撤退晚 and m6 高風險 stop holding); risk labels are an Owner decision",
+ "downstreamIfAccepted": "a new versioned table id, so the exclusion rows tagged v21.b1 (capabilityRegistry.js) need re-measuring for the changed templates; the truth table and the v21 goldens need re-recording. A knob step on hard_engage_stack also changes the career.v21 AI coach (skirmish style uses it): the split gate S5b fails by design, the aiCoach.js comment that the coach stays clear of the table becomes false, and E2 and the career side bias see it. All of this is a new freeze and a new formal acceptance",
  "listedOrder": [
-  "HE_A",
+  "HE_R",
   "HE_B",
   "HE_C",
+  "TLP_R",
   "TLP_E",
   "TLP_F",
-  "TLP_G",
-  "M6_A",
+  "M6_R",
   "M6_B",
   "M6_C",
   "M5_A",
   "M1_B"
  ],
- "review": null
+ "review": {
+  "reviewedAt": "2026-11-03",
+  "verdict": "APPROVE WITH CHANGES (independent reviewer: 0 Blockers, 7 Majors, minors; every change applied before --validate; no further review round on these changes)",
+  "changes": "M1 no-cost claim corrected and read sites listed; M2 existing mechanism data used; M3 knob-only record, segment slopes and three_lane interaction added; M4 risk-only arms HE_R, M6_R, TLP_R replace HE_A, M6_A, TLP_G; M5 vacuous lock replaced by tempo, ownerDecisionArms added; M6 IN_BAND_UNDISTINGUISHED added, power and outcome odds stated; M7 joint near-STOP and winner's curse stated; m1 nexus filter; m2 Bonferroni and pooled reads in the tool"
+ }
 }

@@ -7,7 +7,7 @@
 //  node tools/measure_ga8_fix_screen_3aB.mjs --run --dir=<repo 外新資料夾> --vdir=<同上> [--workers=3]   要 review.reviewedAt＋validation 通過
 //  node tools/measure_ga8_fix_screen_3aB.mjs --report --dir=<同一個>        寫 tools/fixtures/ga8_fix_screen_result_3aB.json
 //  node tools/measure_ga8_fix_screen_3aB.mjs --selftest
-//  第六輪（Owner Review 2026-11-03）的登記多四個欄位，都只在登記有寫時才生效，舊登記行為不變：mechanism（紀錄機制數字）、identityLocks（V2c）、ga8Result（比較對象）、boundedOutcome。
+//  第六輪（Owner Review 2026-11-03）的登記多四個欄位，都只在登記有寫時才生效，舊登記行為不變：mechanism（紀錄機制數字）、identityLocks（V2c）、ga8Result（比較對象）、boundedOutcome（含 ownerDecisionArms、bonferroniZ、earlierReads）。
 //  第二輪（Owner 2026-10-29）：上面每個指令加 --reg=tools/fixtures/ga8_fix_screen2_registration_3aB.json（臂數、模板種類、結果檔都由登記檔決定；不加 --reg＝第一輪，行為不變）
 //
 //  篩選用：src/ 不動、模板不改。候選設定只存在這支工具裡，走 legacy 輸入（旋鈕研究驗證過與 G-A8 的 binding 路徑逐場相同）。
@@ -61,7 +61,7 @@ if (flag("screen-worker")) {
         e.tick(0.5);
         if (t.mech) { if (gold600 === null && e.t >= 600) gold600 = sgn * (e.bGold - e.rGold); if (gold1200 === null && e.t >= 1200) gold1200 = sgn * (e.bGold - e.rGold); }
       }
-      const mech = t.mech ? (() => { const foe = side === "blue" ? "red" : "blue", dead = (s) => Object.values(e.towers ?? {}).filter((x) => x.side === s && (x.dead || x.hp <= 0)).length; return { killsFor: side === "blue" ? e.bK : e.rK, killsAgainst: side === "blue" ? e.rK : e.bK, gold600, gold1200, towersTaken: dead(foe), towersLost: dead(side) }; })() : null;
+      const mech = t.mech ? (() => { const foe = side === "blue" ? "red" : "blue", dead = (s) => Object.entries(e.towers).filter(([k, x]) => x.side === s && x.hp <= 0 && x.lane !== "nexus" && !k.includes("nexus")).length; return { killsFor: side === "blue" ? e.bK : e.rK, killsAgainst: side === "blue" ? e.rK : e.bK, gold600, gold1200, towersTaken: dead(foe), towersLost: dead(side) }; })() : null;
       const win = e.over && (e.winner === "blue" || e.winner === "red") ? (e.winner === side ? 1 : 0) : 0.5;
       process.send({ type: "done", id: t.id, rec: { seed: t.seed, arm: t.arm, binding: !!t.binding, side, layout: objectiveLayoutForSeed(t.seed), ruleset: RULESET,
         layers: { heroSkills: !!M.skills, battleTalents: !!M.talents }, director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null, probe, win, duration: e.t, ...(mech ?? {}) } });
@@ -91,17 +91,31 @@ export function selectCandidate(kind, candidates) {
 }
 /** BASE 在篩選 seeds 上是否重現 G-A8 的旗標（strong：STOP 或 WARN strong；weak：WARN weak）。 */
 export const reproduced = (kind, label) => (kind === "strong" ? label === "STOP" || label === "WARN strong" : label === "WARN weak");
-/** 第六輪登記的 boundedOutcome：REASONABLE＝篩選出的候選 SHOWS_IMPROVEMENT（對 BASE 上界 < 0），或第一個分得開的候選落在帶內。 */
-export function boundedOutcomeOf(templates, stopTargets) {
+/**
+ * 第六輪登記的 boundedOutcome。每個模板一個狀態：
+ *   REASONABLE               篩選出的候選對 BASE 上界 < 0，或第一個分得開的候選落在帶內
+ *   REASONABLE_OWNER_DECISION 同上，但靠的是 ownerDecisionArms 裡的臂（玩法變動大）：要 Owner 明確決定，不算乾淨的通過
+ *   IN_BAND_UNDISTINGUISHED  篩選出的候選在帶內，但與 BASE 分不開（統計力不足，不等於沒效果）
+ *   NO_REASONABLE_CANDIDATE  其他（候選都還在帶外）
+ */
+export function boundedOutcomeOf(templates, stopTargets, ownerDecisionArms = [], bonferroniZ = Infinity) {
   const improves = (c) => !!c?.vsBase && c.vsBase.hi < 0, inBand = (c) => !!c && c.rate > 0.43 && c.rate < 0.57;
   const rows = templates.filter((t) => t.candidates.length).map((t) => {
     const screened = t.candidates.find((c) => c.arm === t.screenedCandidate) ?? null, first = t.candidates.find(improves) ?? null;
-    const reasonable = improves(screened) || inBand(first);
-    return { template: t.template, baseRate: t.base.rate, screened: screened?.arm ?? null, screenedVerdict: t.screenedVerdict, screenedImproves: improves(screened), firstDistinguished: first?.arm ?? null, firstInBand: inBand(first), borderline: t.screenedVerdict === "SELECTED_BORDERLINE", outcome: reasonable ? "REASONABLE" : "NO_REASONABLE_CANDIDATE" };
+    const via = improves(screened) ? screened : inBand(first) ? first : null;
+    const outcome = via ? (ownerDecisionArms.includes(via.arm) ? "REASONABLE_OWNER_DECISION" : "REASONABLE") : inBand(screened) ? "IN_BAND_UNDISTINGUISHED" : "NO_REASONABLE_CANDIDATE";
+    return { template: t.template, baseRate: t.base.rate, screened: screened?.arm ?? null, screenedVerdict: t.screenedVerdict, screenedImproves: improves(screened), firstDistinguished: first?.arm ?? null, firstInBand: inBand(first), via: via?.arm ?? null, borderline: t.screenedVerdict === "SELECTED_BORDERLINE", outcome,
+      candidates: t.candidates.map((c) => ({ arm: c.arm, rate: c.rate, vsBase: c.vsBase?.mean ?? null, lo: c.vsBase?.lo ?? null, hi: c.vsBase?.hi ?? null, z: c.vsBase?.z ?? null, bonferroni: Math.abs(c.vsBase?.z ?? 0) >= bonferroniZ, ownerDecision: ownerDecisionArms.includes(c.arm) })) };
   });
-  const lacking = stopTargets.filter((t) => rows.find((r) => r.template === t)?.outcome !== "REASONABLE");
-  return { study: lacking.length ? "PRODUCT_DECISION_NEEDED" : "CANDIDATES_FOR_ALL_STOPS", lacking, templates: rows };
+  const state = (t) => rows.find((r) => r.template === t)?.outcome;
+  const lacking = stopTargets.filter((t) => !/^REASONABLE/.test(state(t) ?? ""));
+  const ownerNeeded = stopTargets.filter((t) => state(t) === "REASONABLE_OWNER_DECISION");
+  return { study: lacking.length ? "PRODUCT_DECISION_NEEDED" : ownerNeeded.length ? "CANDIDATES_WITH_OWNER_DECISION" : "CANDIDATES_FOR_ALL_STOPS", lacking, ownerNeeded, templates: rows };
 }
+/** 若真值是 p，n 場的 G-A8 判 STOP 的機率（常態近似；n=400 時勝率 ≥ 0.60 下界一定 > 0.55）。 */
+export function stopChance(p, n = 400) { const se = Math.sqrt(Math.max(1e-9, p * (1 - p)) / n), z = (0.6 - p) / se; return 1 - 0.5 * (1 + erf(z / Math.SQRT2)); }
+/** 把這個區段的 BASE 與先前各區段按 n 加權（描述性，不用於選擇）。 */
+export function pooledReads(reads) { const n = reads.reduce((s, r) => s + r.n, 0), p = reads.reduce((s, r) => s + r.rate * r.n, 0) / n; return { pooled: p, n, blocks: reads.length, stopChanceN400: stopChance(p) }; }
 /** 常態近似：若估計就是真值，n 場確認時落入 ≥0.57／≤0.43 的機率（第二輪審查 #7）。 */
 export function confirmRisk(p, n = 400) {
   const se = Math.sqrt(Math.max(1e-9, p * (1 - p)) / n), Phi = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
@@ -122,9 +136,14 @@ if (flag("selftest")) {
   ck("S5 重現：strong 認 STOP／WARN strong，weak 只認 WARN weak", reproduced("strong", "WARN strong") && !reproduced("strong", null) && reproduced("weak", "WARN weak") && !reproduced("weak", "WARN strong"));
   ck("S7 confirmRisk：真值 0.555 ⇒ 確認時 ≥0.57 約 0.27；0.50 ⇒ 兩邊都約 0.003", (() => { const a = confirmRisk(0.555), b = confirmRisk(0.5); return Math.abs(a.pStrong - 0.274) < 0.01 && b.pStrong < 0.005 && b.pWeak < 0.005; })());
   ck("S8 replicationFlag：0.58 RISK、0.44 OVERSHOOT、0.52 CONSISTENT", replicationFlag(0.58) === "RISK_FOR_CONFIRMATORY" && replicationFlag(0.44) === "OVERSHOOT" && replicationFlag(0.52) === "CONSISTENT");
-  { const row = (arm, rate, hi) => ({ arm, rate, vsBase: { hi } }), T = (t, cands, sc, v) => ({ template: t, base: { rate: 0.6 }, candidates: cands, screenedCandidate: sc, screenedVerdict: v });
-    const a = boundedOutcomeOf([T("x", [row("A", 0.52, -0.01)], "A", "SELECTED")], ["x"]), b = boundedOutcomeOf([T("x", [row("A", 0.52, 0.03)], "A", "SELECTED")], ["x"]), c2 = boundedOutcomeOf([T("x", [row("A", 0.56, 0.02), row("B", 0.5, -0.02)], "A", "SELECTED_BORDERLINE")], ["x"]), d = boundedOutcomeOf([T("x", [row("A", 0.42, -0.1)], null, "NO_CANDIDATE")], ["x"]), e = boundedOutcomeOf([T("x", [row("A", 0.52, -0.01)], "A", "SELECTED"), T("y", [], null, "NO_CANDIDATE_REGISTERED")], ["x"]);
-    ck("S9 boundedOutcome：改善且在帶內 ⇒ REASONABLE；分不開 ⇒ PRODUCT_DECISION_NEEDED；第一個分得開的在帶內也算；過頭到帶外不算；沒有候選的模板不進結果", a.study === "CANDIDATES_FOR_ALL_STOPS" && b.study === "PRODUCT_DECISION_NEEDED" && b.lacking[0] === "x" && c2.templates[0].outcome === "REASONABLE" && c2.templates[0].borderline && d.templates[0].outcome === "NO_REASONABLE_CANDIDATE" && e.templates.length === 1); }
+  { const row = (arm, rate, hi, z = 0) => ({ arm, rate, vsBase: { hi, z, mean: 0, lo: 0 } }), T = (t, cands, sc, v) => ({ template: t, base: { rate: 0.6 }, candidates: cands, screenedCandidate: sc, screenedVerdict: v });
+    const g = (cands, sc, v, od = []) => boundedOutcomeOf([T("x", cands, sc, v)], ["x"], od, 2.84);
+    const a = g([row("A", 0.52, -0.01)], "A", "SELECTED"), b = g([row("A", 0.52, 0.03)], "A", "SELECTED"), c2 = g([row("A", 0.56, 0.02), row("B", 0.5, -0.02)], "A", "SELECTED_BORDERLINE"), d = g([row("A", 0.42, -0.1)], null, "NO_CANDIDATE"), o = g([row("A", 0.52, -0.01, -3)], "A", "SELECTED", ["A"]);
+    const e = boundedOutcomeOf([T("x", [row("A", 0.52, -0.01)], "A", "SELECTED"), T("y", [], null, "NO_CANDIDATE_REGISTERED")], ["x"]);
+    ck("S9 boundedOutcome：改善且在帶內 ⇒ REASONABLE；在帶內分不開 ⇒ IN_BAND_UNDISTINGUISHED 且研究要產品決策；第一個分得開的在帶內也算；過頭到帶外不算；沒有候選的模板不進結果",
+      a.study === "CANDIDATES_FOR_ALL_STOPS" && b.templates[0].outcome === "IN_BAND_UNDISTINGUISHED" && b.study === "PRODUCT_DECISION_NEEDED" && b.lacking[0] === "x" && c2.templates[0].outcome === "REASONABLE" && c2.templates[0].via === "B" && c2.templates[0].borderline && d.templates[0].outcome === "NO_REASONABLE_CANDIDATE" && e.templates.length === 1);
+    ck("S10 ownerDecisionArms：靠這些臂過關 ⇒ REASONABLE_OWNER_DECISION，研究結果不算乾淨的 CANDIDATES_FOR_ALL_STOPS；Bonferroni 標記看 |z|", o.templates[0].outcome === "REASONABLE_OWNER_DECISION" && o.study === "CANDIDATES_WITH_OWNER_DECISION" && o.ownerNeeded[0] === "x" && o.templates[0].candidates[0].bonferroni === true && a.templates[0].candidates[0].bonferroni === false);
+    ck("S11 stopChance：0.60 ⇒ 0.5；0.55 ⇒ 約 0.022；pooledReads 依 n 加權", Math.abs(stopChance(0.6) - 0.5) < 1e-6 && Math.abs(stopChance(0.55) - 0.022) < 0.005 && Math.abs(pooledReads([{ rate: 0.6, n: 400 }, { rate: 0.5, n: 1200 }]).pooled - 0.525) < 1e-9); }
   ck("S6 setPath 只改指定欄位", (() => { const o = { a: { b: 1, c: 2 } }; setPath(o, "a.b", 5); return o.a.b === 5 && o.a.c === 2; })());
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
@@ -289,7 +308,8 @@ if (flag("report")) {
   });
   const control = A.STD, controlOk = Math.abs(control.rate - 0.5) <= 0.05;
   //  登記 boundedOutcome：正式 STOP 不因這個區段重現與否而改變，候選照評（第六輪）。
-  const bounded = REG.boundedOutcome ? boundedOutcomeOf(templates, REG.stopTargets ?? []) : null;
+  const bounded = REG.boundedOutcome ? boundedOutcomeOf(templates, REG.stopTargets ?? [], REG.ownerDecisionArms ?? [], REG.bonferroniZ ?? Infinity) : null;
+  const nearStop = REG.earlierReads ? Object.entries(REG.earlierReads).map(([tpl, reads]) => { const base = A[`BASE_${tpl}`]; return { template: tpl, thisBlock: base.rate, earlier: reads, ...pooledReads([...reads, { block: REG.seeds.range, rate: base.rate, n: base.n }]) }; }) : null;
   //  第二輪：與第一輪合併的描述性勝率（同 n ⇒ 平均；不用於選擇）
   const r1 = REG.pooledWith ? JSON.parse(fs.readFileSync(path.join(ROOT, REG.pooledWith), "utf8")) : null;
   const pooled = r1 ? ARMS.filter((x) => r1.arms.some((a) => a.arm === x.arm)).map((x) => { const a = r1.arms.find((y) => y.arm === x.arm); const n = a.n + A[x.arm].n, p = (a.rate * a.n + A[x.arm].rate * A[x.arm].n) / n, se = Math.sqrt(p * (1 - p) / n); return { arm: x.arm, round1: a.rate, round2: A[x.arm].rate, pooled: p, lo: p - 1.96 * se, hi: p + 1.96 * se, n }; }) : null;
@@ -297,7 +317,7 @@ if (flag("report")) {
   const outcome = audit.instrument.length || !controlOk || er === "STOP" ? "INSTRUMENT" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "SCREENED";
   const out = { schema: "esmo.ga8-fix-screen-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: FP, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     ga8Verdict: "STOP (unchanged; screening only, no template changed; a selection is a proposal that must be confirmed by G-A8 on the reserved fresh seeds after an Owner-approved versioned change)",
-    statsNote: `unadjusted 95% intervals; ${ARMS.length} arms on one seed block`, matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), control: { rate: control.rate, ok: controlOk }, outcome, ...(bounded ? { boundedOutcome: bounded } : {}), templates, ...(pooled ? { pooledWithRound1: pooled } : {}), arms };
+    statsNote: `unadjusted 95% intervals; ${ARMS.length} arms on one seed block`, matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), control: { rate: control.rate, ok: controlOk }, outcome, ...(bounded ? { boundedOutcome: bounded } : {}), ...(nearStop ? { nearStop, nearStopNoStopAll: nearStop.filter((x) => (REG.nearStopJoint ?? []).includes(x.template)).reduce((q, x) => q * (1 - x.stopChanceN400), 1) } : {}), templates, ...(pooled ? { pooledWithRound1: pooled } : {}), arms };
   const OUT = path.join(ROOT, OUT_REL);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
@@ -308,6 +328,7 @@ if (flag("report")) {
     for (const c of t.candidates) { const a = A[c.arm]; console.log(`     ${c.arm.padEnd(8)} ${pp(c.rate)}（${pp(c.lo)}..${pp(c.hi)}）${c.label ?? ""}　對 BASE ${ci(c.vsBase)}${a.vsCompare ? `　對 ${a.compareTo} ${ci(a.vsCompare)}` : ""}${c.confirmRisk ? `　確認風險 ≥57 ${pp(c.confirmRisk.pStrong)}%／≤43 ${pp(c.confirmRisk.pWeak)}%` : ""}${c.replicationFlag ? `　複驗 ${c.replicationFlag}` : ""}${c.referenceOnly ? "　（參照，不參與選擇）" : ""}`); }
   }
   if (pooled) for (const p of pooled) console.log(`合併兩輪（描述性）${p.arm.padEnd(18)} 第一輪 ${pp(p.round1)}　第二輪 ${pp(p.round2)}　合併 ${pp(p.pooled)}（${pp(p.lo)}..${pp(p.hi)}，n ${p.n}）`);
-  if (bounded) { for (const t of bounded.templates) console.log(`${t.template.padEnd(24)} ${t.outcome}　screened ${t.screened ?? "—"}（${t.screenedVerdict}）${t.screenedImproves ? " SHOWS_IMPROVEMENT" : ""}　first distinguished ${t.firstDistinguished ?? "—"}${t.borderline ? "　BORDERLINE：交 Owner" : ""}`); console.log(`研究結果：${bounded.study}`); }
+  if (bounded) { for (const t of bounded.templates) { console.log(`${t.template.padEnd(24)} ${t.outcome}　screened ${t.screened ?? "—"}（${t.screenedVerdict}）${t.screenedImproves ? " SHOWS_IMPROVEMENT" : ""}　first distinguished ${t.firstDistinguished ?? "—"}${t.borderline ? "　BORDERLINE：交 Owner" : ""}`); for (const x of t.candidates) if (x.bonferroni) console.log(`     ${x.arm} 過 Bonferroni（描述性，z ${x.z?.toFixed(2)}）`); } console.log(`研究結果：${bounded.study}`); }
+  if (nearStop) for (const x of nearStop) console.log(`${x.template.padEnd(24)} 本區段 ${pp(x.thisBlock)}　${x.blocks} 區段合併 ${pp(x.pooled)}（n ${x.n}）　n=400 判 STOP 機率 ${pp(x.stopChanceN400)}%`);
   console.log(`結果 ${outcome}（G-A8 維持 STOP）`);
 }
