@@ -632,7 +632,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-10-25（Owner Review 決策 5，語意凍結前）：AI 教練加證據規則——模板以外的選擇只加在有紅藍複驗的 std 上（前期滾雪球 n=400、輔助任務 n=200）
   //  （積極型＝std＋前期滾雪球、均衡型＝std＋依素質的輔助任務；v2 模板用純模板；不用強邊；不用未量過的「野區入侵＋前期滾雪球」）。
   //  只改 career.v21 有 AI 對手時的紅方計畫；其他輸入不變。v21 未發布 ⇒ 同版號重新登記（舊值 e3acf891023937e9 未曾發布）。
-  "moba-sim.v21": "0578fa882d74b205",
+  //  2026-11-02（Phase 3a-B 第一階段語意凍結，Owner 正式核准）：模板修正表 v21.b1（career.v21／balanceTool.v21 的 templateBalance 層）、m3／m7／m8 文案與排除列、
+  //  Live 2×2 矩陣與總開關。v20 規則集與 Challenge v20 不變（v20 黃金 39 案逐位元相同）；旗標全關。v21 未發布 ⇒ 同版號重新登記（舊值 0578fa882d74b205 未曾發布）。
+  //  登記 tools/fixtures/stage1_formal_acceptance_registration_3aB.json。
+  "moba-sim.v21": "0cc52b48cfb9348a",
 });
 
 export const isKnownSimulationVersion = (v) =>
