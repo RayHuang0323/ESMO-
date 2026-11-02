@@ -595,7 +595,7 @@
    "career side bias": "continue on PASS only. WARN or INCONCLUSIVE or STOP: stop and report. The registration says PASS is no STOP and no WARN, and reserved blocks can not be un-spent, so a WARN waits for the Owner",
    "E1": "continue on PASS. WARN lines are listed. STOP or INCONCLUSIVE: stop and report",
    "E2": "continue on PASS. STOP or INCONCLUSIVE: stop and report (step 3: an E2 INCONCLUSIVE goes to the Owner)",
-   "truth 4a": "run with --out outside the repo. Quick mode T-gates, then tools/check_truth_preview_3aB.mjs --formal --baseline=<freeze commit>. Any T-gate red other than none, CONTRADICTION, INCONSISTENT or a refusal of that tool: stop and report",
+   "truth 4a": "run with --out outside the repo. Quick mode T-gates, then tools/check_truth_preview_3aB.mjs --formal --baseline=<freeze commit>. Any T-gate red, a refusal of that tool, or CONTRADICTION or INCONSISTENT: stop and report",
    "evidence replay": "--run, and --report only when all are identical; the report rewrites the committed fixture at the frozen fingerprint. Any difference: stop and report",
    "step 4b": "PASS to continue. FAILED, INCONCLUSIVE or STOP: stop and report"
   },
