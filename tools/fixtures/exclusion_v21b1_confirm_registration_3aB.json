@@ -136,7 +136,10 @@
  "noRetries": "no re-run, no seed swap, no metric swap, no seed dropped by hand",
  "notClaimed": "behaviour only. No win-rate claim for a table template combined with a choice: that is a known verification gap and not a pass (stage1_formal_acceptance_registration_3aB.json knownVerificationGaps)",
  "fingerprint": "0cc52b48cfb9348a",
- "review": null,
+ "review": {
+  "reviewedAt": "2026-11-02",
+  "verdict": "APPROVE WITH CHANGES (independent review of the frozen fingerprint, seeds, tools and criteria at 596113c1: 0 Blockers, 0 Majors; the procedural changes applied before the first match)"
+ },
  "requiresResult": {
   "file": "tools/fixtures/ga8_fix_confirm_result_3aB.json",
   "verdict": "PASS",
