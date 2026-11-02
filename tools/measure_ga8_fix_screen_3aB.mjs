@@ -7,6 +7,7 @@
 //  node tools/measure_ga8_fix_screen_3aB.mjs --run --dir=<repo 外新資料夾> --vdir=<同上> [--workers=3]   要 review.reviewedAt＋validation 通過
 //  node tools/measure_ga8_fix_screen_3aB.mjs --report --dir=<同一個>        寫 tools/fixtures/ga8_fix_screen_result_3aB.json
 //  node tools/measure_ga8_fix_screen_3aB.mjs --selftest
+//  第六輪（Owner Review 2026-11-03）的登記多四個欄位，都只在登記有寫時才生效，舊登記行為不變：mechanism（紀錄機制數字）、identityLocks（V2c）、ga8Result（比較對象）、boundedOutcome。
 //  第二輪（Owner 2026-10-29）：上面每個指令加 --reg=tools/fixtures/ga8_fix_screen2_registration_3aB.json（臂數、模板種類、結果檔都由登記檔決定；不加 --reg＝第一輪，行為不變）
 //
 //  篩選用：src/ 不動、模板不改。候選設定只存在這支工具裡，走 legacy 輸入（旋鈕研究驗證過與 G-A8 的 binding 路徑逐場相同）。
@@ -53,10 +54,17 @@ if (flag("screen-worker")) {
       const blueIsArm = t.seed % 2 === 1, side = blueIsArm ? "blue" : "red";
       const { e } = configure(t.seed, "standard", M, 1, null, { blue: blueIsArm ? plan : std, red: blueIsArm ? std : plan }, RULESET);
       const probe = knobProbe(e, side, t.probe === "v3" ? "v3" : t.probe === "v2");
-      for (let i = 1; i * 0.5 <= 3600 && !e.over; i++) e.tick(0.5);
+      //  機制數字（登記 mechanism）：同 measure_ga8_knob_3aB，只讀引擎狀態、不消耗亂數，不改對局。
+      const sgn = side === "blue" ? 1 : -1;
+      let gold600 = null, gold1200 = null;
+      for (let i = 1; i * 0.5 <= 3600 && !e.over; i++) {
+        e.tick(0.5);
+        if (t.mech) { if (gold600 === null && e.t >= 600) gold600 = sgn * (e.bGold - e.rGold); if (gold1200 === null && e.t >= 1200) gold1200 = sgn * (e.bGold - e.rGold); }
+      }
+      const mech = t.mech ? (() => { const foe = side === "blue" ? "red" : "blue", dead = (s) => Object.values(e.towers ?? {}).filter((x) => x.side === s && (x.dead || x.hp <= 0)).length; return { killsFor: side === "blue" ? e.bK : e.rK, killsAgainst: side === "blue" ? e.rK : e.bK, gold600, gold1200, towersTaken: dead(foe), towersLost: dead(side) }; })() : null;
       const win = e.over && (e.winner === "blue" || e.winner === "red") ? (e.winner === side ? 1 : 0) : 0.5;
       process.send({ type: "done", id: t.id, rec: { seed: t.seed, arm: t.arm, binding: !!t.binding, side, layout: objectiveLayoutForSeed(t.seed), ruleset: RULESET,
-        layers: { heroSkills: !!M.skills, battleTalents: !!M.talents }, director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null, probe, win, duration: e.t } });
+        layers: { heroSkills: !!M.skills, battleTalents: !!M.talents }, director: e.director?.mode ?? null, laneFrame: e.director?.laneFrame ?? null, probe, win, duration: e.t, ...(mech ?? {}) } });
     } catch (err) { process.send({ type: "error", id: t.id, error: String(err?.stack ?? err) }); }
   });
   process.send({ type: "ready" });
@@ -83,6 +91,17 @@ export function selectCandidate(kind, candidates) {
 }
 /** BASE 在篩選 seeds 上是否重現 G-A8 的旗標（strong：STOP 或 WARN strong；weak：WARN weak）。 */
 export const reproduced = (kind, label) => (kind === "strong" ? label === "STOP" || label === "WARN strong" : label === "WARN weak");
+/** 第六輪登記的 boundedOutcome：REASONABLE＝篩選出的候選 SHOWS_IMPROVEMENT（對 BASE 上界 < 0），或第一個分得開的候選落在帶內。 */
+export function boundedOutcomeOf(templates, stopTargets) {
+  const improves = (c) => !!c?.vsBase && c.vsBase.hi < 0, inBand = (c) => !!c && c.rate > 0.43 && c.rate < 0.57;
+  const rows = templates.filter((t) => t.candidates.length).map((t) => {
+    const screened = t.candidates.find((c) => c.arm === t.screenedCandidate) ?? null, first = t.candidates.find(improves) ?? null;
+    const reasonable = improves(screened) || inBand(first);
+    return { template: t.template, baseRate: t.base.rate, screened: screened?.arm ?? null, screenedVerdict: t.screenedVerdict, screenedImproves: improves(screened), firstDistinguished: first?.arm ?? null, firstInBand: inBand(first), borderline: t.screenedVerdict === "SELECTED_BORDERLINE", outcome: reasonable ? "REASONABLE" : "NO_REASONABLE_CANDIDATE" };
+  });
+  const lacking = stopTargets.filter((t) => rows.find((r) => r.template === t)?.outcome !== "REASONABLE");
+  return { study: lacking.length ? "PRODUCT_DECISION_NEEDED" : "CANDIDATES_FOR_ALL_STOPS", lacking, templates: rows };
+}
 /** 常態近似：若估計就是真值，n 場確認時落入 ≥0.57／≤0.43 的機率（第二輪審查 #7）。 */
 export function confirmRisk(p, n = 400) {
   const se = Math.sqrt(Math.max(1e-9, p * (1 - p)) / n), Phi = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
@@ -103,6 +122,9 @@ if (flag("selftest")) {
   ck("S5 重現：strong 認 STOP／WARN strong，weak 只認 WARN weak", reproduced("strong", "WARN strong") && !reproduced("strong", null) && reproduced("weak", "WARN weak") && !reproduced("weak", "WARN strong"));
   ck("S7 confirmRisk：真值 0.555 ⇒ 確認時 ≥0.57 約 0.27；0.50 ⇒ 兩邊都約 0.003", (() => { const a = confirmRisk(0.555), b = confirmRisk(0.5); return Math.abs(a.pStrong - 0.274) < 0.01 && b.pStrong < 0.005 && b.pWeak < 0.005; })());
   ck("S8 replicationFlag：0.58 RISK、0.44 OVERSHOOT、0.52 CONSISTENT", replicationFlag(0.58) === "RISK_FOR_CONFIRMATORY" && replicationFlag(0.44) === "OVERSHOOT" && replicationFlag(0.52) === "CONSISTENT");
+  { const row = (arm, rate, hi) => ({ arm, rate, vsBase: { hi } }), T = (t, cands, sc, v) => ({ template: t, base: { rate: 0.6 }, candidates: cands, screenedCandidate: sc, screenedVerdict: v });
+    const a = boundedOutcomeOf([T("x", [row("A", 0.52, -0.01)], "A", "SELECTED")], ["x"]), b = boundedOutcomeOf([T("x", [row("A", 0.52, 0.03)], "A", "SELECTED")], ["x"]), c2 = boundedOutcomeOf([T("x", [row("A", 0.56, 0.02), row("B", 0.5, -0.02)], "A", "SELECTED_BORDERLINE")], ["x"]), d = boundedOutcomeOf([T("x", [row("A", 0.42, -0.1)], null, "NO_CANDIDATE")], ["x"]), e = boundedOutcomeOf([T("x", [row("A", 0.52, -0.01)], "A", "SELECTED"), T("y", [], null, "NO_CANDIDATE_REGISTERED")], ["x"]);
+    ck("S9 boundedOutcome：改善且在帶內 ⇒ REASONABLE；分不開 ⇒ PRODUCT_DECISION_NEEDED；第一個分得開的在帶內也算；過頭到帶外不算；沒有候選的模板不進結果", a.study === "CANDIDATES_FOR_ALL_STOPS" && b.study === "PRODUCT_DECISION_NEEDED" && b.lacking[0] === "x" && c2.templates[0].outcome === "REASONABLE" && c2.templates[0].borderline && d.templates[0].outcome === "NO_REASONABLE_CANDIDATE" && e.templates.length === 1); }
   ck("S6 setPath 只改指定欄位", (() => { const o = { a: { b: 1, c: 2 } }; setPath(o, "a.b", 5); return o.a.b === 5 && o.a.c === 2; })());
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
@@ -132,7 +154,7 @@ const REF = new Set(REG.referenceOnly ?? []);
 const OUT_REL = REG.resultFile ?? "tools/fixtures/ga8_fix_screen_result_3aB.json";
 const [S0, S1] = REG.seeds.range.split("-").map(Number);
 const SEEDS = Array.from({ length: S1 - S0 + 1 }, (_, i) => S0 + i);
-const taskOf = (x, seed, binding = false) => ({ id: `${x.arm}#${seed}${binding ? "#binding" : ""}`, key: binding ? `${x.arm}.binding` : x.arm, seed, arm: x.arm, template: x.template, config: x.config, binding, ...(PROBE_V3 ? { probe: "v3" } : PROBE_V2 ? { probe: "v2" } : {}) });
+const taskOf = (x, seed, binding = false) => ({ id: `${x.arm}#${seed}${binding ? "#binding" : ""}`, key: binding ? `${x.arm}.binding` : x.arm, seed, arm: x.arm, template: x.template, config: x.config, binding, ...(PROBE_V3 ? { probe: "v3" } : PROBE_V2 ? { probe: "v2" } : {}), ...(REG.mechanism ? { mech: true } : {}) });
 const tasks = ARMS.flatMap((x) => SEEDS.map((seed) => taskOf(x, seed)));
 if (flag("plan")) { console.log(`${ARMS.length} 臂 × ${SEEDS.length} seeds ＝ ${tasks.length} 場`); for (const x of ARMS) console.log(`  ${x.arm.padEnd(30)} ${x.template.padEnd(24)} ${JSON.stringify(x.change)}`); process.exit(0); }
 
@@ -181,6 +203,14 @@ if (flag("validate")) {
   for (const [a, b] of Object.entries(REG.compareTo ?? {})) if (!ARM[a] || !ARM[b] || ARM[a].template !== ARM[b].template) v2.push(`compareTo ${a}→${b} 無效`);
   if (REG.listedOrder) { const order = ARMS.filter((x) => x.base && !REF.has(x.arm)).map((x) => x.arm); if (JSON.stringify(order) !== JSON.stringify(REG.listedOrder)) v2.push(`候選順序 ${order.join(",")} ≠ listedOrder`); }
   for (const a of REF) if (!ARM[a] || !ARM[a].base) v2.push(`referenceOnly ${a} 不是候選臂`);
+  if (REG.identityLocks) {
+    const bad = ARMS.filter((x) => x.base).flatMap((x) => (REG.identityLocks[x.template] ?? []).filter((p) => Object.hasOwn(x.change, p)).map((p) => `${x.arm} 改了 ${p}`));
+    const none = Object.keys(REG.identityLocks).filter((t) => !ARMS.some((x) => x.template === t && x.base));
+    ck(`V2c 候選沒有改到鎖定的核心欄位（${Object.keys(REG.identityLocks).length} 個模板）`, bad.length === 0 && none.length === 0, [...bad, ...none].join(","));
+    const { templateConfigFor } = await imp("src/platform/tactics/tacticTemplates.js");
+    const tableBad = ARMS.filter((x) => !x.base && Object.keys(x.change).length).filter((x) => JSON.stringify(MTC.toEngineTactic(x.config)) !== JSON.stringify(MTC.toEngineTactic(templateConfigFor(x.template, "v21.b1"))) || JSON.stringify(MTC.toEngineTacticIdentity(x.config)) !== JSON.stringify(MTC.toEngineTacticIdentity(templateConfigFor(x.template, "v21.b1")))).map((x) => x.arm);
+    ck("V2b 帶數值的 BASE 臂＝凍結修正表 v21.b1 下該模板的旋鈕", tableBad.length === 0, tableBad.join(","));
+  }
   ck(`V2 ${ARMS.length} 臂：設定合法、數值在已出貨範圍內、候選旋鈕組與每個模板／其他候選都不同、只改宣告欄位`, v2.length === 0 && ARMS.length === EXPECTED_ARMS, v2.slice(0, 3).join(" | "));
   const v3a = ARMS.filter((x) => x.base && probeEq(x.expect, ARM[x.base].expect)).map((x) => x.arm);
   //  DH_A／DH_B／M8_B 只改列舉欄位：Director 數值可能與 BASE 相同；那就改用整份旋鈕組簽章判定非空轉。
@@ -237,12 +267,13 @@ if (flag("report")) {
   const arms = ARMS.map((x) => ({ arm: x.arm, template: x.template, change: x.change, ...rateCI(S.map((s) => R(x.arm, s).win)),
     asBlue: half(x.arm, (s) => s % 2 === 1), asRed: half(x.arm, (s) => s % 2 === 0), standard: half(x.arm, (s) => R(x.arm, s).layout === "STANDARD"), swapped: half(x.arm, (s) => R(x.arm, s).layout === "SWAPPED"),
     medianDurationMin: med(S.map((s) => R(x.arm, s).duration)) / 60,
+    ...(REG.mechanism ? { mechanism: (() => { const m = (g) => meanSd(S.map((s) => g(R(x.arm, s))).filter((v) => v != null)).mean; return { killDiff: m((r) => r.killsFor - r.killsAgainst), gold600: m((r) => r.gold600), gold1200: m((r) => r.gold1200), towersTaken: m((r) => r.towersTaken), towersLost: m((r) => r.towersLost) }; })() } : {}),
     ...(x.base ? { vsBase: pairedStats(S.map((s) => R(x.arm, s).win - R(x.base, s).win)) } : {}),
     ...(x.arm !== "STD" ? { vsStd: pairedStats(S.map((s) => R(x.arm, s).win - R("STD", s).win)) } : {}),
     //  第二輪：登記的 compareTo（描述性：m8 內容份額、m7 姿態增量）
     ...(REG.compareTo?.[x.arm] ? { compareTo: REG.compareTo[x.arm], vsCompare: pairedStats(S.map((s) => R(x.arm, s).win - R(REG.compareTo[x.arm], s).win)) } : {}) }));
   const A = Object.fromEntries(arms.map((a) => [a.arm, a]));
-  const ga8 = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/ga8_result_3aB.json"), "utf8"));
+  const ga8 = JSON.parse(fs.readFileSync(path.join(ROOT, REG.ga8Result ?? "tools/fixtures/ga8_result_3aB.json"), "utf8"));
   const ga8Label = (tpl) => { const row = ga8.rows.find((r) => r.template === tpl); return row ? { rate: row.rate, label: row.stop ? "STOP" : row.warn ? (row.rate >= 0.5 ? "WARN strong" : "WARN weak") : null } : null; };
   const templates = Object.entries(KIND).map(([tpl, kind]) => {
     const base = A[`BASE_${tpl}`], cands = ARMS.filter((x) => x.template === tpl && x.base).map((x) => A[x.arm]);
@@ -257,6 +288,8 @@ if (flag("report")) {
       selected: rep ? sel.selected : null, verdict: rep ? sel.verdict : "NOT_REPRODUCED", screenedCandidate: sel.selected, screenedVerdict: sel.verdict };
   });
   const control = A.STD, controlOk = Math.abs(control.rate - 0.5) <= 0.05;
+  //  登記 boundedOutcome：正式 STOP 不因這個區段重現與否而改變，候選照評（第六輪）。
+  const bounded = REG.boundedOutcome ? boundedOutcomeOf(templates, REG.stopTargets ?? []) : null;
   //  第二輪：與第一輪合併的描述性勝率（同 n ⇒ 平均；不用於選擇）
   const r1 = REG.pooledWith ? JSON.parse(fs.readFileSync(path.join(ROOT, REG.pooledWith), "utf8")) : null;
   const pooled = r1 ? ARMS.filter((x) => r1.arms.some((a) => a.arm === x.arm)).map((x) => { const a = r1.arms.find((y) => y.arm === x.arm); const n = a.n + A[x.arm].n, p = (a.rate * a.n + A[x.arm].rate * A[x.arm].n) / n, se = Math.sqrt(p * (1 - p) / n); return { arm: x.arm, round1: a.rate, round2: A[x.arm].rate, pooled: p, lo: p - 1.96 * se, hi: p + 1.96 * se, n }; }) : null;
@@ -264,7 +297,7 @@ if (flag("report")) {
   const outcome = audit.instrument.length || !controlOk || er === "STOP" ? "INSTRUMENT" : er === "INCONCLUSIVE" ? "INCONCLUSIVE" : "SCREENED";
   const out = { schema: "esmo.ga8-fix-screen-result.v1", registration: REG_REL, registrationHash: META.registration, fingerprint: FP, gitHead: provenance().gitHead, reportedAt: new Date().toISOString(),
     ga8Verdict: "STOP (unchanged; screening only, no template changed; a selection is a proposal that must be confirmed by G-A8 on the reserved fresh seeds after an Owner-approved versioned change)",
-    statsNote: `unadjusted 95% intervals; ${ARMS.length} arms on one seed block`, matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), control: { rate: control.rate, ok: controlOk }, outcome, templates, ...(pooled ? { pooledWithRound1: pooled } : {}), arms };
+    statsNote: `unadjusted 95% intervals; ${ARMS.length} arms on one seed block`, matches: tasks.length, errored: audit.errored, instrument: audit.instrument.slice(0, 20), control: { rate: control.rate, ok: controlOk }, outcome, ...(bounded ? { boundedOutcome: bounded } : {}), templates, ...(pooled ? { pooledWithRound1: pooled } : {}), arms };
   const OUT = path.join(ROOT, OUT_REL);
   if (fs.existsSync(OUT)) { console.error("結果檔已存在：不覆寫"); process.exit(2); }
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 1)}\n`);
@@ -275,5 +308,6 @@ if (flag("report")) {
     for (const c of t.candidates) { const a = A[c.arm]; console.log(`     ${c.arm.padEnd(8)} ${pp(c.rate)}（${pp(c.lo)}..${pp(c.hi)}）${c.label ?? ""}　對 BASE ${ci(c.vsBase)}${a.vsCompare ? `　對 ${a.compareTo} ${ci(a.vsCompare)}` : ""}${c.confirmRisk ? `　確認風險 ≥57 ${pp(c.confirmRisk.pStrong)}%／≤43 ${pp(c.confirmRisk.pWeak)}%` : ""}${c.replicationFlag ? `　複驗 ${c.replicationFlag}` : ""}${c.referenceOnly ? "　（參照，不參與選擇）" : ""}`); }
   }
   if (pooled) for (const p of pooled) console.log(`合併兩輪（描述性）${p.arm.padEnd(18)} 第一輪 ${pp(p.round1)}　第二輪 ${pp(p.round2)}　合併 ${pp(p.pooled)}（${pp(p.lo)}..${pp(p.hi)}，n ${p.n}）`);
+  if (bounded) { for (const t of bounded.templates) console.log(`${t.template.padEnd(24)} ${t.outcome}　screened ${t.screened ?? "—"}（${t.screenedVerdict}）${t.screenedImproves ? " SHOWS_IMPROVEMENT" : ""}　first distinguished ${t.firstDistinguished ?? "—"}${t.borderline ? "　BORDERLINE：交 Owner" : ""}`); console.log(`研究結果：${bounded.study}`); }
   console.log(`結果 ${outcome}（G-A8 維持 STOP）`);
 }
