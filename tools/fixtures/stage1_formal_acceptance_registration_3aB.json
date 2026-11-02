@@ -439,6 +439,114 @@
   },
   "stop": "a CONTRADICTION or an inconsistency stops the work and goes to the Owner. No threshold or hypothesis is changed. The two runs are sequential on one line, truth first, and a stop in the first does not start the second",
   "notIndependent": "the formal 4a uses the same seeds and is deterministic, so an OK here makes the formal rows foreseeable. The formal T14 is a re-check, not a new sample",
-  "nodeVersion": "the fixtures do not record the Node version (v24.18.0 now). If every row differs, check that first; the action is still stop and report"
+  "nodeVersion": "the fixtures do not record the Node version (v24.18.0 now). If every row differs, check that first; the action is still stop and report",
+  "outcome": {
+   "at": "2026-11-02, at cc54e232",
+   "notEvidence": "development diagnostic only; the formal 4a and the formal replay still run at the frozen fingerprint",
+   "truthPreview": {
+    "verdict": "OK",
+    "rows": 147,
+    "identical": 142,
+    "changed": 5,
+    "unexpected": 0,
+    "missing": 0,
+    "extra": 0,
+    "sameSplit": true,
+    "sameAsym": true,
+    "contradictions": 0,
+    "rowsOfP6OfferedChoices": [
+     {
+      "key": "weak|classic.m3|objectives.tower|high|blue",
+      "z": 1.966933,
+      "verdict": "fail",
+      "n": 40
+     },
+     {
+      "key": "weak|classic.m8|phases.early.grouping|group|blue|v21",
+      "z": 1.355612,
+      "verdict": "fail",
+      "n": 40
+     }
+    ],
+    "fiveRows": [
+     {
+      "key": "weak|classic.m8|phases.early.grouping|group|blue|v21",
+      "before": {
+       "z": 2.081666,
+       "verdict": "marginal",
+       "n": 40
+      },
+      "preview": {
+       "z": 1.355612,
+       "verdict": "fail",
+       "n": 40
+      }
+     },
+     {
+      "key": "weak|classic.m8|phases.mid.grouping|group|blue|v21",
+      "before": {
+       "z": 0.702617,
+       "verdict": "fail",
+       "n": 40
+      },
+      "preview": {
+       "z": 2.083486,
+       "verdict": "marginal",
+       "n": 40
+      }
+     },
+     {
+      "key": "weak|classic.m8|phases.late.grouping|group|blue|v21",
+      "before": {
+       "z": 1.131715,
+       "verdict": "fail",
+       "n": 27
+      },
+      "preview": {
+       "z": 1,
+       "verdict": "fail",
+       "n": 32
+      }
+     },
+     {
+      "key": "weak|classic.m8|phases.mid.objectiveOrder|baron|blue|v21",
+      "before": {
+       "z": 0,
+       "verdict": "fail",
+       "n": 40
+      },
+      "preview": {
+       "z": 1,
+       "verdict": "fail",
+       "n": 40
+      }
+     },
+     {
+      "key": "weak|classic.m8|phases.late.objectiveOrder|baron|blue|v21",
+      "before": {
+       "z": 0,
+       "verdict": "fail",
+       "n": 22
+      },
+      "preview": {
+       "z": -0.296733,
+       "verdict": "fail",
+       "n": 29
+      }
+     }
+    ],
+    "interrupted": "stopped cleanly three times at the Owner's request and resumed in the same folder on the same code; 6,520 matches, 0 failed",
+    "readForTheOwner": "classic.m8 phases.early.grouping=group, which P6 offers, is z 1.36 with n=40: no effect at this size, not a contradiction under the Owner's definition. classic.m8 phases.mid.grouping=group, which P6 withheld as not replicated, is z 2.08 marginal with n=40: no action, the row stays withheld",
+    "detail": "review/tactic-book-3a/stage1_prefreeze_truth_diagnostic.json"
+   },
+   "evidenceReplay": {
+    "verdict": "all identical",
+    "matches": 2600,
+    "different": 0,
+    "errored": 0,
+    "reportNotRun": "tools/fixtures/evidence_carryforward_3a.json was not rewritten"
+   },
+   "reservedSeeds": "scan of 14,746 recorded matches of the preview, the replay, the four rehearsals and P6: 0 in a reserved block"
+  }
  }
 }

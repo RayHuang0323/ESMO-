@@ -1,0 +1,101 @@
+{
+ "notEvidence": "development diagnostic before the freeze (Owner Review 2026-11-02 decision 2); not a formal confirmation",
+ "verdict": "OK",
+ "rows": 147,
+ "identical": 142,
+ "changed": [
+  "weak|classic.m8|phases.early.grouping|group|blue|v21",
+  "weak|classic.m8|phases.mid.grouping|group|blue|v21",
+  "weak|classic.m8|phases.late.grouping|group|blue|v21",
+  "weak|classic.m8|phases.mid.objectiveOrder|baron|blue|v21",
+  "weak|classic.m8|phases.late.objectiveOrder|baron|blue|v21"
+ ],
+ "unexpected": [],
+ "missing": [],
+ "extra": [],
+ "sameSplit": true,
+ "sameAsym": true,
+ "contradictions": [],
+ "offeredRows": [
+  {
+   "key": "weak|classic.m3|objectives.tower|high|blue",
+   "z": 1.966933,
+   "verdict": "fail",
+   "n": 40
+  },
+  {
+   "key": "weak|classic.m8|phases.early.grouping|group|blue|v21",
+   "z": 1.355612,
+   "verdict": "fail",
+   "n": 40
+  }
+ ],
+ "expectedRows": [
+  {
+   "key": "weak|classic.m8|phases.early.grouping|group|blue|v21",
+   "before": {
+    "z": 2.081666,
+    "verdict": "marginal",
+    "n": 40
+   },
+   "preview": {
+    "z": 1.355612,
+    "verdict": "fail",
+    "n": 40
+   }
+  },
+  {
+   "key": "weak|classic.m8|phases.mid.grouping|group|blue|v21",
+   "before": {
+    "z": 0.702617,
+    "verdict": "fail",
+    "n": 40
+   },
+   "preview": {
+    "z": 2.083486,
+    "verdict": "marginal",
+    "n": 40
+   }
+  },
+  {
+   "key": "weak|classic.m8|phases.late.grouping|group|blue|v21",
+   "before": {
+    "z": 1.131715,
+    "verdict": "fail",
+    "n": 27
+   },
+   "preview": {
+    "z": 1,
+    "verdict": "fail",
+    "n": 32
+   }
+  },
+  {
+   "key": "weak|classic.m8|phases.mid.objectiveOrder|baron|blue|v21",
+   "before": {
+    "z": 0,
+    "verdict": "fail",
+    "n": 40
+   },
+   "preview": {
+    "z": 1,
+    "verdict": "fail",
+    "n": 40
+   }
+  },
+  {
+   "key": "weak|classic.m8|phases.late.objectiveOrder|baron|blue|v21",
+   "before": {
+    "z": 0,
+    "verdict": "fail",
+    "n": 22
+   },
+   "preview": {
+    "z": -0.296733,
+    "verdict": "fail",
+    "n": 29
+   }
+  }
+ ],
+ "pairsOmitted": true
+}
