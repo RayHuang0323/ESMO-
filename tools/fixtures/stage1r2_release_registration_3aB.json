@@ -2,7 +2,7 @@
   "schema": "Stage1R2ReleaseRegistration.v1",
   "studyId": "stage1.r2.release",
   "registeredAt": "2026-11-03, before any src change of this round",
-  "status": "FROZEN at 78ccc817, fingerprint 620196ccea5a8249. Formal runs follow stage1r2_formal_acceptance_registration_3aB.json",
+  "status": "FROZEN at 78ccc817, fingerprint 620196ccea5a8249. Formal runs follow stage1r2_formal_acceptance_registration_3aB.json. Formal G-A8 STOP (9ff121ed): v21.b2 is not released; TLP_R stays unproven",
   "authority": "Owner Review after the bounded balance study (below, verbatim)",
   "ownerReview": {
     "verbatim": [

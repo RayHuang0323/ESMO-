@@ -25237,3 +25237,13 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **驗證**：瀏覽器 stage1_flows 單獨跑 47/47；Build ✓；Gate 46 支 40 綠 6 紅（都是登記的 6 支）；v20 黃金 153/153；分流 75/75；career 黃金 24 案全部只差 setupHash。凍結前獨立審查 0 Blocker，「可以凍結」。
 
 **風險**：Golden 沒有打 skirmish 隊伍的案例（Seed %7＝5），差異是 0 不代表沒影響。舊 H.2 樣本有 10 個 Seed 在保留區段（4 個會實際打到：4640、66400、66944、67168），判定不是污染，已揭露。Seed 計畫與 SDD 帳：SDD 被 git 忽略，不在 commit 裡。
+
+## 2026-11-03 Phase 3a-B r2：正式 G-A8 判 STOP（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_第一階段r2_凍結準備.md` §14。**結果**：凍結 `78ccc817`，Seeds 4601–5000，8,400 場，錯誤 0，對照 48.75%。STOP：`classic.m5` 62.75%（下界 58.0%）。WARN 7 列；`hard_engage` 再 1 勝就 STOP。
+
+**驗證**：不依賴量測工具從原始紀錄重算，21 列 0 差異、紀錄異常 0。
+
+**未完成**：依 Owner r3 第 G 項立即停止，其餘正式驗收沒跑；沒有重抽 Seeds、沒有新研究、沒有重錄 Golden。
+
+**風險**：v21 目前不能發布。建議暫停 v21 發布、旗標關閉，等 Owner 決定產品階段。SDD 帳被 git 忽略，不在 commit 裡。

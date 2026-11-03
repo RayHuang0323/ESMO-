@@ -2,7 +2,7 @@
  "schema": "Stage1FormalAcceptanceRegistration.v2",
  "studyId": "stage1.r2.formalAcceptance",
  "registeredAt": "2026-11-03",
- "status": "FROZEN at 78ccc817 with fingerprint 620196ccea5a8249, authorised by Owner review r3 item E. The formal runs start only after the independent Reviewer confirms the frozen fingerprint, seeds, tools and criteria (item F). G-A8 continues only on PASS (item G). It never enables a release flag and it does not authorise push, deploy or main",
+ "status": "FROZEN at 78ccc817 with fingerprint 620196ccea5a8249, authorised by Owner review r3 item E. The formal runs start only after the independent Reviewer confirms the frozen fingerprint, seeds, tools and criteria (item F). G-A8 continues only on PASS (item G). It never enables a release flag and it does not authorise push, deploy or main. G-A8 ran and is STOP (9ff121ed); under item G no other formal study ran",
  "authority": "Owner review of the balance study (ownerReviewR2 below); the rules of the frozen round carry over unchanged",
  "scope": "stage 1 only: Live tactics v21 (career.v21 with template table v21.b2), Challenge stays on v20. Flags under test: mobaTacticalDirectorV21 on, heroSkillsV1 as the career.v21 requirements say, mobaChallengeV21 OFF",
  "stopRules": {
@@ -792,5 +792,39 @@
   "previous": "0cc52b48cfb9348a (unreleased; freeze 7a6e9736 and its result kept)",
   "notAuthorised": "golden re-recording (Owner must approve separately), threshold change, a smaller G-A8 scope, a drop state, new seeds after a STOP, an added study round, push, deploy, main, flags, CS"
  },
- "freezeProcedureR3": "ownerReviewR3 replaces the first step of freezeProcedure: no pre-freeze diagnostics (item 6), and the Owner approval is conditional and already given (item E). The other steps hold"
+ "freezeProcedureR3": "ownerReviewR3 replaces the first step of freezeProcedure: no pre-freeze diagnostics (item 6), and the Owner approval is conditional and already given (item E). The other steps hold",
+ "formalRuns": {
+  "ga8": {
+   "result": "tools/fixtures/ga8_fix2_confirm_result_3aB.json",
+   "commit": "9ff121ed",
+   "verdict": "STOP",
+   "stops": [
+    "classic.m5 62.75% (lower bound 58.0%)"
+   ],
+   "warns": [
+    "classic.m8",
+    "v2.three_lane_pressure",
+    "v2.jungle_invasion",
+    "v2.support_roamer",
+    "v2.hard_engage_stack",
+    "v2.protect_core_scaling",
+    "v2.defensive_hold"
+   ],
+   "control": 0.4875,
+   "matches": 8400,
+   "errors": 0,
+   "reapedAndResumed": "9 records before the reap; resumed in the same folder at the same HEAD on the Owner word; no result read"
+  },
+  "notRun": [
+   "side bias",
+   "E1",
+   "E2",
+   "truth 4a",
+   "evidence replay",
+   "4b",
+   "rollback",
+   "browser"
+  ],
+  "reason": "ownerReviewR3 item G"
+ }
 }

@@ -278,7 +278,7 @@
     },
     {
       "id": "G-A8.fix2Confirm",
-      "purpose": "RESERVED, not run: the confirmatory G-A8 after a new freeze of table v21.b2 (Owner review of the balance study item 6, assigning the former unassigned range 4601-5000; registration ga8_fix2_confirm_registration_3aB.json). Scan 2026-11-03 in stage1r2_release_registration_3aB.json seedsPlanned.scan20261103",
+      "purpose": "USED by the formal G-A8 (result 9ff121ed, STOP; never reuse): the confirmatory G-A8 after a new freeze of table v21.b2 (Owner review of the balance study item 6, assigning the former unassigned range 4601-5000; registration ga8_fix2_confirm_registration_3aB.json). Scan 2026-11-03 in stage1r2_release_registration_3aB.json seedsPlanned.scan20261103",
       "path": "tool",
       "range": "4601-5000",
       "step": 1
