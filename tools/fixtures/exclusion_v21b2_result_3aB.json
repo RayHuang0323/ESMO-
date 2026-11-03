@@ -1,0 +1,86 @@
+{
+ "schema": "ExclusionV21b2Result.v1",
+ "at": "2026-11-03T04:04:38.904Z",
+ "run": {
+  "registration": "680de6c839e16205",
+  "plan": "154cfbd72ff3986b",
+  "simVersion": "tacticTruthSim.v6",
+  "gitHead": "9a54a920b4fcb5bb6a37a742ab15bd03277c93de",
+  "fingerprint": "0cc52b48cfb9348a"
+ },
+ "seeds": "69801-69900",
+ "errored": 0,
+ "errorRule": null,
+ "rule": {
+  "passZ": 3,
+  "marginalZ": 2
+ },
+ "rows": [
+  {
+   "template": "classic.m6",
+   "dimension": "jungle.focus",
+   "choice": "invade",
+   "own": "gank",
+   "metric": "invasionsActed",
+   "direction": "up",
+   "delta": 0.35,
+   "reasons": [
+    "B_weak_now",
+    "C_weakest_under_table"
+   ],
+   "offeredToday": true,
+   "n": 100,
+   "meanControl": 2.87,
+   "meanChoice": 5.68,
+   "diff": 2.81,
+   "rel": 0.979094,
+   "z": 6.952108,
+   "verdict": "pass"
+  },
+  {
+   "template": "classic.m6",
+   "dimension": "teamfight.posture",
+   "choice": "passive",
+   "own": null,
+   "metric": null,
+   "direction": null,
+   "delta": 0.084,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 0,
+   "verdict": "no_claim"
+  },
+  {
+   "template": "classic.m6",
+   "dimension": "teamfight.posture",
+   "choice": "standard",
+   "own": null,
+   "metric": null,
+   "direction": null,
+   "delta": 0.024,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 0,
+   "verdict": "no_claim"
+  },
+  {
+   "template": "classic.m6",
+   "dimension": "teamfight.posture",
+   "choice": "aggressive",
+   "own": null,
+   "metric": null,
+   "direction": null,
+   "delta": 0.06,
+   "reasons": [
+    "E_changed_by_table"
+   ],
+   "offeredToday": true,
+   "n": 0,
+   "verdict": "no_claim"
+  }
+ ]
+}
