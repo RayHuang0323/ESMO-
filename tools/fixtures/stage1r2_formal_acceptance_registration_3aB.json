@@ -561,7 +561,7 @@
    },
    "reservedSeeds": "scan of 14,746 recorded matches of the preview, the replay, the four rehearsals and P6: 0 in a reserved block"
   },
-  "appliesTo": "freeze 7a6e9736 only: history. Nothing of it has run for v21.b2"
+  "appliesTo": "freeze 7a6e9736 only: history. Owner review r3 item 6: no preview and no replay before the r2 freeze"
  },
  "effortMeasured": "about 17 h single line by the 1.1-1.4 s per match measured on 2026-11-02: G-A8 8,400, career 4,018, E1 8,400, E2 1,600, truth 6,520 (the preview took about 128 min, not the 70 min estimated earlier), replay 2,600, 4b 12,800, plus gates, verify and browser. r2: step 4b grows by 800 matches per added offer and by 800 per added template control; see exclusion_v21b2_confirm_registration_3aB.json. step 4b is 14 choices plus 4 controls x 2 sides x 400 = 14,400 matches",
  "ownerApproval20261102": {
@@ -735,5 +735,30 @@
    "evidence": "screening rule gave NO_REASONABLE_CANDIDATE: 57.1%, vs BASE -2.1 (-6.7..+2.5), n=800; G-A8 formal 61.3% at v21.b1",
    "rule": "never called passed by any document before a formal G-A8 PASS, and even then a PASS covers only G-A8"
   }
- ]
+ ],
+ "ownerReviewR3": {
+  "verbatim": [
+   "Owner Review：核准 Phase 3a-B Stage 1 r2 最後收尾，並有條件核准新凍結及正式驗收。",
+   "1. 接受 m6 團戰姿態在 v21.b2 下撤除，既有存檔須安全解析，v20 不變。",
+   "2. three_lane 風險維持「高」，因為三路前壓仍是核心玩法，不單憑 riskTolerance 決定標示。",
+   "3. M6_B 保留中野快節奏遊走定位，但不得宣稱比賽必然更快結束。",
+   "4. hard_engage 保留強開團定位；文案移除不符合修正後設定的宣稱。缺點改以有設定依據的戰術取捨描述，不得捏造實測效果。",
+   "5. 檢查 hard_engage、three_lane 的「適合…」句，只刪除沒有驗證依據的效果承諾，不擴大重寫整本戰術書。",
+   "6. 凍結前不重跑完整 4a 預演與證據重播，正式驗收依原登記執行。",
+   "A. 單獨重跑 browser_check_stage1_flows_3aB。避免與其他長測試並行；不全面關閉記憶體保護。若仍因資源不足失敗，停止診斷，不無限重試。",
+   "B. 核對最新文案、m6 選項與舊存檔、AI skirmish 的 Golden 差異，並確認 v20、Challenge 隔離及所有快速 Gate。",
+   "C. 對最後修改及正式登記做獨立 Reviewer 審查，更新 05／08、Roadmap、SDD 相關紀錄及本機 Commit。SDD 若被 Git 忽略，須明確記錄，不能宣稱已提交。",
+   "D. 若 Browser PASS、Reviewer 無 Blocker、必要 Gate 符合登記，重新取得最新 origin/main，執行唯讀整合預審。若 main 碰到受監看語意檔，停止回報，不自行合併。",
+   "E. 上述條件全部通過後，本指令授權建立 v21.b2 新語意凍結、登記指紋與五份正式確認登記，使用新 G-A8 Seeds 4601–5000 及原本尚未觀察的四個保留區段。先核對 effectiveSeed 去重及歷史使用情況，任何污染疑慮須停止交 Owner。",
+   "F. 凍結後由獨立 Reviewer 複核。通過才開始新的 G-A8 正式確認，21 模板、原門檻不變。",
+   "G. G-A8 只有 PASS 才繼續其餘已登記正式驗收。STOP／INCONCLUSIVE 或任何證據異常，立即停止、不重抽 Seeds、不追加修正研究，回報 Owner。",
+   "限制：不自行重錄 Golden，等 Owner 另行核准。不放寬門檻、不縮小 G-A8 驗收範圍、不加入下架退路。Challenge v21 STOP 保留，兩個發布旗標關閉。不 Push、不 Deploy、不整合 main、不碰 CS。保留舊凍結與全部歷史量測。",
+   "完成後請回報最新進度、正式 G-A8 結果、剩餘發布阻擋與下一步。若 STOP，直接提出產品階段調整建議，不再自動開始第七輪平衡研究。"
+  ]
+ },
+ "ownerDecisionsR3": {
+  "m6-posture": "accepted (item 1); saves must resolve safely, v20 unchanged",
+  "three-lane-risk-label": "高 stays (item 2)",
+  "preview-before-freeze": "not run (item 6): the 4a truth preview and the evidence replay do not run before this freeze; the formal run follows the registration"
+ }
 }

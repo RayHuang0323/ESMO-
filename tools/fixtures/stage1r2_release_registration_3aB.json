@@ -296,5 +296,62 @@
     "M6_B tempo is unverified; whether hard_engage still reads as a hard engage after losing 撤退晚 and 投入門檻低",
     "the 適合… sentences on hard_engage and three_lane are the same unverified class as the one removed from defensive_hold: listed, not edited (Owner item 5 names defensive_hold only)",
     "hard_engage and three_lane join the unscored post-match panel"
-  ]
+  ],
+  "ownerReviewR3": {
+    "verbatim": [
+      "Owner Review：核准 Phase 3a-B Stage 1 r2 最後收尾，並有條件核准新凍結及正式驗收。",
+      "1. 接受 m6 團戰姿態在 v21.b2 下撤除，既有存檔須安全解析，v20 不變。",
+      "2. three_lane 風險維持「高」，因為三路前壓仍是核心玩法，不單憑 riskTolerance 決定標示。",
+      "3. M6_B 保留中野快節奏遊走定位，但不得宣稱比賽必然更快結束。",
+      "4. hard_engage 保留強開團定位；文案移除不符合修正後設定的宣稱。缺點改以有設定依據的戰術取捨描述，不得捏造實測效果。",
+      "5. 檢查 hard_engage、three_lane 的「適合…」句，只刪除沒有驗證依據的效果承諾，不擴大重寫整本戰術書。",
+      "6. 凍結前不重跑完整 4a 預演與證據重播，正式驗收依原登記執行。",
+      "A. 單獨重跑 browser_check_stage1_flows_3aB。避免與其他長測試並行；不全面關閉記憶體保護。若仍因資源不足失敗，停止診斷，不無限重試。",
+      "B. 核對最新文案、m6 選項與舊存檔、AI skirmish 的 Golden 差異，並確認 v20、Challenge 隔離及所有快速 Gate。",
+      "C. 對最後修改及正式登記做獨立 Reviewer 審查，更新 05／08、Roadmap、SDD 相關紀錄及本機 Commit。SDD 若被 Git 忽略，須明確記錄，不能宣稱已提交。",
+      "D. 若 Browser PASS、Reviewer 無 Blocker、必要 Gate 符合登記，重新取得最新 origin/main，執行唯讀整合預審。若 main 碰到受監看語意檔，停止回報，不自行合併。",
+      "E. 上述條件全部通過後，本指令授權建立 v21.b2 新語意凍結、登記指紋與五份正式確認登記，使用新 G-A8 Seeds 4601–5000 及原本尚未觀察的四個保留區段。先核對 effectiveSeed 去重及歷史使用情況，任何污染疑慮須停止交 Owner。",
+      "F. 凍結後由獨立 Reviewer 複核。通過才開始新的 G-A8 正式確認，21 模板、原門檻不變。",
+      "G. G-A8 只有 PASS 才繼續其餘已登記正式驗收。STOP／INCONCLUSIVE 或任何證據異常，立即停止、不重抽 Seeds、不追加修正研究，回報 Owner。",
+      "限制：不自行重錄 Golden，等 Owner 另行核准。不放寬門檻、不縮小 G-A8 驗收範圍、不加入下架退路。Challenge v21 STOP 保留，兩個發布旗標關閉。不 Push、不 Deploy、不整合 main、不碰 CS。保留舊凍結與全部歷史量測。",
+      "完成後請回報最新進度、正式 G-A8 結果、剩餘發布阻擋與下一步。若 STOP，直接提出產品階段調整建議，不再自動開始第七輪平衡研究。"
+    ]
+  },
+  "copyR3": {
+    "registeredAt": "2026-11-03, before the copy change of this ruling",
+    "v2.hard_engage_stack": {
+      "risk": "中 stays; name 抱團強開 stays (item 4 keeps the hard-engage identity)",
+      "desc": {
+        "remove": "適合陣容有強力控制和後排輸出、隊員默契好的時候。",
+        "why": "item 5: no engine mechanism for control or back-line composition and no measurement; same class as the sentence removed from defensive_hold"
+      },
+      "cons": {
+        "from": "NO_CONS_SENTENCE",
+        "to": "隊伍把重心放在集結打團，多人參戰時，留在各路的人手就比較少。",
+        "why": "item 4: a trade-off from the setting (grouping 0.9, join.fight higher in all phases). A logical consequence, no win rate, no measured effect. The copy gate has no cost row for this template, so its rule would demand NO_CONS_SENTENCE; the Owner ruling overrides that rule for this one sentence, pinned word for word by S20b"
+      }
+    },
+    "v2.three_lane_pressure": {
+      "risk": {
+        "keep": "高",
+        "why": "item 2: three-lane forward pressure is the core play; the label does not follow riskTolerance alone. This is the Owner answer, replacing the open question"
+      },
+      "desc": {
+        "remove": "適合前期陣容就比對手強的時候。",
+        "why": "item 5: never measured; same form as the defensive_hold sentence"
+      },
+      "cons": "unchanged"
+    },
+    "classic.m6": {
+      "unchanged": "item 3: keeps the mid-jungle fast roaming identity; lanePlan and tempo fast unchanged. No text may claim that matches always end faster: S20a pins it"
+    },
+    "otherTemplates": "the other 10 suits sentences are not touched (item 5: do not rewrite the book)"
+  },
+  "predictionsR3": {
+    "registeredAt": "before the change",
+    "fingerprint": "tacticTemplates.js is a semantics file, so the computed fingerprint changes once more; registered only at the freeze",
+    "gates": "S20b, S20c change by name. check_tactic_plan_3a V2d reads shipped copy, so it does not move. Gates that read shipped copy or the engine config do not move: copy is not in the engine config",
+    "browser": "B2d and B2f read the final text",
+    "careerGolden": "the gate prints only the first 3 of 24 cases; it will print every case with the fields that differ. Prediction: setupHash on all 24. Any other field moving on a case would be an AI skirmish or table effect to explain"
+  }
 }
