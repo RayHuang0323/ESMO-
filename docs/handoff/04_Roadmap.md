@@ -2902,3 +2902,11 @@ NEXT_SPRINT = NOT_STARTED
 - 依賴：3a-A → 3a-B → 3b → 3c；Phase 3 完成條件含 3c 的 T2 校準 gate（G-C3），不得延後結案。
 - 保護：v1～v20 指紋、舊 Replay、Challenge（v20 以前由 `canReplay` 明確拒絕）、存檔鍵名與 B1 系列 gate、CS／FPS、正式站行為（3a-A 發布後逐位元不變）；Map Topology FROZEN；Online／DB 不實作。
 - 狀態：**等待 Owner 核准開工**；本節只記錄規劃，尚未修改任何遊戲程式。
+
+## 2026-11-04 Phase 3a-B 暫停後的方向（等 Owner 裁定）
+
+- **3a-B：** v21 發布暫停，旗標關閉，正式站維持 v20。第三次 G-A8 STOP 不改判。測試性整合沒有找到新回歸（`review/tactic-book-3a/3a-B_整合驗證報告.md`），**尚未合併 main**。
+- **合併 main：** 建議，但要先滿足報告 §9 的條件。
+- **下一個里程碑（建議）：全賽季玩家閉環。** MOBA v20、CS Major、Training、Competition Hub、休賽期連起來打完一整季，桌機與手機。順序：恢復 verify 訊號 → 整季連續遊玩 Gate → 手機真機 → 雲端真 E2E → 技術債收斂。
+- **方案 B（前瞻驗收）：** 只有規劃，`review/tactic-book-3a/3a-B_下一階段B_前瞻驗收規劃.md`。四個面向：玩家戰術差異、真實 v20 基準、模板相剋、公平性。排在里程碑之後或平行。
+- **Phase 3b：** 仍被 3a-B 擋住，不開始。

@@ -1,0 +1,1257 @@
+{
+ "baseline": "1d0e219aae20a946bbc04d36349cb988e6e5ba7b",
+ "gitHead": "29cdf9dcb67cda5bc2db70746ee0869628a9f745",
+ "counts": {
+  "needsReading_newSegment": 5,
+  "newSegmentPass": 10,
+  "passBoth": 30,
+  "preexisting": 44,
+  "preexistingChangedText": 23,
+  "needsReading_passedOnBaseline": 3,
+  "fixedHere": 3
+ },
+ "missingFromThisRun": [
+  "build",
+  "simulation_version"
+ ],
+ "rows": [
+  {
+   "id": "cs_owner4f_rules",
+   "status": "FAIL",
+   "ms": 6201,
+   "finishedAt": "2026-11-03T17:48:51.073Z",
+   "cls": "needsReading_newSegment",
+   "failureLines": [
+    "const out=process.env.ESMO_CS_OWNER4F_RULES_REPORT;if(!out||fs.existsSync(out))throw Error('Unique report required');fs.writeFileSync(out,JSON.stringify({pass,fail,checks},null,2),{flag:'wx'});console.log(`CS Owner4F Rules: ${pass}/${pass+fail} PASS`);process.exitCode=fail?1:0;",
+    "Error: Unique report required"
+   ]
+  },
+  {
+   "id": "cs_owner4e_pure",
+   "status": "FAIL",
+   "ms": 487,
+   "finishedAt": "2026-11-03T17:48:51.568Z",
+   "cls": "needsReading_newSegment",
+   "failureLines": [
+    "const out=process.env.ESMO_CS_OWNER4E_REPORT;if(!out||fs.existsSync(out))throw Error('Explicit new report required');",
+    "Error: Explicit new report required"
+   ]
+  },
+  {
+   "id": "cs_bounds_sampler",
+   "status": "PASS",
+   "ms": 115,
+   "finishedAt": "2026-11-03T17:48:51.691Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "cs_major_simulation_v1",
+   "status": "FAIL",
+   "ms": 37690,
+   "finishedAt": "2026-11-03T17:49:29.390Z",
+   "cls": "needsReading_newSegment",
+   "failureLines": [
+    "FAIL mirage 舊比賽逐格／選手／回合與正式 baseline 相同"
+   ]
+  },
+  {
+   "id": "cs_major_utility_rules",
+   "status": "PASS",
+   "ms": 29334,
+   "finishedAt": "2026-11-03T17:49:58.734Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "cs_major_tactical_coordinator",
+   "status": "PASS",
+   "ms": 4487,
+   "finishedAt": "2026-11-03T17:50:03.229Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "cs_major_replay_ui",
+   "status": "FAIL",
+   "ms": 81,
+   "finishedAt": "2026-11-03T17:50:03.318Z",
+   "cls": "needsReading_newSegment",
+   "failureLines": [
+    "CS Major Replay UI D runner需真fixture：設定 ESMO_CS_D_FIXTURE 或 --fixture"
+   ]
+  },
+  {
+   "id": "cs_major_replay_input",
+   "status": "FAIL",
+   "ms": 88,
+   "finishedAt": "2026-11-03T17:50:03.414Z",
+   "cls": "needsReading_newSegment",
+   "failureLines": [
+    "FAIL 唯一現成真Replay全部1111frames與21round仍被接納: Error: ENOENT: no such file or directory, open 'D:\\OneDrive\\文件\\GitHub\\ESMO\\.sprints/<WORKTREE>\\review\\cs-major-upgrade\\evidence\\retention-policy-20261011\\d-canonical-replay.json.gz'"
+   ]
+  },
+  {
+   "id": "cs_identity_gap_r38",
+   "status": "PASS",
+   "ms": 77,
+   "finishedAt": "2026-11-03T17:50:03.500Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "cs_reflex_calibration_r39",
+   "status": "FAIL",
+   "ms": 471,
+   "finishedAt": "2026-11-03T17:50:03.980Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_apm_calibration_r40",
+   "status": "FAIL",
+   "ms": 469,
+   "finishedAt": "2026-11-03T17:50:04.458Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_courage_calibration_r41",
+   "status": "FAIL",
+   "ms": 450,
+   "finishedAt": "2026-11-03T17:50:04.917Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_positioning_calibration_r42",
+   "status": "FAIL",
+   "ms": 487,
+   "finishedAt": "2026-11-03T17:50:05.413Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_accuracy_calibration_r43",
+   "status": "FAIL",
+   "ms": 454,
+   "finishedAt": "2026-11-03T17:50:05.876Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_focus_semantic_correction_r44",
+   "status": "FAIL",
+   "ms": 457,
+   "finishedAt": "2026-11-03T17:50:06.342Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Focus Semantic Correction Readiness R44: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Focus Semantic Correction Readiness R44: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS Focus Semantic Correction Readiness R44: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_batch_calibration_r45",
+   "status": "FAIL",
+   "ms": 1532,
+   "finishedAt": "2026-11-03T17:50:07.886Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Batch Calibration R45: FAIL Error: [MARKER] signature"
+   ]
+  },
+  {
+   "id": "cs_distribution_baseline_r46",
+   "status": "FAIL",
+   "ms": 120,
+   "finishedAt": "2026-11-03T17:50:08.019Z",
+   "cls": "needsReading_passedOnBaseline",
+   "failureLines": [
+    "if (!ok) throw new Error(`[${code}]${detail ? ` ${detail}` : \"\"}`);",
+    "Error: [ROLE_MAPPING]"
+   ]
+  },
+  {
+   "id": "cs_identity_consumers_r47",
+   "status": "FAIL",
+   "ms": 645,
+   "finishedAt": "2026-11-03T17:50:08.677Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Identity Consumers R47: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Identity Consumers R47: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0",
+    "tail 不同：    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   ],
+   "onlyBaseline": [
+    "CS Identity Consumers R47: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_team_identity_consumers_r48",
+   "status": "FAIL",
+   "ms": 678,
+   "finishedAt": "2026-11-03T17:50:09.379Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Team Identity Consumers R48: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Team Identity Consumers R48: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0",
+    "tail 不同：    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+   ],
+   "onlyBaseline": [
+    "CS Team Identity Consumers R48: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_reflex_read_chain_r19",
+   "status": "FAIL",
+   "ms": 589,
+   "finishedAt": "2026-11-03T17:50:09.980Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_learning_lifecycle_r16b",
+   "status": "FAIL",
+   "ms": 95,
+   "finishedAt": "2026-11-03T17:50:10.086Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_mapaware_semantics_r18b",
+   "status": "FAIL",
+   "ms": 521,
+   "finishedAt": "2026-11-03T17:50:10.619Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_learning_measurement_r37",
+   "status": "FAIL",
+   "ms": 104,
+   "finishedAt": "2026-11-03T17:50:10.734Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "if (count !== 1) throw new Error(`[R15_LEGACY_${label}] expected=1 actual=${count}`);",
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_learning_lifecycle_r55",
+   "status": "PASS",
+   "ms": 154,
+   "finishedAt": "2026-11-03T17:50:10.897Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "cs_roster_v1_r56",
+   "status": "PASS",
+   "ms": 164,
+   "finishedAt": "2026-11-03T17:50:11.073Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "cs_matchup_acceptance_r57",
+   "status": "FAIL",
+   "ms": 627,
+   "finishedAt": "2026-11-03T17:50:11.712Z",
+   "cls": "needsReading_passedOnBaseline",
+   "failureLines": [
+    "CS Matchup Acceptance R57: FAIL [SIMULATOR_MARKER_MISSING]"
+   ]
+  },
+  {
+   "id": "roster_ui_r58",
+   "status": "PASS",
+   "ms": 149,
+   "finishedAt": "2026-11-03T17:50:11.873Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "roster_ui_r581",
+   "status": "PASS",
+   "ms": 137,
+   "finishedAt": "2026-11-03T17:50:12.023Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "roster_ui_r582",
+   "status": "PASS",
+   "ms": 98,
+   "finishedAt": "2026-11-03T17:50:12.134Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "team_development_recovery",
+   "status": "FAIL",
+   "ms": 117,
+   "finishedAt": "2026-11-03T17:50:12.265Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "FAIL 4 分類 / 20 節點　nodes=18 categories=4",
+    "FAIL 首頁主要入口磚為「戰隊發展」",
+    "FAIL talentPick 路由仍保留給相容流程",
+    "違反 3 條：4 分類 / 20 節點、首頁主要入口磚為「戰隊發展」、talentPick 路由仍保留給相容流程"
+   ]
+  },
+  {
+   "id": "team_development_v15",
+   "status": "PASS",
+   "ms": 541,
+   "finishedAt": "2026-11-03T17:50:12.819Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "r61_ui_fixture",
+   "status": "FAIL",
+   "ms": 90,
+   "finishedAt": "2026-11-03T17:50:12.921Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "if (!value) throw new Error(`FAIL ${label}`);",
+    "Error: FAIL 四分類與 20 節點"
+   ]
+  },
+  {
+   "id": "player_ui_r62",
+   "status": "FAIL",
+   "ms": 125,
+   "finishedAt": "2026-11-03T17:50:13.061Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "if (!ok) throw new Error(`[${code}]${detail ? ` ${detail}` : \"\"}`);",
+    "Error: [STATUS_UNAVAILABLE_MAPPING]"
+   ]
+  },
+  {
+   "id": "active_match_r63",
+   "status": "FAIL",
+   "ms": 2811,
+   "finishedAt": "2026-11-03T17:50:15.883Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 9) CS fast finish 從目前 frame 到最後 frame"
+   ]
+  },
+  {
+   "id": "r63_competition_integration",
+   "status": "PASS",
+   "ms": 558,
+   "finishedAt": "2026-11-03T17:50:16.453Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "p06b_browser_presence",
+   "status": "FAIL",
+   "ms": 65110,
+   "finishedAt": "2026-11-03T17:51:21.574Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "FAIL Team Development can be upgraded through real UI",
+    "FAIL Team Development upgrade survives browser reload :: {\"reopenedAfterReload\":false,\"rank\":0,\"effect\":false}",
+    "FAIL Player Profile exposes four real tabs :: {\"fullProfileClicked\":false,\"count\":0,\"detail\":false}",
+    "FAIL browser product presence at 390px :: {\"width\":390,\"development\":true,\"active\":true,\"overflow\":6,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":360,\"scrollWidth\":378,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\\nCL\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":338,\"scrollWidth\":342,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":107,\"scrollWidth\":111,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":362,\"scrollWidth\":864,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}",
+    "FAIL browser product presence at 360px :: {\"width\":360,\"development\":true,\"active\":true,\"overflow\":8,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":338,\"scrollWidth\":356,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\\nCLUB XP\\n0 / \"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":316,\"scrollWidth\":320,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":102,\"scrollWidth\":106,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 則未讀訊息等待決定\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 點可以投入團隊成長\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":340,\"scrollWidth\":813,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}",
+    "P0.6B browser product-presence: 7/12 FAIL"
+   ]
+  },
+  {
+   "id": "cs_mapaware_measurement_r37",
+   "status": "FAIL",
+   "ms": 538,
+   "finishedAt": "2026-11-03T17:51:22.121Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_clutch_measurement_r30",
+   "status": "FAIL",
+   "ms": 493,
+   "finishedAt": "2026-11-03T17:51:22.624Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Clutch Measurement / Calibration Readiness R30: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_resilience_measurement_r31",
+   "status": "FAIL",
+   "ms": 469,
+   "finishedAt": "2026-11-03T17:51:23.114Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Resilience Measurement / Calibration Readiness R31: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_clutch_resilience_semantics_r32",
+   "status": "FAIL",
+   "ms": 79,
+   "finishedAt": "2026-11-03T17:51:23.203Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "function fail(code, detail = \"\") { throw new Error(`[${code}]${detail ? `\\n${detail}` : \"\"}`); }",
+    "Error: [PRODUCTION_SOURCE_CHANGED]"
+   ]
+  },
+  {
+   "id": "cs_adaptability_measurement_r34",
+   "status": "FAIL",
+   "ms": 458,
+   "finishedAt": "2026-11-03T17:51:23.683Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Adaptability Measurement / Calibration Readiness R34: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Adaptability Measurement / Calibration Readiness R34: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS Adaptability Measurement / Calibration Readiness R34: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_tactical_iq_measurement_r35",
+   "status": "FAIL",
+   "ms": 454,
+   "finishedAt": "2026-11-03T17:51:24.149Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS TacticalIQ Measurement / Semantic Readiness R35: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS TacticalIQ Measurement / Semantic Readiness R35: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS TacticalIQ Measurement / Semantic Readiness R35: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_synergy_semantics_r16a",
+   "status": "FAIL",
+   "ms": 489,
+   "finishedAt": "2026-11-03T17:51:24.650Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_comms_measurement_r36",
+   "status": "FAIL",
+   "ms": 475,
+   "finishedAt": "2026-11-03T17:51:25.136Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_leadership_measurement_r36",
+   "status": "FAIL",
+   "ms": 460,
+   "finishedAt": "2026-11-03T17:51:25.608Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_synergy_measurement_r36",
+   "status": "FAIL",
+   "ms": 439,
+   "finishedAt": "2026-11-03T17:51:26.057Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS R36 team-stat measurement: FAIL Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "milestone_b4",
+   "status": "FAIL",
+   "ms": 1740,
+   "finishedAt": "2026-11-03T17:51:27.819Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "AssertionError [ERR_ASSERTION]: a solo minion must need eight hits to die",
+    "code: 'ERR_ASSERTION',"
+   ]
+  },
+  {
+   "id": "milestone_j_close",
+   "status": "FAIL",
+   "ms": 9430,
+   "finishedAt": "2026-11-03T17:51:37.259Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 24)〔原始碼〕按鈕掛了可驗收錨點",
+    "❌ 26) 終局 snapshot 能產出正式 BattleResult（不繞過結算）　→ \"BattleResult.v3\"",
+    "❌ FAIL  33/35"
+   ]
+  },
+  {
+   "id": "milestone_j",
+   "status": "FAIL",
+   "ms": 106968,
+   "finishedAt": "2026-11-03T17:53:24.239Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 6) 一場比賽中至少七種技能真的被放出來（淨化需要被減速，另行驗證）　→ {\"smite\":39,\"ghost\":12,\"heal\":7,\"flash\":14,\"ignite\":7,\"barrier\":10}",
+    "❌ 31) 技能層沒有改變陣營勝負分佈（基準 9/6、技能層 7/8）　→ {\"baseWins\":{\"blue\":9,\"red\":6},\"wins\":{\"blue\":7,\"red\":8}}",
+    "❌ FAIL  37/39"
+   ]
+  },
+  {
+   "id": "milestone_i_close",
+   "status": "PASS",
+   "ms": 7530,
+   "finishedAt": "2026-11-03T17:53:31.783Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "milestone_i",
+   "status": "PASS",
+   "ms": 140,
+   "finishedAt": "2026-11-03T17:53:31.944Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "milestone_h",
+   "status": "FAIL",
+   "ms": 7925,
+   "finishedAt": "2026-11-03T17:53:39.879Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 29) 未改 Replay contract 與 BattleResult.v2"
+   ]
+  },
+  {
+   "id": "milestone_g",
+   "status": "FAIL",
+   "ms": 139,
+   "finishedAt": "2026-11-03T17:53:40.028Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 11) 英雄技能明示為靜態資料，不顯示假 CD",
+    "❌ 20) 放寬的是 zoom 下限，不是相機設計包絡（最遠不超過 distMax 太多）　→ {\"farthest\":1700,\"distMax\":560}",
+    "❌ 28) 未改 BattleResult.v2 與 Milestone E 名單資料流"
+   ]
+  },
+  {
+   "id": "milestone_f",
+   "status": "FAIL",
+   "ms": 8626,
+   "finishedAt": "2026-11-03T17:53:48.665Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 30) BattleResult.v2 契約未動"
+   ]
+  },
+  {
+   "id": "milestone_e",
+   "status": "FAIL",
+   "ms": 134,
+   "finishedAt": "2026-11-03T17:53:48.809Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 40) 未改 BattleResult.v2 契約（先發指派靠 lineup 解析，不塞新欄位）",
+    "❌ 41) 換人鈕觸控區 ≥40px，且不是覆蓋在選手列上的絕對定位",
+    "❌ 43) 先發列＝flex 列（選手列 flex:1 可壓縮 + 固定寬換人鈕），維持既有 320px 防護"
+   ]
+  },
+  {
+   "id": "tactic24",
+   "status": "PASS",
+   "ms": 571309,
+   "finishedAt": "2026-11-03T18:03:20.129Z",
+   "cls": "fixedHere"
+  },
+  {
+   "id": "cs23",
+   "status": "PASS",
+   "ms": 943,
+   "finishedAt": "2026-11-03T18:03:21.084Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "cs_match_completion",
+   "status": "FAIL",
+   "ms": 72425,
+   "finishedAt": "2026-11-03T18:04:33.521Z",
+   "cls": "needsReading_passedOnBaseline",
+   "failureLines": [
+    "✅ OT seed Quick Finish uses the legal simulator terminal　seed=6 score=14:16",
+    "✅ final frame is a legal completed terminal",
+    "RangeError: Invalid string length",
+    "    at JSON.stringify (<anonymous>)",
+    "    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/<WORKTREE>/tools/check_cs_match_completion.mjs:202:54)",
+    "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"
+   ]
+  },
+  {
+   "id": "cs_measure_r1",
+   "status": "FAIL",
+   "ms": 476,
+   "finishedAt": "2026-11-03T18:04:34.007Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Measurement R1: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Measurement R1: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0",
+    "tail 不同：CS Measurement R1: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS Measurement R1: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_instrument_r2",
+   "status": "FAIL",
+   "ms": 461,
+   "finishedAt": "2026-11-03T18:04:34.479Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_stat_wiring_r3",
+   "status": "FAIL",
+   "ms": 453,
+   "finishedAt": "2026-11-03T18:04:34.943Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Stat Wiring R3: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Stat Wiring R3: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0",
+    "tail 不同：CS Stat Wiring R3: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS Stat Wiring R3: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_clutch_r4",
+   "status": "FAIL",
+   "ms": 481,
+   "finishedAt": "2026-11-03T18:04:35.433Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS True Clutch R4: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS True Clutch R4: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0",
+    "tail 不同：CS True Clutch R4: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS True Clutch R4: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_retreat_r5",
+   "status": "FAIL",
+   "ms": 491,
+   "finishedAt": "2026-11-03T18:04:35.935Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Retreat R5: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Retreat R5: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0",
+    "tail 不同：CS Retreat R5: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS Retreat R5: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_defuse_r6",
+   "status": "FAIL",
+   "ms": 470,
+   "finishedAt": "2026-11-03T18:04:36.416Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "CS Defuse R6: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "CS Defuse R6: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0",
+    "tail 不同：CS Defuse R6: FAIL [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "CS Defuse R6: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_result_metrics_r8",
+   "status": "FAIL",
+   "ms": 464,
+   "finishedAt": "2026-11-03T18:04:36.891Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_determinism_migration_r10",
+   "status": "FAIL",
+   "ms": 448,
+   "finishedAt": "2026-11-03T18:04:37.350Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_bomb_result_semantics_r11",
+   "status": "FAIL",
+   "ms": 445,
+   "finishedAt": "2026-11-03T18:04:37.805Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_flash_attribution_r12",
+   "status": "FAIL",
+   "ms": 489,
+   "finishedAt": "2026-11-03T18:04:38.306Z",
+   "cls": "preexistingChangedText",
+   "failureLines": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyHere": [
+    "Error: [R15_LEGACY_R51_LEADERSHIP_CALL] expected=1 actual=0"
+   ],
+   "onlyBaseline": [
+    "Error: [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+   ]
+  },
+  {
+   "id": "cs_player_smoke_los_r13",
+   "status": "FAIL",
+   "ms": 489,
+   "finishedAt": "2026-11-03T18:04:38.808Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [SOURCE_PROVENANCE_MISMATCH]"
+   ]
+  },
+  {
+   "id": "cs_he_gameplay_r14",
+   "status": "FAIL",
+   "ms": 503,
+   "finishedAt": "2026-11-03T18:04:39.324Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [SOURCE_PROVENANCE_MISMATCH]"
+   ]
+  },
+  {
+   "id": "cs_molly_gameplay_r15",
+   "status": "FAIL",
+   "ms": 489,
+   "finishedAt": "2026-11-03T18:04:39.827Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [SOURCE_PROVENANCE_MISMATCH]"
+   ]
+  },
+  {
+   "id": "cs_calibration_readiness_r17",
+   "status": "FAIL",
+   "ms": 84,
+   "finishedAt": "2026-11-03T18:04:39.923Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_FPS_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_positioning_measurement_r20",
+   "status": "FAIL",
+   "ms": 536,
+   "finishedAt": "2026-11-03T18:04:40.471Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Positioning Measurement Completion R20: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_apm_measurement_r21",
+   "status": "FAIL",
+   "ms": 495,
+   "finishedAt": "2026-11-03T18:04:40.978Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS APM Measurement / Calibration Readiness R21: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_local_causal_framework_r22",
+   "status": "FAIL",
+   "ms": 87,
+   "finishedAt": "2026-11-03T18:04:41.077Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_courage_measurement_r23",
+   "status": "FAIL",
+   "ms": 496,
+   "finishedAt": "2026-11-03T18:04:41.586Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Courage Measurement / Calibration Readiness R23: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_accuracy_measurement_r24",
+   "status": "FAIL",
+   "ms": 455,
+   "finishedAt": "2026-11-03T18:04:42.063Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Accuracy Measurement / Calibration Readiness R24: FAIL Error: [LIVE_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_accuracy_semantics_r25",
+   "status": "FAIL",
+   "ms": 511,
+   "finishedAt": "2026-11-03T18:04:42.587Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Accuracy Semantic Audit / Minimal Correction R25: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_decision_measurement_r26",
+   "status": "FAIL",
+   "ms": 529,
+   "finishedAt": "2026-11-03T18:04:43.130Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Decision Measurement / Calibration Readiness R26: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_decision_semantics_r27",
+   "status": "FAIL",
+   "ms": 511,
+   "finishedAt": "2026-11-03T18:04:43.653Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Decision Semantic Audit / Minimal Correction R27: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "cs_focus_measurement_r28",
+   "status": "FAIL",
+   "ms": 494,
+   "finishedAt": "2026-11-03T18:04:44.160Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "CS Focus Measurement / Calibration Readiness R28: FAIL Error: [CURRENT_SOURCE_SHA256]"
+   ]
+  },
+  {
+   "id": "progress25",
+   "status": "FAIL",
+   "ms": 477,
+   "finishedAt": "2026-11-03T18:04:44.649Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 13) 不修改 BattleResult.v2（schema 字串與 players 欄位仍在）"
+   ]
+  },
+  {
+   "id": "experience26",
+   "status": "PASS",
+   "ms": 10315,
+   "finishedAt": "2026-11-03T18:04:54.977Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "talent27",
+   "status": "PASS",
+   "ms": 351,
+   "finishedAt": "2026-11-03T18:04:55.338Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "stats28",
+   "status": "FAIL",
+   "ms": 377810,
+   "finishedAt": "2026-11-03T18:11:13.161Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 18) Progress 冪等不受影響（同 tx 二次套用 ⇒ alreadyApplied，不重複發獎）"
+   ]
+  },
+  {
+   "id": "growth_p0",
+   "status": "PASS",
+   "ms": 121,
+   "finishedAt": "2026-11-03T18:11:13.293Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "ability_p02",
+   "status": "FAIL",
+   "ms": 147076,
+   "finishedAt": "2026-11-03T18:13:40.392Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 6) 傷害式仍是 `p.power * dt * ...`，沒有夾帶能力係數"
+   ]
+  },
+  {
+   "id": "quality_p03",
+   "status": "FAIL",
+   "ms": 198638,
+   "finishedAt": "2026-11-03T18:16:59.042Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ §2a 傷害式仍是 `p.power * dt * R.dmgK * ...`",
+    "❌ §4-4d 對照組死亡數大致對稱（無系統性偏袒）　死亡 A=8.15 B=4.8　 A=11.35 B=10.1",
+    "❌ §4-5c 等級差距不誇張（≤ 2.5 級）　差 2.75 級",
+    "❌ §4-5d 對照組經濟與等級大致對稱　藍 13.3　紅 12.070000000000002",
+    "❌ §4-6f 既有陣營偏斜已記錄（技能層 baseline 藍方勝率 < 50%，非 P0-3 造成）　⚠ 技術債：技能層陣營平衡，另案處理",
+    "🔴 P0-3 戰鬥品質層：48/53 通過"
+   ]
+  },
+  {
+   "id": "growth_ui_p1",
+   "status": "FAIL",
+   "ms": 1819,
+   "finishedAt": "2026-11-03T18:17:00.873Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ §8d S28 傷害式紅線仍然成立",
+    "🔴 P1 成長可視化：79/80 通過"
+   ]
+  },
+  {
+   "id": "regress",
+   "status": "PASS",
+   "ms": 44421,
+   "finishedAt": "2026-11-03T18:17:45.309Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "regress2",
+   "status": "PASS",
+   "ms": 49164,
+   "finishedAt": "2026-11-03T18:18:34.484Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "runtime29",
+   "status": "PASS",
+   "ms": 98085,
+   "finishedAt": "2026-11-03T18:20:12.580Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "q4_history",
+   "status": "PASS",
+   "ms": 861,
+   "finishedAt": "2026-11-03T18:20:13.453Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "q5_history",
+   "status": "PASS",
+   "ms": 3295,
+   "finishedAt": "2026-11-03T18:20:16.761Z",
+   "cls": "fixedHere"
+  },
+  {
+   "id": "q6_playoffs",
+   "status": "PASS",
+   "ms": 1108,
+   "finishedAt": "2026-11-03T18:20:17.892Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "q7a_safety",
+   "status": "PASS",
+   "ms": 529,
+   "finishedAt": "2026-11-03T18:20:18.435Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "q7b_season_state_v2",
+   "status": "FAIL",
+   "ms": 128,
+   "finishedAt": "2026-11-03T18:20:18.577Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "TypeError: Cannot read properties of undefined (reading 'id')"
+   ]
+  },
+  {
+   "id": "m2_season_state_v2_sealing",
+   "status": "PASS",
+   "ms": 133,
+   "finishedAt": "2026-11-03T18:20:18.725Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "hero_skills_round2",
+   "status": "PASS",
+   "ms": 1007,
+   "finishedAt": "2026-11-03T18:20:19.759Z",
+   "cls": "fixedHere"
+  },
+  {
+   "id": "hero_skills_phase1",
+   "status": "FAIL",
+   "ms": 235,
+   "finishedAt": "2026-11-03T18:20:20.008Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+    "+   '   if (!snap.over) throw new Error(\"snapshotToBattleResult: snapshot 尚未終局（over=false）\");\\n' +",
+    "code: 'ERR_ASSERTION',",
+    "'   if (!snap.over) throw new Error(\"snapshotToBattleResult: snapshot 尚未終局（over=false）\");\\n' +"
+   ]
+  },
+  {
+   "id": "hero_presentation_l",
+   "status": "PASS",
+   "ms": 12450,
+   "finishedAt": "2026-11-03T18:20:32.471Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "pacing29b1",
+   "status": "FAIL",
+   "ms": 311288,
+   "finishedAt": "2026-11-03T18:25:43.771Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 1) 5/10/15/20 分擊殺分布落在 S29B1 規格（v3 p50：5分0、10分0、15分4、20分11、終局13、時長20.6分）",
+    "❌ 3) 首殺時間分布合理（p10=499s、p50=626s、p90=852s；需 p10≥45、p50∈[90,420]）",
+    "❌ 15) Minimap 與世界座標一致（三個視圖都讀 snapshot.objectives / objectivesMeta / PITS，動態座標 + gameData 出生點同源；無硬編碼副本）",
+    "❌ 25) v3 陣列順序不決定勝負（P0 防線：40 seeds 正序藍勝 18/40、反序 25/40，位移 18pp ≤ 15；兩者皆在 30–70%）"
+   ]
+  },
+  {
+   "id": "presentation29b2",
+   "status": "PASS",
+   "ms": 6849,
+   "finishedAt": "2026-11-03T18:25:50.633Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "controls29b3",
+   "status": "FAIL",
+   "ms": 18210,
+   "finishedAt": "2026-11-03T18:26:08.856Z",
+   "cls": "preexisting",
+   "failureLines": [
+    "❌ 2) complete match 會進入 Result（分塊+途中 snapshot 與自然跑完逐位元同結果：true；終局可建 BattleResult：winner=red）",
+    "❌ 16) Minimap 與主場景座標一致（雙方都讀 gameData 常數：FOUNTAIN/PITS/CAMPS/snap.objectives；引擎目標座標 == gameData）"
+   ]
+  },
+  {
+   "id": "fairness_p0a",
+   "status": "PASS",
+   "ms": 1656,
+   "finishedAt": "2026-11-03T18:26:10.527Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "fairness_p0b",
+   "status": "PASS",
+   "ms": 1184,
+   "finishedAt": "2026-11-03T18:26:11.727Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "fairness_p0c",
+   "status": "PASS",
+   "ms": 128906,
+   "finishedAt": "2026-11-03T18:28:20.647Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "map_topology_final",
+   "status": "PASS",
+   "ms": 2461,
+   "finishedAt": "2026-11-03T18:28:23.119Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "tactical_ai_p1",
+   "status": "PASS",
+   "ms": 27574,
+   "finishedAt": "2026-11-03T18:28:50.708Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "tactical_ai_p2",
+   "status": "PASS",
+   "ms": 40602,
+   "finishedAt": "2026-11-03T18:29:31.322Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "fairness_p0d",
+   "status": "PASS",
+   "ms": 5314,
+   "finishedAt": "2026-11-03T18:29:36.648Z",
+   "cls": "passBoth"
+  },
+  {
+   "id": "tactic_registry_3a",
+   "status": "PASS",
+   "ms": 2697,
+   "finishedAt": "2026-11-03T18:29:39.359Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "tactic_indicators_3a",
+   "status": "PASS",
+   "ms": 960,
+   "finishedAt": "2026-11-03T18:29:40.331Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "tactic_save_3a",
+   "status": "PASS",
+   "ms": 12233,
+   "finishedAt": "2026-11-03T18:29:52.579Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "tactic_book_view_3a",
+   "status": "PASS",
+   "ms": 25288,
+   "finishedAt": "2026-11-03T18:30:17.879Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "tactic_replication_3a",
+   "status": "PASS",
+   "ms": 2012,
+   "finishedAt": "2026-11-03T18:30:19.904Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "tactical_directive_3c",
+   "status": "PASS",
+   "ms": 2395,
+   "finishedAt": "2026-11-03T18:30:22.325Z",
+   "cls": "newSegmentPass"
+  },
+  {
+   "id": "tactical_director_3c",
+   "status": "PASS",
+   "ms": 2985,
+   "finishedAt": "2026-11-03T18:30:25.328Z",
+   "cls": "newSegmentPass"
+  }
+ ]
+}

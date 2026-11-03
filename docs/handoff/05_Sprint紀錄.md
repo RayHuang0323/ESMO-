@@ -26852,3 +26852,15 @@ Owner人工驗收完成且明確授權正常main push／Pages／正式站Smoke�
 **未完成**：依 Owner r3 第 G 項立即停止，其餘正式驗收沒跑；沒有重抽 Seeds、沒有新研究、沒有重錄 Golden。
 
 **風險**：v21 目前不能發布。建議暫停 v21 發布、旗標關閉，等 Owner 決定產品階段。SDD 帳被 git 忽略，不在 commit 裡。
+
+## 2026-11-04 Phase 3a-B 第三次 STOP 後：旗標關閉測試性整合（本機 integration/moba-3aB-flags-off-test；未 push／deploy，未合併 main，未碰 CS，未重錄 Golden，旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_整合驗證報告.md`。Owner 接受第三次 G-A8 STOP、停止第七輪；採方案 A，但只核准獨立 worktree 的整合驗證；v21 發布暫停；方案 B 列為下一階段規劃。
+
+**完成**：合併 commit `29cdf9dc`（`b4f8e0c3` ＋ `e11f0e4f`），衝突只有 05、08。新 Gate `check_flags_off_integration_3aB`（跨樹）與 `browser_check_flags_off_release_3aB`（打包結果）。Golden 逐案分類。方案 B 規劃：`review/tactic-book-3a/3a-B_下一階段B_前瞻驗收規劃.md`。
+
+**驗證**：Build ✓（21.26s）。Node 67 支：60 綠 7 紅，全部分類完，真正回歸 0。v20 黃金 153/153。旗標關閉跨樹 26/26。verify 選定 118 段：43 綠 75 紅，**75 段在乾淨 main 上同樣紅、失敗行相同，main 綠合併後紅 0 段**。瀏覽器 13 支：12 支全綠（旗標關閉 25/25、stage1 47/47、Replay 25/25 打本機預覽等）。
+
+**未完成**：`browser_check_cs_major_formal_flow` 沒有跑成（`HARNESS_FAIL` 0/0：這棵樹沒有被 git 忽略的 `review/cs-major-upgrade/evidence`，還沒開瀏覽器就停）。33 段 CS verify 沒跑。批次外層與防休眠被記憶體保護停掉，依規定不重啟，等 Owner。
+
+**風險**：合併樹 `MOBA_SIMULATION_VERSION` 是 `moba-sim.v21`（讀取者都查過，行為安全，名字待 Owner 決定）；v21 程式與文字會進公開 bundle；verify 有 47 段停在過期的來源指紋或標記，走不到行為斷言。分支未動，紀錄只 commit 在整合分支。

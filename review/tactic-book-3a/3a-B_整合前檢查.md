@@ -3,6 +3,10 @@
 - 日期：2026-11-03；獨立唯讀子代理執行，**沒有合併、沒有建置、沒有在合併後的樹上跑任何 gate**。
 - 比對：`feature/moba-phase3a-stage1`（`a7a75f16`）對本機 `origin/main`（`b4f8e0c3`，未 fetch）；合併基準 `1d0e219a`。
 
+## 更新：實際做了測試性整合（2026-11-04）
+
+已在獨立 worktree 實際合併並跑 Gate，結果見 `3a-B_整合驗證報告.md`。下面的預測對照：衝突確實只有 05、08；`tools/verify.mjs` 自動合併；B1 如預測變紅；S9a 預測會紅但沒有發生，因為 main 沒有 push。語意指紋在合併樹實算與凍結相同（`check_simulation_version_gate` 83/83）。
+
 ## 更新：`v21.b2` 之後（2026-11-03，已 fetch；只分析差異，沒有 Merge）
 
 | 項目 | 結果 |

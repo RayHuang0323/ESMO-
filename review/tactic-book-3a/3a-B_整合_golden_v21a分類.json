@@ -1,0 +1,880 @@
+{
+ "schema": "esmo.golden-classification.v1",
+ "summary": {
+  "total": 40,
+  "expected": 40,
+  "review": 0,
+  "recordedAt": {
+   "gitHead": "0e3c022426f8869f88668c73997a7dca719b4b08",
+   "fingerprint": "29140fe0cb5a4c86",
+   "flagsAtRecording": {
+    "devFastForward": true,
+    "devQuickRecovery": true,
+    "asiaCircuit": true,
+    "heroProxyChichuan": true,
+    "heroProxyVariant": "cli-v003",
+    "itemsV1": true,
+    "heroSkillsV1": true,
+    "heroBattleTalentsV1": true
+   }
+  }
+ },
+ "rows": [
+  {
+   "id": "bind-template:v2.three_lane_pressure:s19",
+   "group": "binding-template",
+   "seed": 19,
+   "templateId": "v2.three_lane_pressure",
+   "choices": {},
+   "fixtureDigest": "1222.5:blue:33:4:42740:28328",
+   "nowDigest": "1219.0:blue:22:10:37381:31333",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.three_lane_pressure:s3",
+   "group": "binding-template",
+   "seed": 3,
+   "templateId": "v2.three_lane_pressure",
+   "choices": {},
+   "fixtureDigest": "1340.5:red:11:20:33452:39444",
+   "nowDigest": "892.0:red:7:6:23674:25538",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.jungle_invasion:s23",
+   "group": "binding-template",
+   "seed": 23,
+   "templateId": "v2.jungle_invasion",
+   "choices": {},
+   "fixtureDigest": "1355.0:blue:21:17:38744:35919",
+   "nowDigest": "932.5:red:8:10:24997:27347",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.jungle_invasion:s7",
+   "group": "binding-template",
+   "seed": 7,
+   "templateId": "v2.jungle_invasion",
+   "choices": {},
+   "fixtureDigest": "985.0:blue:9:5:27849:24880",
+   "nowDigest": "1325.0:red:17:15:34893:36041",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.bot_duo_pressure:s29",
+   "group": "binding-template",
+   "seed": 29,
+   "templateId": "v2.bot_duo_pressure",
+   "choices": {},
+   "fixtureDigest": "932.0:red:2:15:22069:30123",
+   "nowDigest": "1048.0:red:6:19:25065:33497",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.bot_duo_pressure:s11",
+   "group": "binding-template",
+   "seed": 11,
+   "templateId": "v2.bot_duo_pressure",
+   "choices": {},
+   "fixtureDigest": "863.5:red:3:9:21587:26601",
+   "nowDigest": "1578.5:red:22:31:42832:48321",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.mid_jungle_sync:s3",
+   "group": "binding-template",
+   "seed": 3,
+   "templateId": "v2.mid_jungle_sync",
+   "choices": {},
+   "fixtureDigest": "1293.0:red:14:17:34703:37270",
+   "nowDigest": "892.0:red:7:6:23674:25538",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.mid_jungle_sync:s19",
+   "group": "binding-template",
+   "seed": 19,
+   "templateId": "v2.mid_jungle_sync",
+   "choices": {},
+   "fixtureDigest": "904.5:red:3:4:21802:24430",
+   "nowDigest": "1219.0:blue:22:10:37381:31333",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.support_roamer:s7",
+   "group": "binding-template",
+   "seed": 7,
+   "templateId": "v2.support_roamer",
+   "choices": {},
+   "fixtureDigest": "910.0:red:5:7:22490:26186",
+   "nowDigest": "1325.0:red:17:15:34893:36041",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.support_roamer:s23",
+   "group": "binding-template",
+   "seed": 23,
+   "templateId": "v2.support_roamer",
+   "choices": {},
+   "fixtureDigest": "1003.0:blue:7:7:27984:25616",
+   "nowDigest": "932.5:red:8:10:24997:27347",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.dragon_pit_macro:s11",
+   "group": "binding-template",
+   "seed": 11,
+   "templateId": "v2.dragon_pit_macro",
+   "choices": {},
+   "fixtureDigest": "1409.5:blue:28:14:44108:37260",
+   "nowDigest": "1578.5:red:22:31:42832:48321",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.dragon_pit_macro:s29",
+   "group": "binding-template",
+   "seed": 29,
+   "templateId": "v2.dragon_pit_macro",
+   "choices": {},
+   "fixtureDigest": "876.0:red:3:8:20204:26255",
+   "nowDigest": "1048.0:red:6:19:25065:33497",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.top_solo_split:s19",
+   "group": "binding-template",
+   "seed": 19,
+   "templateId": "v2.top_solo_split",
+   "choices": {},
+   "fixtureDigest": "859.0:blue:5:5:22646:24025",
+   "nowDigest": "1219.0:blue:22:10:37381:31333",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.top_solo_split:s3",
+   "group": "binding-template",
+   "seed": 3,
+   "templateId": "v2.top_solo_split",
+   "choices": {},
+   "fixtureDigest": "1196.5:red:5:17:27743:37194",
+   "nowDigest": "892.0:red:7:6:23674:25538",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.mid_solo_split:s23",
+   "group": "binding-template",
+   "seed": 23,
+   "templateId": "v2.mid_solo_split",
+   "choices": {},
+   "fixtureDigest": "879.0:red:7:7:25003:23942",
+   "nowDigest": "932.5:red:8:10:24997:27347",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.mid_solo_split:s7",
+   "group": "binding-template",
+   "seed": 7,
+   "templateId": "v2.mid_solo_split",
+   "choices": {},
+   "fixtureDigest": "866.0:red:9:5:22583:23936",
+   "nowDigest": "1325.0:red:17:15:34893:36041",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.hard_engage_stack:s29",
+   "group": "binding-template",
+   "seed": 29,
+   "templateId": "v2.hard_engage_stack",
+   "choices": {},
+   "fixtureDigest": "994.5:red:2:11:23391:29637",
+   "nowDigest": "1048.0:red:6:19:25065:33497",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.hard_engage_stack:s11",
+   "group": "binding-template",
+   "seed": 11,
+   "templateId": "v2.hard_engage_stack",
+   "choices": {},
+   "fixtureDigest": "1375.0:red:16:23:35336:40667",
+   "nowDigest": "1578.5:red:22:31:42832:48321",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.protect_core_scaling:s3",
+   "group": "binding-template",
+   "seed": 3,
+   "templateId": "v2.protect_core_scaling",
+   "choices": {},
+   "fixtureDigest": "809.5:red:2:3:19400:22536",
+   "nowDigest": "892.0:red:7:6:23674:25538",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.protect_core_scaling:s19",
+   "group": "binding-template",
+   "seed": 19,
+   "templateId": "v2.protect_core_scaling",
+   "choices": {},
+   "fixtureDigest": "996.5:blue:12:8:28985:26702",
+   "nowDigest": "1219.0:blue:22:10:37381:31333",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.standard_macro:s7",
+   "group": "binding-template",
+   "seed": 7,
+   "templateId": "v2.standard_macro",
+   "choices": {},
+   "fixtureDigest": "917.0:red:10:2:25380:23800",
+   "nowDigest": "1325.0:red:17:15:34893:36041",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.standard_macro:s23",
+   "group": "binding-template",
+   "seed": 23,
+   "templateId": "v2.standard_macro",
+   "choices": {},
+   "fixtureDigest": "985.0:blue:12:2:30061:22677",
+   "nowDigest": "932.5:red:8:10:24997:27347",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.defensive_hold:s11",
+   "group": "binding-template",
+   "seed": 11,
+   "templateId": "v2.defensive_hold",
+   "choices": {},
+   "fixtureDigest": "1462.5:blue:22:17:42553:40437",
+   "nowDigest": "1578.5:red:22:31:42832:48321",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-template:v2.defensive_hold:s29",
+   "group": "binding-template",
+   "seed": 29,
+   "templateId": "v2.defensive_hold",
+   "choices": {},
+   "fixtureDigest": "907.5:red:0:16:22093:29708",
+   "nowDigest": "1048.0:red:6:19:25065:33497",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:jungle.focus=farm:s3",
+   "group": "binding-choice",
+   "seed": 3,
+   "templateId": "std",
+   "choices": {
+    "jungle": {
+     "focus": "farm"
+    }
+   },
+   "fixtureDigest": "892.0:red:7:6:23674:25538",
+   "nowDigest": "892.0:red:7:6:23674:25538",
+   "differs": [],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:jungle.focus=farm:s19",
+   "group": "binding-choice",
+   "seed": 19,
+   "templateId": "std",
+   "choices": {
+    "jungle": {
+     "focus": "farm"
+    }
+   },
+   "fixtureDigest": "904.0:red:11:2:26129:24035",
+   "nowDigest": "1219.0:blue:22:10:37381:31333",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:jungle.focus=invade:s7",
+   "group": "binding-choice",
+   "seed": 7,
+   "templateId": "std",
+   "choices": {
+    "jungle": {
+     "focus": "invade"
+    }
+   },
+   "fixtureDigest": "1325.0:red:17:15:34893:36041",
+   "nowDigest": "1325.0:red:17:15:34893:36041",
+   "differs": [],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:jungle.focus=invade:s23",
+   "group": "binding-choice",
+   "seed": 23,
+   "templateId": "std",
+   "choices": {
+    "jungle": {
+     "focus": "invade"
+    }
+   },
+   "fixtureDigest": "932.5:red:8:10:24997:27347",
+   "nowDigest": "932.5:red:8:10:24997:27347",
+   "differs": [],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:lanes.mid.stance=split:s11",
+   "group": "binding-choice",
+   "seed": 11,
+   "templateId": "std",
+   "choices": {
+    "lanes": {
+     "mid": {
+      "stance": "split"
+     }
+    }
+   },
+   "fixtureDigest": "892.5:blue:4:7:24645:24927",
+   "nowDigest": "1578.5:red:22:31:42832:48321",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:lanes.mid.stance=split:s29",
+   "group": "binding-choice",
+   "seed": 29,
+   "templateId": "std",
+   "choices": {
+    "lanes": {
+     "mid": {
+      "stance": "split"
+     }
+    }
+   },
+   "fixtureDigest": "942.5:red:2:14:21460:30248",
+   "nowDigest": "1048.0:red:6:19:25065:33497",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=roam:s19",
+   "group": "binding-choice",
+   "seed": 19,
+   "templateId": "std",
+   "choices": {
+    "seats": {
+     "b5": {
+      "mission": "roam"
+     }
+    }
+   },
+   "fixtureDigest": "1219.0:blue:22:10:37381:31333",
+   "nowDigest": "1219.0:blue:22:10:37381:31333",
+   "differs": [],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=roam:s3",
+   "group": "binding-choice",
+   "seed": 3,
+   "templateId": "std",
+   "choices": {
+    "seats": {
+     "b5": {
+      "mission": "roam"
+     }
+    }
+   },
+   "fixtureDigest": "818.0:red:3:3:20639:22752",
+   "nowDigest": "892.0:red:7:6:23674:25538",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=protect:s23",
+   "group": "binding-choice",
+   "seed": 23,
+   "templateId": "std",
+   "choices": {
+    "seats": {
+     "b5": {
+      "mission": "protect"
+     }
+    }
+   },
+   "fixtureDigest": "932.5:red:8:11:24922:27699",
+   "nowDigest": "932.5:red:8:10:24997:27347",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=protect:s7",
+   "group": "binding-choice",
+   "seed": 7,
+   "templateId": "std",
+   "choices": {
+    "seats": {
+     "b5": {
+      "mission": "protect"
+     }
+    }
+   },
+   "fixtureDigest": "1325.0:red:17:15:34893:36041",
+   "nowDigest": "1325.0:red:17:15:34893:36041",
+   "differs": [],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:teamfight.posture=passive:s29",
+   "group": "binding-choice",
+   "seed": 29,
+   "templateId": "std",
+   "choices": {
+    "teamfight": {
+     "posture": "passive"
+    }
+   },
+   "fixtureDigest": "997.5:blue:3:10:24324:28438",
+   "nowDigest": "1048.0:red:6:19:25065:33497",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:teamfight.posture=passive:s11",
+   "group": "binding-choice",
+   "seed": 11,
+   "templateId": "std",
+   "choices": {
+    "teamfight": {
+     "posture": "passive"
+    }
+   },
+   "fixtureDigest": "1389.5:red:10:27:34766:42495",
+   "nowDigest": "1578.5:red:22:31:42832:48321",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:teamfight.posture=aggressive:s3",
+   "group": "binding-choice",
+   "seed": 3,
+   "templateId": "std",
+   "choices": {
+    "teamfight": {
+     "posture": "aggressive"
+    }
+   },
+   "fixtureDigest": "1139.5:red:7:15:28754:34308",
+   "nowDigest": "892.0:red:7:6:23674:25538",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:teamfight.posture=aggressive:s19",
+   "group": "binding-choice",
+   "seed": 19,
+   "templateId": "std",
+   "choices": {
+    "teamfight": {
+     "posture": "aggressive"
+    }
+   },
+   "fixtureDigest": "1014.0:red:11:12:26736:30103",
+   "nowDigest": "1219.0:blue:22:10:37381:31333",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:objectives.tower=high:s7",
+   "group": "binding-choice",
+   "seed": 7,
+   "templateId": "std",
+   "choices": {
+    "objectives": {
+     "tower": "high"
+    }
+   },
+   "fixtureDigest": "1439.5:blue:14:21:36900:40369",
+   "nowDigest": "1325.0:red:17:15:34893:36041",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  },
+  {
+   "id": "bind-choice:objectives.tower=high:s23",
+   "group": "binding-choice",
+   "seed": 23,
+   "templateId": "std",
+   "choices": {
+    "objectives": {
+     "tower": "high"
+    }
+   },
+   "fixtureDigest": "824.0:blue:0:7:21031:23984",
+   "nowDigest": "932.5:red:8:10:24997:27347",
+   "differs": [
+    "digest",
+    "streamHash",
+    "resultHash"
+   ],
+   "callDiffs": [
+    "configureMatch"
+   ],
+   "equalsStandardMacroOnSameSeed": true,
+   "callsEqualStandard": true,
+   "classification": "EXPECTED_CHANGE"
+  }
+ ]
+}
