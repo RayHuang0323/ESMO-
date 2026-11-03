@@ -1,0 +1,114 @@
+{
+  "schema": "Stage1R2ReleaseRegistration.v1",
+  "studyId": "stage1.r2.release",
+  "registeredAt": "2026-11-03, before any src change of this round",
+  "status": "REGISTERED, implementation not started. Preparation only: no freeze, no formal G-A8, no golden re-recording",
+  "authority": "Owner Review after the bounded balance study (below, verbatim)",
+  "ownerReview": {
+    "verbatim": [
+      "Owner Review：Phase 3a-B 平衡研究接受結論，核准最後一版有界限的發布修正。",
+      "1. hard_engage 採 HE_R（0.7／0.5）、classic.m6 採 M6_B（0.6／0.5）作為 v21 候選，依實際設定同步調整文案。",
+      "2. three_lane_pressure 有條件採 TLP_R（0.7／0.5），保留三路前壓與快節奏。明確標記為未證實候選，不得稱為已通過。",
+      "3. 不核准本輪 G-A8 STOP 後的條件式下架退路；全部 21 模板仍依原判準驗收，STOP 就停止。",
+      "4. m5、m1 保留原樣，不為提高通過機率而修改無明確證據的候選。",
+      "5. defensive_hold 僅移除未被驗證的優勢宣稱，內容重新設計列入後續技術與產品待辦。",
+      "6. 核准新 Seeds 規劃。G-A8 可評估 4601–5000，但需先全面去重、確認有效 Seed 與獨立 Reviewer；所有已觀察與其他保留區段不得污染。",
+      "建立新的 v21 版本化修正表，保留舊凍結與證據，不覆寫歷史。",
+      "確認修正對 UI、AI 教練、fallback、選項、真實性表、排除列、Career 和 Golden 的影響。",
+      "不修改 v20、不碰共用 LogicEngine、不調整 G-A8 門檻。",
+      "完成必要的開發期測試、正式驗收事前登記及獨立審查，優先控制新增測試成本。",
+      "更新整合前檢查時確認最新 origin/main，分析差異即可，不實際 Merge。",
+      "本輪只準備最後修正版，不自行正式凍結、不跑新 G-A8 正式確認、不重錄 Golden。",
+      "如果確認候選無法維持玩法特色，或必須再擴大平衡研究，停止並回報，不自動追加下一輪。",
+      "G-A8 與 Challenge STOP 保留，兩個發布旗標關閉。不 Push、不 Deploy、不整合 main、不碰 CS。",
+      "完成後回報是否可進行新凍結，以及真正剩餘的發布阻擋，等待 Owner Review。"
+    ]
+  },
+  "history": {
+    "kept": "freeze 7a6e9736, fingerprint 0cc52b48cfb9348a, table v21.b1, the formal G-A8 result 84ad5014 and every registration and result of that round stay as they are. v21.b1 stays in the table list, unused by any ruleset, so old rows and old results still resolve",
+    "notAPass": "nothing in this round changes the formal G-A8 STOP. Candidates are candidates"
+  },
+  "table": {
+    "id": "v21.b2",
+    "readBy": ["career.v21", "balanceTool.v21"],
+    "notReadBy": ["career.v20", "balanceTool.v20", "challenge.v20", "challenge.v21"],
+    "entries": {
+      "classic.m3": { "values": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 }, "source": "same as v21.b1", "status": "v21 candidate" },
+      "classic.m7": { "values": { "macro.aggression": 0.5, "macro.riskTolerance": 0.5, "macro.tempo": "standard", "lanePlan.top": "standard", "lanePlan.mid": "standard", "lanePlan.adc": "standard" }, "source": "same as v21.b1", "status": "v21 candidate" },
+      "classic.m8": { "values": { "macro.aggression": 0.5, "macro.riskTolerance": 0.5 }, "source": "same as v21.b1", "status": "v21 candidate" },
+      "classic.m6": { "values": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 }, "source": "screen6 arm M6_B", "status": "v21 candidate" },
+      "v2.hard_engage_stack": { "values": { "macro.riskTolerance": 0.5 }, "source": "screen6 arm HE_R, aggression stays 0.7", "status": "v21 candidate" },
+      "v2.three_lane_pressure": { "values": { "macro.riskTolerance": 0.5 }, "source": "screen6 arm TLP_R, aggression stays 0.7", "status": "UNPROVEN v21 candidate (Owner item 2): the screening rule gave NO_REASONABLE_CANDIDATE, 57.1%, vs BASE -2.1 (-6.7..+2.5). Never called passed. Three-lane forward lanes and fast tempo are unchanged" }
+    },
+    "notInTable": { "classic.m5": "Owner item 4", "classic.m1": "Owner item 4", "v2.defensive_hold": "copy only, Owner item 5, not a balance entry, so post-match scoring stays as it is" },
+    "absoluteValues": "as v21.b1: applying twice equals applying once"
+  },
+  "copy": {
+    "rule": "Same rule as the Owner 2026-11-01 decision for m3 and m8: only remove sentences the new values no longer support or that have no evidence; no new claims. Shown only on screens, never in the engine config. v21 only: the template objects tacticTemplates.v1 and MOBA_TACTICS stay byte-identical, v20 unchanged",
+    "classic.m6": {
+      "risk": { "from": "高", "to": "中", "why": "riskTolerance 0.5 is the neutral value; same rule as m3 at 0.6/0.5 (Owner 2026-11-01 item 1)" },
+      "desc": { "keep": "中野聯動全圖製造人數差" },
+      "detail": { "from": "中單與打野高機動游走，靠支援差碾壓節奏", "to": "中單與打野高機動游走", "why": "碾壓 has no evidence: M6_B reads 50.2% vs std. Lane plan and gank interval are unchanged, so the first half holds" },
+      "cons": { "from": "游走撲空就虧線；高風險換節奏，落後時雪上加霜", "to": "游走撲空就虧線", "why": "高風險 no longer holds at riskTolerance 0.5; 落後時雪上加霜 has no evidence" }
+    },
+    "v2.hard_engage_stack": {
+      "risk": { "from": "高", "to": "中", "why": "riskTolerance 0.5; same rule as m3" },
+      "desc": { "remove": "投入團戰的門檻也稍微比較低", "why": "copy gate: commit row is same under 0.7/0.5 (registration screen6 copyImpact.HE_R)" },
+      "cons": { "from": "隊伍撤退的時機比平常稍微晚一點，投入團戰的門檻也比平常稍微低一些。", "to": "NO_CONS_SENTENCE of tools/lib/tacticEffectSheet.mjs", "why": "copy gate: retreat and commit rows are same, the template has no cost row left, and the gate's rule then requires that sentence" }
+    },
+    "v2.three_lane_pressure": {
+      "text": "unchanged: screen6 copyImpact.TLP_R is empty",
+      "risk": { "keep": "高", "why": "the Owner's copy instruction names item 1 only. The forward lanes stay, so the label is not plainly false. Listed for the Owner to confirm" }
+    },
+    "v2.defensive_hold": {
+      "desc": { "remove": "適合陣容比對手弱的時候。", "why": "Owner item 5. Everything else stays" },
+      "risk": { "keep": "低" },
+      "balance": "no table entry"
+    },
+    "gate": "the copy gate copyViolationsOf runs on the table copy against the effect sheet of the table config, for the v2 templates under v21.b2. classic templates are outside that gate, as today"
+  },
+  "impact": {
+    "ui": "TacticScreen and tacticBookOptions read the table and copy by ruleset id, no screen hard-codes v21.b1 (checked by reading). Prediction: no src screen edit needed",
+    "aiCoach": "STYLE_TEMPLATES.skirmish is v2.hard_engage_stack, so career.v21 AI skirmish teams play 0.7/0.5. This is accepted by Owner item 1 as a consequence. The aiCoach.js comment that the coach stays clear of the table becomes false and is corrected. check_stage1_split S5b changes to: the coach picks exactly one table template, v2.hard_engage_stack, and its binding goes through the Resolver once. No other coach rule changes",
+    "fallback": "TEAM_STYLE_TACTIC (aggressive m7, defensive m8, skirmish m3) is unchanged. v2.hard_engage_stack is not a fallback target. classic.m6 is not a style fallback. Prediction: S5a holds with the new id",
+    "choices": "offered lists on the three new templates can change where the choice's own value, claim or knob delta moves. Decided by the development exclusion study below, not by hand",
+    "truthTable": "stale by design (T2), re-measured only as step 4a after a freeze. Rows of table templates under a table ruleset are recorded, they do not derive exclusions (tableOnTable reads every table). The plan difference is computed without matches and reported",
+    "exclusionRows": "v21.b1 rows stay. v21.b2 gets the same rows for m3, m7, m8, whose values are identical, plus what the development study decides for classic.m6, v2.hard_engage_stack, v2.three_lane_pressure",
+    "career": "career.v21 layers change from v21.b1 to v21.b2, so every career.v21 setup hash changes (the fixture is already red on setupHash, not re-recorded). Live 2x2 matrix, master switch, rollback and save behaviour unchanged",
+    "golden": "not re-recorded. v20 golden 153/153 must stay green. Challenge golden unchanged in match results"
+  },
+  "predictions": {
+    "registeredBeforeRunning": true,
+    "mustStayGreenAsTheyAre": ["check_match_setup_3a 153/153 (v20 golden)", "check_challenge_setup_3a", "check_tactic_replication_3a", "check_tactic_plan_3a", "check_ai_coach_3a"],
+    "redBeforeAndStaysRed": { "check_match_golden_v21a": "97/137 at the frozen state: the same 40 cases expected; any extra red must be a case that uses one of the three new table templates", "check_career_golden_v21": "3/5, same checks (P2 and setupHash), match results may move through AI skirmish teams and that is reported", "check_challenge_golden_v21": "5/6 unchanged", "check_club_mastery_v1": "264/265 existing debt" },
+    "becomesRedUntilFreeze": { "check_simulation_version_gate": "fingerprint differs from the registered 0cc52b48cfb9348a until a freeze registers a new one; expected 82/83", "check_tactic_truth_3a": "T2 stale as before, possibly T-gates that pin the plan: reported, not re-measured" },
+    "changedAssertionsVisibly": {
+      "check_stage1_split_3aB": "S1, S2b, S4a extended to six templates, S5b, S11 scope, S13a-c2, S14 and S17 keep their meaning under v21.b2; the pinned hash of S13c2 is updated visibly; shipped hash S13c must NOT change. New: copy under v21.b2, defensive_hold copy-only, v21.b1 values of m3 m7 m8 identical to v21.b2",
+      "check_match_ruleset_3a": "the pinned career.v21 and balanceTool.v21 strings change b1 to b2 and nothing else",
+      "check_c3_phase_skeleton": "RS1', RS2', RS7' change b1 to b2; expected change set is derived from the table and gains the bind-template cases of the new templates that exist in the fixture",
+      "check_laneframe_c3": "same derivation through tools/lib/laneFrameC3.mjs",
+      "check_tactic_save_3a": "only the literal table id",
+      "check_stage1_rollback_drill_3aB": "only the literal table id",
+      "browser_check_stage1_flows_3aB": "only the literal table id; extended with hard_engage, m6 and defensive_hold copy on screen",
+      "check_tactic_truth_3a": "reads every table, no edit predicted",
+      "measure_ga8_fix_screen_3aB": "V2b pins v21.b1 by name: stays pinned to the frozen table, that tool is finished"
+    },
+    "ifAPredictionFails": "recorded here as it is, investigated before any gate edit. A gate is not edited to make it green without the reason written down"
+  },
+  "seedsPlanned": {
+    "ga8Confirm": { "range": "4601-5000", "n": 400, "step": 1, "path": "tool", "status": "to be assigned by this round's plan after the scan, the seed gate and the independent Reviewer (Owner item 6)" },
+    "exclusionDevelopment": { "stage1": "69801-69900", "stage2": "69901-70300", "status": "proposed: unused and unreserved, scan before use" },
+    "scan20261103": {
+      "4601-5000": "3,468 measurement jsonl files on disk: none has a seed in the block. Registrations and tools: only the plan's own reservation and two notes saying it is reserved. One literal: seed 4640 in review/moba-runtime/h2/baseline_after.json, a 240-seed sample scattered across 0-99968 from July (H.2, engine before v18, no tactic comparison)",
+      "layout": "4601-5000 has STANDARD 213 and SWAPPED 187 (43001-43400 was 199/201); sides are 200/200",
+      "69801-70300": "no measurement jsonl. Three literals in the same H.2 baselines, the same scattered sample"
+    },
+    "untouched": "51001-55999, 66001-67200, 67501-68299, 65101-65500, 45001-49999, 59801-60599, 61001-61799, 6001-9000 subranges: no use this round"
+  },
+  "stopRules": {
+    "ownerClose": "if a candidate cannot keep its play identity, or more balance study would be needed: stop and report. No next round",
+    "notThisRound": "no freeze, no fingerprint registration, no formal G-A8, no golden re-recording, no v20 change, no LogicEngine change, no G-A8 threshold change, no flags, no push, deploy, main, CS",
+    "ga8": "all 21 templates under the original rule; STOP stops. The conditional drop was not approved (Owner item 3): no drop state, no drop tool"
+  },
+  "backlog": { "defensive_hold": "content redesign: technical and product backlog (Owner item 5)" }
+}
