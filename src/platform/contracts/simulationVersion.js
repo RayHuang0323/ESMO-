@@ -635,7 +635,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  2026-11-02（Phase 3a-B 第一階段語意凍結，Owner 正式核准）：模板修正表 v21.b1（career.v21／balanceTool.v21 的 templateBalance 層）、m3／m7／m8 文案與排除列、
   //  Live 2×2 矩陣與總開關。v20 規則集與 Challenge v20 不變（v20 黃金 39 案逐位元相同）；旗標全關。v21 未發布 ⇒ 同版號重新登記（舊值 0578fa882d74b205 未曾發布）。
   //  登記 tools/fixtures/stage1_formal_acceptance_registration_3aB.json。
-  "moba-sim.v21": "0cc52b48cfb9348a",
+  //  2026-11-03（Phase 3a-B 第一階段 r2 語意凍結，Owner r3 裁定 E 項授權）：模板修正表 v21.b2（m6 M6_B、hard_engage HE_R、three_lane TLP_R 未證實候選；m3／m7／m8 與 v21.b1 同值）、
+  //  v21.b2 文案與排除列。v20 規則集與 Challenge v20 不變（v20 黃金 39 案逐位元相同）；旗標全關。v21 未發布 ⇒ 同版號重新登記（舊值 0cc52b48cfb9348a 未曾發布，舊凍結 7a6e9736 與結果保留）。
+  //  登記 tools/fixtures/stage1r2_formal_acceptance_registration_3aB.json。
+  "moba-sim.v21": "620196ccea5a8249",
 });
 
 export const isKnownSimulationVersion = (v) =>
