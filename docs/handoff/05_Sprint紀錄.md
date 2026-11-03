@@ -25227,3 +25227,5 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **待 Owner**：流程 Gate 重跑；m6 團戰姿態撤下、three_lane 風險標示、M6_B 節奏、hard_engage 是否仍算強開、其他「適合…」句、凍結前要不要預演；核准新凍結。
 
 **風險**：依 Owner 裁定的組合，估計新 G-A8 全部不判 STOP 約 25–37%（m5 36%、m1 22% 最大）；再次 STOP 會白費凍結前工作並用掉 4601–5000。Challenge v21 STOP 保留，只擋第二階段。
+
+**補記（同一輪，第二次審查後）**：Gate 46 支第一次是 38 綠 8 紅，LaneFrame、Skeleton 只差固定數字，更新後 40 綠 6 紅（log `esmo-measure/logs-stage1/r2.gates.rerun.log`、`r2.gates.rerun2.log`）。4b 是 14 個選項＋4 組對照、14,400 場，約 5.1 小時。瀏覽器流程 Gate 的斷言再次修改，仍沒有完整結果。

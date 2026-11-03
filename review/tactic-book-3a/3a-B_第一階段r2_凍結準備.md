@@ -51,7 +51,7 @@
 | **UI** | 畫面依規則集讀表，不必改畫面程式 | 兩支瀏覽器 Gate 通過；**流程 Gate 沒有完整結果，§8** |
 | **AI 教練** | skirmish 隊伍現在打 0.7／0.5，比原本弱。計畫仍是不帶選擇的 `hard_engage`，修正只經 Resolver 套一次 | S5b、S5c、`check_ai_coach_3a` 11/11 |
 | **Fallback** | 不變：aggressive→m7、defensive→m8、skirmish→m3，`hard_engage`、m6 都不是退路目標 | S5a |
-| **選項** | **m6 的團戰姿態整個維度消失**（§5）。其他模板 588 格比對：表外 18 個模板 0 格改變 | §5、S13b、S20h |
+| **選項** | **m6 的團戰姿態整個維度消失**（§5）。其餘 18 個模板（15 個表外，加上值沒變的 m3、m7、m8）在 `v21.b1` 與 `v21.b2` 之間 0 格改變。三個新模板的 `risk.tolerance` 變成模板本來的值，提供清單不變，畫面沒有差別 | §5、S13b、S20h |
 | **賽後面板** | m6、`hard_engage`、`three_lane` 改成未評分，與 m3、m7、m8 相同 | S20f |
 | **勝利條件** | 84 格與 `v21.b1` 相同 | 比對差異 0，S13c2 |
 | **真實性表** | 依設計過期（T2），正式 4a 才重量。163 批的鍵與結果檔相符；三個新模板只碰到 m6 的 2 批（對照、入侵），`hard_engage`、`three_lane` 沒有模板層列 | 計畫比對，沒跑比賽 |
@@ -81,7 +81,7 @@ Seeds 69801–69900，200 場，錯誤 0，4.2 分。結果 `tools/fixtures/excl
 
 | 檢查 | 結果 |
 |---|---|
-| 量測資料 | Reviewer 獨立掃 3,824 個 jsonl／meta 檔，沒有 Seed 落在這個區段 |
+| 量測資料 | 我掃了 3,468 個 jsonl 檔、Reviewer 另外連 meta 與其他 worktree 一起掃（回報 3,824 個，後一位 Reviewer 無法重現這個數字），都沒有 Seed 落在這個區段 |
 | 登記與工具 | 只有 Seed 計畫的保留列和說明文字；工具沒有算出這個區段的 Seed 算式 |
 | 有效 Seed | 工具路徑，400 個都是 Seed 本身，不重複（E1） |
 | Seed 4640 | 7 月 H.2 基準裡的舊引擎抽樣（240 個散布在 0–99968），不是戰術研究，Reviewer 判定無害 |
@@ -110,7 +110,7 @@ Seeds 69801–69900，200 場，錯誤 0，4.2 分。結果 `tools/fixtures/excl
 | 項目 | 結果 |
 |---|---|
 | Build | ✓ built |
-| Gate 46 支 | **40 綠，6 紅，都在預期內** |
+| Gate 46 支 | 第一次 38 綠 8 紅，多的 2 紅（LaneFrame、Skeleton）都只差固定數字；更新後 **40 綠，6 紅，都在預期內** |
 | `verify --only=tactic24,runtime29` | 2/2 PASS |
 | 分流 `check_stage1_split_3aB` | 73/73 |
 | 正式驗收核對 `check_formal_acceptance_3aB` | 59/59 |
@@ -118,7 +118,7 @@ Seeds 69801–69900，200 場，錯誤 0，4.2 分。結果 `tools/fixtures/excl
 | v20 黃金 `check_match_setup_3a` | 153/153 |
 | AI 教練 | 11/11 |
 | Seed 計畫 | 45/45 |
-| LaneFrame、Skeleton（修 pin 後重跑） | 55/55、171/171 |
+| LaneFrame、Skeleton（修固定數字後重跑，log `esmo-measure/logs-stage1/r2.gates.rerun.log`、`r2.gates.rerun2.log`） | 55/55、171/171 |
 | 瀏覽器 `tactic_book_v21`、`tactic_book_3a`、`battle_notices` | 30/30、31/31、11/11 |
 | 瀏覽器 `stage1_flows` | **沒有完整結果，§8** |
 
@@ -145,6 +145,8 @@ Seeds 69801–69900，200 場，錯誤 0，4.2 分。結果 `tools/fixtures/excl
 | T14、S7、C3、G1b 的固定數字 | Gate | 依名稱或推導更新，判定條件不變 |
 | m6 團戰姿態消失 | 計畫計算 | 回報給您 |
 
+**Reviewer 的第二次審查（`e2811904`）：** APPROVE WITH CHANGES，0 Blocker、1 Major（4b 登記的舊數字，已改，R6b 釘住）、6 Minor（已改）。這次修改之後沒有第三次審查。
+
 **一次提交流程失誤：** `fbdc342f` 提交時 O6 是紅的（指令串接，提交不看結果），下一筆 `9a54a920` 修好。研究在修好之後才開跑。
 
 ## 8. 瀏覽器流程 Gate 的狀況（照實記錄）
@@ -166,8 +168,9 @@ Seeds 69801–69900，200 場，錯誤 0，4.2 分。結果 `tools/fixtures/excl
 |---|---|---|
 | 1 | 重跑 `browser_check_stage1_flows_3aB`（約 3–5 分） | 您說一聲，我跑 |
 | 2 | 您確認 §9.1 的決定 | Owner |
-| 3 | 您核准新凍結，含指紋登記與 4601–5000、四個沿用區段 | Owner |
-| 4 | 凍結後獨立 Reviewer 確認指紋、Seeds、工具、準則 | 獨立 Reviewer |
+| 3 | 凍結當下重跑整合前檢查（main 若碰到受監看的檔案，先合併再凍結） | 我 |
+| 4 | 您核准新凍結，含指紋登記與 4601–5000、四個沿用區段 | Owner |
+| 5 | 凍結後獨立 Reviewer 確認指紋、Seeds、工具、準則 | 獨立 Reviewer |
 
 ### 9.1 要您決定
 
@@ -183,11 +186,13 @@ Seeds 69801–69900，200 場，錯誤 0，4.2 分。結果 `tools/fixtures/excl
 | # | 阻擋 | 說明 |
 |---|---|---|
 | 1 | **正式 G-A8 STOP** | 只有新的正式 G-A8 判 PASS 才解除 |
-| 2 | **通過機率不高** | 依 §10.1 |
-| 3 | 正式驗收其餘步驟 | 側偏、E1、E2、4a、重播、4b、Gate、verify、瀏覽器、回滾，都還沒跑；任何一步都可能擋下 |
-| 4 | Golden 重錄 | 凍結後要您另外同意、逐案審閱 |
+| 2 | 正式驗收其餘步驟 | 側偏、E1、E2、4a、重播、4b、Gate、verify、瀏覽器、回滾，都還沒跑；任何一步都可能擋下 |
+| 3 | Golden 重錄 | 凍結後要您另外同意、逐案審閱 |
+| 4 | Owner Release Review | 正式驗收之後由您決定是否發布；已知缺口（模板＋選項勝率、模板相剋、玩法手感、verify 51 段盲區）都不算通過，要在這裡面對 |
 | 5 | 整合 | 約 1 個工作天，要您下令（`3a-B_整合前檢查.md`） |
-| 6 | 已知缺口 | 模板＋選項勝率、模板相剋、玩法手感、verify 51 段盲區：都不算通過 |
+| 6 | 啟用旗標 | 部署後才開 `mobaTacticalDirectorV21`，要您下令 |
+
+**不是阻擋、是風險：** 新 G-A8 的通過機率不高，見 §10.1。
 
 **Challenge v21 STOP 不擋第一階段：** 第一階段旗標下 Challenge 留在 v20。它擋的是第二階段。
 

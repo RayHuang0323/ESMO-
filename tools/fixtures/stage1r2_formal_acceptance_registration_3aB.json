@@ -10,9 +10,9 @@
   "warn": "a G-A8 WARN (win rate >= 0.57 or <= 0.43) is not a STOP, as in the original registration; every WARN is listed by template in the report and the Owner sees it before any release decision",
   "inconclusive": "INCONCLUSIVE, undecided or data-incomplete in any step is NOT a pass: the release decision waits for the Owner",
   "challenge": "the Challenge side-bias STOP stays. Stage 1 does not measure it and never claims it passed",
-  "anyOtherRed": "any other pre-registered check that fails stops the release decision and is reported. There is no automatic fix and no automatic restart: any change needs a new Owner ruling and a new freeze, and that ruling decides the seed policy for every observed block (43001-43400 and the others of this spec are observed once run). This spec authorises neither re-using them nor drawing new ones",
+  "anyOtherRed": "any other pre-registered check that fails stops the release decision and is reported. There is no automatic fix and no automatic restart: any change needs a new Owner ruling and a new freeze, and that ruling decides the seed policy for every observed block (4601-5000 and the others of this spec are observed once run; 43001-43400 is already observed). This spec authorises neither re-using them nor drawing new ones",
   "optionalStopping": "each study runs to its registered n; no peeking decision; errored seeds follow errorRule (> 1% STOP); an interrupted run resumes in the same folder on the same fingerprint",
-  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 or the v21.b2 study offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the formal measurement and is reported; the investigation is not widened without approval (Owner approval 2026-11-02). No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: tools/lib/p6Contradiction.mjs reads both studies; classic.m6 jungle.focus=invade, if the v21.b2 study offers it, also has a truth row. Of the 13 choices P6 offers, the truth table has rows on the offered template for two (classic.m3 objectives.tower=high measured on balanceTool.v20 with the shipped template, classic.m8 phases.early.grouping=group measured under the table). The other 11 have no row on the offered template and are decided by P6 plus 4b alone. Rows of the same choice on std or another template are not a CONTRADICTION",
+  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 or the v21.b2 study offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the formal measurement and is reported; the investigation is not widened without approval (Owner approval 2026-11-02). No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: tools/lib/p6Contradiction.mjs reads both studies; the 14 offered choices reach 3 truth rows: classic.m6 jungle.focus=invade (weak, pass, z 4.55) plus the two below. Of the 13 choices P6 offers, the truth table has rows on the offered template for two (classic.m3 objectives.tower=high measured on balanceTool.v20 with the shipped template, classic.m8 phases.early.grouping=group measured under the table). The other 11 have no row on the offered template and are decided by P6 plus 4b alone. Rows of the same choice on std or another template are not a CONTRADICTION",
   "ga8Prerequisite": "only a G-A8 PASS lets the other formal measurements proceed automatically; STOP and INCONCLUSIVE both stop and go to the Owner (Owner Review 2026-11-02 decision 5). Enforced through requiresResult in the four confirm registrations. The 4a re-measure and the formal evidence replay have no tool check (their seeds are not reserved): they follow the order by procedure. A CONTRADICTION at 4a does not make 4b refuse by itself either: the order stops by procedure and the tools do not enforce that part",
   "evidenceInconsistency": "an unexpected change on another template, a missing or extra truth row, a change in the split or asymmetry tables, none of the five registered rows changing, or a replay difference is an evidence inconsistency: it stops the formal measurement and is reported (Owner approval 2026-11-02). Checked after the formal 4a by node tools/check_truth_preview_3aB.mjs --formal --baseline=<freeze commit>, and by the replay itself",
   "noConditionalDrop": "Owner review item 3: the conditional drop after a G-A8 STOP is NOT approved. All 21 templates are judged under the original rule, a STOP stops. There is no drop state and no drop tool"
@@ -237,7 +237,8 @@
    "id": "truth-and-replay-before-the-freeze",
    "question": "truth 4a and the evidence replay would first run after about 10 h of reserved seeds. A non-table row that flips would need a row change, a new fingerprint and a new ruling with those blocks already observed. check_tactic_truth_3a --measure --preview (about 70 min, observed seeds 1-40, writes outside the repo, T1 refuses its output) and the replay could run first",
    "decision": "approved: the truth 4a preview and the evidence replay run before the freeze, on observed seeds only, as a development diagnostic and never as formal confirming evidence",
-   "source": "stated by the Owner, Owner Review 2026-11-02"
+   "source": "stated by the Owner, Owner Review 2026-11-02",
+   "appliesTo": "freeze 7a6e9736 only. Whether r2 runs a preview before its freeze is an open Owner question (stage1r2 record section 9.1 item 6)"
   },
   {
    "item": 6,
@@ -405,7 +406,8 @@
    "notEvidence": "the rehearsal numbers are not results of anything and stay out of the repo. They only show the tools work end to end. This branch keeps fingerprint 0578fa882d74b205 and READY_FOR_FREEZE: it is not a freeze",
    "notRehearsed": "the truth re-measure (about 70 minutes on seeds 1-40) and the 15-18 h run are not started; the truth plan is checked by the 163 batch comparison"
   },
-  "stopConditions": "a new regression, contaminated evidence, or a need to change an acceptance criterion stops the related work and is reported to the Owner; none of them is released here"
+  "stopConditions": "a new regression, contaminated evidence, or a need to change an acceptance criterion stops the related work and is reported to the Owner; none of them is released here",
+  "appliesTo": "freeze 7a6e9736 only: history. The fingerprint named in dryRun.notEvidence is the one of that time"
  },
  "ownerReview20261102c": {
   "verbatim": [
@@ -558,7 +560,8 @@
     "reportNotRun": "tools/fixtures/evidence_carryforward_3a.json was not rewritten"
    },
    "reservedSeeds": "scan of 14,746 recorded matches of the preview, the replay, the four rehearsals and P6: 0 in a reserved block"
-  }
+  },
+  "appliesTo": "freeze 7a6e9736 only: history. Nothing of it has run for v21.b2"
  },
  "effortMeasured": "about 17 h single line by the 1.1-1.4 s per match measured on 2026-11-02: G-A8 8,400, career 4,018, E1 8,400, E2 1,600, truth 6,520 (the preview took about 128 min, not the 70 min estimated earlier), replay 2,600, 4b 12,800, plus gates, verify and browser. r2: step 4b grows by 800 matches per added offer and by 800 per added template control; see exclusion_v21b2_confirm_registration_3aB.json. step 4b is 14 choices plus 4 controls x 2 sides x 400 = 14,400 matches",
  "ownerApproval20261102": {

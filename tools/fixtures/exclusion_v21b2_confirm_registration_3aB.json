@@ -119,9 +119,9 @@
     "direction": "up"
    }
   ],
-  "controls": "one per side and template (classic.m3, classic.m7, classic.m8)",
-  "matches": "(13 arms + 3 controls) x 2 sides x 400 = 12,800",
-  "expectedEffort": "about 3.6 h single line at the 1.05 s/match measured in P6"
+  "controls": "one per side and template (classic.m3, classic.m6, classic.m7, classic.m8)",
+  "matches": "(14 arms + 4 controls) x 2 sides x 400 = 14,400",
+  "expectedEffort": "about 5.1 h single line at the 1.28 s/match measured on 2026-11-03"
  },
  "decisionRule": {
   "confirmed": "on BOTH sides n >= 200 valid pairs, z >= 3 and relative effect >= 0.05 in the claimed direction",
@@ -135,7 +135,7 @@
   },
   "minValidPairsPerSide": 200,
   "minValidPairsAuthority": "Owner Review 2026-11-02 decision 3; lowering it after the fact is forbidden",
-  "achievability": "checked before registering, from the P6 raw records, no reserved seed: all 13 metrics are valid in 100 of 100 matches on the blue side and in 100 of 100 on the red side of the same matches (a proxy: stage 1 ran blue arms only); the two stage-2 items measured 400 of 400 on both sides. Expected about 400 per side, far above the floor",
+  "achievability": "checked before registering, from raw records, no reserved seed: the 13 P6 metrics are valid in 100 of 100 matches on the blue side and in 100 of 100 on the red side of the same matches (a proxy: stage 1 ran blue arms only); the two stage-2 items measured 400 of 400 on both sides. classic.m6 invasionsActed: valid in 200 of 200 records on each side of the v21.b2 study (the same proxy: red played std there). Expected about 400 per side, far above the floor",
   "order": "not_replicated when a side with n >= 200 misses the rule; otherwise inconclusive when a side has n < 200; otherwise confirmed",
   "inconclusive": "no side misses the rule and a side has n < 200 valid pairs",
   "mixedCase": "a side with n >= 200 that misses the rule makes the item not_replicated and the study FAILED, even when the other side has n < 200; that other side is recorded in insufficientSides (Owner approval 2026-11-02)"
