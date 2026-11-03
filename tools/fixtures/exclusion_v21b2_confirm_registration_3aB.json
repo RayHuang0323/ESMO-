@@ -16,9 +16,9 @@
   "block": "exclusion.v21b1.confirm of tools/fixtures/study_seed_plan_3aB.json (never run)",
   "rule": "disjoint from the P6 blocks 65001-65100, 65501-65900 and the v21.b2 development blocks 69801-69900, 69901-70300"
  },
- "design": "balanceTool.v21 (template table v21.b1). For each side: the template plus that one choice on that side, std on the other, paired by seed against the template without the choice on that side. Same instrument as P6 stage 2 (runTruthMatch, items standard, skills on)",
+ "design": "balanceTool.v21 (template table v21.b2). For each side: the template plus that one choice on that side, std on the other, paired by seed against the template without the choice on that side. Same instrument as P6 stage 2 (runTruthMatch, items standard, skills on)",
  "plan": {
-  "rule": "every row of the two P6 result files with stage-1 pass or stage-2 confirmed; the tool refuses if this list differs from what those files derive",
+  "rule": "every row of the four result files (P6 stage 1 and 2 for classic.m3 / m7 / m8, whose values are identical in v21.b1 and v21.b2; the v21.b2 study stage 1 and 2 for classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure) with stage-1 pass or stage-2 confirmed; the tool refuses if this list differs from what those files derive",
   "items": [
    {
     "template": "classic.m7",

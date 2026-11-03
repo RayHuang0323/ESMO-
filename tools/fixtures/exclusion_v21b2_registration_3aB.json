@@ -55,13 +55,13 @@
   "v20": "the v20 offer lists, check_match_setup_3a (v20 golden 39 cases) and the Challenge goldens stay byte-identical, verified by those gates and check_stage1_split_3aB S13",
   "gatesThatChange": "check_stage1_split_3aB S13 (it pins that no row is keyed), check_tactic_registry_3a and check_tactic_book_view_3a if they count rows: replacement assertions registered before editing"
  },
- "limits": "multiple comparisons are not corrected. Stage 1 is blue only, the same as the truth-table weak batches. Options offered today can be withdrawn; every one is listed for the Owner",
+ "limits": "multiple comparisons are not corrected. Stage 1 is blue only, the same as the truth-table weak batches. Options offered today can be withdrawn; every one is listed for the Owner. The rule sees knob deltas of choices, not engine interactions with a lower commit or retreat. v2.hard_engage_stack and v2.three_lane_pressure have no template-level truth row, so their other choices have no template-level evidence, before or after this table (disclosed by the independent review)",
  "plan": {
   "count": 4,
   "runBatches": 1,
   "noClaim": 3,
-  "controls": 3,
-  "matches": 400,
+  "controls": 1,
+  "matches": 200,
   "items": [
    {
     "template": "classic.m6",
@@ -114,9 +114,17 @@
    }
   ]
  },
- "expectedEffort": "stage 1: 400 matches, about 10 minutes, single line, workers 3; stage 2 only if the one measured row is marginal: 1,600 matches, about 35 minutes",
- "review": null,
- "reviewRounds": [],
+ "expectedEffort": "stage 1: 200 matches, about 5 minutes, single line, workers 3; stage 2 only if the one measured row is marginal: 1,600 matches, about 35 minutes",
+ "review": {
+  "reviewedAt": "2026-11-03",
+  "verdict": "APPROVE WITH CHANGES (independent review at 805257b2: the study may run as registered after the tool and lib edits; all applied)"
+ },
+ "reviewRounds": [
+  {
+   "round": 1,
+   "verdict": "APPROVE WITH CHANGES (independent review at 805257b2: the study may run as registered after the tool and lib edits; all applied)"
+  }
+ ],
  "reportListings": "the stage-1 report prints every option offered today that the study does not offer. Applying the rows also lists every win-condition expansion that changes on classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure (before / after of winConditionFill) in the stage-1 doc",
- "ownerVisibleConsequence": "classic.m6 teamfight.posture: passive, standard and aggressive are selected with no registered claim (own null), so the rule withdraws them under v21.b2, exactly as for classic.m3. v2.hard_engage_stack and v2.three_lane_pressure keep aggression, so no knob delta moves and no row is selected. risk.tolerance=balanced becomes their own value on all three, so it stops being a non-default choice. Other templates: 0 cells of 588 move between v21.b1 and v21.b2"
+ "ownerVisibleConsequence": "classic.m6 teamfight.posture: passive, standard and aggressive are selected with no registered claim (own null), so the rule withdraws them under v21.b2, exactly as for classic.m3: the dimension disappears on classic.m6 for players. v2.hard_engage_stack and v2.three_lane_pressure keep aggression, so no knob delta moves and no row is selected. risk.tolerance offered only balanced before and after, so it was never drawn: no screen effect. Other templates: 0 cells of 588 move between v21.b1 and v21.b2"
 }

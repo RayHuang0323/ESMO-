@@ -12,7 +12,7 @@
   "challenge": "the Challenge side-bias STOP stays. Stage 1 does not measure it and never claims it passed",
   "anyOtherRed": "any other pre-registered check that fails stops the release decision and is reported. There is no automatic fix and no automatic restart: any change needs a new Owner ruling and a new freeze, and that ruling decides the seed policy for every observed block (43001-43400 and the others of this spec are observed once run). This spec authorises neither re-using them nor drawing new ones",
   "optionalStopping": "each study runs to its registered n; no peeking decision; errored seeds follow errorRule (> 1% STOP); an interrupted run resumes in the same folder on the same fingerprint",
-  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the formal measurement and is reported; the investigation is not widened without approval (Owner approval 2026-11-02). No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: of the 13 choices P6 offers, the truth table has rows on the offered template for two (classic.m3 objectives.tower=high measured on balanceTool.v20 with the shipped template, classic.m8 phases.early.grouping=group measured under the table). The other 11 have no row on the offered template and are decided by P6 plus 4b alone. Rows of the same choice on std or another template are not a CONTRADICTION",
+  "contradiction": "CONTRADICTION (Owner Review 2026-11-02 decision 1): a choice P6 or the v21.b2 study offers whose row in the truth table has verdict reversed (z <= -2 against the claim) stops the formal measurement and is reported; the investigation is not widened without approval (Owner approval 2026-11-02). No effect and marginal are not a contradiction. Recorded separately from a G-A8 STOP: it is not a G-A8 result and a G-A8 PASS does not clear it. Implemented in tools/lib/p6Contradiction.mjs, gate check_tactic_truth_3a T14 and tools/check_truth_preview_3aB.mjs. Scope: tools/lib/p6Contradiction.mjs reads both studies; classic.m6 jungle.focus=invade, if the v21.b2 study offers it, also has a truth row. Of the 13 choices P6 offers, the truth table has rows on the offered template for two (classic.m3 objectives.tower=high measured on balanceTool.v20 with the shipped template, classic.m8 phases.early.grouping=group measured under the table). The other 11 have no row on the offered template and are decided by P6 plus 4b alone. Rows of the same choice on std or another template are not a CONTRADICTION",
   "ga8Prerequisite": "only a G-A8 PASS lets the other formal measurements proceed automatically; STOP and INCONCLUSIVE both stop and go to the Owner (Owner Review 2026-11-02 decision 5). Enforced through requiresResult in the four confirm registrations. The 4a re-measure and the formal evidence replay have no tool check (their seeds are not reserved): they follow the order by procedure. A CONTRADICTION at 4a does not make 4b refuse by itself either: the order stops by procedure and the tools do not enforce that part",
   "evidenceInconsistency": "an unexpected change on another template, a missing or extra truth row, a change in the split or asymmetry tables, none of the five registered rows changing, or a replay difference is an evidence inconsistency: it stops the formal measurement and is reported (Owner approval 2026-11-02). Checked after the formal 4a by node tools/check_truth_preview_3aB.mjs --formal --baseline=<freeze commit>, and by the replay itself",
   "noConditionalDrop": "Owner review item 3: the conditional drop after a G-A8 STOP is NOT approved. All 21 templates are judged under the original rule, a STOP stops. There is no drop state and no drop tool"
@@ -91,15 +91,15 @@
  "runnablePreconditions": [
   {
    "item": "ga8_fix2_confirm_registration_3aB.json final text, measure_ga8_3aB.mjs --reg",
-   "status": "done; fingerprint filled"
+   "status": "tool done; registration READY_FOR_FREEZE, fingerprint TBD_AT_FREEZE"
   },
   {
    "item": "sidebias_career_fix2confirm_registration_3aB.json final text, measure_side_bias_3aB.mjs --reg",
-   "status": "done; fingerprint filled"
+   "status": "tool done; registration READY_FOR_FREEZE, fingerprint TBD_AT_FREEZE"
   },
   {
    "item": "measure_e1_3aB.mjs and measure_e2_3aB.mjs --reg, fix-confirm registrations on the reserved blocks",
-   "status": "done; fingerprint filled"
+   "status": "tool done; registration READY_FOR_FREEZE, fingerprint TBD_AT_FREEZE"
   },
   {
    "item": "tools/lib/tacticTruthPlan.mjs computes own, delta and claim with the table of the row's ruleset",
@@ -123,24 +123,18 @@
   },
   {
    "item": "moba-sim v21 candidate fingerprint re-registered",
-   "status": "done: 0cc52b48cfb9348a at 7a6e9736"
+   "status": "pending: only at a new freeze the Owner approves. The previous value 0cc52b48cfb9348a was registered at 7a6e9736"
+  },
+  {
+   "item": "development exclusion study of v21.b2 and its rows",
+   "status": "see exclusion_v21b2_registration_3aB.json; pending until its result is applied"
   }
  ],
  "notInStage1": "Challenge side-bias confirmation 45001-49999, C1 calibration, challenge.v21 golden: stage 2. v21 post-match evidence goals: need their own formal evidence (Owner 2026-11-01 item 4); until then rebalanced templates show unscored counts",
  "neverClaimed": "passing stage 1 is not a pass of the original P2 acceptance, of G-A8 by exclusion, or of the Challenge side bias",
  "effort": "about 15-18 hours single line (workers <= 3), by earlier measurements of these studies; not measured for this freeze",
  "review": {
-  "verdict": "independent rounds: see reviewRounds. This approves the specification. The formal runs are authorised by ownerApproval20261102",
-  "rounds": [
-   {
-    "round": 1,
-    "verdict": "APPROVE WITH CHANGES; M3, M4, M5 and minors m5, m6 applied here"
-   },
-   {
-    "round": 2,
-    "verdict": "APPROVE WITH CHANGES; applied here: verify baseline, truth rows of table templates, Owner decision on table template + choice"
-   }
-  ]
+  "verdict": "r2 spec review: see reviewRounds. Formal runs are not authorised: they need a new Owner approval of a new freeze"
  },
  "gateList": [
   "check_simulation_version_gate",
@@ -203,35 +197,9 @@
  "reviewRounds": [
   {
    "round": 1,
-   "verdict": "APPROVE WITH CHANGES; M3, M4, M5 and minors m5, m6 applied here"
-  },
-  {
-   "round": 2,
-   "verdict": "APPROVE WITH CHANGES; applied here: verify baseline, truth rows of table templates, Owner decision on table template + choice"
-  },
-  {
-   "round": 3,
-   "at": "2026-11-02",
-   "scope": "all formal tools, seeds, thresholds, baseline at 64920ceb",
-   "verdict": "APPROVE WITH CHANGES (2 Blockers, 4 Majors, minors). Thresholds, hypotheses, seeds, STOP rules and flags hold. Tool defects applied; the items that touch an acceptance criterion are in openOwnerDecisions, not decided"
-  },
-  {
-   "round": 4,
-   "at": "2026-11-02",
-   "scope": "the fixes of round 3 at 2896325c",
-   "verdict": "APPROVE WITH CHANGES (0 Blockers, 2 Majors, minors), conditional on rehearsal section F, which passed. Applied; no further review round was run on these last fixes"
-  },
-  {
-   "round": 5,
-   "at": "2026-11-02",
-   "scope": "the five Owner decisions as recorded, before any preview number",
-   "verdict": "APPROVE WITH CHANGES (0 Blockers, 1 Major, minors): the criteria, seeds, write guards and predictions hold; the diagnostic fixes applied before any preview number existed. Readings for the Owner are listed in the report"
-  },
-  {
-   "round": 6,
-   "at": "2026-11-02",
-   "scope": "the frozen fingerprint, seeds, tools and criteria at 596113c1, before any reserved seed",
-   "verdict": "APPROVE WITH CHANGES (0 Blockers, 0 Majors, no tool edit). Procedural changes applied before the first match"
+   "at": "2026-11-03",
+   "scope": "table v21.b2, seeds, development study, these registrations, gate edits, at 805257b2",
+   "verdict": "APPROVE WITH CHANGES: 1 Blocker for a freeze request, 3 Major, minors; applied in the commit after 805257b2. Not an Owner approval"
   }
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
@@ -378,7 +346,7 @@
    "W3": "E1 and E2: new e1_fix2_confirm_registration_3aB.json (66001-67200, safety 66001-66400) and e2_fix2_confirm_registration_3aB.json (67501-68299 odd), everything else copied; measure_e1_3aB.mjs and measure_e2_3aB.mjs --reg, workers receive --reg too",
    "W4": "tools/lib/tacticTruthPlan.mjs: own, delta, claim and weak selection of a row use the template table of the ruleset the row is measured on. Rows measured on balanceTool.v20 are unchanged",
    "W5": "check_tactic_truth_3a: exKey includes templateBalance. Truth rows of a table template on a table-carrying ruleset are recorded and do not derive an exclusion. A table template row measured on balanceTool.v20 derives a row keyed null only if P6 decided that choice; otherwise it derives an unkeyed row as before",
-   "W6": "step 4b: exclusion_v21b2_confirm_registration_3aB.json and --confirm-* in measure_exclusion_v21b2_3aB.mjs: the 13 choices P6 offers, blue and red against control, 65101-65500, the replication rule, about 12,800 matches",
+   "W6": "step 4b: exclusion_v21b2_confirm_registration_3aB.json and --confirm-* in measure_exclusion_v21b2_3aB.mjs: the 13 choices P6 offers plus what the v21.b2 study offers, blue and red against control, 65101-65500, the replication rule, about 12,800 matches plus 800 per added offer and 800 per added template control",
    "W7": "tools/check_stage1_rollback_drill_3aB.mjs: the cases of step 8, flag off and on",
    "W8": "verify baseline: a full tools/verify.mjs on 1d0e219 (git merge-base of origin/main and this branch) in a separate worktree, recorded by tools/record_verify_baseline_3aB.mjs into tools/fixtures/stage1_verify_baseline_3aB.json, never edited afterwards",
    "W9": "tools/check_formal_acceptance_3aB.mjs: mechanical cross-check of all of the above (seeds disjoint and reserved, thresholds verbatim, refusal before the freeze, decisions and the gap recorded, one worker smoke per tool on an already observed seed)"
@@ -599,7 +567,8 @@
    "先確認並登記三項判定：1. CONTRADICTION 或證據異常：停止正式量測並回報，未經核准不擴大調查。2. 4b 一側有效樣本足夠且明確未通過必要條件，即判 FAILED；另一側若樣本不足須明確記錄。3. CONTRADICTION 限同模板；其他模板的預期外變動依證據不一致規則阻擋。",
    "執行順序：1. 確認最新 HEAD、工作目錄及研究證據，建立正式凍結 Commit，登記新的 v21 語意指紋。2. 完成五份確認登記，交獨立 Reviewer 審查凍結指紋、Seeds、工具與判準。若有實質問題先停止，不消耗保留 Seeds。3. 審查通過後，正式執行 G-A8 確認研究 8,400 場。4. G-A8 只有 PASS 才可依事前登記繼續其他正式量測；STOP 或 INCONCLUSIVE 立即停止並回報，不重抽 Seeds、不調整門檻。5. 其他量測若出現失敗、矛盾或證據不一致，也應停止後續量測並回報。6. 使用 checkpoint、單線執行長量測，保留完整 log，更新 05／08、Roadmap、SDD 及驗收紀錄。",
    "本次授權不包含 Golden 重錄、Push、Deploy、main 整合、開啟發布旗標或修改 CS。Challenge v21 STOP 繼續保留，第一階段仍維持 Challenge v20。全部通過後提交正式驗收報告，停止等待 Owner Release Review。"
-  ]
+  ],
+  "appliesTo": "freeze 7a6e9736 only. It does not authorise any r2 run"
  },
  "formalRunPolicy": {
   "registeredAt": "2026-11-02, before the freeze commit",
@@ -616,7 +585,8 @@
   },
   "notInThisAuthorisation": "golden re-recording (step 5), push, deploy, main integration (step 10), enabling a release flag, changing CS. Challenge v21 STOP stays; stage 1 stays on Challenge v20",
   "environment": "the launching shell has no ESMO_* variable set, and node -v is written into each log. Logs are kept outside the repo in C:/Users/ifikn/esmo-measure/logs-stage1. No commit on this branch while a study is running; a result commit only between studies",
-  "proceduralOnly": "stopping after side bias, E1 and E2 is by this policy, not by the tools: only G-A8 is enforced by tool"
+  "proceduralOnly": "stopping after side bias, E1 and E2 is by this policy, not by the tools: only G-A8 is enforced by tool",
+  "appliesTo": "the rules carry over; the authorisation of Owner approval 2026-11-02 applied to 7a6e9736 only. r2 runs need a new Owner approval"
  },
  "freezePrediction": {
   "registeredAt": "2026-11-03, before a new freeze; a new outcome is written only after one",
@@ -705,7 +675,54 @@
    "next": "a new Owner ruling. stopRules.anyOtherRed: any change needs a new ruling and a new freeze, and that ruling decides the seed policy",
    "record": "review/tactic-book-3a/3a-B_正式驗收紀錄.md"
   },
-  "note": "history, not overwritten. Table v21.b1 at 7a6e9736: formal G-A8 STOP. That result stands"
+  "note": "history, not overwritten. Table v21.b1 at 7a6e9736: formal G-A8 STOP. That result stands",
+  "reviewRounds": [
+   {
+    "round": 1,
+    "verdict": "APPROVE WITH CHANGES; M3, M4, M5 and minors m5, m6 applied here"
+   },
+   {
+    "round": 2,
+    "verdict": "APPROVE WITH CHANGES; applied here: verify baseline, truth rows of table templates, Owner decision on table template + choice"
+   },
+   {
+    "round": 3,
+    "at": "2026-11-02",
+    "scope": "all formal tools, seeds, thresholds, baseline at 64920ceb",
+    "verdict": "APPROVE WITH CHANGES (2 Blockers, 4 Majors, minors). Thresholds, hypotheses, seeds, STOP rules and flags hold. Tool defects applied; the items that touch an acceptance criterion are in openOwnerDecisions, not decided"
+   },
+   {
+    "round": 4,
+    "at": "2026-11-02",
+    "scope": "the fixes of round 3 at 2896325c",
+    "verdict": "APPROVE WITH CHANGES (0 Blockers, 2 Majors, minors), conditional on rehearsal section F, which passed. Applied; no further review round was run on these last fixes"
+   },
+   {
+    "round": 5,
+    "at": "2026-11-02",
+    "scope": "the five Owner decisions as recorded, before any preview number",
+    "verdict": "APPROVE WITH CHANGES (0 Blockers, 1 Major, minors): the criteria, seeds, write guards and predictions hold; the diagnostic fixes applied before any preview number existed. Readings for the Owner are listed in the report"
+   },
+   {
+    "round": 6,
+    "at": "2026-11-02",
+    "scope": "the frozen fingerprint, seeds, tools and criteria at 596113c1, before any reserved seed",
+    "verdict": "APPROVE WITH CHANGES (0 Blockers, 0 Majors, no tool edit). Procedural changes applied before the first match"
+   }
+  ],
+  "reviewNote": {
+   "verdict": "independent rounds: see reviewRounds. This approves the specification. The formal runs are authorised by ownerApproval20261102",
+   "rounds": [
+    {
+     "round": 1,
+     "verdict": "APPROVE WITH CHANGES; M3, M4, M5 and minors m5, m6 applied here"
+    },
+    {
+     "round": 2,
+     "verdict": "APPROVE WITH CHANGES; applied here: verify baseline, truth rows of table templates, Owner decision on table template + choice"
+    }
+   ]
+  }
  },
  "unprovenCandidates": [
   {

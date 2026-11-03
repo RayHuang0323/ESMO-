@@ -75,6 +75,11 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   ck("O5 G-A8 確認登記的修正表是 v21.b2、與規則集讀的同一張；範圍與原始登記相同", FORMAL.ga8.reg.templateBalance === "v21.b2" && same(FORMAL.ga8.reg.templates, R("ga8_registration_3aB.json").templates));
 }
 
+{
+  const rp = P7.runnablePreconditions ?? [];
+  ck("O6 這份登記沒有任何授權開跑的說法：r2 沒有 Owner 核准凍結；上一輪的核准標明只適用 7a6e9736；前置項沒有宣稱指紋已填；舊審查輪次移到 previousRound", /not authorised/.test(P7.review?.verdict ?? "") && !/authorised by ownerApproval/.test(P7.review?.verdict ?? "") && /7a6e9736 only/.test(P7.ownerApproval20261102?.appliesTo ?? "") && /7a6e9736 only/.test(P7.formalRunPolicy?.appliesTo ?? "") && !rp.some((x) => /fingerprint filled|at 7a6e9736/.test(x.status)) && (P7.previousRound?.reviewRounds ?? []).length >= 3);
+}
+
 // ── R 確認登記 ───────────────────────────────────────────────────────────────
 {
   for (const [id, f] of Object.entries(FORMAL)) {
@@ -153,6 +158,8 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   ck(POST_FREEZE ? "X1 五支工具 --preflight：回答可以開跑或說明拒絕原因，沒有開跑、沒有建立資料夾" : "X1 五支工具帶確認登記 --preflight 都拒絕（exit 2，原因是登記還沒填）、沒有建立資料夾：凍結前開不了跑", !bad.length, bad.join(" | "));
   const selfSrc = fs.readFileSync(fileURLToPath(import.meta.url), "utf8");
   ck("X1b 這支 gate 不會 spawn 開跑旗標（否則登記填完之後就是真的開跑）", ![["--", "run"], ["--", "confirm-run"]].some(([a, b]) => ['"', "'", "`"].some((q) => selfSrc.includes(`${q}${a}${b}${q}`) || selfSrc.includes(`${q}${a}${b} `))));
+  const st = spawnSync(process.execPath, ["tools/measure_ga8_3aB.mjs", `--reg=tools/fixtures/${FORMAL.ga8.file}`, "--selftest"], { cwd: ROOT, encoding: "utf8" });
+  ck("X1c G-A8 工具帶確認登記 --selftest 全綠（審查：之前寫死上一輪的區段，沒有 gate 抓到）", st.status === 0, (st.stdout ?? "").trim().split("\n").slice(-1)[0]);
   const g = spawnSync(process.execPath, ["tools/measure_ga8_3aB.mjs", "--reg=../evil.json", "--plan"], { cwd: ROOT, encoding: "utf8" });
   ck("X2 --reg 只收 tools/fixtures/ 底下的 json", g.status === 2);
 }

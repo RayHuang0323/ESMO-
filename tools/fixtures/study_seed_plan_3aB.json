@@ -207,7 +207,7 @@
     },
     {
       "id": "exclusion.v21b1.confirm",
-      "purpose": "RESERVED, not run: post-freeze red and blue confirmation of the choices P6 offers on classic.m3 / m7 / m8 under v21.b1 (stage1_formal_acceptance_registration_3aB.json step 4b)",
+      "purpose": "RESERVED, not run: post-freeze red and blue confirmation of the offered choices of the table templates. Registered at the frozen round for v21.b1 (never run); r2 uses it through exclusion_v21b2_confirm_registration_3aB.json",
       "path": "tool",
       "range": "65101-65500",
       "step": 1

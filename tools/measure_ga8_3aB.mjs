@@ -63,7 +63,8 @@ if (flag("selftest")) {
   const ck = (l, ok) => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}`); };
   const ws = (n, p) => Array.from({ length: n }, (_, i) => ((i * 37) % 100 < p * 100 ? 1 : 0));
   ck("S1 0.50 ⇒ 不 STOP 不 WARN；0.65 ⇒ STOP；0.58 ⇒ WARN 不 STOP；0.42 ⇒ WARN", !templateVerdict(ws(400, 0.5)).stop && !templateVerdict(ws(400, 0.5)).warn && templateVerdict(ws(400, 0.65)).stop && templateVerdict(ws(400, 0.58)).warn && !templateVerdict(ws(400, 0.58)).stop && templateVerdict(ws(400, 0.42)).warn);
-  ck(`S2 登記：seeds ${IS_FORMAL ? "43001–43400" : "25001–25400"}、閾值 0.60／0.55`, REG.seeds.range === (IS_FORMAL ? "43001-43400" : "25001-25400") && /0\.60/.test(REG.thresholds["STOP (dominant)"]));
+  const planBlocks = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/study_seed_plan_3aB.json"), "utf8")).studies.filter((s) => /^G-A8\.fix\d*Confirm$/.test(s.id)).map((s) => s.range);
+  ck(`S2 登記：seeds ${REG.seeds.range}（正式登記要是 Seed 計畫裡的 G-A8 確認區段）、閾值 0.60／0.55`, (IS_FORMAL ? planBlocks.includes(REG.seeds.range) : REG.seeds.range === "25001-25400") && /0\.60/.test(REG.thresholds["STOP (dominant)"]));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);
 }

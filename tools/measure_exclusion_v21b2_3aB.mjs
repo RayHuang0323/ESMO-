@@ -7,10 +7,10 @@
 //  node tools/measure_exclusion_v21b2_3aB.mjs --plan
 //  node tools/measure_exclusion_v21b2_3aB.mjs --selftest
 //  node tools/measure_exclusion_v21b2_3aB.mjs --run --dir=<repo 外新資料夾> [--workers=3]   要 APPROVE 的獨立審查、登記清單與重算相同、src／tools 乾淨、儀器檢查通過
-//  node tools/measure_exclusion_v21b2_3aB.mjs --report --dir=<同一個>                        寫 tools/fixtures/exclusion_v21b1_result_3aB.json
+//  node tools/measure_exclusion_v21b2_3aB.mjs --report --dir=<同一個>                        寫 tools/fixtures/exclusion_v21b2_result_3aB.json
 //  node tools/measure_exclusion_v21b2_3aB.mjs --confirm-plan | --confirm-run --dir=<repo 外新資料夾> [--workers=3] | --confirm-report --dir=<同一個>   正式驗收 step 4b（凍結後才能跑）
 //  node tools/measure_exclusion_v21b2_3aB.mjs --stage2-run --dir=<另一個> [--workers=3]      第一階段的邊際項：新 seeds、紅藍雙方（結果檔要先提交）
-//  node tools/measure_exclusion_v21b2_3aB.mjs --stage2-report --dir=<同一個>                 寫 tools/fixtures/exclusion_v21b1_stage2_result_3aB.json
+//  node tools/measure_exclusion_v21b2_3aB.mjs --stage2-report --dir=<同一個>                 寫 tools/fixtures/exclusion_v21b2_stage2_result_3aB.json
 //
 //  設計與真實性表的 weak 批次相同（藍方＝選擇，紅方 std；同 seed 配對），批次用 balanceTool.v21（修正表只有這個工具規則集讀得到）。
 //  判定（Owner 2026-10-13：保留原規則、不直接改成 z ≥ 3；邊際用獨立新 seeds、紅藍雙方複驗）：
@@ -117,7 +117,7 @@ if (flag("plan-json")) { console.log(J(buildExclusionPlan())); process.exit(0); 
 if (flag("plan")) {
   const PLAN = buildExclusionPlan();
   const nm = PLAN.filter((b) => b.metric).length;
-  console.log(`${PLAN.length} 項：要跑 ${nm} 批＋${TEMPLATES.length} 組對照；沒有宣稱 ${PLAN.length - nm} 項（不跑，判不提供）`);
+  console.log(`${PLAN.length} 項：要跑 ${nm} 批＋${new Set(PLAN.filter((b) => b.metric).map((b) => b.template)).size} 組對照；沒有宣稱 ${PLAN.length - nm} 項（不跑，判不提供）`);
   for (const b of PLAN) console.log(`${b.template} ${b.dimension}=${b.choice} own=${b.own} ${b.metric ?? "(no claim)"} ${b.direction ?? ""} d=${b.delta} [${b.reasons.join(",")}]`);
   process.exit(0);
 }
@@ -193,8 +193,9 @@ if (flag("selftest")) {
   const inPlan = (x) => PLAN.some((b) => b.template === x.template && b.dimension === x.dimension && b.choice === x.choice);
   ck("S4 這三個模板目前的每一筆排除列要嘛進清單，要嘛被不分模板的「*」列涵蓋（std 層級，不在範圍），要嘛結構上不提供", keyedAll.every((x) => inPlan(x) || starWithheld(x.dimension, x.choice) || !detailOf(engine, x.template, x.dimension)?.offered.includes(x.choice) || detailOf(engine, x.template, x.dimension)?.own === x.choice));
   ck("S5 v21.b2 下三個模板的 risk 都是 0.5，出貨版不是（修正表真的進了這條路）", TEMPLATES.every((t) => templateConfigFor(t, TB).macro.riskTolerance === 0.5 && templateConfigFor(t, null).macro.riskTolerance !== 0.5));
-  const cOnly = PLAN.filter((x) => x.reasons.length === 1 && x.reasons[0] === "C_weakest_under_table").length;
-  ck("S6 沒有「只因與表外模板並列最小」而選進來的項目（與 v21.b1 同一條規則）", PLAN.every((x) => !x.reasons.includes("C_weakest_under_table") || !x.tiedOutside), `C only ${cOnly}`);
+  const has = (t, dim, ch) => PLAN.find((x) => x.template === t && x.dimension === dim && x.choice === ch);
+  ck("S6 清單釘住（審查）：m6 團戰姿態 3 項沒有宣稱；m6 jungle.focus=invade 有宣稱；hard_engage、three_lane 沒有項目（只動 risk，沒有選擇的旋鈕差距改變）",
+    ["passive", "standard", "aggressive"].every((x) => has("classic.m6", "teamfight.posture", x)?.metric === null) && !!has("classic.m6", "jungle.focus", "invade")?.metric && PLAN.length === 4 && PLAN.every((x) => x.template === "classic.m6"), J(PLAN.map((x) => x.choice)));
   const runnerSrc = fs.readFileSync(path.join(ROOT, "tools/balance/moba_items_balance_runner.mjs"), "utf8"), selfSrc = fs.readFileSync(SELF, "utf8");
   ck("S8 worker 旗標不與 balance runner 的 --worker 撞名（撞名會多送 ready、任務錯位）", runnerSrc.includes('process.argv.includes("--worker")') && !/workerArgs: \["--worker"\]/.test(selfSrc) && !selfSrc.includes(["if (flag(", '"worker"', "))"].join("")));
   const inst = await instrumentProblems(PLAN, ["blue", "red"]);
@@ -211,7 +212,8 @@ const ITEMS = REG.plan.items;
 const RUN_ITEMS = ITEMS.filter((b) => b.metric);
 const keyOfPlan = (b) => `${b.template}|${b.dimension}|${b.choice}`;
 const armOf = (b) => ({ templateId: b.template, choices: nestedOf([[b.dimension, b.choice]]) });
-const CONTROLS = TEMPLATES.map((t) => ({ key: `control|${t}`, blue: { templateId: t, choices: {} } }));
+//  只跑有列要量的模板的對照（審查：沒有列的對照買不到任何判定）。
+const CONTROLS = TEMPLATES.filter((t) => RUN_ITEMS.some((b) => b.template === t)).map((t) => ({ key: `control|${t}`, blue: { templateId: t, choices: {} } }));
 const BATCHES = [...CONTROLS, ...RUN_ITEMS.map((b) => ({ key: keyOfPlan(b), blue: armOf(b) }))];
 const tasks = BATCHES.flatMap((b) => SEEDS.map((s) => ({ id: `${b.key}#${s}`, key: b.key, seed: s, blue: b.blue })));
 const SV = await imp("src/platform/contracts/simulationVersion.js");

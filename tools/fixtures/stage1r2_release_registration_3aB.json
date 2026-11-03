@@ -164,7 +164,8 @@
     "truthTable": "stale by design (T2), re-measured only as step 4a after a freeze. Rows of table templates under a table ruleset are recorded, they do not derive exclusions (tableOnTable reads every table). The plan difference is computed without matches and reported",
     "exclusionRows": "v21.b1 rows stay. v21.b2 gets the same rows for m3, m7, m8, whose values are identical, plus what the development study decides for classic.m6, v2.hard_engage_stack, v2.three_lane_pressure",
     "career": "career.v21 layers change from v21.b1 to v21.b2, so every career.v21 setup hash changes (the fixture is already red on setupHash, not re-recorded). Live 2x2 matrix, master switch, rollback and save behaviour unchanged",
-    "golden": "not re-recorded. v20 golden 153/153 must stay green. Challenge golden unchanged in match results"
+    "golden": "not re-recorded. v20 golden 153/153 must stay green. Challenge golden unchanged in match results",
+    "evidenceGoals": "every template in the table is unscored after the match: classic.m6, v2.hard_engage_stack, v2.three_lane_pressure now get evidenceGoals \"unscored\" and tacticIntent false (mobaProgressAdapter.js), as m3, m7, m8. defensive_hold is copy only, so its scoring is unchanged. Not named when this was registered; found by the independent review"
   },
   "predictions": {
     "registeredBeforeRunning": true,
@@ -256,7 +257,29 @@
         "what": "exclusion plan: m6 teamfight.posture",
         "why": "the registration said offered lists can change without naming this. The knob delta moves, own stays null, no registered claim, so the same rule as m3 withdraws the three options under v21.b2",
         "handling": "not a gate problem; a visible player difference, reported to the Owner"
+      },
+      {
+        "what": "tools/measure_ga8_3aB.mjs --reg=<r2> --selftest failed S2",
+        "why": "the selftest hard-coded 43001-43400 and no gate ran it with --reg. Found by the independent review, not by me",
+        "handling": "compared with the G-A8 confirm blocks of the seed plan; check_formal_acceptance X1c now runs it"
+      },
+      {
+        "what": "tools/lib/p6Contradiction.mjs read only the v21.b1 results",
+        "why": "T14 and the truth preview would have skipped study offers, and classic.m6 jungle.focus=invade has a truth row. Found by the independent review",
+        "handling": "union with exclusion_v21b2_* when present"
+      },
+      {
+        "what": "tools/measure_exclusion_v21b2_3aB.mjs selftest S6 was vacuous and 200 of 400 stage-1 matches bought nothing",
+        "why": "my copy of the old tool. Found by the independent review",
+        "handling": "S6 pins the plan; controls only for templates with a measured row"
       }
     ]
-  }
+  },
+  "ownerList": [
+    "classic.m6 loses the team-fight posture dimension under v21.b2 (same rule as classic.m3)",
+    "v2.three_lane_pressure keeps the risk label 高 while v2.hard_engage_stack with the identical 0.7/0.5 is 中, and the m6 / hard_engage rationale would give 中: Owner to decide",
+    "M6_B tempo is unverified; whether hard_engage still reads as a hard engage after losing 撤退晚 and 投入門檻低",
+    "the 適合… sentences on hard_engage and three_lane are the same unverified class as the one removed from defensive_hold: listed, not edited (Owner item 5 names defensive_hold only)",
+    "hard_engage and three_lane join the unscored post-match panel"
+  ]
 }
