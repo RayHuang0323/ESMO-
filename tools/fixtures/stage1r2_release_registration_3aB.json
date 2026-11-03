@@ -217,7 +217,47 @@
       "layout": "4601-5000 has STANDARD 213 and SWAPPED 187 (43001-43400 was 199/201); sides are 200/200",
       "69801-70300": "no measurement jsonl. Three literals in the same H.2 baselines, the same scattered sample"
     },
-    "untouched": "51001-55999, 66001-67200, 67501-68299, 65101-65500, 45001-49999, 59801-60599, 61001-61799, 6001-9000 subranges: no use this round"
+    "untouched": "51001-55999, 66001-67200, 67501-68299, 65101-65500, 45001-49999, 59801-60599, 61001-61799, 6001-9000 subranges: no use this round",
+    "historicalSampleInFormalBlocks": {
+      "disclosedAt": "2026-11-03, before the r2 freeze, after the independent review found more than the one seed first disclosed",
+      "source": "review/moba-runtime/h2/baseline_after.json: 232 distinct seeds scattered across 0-99968, generated 2026-07-28 by tools/bench_moba_baseline.mjs on a bare LogicEngine before v18",
+      "inTheBlocks": {
+        "4601-5000": [
+          4640
+        ],
+        "51001-55999": [
+          52832,
+          53120,
+          54592,
+          55000
+        ],
+        "66001-67200": [
+          66400,
+          66944,
+          67168
+        ],
+        "67501-68299": [
+          67520,
+          67616
+        ],
+        "65101-65500": []
+      },
+      "seedsAFormalStudyWouldPlay": {
+        "G-A8 4601-5000": [
+          4640
+        ],
+        "E1 66001-67200": [
+          66400,
+          66944,
+          67168
+        ],
+        "career 51001-55999 (odd only)": [],
+        "E2 67501-68299 (odd only)": [],
+        "4b 65101-65500": []
+      },
+      "judgement": "not a pollution doubt under Owner r3 item E. No tactic, template arm or hypothesis; an engine several versions older; the output never entered any template, threshold or candidate decision, so nothing observed there can inform these formal runs. Seeds stay in, n stays as registered. Stated to the Owner, who may read item E more strictly",
+      "everyOtherJson": "no other json under review or tools/fixtures has a seed in these blocks; measurement folders: none"
+    }
   },
   "stopRules": {
     "ownerClose": "if a candidate cannot keep its play identity, or more balance study would be needed: stop and report. No next round",

@@ -77,7 +77,9 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
 
 {
   const rp = P7.runnablePreconditions ?? [];
-  ck("O6 這份登記沒有任何授權開跑的說法：r2 沒有 Owner 核准凍結；上一輪的核准標明只適用 7a6e9736；前置項沒有宣稱指紋已填；舊審查輪次移到 previousRound", /not authorised/.test(P7.review?.verdict ?? "") && !/authorised by ownerApproval/.test(P7.review?.verdict ?? "") && /7a6e9736 only/.test(P7.ownerApproval20261102?.appliesTo ?? "") && /7a6e9736 only/.test(P7.formalRunPolicy?.appliesTo ?? "") && !rp.some((x) => /fingerprint filled|at 7a6e9736/.test(x.status)) && (P7.previousRound?.reviewRounds ?? []).length >= 3);
+  const oldOnly = /7a6e9736 only/.test(P7.ownerApproval20261102?.appliesTo ?? "") && !/authorised by ownerApproval/.test(P7.review?.verdict ?? "") && !rp.some((x) => /at 7a6e9736/.test(x.status)) && (P7.previousRound?.reviewRounds ?? []).length >= 3;
+  if (POST_FREEZE) ck("O6 凍結後：授權來自 Owner r3（E、F、G），記在 freeze；指紋＝目前登記的；上一輪的核准仍只適用 7a6e9736；G-A8 要 F 的獨立 Reviewer 複核才開跑；不授權 Golden、Push、Deploy、main、旗標", oldOnly && P7.freeze?.fingerprint === FP_NOW && /ownerReviewR3/.test(P7.freeze?.authority ?? "") && /independent Reviewer/.test(P7.status) && /does not authorise push, deploy or main/.test(P7.status) && /never enables a release flag/.test(P7.status) && /golden/i.test(P7.freeze?.notAuthorised ?? ""));
+  else ck("O6 凍結前：這份登記沒有任何授權開跑的說法；上一輪的核准標明只適用 7a6e9736；前置項沒有宣稱指紋已填；舊審查輪次移到 previousRound", oldOnly && /not authorised/.test(P7.review?.verdict ?? "") && /7a6e9736 only/.test(P7.formalRunPolicy?.appliesTo ?? "") && !rp.some((x) => /fingerprint filled/.test(x.status)));
 }
 
 // ── R 確認登記 ───────────────────────────────────────────────────────────────

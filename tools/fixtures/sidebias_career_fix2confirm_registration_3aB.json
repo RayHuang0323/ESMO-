@@ -38,7 +38,7 @@
     "career.v20",
     "career.v21"
    ],
-   "entry": "prepareLiveMatch (formal live entry) via tools/lib/careerLiveInputs.mjs: golden live inputs, mirroredRoster(seed), blue = std tactic-book binding with no choices, opponent AI_TEAMS[seed % 7]; career.v21 red = AI coach v1 (the ruleset carries TEMPLATE_BALANCE v21.b1), career.v20 red = style template",
+   "entry": "prepareLiveMatch (formal live entry) via tools/lib/careerLiveInputs.mjs: golden live inputs, mirroredRoster(seed), blue = std tactic-book binding with no choices, opponent AI_TEAMS[seed % 7]; career.v21 red = AI coach v1 (the ruleset carries TEMPLATE_BALANCE v21.b2), career.v20 red = style template",
    "seeds": {
     "block": "sideBias.career.fixConfirm of tools/fixtures/study_seed_plan_3aB.json",
     "range": "51001-55999",

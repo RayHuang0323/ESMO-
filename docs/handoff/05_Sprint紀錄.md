@@ -25229,3 +25229,11 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **風險**：依 Owner 裁定的組合，估計新 G-A8 全部不判 STOP 約 25–37%（m5 36%、m1 22% 最大）；再次 STOP 會白費凍結前工作並用掉 4601–5000。Challenge v21 STOP 保留，只擋第二階段。
 
 **補記（同一輪，第二次審查後）**：Gate 46 支第一次是 38 綠 8 紅，LaneFrame、Skeleton 只差固定數字，更新後 40 綠 6 紅（log `esmo-measure/logs-stage1/r2.gates.rerun.log`、`r2.gates.rerun2.log`）。4b 是 14 個選項＋4 組對照、14,400 場，約 5.1 小時。瀏覽器流程 Gate 的斷言再次修改，仍沒有完整結果。
+
+## 2026-11-03 Phase 3a-B r2 Owner r3：文案定稿與凍結前核對（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_第一階段r2_凍結準備.md` §13。**完成**：hard_engage 缺點改成「隊員更常加入團戰，留在各路的人手就比較少。」（Owner 第 4 點；規則的唯一例外，逐字釘住）；hard_engage、three_lane 的「適合…」句刪除（第 5 點）；three_lane 風險維持高（第 2 點）；m6 舊存檔安全解析（第 1 點）。
+
+**驗證**：瀏覽器 stage1_flows 單獨跑 47/47；Build ✓；Gate 46 支 40 綠 6 紅（都是登記的 6 支）；v20 黃金 153/153；分流 75/75；career 黃金 24 案全部只差 setupHash。凍結前獨立審查 0 Blocker，「可以凍結」。
+
+**風險**：Golden 沒有打 skirmish 隊伍的案例（Seed %7＝5），差異是 0 不代表沒影響。舊 H.2 樣本有 10 個 Seed 在保留區段（4 個會實際打到：4640、66400、66944、67168），判定不是污染，已揭露。Seed 計畫與 SDD 帳：SDD 被 git 忽略，不在 commit 裡。
