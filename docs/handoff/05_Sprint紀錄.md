@@ -25197,3 +25197,17 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **待 Owner**：下一步裁定與 Seeds 政策。43001–43400 已觀察，不得再當確認用；另外四個保留區段未觀察。
 
 **風險**：`m5`、`m3`、`m1` 也在門檻下方不遠，只修這三個，下一次確認仍可能出現別的 STOP。
+
+## 2026-11-03 Phase 3a-B 平衡修正研究：一輪有界篩選，判定 PRODUCT_DECISION_NEEDED（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_平衡修正研究.md`；整合前檢查：`review/tactic-book-3a/3a-B_整合前檢查.md`。
+
+**完成**：診斷（只用既有資料與引擎程式）；事前登記與獨立審查（0 Blocker，7 Major 全部在跑比賽前改完）；篩選 Seeds 69001–69800，18 臂 14,400 場，錯誤 0，對照 48.3%，結果檔 `tools/fixtures/ga8_fix_screen6_result_3aB.json`（commit `aaa5954b`）；判讀的獨立審查（0 Blocker，9 Major，已改入文件，沒有再審第三次）；唯讀整合前檢查。
+
+**結果**：`hard_engage_stack` 有候選 HE_R 54.9%（對 BASE −6.0）；`classic.m6` 有候選 M6_B 50.2%（−8.5）；`three_lane_pressure` **沒有合理候選**（TLP_R 57.1%，差 2 場進帶內，不改判；TLP_E 60.1、TLP_F 62.4）；m5、m1 在帶內但與 BASE 分不開（M5_A 56.6 邊界、M1_B 54.6）；m3 修正表 55.5 未重現。**沒有證據支持單一共同根因。**
+
+**未做**：沒有改模板、門檻、旗標；沒有凍結、P2、Golden；沒有動用保留 Seeds；沒有加開第七輪。正式 G-A8 維持 STOP，凍結版本 `7a6e9736` 與證據未動，Challenge v21 STOP 保留。
+
+**待 Owner**：`three_lane` 怎麼處理（採 TLP_R／下架／重新設計／修改發布條件）、m5 m1 要不要一起修、`defensive_hold` 的處理、新 G-A8 確認區段（尚未指派）。
+
+**風險**：建議的組合一次過 G-A8 的估計只有約 32–67%（加事前登記的下架退路約 50–76%）；排除列工作量未知；`hard_engage` 修正會改變 career.v21 的 AI 對手；模板可能變得太像；選出的讀數有贏家詛咒；模板搭配玩家選項仍 NOT TESTED；篩選只對 std，沒有量相剋。
