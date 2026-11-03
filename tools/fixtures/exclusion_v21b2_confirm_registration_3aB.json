@@ -143,7 +143,10 @@
  "noRetries": "no re-run, no seed swap, no metric swap, no seed dropped by hand",
  "notClaimed": "behaviour only. No win-rate claim for a table template combined with a choice: that is a known verification gap and not a pass (stage1r2_formal_acceptance_registration_3aB.json knownVerificationGaps)",
  "fingerprint": "620196ccea5a8249",
- "review": null,
+ "review": {
+  "reviewedAt": "2026-11-03",
+  "verdict": "APPROVE (independent post-freeze review at 859a0241 of the frozen fingerprint, seeds, tools and criteria: 0 Blockers, 0 Majors). Scope: registration, seeds, instrument preflight; the 4b decision logic was covered by its gate checks and selftest only, not re-derived"
+ },
  "requiresResult": {
   "file": "tools/fixtures/ga8_fix2_confirm_result_3aB.json",
   "verdict": "PASS",

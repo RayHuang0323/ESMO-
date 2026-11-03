@@ -212,6 +212,12 @@
    "at": "2026-11-03",
    "scope": "final copy, old saves, skirmish golden, registrations, seeds, freeze readiness at cc4bdc32",
    "verdict": "APPROVE WITH CHANGES: 0 Blockers, 1 Major (old sample disclosure), 3 Minors, applied; Freeze may proceed: yes"
+  },
+  {
+   "round": 4,
+   "at": "2026-11-03",
+   "scope": "post-freeze review at 859a0241 (Owner r3 item F)",
+   "verdict": "APPROVE: 0 Blockers, 0 Majors; G-A8 may start"
   }
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
@@ -594,7 +600,7 @@
    "career side bias": "continue on PASS only. WARN or INCONCLUSIVE or STOP: stop and report. The registration says PASS is no STOP and no WARN, and reserved blocks can not be un-spent, so a WARN waits for the Owner",
    "E1": "continue on PASS. WARN lines are listed. STOP or INCONCLUSIVE: stop and report",
    "E2": "continue on PASS. STOP or INCONCLUSIVE: stop and report (step 3: an E2 INCONCLUSIVE goes to the Owner)",
-   "truth 4a": "run with --out outside the repo. Quick mode T-gates, then tools/check_truth_preview_3aB.mjs --formal --baseline=<freeze commit>. Any T-gate red, a refusal of that tool, or CONTRADICTION or INCONSISTENT: stop and report",
+   "truth 4a": "run with --dir outside the repo (order step 4; the measure mode has no --out). Quick mode T-gates, then tools/check_truth_preview_3aB.mjs --formal --baseline=<freeze commit>. Any T-gate red, a refusal of that tool, or CONTRADICTION or INCONSISTENT: stop and report",
    "evidence replay": "--run, and --report only when all are identical; the report rewrites the committed fixture at the frozen fingerprint. Any difference: stop and report",
    "step 4b": "PASS to continue. FAILED, INCONCLUSIVE or STOP: stop and report"
   },
@@ -619,7 +625,7 @@
    "check_club_mastery_v1 (known debt)"
   ],
   "consequence": "steps 5, 6 and 7 list these gates. With no golden re-recording authorised, the goldens and P2 stay red at the end of this run, so steps 5, 6 and 7 can not be complete here, and step 10 is not authorised either. The acceptance report lists exactly those reds and leaves them to the Owner Release Review; they are not called a pass",
-  "outcome": "matched at the frozen state (78ccc817): 46 gates, 41 green; red exactly check_challenge_golden_v21 5/6 (P2 only), check_career_golden_v21 3/5 (P2 and setupHash; 24 of 24 cases differ only in setupHash), check_tactic_truth_3a 36/37 (T2), check_match_golden_v21a 97/137 (the same 40), check_club_mastery_v1 264/265. The three long groups overlapped for part of the run instead of a strict single line; none of these gates reads time",
+  "outcome": "matched at the frozen state (78ccc817): 46 gates, 41 green (45 at 78ccc817, check_formal_acceptance_3aB at 859a0241 after the fill); red exactly check_challenge_golden_v21 5/6 (P2 only), check_career_golden_v21 3/5 (P2 and setupHash; 24 of 24 cases differ only in setupHash), check_tactic_truth_3a 36/37 (T2), check_match_golden_v21a 97/137 (the same 40), check_club_mastery_v1 264/265. The three long groups overlapped for part of the run instead of a strict single line; none of these gates reads time",
   "previousOutcome": "matched at the frozen state (596113c1): 46 gates, 41 green; red exactly check_challenge_golden_v21 5/6 (P2 only; 12 cases byte-identical), check_career_golden_v21 3/5, check_tactic_truth_3a 36/37 (T2), check_match_golden_v21a 97/137 (the same 40), check_club_mastery_v1 264/265"
  },
  "ownerReviewR2": {
