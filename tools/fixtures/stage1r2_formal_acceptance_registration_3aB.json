@@ -2,7 +2,7 @@
  "schema": "Stage1FormalAcceptanceRegistration.v2",
  "studyId": "stage1.r2.formalAcceptance",
  "registeredAt": "2026-11-03",
- "status": "READY_FOR_FREEZE: prepared, not frozen. The formal runs need a new Owner approval of a new freeze, then an independent Reviewer confirming the frozen fingerprint, seeds, tools and criteria. It never enables a release flag and it does not authorise push, deploy or main. independent Reviewer rule of ownerInstruction20261102 stays",
+ "status": "FROZEN at 78ccc817 with fingerprint 620196ccea5a8249, authorised by Owner review r3 item E. The formal runs start only after the independent Reviewer confirms the frozen fingerprint, seeds, tools and criteria (item F). G-A8 continues only on PASS (item G). It never enables a release flag and it does not authorise push, deploy or main",
  "authority": "Owner review of the balance study (ownerReviewR2 below); the rules of the frozen round carry over unchanged",
  "scope": "stage 1 only: Live tactics v21 (career.v21 with template table v21.b2), Challenge stays on v20. Flags under test: mobaTacticalDirectorV21 on, heroSkillsV1 as the career.v21 requirements say, mobaChallengeV21 OFF",
  "stopRules": {
@@ -91,15 +91,15 @@
  "runnablePreconditions": [
   {
    "item": "ga8_fix2_confirm_registration_3aB.json final text, measure_ga8_3aB.mjs --reg",
-   "status": "tool done; registration READY_FOR_FREEZE, fingerprint TBD_AT_FREEZE"
+   "status": "done; fingerprint 620196ccea5a8249 filled"
   },
   {
    "item": "sidebias_career_fix2confirm_registration_3aB.json final text, measure_side_bias_3aB.mjs --reg",
-   "status": "tool done; registration READY_FOR_FREEZE, fingerprint TBD_AT_FREEZE"
+   "status": "done; fingerprint 620196ccea5a8249 filled"
   },
   {
    "item": "measure_e1_3aB.mjs and measure_e2_3aB.mjs --reg, fix-confirm registrations on the reserved blocks",
-   "status": "tool done; registration READY_FOR_FREEZE, fingerprint TBD_AT_FREEZE"
+   "status": "done; fingerprint 620196ccea5a8249 filled"
   },
   {
    "item": "tools/lib/tacticTruthPlan.mjs computes own, delta and claim with the table of the row's ruleset",
@@ -123,7 +123,7 @@
   },
   {
    "item": "moba-sim v21 candidate fingerprint re-registered",
-   "status": "pending: only at a new freeze the Owner approves. The value of the previous round is in previousRound.freeze"
+   "status": "done: 620196ccea5a8249 at 78ccc817"
   },
   {
    "item": "development exclusion study of v21.b2 and its rows",
@@ -134,7 +134,7 @@
  "neverClaimed": "passing stage 1 is not a pass of the original P2 acceptance, of G-A8 by exclusion, or of the Challenge side bias",
  "effort": "about 15-18 hours single line (workers <= 3), by earlier measurements of these studies; not measured for this freeze",
  "review": {
-  "verdict": "r2 spec review: see reviewRounds. Formal runs are not authorised: they need a new Owner approval of a new freeze"
+  "verdict": "r2 spec reviews: see reviewRounds. Formal runs are authorised by ownerReviewR3 only after the post-freeze independent Reviewer confirms"
  },
  "gateList": [
   "check_simulation_version_gate",
@@ -200,6 +200,18 @@
    "at": "2026-11-03",
    "scope": "table v21.b2, seeds, development study, these registrations, gate edits, at 805257b2",
    "verdict": "APPROVE WITH CHANGES: 1 Blocker for a freeze request, 3 Major, minors; applied in the commit after 805257b2. Not an Owner approval"
+  },
+  {
+   "round": 2,
+   "at": "2026-11-03",
+   "scope": "record and gates at e2811904",
+   "verdict": "APPROVE WITH CHANGES: 0 Blockers, 1 Major, 6 Minors, applied"
+  },
+  {
+   "round": 3,
+   "at": "2026-11-03",
+   "scope": "final copy, old saves, skirmish golden, registrations, seeds, freeze readiness at cc4bdc32",
+   "verdict": "APPROVE WITH CHANGES: 0 Blockers, 1 Major (old sample disclosure), 3 Minors, applied; Freeze may proceed: yes"
   }
  ],
  "verifyBaseline": "verify.mjs has many long-standing segment failures, far more than knownDebts (the last local state shows 67 of 118, mostly CS and milestone; it is a git-ignored file and not evidence). So the baseline is produced mechanically, not written by hand: a full verify run on origin/main at the commit stage 1 branches from, in a separate worktree, BEFORE step 1, stored as tools/fixtures/stage1_verify_baseline_3aB.json with each failing segment name and failure text. It is never edited afterwards",
@@ -575,7 +587,7 @@
  },
  "formalRunPolicy": {
   "registeredAt": "2026-11-02, before the freeze commit",
-  "authority": "Owner approval 2026-11-02, items 4 and 5",
+  "authority": "Owner approval 2026-11-02 items 4 and 5 for the rules, ownerReviewR3 for r2",
   "mode": "one study at a time on one line, workers 3, a new folder outside the repo per study, full logs kept. Interrupted studies resume in the same folder with no commit in between",
   "afterEachStudy": {
    "G-A8": "continue only on verdict PASS. WARN rows are listed and are not a STOP (original registration). STOP or INCONCLUSIVE: stop and report; no new seeds, no threshold change",
@@ -589,7 +601,7 @@
   "notInThisAuthorisation": "golden re-recording (step 5), push, deploy, main integration (step 10), enabling a release flag, changing CS. Challenge v21 STOP stays; stage 1 stays on Challenge v20",
   "environment": "the launching shell has no ESMO_* variable set, and node -v is written into each log. Logs are kept outside the repo in C:/Users/ifikn/esmo-measure/logs-stage1. No commit on this branch while a study is running; a result commit only between studies",
   "proceduralOnly": "stopping after side bias, E1 and E2 is by this policy, not by the tools: only G-A8 is enforced by tool",
-  "appliesTo": "the rules carry over; the authorisation of Owner approval 2026-11-02 applied to 7a6e9736 only. r2 runs need a new Owner approval"
+  "appliesTo": "the rules carry over; the authorisation of Owner approval 2026-11-02 applied to 7a6e9736 only. The r2 runs are authorised by ownerReviewR3 items F and G"
  },
  "freezePrediction": {
   "registeredAt": "2026-11-03, before a new freeze; a new outcome is written only after one",
@@ -607,7 +619,7 @@
    "check_club_mastery_v1 (known debt)"
   ],
   "consequence": "steps 5, 6 and 7 list these gates. With no golden re-recording authorised, the goldens and P2 stay red at the end of this run, so steps 5, 6 and 7 can not be complete here, and step 10 is not authorised either. The acceptance report lists exactly those reds and leaves them to the Owner Release Review; they are not called a pass",
-  "outcome": null,
+  "outcome": "matched at the frozen state (78ccc817): 46 gates, 41 green; red exactly check_challenge_golden_v21 5/6 (P2 only), check_career_golden_v21 3/5 (P2 and setupHash; 24 of 24 cases differ only in setupHash), check_tactic_truth_3a 36/37 (T2), check_match_golden_v21a 97/137 (the same 40), check_club_mastery_v1 264/265. The three long groups overlapped for part of the run instead of a strict single line; none of these gates reads time",
   "previousOutcome": "matched at the frozen state (596113c1): 46 gates, 41 green; red exactly check_challenge_golden_v21 5/6 (P2 only; 12 cases byte-identical), check_career_golden_v21 3/5, check_tactic_truth_3a 36/37 (T2), check_match_golden_v21a 97/137 (the same 40), check_club_mastery_v1 264/265"
  },
  "ownerReviewR2": {
@@ -760,5 +772,19 @@
   "m6-posture": "accepted (item 1); saves must resolve safely, v20 unchanged",
   "three-lane-risk-label": "高 stays (item 2)",
   "preview-before-freeze": "not run (item 6): the 4a truth preview and the evidence replay do not run before this freeze; the formal run follows the registration"
- }
+ },
+ "freeze": {
+  "authority": "ownerReviewR3 items E, F, G",
+  "conditions": {
+   "A browser flows": "47/47 alone (logs-stage1/r3.browser.flows.log)",
+   "C review": "independent review before the freeze: 0 Blockers, \"Freeze may proceed: yes\"",
+   "D main": "origin/main b4f8e0c3 by ls-remote; watched files touched by main: 0 of 84",
+   "E seeds": "effectiveSeed gate 45/45; 3,470 measurement jsonl with no seed in the five blocks; the old H.2 sample is disclosed in stage1r2_release_registration_3aB.json seedsPlanned.historicalSampleInFormalBlocks"
+  },
+  "commit": "78ccc81745446b7bab076e435c71be7b36930b25",
+  "fingerprint": "620196ccea5a8249",
+  "previous": "0cc52b48cfb9348a (unreleased; freeze 7a6e9736 and its result kept)",
+  "notAuthorised": "golden re-recording (Owner must approve separately), threshold change, a smaller G-A8 scope, a drop state, new seeds after a STOP, an added study round, push, deploy, main, flags, CS"
+ },
+ "freezeProcedureR3": "ownerReviewR3 replaces the first step of freezeProcedure: no pre-freeze diagnostics (item 6), and the Owner approval is conditional and already given (item E). The other steps hold"
 }

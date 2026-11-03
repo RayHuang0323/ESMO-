@@ -28,7 +28,7 @@
  "owner": {
   "confirmedAt": null
  },
- "status": "READY_FOR_FREEZE (prepared 2026-11-03 under the Owner review of the balance study; not registered: no new freeze is approved, so the tool refuses to run). Nothing here may change after the first match",
+ "status": "registered (Owner review r3 item E, 2026-11-03; frozen fingerprint 620196ccea5a8249 at freeze commit 78ccc817). Nothing here may change after the first match",
  "result": "tools/fixtures/sidebias_career_fix2confirm_result_3aB.json",
  "circuitBreaker": "more than 2% invalid seeds after >= 100 walked => STOP(CIRCUIT_BREAKER), Owner decides",
  "halt": "a HALT file in the data folder blocks --run and --report until the Owner decides",
@@ -51,7 +51,7 @@
    "valid": "both arms produced a record; ruleset = the arm; engine seed = effectiveSeed; career.v21 has Director core.v1 and laneFrame teamRelative"
   }
  },
- "fingerprint": "TBD_AT_FREEZE",
+ "fingerprint": "620196ccea5a8249",
  "copiedFrom": {
   "file": "tools/fixtures/side_bias_registration_3aB.json",
   "unchangedFields": [

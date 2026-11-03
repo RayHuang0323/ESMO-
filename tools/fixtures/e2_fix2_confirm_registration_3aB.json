@@ -3,7 +3,7 @@
  "studyId": "e2-career-v21-behaviour-fix2-confirm-3aB",
  "stage": "Phase 3a-B stage 1 r2 formal acceptance step 3: E2 on the same reserved block, never run at the previous fingerprint",
  "registeredAt": "2026-11-03",
- "status": "READY_FOR_FREEZE (prepared 2026-11-03 under the Owner review of the balance study; not registered: no new freeze is approved, so the tool refuses to run). Nothing here may change after the first match",
+ "status": "registered (Owner review r3 item E, 2026-11-03; frozen fingerprint 620196ccea5a8249 at freeze commit 78ccc817). Nothing here may change after the first match",
  "authority": "3a-B kickoff checklist §5 (structure ✅ / behaviour ❌ / outcome ❌) and Owner 2026-10-25 P2 authorisation: the n=400 evidence was measured on balanceTool.v21 (red std, no player stats); career.v21 differs (red = AI coach, blue player stats, items/talents per flags), so the effect must be checked through the formal entry. Re-run: stage1r2_formal_acceptance_registration_3aB.json step 3; the original block 23001-23799 was observed at the old fingerprint",
  "question": "Do the live v21 choices, entered through the formal career path (prepareLiveMatch with career.v21), still move the registered behaviour in the registered direction on the player's side?",
  "tool": "node tools/measure_e2_3aB.mjs --reg=tools/fixtures/e2_fix2_confirm_registration_3aB.json (--plan / --run / --report); instrument and inputs as in the original registration",
@@ -93,7 +93,7 @@
  "errors": "errored matches are never retried or replaced and are listed by seed; any errored match => at most INCONCLUSIVE; more than 1% of the planned matches errored => STOP(INSTRUMENT)",
  "instrumentCheck": "every record (live and again at report time): career.v21, Director core.v1, laneFrame teamRelative, engine seed = seed, red = AI coach binding, phaseStudySim.v3, empty selfCheck, and no blue choice dropped (droppedChoices empty); any failure => HALT / STOP(INSTRUMENT)",
  "result": "tools/fixtures/e2_fix2_confirm_result_3aB.json",
- "fingerprint": "TBD_AT_FREEZE",
+ "fingerprint": "620196ccea5a8249",
  "copiedFrom": {
   "file": "tools/fixtures/e2_registration_3aB.json",
   "unchangedFields": [

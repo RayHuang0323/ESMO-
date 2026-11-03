@@ -2,7 +2,7 @@
   "schema": "Stage1R2ReleaseRegistration.v1",
   "studyId": "stage1.r2.release",
   "registeredAt": "2026-11-03, before any src change of this round",
-  "status": "REGISTERED 7a999b9c before any src change; implemented after it. Preparation only: no freeze, no formal G-A8, no golden re-recording",
+  "status": "FROZEN at 78ccc817, fingerprint 620196ccea5a8249. Formal runs follow stage1r2_formal_acceptance_registration_3aB.json",
   "authority": "Owner Review after the bounded balance study (below, verbatim)",
   "ownerReview": {
     "verbatim": [

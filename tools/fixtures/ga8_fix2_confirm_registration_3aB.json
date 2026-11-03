@@ -3,7 +3,7 @@
  "studyId": "ga8-fix2-confirm-3aB",
  "stage": "Phase 3a-B stage 1 r2 formal acceptance step 1: confirmatory G-A8 after table v21.b2",
  "registeredAt": "2026-11-03",
- "status": "READY_FOR_FREEZE (prepared 2026-11-03 under the Owner review of the balance study; not registered: no new freeze is approved, so the tool refuses to run). Nothing here may change after the first match",
+ "status": "registered (Owner review r3 item E, 2026-11-03; frozen fingerprint 620196ccea5a8249 at freeze commit 78ccc817). Nothing here may change after the first match",
  "authority": "Owner review of the balance study (stage1r2_release_registration_3aB.json): item 3, all 21 templates under the original rule, STOP stops, no conditional drop; item 6, seeds 4601-5000 after de-duplication, valid effective seeds and an independent Reviewer. Thresholds unchanged. Earlier: Owner 2026-10-28 items 1 and 4, Owner 2026-10-30 third ruling item 6",
  "tool": "node tools/measure_ga8_3aB.mjs --reg=tools/fixtures/ga8_fix2_confirm_registration_3aB.json (--plan / --run / --report)",
  "ruleset": "balanceTool.v21 (tool path: Director core.v1, laneFrame teamRelative, skills on, talents off, items standard, no player stats) — the plans themselves are compared, not the AI coach or player stats",
@@ -37,7 +37,7 @@
  "result": "tools/fixtures/ga8_fix2_confirm_result_3aB.json",
  "templateBalance": "v21.b2",
  "scope": "all 21 templates, not only the changed ones: every template is re-checked and a new STOP elsewhere cannot hide. No template is dropped after the fact",
- "fingerprint": "TBD_AT_FREEZE",
+ "fingerprint": "620196ccea5a8249",
  "copiedFrom": {
   "file": "tools/fixtures/ga8_registration_3aB.json",
   "unchangedFields": [

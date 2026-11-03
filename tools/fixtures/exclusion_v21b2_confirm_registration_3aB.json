@@ -3,7 +3,7 @@
  "studyId": "exclusion-v21b2-confirm-3aB",
  "stage": "Phase 3a-B stage 1 r2 formal acceptance step 4b",
  "registeredAt": "2026-11-03",
- "status": "READY_FOR_FREEZE (prepared 2026-11-03 under the Owner review of the balance study; not registered: no new freeze is approved, so the tool refuses to run). Nothing here may change after the first match",
+ "status": "registered (Owner review r3 item E, 2026-11-03; frozen fingerprint 620196ccea5a8249 at freeze commit 78ccc817). Nothing here may change after the first match",
  "authority": "Owner 2026-10-13 (marginal and new evidence re-verified on fresh seeds, blue and red), Owner 2026-11-01 item 5, stage1r2_formal_acceptance_registration_3aB.json step 4",
  "tool": "node tools/measure_exclusion_v21b2_3aB.mjs --confirm-plan | --confirm-run --dir=<new folder outside the repo> --workers=3 | --confirm-report --dir=<same>",
  "result": "tools/fixtures/exclusion_v21b2_confirm_result_3aB.json",
@@ -142,7 +142,7 @@
  },
  "noRetries": "no re-run, no seed swap, no metric swap, no seed dropped by hand",
  "notClaimed": "behaviour only. No win-rate claim for a table template combined with a choice: that is a known verification gap and not a pass (stage1r2_formal_acceptance_registration_3aB.json knownVerificationGaps)",
- "fingerprint": "TBD_AT_FREEZE",
+ "fingerprint": "620196ccea5a8249",
  "review": null,
  "requiresResult": {
   "file": "tools/fixtures/ga8_fix2_confirm_result_3aB.json",
