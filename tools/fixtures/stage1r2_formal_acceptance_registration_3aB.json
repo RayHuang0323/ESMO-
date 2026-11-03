@@ -123,7 +123,7 @@
   },
   {
    "item": "moba-sim v21 candidate fingerprint re-registered",
-   "status": "pending: only at a new freeze the Owner approves. The previous value 0cc52b48cfb9348a was registered at 7a6e9736"
+   "status": "pending: only at a new freeze the Owner approves. The value of the previous round is in previousRound.freeze"
   },
   {
    "item": "development exclusion study of v21.b2 and its rows",
