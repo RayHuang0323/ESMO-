@@ -1,0 +1,246 @@
+{
+ "schema": "esmo.challenge-order-registration.v1",
+ "studyId": "phase3a-B.challenge.order.d5",
+ "stage": "Phase 3a-B fix planning round 3: Challenge settlement-order diagnosis (Owner 2026-10-30 approved D5)",
+ "registeredAt": "2026-10-30",
+ "status": "registered; diagnosis only; runnable after the independent review (review.reviewedAt + an APPROVE verdict) and a passing --validate; never changes the challenge side-bias STOP, never a release PASS, never an engine, flag, fixture or hero change",
+ "authority": "Owner 2026-10-30: approve D5 - run the Challenge settlement-order diagnosis by swapping the players array order in the measurement tool only, comparing the L1 / L3a mirror results on the same seeds, lineups and conditions, to establish whether the skill side effect is related to the settlement order; the official engine is not modified. Owner item 5 of 2026-10-29 (no settlement-order flag, no shared-engine change) stays in force",
+ "tool": "tools/measure_challenge_order_3aB.mjs (--plan / --selftest / --validate / --run / --report); result tools/fixtures/challenge_order_result_3aB.json",
+ "resultFile": "tools/fixtures/challenge_order_result_3aB.json",
+ "semantics": "src/ is not modified, no flag is added and the fingerprint does not change. Every match is the C2 mirror match (buildChallengeMatchSetup -> the ladder ladderSetup -> mirrorSetup -> assembleMatch -> the runChallenge tick loop; the functions are copied verbatim from measure_challenge_c2_3aB.mjs and V1 checks them record by record). The only intervention: after assembleMatch and before the first tick, the engine hero list e.players is reordered IN PLACE so the five red heroes come first (b-order within a side unchanged). The engine iterates this.players for every per-hero step (casting loop, passives, attacks, kill resolution); it keeps no cached sub-list of players and splits teams by p.side, not by index (code audit, round-2 doc section 2.1); spawn positions (rng) and the tie-break hash (construction index) are fixed in the constructor, before the reorder",
+ "background": "C2 (be02333f): in true mirrors (both sides the same team, heroes, mastery, stats and tactic; STANDARD layout) switching the skill layer on (L1 -> L3a, which also switches the live assembly order) moved the blue win rate by +6.9 pp pooled (2.9..10.8, z 3.40, SKILL_LAYER_SIDE_EFFECT), concentrated in topheavyDef (+16.0; mirror +3.8, rotation +0.8, balancedDef +6.8 NONE). The code audit found no side branch in the skill rules; candidate sources: (a) the hero processing order (blue first in this.players: same-tick mutual kills resolved blue first, kill XP lost by the second killer, passives, displacement), (b) the systems heroSkillsOn switches on (per-pit approach geometry), (c) the live assembly order. In the ladder (real, non-mirror pairings) the STANDARD skills step was +0.1 only, so the mirror effect is not a general challenge effect",
+ "questions": {
+  "Q1": "primary: does reversing the hero processing order reverse the skill-layer side effect? On the same fresh seeds, per seed: dB = W_B(L3a) - W_B(L1) (blue first), dR = W_R(L3a) - W_R(L1) (red first); order component O = (dB - dR)/2, position component P = (dB + dR)/2 (what stays with blue when the order is reversed); per lineup and pooled. Review D5 #1: blue-first is re-run on the fresh seeds, so O + P is not fixed in advance by the selected C2 value",
+  "Q2": "secondary (descriptive): the first-mover advantage per context A = (W_B - W_R)/2 at L1 (no skills: basic attacks, minion / tower fights) and at L3a",
+  "Q3": "secondary (descriptive): the live assembly order alone (L1 -> L1o, blue first) and the skills-only step (L1o -> L3a), per lineup and pooled",
+  "Q0": "replication (descriptive): the blue-first skill step dB on the fresh seeds next to the C2 value (+6.9 pooled, selected for significance)"
+ },
+ "seeds": {
+  "fresh": {
+   "range": "62001-64999",
+   "step": 2,
+   "perArm": 300,
+   "rule": "review D5 #1: a fresh diagnostic block challenge.order.d5 in tools/fixtures/study_seed_plan_3aB.json (odd seeds, as the challenge path; not the reserved confirmatory block 45001-49999). Each lineup uses the first 300 odd seeds of its pairing residue (seed % 5 = 0 for mirror / topheavyDef, 4 for rotation / balancedDef; the pairing FIXTURE_KEYS[seed % 5] > FIXTURE_KEYS[(seed + 2) % 5] as in C2). Blue-first and red-first run on the same seeds. Never used to confirm a fix"
+  },
+  "rebuildRerun": 20,
+  "rebuildRule": "V1 only: the rebuild arms run the first 20 seeds of each C2 mirror arm (the committed side-bias walk 33001.. odd; diagnostic reuse allowed by the seed plan) and must equal the committed C2 records; they are not used in the analysis",
+  "pairing": "paired per seed; reordering changes the order of random draws, so the red-first match on a seed is not the blue-first match with sides swapped: the pairing removes the seed-level lineup / pairing variance, the rest is noise that is symmetric in a mirror"
+ },
+ "contexts": {
+  "L1": "ladder L1_frame: v20 plus Director core.v1 / laneFrame teamRelative (no skills, no growth, STANDARD)",
+  "L1o": "L1 plus the live assembly order (no skills; new in this study)",
+  "L3a": "ladder L3a_skills: L1 plus the live assembly order and hero skills (no growth, STANDARD)"
+ },
+ "arms": {
+  "RB_mirror_L1": {
+   "source": "MIR_mirror_L1",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "V1 only: blue-first rebuild of the C2 arm on its first 20 C2 seeds, equal to the committed C2 records match by match (winner, duration, kills): the copied pipeline is the C2 pipeline. Not used in the analysis"
+  },
+  "RB_mirror_L3a": {
+   "source": "MIR_mirror_L3a",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "as above, L3a"
+  },
+  "BF_mirror_L1": {
+   "source": "MIR_mirror_L1",
+   "first": "blue",
+   "kind": "measure",
+   "why": "review D5 #1: blue-first on the fresh seeds (the C2 lineup and context; not the selected C2 records)"
+  },
+  "BF_mirror_L3a": {
+   "source": "MIR_mirror_L3a",
+   "first": "blue",
+   "kind": "measure",
+   "why": "blue-first on the fresh seeds, L3a"
+  },
+  "RF_mirror_L1": {
+   "source": "MIR_mirror_L1",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first on the same fresh seeds, lineup and context as BF; only the hero list order is reversed after assembly"
+  },
+  "RF_mirror_L3a": {
+   "source": "MIR_mirror_L3a",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first, L3a (skills on)"
+  },
+  "AO_mirror": {
+   "source": "MIR_mirror_L1",
+   "context": "L1o",
+   "first": "blue",
+   "kind": "measure",
+   "why": "secondary (descriptive): L1 plus the live assembly order, no skills; splits the C2 skill step (L1 -> L3a, which includes the assembly order) into assembly order (L1 -> L1o) and skills only (L1o -> L3a)"
+  },
+  "RB_topheavyDef_L1": {
+   "source": "MIR_topheavyDef_L1",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "V1 only: blue-first rebuild of the C2 arm on its first 20 C2 seeds, equal to the committed C2 records match by match (winner, duration, kills): the copied pipeline is the C2 pipeline. Not used in the analysis"
+  },
+  "RB_topheavyDef_L3a": {
+   "source": "MIR_topheavyDef_L3a",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "as above, L3a"
+  },
+  "BF_topheavyDef_L1": {
+   "source": "MIR_topheavyDef_L1",
+   "first": "blue",
+   "kind": "measure",
+   "why": "review D5 #1: blue-first on the fresh seeds (the C2 lineup and context; not the selected C2 records)"
+  },
+  "BF_topheavyDef_L3a": {
+   "source": "MIR_topheavyDef_L3a",
+   "first": "blue",
+   "kind": "measure",
+   "why": "blue-first on the fresh seeds, L3a"
+  },
+  "RF_topheavyDef_L1": {
+   "source": "MIR_topheavyDef_L1",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first on the same fresh seeds, lineup and context as BF; only the hero list order is reversed after assembly"
+  },
+  "RF_topheavyDef_L3a": {
+   "source": "MIR_topheavyDef_L3a",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first, L3a (skills on)"
+  },
+  "AO_topheavyDef": {
+   "source": "MIR_topheavyDef_L1",
+   "context": "L1o",
+   "first": "blue",
+   "kind": "measure",
+   "why": "secondary (descriptive): L1 plus the live assembly order, no skills; splits the C2 skill step (L1 -> L3a, which includes the assembly order) into assembly order (L1 -> L1o) and skills only (L1o -> L3a)"
+  },
+  "RB_rotation_L1": {
+   "source": "MIR_rotation_L1",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "V1 only: blue-first rebuild of the C2 arm on its first 20 C2 seeds, equal to the committed C2 records match by match (winner, duration, kills): the copied pipeline is the C2 pipeline. Not used in the analysis"
+  },
+  "RB_rotation_L3a": {
+   "source": "MIR_rotation_L3a",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "as above, L3a"
+  },
+  "BF_rotation_L1": {
+   "source": "MIR_rotation_L1",
+   "first": "blue",
+   "kind": "measure",
+   "why": "review D5 #1: blue-first on the fresh seeds (the C2 lineup and context; not the selected C2 records)"
+  },
+  "BF_rotation_L3a": {
+   "source": "MIR_rotation_L3a",
+   "first": "blue",
+   "kind": "measure",
+   "why": "blue-first on the fresh seeds, L3a"
+  },
+  "RF_rotation_L1": {
+   "source": "MIR_rotation_L1",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first on the same fresh seeds, lineup and context as BF; only the hero list order is reversed after assembly"
+  },
+  "RF_rotation_L3a": {
+   "source": "MIR_rotation_L3a",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first, L3a (skills on)"
+  },
+  "AO_rotation": {
+   "source": "MIR_rotation_L1",
+   "context": "L1o",
+   "first": "blue",
+   "kind": "measure",
+   "why": "secondary (descriptive): L1 plus the live assembly order, no skills; splits the C2 skill step (L1 -> L3a, which includes the assembly order) into assembly order (L1 -> L1o) and skills only (L1o -> L3a)"
+  },
+  "RB_balancedDef_L1": {
+   "source": "MIR_balancedDef_L1",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "V1 only: blue-first rebuild of the C2 arm on its first 20 C2 seeds, equal to the committed C2 records match by match (winner, duration, kills): the copied pipeline is the C2 pipeline. Not used in the analysis"
+  },
+  "RB_balancedDef_L3a": {
+   "source": "MIR_balancedDef_L3a",
+   "first": "blue",
+   "kind": "rebuild",
+   "why": "as above, L3a"
+  },
+  "BF_balancedDef_L1": {
+   "source": "MIR_balancedDef_L1",
+   "first": "blue",
+   "kind": "measure",
+   "why": "review D5 #1: blue-first on the fresh seeds (the C2 lineup and context; not the selected C2 records)"
+  },
+  "BF_balancedDef_L3a": {
+   "source": "MIR_balancedDef_L3a",
+   "first": "blue",
+   "kind": "measure",
+   "why": "blue-first on the fresh seeds, L3a"
+  },
+  "RF_balancedDef_L1": {
+   "source": "MIR_balancedDef_L1",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first on the same fresh seeds, lineup and context as BF; only the hero list order is reversed after assembly"
+  },
+  "RF_balancedDef_L3a": {
+   "source": "MIR_balancedDef_L3a",
+   "first": "red",
+   "kind": "measure",
+   "why": "red-first, L3a (skills on)"
+  },
+  "AO_balancedDef": {
+   "source": "MIR_balancedDef_L1",
+   "context": "L1o",
+   "first": "blue",
+   "kind": "measure",
+   "why": "secondary (descriptive): L1 plus the live assembly order, no skills; splits the C2 skill step (L1 -> L3a, which includes the assembly order) into assembly order (L1 -> L1o) and skills only (L1o -> L3a)"
+  }
+ },
+ "expectedArms": 28,
+ "expectedMatches": 6160,
+ "runOrder": [
+  "rebuild",
+  "measure"
+ ],
+ "analysis": {
+  "labels": "MATERIAL at |z| >= 2.81 (review D5 #6: O and P x (4 lineups + pooled) = 10 tests, Bonferroni 0.05 / 10), HINT if the unadjusted 95% interval excludes 0, else NONE; every NONE / HINT is reported with MDE = (2.81 + 0.84) x se",
+  "verdict": "on the pooled O and P: ORDER_DRIVEN if O is MATERIAL and P is not; POSITION_DRIVEN if P is MATERIAL and O is not; MIXED if both; LINEUP_SPECIFIC if neither pooled value is but a lineup O or P is; else INCONCLUSIVE. The verdict is null (at most INCONCLUSIVE) if any match errored; INSTRUMENT (no result file) if the live check failed, V1 failed (including a missing C2 record) or the error rule says STOP",
+  "prediction": "if the +6.9 pp is entirely the hero processing order, dR is about -dB, so O is about +6.9 and P about 0 (ORDER_DRIVEN); if it is entirely per-side geometry or another blue-fixed loop, dR is about dB, O about 0 and P about +6.9 (POSITION_DRIVEN)",
+  "power": "per-match sd of a paired step difference about 0.70 (C2); O and P each average two independent steps: se about 0.70 x sqrt(2) / 2 / sqrt(1200) = 1.43 pp pooled, MDE about 5.2 pp at |z| 2.81 and 80% power; per lineup about 10.4 pp. If the fresh dB is much smaller than the C2 +6.9 (winner's curse), O and P will usually be INCONCLUSIVE; that outcome is reported as such, not as evidence of no effect",
+  "interpretation": "what a verdict means for an engine change (the Owner decides; the study only measures). Review D5 #5: O measures the order x skills interaction (the first-mover advantage at L3a minus that at L1), not the effect of any particular fix. ORDER_DRIVEN => the mirror skill-step effect depends on the hero processing order; an order fix (simultaneous resolution or alternating first mover) is a candidate that must be designed and measured separately, and this study does not bound what it would change; POSITION_DRIVEN => reversing the hero order does not move the effect: the source is per-side geometry or one of the blue-fixed structures that this study does not reverse (see limitations), so an order fix of the hero loop alone is not supported; MIXED => both; INCONCLUSIVE / LINEUP_SPECIFIC => no engine change is supported by this study. In every case the ladder result (STANDARD skills step +0.1 in real pairings) limits how much of the real challenge side bias a mirror finding explains; the challenge side-bias STOP stays",
+  "secondary": "Q2 first-mover advantage A = (W_B - W_R)/2 at L1 and L3a; Q3 assembly order (L1 -> L1o, blue first) and skills only (L1o -> L3a, blue first) on the fresh seeds; descriptive, same labels"
+ },
+ "validation": {
+  "V0": "28 arms, 6160 matches; every measure arm has 300 fresh seeds",
+  "V1a": "the committed C2 records exist for every rebuild seed",
+  "V1": "the rebuild arms equal the committed C2 records match by match (winner, duration, kills): 8 arms x 5 seeds at validate, all 20 seeds at run (re-checked by --report; a missing C2 record => INSTRUMENT)",
+  "V2": "every validate match passes the live check",
+  "V3": "reordering does not change the t=0 state: per seat power and maxHp of a red-first match equal those of a fresh blue-first build of the same seed and context",
+  "V4": "a red-first L3a match is deterministic (the same match twice in one process: winner, duration, kills equal)"
+ },
+ "liveCheck": "every record (HALT on mismatch): arm / seed identity, engine seed = seed, Director core.v1 and laneFrame teamRelative, skills on exactly in L3a, passives / curve off, layout not SWAPPED, skill seats = all ten in L3a and none otherwise, the constructed hero order is b1..b5,r1..r5, the played order at t=0 and the order at the end of the match are r1..r5,b1..b5 on red-first arms (b1..r5 otherwise; review D5 #7), and the mirror is symmetric at t=0 (heroes, power, maxHp per seat, directive and identity)",
+ "errors": "errored matches are never retried; the tool applies errorRule (studyRunner): more than 1% errored => STOP(INSTRUMENT), no result file; any error => verdict null, outcome INCONCLUSIVE (review D5 #3)",
+ "limitations": [
+  "only the hero list order is reversed; at least these blue-fixed structures are not (review D5 #4): the loops over the fixed list [\"blue\", \"red\"] in LogicEngine.js (lines 129, 233, 249, 412, 1029, 3241, 6081, 6378, 7249, 7439), the tuple loops at 5437 and 5828, the paired calls at 5973-5974 (advance) and 6038-6039 (strike), the id tie-breaks by localeCompare (about 14 sites, e.g. 4483 [...b, ...r] sorted by id, which favour b*), the Object.entries order of the towers and the minion lists. P can therefore still contain order effects from those structures, and POSITION_DRIVEN does not mean \"geometry only\"",
+  "random draws are consumed in hero order, so the reorder also changes which hero gets which draw; in a mirror this is symmetric noise, not a bias",
+  "mirrors only and STANDARD layout only (as C2); real challenge pairings and the SWAPPED layout are not covered; the ladder shows the mirror effect does not carry over to real pairings at the STANDARD skills step. The secondary AO / skills-only split is blue-first only",
+  "the study measures; it does not implement or test an engine fix"
+ ],
+ "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
+ "notClaimed": "not a fix, not a release PASS, not a change of the challenge side-bias STOP; no engine, flag, ruleset, fixture or hero change; the C2 records are used only for V1 and the descriptive replication line",
+ "checkpointing": "per match; resume in the same folder",
+ "review": {
+  "reviewedAt": "2026-10-30",
+  "verdict": "APPROVE WITH CHANGES (independent reviewer; 3 Major / 5 minor, all applied)",
+  "round1": "2026-10-30 APPROVE WITH CHANGES: M1 reusing the selected C2 blue-first records fixes O + P = dB in advance (a verdict almost always follows, with the winner's curse) => blue-first and red-first both run on the same fresh seeds 62001-64999 (new block challenge.order.d5; not the reserved confirmatory block), C2 records only for V1 and a descriptive replication line; M2 a missing C2 record is no longer scored as a draw: V1 at report includes kills and a missing record => INSTRUMENT, the analysis reads only this folder and throws on a missing record; M3 errorRule applied (STOP => INSTRUMENT, no result file; errors => verdict null); m4 the list of blue-fixed structures completed (\"at least\"); m5 the ORDER_DRIVEN interpretation no longer claims to bound a fix; m6 labels at |z| 2.81 (10 tests); m7 the hero order is also checked at the end of the match; m8 V1 compares kills at report too. Verified by the reviewer: the in-place reorder is complete (this.players assigned once at LogicEngine.js:128, no cached sub-lists, the Director does not touch players, skills / curve keyed by seat, _hpAtTickStart rebuilt per tick, spawn rng and decisionHash fixed before the reorder); the copied pipeline equals C2 for the mirror arms; the AO arm is built correctly"
+ }
+}

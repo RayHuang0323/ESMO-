@@ -255,6 +255,21 @@ export default function BattleEndScreen({ roster = null, homeSide = "blue", onCo
               const ex = result.tacticExecution[homeSide] ?? {};
               const rows = (def?.evidence ?? []).map((e) => ({ ...e, val: ex[e.key] ?? 0, hit: (ex[e.key] ?? 0) >= e.goal }));
               const hits = rows.filter((r) => r.hit).length;
+              //  v21 修正過的模板：這些目標是修正前的設定訂的，不適用（Owner 2026-11-01 第 4 點）⇒ 只列實際計數，不打勾、不算執行度。
+              const unscored = result.tactic.evidenceGoals === "unscored";
+              if (unscored) return (
+                <Panel title={`戰術執行 · ${result.tactic.tacticName}`}>
+                  <div data-testid="tactic-exec-unscored">
+                    {rows.map((r) => (
+                      <div key={`${r.key}-${r.label}`} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
+                        <span style={{ color: "rgba(255,255,255,0.7)" }}>{r.label}</span>
+                        <span style={{ fontFamily: MONO, fontWeight: 800, color: "rgba(255,255,255,0.55)" }}>{r.val}</span>
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 10, marginTop: 4, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>未評分：這套戰術調整後還沒有正式的執行目標，這裡只列本場實際計數</div>
+                  </div>
+                </Panel>
+              );
               return (
                 <Panel title={`戰術執行 · ${result.tactic.tacticName}`}>
                   {rows.map((r) => (

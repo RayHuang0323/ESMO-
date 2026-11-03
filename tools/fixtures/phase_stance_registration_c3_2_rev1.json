@@ -1,0 +1,129 @@
+{
+  "schema": "esmo.phase-stance-registration.v1",
+  "studyId": "phase-stance-c3-2-rev1",
+  "stage": "Phase 3a-C3-2 phase stance — corrected-instrument replication (rev1)",
+  "registeredAt": "2026-10-22",
+  "status": "registered before any rev1 run; nothing in this file changes after results",
+  "amends": {
+    "file": "tools/fixtures/phase_stance_registration_c3_2.json",
+    "commit": "b0c94b2",
+    "what": "only the instrument layers (hero skills / passives / power curve on, battle talents off, as G-A7 / replication), the seed range, the study id and the result file. Every other field (whatIsUnchanged, options, directionSource, metrics, rules incl. precedence / zeroVariance / noVerdictWhen / minValidPairs, consequences, arms, ruleset, stop-loss) is inherited unchanged from the original registration and copied here verbatim."
+  },
+  "originalEvidence": {
+    "result": "tools/fixtures/phase_stance_result_c3_2.json (commit f4a4ae9)",
+    "defect": "the measurement worker never set ESMO_BALANCE_SKILLS, so the runner silently disabled hero skills / passives / power curves; all 6800 matches ran without hero skills, unlike the truth table, the replication study and the laneFrame studies (skills on). The instrument header claimed skills on; the self-check gate ran both instruments without skills, so the cross-instrument check could not detect it. Found by the controller on 2026-10-22 while reading C7 §5 (which records the same trap).",
+    "rule": "the original result is kept unchanged as evidence of behaviour without hero skills; it is never re-labelled, and it is not used to mark any option live.",
+    "reReport": "the original batch can no longer be re-reported: its records carry no layers field, so the strict instrument check would flag every record STOP(INSTRUMENT); it is also stale (src changed since b0c94b2). The committed original result stays the only report of that batch."
+  },
+  "authority": {
+    "owner2026_10_22": "Owner approved the 6 options confirmed by the original study as v21 candidates, to be marked live once the evidence conditions are met, and authorised fresh seeds for further measurements. Because the original evidence was produced with the wrong instrument layers, the controller treats a corrected-instrument replication on fresh seeds as the evidence condition. Early and mid scaling stay design regardless (Owner), and the D-18 redesign reserve 7001-7400 is not used."
+  },
+  "whyNotRerunOriginalSeeds": "3001-3400 have been observed (Owner rule: observed seeds are not reused).",
+  "seeds": {
+    "range": "18001-18400",
+    "n": 400,
+    "seedSource": "tool (balance runner buildBalanceMatchSetup, meta.seedSource 'tool': the seed is used as-is)",
+    "why": "above every range used so far (laneFrame behavioural revision ended at 17600) and outside every range in the draft §1.3 table; never used by any measurement"
+  },
+  "resultFixture": "tools/fixtures/phase_stance_result_c3_2_rev1.json",
+  "design": {
+    "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative, objectiveLayout bySeed; same engine-facing layers as career.v21)",
+    "instrument": "tools/lib/phaseBucketSim.mjs (phaseBucketSim.v1), self-check gate tools/check_phase_bucket_c3.mjs committed before this registration's run. Phase of a tick = e.director.phase(e.t) after the tick (the engine advances this.t first, check_tactical_director_3c C6), so events and seconds of the tick ending at 480.0 belong to mid. Read-only; tacticTruthSim.mjs is not modified.",
+    "arms": "For each option: the option on blue vs std on red (read blue), and std on blue vs the option on red (read red). Control: std vs std (both sides read). The option arm is the std template plus that single phase choice merged by the Resolver's mergeTacticConfig and fed as a legacy input (createTacticPlan rejects MEASURED_EXCLUSIONS, which only governs what is offered to players); the control arm is the std template without choices through the same legacy path (content equals STANDARD_OPP_TACTIC; check_phase_bucket_c3 A0). The opponent side of every option arm, and both sides of the control, use that same control config through the same legacy path (so control and treatment matches differ only in the option side's config). check_phase_bucket_c3 A1 proves each option's engine input differs from the control only in identity.phaseEngage / phaseJoin at the option's phase index.",
+    "matches": "400 seeds x (1 control + 8 options x 2 sides) = 6800 matches",
+    "tick": "dt 0.5 s, stop at engine over or 3600 s",
+    "instrumentCheck": "every record: ruleset balanceTool.v21, director mode core.v1, selfCheck() empty (internal consistency: three buckets sum to the whole-match tally for engages / engageStarts / fights and to the engine's own five exec totals; phaseSecs sum to the duration). Any violation => STOP(INSTRUMENT), Owner decides (not a statistical verdict). The whole-match tally is incremented in the same branch as the bucket, so the per-record check guards bookkeeping only; the independent evidence that the three buckets equal the whole-match value is check_phase_bucket_c3 X1 (cross-instrument against the unchanged tacticTruthSim, same seeds, same ruleset). Plus: layers must be skills on / talents off.",
+    "layers": "hero skills on, hero passives on, hero power curve on, battle talents off (G-A7 / replication convention). The worker sets ESMO_BALANCE_SKILLS=on and clears ESMO_BALANCE_TALENTS before loading the instrument; every record carries layers and the instrument check requires heroSkills = true and battleTalents = false (otherwise STOP(INSTRUMENT)). check_phase_bucket_c3 L1/L2 pin this."
+  },
+  "options": [
+    {
+      "dimension": "phases.early.stance",
+      "choice": "aggressive",
+      "phase": "early",
+      "direction": "up"
+    },
+    {
+      "dimension": "phases.early.stance",
+      "choice": "defensive",
+      "phase": "early",
+      "direction": "down"
+    },
+    {
+      "dimension": "phases.early.stance",
+      "choice": "scaling",
+      "phase": "early",
+      "direction": "down"
+    },
+    {
+      "dimension": "phases.mid.stance",
+      "choice": "aggressive",
+      "phase": "mid",
+      "direction": "up"
+    },
+    {
+      "dimension": "phases.mid.stance",
+      "choice": "defensive",
+      "phase": "mid",
+      "direction": "down"
+    },
+    {
+      "dimension": "phases.mid.stance",
+      "choice": "scaling",
+      "phase": "mid",
+      "direction": "down"
+    },
+    {
+      "dimension": "phases.late.stance",
+      "choice": "defensive",
+      "phase": "late",
+      "direction": "down"
+    },
+    {
+      "dimension": "phases.late.stance",
+      "choice": "scaling",
+      "phase": "late",
+      "direction": "up"
+    }
+  ],
+  "directionSource": "Registry rank (draft §2.3): early / mid defensive < scaling < standard < aggressive; late defensive < standard < scaling. Each option is compared with standard only (the control); the order among non-standard options is not claimed. late has no aggressive option (identical to scaling, capabilityRegistry.js).",
+  "metrics": {
+    "primary": "engageDecisionsPerMin.<phase>: new ENGAGE decisions of the side's heroes in that phase / (that phase's seconds / 60)",
+    "startOnly": "engageStartsPerMin.<phase>: new ENGAGE decisions whose previous decision was not ENGAGE, per minute of that phase (required: engage decisions are re-evaluated while an engagement lasts, a duty-cycle component)",
+    "na": "a phase shorter than 60 s in a match => null for that match (fixed inclusion rule, as tacticTruthSim). A seed counts for an option side only if both the control and the treatment value are non-null (paired).",
+    "lateSelection": "disclosed limitation: a late value exists only when that match lasts >= 1019.5 s, and a late option only changes play after 960 s, so its valid pairs are selected on a post-treatment outcome (match length). The rule is kept as approved (D-19); the late n_eff and N/A counts are reported per side. In the instrument gate run 3 of 4 matches reached the late phase, so n_insufficient for late options is a real possibility (=> stop and report, no rule change)."
+  },
+  "rules": {
+    "perSidePerMetric": "paired over seeds: diff = mean(treatment - control); z = diff / (sd / sqrt(n)); rel = diff / mean(control). OK = sign(diff) matches the direction AND z in the direction >= 3 AND |rel| >= 0.05",
+    "sidePass": "both metrics OK on that side",
+    "verdicts": {
+      "confirmed": "both sides pass",
+      "duty_cycle_only": "the primary metric is OK on both sides but the start-only metric fails on at least one side",
+      "one_sided": "exactly one side passes",
+      "insufficient": "neither side passes and no reversal",
+      "reversed": "on either side and either metric, z in the direction <= -3 (overrides the others)",
+      "n_insufficient": "valid pairs < 200 on either side for either metric (overrides everything except STOP(INSTRUMENT)); no statistical verdict is emitted for that option"
+    },
+    "precedence": "the first matching verdict in this order: n_insufficient > reversed > confirmed > duty_cycle_only > one_sided > insufficient (so one side passing both metrics while the other passes only the primary metric is duty_cycle_only, not one_sided)",
+    "zeroVariance": "if sd of the paired differences is 0: z = 0 when diff = 0, otherwise z = sign(diff) x 99 (as tacticTruthSim.pairStats); rel = null when the control mean is 0 (then the |Δ| >= 5 % condition is not met)",
+    "noVerdictWhen": "the batch is incomplete, halted by STOP(INSTRUMENT) or STOP(CIRCUIT_BREAKER), or stale (src or fingerprint changed since the batch started, or meta.json missing): every verdict is null and the result fixture is not written",
+    "minValidPairs": 200,
+    "minValidPairsWhy": "D-19: late valid pairs n >= 200 (the original truth table had 23/40 late pairs); applied to every phase for uniformity (early/mid have 400 by construction unless a match ends before 9 minutes)",
+    "multiplicity": "an option is confirmed only when 4 one-sided tests (2 metrics x 2 sides) each reach z >= 3 (p ~ 0.00135 each); 8 options. The family-wise chance of a false 'confirmed' is negligible; false 'reversed' per option needs one of 4 tests at z <= -3 (about 0.5 % per option, about 4 % over 8 options) and is reported as such.",
+    "thresholdsFrom": "draft §1.3 (Owner mid-term ruling: fresh seeds, both sides, direction + paired z >= 3 + |Δ| >= 5 %, start-only version for duty-cycle metrics) and D-19 (n >= 200)"
+  },
+  "stopLoss": {
+    "cap": "6800 matches (seeds 3001-3400) is a hard cap with one decision look after the batch is complete; no extension, no re-run, no interim decision look",
+    "operationalStops": "STOP(INSTRUMENT) on any instrument-check violation (exit 5); worker errors are logged per arm (<key>.errors.jsonl), the seed becomes N/A for every option, more than 20 errored matches, or (once at least 1000 matches have been attempted) more than 0.5 % of attempted matches => STOP(CIRCUIT_BREAKER) (exit 4); a file named STOP in the batch folder pauses before the next match (exit 3, same command resumes); a worker that dies mid-match (memory reaper, OOM) leaves that match unrecorded and the run exits 6 (incomplete, same command resumes; not an error and not a breaker count)",
+    "provenance": "the run refuses a dirty src/tools tree; gitHead and the v21 fingerprint are recorded at the start and must match on every resume",
+    "reportGuard": "--report --reg=tools/fixtures/phase_stance_registration_c3_2_rev1.json writes tools/fixtures/phase_stance_result_c3_2_rev1.json only once, only when the batch is complete or halted, never overwrites it"
+  },
+  "workers": 3,
+  "whatIsUnchanged": "The stance's engine fields and direction are not changed (identity.phaseEngage / phaseJoin from MobaTacticConfig PHASE_ENGAGE {aggressive 0.08, standard 0, defensive -0.08, scaling -0.05} and PHASE_ENGAGE_LATE {aggressive 0.08, standard 0, defensive -0.08, scaling 0.08}); only the metric is re-registered (C7 class 4: the old fightEntriesPerMin.<p> was the wrong instrument). MEASURED_EXCLUSIONS, the truth table (tactic_truth_3a.json) and its G-A7 metric are not touched by this study.",
+  "consequences": {
+    "notConfirmed": "the option stays in MEASURED_EXCLUSIONS (not offered to players); PHASE_ENGAGE is never enlarged. Whether to use the one-time redesign (reserve 7001-7400, D-18) is the Owner's decision.",
+    "confirmed": "evidence only. Offering a confirmed option to players means changing MEASURED_EXCLUSIONS, which check_tactic_truth_3a requires to equal the truth table (G-A7, metric fightEntriesPerMin.<p>, seeds 1-40); that rule change is an Owner decision and is not made in this round.",
+    "nInsufficient": "keep the checkpoint and report; additional seeds need a new range approved by the Owner (never 3401+ or the reserves).",
+    "rev1": "only options that are confirmed again here (same rules) proceed to the live promotion step; an option confirmed in the original study but not here stays excluded and is reported to the Owner. early/mid scaling are measured again for completeness (same rules) but stay design whatever the result."
+  },
+  "reviewHistory": "2026-10-22 scoped review before commit: APPROVE WITH CHANGES (no Critical). Fixed before commit: inherited fields copied verbatim (whatIsUnchanged, consequences incl. the G-A7 constraint on going live); run/report refuse a batch folder started under another registration; --run refuses a registration whose result already exists; layer check also requires passives and power curve; correction notes appended to 05/08 for the a6ea6e6 acceptance record."
+}

@@ -1,0 +1,57 @@
+{
+ "schema": "esmo.ga8-registration.v1",
+ "studyId": "ga8-fix2-confirm-3aB",
+ "stage": "Phase 3a-B stage 1 r2 formal acceptance step 1: confirmatory G-A8 after table v21.b2",
+ "registeredAt": "2026-11-03",
+ "status": "registered (Owner review r3 item E, 2026-11-03; frozen fingerprint 620196ccea5a8249 at freeze commit 78ccc817). Nothing here may change after the first match",
+ "authority": "Owner review of the balance study (stage1r2_release_registration_3aB.json): item 3, all 21 templates under the original rule, STOP stops, no conditional drop; item 6, seeds 4601-5000 after de-duplication, valid effective seeds and an independent Reviewer. Thresholds unchanged. Earlier: Owner 2026-10-28 items 1 and 4, Owner 2026-10-30 third ruling item 6",
+ "tool": "node tools/measure_ga8_3aB.mjs --reg=tools/fixtures/ga8_fix2_confirm_registration_3aB.json (--plan / --run / --report)",
+ "ruleset": "balanceTool.v21 (tool path: Director core.v1, laneFrame teamRelative, skills on, talents off, items standard, no player stats) — the plans themselves are compared, not the AI coach or player stats",
+ "templates": "all 21 templates of TACTIC_TEMPLATE_LIST (8 classic, std, 12 v2), each as a tactic-book plan with no choices; std vs std is the control",
+ "opponent": "std template plan with no choices",
+ "seeds": {
+  "range": "4601-5000",
+  "n": 400,
+  "path": "tool (seed as-is; tools/check_study_seed_plan_3aB.mjs, block G-A8.fix2Confirm)",
+  "side": "the template plays blue on odd seeds and red on even seeds (200 / 200), so the map side cancels; layout by seed (report STANDARD/SWAPPED split)",
+  "rule": "disjoint from every block that observed these templates on this code line: 25001-25400, 41001-41400, 43001-43400, 57801-58200, 69001-69800 and the rest of study_seed_plan_3aB.json. Scan 2026-11-03: stage1r2_release_registration_3aB.json seedsPlanned.scan20261103"
+ },
+ "matches": "21 x 400 = 8,400 (~3 h, 3 workers)",
+ "metric": "the template side's win rate; a match with no winner at 3600 s counts 0.5",
+ "thresholds": {
+  "STOP (dominant)": "win rate >= 0.60 AND the lower 95% bound > 0.55",
+  "WARN": "win rate >= 0.57, or win rate <= 0.43 (a dominated plan is reported; it is not a release blocker by itself)",
+  "control": "std vs std must have a win rate within 0.50 +/- 0.05 (instrument sanity); outside => STOP(INSTRUMENT)",
+  "PASS": "data complete, no STOP"
+ },
+ "report": [
+  "per template: win rate, 95% CI, as blue / as red, STANDARD / SWAPPED split",
+  "median match duration per template (20-40 min long-term target, report only)"
+ ],
+ "noOptionalStopping": "verdicts only on complete data",
+ "notClaimed": "no claim that a template is favourable; a STOP means a template must not ship as-is and goes to the Owner (no coefficient change without the Owner). A PASS here clears only G-A8 for the frozen stage-1 semantics; the Challenge side-bias STOP and the rest of the acceptance are separate, and templates combined with choices are not tested here (knownVerificationGaps). v2.three_lane_pressure under v21.b2 is an unproven candidate: only this formal run can clear it, and it is not called passed before that",
+ "errors": "errored matches are never retried or replaced and are listed by seed; any errored match => at most INCONCLUSIVE; more than 1% errored => STOP(INSTRUMENT)",
+ "instrumentCheck": "every record (live and at report time): balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off; any failure => HALT / STOP(INSTRUMENT). Added for this registration: the knobs the engine holds at t = 0 equal the knobs the resolver gives under templateBalance",
+ "sideBalanceNote": "odd seeds: template on blue; even seeds: on red. Because the layout is by seed, the template is on the dragon side in 201/400 = 50.25% of these seeds; the std vs std control absorbs a common side effect; each template's dragonSideShare is reported",
+ "checkpointing": "per match (finer than the plan's 250-match batches)",
+ "result": "tools/fixtures/ga8_fix2_confirm_result_3aB.json",
+ "templateBalance": "v21.b2",
+ "scope": "all 21 templates, not only the changed ones: every template is re-checked and a new STOP elsewhere cannot hide. No template is dropped after the fact",
+ "fingerprint": "620196ccea5a8249",
+ "copiedFrom": {
+  "file": "tools/fixtures/ga8_registration_3aB.json",
+  "unchangedFields": [
+   "ruleset",
+   "templates",
+   "opponent",
+   "matches",
+   "metric",
+   "thresholds",
+   "report",
+   "noOptionalStopping",
+   "errors",
+   "checkpointing"
+  ],
+  "note": "check_formal_acceptance_3aB compares these field by field with the original"
+ }
+}

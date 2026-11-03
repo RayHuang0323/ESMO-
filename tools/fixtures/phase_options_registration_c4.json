@@ -1,0 +1,412 @@
+{
+  "schema": "esmo.phase-options-registration.v1",
+  "studyId": "phase-options-c4",
+  "stage": "Phase 3a-C4 objective priority (per-phase objectiveOrder first item; whole-match objectives re-registration)",
+  "registeredAt": "2026-10-22",
+  "status": "REGISTERED — fixed before any run; nothing changes after the run starts",
+  "authority": {
+    "owner2026_10_22": "Owner authorised C4 (dragon first / baron first / towers first / per-phase objective policy) on fresh seeds, red and blue, approved thresholds. Must distinguish 'goes to contest more often' from 'captures more easily'; if only dragon works only dragon is confirmed; early phase cannot choose baron.",
+    "contract": "review/tactic-book-3a/C3-C6_行為契約草案.md §3 (C4-1 only the first item is claimed; C4-2 nothing is claimed for second/third; C4-3 whole-match re-registration; C4-4 baron after C7 §4-D)",
+    "diagnostic": "tools/fixtures/c7_diag_result_3c.json reading '4-D baronHigh: noise_original_reversal' — objectiveFightEntriesPerMin.baron is no longer reversed on either side (blue +11.1 % z 2.66, red +10.0 % z 2.47), so the earlier n=40 reversal was noise and baron options may be registered (contract C4-4)."
+  },
+  "seeds": {
+    "range": "3401-3800",
+    "n": 400,
+    "seedSource": "tool (balance runner, seed used as-is)",
+    "why": "C4 range in the contract §3.3 / seed table; never used by any measurement"
+  },
+  "resultFixture": "tools/fixtures/phase_options_result_c4.json",
+  "design": {
+    "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative)",
+    "instrument": "tools/lib/phaseStudySim.mjs (phaseStudySim.v1), self-check tools/check_phase_study_c3.mjs; layers skills/passives/power curve on, talents off",
+    "arms": "control = std template, no per-phase choice, both sides. Each option is run twice: treatment on blue (red = control) and treatment on red (blue = control); pairs are the same seed.",
+    "mapping": "PHASE_CHOICE_MAPPING phases.<p>.objectiveOrder: dragon = { objectives.dragonPriority: 0.95 } (classic.m4), baron = { objectives.baronPriority: 0.85 } (classic.m4; mid/late only, early has no baron), towers = { objectives.towerPriority: 0.9 } (classic.m1). The same values as whole-match high, applied only in that phase. Whole-match options use CHOICE_MAPPING objectives.dragon/baron (unchanged).",
+    "bucketing": "an appearance of dragon/baron and its contest/capture go to the phase of the tick in which the objective appeared (contract §3.3); per-match share = contested appearances / appearances in the bucket; no appearance => null; a pair is valid when both arms have >= 1 appearance in the bucket"
+  },
+  "ceilingCheck": {
+    "rule": "contract §3.3: a bucket whose control share leaves < 5 % headroom is not registered. Headroom is taken relative to the control share, (1 - ctrl) / ctrl, because the claim threshold minRel is relative; the absolute headroom 1 - ctrl is also listed.",
+    "source": "control arm of tools/fixtures/c7_diag_result_3c.json (seeds 1401-1800, C:/Users/ifikn/esmo-measure/c7-diag-3c/ctrl.jsonl), all non-null matches",
+    "buckets": {
+      "dragon.early": {
+        "blue": {
+          "n": 400,
+          "ctrl": 0.828,
+          "relHeadroom": 0.208
+        },
+        "red": {
+          "n": 400,
+          "ctrl": 0.825,
+          "relHeadroom": 0.212
+        },
+        "registered": true
+      },
+      "dragon.mid": {
+        "blue": {
+          "n": 400,
+          "ctrl": 0.774,
+          "relHeadroom": 0.292
+        },
+        "red": {
+          "n": 400,
+          "ctrl": 0.763,
+          "relHeadroom": 0.31
+        },
+        "registered": true
+      },
+      "dragon.late": {
+        "blue": {
+          "n": 236,
+          "ctrl": 0.534,
+          "relHeadroom": 0.873
+        },
+        "red": {
+          "n": 236,
+          "ctrl": 0.539,
+          "relHeadroom": 0.854
+        },
+        "registered": true
+      },
+      "baron.mid": {
+        "blue": {
+          "n": 400,
+          "ctrl": 0.917,
+          "relHeadroom": 0.09,
+          "absHeadroom": 0.083
+        },
+        "red": {
+          "n": 400,
+          "ctrl": 0.936,
+          "relHeadroom": 0.068,
+          "absHeadroom": 0.064
+        },
+        "registered": true,
+        "warning": "passes the 5 % rule but a red confirmation needs the treatment to close about 3/4 of the remaining headroom; the whole-match baron high moved this bucket +3.6 % on red in the diagnostic. Stated before the run; the rule is not changed."
+      },
+      "baron.late": {
+        "blue": {
+          "n": 209,
+          "ctrl": 0.734,
+          "relHeadroom": 0.362
+        },
+        "red": {
+          "n": 209,
+          "ctrl": 0.686,
+          "relHeadroom": 0.457
+        },
+        "registered": true
+      },
+      "baron.early": {
+        "registered": false,
+        "why": "no baron in the early phase (0 appearances); the choice does not exist"
+      },
+      "dragon.early+mid+late": {
+        "blue": {
+          "n": 400,
+          "ctrl": 0.748,
+          "relHeadroom": 0.337
+        },
+        "red": {
+          "n": 400,
+          "ctrl": 0.748,
+          "relHeadroom": 0.336
+        },
+        "registered": true,
+        "note": "whole-match dragon high (up) and low (down; room = the share itself)"
+      },
+      "baron.early+mid+late": {
+        "blue": {
+          "n": 400,
+          "ctrl": 0.874,
+          "relHeadroom": 0.144
+        },
+        "red": {
+          "n": 400,
+          "ctrl": 0.878,
+          "relHeadroom": 0.138
+        },
+        "registered": true
+      }
+    },
+    "absoluteReading": "absolute headroom (1 - ctrl) gives the same register/skip decision for every bucket (smallest: baron.mid red 0.064 > 0.05)"
+  },
+  "options": [
+    {
+      "id": "dragonFirstEarly",
+      "dimension": "phases.early.objectiveOrder",
+      "choice": "dragon",
+      "phase": "early",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "objectiveOrder": "dragon"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.dragon.early",
+          "direction": "up",
+          "fallbackMetric": "contestShare.dragon.early+mid"
+        }
+      ],
+      "report": [
+        "captureShare.dragon.early",
+        "captureShare.dragon.early+mid"
+      ]
+    },
+    {
+      "id": "dragonFirstMid",
+      "dimension": "phases.mid.objectiveOrder",
+      "choice": "dragon",
+      "phase": "mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "mid": {
+            "objectiveOrder": "dragon"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.dragon.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "captureShare.dragon.mid"
+      ]
+    },
+    {
+      "id": "dragonFirstLate",
+      "dimension": "phases.late.objectiveOrder",
+      "choice": "dragon",
+      "phase": "late",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "late": {
+            "objectiveOrder": "dragon"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.dragon.late",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "captureShare.dragon.late"
+      ]
+    },
+    {
+      "id": "baronFirstMid",
+      "dimension": "phases.mid.objectiveOrder",
+      "choice": "baron",
+      "phase": "mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "mid": {
+            "objectiveOrder": "baron"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.baron.mid",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "captureShare.baron.mid"
+      ]
+    },
+    {
+      "id": "baronFirstLate",
+      "dimension": "phases.late.objectiveOrder",
+      "choice": "baron",
+      "phase": "late",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "late": {
+            "objectiveOrder": "baron"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.baron.late",
+          "direction": "up",
+          "fallbackMetric": "contestShare.baron.mid+late"
+        }
+      ],
+      "report": [
+        "captureShare.baron.late",
+        "captureShare.baron.mid+late"
+      ]
+    },
+    {
+      "id": "towersFirstEarly",
+      "dimension": "phases.early.objectiveOrder",
+      "choice": "towers",
+      "phase": "early",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "early": {
+            "objectiveOrder": "towers"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "siegeWindowsPerMin.early",
+          "direction": "up"
+        }
+      ],
+      "report": []
+    },
+    {
+      "id": "towersFirstMid",
+      "dimension": "phases.mid.objectiveOrder",
+      "choice": "towers",
+      "phase": "mid",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "mid": {
+            "objectiveOrder": "towers"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "siegeWindowsPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "report": []
+    },
+    {
+      "id": "towersFirstLate",
+      "dimension": "phases.late.objectiveOrder",
+      "choice": "towers",
+      "phase": "late",
+      "input": {
+        "choices": {},
+        "phaseChoices": {
+          "late": {
+            "objectiveOrder": "towers"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "siegeWindowsPerMin.late",
+          "direction": "up"
+        }
+      ],
+      "report": []
+    },
+    {
+      "id": "dragonHigh",
+      "dimension": "objectives.dragon",
+      "choice": "high",
+      "phase": null,
+      "input": {
+        "choices": {
+          "objectives": {
+            "dragon": "high"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.dragon.early+mid+late",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "captureShare.dragon.early+mid+late"
+      ]
+    },
+    {
+      "id": "dragonLow",
+      "dimension": "objectives.dragon",
+      "choice": "low",
+      "phase": null,
+      "input": {
+        "choices": {
+          "objectives": {
+            "dragon": "low"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.dragon.early+mid+late",
+          "direction": "down"
+        }
+      ],
+      "report": [
+        "captureShare.dragon.early+mid+late"
+      ]
+    },
+    {
+      "id": "baronHigh",
+      "dimension": "objectives.baron",
+      "choice": "high",
+      "phase": null,
+      "input": {
+        "choices": {
+          "objectives": {
+            "baron": "high"
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.baron.early+mid+late",
+          "direction": "up"
+        }
+      ],
+      "report": [
+        "captureShare.baron.early+mid+late"
+      ]
+    }
+  ],
+  "reportedMetrics": [
+    "captureShare.dragon.early",
+    "captureShare.dragon.mid",
+    "captureShare.dragon.late",
+    "captureShare.dragon.early+mid",
+    "captureShare.dragon.early+mid+late",
+    "captureShare.baron.mid",
+    "captureShare.baron.late",
+    "captureShare.baron.mid+late",
+    "captureShare.baron.early+mid+late"
+  ],
+  "rules": {
+    "minZ": 3,
+    "minRel": 0.05,
+    "minValidPairs": 200,
+    "text": "per claim per side: paired over seeds (treatment arm vs control, same side). OK = sign matches direction AND z in the direction >= 3 AND |rel| >= 5 %. Valid pairs < 200 on either side => fallbackMetric (contract §3.3 merge table, fixed here: dragon.early -> dragon.early+mid, baron.late -> baron.mid+late; no other bucket has a fallback) => still < 200 => unmeasurable (no relaxing; more seeds need a new range and Owner approval). A phase rate is null when the phase lasted < 60 s. Precedence: unmeasurable > reversed > guard_failed > confirmed > one_sided > insufficient."
+  },
+  "notClaimed": {
+    "capture": "captureShare.<k>.<p> (the side captured that appearance) is REPORTED, never claimed: contest = 'goes to the pit more often', capture = outcome, which the Owner asked to keep separate. A confirmed contest claim is worded 'contests more often', never 'takes more dragons'.",
+    "secondThird": "objects ranked second/third: no 'less important' effect is claimed (C4-2)",
+    "towersLaneOffset": "towers-first projects objectives.towerPriority, which in the engine projection also moves laneOffset +0.012 on all three lanes (shown by tools/check_phase_options_arms_3c.mjs; same as the whole-match option). The co-movement is not claimed; if towers-first is confirmed, the Registry entry and the player text must disclose it, because contract C4-1 names only siegeBias.",
+    "baronLow": "objectives.baron=low is not registered (contract §3.3: insufficient before; re-offering it would be a new design)",
+    "towerWholeMatch": "objectives.tower=high is already confirmed (REP) and objectives.tower=low has no working mechanism (C7 §1.2); neither is re-registered here"
+  },
+  "consequences": {
+    "confirmed": "the per-phase choice becomes offerable (Registry design -> live) in a separate commit with gates; evidence scope is balanceTool.v21, std template; whole-match options leave MEASURED_EXCLUSIONS only through the truth-table/replication rules",
+    "notConfirmed": "stays design; coefficients are never enlarged; root cause recorded"
+  },
+  "power": "Late buckets are borderline: control valid n is 236 (dragon.late) and 209 (baron.late), and a pair needs both arms to have an appearance, so dragonFirstLate may be unmeasurable. baron.late falls back to baron.mid+late, which is dominated by mid appearances where the late override is off (about 793 mid vs 266 late appearances in the control), so baronFirstLate is expected to be insufficient. If baronFirstLate or dragonFirstEarly is confirmed only through its fallback, the claim is worded for the merged window measured (e.g. 'contests mid+late baron more often when baron is first in late'), never as a late-only effect. Late pairs only include seeds where both arms reach the late phase, and the treatment may change match length (selection after treatment). baron.mid on red needs to close about 3/4 of its headroom (see ceilingCheck). All stated before the run; the rules are not changed.",
+  "reviewHistory": "Pre-run review 2026-10-22: APPROVE WITH CHANGES, no blockers. Fixed before commit: #3 late-bucket / fallback expectations and selection-after-treatment disclosed with fallback claim wording, #4 whole-match buckets added to ceilingCheck with the absolute reading, #7 towers-first laneOffset disclosure obligation."
+}

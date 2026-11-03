@@ -1,0 +1,79 @@
+{
+ "schema": "esmo.challenge-c1-registration.v1",
+ "studyId": "challenge-c1-calibration-3aB",
+ "stage": "Phase 3a-B fix planning round 2: v21 practice-opponent difficulty ladder and calibration candidates (C1), designed after the C2 per-hero / per-lineup diagnosis (Owner ruling 2026-10-29 item 3)",
+ "registeredAt": "2026-10-29",
+ "status": "DRAFT for parts S1 and CF (they need the Owner to confirm the target bands in targets, owner.targetsConfirmedAt; CF also needs the single semantics freeze). Part M0 (baseline, a measurement only, no fixture changed) is registered and runnable with tools/measure_challenge_c1_3aB.mjs after an independent review (review.reviewedAt + APPROVE) and a passing --validate. Nothing in a part may change after that part's first match",
+ "authority": "Owner 2026-10-29 item 3: C2 per-hero / lineup diagnosis and the skill red / blue symmetry check first, then design a reasonable difficulty ladder for the v21 practice opponents and calibration candidates; no freeze until the m7 candidate and the challenge side-bias plan are confirmed; v20 behaviour and golden baselines strictly protected",
+ "why": "In Challenge the challenger is always blue (challengeMatchSetup), so a side effect of the engine is part of every practice match's difficulty. v20 already calibrated drill_mirror's base 70 with that effect included (fixtureOpponents.js comment: identical squads, challenger wins 33%). The v21 layers (skills, Director, laneFrame, layout) changed the side effect (challenge side bias C1 STOP; ladder ATTRIBUTED: skills / layout, see 3a-B_修正規劃.md) and the fixture-vs-fixture strengths (ladder: e.g. mirror>topheavy 71.3 -> 48.2, rotation>balanced 65.2 -> 95.4). The fixture parameters were never re-calibrated for v21. Calibrating them per simulation version is a data-level, v21-only way to give the player a deliberate difficulty ladder whatever the structural side effect is; it does not fix the side effect itself (that needs the shared-engine order fix, deferred by the Owner)",
+ "referenceChallenger": {
+  "R0": "a new save: the squad, stats and lineup that the profile store creates for a new game, every hero at mastery Lv.1 (FRESH, as tools/check_player_challenge_slice3.mjs), tactic MOBA_TACTICS[0] (m1, the first listed tactic and the one check_player_challenge_slice3 uses), automatic draft (challengerActions: []). This is the player the v20 drill_mirror calibration was made for (comment: player start average 75)",
+  "R1": "optional (Owner): the same squad at mastery Lv.4 on every hero, a player who has trained a little. Measured in M0 only if the Owner adds it; it would double M0",
+  "construction": "the tool rebuilds the R0 entry snapshot exactly as profileStore._issueEntrySnapshot does after startNewGame(\"elite\") (same careerState: store players / lineup / team, heroProgress FRESH, HERO_ASSIGN, intent entry, reason manual, tactic m1) with two tool-given values: now fixed (1757000000000, so the hash is deterministic) and simulationVersion per arm (the store takes it from the feature flags). Every match is then built like profileStore.startFixtureChallenge: defender = fixtureSnapshot(key, { playerMasteryLevel: 1, simulationVersion }), createDraftResult({ challengerActions: [], pool = CHAMPIONS_100 ids sorted, ... }), createChallengeInstance({ seedSource: seed, kind formal, ... }) and the formal runChallenge with currentSimulationVersion = the arm version"
+ },
+ "parts": {
+  "M0": {
+   "what": "baseline ladder: R0 vs each of the five fixtures, challenge.v20 and challenge.v21 (current parameters), challenger win rate with 95% CI per fixture and version, median duration, STANDARD / SWAPPED split",
+   "seeds": "challenge.c1.baseline 59001-59799 odd (400 seeds; every seed is played against all five fixtures on both versions; the five fixtures share each seed, so fixture differences are paired by seed)",
+   "matches": "5 fixtures x 2 versions x 400 = 4,000",
+   "use": "descriptive: the numbers the Owner needs to choose the target bands; the v20 column is the shipped ladder, never changed",
+   "report": "per version and fixture: challenger win rate (unresolved = 0.5) with Wilson 95% CI, the slice3 scoring (strictWin: challengerWin only, unresolved = loss) next to it, unresolved count, median duration, STANDARD / SWAPPED halves on v21 only (challenge.v20 fixes the layout to standard, so its halves are null); per fixture the paired v21 - v20 difference (it includes the layout change); per version the easiest-to-hardest order and the best-minus-worst spread (strictSpread >= 0.20 is the slice3 gradient condition, descriptive); v21 rows say whether the rate is inside the PROPOSED band (descriptive, not a verdict). The report refuses (INSTRUMENT, no ranking, no result file) if any record fails the live check, the error rule says STOP, the R0 hash is not deterministic, or the run has no PIN.json"
+  },
+  "S1": {
+   "what": "candidate screen on v21 only: per fixture up to three candidate parameter sets around the value M0 implies for the confirmed target band, R0 vs the candidate fixture, 400 seeds each",
+   "seeds": "challenge.c1.screen 59801-60599 odd (400 seeds)",
+   "matches": "about 5 fixtures x 3 candidates x 400 = 6,000 (fewer if a fixture is already inside its band in M0: then it gets no candidate)",
+   "selection": "per fixture: the first listed candidate whose win rate is inside the confirmed band (candidates listed from the smallest change); none => NO_CANDIDATE for that fixture; the ladder order must hold between the selected values (monotone in the confirmed order), otherwise LADDER_NOT_MONOTONE and no selection is proposed; review C1 #m5: the selected set must also have a slice3 spread (strictWin best minus worst) >= 0.20, otherwise SPREAD_TOO_SMALL and no selection is proposed"
+  },
+  "CF": {
+   "what": "confirmation after the single freeze: R0 vs every calibrated fixture on the frozen v21 by this tool, fresh seeds, the confirmed bands unchanged, plus the slice3 section 3 thresholds applied by this tool on v21 with the slice3 scoring (challengerWin only): the mirror candidate > 0.20 and < 0.85, strictSpread >= 0.20. Review C1 #M4: check_player_challenge_slice3 itself runs on the default flags (mobaTacticalDirectorV21 false, featureFlags.js) and therefore only guards the v20 fixtures; it is still run unchanged and must stay green, but it is not the v21 confirmation",
+   "seeds": "challenge.c1.confirm 61001-61799 odd (400 seeds, RESERVED, not run)",
+   "matches": "5 x 400 = 2,000"
+  }
+ },
+ "targets": {
+  "status": "PROPOSAL for the Owner (not confirmed); bands are R0 win rates on challenge.v21 on the slice3 scoring (strictWin: challengerWin only, unresolved = loss), the same scoring as the shipped gate; the report shows the 0.5-scored rate next to it",
+  "order": "drill_mirror easiest, then drill_balanced, drill_rotation, drill_topheavy, drill_veteran hardest (proposal: the mirror fixture is the documented first-match candidate; veteran's mastery 12 is the documented hard end; the middle order follows M0 unless the Owner fixes it)",
+  "bands": {
+   "drill_mirror": "0.45-0.60 (a real chance on the first match, not a guaranteed win; review C1 #m5: with the slice3 gate N = 16 a true 0.35 would fail its > 0.20 check about 12% of the time and 0.45 about 3%, so the lower bound is 0.45 to avoid adding to the registered flaky gate; inside the gate's < 0.85)",
+   "drill_balanced": "0.25-0.45",
+   "drill_rotation": "0.20-0.40",
+   "drill_topheavy": "0.15-0.35",
+   "drill_veteran": "0.05-0.20 (hard but not structurally lost: > 0.05)"
+  },
+  "spread": "best minus worst >= 0.20 on the slice3 scoring (strictWin), checked on the selected set (the bands alone do not imply it); the slice3 gradient condition, threshold unchanged",
+  "note": "the bands are internal design targets. Nothing about them may reach the UI: fixtureOpponents.js and the challenge board must not carry strength / rating / tier fields or win-rate / recommended-difficulty wording (check_player_challenge_slice3 section 1)"
+ },
+ "levers": {
+  "allowed": [
+   "base (all five fixtures): the shared stat base; steps of 2 points",
+   "mastery (balanced, topheavy, rotation; never drill_mirror, whose masteryEven 'same as you' is its documented identity). drill_veteran's mastery stays 12: review C1 #M3, check_player_challenge_slice3 section 3 requires a candidate with avgMastery >= 12 (veteran's average is mastery + 0.8 rounded, fixtureOpponents.js:148 / challengeBoard.js), so 11 would turn the shipped gate red; changing it needs a separate Owner approval of a gate change. Its trait 英雄熟練遠高於平均 also depends on it"
+  ],
+  "fixed": "tacticId, draft policy, spread (topheavy 22 / rotation 10; the traits 資源集中在上路與打野 and 另外三名先發明顯較低 must stay true), ageBase, traits and note text, masteryEven",
+  "versioning": "a table keyed by simulationVersion inside fixtureOpponents.js: 'moba-sim.v21' entries override base / mastery for that key; 'moba-sim.v20' has no entry, so every v20 snapshot, the v20 golden cases and every stored challenge (replayed from its stored snapshot) stay byte-identical. Review C1 #m2: the provider's list / getSnapshot do not pass simulationVersion (fixtureOpponents.js:211 / 216) and the store relies on the authority's default, so the lookup must use simulationVersion ?? CHALLENGE_SIMULATION_VERSION, otherwise the formal path never sees the v21 values. The table name and fields must not be strength / rating / tier (slice3 section 1 scans the source)",
+  "goldenImpact": "review C1 #m3: everything that builds v21 challenge inputs from the fixtures changes with a v21 calibration: check_challenge_golden_v21 (v21 challenge golden), the G-AC1 golden check_match_golden_v21a (capture_golden_v21a_corrections.mjs builds challenge inputs at moba-sim.v21; PINNED constants), and the studies that use v21 fixtures as input (challenge side bias C1 and its confirmatory block 45001-49999, the ladder, the bidirectional study, C2). Golden re-recording only after the freeze, visibly, with the Owner's approval (CLAUDE.md rule); v20 golden unchanged"
+ },
+ "dependsOnC2": "C2 (tools/fixtures/challenge_c2_registration_3aB.json) decides whether one hero / seat or one lineup carries the v21 side effect. If C2 finds a single carrier (a hero kit whose knockout removes most of the effect, or one lineup with a mirror side effect far from the others), the calibration of the fixture that drafts that hero / uses that lineup is listed first and its candidate values are centred on the C2 estimate; if the effect is diffuse, all five fixtures are calibrated the same way",
+ "validation": {
+  "V0": "10 arms (5 fixtures x 2 versions), 400 seeds, 4,000 matches",
+  "V1": "rebuild equals the store path at the flag-default version (v20): per fixture one store match (startNewGame elite, startFixtureChallenge(key, { tacticId: m1, heroProgress: FRESH }), runChallengeById) and the tool rebuild with seedSource = that instance's matchSeed (toEngineSeed is the identity on odd seeds): outcome, durationSec, score and draft assignment identical",
+  "V1b": "review C1 #m1: v21 cannot be compared with the store (the flags are constants). Instead the R0 and five fixture snapshots at moba-sim.v21 equal the v20 ones field by field after removing only simulationVersion and hash; v21 match equivalence then follows by construction (createChallengeInstance takes simulationVersion from the challenger snapshot and rejects a mismatch, runChallenge picks the ruleset from challenge.simulationVersion)",
+  "V2": "every match (live check, HALT on mismatch): simulationVersion and ruleset = the arm version (challenge.v20 / challenge.v21), matchSeed = seed, challenger tactic m1, defender tactic / base / mastery / spread = the shipped fixture definition; during --run also the R0 hash per version and the defender hash per arm equal the values pinned by --validate (review C1 #m6)",
+  "V3": "the R0 snapshot hash is identical on every validate match of one version and the defender hash on every match of one arm; reported as r0Deterministic"
+ },
+ "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
+ "fingerprint": "M0 and S1: 0578fa882d74b205 (the current v21 candidate; S1 candidates exist only in the tool, src/ unchanged). CF: the frozen fingerprint (to be filled at the freeze)",
+ "costs": "M0 4,000 matches + S1 up to 6,000 + CF 2,000; at the measured 1.35-1.6 s per match (3 workers) M0 about 1.5-1.8 h, S1 up to 2.7 h, CF about 0.9 h",
+ "notClaimed": "no fixture is changed by M0 or S1; a selection is a proposal; a calibration sets difficulty, it does not remove the engine's side effect, and the challenge side-bias study must be re-run after the freeze anyway (its fixture inputs change)",
+ "review": {
+  "reviewedAt": "2026-10-29",
+  "verdict": "APPROVE for part M0 (round 2, independent reviewer; round 1 APPROVE WITH CHANGES 4 Major / 8 minor all applied; round-2 minor r1-r4 applied). S1 / CF stay DRAFT pending the Owner target bands and the freeze",
+  "round1": "2026-10-29 APPROVE WITH CHANGES (4 Major / 8 minor), all applied: M1 v20 layout fixed STANDARD (record layout from the ruleset, v20 halves null, paired difference includes layout); M2 report refuses on instrument / error STOP / non-deterministic R0 / missing PIN, outcome field; M3 veteran mastery stays 12 (slice3 avgMastery >= 12); M4 CF judged by this tool on v21 with slice3 thresholds (slice3 itself guards v20 only); m1 V1b snapshot equivalence v20 / v21; m2 versioning lookup with the authority default; m3 golden / study impact listed, side-bias re-run stated; m4 Wilson CI and the slice3 strictWin scoring; m5 mirror band 0.45-0.60 and an explicit spread check in S1; m6 hashes pinned at --run; m7 localStorage shim assigned; m8 run order",
+  "round2": "2026-10-29 APPROVE with 4 minor, all applied: r1 V1b strips only simulationVersion / hash; r2 PIN.json carries registrationHash / validate gitHead and at, --run refuses a different existing PIN, --report ignores a PIN of another registration; r3 bands on strictWin (report inProposedBand uses strictWin); r4 recCheck checks the layout"
+ },
+ "owner": {
+  "targetsConfirmedAt": null
+ },
+ "tool": "tools/measure_challenge_c1_3aB.mjs (--plan / --selftest / --validate / --run / --report; M0 only; selftest 7/7); result tools/fixtures/challenge_c1_m0_result_3aB.json",
+ "runOrder": "review C1 #m8: fill review -> commit (the tool refuses a dirty src / tools) -> --validate -> --run, and only after the running 3-worker measurement (C2) and the m7 third screening have finished (single line)"
+}

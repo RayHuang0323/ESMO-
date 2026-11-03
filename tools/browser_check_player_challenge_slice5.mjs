@@ -17,7 +17,8 @@
 import { RESOLVE_APP_MODULES } from "./browser/cdp.mjs";
 import { runGate, finishGate } from "./browser/harness.mjs";
 //  ⚠ 從本機原始碼讀版號，拿去比對畫面上真的記下來的值。
-import { MOBA_SIMULATION_VERSION } from "../src/platform/contracts/simulationVersion.js";
+//  Phase 3a-B T16（版本事實）：場次記下的是 Challenge 目前的模擬版本（旗標關＝v20，與正式站相同），不是整個 build 的候選版本。
+import { CHALLENGE_SIMULATION_VERSION as MOBA_SIMULATION_VERSION } from "../src/platform/challenge/challengeVersion.js";
 
 const J = (raw) => JSON.parse(String(raw).replace(/^"|"$/g, ""));
 

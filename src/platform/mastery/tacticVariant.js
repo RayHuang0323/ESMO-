@@ -28,7 +28,8 @@
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
 // ============================================================================
 import { mobaTacticById, validateMobaTacticConfig } from "../contracts/MobaTacticConfig.js";
-import { DOCTRINE, doctrineOfTactic } from "./doctrine.js";
+import { doctrineOfTactic } from "./doctrine.js";
+import { TACTIC_OVERLAYS, applyOverlayFields } from "../tactics/tacticOverlays.js";
 
 export const TACTIC_VARIANT_VERSION = "TacticVariant.v1";
 
@@ -51,6 +52,11 @@ export const ALLOWED_VARIANT_FIELDS = Object.freeze([
  *   `carryPriority`、`jungleResourceShare`、`vision.*`。讓變體去動它們，
  *   玩家會看到一個「不一樣」的戰術，而引擎的行為一模一樣——
  *   那是**假選擇**，是這種系統最容易犯、也最難被發現的謊。
+ *
+ * Phase 3a T8 註記（唯讀相容，內容刻意不動）：此清單是 moba-sim.v17 之前的事實。v17 的
+ * `toEngineTacticIdentity` 已經讀取 macro.earlyGame／midGame／lateGame，現行能力表
+ * （tactics/capabilityRegistry.js）把它們列為 live。這裡仍禁止變體修改它們，是因為放寬會改變
+ * `applyVariant` 的輸出（3a-A 不得改變任何比賽結果）；要不要放寬是日後覆蓋層資料升版時的決定。
  */
 export const FORBIDDEN_VARIANT_FIELDS = Object.freeze([
   //  身分與判準
@@ -80,57 +86,23 @@ const get = (obj, path) => path.split(".").reduce((o, k) => (o == null ? undefin
  * 第一批變體。**刻意只有三個**——在「宣告式取捨」這套規則好不好玩還沒被
  * 驗證之前做九個，是在放大一個未驗證的假設。三條 doctrine 各一個，
  * 讓每一條都有東西可解鎖，不會出現「選了流派卻沒東西拿」。
+ *
+ * Phase 3a T8：**資料搬家了**。三個變體的數值與取捨宣告現在住在 `tactics/tacticOverlays.js`
+ * （覆蓋層 tacticOverlays.v1，id 不變、逐欄相同）；這裡只是把它們投影成原本的 TacticVariant 形狀，
+ * 所以所有既有消費端（ClubMastery、TacticScreen、gate）看到的物件與遷移前逐位元相同。
+ * 新增／調整變體請改覆蓋層資料，不要在這裡內嵌數值。
  */
-export const TACTIC_VARIANTS = Object.freeze([
-  Object.freeze({
-    variantId: "m1_measured_siege",
-    baseTacticId: "m1",
-    doctrine: DOCTRINE.TEMPO,
-    name: "穩健速推",
-    desc: "一樣快，但留得住撤退空間——代價是推塔壓力鬆掉一截",
-    benefitAxes: Object.freeze([
-      Object.freeze({ id: "retreat_room", label: "撤退容錯", fields: Object.freeze(["macro.riskTolerance"]) }),
-    ]),
-    costAxes: Object.freeze([
-      Object.freeze({ id: "siege_pressure", label: "推塔壓力", fields: Object.freeze(["objectives.towerPriority"]) }),
-    ]),
-    //  riskTolerance 0.6 → 0.45（撤退門檻變寬）；towerPriority 0.9 → 0.75（推塔權重下降）
-    changedFields: Object.freeze({ "macro.riskTolerance": 0.45, "objectives.towerPriority": 0.75 }),
-    rationale: "速推流輸掉的局多半是壓過頭被反打；這個變體把那條線往回收，換來的是滾雪球慢一點。",
-  }),
-  Object.freeze({
-    variantId: "m4_contested_stack",
-    baseTacticId: "m4",
-    doctrine: DOCTRINE.CONTROL,
-    name: "爭奪型龍堆",
-    desc: "願意為龍開戰，換來的是野區更容易被入侵",
-    benefitAxes: Object.freeze([
-      Object.freeze({ id: "dragon_contest", label: "龍區爭奪", fields: Object.freeze(["macro.aggression"]) }),
-    ]),
-    costAxes: Object.freeze([
-      Object.freeze({ id: "team_cohesion", label: "抱團程度", fields: Object.freeze(["macro.grouping"]) }),
-    ]),
-    //  aggression 0.4 → 0.55（更敢打）；grouping 0.7 → 0.55（陣型更散）
-    changedFields: Object.freeze({ "macro.aggression": 0.55, "macro.grouping": 0.55 }),
-    rationale: "龍堆運營怕的是對手不給龍；這個變體讓你搶得起來，代價是隊伍不再永遠站在一起。",
-  }),
-  Object.freeze({
-    variantId: "m8_early_footing",
-    baseTacticId: "m8",
-    doctrine: DOCTRINE.ADAPTIVE,
-    name: "穩健起手",
-    desc: "打野改為 Gank 建立前期立足點，代價是巴龍節奏被推遲",
-    benefitAxes: Object.freeze([
-      Object.freeze({ id: "early_footing", label: "前期立足", fields: Object.freeze(["lanePlan.jungle"]) }),
-    ]),
-    costAxes: Object.freeze([
-      Object.freeze({ id: "baron_tempo", label: "巴龍節奏", fields: Object.freeze(["objectives.baronPriority"]) }),
-    ]),
-    //  jungle farm → gank（enum 換一項）；baronPriority 0.75 → 0.6
-    changedFields: Object.freeze({ "lanePlan.jungle": "gank", "objectives.baronPriority": 0.6 }),
-    rationale: "後期決戰最痛的是前期被打崩就沒有後期；這個變體買前期，賣掉一部分巴龍主動權。",
-  }),
-]);
+export const TACTIC_VARIANTS = Object.freeze(TACTIC_OVERLAYS.map((o) => Object.freeze({
+  variantId: o.overlayId,
+  baseTacticId: o.baseTacticId,
+  doctrine: o.doctrine,
+  name: o.name,
+  desc: o.desc,
+  benefitAxes: o.benefitAxes,
+  costAxes: o.costAxes,
+  changedFields: o.changedFields,
+  rationale: o.rationale,
+})));
 
 /**
  * 驗證一個變體。**結構性檢查**，不宣稱平衡。
@@ -228,13 +200,9 @@ export function validateVariant(v) {
  * ⚠ 深拷貝後才改——絕不修改傳入的 base（那是 `MOBA_TACTICS` 的共用物件）。
  */
 export function applyVariant(baseConfig, v) {
-  const out = structuredClone(baseConfig);
-  for (const [field, value] of Object.entries(v?.changedFields ?? {})) {
-    if (FORBIDDEN_VARIANT_FIELDS.includes(field) || !ALLOWED_VARIANT_FIELDS.includes(field)) continue;
-    const [group, key] = field.split(".");
-    if (!group || !key || out[group] == null) continue;
-    out[group] = { ...out[group], [key]: value };
-  }
+  //  欄位怎麼套用走覆蓋層的共用函式（Phase 3a T8）；哪些欄位准套用仍由本檔的 allowed／forbidden 決定。
+  const out = applyOverlayFields(baseConfig, v?.changedFields,
+    (field) => !FORBIDDEN_VARIANT_FIELDS.includes(field) && ALLOWED_VARIANT_FIELDS.includes(field));
   //  變體有自己的顯示名稱，但**沿用 base 的 tacticId**——引擎與賽果看到的
   //  仍然是同一個戰術，所以 `evidence` 判定、`mobaTacticById` 與所有既有
   //  消費端都不需要知道變體存在。

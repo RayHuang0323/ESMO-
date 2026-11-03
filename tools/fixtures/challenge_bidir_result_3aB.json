@@ -1,0 +1,160 @@
+{
+ "schema": "esmo.challenge-bidir-result.v1",
+ "registration": "tools/fixtures/challenge_bidir_registration_3aB.json",
+ "registrationHash": "9a9fe6e6dc7df66c",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "c7aa5b0a938173d889ec8f64edacb75b63ba5e9a",
+ "reportedAt": "2026-10-27T14:31:24.049Z",
+ "sideBiasVerdict": "STOP (unchanged; this study never changes it)",
+ "seeds": 2049,
+ "errored": [],
+ "invalid": [],
+ "perStratum": {
+  "STANDARD": {
+   "n": 1049,
+   "S20": -0.026692087702573863,
+   "S21": 0.007626310772163913,
+   "S20ci": [
+    -0.04256799270669247,
+    -0.010816182698455298
+   ],
+   "S21ci": [
+    -0.006479321692218305,
+    0.021731943236546238
+   ],
+   "worsePp": -1.906577693040995,
+   "worseUpperPp": 0.21978462034446866,
+   "winChangePp": 3.4318398474737775,
+   "z": -3.1633395958467903,
+   "stop": false,
+   "warnPp": false
+  },
+  "SWAPPED": {
+   "n": 1000,
+   "S20": -0.012249999999999983,
+   "S21": 0.03149999999999997,
+   "S20ci": [
+    -0.028215735956247778,
+    0.0037157359562477767
+   ],
+   "S21ci": [
+    0.016596836688921385,
+    0.04640316331107862
+   ],
+   "worsePp": 1.924999999999999,
+   "worseUpperPp": 4.148128128037999,
+   "winChangePp": 4.374999999999996,
+   "z": 3.857177592174043,
+   "stop": true,
+   "warnPp": false
+  }
+ },
+ "durationRatioByStratum": {
+  "STANDARD": 0.9499761791329204,
+  "SWAPPED": 0.9529691211401425
+ },
+ "v20PooledSideAdvantage": -0.019643728648121028,
+ "v21PureBlueAdvantage": 0.019563155386081943,
+ "v21DragonSideAdvantage": -0.01193684461391803,
+ "byPairing": {
+  "drill_balanced>drill_veteran": {
+   "n": 410,
+   "challengerTeamWin20": 0.16707317073170733,
+   "challengerTeamWin21": 0.18658536585365854,
+   "change": 0.01951219512195122,
+   "changeCi": [
+    -0.017359282306453058,
+    0.05638367255035549
+   ],
+   "side20": -0.025609756097561,
+   "side21": 0.008536585365853666
+  },
+  "drill_veteran>drill_mirror": {
+   "n": 410,
+   "challengerTeamWin20": 0.973170731707317,
+   "challengerTeamWin21": 0.9975609756097561,
+   "change": 0.024390243902439025,
+   "changeCi": [
+    0.01341702108501669,
+    0.03536346671986136
+   ],
+   "side20": -0.009756097560975618,
+   "side21": 0.0024390243902439046
+  },
+  "drill_mirror>drill_topheavy": {
+   "n": 410,
+   "challengerTeamWin20": 0.7128048780487805,
+   "challengerTeamWin21": 0.4823170731707317,
+   "change": -0.2304878048780488,
+   "changeCi": [
+    -0.2741835756858227,
+    -0.1867920340702749
+   ],
+   "side20": -0.027439024390243927,
+   "side21": 0.05670731707317078
+  },
+  "drill_topheavy>drill_rotation": {
+   "n": 410,
+   "challengerTeamWin20": 0.09390243902439024,
+   "challengerTeamWin21": 0.10609756097560975,
+   "change": 0.012195121951219513,
+   "changeCi": [
+    -0.01786325805278919,
+    0.042253501955228215
+   ],
+   "side20": -0.024390243902439046,
+   "side21": 0.012195121951219523
+  },
+  "drill_rotation>drill_balanced": {
+   "n": 409,
+   "challengerTeamWin20": 0.6515892420537898,
+   "challengerTeamWin21": 0.9541564792176039,
+   "change": 0.3025672371638142,
+   "changeCi": [
+    0.2668242785464724,
+    0.33831019578115595
+   ],
+   "side20": -0.011002444987775084,
+   "side21": 0.016503667481662543
+  }
+ },
+ "reconcile": {
+  "STANDARD.v20": {
+   "oneDirectionalBlueWin": 0.4938036224976168,
+   "sideAdvantage": -0.026692087702573863,
+   "strengthTerm": 0.020495710200190642
+  },
+  "STANDARD.v21": {
+   "oneDirectionalBlueWin": 0.5471877979027645,
+   "sideAdvantage": 0.007626310772163913,
+   "strengthTerm": 0.03956148713060059
+  },
+  "SWAPPED.v20": {
+   "oneDirectionalBlueWin": 0.5065,
+   "sideAdvantage": -0.012249999999999983,
+   "strengthTerm": 0.018749999999999933
+  },
+  "SWAPPED.v21": {
+   "oneDirectionalBlueWin": 0.5825,
+   "sideAdvantage": 0.03149999999999997,
+   "strengthTerm": 0.051000000000000045
+  }
+ },
+ "committedOneDirectionalUnits": {
+  "STANDARD": {
+   "worsePp": 4.099142040038128,
+   "winChangePp": 5.338417540514772
+  },
+  "SWAPPED": {
+   "worsePp": 7.600000000000007,
+   "winChangePp": 7.600000000000007
+  }
+ },
+ "verdict": "STOP",
+ "outcome": "SIDE_CONFIRMED",
+ "outcomeNote": "no label is a release PASS; SIDE_NOT_REPRODUCED means no evidence of a side worsening at this power, not proof of its absence; challenge side bias stays STOP and challenge.v21 stays flag-gated (Owner decides)",
+ "definitions": {
+  "worsePp": "(|S_v21| - |S_v20|) x 100: change in the size of the side advantage (distance from 50%)",
+  "winChangePp": "(S_v21 - S_v20) x 100: change of the strength-cancelled blue win rate"
+ }
+}

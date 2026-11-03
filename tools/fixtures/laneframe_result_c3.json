@@ -1,0 +1,926 @@
+{
+  "schema": "esmo.laneframe-result.v1",
+  "registration": "tools/fixtures/laneframe_registration_c3.json",
+  "registeredAt": "2026-10-15",
+  "reportedAt": "2026-10-19T21:09:12.250Z",
+  "gitHead": "d31dbcd2f3a160c80e9ee2bb686d74106897ee13",
+  "dirtyFilesUnderSrcTools": 0,
+  "simulationVersion": "moba-sim.v21",
+  "fingerprint": "6c8db7e7cff3ae6a",
+  "batchesStartedUnder": {
+    "behavioural": {
+      "study": "behavioural",
+      "startedAt": "2026-10-19T18:30:16.629Z",
+      "gitHead": "fab35dd8f97d32c3799d092857bfcdae98e3baf7",
+      "dirtyFilesUnderSrcTools": 0,
+      "simulationVersion": "moba-sim.v21",
+      "fingerprint": "6c8db7e7cff3ae6a",
+      "design": {
+        "plans": [
+          {
+            "name": "std+top-split",
+            "arm": {
+              "templateId": "std",
+              "choices": {
+                "lanes": {
+                  "top": {
+                    "stance": "split"
+                  }
+                }
+              }
+            },
+            "splitLane": "top"
+          },
+          {
+            "name": "std+bot-aggressive",
+            "arm": {
+              "templateId": "std",
+              "choices": {
+                "lanes": {
+                  "bot": {
+                    "stance": "aggressive"
+                  }
+                }
+              }
+            },
+            "splitLane": null
+          },
+          {
+            "name": "classic.m4",
+            "arm": {
+              "templateId": "classic.m4",
+              "choices": {}
+            },
+            "splitLane": null
+          },
+          {
+            "name": "classic.m5",
+            "arm": {
+              "templateId": "classic.m5",
+              "choices": {}
+            },
+            "splitLane": null
+          }
+        ]
+      }
+    },
+    "sidebias": {
+      "study": "sidebias-career",
+      "startedAt": "2026-10-19T19:28:32.124Z",
+      "gitHead": "d31dbcd2f3a160c80e9ee2bb686d74106897ee13",
+      "dirtyFilesUnderSrcTools": 0,
+      "simulationVersion": "moba-sim.v21",
+      "fingerprint": "6c8db7e7cff3ae6a",
+      "design": {
+        "comparison": "career.v21 vs career.v20",
+        "rulesetResolution": "resolveLiveRuleset with the featureFlags of tools/fixtures/match_golden_v20.json (career.v20); same flags + mobaTacticalDirectorV21=true (career.v21); the resolved rulesetId must equal the arm, otherwise the run fails",
+        "path": "Live assembly path: prepareLiveMatch (src/useLocalServer.js) -> buildLiveMatchSetup -> assembleMatch; no tool overrides",
+        "inputs": {
+          "players": "match_golden_v20.json inputs.players + inputs.lineup (player stats on blue only, the career rule playerStatSides = blue)",
+          "loadout": "match_golden_v20.json inputs.defaultLoadout",
+          "roster": "moba_items_balance_runner mirroredRoster(seed) (same heroes on both sides, spells from buildLoadout), app-row shape via tools/lib/liveGolden.mjs appRoster",
+          "blueTactic": "tactic-book binding of template std with no choices (bindTacticPlanToCurrentVersions(createTacticPlan({templateId:'std'}).plan)), the current new-match path. Reason: with no blue tactic the Live path never calls configureMatch, so the red style is never applied and v20/v21 would be identical by construction (controller probe 2026-10-20). A match without a tactical director fails the seed before ticking.",
+          "buildStrategy": "standard",
+          "talentSelections": "none",
+          "opponent": "AI_TEAMS[seed % AI_TEAMS.length] (fixed assignment, independent of outcome); red tactic = mobaTacticForTeamStyle(team.style), the Live source",
+          "seedSource": "session (engine seed = normalizeLiveSeed(seed, 'session') = (seed >>> 0) | 1)",
+          "layout": "not set; derived by the setup from the engine seed (objectiveLayoutForSeed(effectiveSeed))"
+        },
+        "tick": "dt 0.5 s, stop at engine over or 3600 s (same as the behavioural study)",
+        "seedOrder": {
+          "unit": "effectiveSeed = normalizeLiveSeed(seed, 'session'); every counted sample has a distinct effectiveSeed; the tool throws if a walked seed is not its own effectiveSeed or repeats one",
+          "segments": [
+            [
+              5001,
+              5999
+            ],
+            [
+              9101,
+              null
+            ]
+          ],
+          "step": 2,
+          "why": "Odd seeds only: an odd seed is its own effectiveSeed, so every sample has a distinct engine seed (even seed 2k would run engine seed 2k+1). 5001-5999 is the de-duplicated balance row of draft §1.3 (6000 maps to 6001 inside the C8 reserve and is excluded); it yields 249 STANDARD / 251 SWAPPED. The continuation starts at 9101 (Owner approval 2026-10-20), outside every range in the draft §1.3 table (9001-9100 = behavioural study).",
+          "targetPerLayout": 1000,
+          "stopRule": "walk the sequence in ascending order; include every seed; stop after the first seed at which BOTH layouts have >= 1000 valid seeds",
+          "expectedIfAllValid": {
+            "lastSeed": 12113,
+            "seeds": 2007,
+            "STANDARD": 1000,
+            "SWAPPED": 1007,
+            "matches": 4014,
+            "m4": {
+              "STANDARD": 134,
+              "SWAPPED": 152
+            }
+          },
+          "walkLimit": 16000,
+          "walkLimitRule": "if the walk reaches 16000 without the target => incomplete, Owner decides (the sample threshold is never lowered)",
+          "chunkSeeds": 200,
+          "circuitBreaker": {
+            "maxInvalidSeeds": 20,
+            "maxInvalidShare": 0.02,
+            "minWalkedForShare": 100,
+            "rule": "checked between chunks of 200 seeds and in the verdict: more than 20 invalid seeds, or (after >= 100 walked seeds) more than 2 % invalid => scheduling stops, verdict STOP(CIRCUIT_BREAKER), Owner decides"
+          },
+          "noSelection": "no seed is dropped or chosen by outcome; the layouts are therefore unequal in n (SWAPPED keeps all its seeds up to the stop point)"
+        },
+        "validSeed": "both arms produced a record (prepareLiveMatch ok, tactical director present, no exception) and each record shows: rulesetId = the arm; engine seed = effectiveSeed; layout = objectiveLayoutForSeed(effectiveSeed); director mode/laneFrame = static/legacyMirror (career.v20) or core.v1/teamRelative (career.v21); red knobs tacticId = the tactic assigned to the seed. Outcome (win/loss/draw/timeout) never affects validity. An invalid seed is listed with its reason and the walk continues (subject to the circuit breaker). A worker exception is written to <arm>.errors.jsonl and the seed stays invalid on resume (deterministic engine; a transient failure is also kept, never retried selectively).",
+        "metric": "blue win rate; bias(ruleset, layout) = blueWinRate - 0.5. NEW RULE in this addendum (the original d was in {-1,0,1}): a match with no winner at 3600 s counts 0.5",
+        "worse_pp": "unchanged: (|bias21| - |bias20|) * 100, per layout",
+        "z": "paired per-seed d = (win21 - win20) * sign(bias20) (sign(bias21) if bias20 = 0), d in {-1,-0.5,0,0.5,1} because of the draw rule; z = mean(d)/(sd(d)/sqrt(n)); sd = 0 => z = 0 when mean is 0",
+        "thresholds": "overall: unchanged, read from the original gates.sideBias.stop and gates.sideBias.warning (STOP: worse >= 5 pp or z >= 3 in the worsening direction or any new regression; WARN: worse >= 3 pp or |median duration21 / median duration20 - 1| > 0.10)",
+        "strata": {
+          "overall": "all valid seeds, per layout — the registered D-20 gate with the original STOP/WARN thresholds",
+          "m4": "valid seeds whose opponent style maps to tactic m4 (AI_TEAMS index 4, style objective; the only top/bot-asymmetric AI style), per layout. STOP only if the paired z in the worsening direction >= 3 (Owner 2026-10-20). worse_pp >= 5 => OWNER_REVIEW flag, always reported, the verdict becomes owner_review (never an automatic pass). No WARN for the stratum. Expected n 134 STANDARD / 152 SWAPPED.",
+          "nonM4Identity": "valid seeds whose opponent style maps to a top/bot-symmetric tactic: laneFrame swaps equal values, so career.v21 must reproduce career.v20 exactly (same winner and same duration) — any difference is an ANOMALY => STOP for Owner (independent review 2026-10-20 dumped knobs/directives for all 7 styles and found them JSON-identical for every non-m4 style)"
+        },
+        "verdict": "stop if: circuit breaker, any non-m4 anomaly, or (data complete and) an overall STOP or an m4 z STOP in either layout; else incomplete if the walk is not finished; else warn if an overall WARN; else owner_review if an m4 OWNER_REVIEW; else pass. Threshold flags are emitted only when the data is complete (no optional stopping on partial batches).",
+        "statisticalLimits": [
+          "Dilution: only m4 opponents (about 1/7 of seeds) can differ between v20 and v21, so the overall worse_pp is diluted about 7x relative to the m4 stratum. This is the share of career matches exposed to the fix with the current uniform AI_TEAMS assignment: the overall figure answers the career-exposure question, the m4 stratum the style-specific question.",
+          "No pairing benefit in m4: a tiny knob change re-randomises the match (diagnostic seed 5002: red win 1501.5 s under v20, blue win 1023.5 s under v21), so v20/v21 outcomes on m4 seeds are close to independent and the paired z has roughly the power of an unpaired comparison. With n about 134/152 the standard error of mean(d) is about 5-6 pp; under no true effect P(worse_pp >= 5) is roughly 15-20 % per layout (about 30 % across both), which is why the Owner made worse_pp an OWNER_REVIEW flag and kept STOP on z >= 3 (false-alarm rate about 0.1 % per layout).",
+          "Outcome churn is expected: although the knob change is small, pairsChangedOutcome in the m4 stratum should be near 2p(1-p) of its pairs; churn by itself is not evidence of a bias change.",
+          "Family-wise rate: two layouts x two strata x several criteria (overall worse_pp/z/duration, m4 z, m4 OWNER_REVIEW); the overall z >= 3 and m4 z >= 3 criteria together have a family-wise false STOP rate below about 0.5 %; the OWNER_REVIEW and overall worse_pp criteria carry larger rates and are interpreted with the z values.",
+          "Intrinsic side bias is unmeasured here: blue has player stats and red does not (playerStatSides = blue), but probes showed red wins too; the size and sign of the starting bias are reported, not assumed. The gate compares v21 with v20 on the same seeds, not bias against zero.",
+          "Representativeness (Owner-accepted disclosure): formal career rulesets + formal assembly path + a fixed tool setup — blue std binding, mirrored rosters instead of drafts, uniform AI_TEAMS[seed%7] opponents (m4 exposure 1/7), one fixed golden squad with golden flags. Other squads, drafts, blue tactics and items strategies are not covered. Never described as 'real career'.",
+          "m4's only top/bot asymmetry among lane-keyed knobs is laneOffset (team-relative top -0.007, bot -0.057; gankWeights equal, no splitLane — controller probe and independent review 2026-10-20)."
+        ],
+        "twinDiagnostic": "balanceTool.v20 vs balanceTool.v21 with forced STANDARD/SWAPPED (measure --study=sidebias-twin) may be run as a supplementary diagnostic only; it is never reported as the career acceptance and never decides the gate",
+        "newRegression": "unchanged: see the original gates.sideBias.newRegression and clarifications.newRegressionGates",
+        "workers": 3,
+        "workersNote": "<= 3; the controller may use fewer while other CS jobs run (does not change results)"
+      }
+    }
+  },
+  "stale": [],
+  "behavioural": {
+    "ruleset": "balanceTool.v21",
+    "laneFrame": "teamRelative",
+    "seeds": "9001-9100",
+    "layouts": [
+      "STANDARD",
+      "SWAPPED"
+    ],
+    "plans": [
+      {
+        "name": "std+top-split",
+        "arm": {
+          "templateId": "std",
+          "choices": {
+            "lanes": {
+              "top": {
+                "stance": "split"
+              }
+            }
+          }
+        },
+        "splitLane": "top"
+      },
+      {
+        "name": "std+bot-aggressive",
+        "arm": {
+          "templateId": "std",
+          "choices": {
+            "lanes": {
+              "bot": {
+                "stance": "aggressive"
+              }
+            }
+          }
+        },
+        "splitLane": null
+      },
+      {
+        "name": "classic.m4",
+        "arm": {
+          "templateId": "classic.m4",
+          "choices": {}
+        },
+        "splitLane": null
+      },
+      {
+        "name": "classic.m5",
+        "arm": {
+          "templateId": "classic.m5",
+          "choices": {}
+        },
+        "splitLane": null
+      }
+    ],
+    "verdict": "fail",
+    "complete": true,
+    "full": true,
+    "gates": {
+      "B1": "n_reduced",
+      "B2": "fail",
+      "B3": "fail",
+      "negativeControl": "pass"
+    },
+    "b1": [
+      {
+        "arm": "std+top-split@blue",
+        "splitLane": "top",
+        "matches": 200,
+        "withSplitTicks": 198,
+        "noSplitTicks": 2,
+        "minShare": 1,
+        "verdict": "n_reduced"
+      },
+      {
+        "arm": "std+top-split@red",
+        "splitLane": "top",
+        "matches": 200,
+        "withSplitTicks": 200,
+        "noSplitTicks": 0,
+        "minShare": 1,
+        "verdict": "pass"
+      }
+    ],
+    "negative": {
+      "arm": "neg:std+top-split@red",
+      "laneFrame": "legacyMirror",
+      "withSplitTicks": 196,
+      "pooledOwnLaneShare": 0,
+      "maxMatchShare": 0,
+      "verdict": "fails-as-required"
+    },
+    "rows": [
+      {
+        "gate": "B2",
+        "plan": "std+top-split",
+        "metric": "gankShare.top",
+        "metricType": "share",
+        "n": 87,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.014949,
+        "zEffectBlue": -0.593463,
+        "meanEffectRed": 0.053113,
+        "zEffectRed": 2.071976,
+        "meanD": 0.068062,
+        "sdD": 0.324961,
+        "zDiff": 1.953581,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B2",
+        "plan": "std+top-split",
+        "metric": "gankShare.mid",
+        "metricType": "share",
+        "n": 87,
+        "nSeeds": 100,
+        "meanEffectBlue": 0.006324,
+        "zEffectBlue": 0.31264,
+        "meanEffectRed": -0.018468,
+        "zEffectRed": -1.059191,
+        "meanD": -0.024792,
+        "sdD": 0.248179,
+        "zDiff": -0.931765,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B2",
+        "plan": "std+top-split",
+        "metric": "gankShare.bot",
+        "metricType": "share",
+        "n": 87,
+        "nSeeds": 100,
+        "meanEffectBlue": 0.008625,
+        "zEffectBlue": 0.282685,
+        "meanEffectRed": -0.034645,
+        "zEffectRed": -1.280339,
+        "meanD": -0.04327,
+        "sdD": 0.384632,
+        "zDiff": -1.049297,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B3",
+        "plan": "std+top-split",
+        "metric": "laneForward.top",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -1.269009,
+        "zEffectBlue": -1.444591,
+        "meanEffectRed": -0.350041,
+        "zEffectRed": -0.421642,
+        "meanD": 0.918968,
+        "sdD": 9.339696,
+        "zDiff": 0.983938,
+        "tolerance": 0.06345,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B3",
+        "plan": "std+top-split",
+        "metric": "laneForward.mid",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.020517,
+        "zEffectBlue": -0.033006,
+        "meanEffectRed": -0.589641,
+        "zEffectRed": -1.1383,
+        "meanD": -0.569124,
+        "sdD": 7.543741,
+        "zDiff": -0.754432,
+        "tolerance": 0.001026,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B3",
+        "plan": "std+top-split",
+        "metric": "laneForward.bot",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": 0.138567,
+        "zEffectBlue": 0.142855,
+        "meanEffectRed": 0.211376,
+        "zEffectRed": 0.236543,
+        "meanD": 0.072809,
+        "sdD": 13.370126,
+        "zDiff": 0.054456,
+        "tolerance": 0.006928,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B2",
+        "plan": "std+bot-aggressive",
+        "metric": "gankShare.top",
+        "metricType": "share",
+        "n": 79,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.079663,
+        "zEffectBlue": -3.2098,
+        "meanEffectRed": -0.064428,
+        "zEffectRed": -2.586033,
+        "meanD": 0.015235,
+        "sdD": 0.320274,
+        "zDiff": 0.422802,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B2",
+        "plan": "std+bot-aggressive",
+        "metric": "gankShare.mid",
+        "metricType": "share",
+        "n": 79,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.029933,
+        "zEffectBlue": -1.425027,
+        "meanEffectRed": -0.037525,
+        "zEffectRed": -1.832987,
+        "meanD": -0.007592,
+        "sdD": 0.227366,
+        "zDiff": -0.296786,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B2",
+        "plan": "std+bot-aggressive",
+        "metric": "gankShare.bot",
+        "metricType": "share",
+        "n": 79,
+        "nSeeds": 100,
+        "meanEffectBlue": 0.109596,
+        "zEffectBlue": 3.83399,
+        "meanEffectRed": 0.101953,
+        "zEffectRed": 3.626234,
+        "meanD": -0.007643,
+        "sdD": 0.348687,
+        "zDiff": -0.194826,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B3",
+        "plan": "std+bot-aggressive",
+        "metric": "laneForward.top",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.672557,
+        "zEffectBlue": -0.958225,
+        "meanEffectRed": -0.465762,
+        "zEffectRed": -0.566391,
+        "meanD": 0.206795,
+        "sdD": 11.245629,
+        "zDiff": 0.183889,
+        "tolerance": 0.033628,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B3",
+        "plan": "std+bot-aggressive",
+        "metric": "laneForward.mid",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": 0.057245,
+        "zEffectBlue": 0.119696,
+        "meanEffectRed": 0.307671,
+        "zEffectRed": 0.584084,
+        "meanD": 0.250426,
+        "sdD": 6.55397,
+        "zDiff": 0.382098,
+        "tolerance": 0.002862,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B3",
+        "plan": "std+bot-aggressive",
+        "metric": "laneForward.bot",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": 3.066621,
+        "zEffectBlue": 2.633461,
+        "meanEffectRed": 1.4808,
+        "zEffectRed": 1.424828,
+        "meanD": -1.585822,
+        "sdD": 14.860061,
+        "zDiff": -1.06717,
+        "tolerance": 0.153331,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B2",
+        "plan": "classic.m4",
+        "metric": "gankShare.top",
+        "metricType": "share",
+        "n": 90,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.019195,
+        "zEffectBlue": -0.695279,
+        "meanEffectRed": 0.022094,
+        "zEffectRed": 0.88257,
+        "meanD": 0.041289,
+        "sdD": 0.377079,
+        "zDiff": 1.038781,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B2",
+        "plan": "classic.m4",
+        "metric": "gankShare.mid",
+        "metricType": "share",
+        "n": 90,
+        "nSeeds": 100,
+        "meanEffectBlue": 0.043974,
+        "zEffectBlue": 1.934844,
+        "meanEffectRed": 0.030952,
+        "zEffectRed": 1.378157,
+        "meanD": -0.013022,
+        "sdD": 0.306882,
+        "zDiff": -0.40256,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B2",
+        "plan": "classic.m4",
+        "metric": "gankShare.bot",
+        "metricType": "share",
+        "n": 90,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.02478,
+        "zEffectBlue": -0.941131,
+        "meanEffectRed": -0.053047,
+        "zEffectRed": -1.959484,
+        "meanD": -0.028267,
+        "sdD": 0.365699,
+        "zDiff": -0.733293,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B3",
+        "plan": "classic.m4",
+        "metric": "laneForward.top",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.172629,
+        "zEffectBlue": -0.214868,
+        "meanEffectRed": 1.751176,
+        "zEffectRed": 2.353716,
+        "meanD": 1.923805,
+        "sdD": 10.515398,
+        "zDiff": 1.829512,
+        "tolerance": 0.008631,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B3",
+        "plan": "classic.m4",
+        "metric": "laneForward.mid",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -1.849139,
+        "zEffectBlue": -2.72102,
+        "meanEffectRed": -1.797676,
+        "zEffectRed": -3.032744,
+        "meanD": 0.051463,
+        "sdD": 9.215425,
+        "zDiff": 0.055844,
+        "tolerance": 0.092457,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "pass"
+      },
+      {
+        "gate": "B3",
+        "plan": "classic.m4",
+        "metric": "laneForward.bot",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -3.530088,
+        "zEffectBlue": -3.350158,
+        "meanEffectRed": -1.640371,
+        "zEffectRed": -1.912464,
+        "meanD": 1.889717,
+        "sdD": 13.547761,
+        "zDiff": 1.394855,
+        "tolerance": 0.176504,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B2",
+        "plan": "classic.m5",
+        "metric": "gankShare.top",
+        "metricType": "share",
+        "n": 91,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.114478,
+        "zEffectBlue": -4.626618,
+        "meanEffectRed": -0.100167,
+        "zEffectRed": -4.493332,
+        "meanD": 0.014311,
+        "sdD": 0.312505,
+        "zDiff": 0.436848,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B2",
+        "plan": "classic.m5",
+        "metric": "gankShare.mid",
+        "metricType": "share",
+        "n": 91,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.053513,
+        "zEffectBlue": -2.984365,
+        "meanEffectRed": -0.027531,
+        "zEffectRed": -1.411668,
+        "meanD": 0.025981,
+        "sdD": 0.251451,
+        "zDiff": 0.985663,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B2",
+        "plan": "classic.m5",
+        "metric": "gankShare.bot",
+        "metricType": "share",
+        "n": 91,
+        "nSeeds": 100,
+        "meanEffectBlue": 0.16799,
+        "zEffectBlue": 5.726155,
+        "meanEffectRed": 0.127698,
+        "zEffectRed": 5.012513,
+        "meanD": -0.040292,
+        "sdD": 0.367434,
+        "zDiff": -1.046074,
+        "tolerance": 0.05,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "n_reduced"
+      },
+      {
+        "gate": "B3",
+        "plan": "classic.m5",
+        "metric": "laneForward.top",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -1.085171,
+        "zEffectBlue": -1.416347,
+        "meanEffectRed": -0.404193,
+        "zEffectRed": -0.461902,
+        "meanD": 0.680977,
+        "sdD": 10.746741,
+        "zDiff": 0.633659,
+        "tolerance": 0.054259,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B3",
+        "plan": "classic.m5",
+        "metric": "laneForward.mid",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -0.31983,
+        "zEffectBlue": -0.576481,
+        "meanEffectRed": -0.951483,
+        "zEffectRed": -1.664416,
+        "meanD": -0.631654,
+        "sdD": 7.102859,
+        "zDiff": -0.889295,
+        "tolerance": 0.015991,
+        "zDiffOk": true,
+        "toleranceOk": false,
+        "sameSignApplies": false,
+        "sameSignOk": true,
+        "verdict": "fail"
+      },
+      {
+        "gate": "B3",
+        "plan": "classic.m5",
+        "metric": "laneForward.bot",
+        "metricType": "non-share",
+        "n": 100,
+        "nSeeds": 100,
+        "meanEffectBlue": -2.971584,
+        "zEffectBlue": -2.430458,
+        "meanEffectRed": -2.862107,
+        "zEffectRed": -2.675219,
+        "meanD": 0.109477,
+        "sdD": 16.585943,
+        "zDiff": 0.066006,
+        "tolerance": 0.148579,
+        "zDiffOk": true,
+        "toleranceOk": true,
+        "sameSignApplies": true,
+        "sameSignOk": true,
+        "verdict": "pass"
+      }
+    ],
+    "flags": [
+      "N_REDUCED: 1 B1 arms with no-split matches, 11 B2/B3 rows with n < 100 — registration requires full n; Owner decides (not a pass)",
+      "STOP: a registered behavioural gate failed — keep the checkpoint, Owner decides (tolerances are never changed)"
+    ],
+    "interpretation": {
+      "negativeControl": "run on the red top-split arm only (the plan with a splitLane), legacyMirror override; criterion = pooled own-lane split share over all its matches < 0.5 (registered falsifiable criterion)",
+      "missingValues": "B1: matches with no split tick are counted (noSplitTicks) and make the arm n_reduced; B2/B3: a seed with any null among its 8 values is excluded and counted; any n < nSeeds ⇒ n_reduced (never pass). Rule fixed 2026-10-20 before any full-study data."
+    }
+  },
+  "sideBias": {
+    "registration": "tools/fixtures/laneframe_registration_c3_d20rev.json (amends gates.sideBias; Owner 2026-10-20)",
+    "comparison": "career.v21 vs career.v20",
+    "overall": {
+      "STANDARD": {
+        "n": 1000,
+        "blueWinRate20": 0.387,
+        "blueWinRate21": 0.393,
+        "bias20": -0.113,
+        "bias21": -0.107,
+        "worsePp": -0.6,
+        "meanD": -0.006,
+        "zWorsening": -0.697307,
+        "pairsChangedOutcome": 74,
+        "medianDuration20": 1101.25,
+        "medianDuration21": 1103.75,
+        "medianDurationRatioChange": 0.00227,
+        "noWinnerPairs": 0,
+        "stop": false,
+        "warn": false
+      },
+      "SWAPPED": {
+        "n": 1007,
+        "blueWinRate20": 0.316783,
+        "blueWinRate21": 0.310824,
+        "bias20": -0.183217,
+        "bias21": -0.189176,
+        "worsePp": 0.595829,
+        "meanD": 0.005958,
+        "zWorsening": 0.774443,
+        "pairsChangedOutcome": 60,
+        "medianDuration20": 1059.5,
+        "medianDuration21": 1072,
+        "medianDurationRatioChange": 0.011798,
+        "noWinnerPairs": 0,
+        "stop": false,
+        "warn": false
+      }
+    },
+    "m4": {
+      "STANDARD": {
+        "n": 134,
+        "blueWinRate20": 0.402985,
+        "blueWinRate21": 0.447761,
+        "bias20": -0.097015,
+        "bias21": -0.052239,
+        "worsePp": -4.477612,
+        "meanD": -0.044776,
+        "zWorsening": -0.696143,
+        "pairsChangedOutcome": 74,
+        "medianDuration20": 1189.75,
+        "medianDuration21": 1220.25,
+        "medianDurationRatioChange": 0.025636,
+        "noWinnerPairs": 0,
+        "stop": false,
+        "ownerReview": false
+      },
+      "SWAPPED": {
+        "n": 152,
+        "blueWinRate20": 0.355263,
+        "blueWinRate21": 0.315789,
+        "bias20": -0.144737,
+        "bias21": -0.184211,
+        "worsePp": 3.947368,
+        "meanD": 0.039474,
+        "zWorsening": 0.773573,
+        "pairsChangedOutcome": 60,
+        "medianDuration20": 1072.5,
+        "medianDuration21": 1138.5,
+        "medianDurationRatioChange": 0.061538,
+        "noWinnerPairs": 0,
+        "stop": false,
+        "ownerReview": false
+      }
+    },
+    "nonM4Identity": {
+      "STANDARD": {
+        "n": 866,
+        "differing": 0,
+        "examples": []
+      },
+      "SWAPPED": {
+        "n": 855,
+        "differing": 0,
+        "examples": []
+      }
+    },
+    "flags": [
+      "NEW_REGRESSION: not measured here — the controller checks clarifications.newRegressionGates separately (any newly red gate = STOP)"
+    ],
+    "sample": {
+      "seedOrder": {
+        "segments": [
+          [
+            5001,
+            5999
+          ],
+          [
+            9101,
+            null
+          ]
+        ],
+        "step": 2,
+        "unit": "effectiveSeed = normalizeLiveSeed(seed, 'session')"
+      },
+      "firstSeed": 5001,
+      "lastSeed": 12113,
+      "seedsPlanned": 2007,
+      "seedsWalked": 2007,
+      "validPerLayout": {
+        "STANDARD": 1000,
+        "SWAPPED": 1007
+      },
+      "invalidSeeds": [],
+      "m4PerLayout": {
+        "STANDARD": 134,
+        "SWAPPED": 152
+      }
+    },
+    "ownerReview": false,
+    "verdict": "pass",
+    "interpretation": {
+      "draws": "no winner at 3600 s counts 0.5 (new rule registered in the addendum; the original d was in {-1,0,1})",
+      "strata": {
+        "overall": "all valid seeds, per layout — the registered D-20 gate with the original STOP/WARN thresholds",
+        "m4": "valid seeds whose opponent style maps to tactic m4 (AI_TEAMS index 4, style objective; the only top/bot-asymmetric AI style), per layout. STOP only if the paired z in the worsening direction >= 3 (Owner 2026-10-20). worse_pp >= 5 => OWNER_REVIEW flag, always reported, the verdict becomes owner_review (never an automatic pass). No WARN for the stratum. Expected n 134 STANDARD / 152 SWAPPED.",
+        "nonM4Identity": "valid seeds whose opponent style maps to a top/bot-symmetric tactic: laneFrame swaps equal values, so career.v21 must reproduce career.v20 exactly (same winner and same duration) — any difference is an ANOMALY => STOP for Owner (independent review 2026-10-20 dumped knobs/directives for all 7 styles and found them JSON-identical for every non-m4 style)"
+      },
+      "statisticalLimits": [
+        "Dilution: only m4 opponents (about 1/7 of seeds) can differ between v20 and v21, so the overall worse_pp is diluted about 7x relative to the m4 stratum. This is the share of career matches exposed to the fix with the current uniform AI_TEAMS assignment: the overall figure answers the career-exposure question, the m4 stratum the style-specific question.",
+        "No pairing benefit in m4: a tiny knob change re-randomises the match (diagnostic seed 5002: red win 1501.5 s under v20, blue win 1023.5 s under v21), so v20/v21 outcomes on m4 seeds are close to independent and the paired z has roughly the power of an unpaired comparison. With n about 134/152 the standard error of mean(d) is about 5-6 pp; under no true effect P(worse_pp >= 5) is roughly 15-20 % per layout (about 30 % across both), which is why the Owner made worse_pp an OWNER_REVIEW flag and kept STOP on z >= 3 (false-alarm rate about 0.1 % per layout).",
+        "Outcome churn is expected: although the knob change is small, pairsChangedOutcome in the m4 stratum should be near 2p(1-p) of its pairs; churn by itself is not evidence of a bias change.",
+        "Family-wise rate: two layouts x two strata x several criteria (overall worse_pp/z/duration, m4 z, m4 OWNER_REVIEW); the overall z >= 3 and m4 z >= 3 criteria together have a family-wise false STOP rate below about 0.5 %; the OWNER_REVIEW and overall worse_pp criteria carry larger rates and are interpreted with the z values.",
+        "Intrinsic side bias is unmeasured here: blue has player stats and red does not (playerStatSides = blue), but probes showed red wins too; the size and sign of the starting bias are reported, not assumed. The gate compares v21 with v20 on the same seeds, not bias against zero.",
+        "Representativeness (Owner-accepted disclosure): formal career rulesets + formal assembly path + a fixed tool setup — blue std binding, mirrored rosters instead of drafts, uniform AI_TEAMS[seed%7] opponents (m4 exposure 1/7), one fixed golden squad with golden flags. Other squads, drafts, blue tactics and items strategies are not covered. Never described as 'real career'.",
+        "m4's only top/bot asymmetry among lane-keyed knobs is laneOffset (team-relative top -0.007, bot -0.057; gankWeights equal, no splitLane — controller probe and independent review 2026-10-20)."
+      ]
+    }
+  },
+  "stop": true,
+  "warn": false,
+  "ownerReview": false,
+  "sideBiasVerdictNote": "sideBias.verdict is the formal D-20 result (career); sideBiasTwinDiagnostic never decides it",
+  "headDelta": [
+    {
+      "study": "behavioural",
+      "startedAt": "fab35dd8f97d32c3799d092857bfcdae98e3baf7",
+      "reportedAt": "d31dbcd2f3a160c80e9ee2bb686d74106897ee13",
+      "srcChanged": [],
+      "toolsChanged": [
+        "tools/fixtures/laneframe_registration_c3_d20rev.json",
+        "tools/measure_laneframe_c3.mjs"
+      ],
+      "fingerprint": "6c8db7e7cff3ae6a"
+    },
+    {
+      "study": "sidebias-career",
+      "startedAt": "d31dbcd2f3a160c80e9ee2bb686d74106897ee13",
+      "reportedAt": "d31dbcd2f3a160c80e9ee2bb686d74106897ee13",
+      "srcChanged": [],
+      "toolsChanged": [],
+      "fingerprint": "6c8db7e7cff3ae6a"
+    }
+  ]
+}

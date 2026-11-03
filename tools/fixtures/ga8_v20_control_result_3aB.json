@@ -1,0 +1,1295 @@
+{
+ "schema": "esmo.ga8-v20-control-result.v1",
+ "registration": "tools/fixtures/ga8_v20_control_registration_3aB.json",
+ "registrationHash": "4e874d066955a105",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "fb7045a1c8d29379dddfb05c38a5b67203aafb77",
+ "reportedAt": "2026-10-27T08:53:59.296Z",
+ "ga8Verdict": "STOP (unchanged; this diagnostic never changes it)",
+ "matches": 8400,
+ "errored": [],
+ "instrument": false,
+ "c6Violations": [],
+ "control": {
+  "template": "std",
+  "kind": "std",
+  "v20Content": true,
+  "n": 400,
+  "v20": {
+   "rate": 0.5475,
+   "lo": 0.49866052610309636,
+   "hi": 0.5963394738969036,
+   "stop": false,
+   "strong": false,
+   "weak": false
+  },
+  "v21": {
+   "rate": 0.5475,
+   "lo": 0.49866052610309636,
+   "hi": 0.5963394738969036,
+   "stop": false,
+   "strong": false,
+   "weak": false
+  },
+  "v21Flag": null,
+  "v20OnlyFlag": null,
+  "c6Violation": false,
+  "pairedD": {
+   "n": 400,
+   "mean": 0,
+   "lo": 0,
+   "hi": 0,
+   "nPlus": 0,
+   "nMinus": 0,
+   "p": 1
+  },
+  "pairedDBlue": {
+   "n": 200,
+   "mean": 0,
+   "lo": 0,
+   "hi": 0,
+   "nPlus": 0,
+   "nMinus": 0,
+   "p": 1
+  },
+  "pairedDRed": {
+   "n": 200,
+   "mean": 0,
+   "lo": 0,
+   "hi": 0,
+   "nPlus": 0,
+   "nMinus": 0,
+   "p": 1
+  },
+  "v20AsBlue": 0.5,
+  "v20AsRed": 0.595,
+  "v20Standard": 0.5528846153846154,
+  "v20Swapped": 0.5416666666666666,
+  "v20MedianDurationMin": 17.833333333333332,
+  "classification": "CONTROL"
+ },
+ "rows": [
+  {
+   "template": "classic.m1",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.6025,
+    "lo": 0.5544806015075268,
+    "hi": 0.6505193984924733,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.6025,
+    "lo": 0.5544806015075268,
+    "hi": 0.6505193984924733,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "stop",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.62,
+   "v20AsRed": 0.585,
+   "v20Standard": 0.5961538461538461,
+   "v20Swapped": 0.609375,
+   "v20MedianDurationMin": 17.516666666666666,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "classic.m2",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.615,
+    "lo": 0.5672539392641711,
+    "hi": 0.6627460607358289,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.5475,
+    "lo": 0.49866052610309636,
+    "hi": 0.5963394738969036,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": "stop",
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": -0.0675,
+    "lo": -0.11536375583682297,
+    "hi": -0.01963624416317704,
+    "nPlus": 35,
+    "nMinus": 62,
+    "p": 0.007959455422447276
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": -0.135,
+    "lo": -0.2299255947714502,
+    "hi": -0.04007440522854981,
+    "nPlus": 35,
+    "nMinus": 62,
+    "p": 0.007959455422447276
+   },
+   "v20AsBlue": 0.595,
+   "v20AsRed": 0.635,
+   "v20Standard": 0.625,
+   "v20Swapped": 0.6041666666666666,
+   "v20MedianDurationMin": 17.875,
+   "classification": null
+  },
+  {
+   "template": "classic.m3",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.6825,
+    "lo": 0.6368235002262767,
+    "hi": 0.7281764997737233,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.6825,
+    "lo": 0.6368235002262767,
+    "hi": 0.7281764997737233,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "stop",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.675,
+   "v20AsRed": 0.69,
+   "v20Standard": 0.6682692307692307,
+   "v20Swapped": 0.6979166666666666,
+   "v20MedianDurationMin": 19.216666666666665,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "classic.m4",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.4175,
+    "lo": 0.3691110912374738,
+    "hi": 0.46588890876252614,
+    "stop": false,
+    "strong": false,
+    "weak": true
+   },
+   "v21": {
+    "rate": 0.445,
+    "lo": 0.3962363595331629,
+    "hi": 0.49376364046683713,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": "weak",
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0.0275,
+    "lo": -0.019736057072106367,
+    "hi": 0.07473605707210637,
+    "nPlus": 52,
+    "nMinus": 41,
+    "p": 0.2997316968970376
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0.055,
+    "lo": -0.03943625804833025,
+    "hi": 0.14943625804833024,
+    "nPlus": 52,
+    "nMinus": 41,
+    "p": 0.2997316968970376
+   },
+   "v20AsBlue": 0.445,
+   "v20AsRed": 0.39,
+   "v20Standard": 0.4182692307692308,
+   "v20Swapped": 0.4166666666666667,
+   "v20MedianDurationMin": 19.016666666666666,
+   "classification": null
+  },
+  {
+   "template": "classic.m5",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.57,
+    "lo": 0.5214218155958871,
+    "hi": 0.6185781844041128,
+    "stop": false,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.5975,
+    "lo": 0.5493804540570635,
+    "hi": 0.6456195459429366,
+    "stop": false,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "strong",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0.0275,
+    "lo": -0.018705674824256283,
+    "hi": 0.07370567482425629,
+    "nPlus": 50,
+    "nMinus": 39,
+    "p": 0.28909608069606385
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0.055,
+    "lo": -0.03736945589267877,
+    "hi": 0.14736945589267877,
+    "nPlus": 50,
+    "nMinus": 39,
+    "p": 0.28909608069606385
+   },
+   "v20AsBlue": 0.62,
+   "v20AsRed": 0.52,
+   "v20Standard": 0.5576923076923077,
+   "v20Swapped": 0.5833333333333334,
+   "v20MedianDurationMin": 17.391666666666666,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "classic.m6",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.59,
+    "lo": 0.5417399733170546,
+    "hi": 0.6382600266829453,
+    "stop": false,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.59,
+    "lo": 0.5417399733170546,
+    "hi": 0.6382600266829453,
+    "stop": false,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "strong",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.595,
+   "v20AsRed": 0.585,
+   "v20Standard": 0.5769230769230769,
+   "v20Swapped": 0.6041666666666666,
+   "v20MedianDurationMin": 17.866666666666667,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "classic.m7",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.6725,
+    "lo": 0.6264508710103898,
+    "hi": 0.7185491289896102,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.6725,
+    "lo": 0.6264508710103898,
+    "hi": 0.7185491289896102,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "stop",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.71,
+   "v20AsRed": 0.635,
+   "v20Standard": 0.6634615384615384,
+   "v20Swapped": 0.6822916666666666,
+   "v20MedianDurationMin": 17,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "classic.m8",
+   "kind": "classic",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.3625,
+    "lo": 0.3153302338133285,
+    "hi": 0.4096697661866715,
+    "stop": false,
+    "strong": false,
+    "weak": true
+   },
+   "v21": {
+    "rate": 0.3625,
+    "lo": 0.3153302338133285,
+    "hi": 0.4096697661866715,
+    "stop": false,
+    "strong": false,
+    "weak": true
+   },
+   "v21Flag": "weak",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.355,
+   "v20AsRed": 0.37,
+   "v20Standard": 0.33653846153846156,
+   "v20Swapped": 0.390625,
+   "v20MedianDurationMin": 19.3,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "std",
+   "kind": "std",
+   "v20Content": true,
+   "n": 400,
+   "v20": {
+    "rate": 0.5475,
+    "lo": 0.49866052610309636,
+    "hi": 0.5963394738969036,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.5475,
+    "lo": 0.49866052610309636,
+    "hi": 0.5963394738969036,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.5,
+   "v20AsRed": 0.595,
+   "v20Standard": 0.5528846153846154,
+   "v20Swapped": 0.5416666666666666,
+   "v20MedianDurationMin": 17.833333333333332,
+   "classification": "CONTROL"
+  },
+  {
+   "template": "v2.three_lane_pressure",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.6025,
+    "lo": 0.5544806015075268,
+    "hi": 0.6505193984924733,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.6025,
+    "lo": 0.5544806015075268,
+    "hi": 0.6505193984924733,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "stop",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.635,
+   "v20AsRed": 0.57,
+   "v20Standard": 0.5576923076923077,
+   "v20Swapped": 0.6510416666666666,
+   "v20MedianDurationMin": 16.725,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "v2.jungle_invasion",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.5325,
+    "lo": 0.48354238675408234,
+    "hi": 0.5814576132459176,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.5325,
+    "lo": 0.48354238675408234,
+    "hi": 0.5814576132459176,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.555,
+   "v20AsRed": 0.51,
+   "v20Standard": 0.5576923076923077,
+   "v20Swapped": 0.5052083333333334,
+   "v20MedianDurationMin": 17.4,
+   "classification": null
+  },
+  {
+   "template": "v2.bot_duo_pressure",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.565,
+    "lo": 0.5163549699623032,
+    "hi": 0.6136450300376967,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.5625,
+    "lo": 0.5138234358778596,
+    "hi": 0.6111765641221404,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": -0.0025,
+    "lo": -0.052291243153157294,
+    "hi": 0.04729124315315729,
+    "nPlus": 51,
+    "nMinus": 52,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": -0.005,
+    "lo": -0.10470630136888691,
+    "hi": 0.0947063013688869,
+    "nPlus": 51,
+    "nMinus": 52,
+    "p": 1
+   },
+   "v20AsBlue": 0.615,
+   "v20AsRed": 0.515,
+   "v20Standard": 0.5528846153846154,
+   "v20Swapped": 0.578125,
+   "v20MedianDurationMin": 18.483333333333334,
+   "classification": null
+  },
+  {
+   "template": "v2.mid_jungle_sync",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.6025,
+    "lo": 0.5544806015075268,
+    "hi": 0.6505193984924733,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.6025,
+    "lo": 0.5544806015075268,
+    "hi": 0.6505193984924733,
+    "stop": true,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "stop",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.585,
+   "v20AsRed": 0.62,
+   "v20Standard": 0.6009615384615384,
+   "v20Swapped": 0.6041666666666666,
+   "v20MedianDurationMin": 18.358333333333334,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "v2.support_roamer",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.4425,
+    "lo": 0.39376413295280255,
+    "hi": 0.49123586704719746,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.44,
+    "lo": 0.3912931576549242,
+    "hi": 0.48870684234507583,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": -0.0025,
+    "lo": -0.04981243113972128,
+    "hi": 0.044812431139721276,
+    "nPlus": 46,
+    "nMinus": 47,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": -0.005,
+    "lo": -0.09974238967859127,
+    "hi": 0.08974238967859126,
+    "nPlus": 46,
+    "nMinus": 47,
+    "p": 1
+   },
+   "v20AsBlue": 0.475,
+   "v20AsRed": 0.41,
+   "v20Standard": 0.41346153846153844,
+   "v20Swapped": 0.4739583333333333,
+   "v20MedianDurationMin": 19.816666666666666,
+   "classification": null
+  },
+  {
+   "template": "v2.dragon_pit_macro",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.535,
+    "lo": 0.48605898286820415,
+    "hi": 0.5839410171317959,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.535,
+    "lo": 0.48605898286820415,
+    "hi": 0.5839410171317959,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.555,
+   "v20AsRed": 0.515,
+   "v20Standard": 0.5336538461538461,
+   "v20Swapped": 0.5364583333333334,
+   "v20MedianDurationMin": 18.558333333333334,
+   "classification": null
+  },
+  {
+   "template": "v2.top_solo_split",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.485,
+    "lo": 0.435960717500455,
+    "hi": 0.5340392824995449,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.45,
+    "lo": 0.401184558094584,
+    "hi": 0.49881544190541605,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": -0.035,
+    "lo": -0.08491496628917156,
+    "hi": 0.01491496628917155,
+    "nPlus": 45,
+    "nMinus": 59,
+    "p": 0.20217310609620584
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": -0.07,
+    "lo": -0.16971840150137782,
+    "hi": 0.029718401501377806,
+    "nPlus": 45,
+    "nMinus": 59,
+    "p": 0.20217310609620584
+   },
+   "v20AsBlue": 0.445,
+   "v20AsRed": 0.525,
+   "v20Standard": 0.4855769230769231,
+   "v20Swapped": 0.484375,
+   "v20MedianDurationMin": 17.325,
+   "classification": null
+  },
+  {
+   "template": "v2.mid_solo_split",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.4625,
+    "lo": 0.41357681459496515,
+    "hi": 0.511423185405035,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.4225,
+    "lo": 0.37403156751690425,
+    "hi": 0.4709684324830957,
+    "stop": false,
+    "strong": false,
+    "weak": true
+   },
+   "v21Flag": "weak",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": -0.04,
+    "lo": -0.08939385571562657,
+    "hi": 0.009393855715626565,
+    "nPlus": 43,
+    "nMinus": 59,
+    "p": 0.13709880575604838
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": -0.08,
+    "lo": -0.1785989735643313,
+    "hi": 0.018598973564331295,
+    "nPlus": 43,
+    "nMinus": 59,
+    "p": 0.13709880575604838
+   },
+   "v20AsBlue": 0.455,
+   "v20AsRed": 0.47,
+   "v20Standard": 0.5,
+   "v20Swapped": 0.421875,
+   "v20MedianDurationMin": 18.375,
+   "classification": "UNRESOLVED"
+  },
+  {
+   "template": "v2.hard_engage_stack",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.575,
+    "lo": 0.5264937153646786,
+    "hi": 0.6235062846353213,
+    "stop": false,
+    "strong": true,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.575,
+    "lo": 0.5264937153646786,
+    "hi": 0.6235062846353213,
+    "stop": false,
+    "strong": true,
+    "weak": false
+   },
+   "v21Flag": "strong",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.59,
+   "v20AsRed": 0.56,
+   "v20Standard": 0.5625,
+   "v20Swapped": 0.5885416666666666,
+   "v20MedianDurationMin": 17.983333333333334,
+   "classification": "PRE_EXISTING"
+  },
+  {
+   "template": "v2.protect_core_scaling",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.4,
+    "lo": 0.35192987578437884,
+    "hi": 0.4480701242156212,
+    "stop": false,
+    "strong": false,
+    "weak": true
+   },
+   "v21": {
+    "rate": 0.4375,
+    "lo": 0.3888234358778596,
+    "hi": 0.4861765641221404,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": "weak",
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0.0375,
+    "lo": -0.012638098761006397,
+    "hi": 0.0876380987610064,
+    "nPlus": 60,
+    "nMinus": 45,
+    "p": 0.17156469715427503
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0.075,
+    "lo": -0.025131345902074068,
+    "hi": 0.17513134590207408,
+    "nPlus": 60,
+    "nMinus": 45,
+    "p": 0.17156469715427503
+   },
+   "v20AsBlue": 0.425,
+   "v20AsRed": 0.375,
+   "v20Standard": 0.4326923076923077,
+   "v20Swapped": 0.3645833333333333,
+   "v20MedianDurationMin": 19.908333333333335,
+   "classification": null
+  },
+  {
+   "template": "v2.standard_macro",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.52,
+    "lo": 0.47097789972074355,
+    "hi": 0.5690221002792565,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21": {
+    "rate": 0.52,
+    "lo": 0.47097789972074355,
+    "hi": 0.5690221002792565,
+    "stop": false,
+    "strong": false,
+    "weak": false
+   },
+   "v21Flag": null,
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.515,
+   "v20AsRed": 0.525,
+   "v20Standard": 0.5048076923076923,
+   "v20Swapped": 0.5364583333333334,
+   "v20MedianDurationMin": 18.333333333333332,
+   "classification": null
+  },
+  {
+   "template": "v2.defensive_hold",
+   "kind": "v2",
+   "v20Content": false,
+   "n": 400,
+   "v20": {
+    "rate": 0.285,
+    "lo": 0.24070598234524196,
+    "hi": 0.329294017654758,
+    "stop": false,
+    "strong": false,
+    "weak": true
+   },
+   "v21": {
+    "rate": 0.285,
+    "lo": 0.24070598234524196,
+    "hi": 0.329294017654758,
+    "stop": false,
+    "strong": false,
+    "weak": true
+   },
+   "v21Flag": "weak",
+   "v20OnlyFlag": null,
+   "c6Violation": false,
+   "pairedD": {
+    "n": 400,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDBlue": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "pairedDRed": {
+    "n": 200,
+    "mean": 0,
+    "lo": 0,
+    "hi": 0,
+    "nPlus": 0,
+    "nMinus": 0,
+    "p": 1
+   },
+   "v20AsBlue": 0.285,
+   "v20AsRed": 0.285,
+   "v20Standard": 0.2548076923076923,
+   "v20Swapped": 0.3177083333333333,
+   "v20MedianDurationMin": 18.325,
+   "classification": "PRE_EXISTING"
+  }
+ ],
+ "notes": [
+  "v2.* templates never shipped under v20: their v20 numbers are counterfactual",
+  "PRE_EXISTING is not PASS; the five G-A8 STOP templates keep blocking the v21 release"
+ ]
+}

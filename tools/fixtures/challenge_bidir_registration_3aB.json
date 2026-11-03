@@ -1,0 +1,70 @@
+{
+ "schema": "esmo.challenge-bidir-registration.v1",
+ "studyId": "challenge-bidir-3aB",
+ "stage": "Phase 3a-B P2-5b (follow-up to the challenge side bias STOP; Owner ruling 2026-10-27 item 1 = (a))",
+ "registeredAt": "2026-10-27",
+ "status": "registered; independent review APPROVE (round 2) 2026-10-27; the formal run additionally needs owner.confirmedAt (the only field that may change before the run; the tool refuses --run without it); written after the challenge side bias result was observed (commit b2af521b) and declared as such",
+ "review": {
+  "reviewedAt": "2026-10-27",
+  "verdict": "APPROVE (round 2)",
+  "round1": "APPROVE WITH CHANGES 2026-10-27 (M1 wording of cancellation and 'side'; M2 NOT_SIDE -> SIDE_NOT_REPRODUCED + power rule INCONCLUSIVE_POWER + per-pairing side; M3 live instrument check by task arm; m1 two-unit table; m2 duration per stratum; m3 frozen draft declared; m4 reconcile note; m5 simulationVersion note) - all applied"
+ },
+ "owner": {
+  "confirmedAt": "2026-10-27 (Owner ruling item 1: formal 4,098-match run approved with the reviewed registration, seeds, criteria and frozen fingerprint; the result must separate team strength, side and interaction; it never lifts the STOP)"
+ },
+ "purpose": "Separate the side from team strength in the Challenge setting. The registered side bias study ran every pairing in one direction only (the challenger always on blue), so its blue win rate mixes the side with the challenger's strength. Here every seed is played a second time with the same two squads, the same frozen draft, the same tactics, the same player stats and loadouts, and only the sides exchanged. 'Side' here means everything that differs between blue and red: map geometry, engine processing order (TD-21, runtime29 §29) and, under challenge.v20, the legacyMirror lane frame (red lane-keyed knobs mirrored, TD-3A-23; challenge.v21 uses teamRelative).",
+ "notClaimed": "This study never changes the registered side bias verdict: challenge side bias stays STOP (Owner item 3), challenge.v21 stays flag-gated and off. Its outcome only tells the Owner what the STOP is made of; no outcome is a release PASS by itself.",
+ "tool": "tools/measure_challenge_bidir_3aB.mjs (--validate / --run / --report; result tools/fixtures/challenge_bidir_result_3aB.json)",
+ "fingerprint": "0578fa882d74b205 (semantics frozen at 176ccac0; src unchanged)",
+ "seeds": {
+  "source": "exactly the seeds walked by the committed challenge side bias study (path challenge, 33001..37097 odd, 2,049 seeds; 1,049 STANDARD / 1,000 SWAPPED by bySeed stratum), minus nothing (it had 0 invalid seeds)",
+  "reuseNote": "deliberate reuse so each seed gives a forward/reverse pair on the same match seed; not a new evidence block"
+ },
+ "orientations": {
+  "forward": "the committed side bias records (read only): challenger team = FIXTURE_KEYS[seed % 5] on blue, defender team = FIXTURE_KEYS[(seed + 2) % 5] on red, built by runChallenge. The data dir's meta must equal the side bias registration hash 3348f4a4ff6d97b2 / study side-bias-3aB/challenge / the frozen fingerprint, and every record is re-checked (engineSeed = seed, simulationVersion = the arm's)",
+  "reverse": "new: the same challengeGoldenInputs (same snapshots, same DraftResult, same tactic ids, same matchSeed); buildChallengeMatchSetup is called with the defender snapshot as the blue side and the challenger snapshot as the red side, tactics {blue: defender tactic, red: challenger tactic}, and the DraftResult assignment mirrored seat by seat (b_i <-> r_i, so each team keeps its heroes in the same seat index); then the production assembleMatch with the same deps as runChallenge (heroLookup = heroById, label challenge:injected-heroOf), the ruleset from challengeRulesetForVersion(version), and the same tick loop (CHALLENGE_DT 0.5, CHALLENGE_MAX_T 1800). Deliberate: the draft is the frozen forward DraftResult (not re-drafted with the policies swapped), so the reverse game is NOT what runChallenge would produce if the defender issued the challenge; meta.opponentId and the tactic meta follow the blue side but only enter meta, never the simulation (V2 checks meta is identical). Reverse records carry no simulationVersion field: their ruleset comes from the real setup (setup.ruleset.rulesetId) and v21 records are also checked for Director core.v1 / laneFrame teamRelative, live (by the task's arm) and at report time",
+  "arms": "challenge.v20 reverse and challenge.v21 reverse: 2 x 2,049 = 4,098 new matches (~80 min at 3 workers)"
+ },
+ "validation (all must pass before --run; --validate)": [
+  "V1 tool path = runChallenge: the forward orientation built by the tool's own path (buildChallengeMatchSetup + assembleMatch + tick loop) reproduces the committed forward record (winner, duration, matchSeed) for the first 20 STANDARD and first 20 SWAPPED seeds, both versions (80 matches)",
+  "V2 mirror is exact and non-vacuous, for 20 seeds x 2 versions: reverse.roster[b_i] = forward.roster[r_i] and reverse.roster[r_i] = forward.roster[b_i] (heroId and spells); same for loadout; reverse.playerSlots.blue[i] = forward.playerSlots.red[i] with the seat id renamed, and vice versa; reverse.tactic.blue = forward.tactic.red and vice versa; every other setup field (ruleset, seed, tool, meta, effectiveLayers) identical, hash fields ignored; at least one seed where the two teams' rosters, stats and tactics all differ (the mirror moves something)",
+  "V3 involution: mirroring the reverse inputs again gives a setup identical to the forward setup (stable stringify), for the same 40 cases",
+  "V4 the forward data dir is complete for every walked seed and passes its own validity rule"
+ ],
+ "metric": {
+  "win": "1 if blue wins, 0 if red wins, 0.5 if unresolved at the cap (as the side bias study)",
+  "sidePerSeed": "s(seed, version) = (blueWin_forward + blueWin_reverse) / 2: each team plays each side once on the same match seed, so the teams' side effects are averaged within every pairing and the main effect of team strength cancels in expectation. Not removed (they stay in S): team x side interaction, including the v20 legacyMirror lane-name swap that makes the same tactic play differently on red, and the engine order bias (TD-21). Consequently S_v21 - S_v20 also contains the effect of the laneFrame fix.",
+  "sideAdvantage": "S(version, stratum) = mean over seeds of s - 0.5 (blue-side advantage with strength removed); stratum = the seed's bySeed layout (the map challenge.v21 plays; challenge.v20 always plays STANDARD, so for v20 the strata are labels only)",
+  "strength": "t(seed, version) = (blueWin_forward + (1 - blueWin_reverse)) / 2 = the challenger team's win rate averaged over both sides; reported per pairing (5 pairings) for both versions, with the paired v21 - v20 change and its 95% CI (descriptive)"
+ },
+ "comparison (same rule as the registered side bias study, applied to the strength-cancelled quantity)": {
+  "worse_pp": "(|S_v21| - |S_v20|) x 100 per stratum: the change in the size of the side advantage (distance from 50%), NOT the change of the blue win rate",
+  "winChange_pp": "(S_v21 - S_v20) x 100 per stratum, reported next to worse_pp and always labelled as the change of the strength-cancelled blue win rate (Owner item 4)",
+  "z": "paired per seed d = (s_v21 - s_v20) x g, g = the sign of the larger |S| of the two versions; z = mean(d) / (sd(d) / sqrt(n))",
+  "STOP": "in either stratum: worse_pp >= 5, or worse_pp > 0 and z >= 3",
+  "WARN": "in either stratum: worse_pp >= 3, or |median duration ratio v21/v20 - 1| > 0.10 per stratum (medians as in the side bias tool: even n = mean of the middle two); forward and reverse durations pooled within the stratum (declared difference from the one-directional study)",
+  "PASS": "data complete, V1-V4 passed, no STOP, no WARN",
+  "worseUpper": "approximate 95% upper bound of worse_pp = worse_pp + 1.96 x se(paired d in the g direction) x 100 (declared approximation)"
+ },
+ "report": [
+  "per stratum and version: S with 95% CI, worse_pp, winChange_pp, z, duration ratio",
+  "challenge.v21: pure blue advantage = mean of the two strata's S; dragon side = (S_STANDARD - S_SWAPPED) / 2",
+  "challenge.v20: pooled S only (always STANDARD map)",
+  "per pairing and version: challenger-team win rate t averaged over sides, paired v21 - v20 change with 95% CI",
+  "a reconciliation table: the one-directional blue win rate = S + 0.5 + strength term, per version and stratum, so the committed STOP numbers can be read in the same units",
+  "the committed one-directional STOP in both units side by side: worse_pp and blue win-rate change pp (Owner item 4)",
+  "the reconcile table uses the data after dropping errored seeds and may differ slightly from the committed numbers"
+ ],
+ "noOptionalStopping": "verdict only on complete data",
+ "errors": "errored matches are never retried or replaced, listed by seed; any => at most INCONCLUSIVE; > 1% => INSTRUMENT",
+ "envGuard": "--run and --validate refuse any ESMO_BALANCE_* in the environment (the challenge path does not read them, but the guard keeps the run clean)",
+ "outcomeLabels": {
+  "note": "decided now; every label goes to the Owner; NO label is a release PASS; challenge side bias stays STOP and challenge.v21 stays flag-gated",
+  "SIDE_CONFIRMED": "bidirectional verdict STOP: challenge.v21 worsens the side advantage itself",
+  "SIDE_WARN": "bidirectional verdict WARN",
+  "SIDE_NOT_REPRODUCED": "bidirectional verdict PASS AND in both strata the worse_pp upper bound < 5 pp: no evidence at this power that the side advantage got worse once strength is removed (not proof of absence); per-pairing strength changes and per-pairing side20/side21 are reported next to it (descriptive; lopsided pairings near 0%/100% dilute S)",
+  "INCONCLUSIVE_POWER": "bidirectional verdict PASS but a worse_pp upper bound >= 5 pp",
+  "INSTRUMENT": "any validation fails, any record fails its validity rule, or errored matches > 1%",
+  "INCONCLUSIVE": "any errored match (<= 1%); errored seeds are never retried or replaced and are dropped from both versions"
+ }
+}

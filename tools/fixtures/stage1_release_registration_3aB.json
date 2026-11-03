@@ -1,0 +1,318 @@
+{
+  "schema": "esmo.stage1-release-registration.v1",
+  "studyId": "phase3a-B.stage1.release",
+  "registeredAt": "2026-10-30",
+  "status": "registered; implementation design and acceptance spec for stage 1 (Live tactics v21 = tactic book + AI coach + Director; Challenge stays v20). Implementation is allowed only after the independent review (review.reviewedAt + an APPROVE verdict). This registration never enables a release flag, never starts the 15-18 h formal validation, never freezes semantics by itself",
+  "authority": "Owner 2026-10-30 (third ruling of the day): 1 mid_jungle_sync NO_CANDIDATE, unchanged, confirmation by the original G-A8 rules; 2 M3_C / M7_M / M8_C approved as v21 fix candidates through a versioned fix table, v20 behaviour must not change; 3 m7 v21 copy: name 前期野區入侵, risk 中, focus 打野, desc 打野開局主動入侵敵方野區，前期積極尋找接戰機會, cons 入侵失利可能讓隊伍失去前期節奏, keep the id classic.m7; 4 when the AI coach is unavailable and the fixed (style) tactic is used, apply the v21 fix by the match ruleset, never twice, v20 unchanged; 5 minimal release split approved: Live tactics v21 and Challenge v21 controlled separately, the tactic book under the master flag, Challenge stays v20 in stage 1, protect saves, in-progress matches, replay and flag rollback; 6 G-A8 and Challenge STOP stay; if the confirmatory G-A8 is still STOP the release stops and is reported, no threshold relaxation, no new seeds, no change of the test scope after the fact. Next: pre-registration, independent review, minimal implementation and a quick regression; confirm v20 goldens and flag-off behaviour unchanged; check the v21 UI copy, the AI fallback, saves and Challenge isolation. No full formal validation, no release flag, no push / deploy / main / CS",
+  "baseline": {
+    "branch": "feature/moba-phase3a (the implementation goes on a new local branch feature/moba-phase3a-stage1 created from it)",
+    "semanticsFreeze": "176ccac0",
+    "fingerprint": "0578fa882d74b205 (v21 candidate; changes with this implementation, re-registered only at the single semantics freeze)",
+    "production": "origin/main b4f8e0c3 (branch point of this work 1d0e219, the v20 release)"
+  },
+  "implementation": {
+    "I1_fixTable": {
+      "file": "src/platform/tactics/tacticTemplates.js",
+      "what": "two frozen versioned tables keyed by templateId. (a) TEMPLATE_BALANCE[\"v21.b1\"]: NUMERIC fields only, ABSOLUTE values (applying twice = applying once): classic.m3 {macro.aggression 0.6, macro.riskTolerance 0.5}; classic.m7 {macro.aggression 0.5, macro.riskTolerance 0.5, macro.tempo standard, lanePlan.top standard, lanePlan.mid standard, lanePlan.adc standard}; classic.m8 {macro.aggression 0.5, macro.riskTolerance 0.5}. (b) review M5: TEMPLATE_COPY[\"v21.b1\"], display only (never enters the engine config): classic.m7 {name 前期野區入侵, risk 中, focus 打野, desc 打野開局主動入侵敵方野區，前期積極尋找接戰機會, detail = desc (interpretation, for Owner confirmation: the Owner gave no detail and the old detail 全線壓制，速戰速決 is false under M7_M), cons 入侵失利可能讓隊伍失去前期節奏}; archetype 前期入侵, emoji, boost, fit, evidence and the id classic.m7 / tacticId m7 unchanged (review minor 1: 「前期野區入侵」 read as the name). One helper templateConfigFor(templateId, templateBalance) returns the shipped config (templateBalance null) or the balanced config; one helper templateCopyFor(templateId, templateBalance) returns the display copy. tacticTemplates.v1, MOBA_TACTICS and every template object stay byte-identical",
+      "notChanged": "m3 and m8 copy is NOT changed (the Owner fixed only the m7 copy). Review minor 2: an Owner decision on the m3 copy (cons 撤退門檻極低 is false once retreatAt is 0.25; risk 高) and the m8 copy (risk 低) is a HARD precondition of the semantics freeze. The copy gate (templateCopyViolations, check_tactic_plan_3a.mjs:481) works on the controlled vocabulary of the v2 copy; the classic copy is legacy free text with no effect-table rows, so it cannot be extended in the same form: the classic copy is guarded by S8 (exact Owner text) and the hand-derived m3 / m8 findings go to the Owner"
+    },
+    "I2_rulesets": {
+      "file": "src/platform/contracts/matchRuleset.js (semantics file)",
+      "what": "career.v21 and balanceTool.v21 get the optional layer templateBalance \"v21.b1\" (validated like laneFrame: if present it must be a known table id); the three v20 rulesets and challenge.v21 are untouched byte for byte (challenge.v21 is stage 2; changing its object would change every challenge.v21 setup hash). resolveRulesetForMode: the challenge branch needs mobaTacticalDirectorV21 && heroSkillsV1 && mobaChallengeV21 (new); the Live branch is unchanged",
+      "flag": "src/featureFlags.js: mobaChallengeV21: false (not a semantics file). mobaTacticalDirectorV21 stays false"
+    },
+    "I4_assembler": {
+      "file": "src/battle/moba/matchAssembler.js",
+      "what": "passes templateBalance from the ruleset layer to resolveTactic for both sides; absent layer => option absent (the resolveTactic arguments are byte-identical to today for every ruleset without the layer). Review round 2 (M2): under a ruleset with templateBalance, tacticMeta.tacticName (matchAssembler.js:377) and replayConfig.tacticName (:424) are taken from the resolver meta (r.meta) instead of the config name, so BattleEndScreen.jsx:259 and MobaReplayScreen.jsx:317 show the v21 name; this name goes through configureMatch meta into the BattleResult and the replay ONLY for career.v21 / balanceTool.v21 (those golden cases change anyway; every v20 and challenge case unchanged)"
+    },
+    "I5_live": {
+      "file": "src/battle/moba/liveMatchSetup.js",
+      "what": "review M2, pre-registered 2x2 matrix for BLUE, decided by the match ruleset (new match: resolved from the flags at start; resume: the persisted ruleset), never by the flags directly: (1) career.v21 + binding: binding as today (resolver applies the table); (2) career.v21 + no binding (legacy tactic confirmed on the v20 screen, or an old resume): if the legacy tacticId is in the table, the config is REBUILT from ids: templateConfigFor(classic.<id>, table) then applyVariant(variantById(config.variantId)) if a variant was set (balance before the overlay, exactly once); otherwise unchanged; (3) career.v20 + binding (confirmed in the tactic book, then the flag was turned off before the start): the binding is not used. Review round 2 (M3): if plan.templateId is classic.mX, blue = mobaTacticById(mX) with applyVariant(variantById(plan.overlayIds[0])) when the plan has a classic overlay (the production v20 inputs); if plan.templateId is std or any v2.* template (no production v20 equivalent; mobaTacticById(\"std\") is null, matchSetup.js:346 would switch the match layer off), blue = { kind: \"std\" } (STANDARD_OPP_TACTIC, neutral; DEFAULT pending Owner confirmation, see preFreeze); every choice of the plan is reported in droppedChoices and the notice gets a template-substitution field (the template the player chose and the tactic actually used) so a v2 plan with no choices is never swapped silently; the stored display object (which may be a v2 or balanced merge) is never played; (4) career.v20 + no binding: opts.tactic as production v20. RED: the AI coach binding (career.v21) is balanced by the resolver only; the style-template fallback (coach unavailable, career.v21) uses the same rebuild helper as (2), exactly once (red is re-derived at every start / resume and never saved); career.v20 unchanged. Review minor 3: STYLE_TEMPLATES of the AI coach (aiCoach.js:34-40) never pick m3 / m7 / m8, asserted directly; the fallback fires only when the coach fails (aiCoach.js:62). bindingForRuleset keeps its criteria (requires / scope; not no-op status) and applies only under career.v21. Review round 2 (minor 10): the matrix is keyed on ruleset LAYERS, not ids: a binding is used only when tacticalDirector is core.v1; the table applies only when the templateBalance layer is present (so the DEV tool ruleset liveMatchSetup.js:110-120, static, behaves like career.v20). (minor 9) accepted transitional display mismatch: in case (2) the LoadingScreen / HUD show the copy of the tactic the player confirmed on the v20 screen while the balanced config plays (one match in the flag-flip window). (minor 8) the rebuild helper takes an injectable table so S6 can observe \"balance before variant\" with a planted table / overlay (the real m8 overlay, tacticOverlays.js:61, is disjoint from v21.b1)"
+    },
+    "I6_ui": {
+      "files": "src/AppShell.jsx, new src/screens/moba/TacticScreenV20.jsx, src/screens/moba/TacticScreen.jsx, src/screens/moba/tacticBook/tacticBookOptions.js, src/screens/moba/tacticBook/TemplateStrip.jsx, src/screens/moba/tacticBook/ConfirmPanel.jsx / OpponentIntelPanel.jsx as needed",
+      "what": "master switch: AppShell resolves the Live ruleset from the flags; tacticalDirector static (career.v20) => TacticScreenV20, a verbatim copy of src/screens/moba/TacticScreen.jsx at 1d0e219 (identical at origin/main b4f8e0c3; all 19 named imports still exist), which never produces a binding; core.v1 (career.v21) => the tactic book. Review minor 4: AppShell writes tacticPlanBinding into activeMatch.config only when non-null or to clear a stale binding of the same match (production never wrote the key; a stale binding would otherwise win over the tactic re-chosen on the v20 screen). Under a ruleset with templateBalance the tactic book uses the balanced engine (own, offered, values, view config, indicators) and TEMPLATE_COPY for every copy surface. Copy surfaces enumerated (review M5): template strip (name, desc, risk), TacticScreen header / archetype / risk / 優勢 (detail) / 缺點 (cons) (cur = template config, TacticScreen.jsx:282-345), confirm page template name, opponent intel names and its fallback name (tacticBookOptions.js:247), DevelopmentInsights rows (TacticScreen.jsx:128-133), LoadingScreen.jsx:125 and BattleHUD.jsx:187 (both read the applied display object, which carries the v21 copy under career.v21), BattleEndScreen.jsx:259 (meta tacticName, I3). Under v20 nothing changes. The tacticBook save slice is read and written as today in both modes (hidden under v20, never deleted). Review round 2: MobaReplayScreen.jsx:317 added to the copy surfaces (via replayConfig.tacticName, I4). (minor 11) ClubMasteryScreen lists MOBA_TACTICS names as mastery records by tacticId; it is outside the match-ruleset scope and keeps the v20 names in stage 1 (listed for the Owner)"
+    },
+    "I7_challenge": {
+      "what": "no challenge semantics change: with mobaChallengeV21 off, CHALLENGE_SIMULATION_VERSION = moba-sim.v20, new challenges and snapshots record v20, challenge.v20 reads the shipped legacy configs (snapshots store only tacticId; the Challenge path never reads templates). Review minor 6: challenge.v21 stays byte-identical, so its releaseRequirements do not list mobaChallengeV21 (recorded; the gate S2 checks the resolve branch instead); the header comment of challengeVersion.js (not a semantics file) is updated"
+    },
+    "I8_gate": {
+      "file": "new tools/check_stage1_split_3aB.mjs",
+      "assertions": [
+        "S1 the three v20 rulesets and challenge.v21 are byte-identical to the pinned pre-change serialisations; v20 rulesets have no templateBalance key",
+        "S2 resolveRulesetForMode with all flags off equals the pinned pre-change outputs for live and challenge; with the stage-1 flags (mobaTacticalDirectorV21 on, mobaChallengeV21 off) live = career.v21 and challenge = challenge.v20 and challengeSimulationVersionFor = moba-sim.v20; with all three on challenge = challenge.v21 (unchanged object)",
+        "S3 MOBA_TACTICS and every template object are byte-identical to the pinned pre-change hashes; the table holds only classic.m3 / m7 / m8, every value is in the shipped range, absolute, and the balanced knob sets are distinct from every template and from each other; review round 2: no table entry sets lanePlan split, carry / seat priority, std or classic.m2 (the union rule and the mapping caps rely on it)",
+        "S4 resolver: a binding of classic.m3 / m7 / m8 with no choices resolves under v21.b1 to the knobs of the screened arms M3_C / M7_M / M8_C (built from the screening registrations) and without the option to today's knobs; plan validity is the union rule (a plan valid under either config validates; planHash unchanged); a plan saved under one config resolves under the other; review round 2: the classic.m7 phases.early.focusLane=top case validates and resolves in both directions (no-op under shipped, offered under v21.b1)",
+        "S5 AI fallback: career.v21 red style template (aggressive m7, defensive m8, skirmish m3) gets the balanced config exactly once (the rebuild helper applied to its own output changes nothing); career.v20 unchanged; STYLE_TEMPLATES of the AI coach never pick m3 / m7 / m8 (asserted directly)",
+        "S6 Live 2x2 matrix (review M2): (1) v21 + binding as today; (2) v21 + legacy m3 / m7 / m8 (with and without a variant) rebuilt once, balance before the variant; (3) v20 + binding => blue = mobaTacticById(legacyTacticId) (+ the plan classic overlay), droppedChoices lists every choice, the stored display object is not played; (4) v20 + no binding = production; a persisted career.v21 ruleset with a binding resolves with the binding when the flag is off (resume by match ruleset); the \"confirmed, not started\" cases of (2) and (3); review round 2: case (3) for classic.mX with and without an overlay, for std, and for a v2 plan with no choices (template-substitution field present); the matrix keyed on layers covers the DEV tool ruleset; \"balance before variant\" observed with a planted table / overlay",
+        "S7 Challenge isolation: under the stage-1 flags a challenge match setup of a snapshot with tacticId m7 uses the shipped MOBA_TACTICS m7 config; every challenge-path call site passes the challenge version explicitly (no default MOBA_SIMULATION_VERSION leaks)",
+        "S8 copy: every enumerated surface under v21 shows exactly the Owner copy for classic.m7 (name, risk, focus, desc, detail, cons; id classic.m7; archetype, emoji, fit, evidence unchanged), the v20 view and the template objects keep the original copy, and the engine config of the balanced m7 carries no copy field change",
+        "S9 UI split: TacticScreenV20.jsx equals src/screens/moba/TacticScreen.jsx at 1d0e219 and at origin/main b4f8e0c3 except for the header line naming the file; AppShell renders it exactly when the resolved Live ruleset is static; AppShell writes tacticPlanBinding only when non-null",
+        "S10 saves: a profile with tacticBook plans round-trips through the save bundle in both flag states with the plans unchanged",
+        "S11 display = engine (review M1): for classic.m3 / m7 / m8 over an enumerated plan space (no choices, every single offered choice, pairs of offered choices) under v21.b1, the value shown per dimension (own or explicit) equals the value the resolved engine config holds, and no offered non-own choice is a no-op; the same under the shipped config",
+        "S12 names: under career.v21 the BattleResult tacticMeta.tacticName and replayConfig.tacticName of a classic.m7 binding are 前期野區入侵; under career.v20 and challenge unchanged",
+        "S13 exclusions: a row with templateBalance applies only under its table; every existing row (no key) applies under both configs (conservative until re-decided)"
+      ]
+    },
+    "I3_resolverAndChoiceEngine": {
+      "files": "src/platform/tactics/tacticChoiceMapping.js, src/platform/tactics/tacticPlan.js, src/battle/moba/tactics/tacticResolver.js",
+      "what": "review M1: the choice engine takes the template config through templateConfigFor; one engine instance per table (shipped = null, v21.b1). OFFERING and RESOLUTION use the engine of the ruleset table everywhere: own choices, offered lists, win-condition fill, effective choices, merge (template -> overlays -> choices), view config, indicators. PLAN VALIDITY is ruleset-independent and stated: a plan is valid iff its structure is valid and planProblems is empty under the shipped config OR under at least one registered table (union; when all fail the shipped errors are returned). So no saved plan, binding or planHash changes, and a plan saved in one mode never becomes unresolvable in the other (an explicit choice that is a no-op under the other config is applied as a no-op). legacy and std inputs: unchanged. resolveTactic takes opts.templateBalance (absent => byte-identical behaviour); the meta tacticName / playbookName of a balanced classic template come from TEMPLATE_COPY under that table (review M5: results under career.v21 show the v21 name), otherwise unchanged. Review round 2: (M1) the SAME union function is used by createTacticPlan (tacticPlan.js:225) and by the resolver re-validation (tacticResolver.js:119), computed over the table variants of the same mapping instance (planted-mapping gates keep working); example pinned in S4: classic.m7 phases.early.focusLane=top is a no-op under the shipped config (tacticChoiceMapping.js:266-267) and offered under v21.b1, and resolves in both directions. (minor 5) the table engine is also used by keptUnofferedChoices (tacticBookOptions.js:271, at match start useLocalServer.js:237), offeredChoicesOnly and the AI coach tacticBookOptions call (aiCoach.js:66; the ruleset table is passed through redCoachBinding). (minor 6) caps and floors of the mapping (tplConfig sources std and classic.m2, tacticChoiceMapping.js:89, 99) are neutral mapping constants and never go through templateConfigFor. (M4) measured exclusions and replication withdrawals get an optional templateBalance key: a row with templateBalance X applies only under table X; a row without the key applies everywhere (today's behaviour, so the existing rows measured on the shipped m3 / m7 / m8 configs keep withholding under v21.b1 conservatively until the pre-freeze measurement re-decides them for v21.b1, Owner 2026-10-23 evidence isolation). Meta under a table: tacticName / playbookName of a template with a TEMPLATE_COPY entry come from the copy (binding input: the templateId; legacy input: the classic template of its tacticId); otherwise unchanged"
+    }
+  },
+  "quickRegression": {
+    "purpose": "the regression the Owner asked for now (not the formal validation): v20 goldens and flag-off behaviour unchanged; v21 copy, AI fallback, saves and Challenge isolation checked",
+    "mustPass": [
+      "npm run build",
+      "node tools/check_stage1_split_3aB.mjs (S1-S11)",
+      "node tools/check_match_setup_3a.mjs (v20 golden 39 cases byte-identical)",
+      "node tools/check_match_ruleset_3a.mjs (v20 / challenge pins unchanged; career.v21 / balanceTool.v21 pins updated visibly)",
+      "node tools/check_challenge_golden_v21.mjs, check_challenge_setup_3a.mjs (Challenge unchanged)",
+      "node tools/check_match_golden_v21a.mjs and check_career_golden_v21.mjs (run to produce the changed-case list; v20 and challenge cases must be identical; not re-recorded)",
+      "node tools/check_live_setup_3a.mjs (I5), check_ai_coach_3a.mjs (fallback), check_balance_runner_setup_3a.mjs (balanceTool.v21 layer)",
+      "node tools/check_tactical_director_3c.mjs, check_tactical_directive_3c.mjs",
+      "node tools/check_tactic_plan_3a.mjs, check_tactic_book_view_3a.mjs, check_tactic_book_ui_3aB.mjs, check_tactic_save_3a.mjs, check_career_v21_tactics_c6.mjs, check_tactic_evidence_scope_3a.mjs",
+      "node tools/check_tactic_truth_3a.mjs and check_tactic_replication_3a.mjs (expected STALE where they compare the measured fingerprint; the exact assertion ids that go STALE are recorded, everything else must pass)",
+      "node tools/check_save_bundle_b1b.mjs, check_save_hardening_b1c.mjs, check_cloud_save_b1d.mjs",
+      "node tools/check_player_challenge_slice1..8 (slice3 section 3 is a registered flaky statistical gate: reported as is, thresholds never relaxed)",
+      "node tools/verify.mjs --only=tactic24,runtime29 (tactic24 27/29 with the two v20 reds; runtime29 flat 35/35)",
+      "node tools/regress.mjs and regress2.mjs (CLAUDE.md: always run; NOT evidence for tactic changes, they never call configureMatch)",
+      "browser (review M4): browser_check_tactic_book_3a and browser_check_tactic_book_v21 on desktop and 390 px if the dev server and Chrome are available; otherwise every copy surface of I6 is listed as not browser-tested",
+      "node tools/check_c3_phase_skeleton.mjs, check_laneframe_c3.mjs, check_tactic_registry_3a.mjs, check_tactic_resolver_3a.mjs, check_match_assembler_3a.mjs, check_match_setup_contract_3a.mjs, check_moba_tactical_ai_p1.mjs, check_moba_tactical_ai_p2.mjs, check_phase_bucket_c3.mjs, check_phase_choices_c3.mjs, check_phase_study_c3.mjs, check_tactic_indicators_3a.mjs, check_win_condition_c6.mjs, check_c7_diag_3c.mjs, check_challenge_snapshot_fatigue_g4.mjs, check_study_seed_plan_3aB.mjs (complete MOBA Phase 3a sweep; pre-existing reds on the baseline: check_tactical_identity_v17 E1 / E5, check_hero_skills_phase1)"
+    ],
+    "expectedChanges": [
+      "check_match_ruleset_3a: the pinned career.v21 / balanceTool.v21 serialisations (R22 and siblings) change by the new layer; the pins are updated visibly in the same commit, every v20 / challenge pin unchanged",
+      "check_match_golden_v21a / check_career_golden_v21: only cases on career.v21 / balanceTool.v21 may change (setup hash by the new layer; result only where classic.m3 / m7 / m8, the AI fallback or the v21 tacticName is involved); every v20 case and every challenge case identical; not re-recorded; the changed case list is reported",
+      "review M3, red by design with pre-registered replacement assertions (no silent edits): check_tactic_book_ui_3aB U5 (career.v20 + binding gave droppedChoices of the v21-only choices) => U5': career.v20 + binding => for a classic plan blue legacy = mobaTacticById(legacyTacticId) (+ plan classic overlay), for a std / v2 plan blue = std with the template-substitution field; no binding in the setup; droppedChoices lists every choice of the plan; career.v21 unchanged (review round 2 M3: the U5 / E5 / D fixtures use templateId std, so the replacements use a classic plan AND the std case explicitly). check_tactic_evidence_scope_3a E5 (career.v20 binding drops scope \"static\" choices) => E5': under career.v20 the binding is not used at all (master switch); under career.v21 scope handling unchanged. browser_check_battle_notices_3aB D (flag off: binding with a v21-only choice starts with the notice) => D': flag off: the notice lists every choice and the match starts on the classic tactic. Review round 2 (minor 7): check_tactic_book_view_3a V11 screenWired (:176-177) requires exactly `{ tacticalDirector })` and goes red when the table is passed => V11': the same wiring check accepting `{ tacticalDirector, templateBalance })` and asserting the table comes from the same resolved ruleset. W4 / W5 (:137, :173) and check_tactic_book_ui_3aB (:67) are expected to stay green; any other red is investigated, not edited to pass",
+      "this supersedes the Owner decision of 2026-10-25 (item 4: under career.v20 a binding keeps its static choices and drops only v21-only ones): under the Owner 2026-10-30 item 5 (tactic book under the master flag) a binding is not used at all under career.v20; recorded for the Owner",
+      "review minor 5: in-progress career.v21 matches saved before this change carry a ruleset without templateBalance and fail usablePersistedRuleset (missing layer key, matchSetup.js:166) and re-resolve; v21 was never released, so no player is affected; there is no no-balance career.v21 / balanceTool.v21 control arm (a tool override value would be needed for one)",
+      "fingerprint and truth table: the semantics files change, so the measured fingerprint differs from 0578fa882d74b205 and the truth table is stale; tools that refuse to run on another fingerprint will refuse; re-registration belongs to the freeze"
+    ],
+    "notRun": "the 15-18 h formal validation (G-A8 confirm, E1, E2, career side bias, evidence replay, truth table re-run, golden re-recording); browser gates are run only if the dev server is available and are otherwise listed as not browser-tested",
+    "baseline": "every gate is also run on the unchanged tree (feature/moba-phase3a at the registration commit) first, so pre-existing reds are separated from regressions",
+    "secondPassReplacements": [
+      "skeleton RS1' / RS2' / RS7': the v21 layers equal the v20 layers plus the registered v21 keys, which now include templateBalance \"v21.b1\" (career.v21, balanceTool.v21 and the flag-resolved career.v21); every other requirement unchanged",
+      "skeleton RS8': challenge mode needs mobaTacticalDirectorV21 && heroSkillsV1 && mobaChallengeV21 for challenge.v21; the stage-1 flags give challenge.v20",
+      "skeleton G / G1c and laneframe C3: the expected changed set of the v21-A rerun under career.v21 becomes laneFrame (9) U AI coach (6) U TEMPLATE BALANCE, where the template-balance set is DERIVED, not listed: every bind-template case of a template that TEMPLATE_BALANCE[\"v21.b1\"] changes (classic.m3 / m7 / m8, 2 seeds each = 6 ids). Exact-set equality stays (no tolerance added); the six are required to change and every other case must stay identical. The v21-A fixture is NOT re-recorded",
+      "registry U1' and resolver XP1': plan acceptance equals the UNION of the structural offers under the shipped config and under every registered table (the registered union rule); offering (tacticBookOptions) stays per config and is unchanged for the shipped config. The known case classic.m7 phases.early.focusLane=top (no-op under shipped, offered under v21.b1) is named in the assertion; review 2: the known case is named in resolver XP1' (and S4b) and XP1' requires at least one table-only case",
+      "resolver D1': the allowed applyVariant callers add src/battle/moba/liveMatchSetup.js (v20 fallback of a classic plan with its overlay; rebuild of a classic legacy tactic under the table) and src/platform/tactics/tacticTemplates.js (classicLegacyTemplateOf, the exactness check); both only apply a variant that the plan or the config already names (variantById of an existing id), so the v20 reachability claim (variants filtered by baseTacticId at the only v20 entry) is unchanged",
+      "case 3 std plan: substitution null (replacement assertions V13', E5', U5', V4', D1' and S6 updated accordingly; v2 plans keep the substitution)"
+    ]
+  },
+  "formalAcceptance": {
+    "when": "after the Owner approves the single semantics freeze; registered separately, with its own independent review, before any measurement",
+    "scope": "stage 1 only: Live tactics v21 (career.v21 with the v21.b1 table), Challenge on v20",
+    "required": [
+      "G-A8 confirmatory re-run on 43001-43400, all 21 templates, original thresholds (no template excluded). If it is STOP: the release stops and is reported (Owner item 6); no threshold relaxation, no new seeds, no change of scope after the fact",
+      "E1, E2 (career.v21 with the AI coach), career side-bias confirmation 51001-55999, evidence replay, truth table full re-run, v21a / career golden re-recording (Owner), v20 golden 39 cases unchanged",
+      "Phase 3a gates, 42 Node gates, verify full suite, save gates (b1b / b1c / b1d) and browser save gates",
+      "split gates: check_stage1_split_3aB; Challenge under the stage-1 flags: challenge goldens, player challenge slices 1-8, browser challenge gates; existing v20 challenges replay; flag rollback drill (a stage-1 save with tactic-book plans, an in-progress career.v21 match, and the \"confirmed, not started\" states of matrix cases (2) and (3), loaded with the flag off / on: no damage, in-progress matches resume byte-identical on their persisted ruleset, plans kept); code rollback is not supported (it would delete tacticBook) and is excluded by the release manual",
+      "browser: the tactic book with the real flag on (desktop + 390 px) and the flag-off tactic screen compared with production",
+      "merge integration with the current origin/main (includes CS Major v1.0; CS verify-only) before deploy; post-deploy production gates"
+    ],
+    "notInStage1": "Challenge side-bias confirmation 45001-49999, C1 calibration, challenge.v21 golden: stage 2; the Challenge side-bias STOP stays",
+    "neverClaimed": "passing stage 1 is not a pass of the original P2 acceptance, of G-A8 by exclusion, or of the Challenge side bias",
+    "order": "review minor 7: the G-A8 confirmatory re-run runs FIRST; if it is STOP every other formal measurement is halted and the stop is reported (Owner item 6)"
+  },
+  "constraints": "no shared-engine change (LogicEngine.js untouched), no red/blue compensation, no new seeds drawn after seeing data, both STOPs stay, v20 rulesets and goldens byte-identical, no release flag enabled, no push / deploy / main / CS",
+  "review": {
+    "reviewedAt": "2026-10-30",
+    "verdict": "APPROVE WITH CHANGES (independent reviewer, 2 rounds: 5 Major / 8 minor, then 4 Major / 7 minor; all applied). Implementation may start",
+    "round1": "2026-10-30 APPROVE WITH CHANGES (5 Major / 8 minor, all applied; re-review requested for M1): M1 display vs engine mismatch (own / offered / win-condition / view config / indicators on the shipped template) => one templateConfigFor helper used everywhere, union plan validity, gate S11, truth rows of the balanced templates before the freeze; M2 blue side and flag-flip window => pre-registered 2x2 matrix (rebuild from ids, balance before variant; v20 + binding plays the classic legacy tactic); M3 gates red by design listed with replacement assertions; M4 quick regression completed (goldens, ruleset pins, live / ai coach / challenge / balance runner setup, tactic save, c6, truth / replication STALE ids, regress / regress2, browser or not-browser-tested list); M5 display-only TEMPLATE_COPY, every copy surface enumerated, results show the v21 name under career.v21; minors: m7 name / detail interpretation, m3 / m8 copy as a hard freeze precondition and why the copy gate cannot be extended, coach STYLE_TEMPLATES assertion, accepted non-equivalences and AppShell key, pre-change career.v21 resumes, challenge.v21 releaseRequirements and challengeVersion.js comment, G-A8 first in the formal order, S9 against b4f8e0c3 too",
+    "round2": "2026-10-30 re-review APPROVE WITH CHANGES (4 Major / 7 minor, all applied): M1 the union function also in the resolver re-validation (tacticResolver.js:119), S4 focusLane case, S3 no split / seat priority in a table; M2 v21 name reaches results through r.meta in the assembler (tacticMeta :377, replayConfig :424), MobaReplayScreen added, legacy meta from the copy table; M3 case (3) for std / v2 plans (std default pending Owner, substitution field, fixtures fixed); M4 exclusions keyed by table (conservative default, pre-freeze re-decision); minors: keptUnofferedChoices / offeredChoicesOnly / coach on the table engine, caps stay shipped, V11 replacement, planted table for balance-before-variant, case (2) copy accepted, supersession to preFreeze, matrix keyed on layers, ClubMasteryScreen out of scope",
+    "round3": "implementation review 2026-10-30: APPROVE WITH CHANGES 3 Major / 7 minor, all applied; second-pass replacements registered in quickRegression.secondPassReplacements before the gates were edited",
+    "round4": "second implementation review 2026-11-01: APPROVE WITH CHANGES (5 minor, all applied: derived set pinned to 6 ids, XP1' table-only count and named m7 case, M10 numbering and precondition, evidence goals to preFreeze, commit)"
+  },
+  "preFreeze": [
+    "Owner decision on the m3 / m8 copy (hard precondition)",
+    "Owner confirmation of the m7 detail line (= desc) and of results showing the v21 name under career.v21",
+    "review M1 / round 2 M4: the existing measured-exclusion and replication rows of classic.m3 / m7 / m8 (e.g. capabilityRegistry.js:404 m7 top split, :420 m3 tower high, :422-429 m8 phase rows) re-decided for v21.b1 by a development measurement on fresh seeds (registered first), and new rows keyed by templateBalance v21.b1, BEFORE the freeze (until then the shipped-config rows keep withholding conservatively under v21.b1)",
+    "the quick regression of this registration green except the pre-registered expected changes",
+    "the formal stage-1 acceptance registered and independently reviewed",
+    "Owner confirmation that the 2026-10-25 decision (item 4: a binding under career.v20 keeps its static choices) is superseded by the master switch (review round 2 minor 10)",
+    "Owner confirmation of the case (3) default for std / v2 plans under career.v20 (blue = standard tactic with a substitution notice) (review round 2 M3)",
+    "review 2 (minor 4): the post-match \"tactic execution\" panel (BattleEndScreen.jsx:254) grades by mobaTacticById(tacticId).evidence, i.e. the v20 goals (m7 推塔波次 6 from the all-lane-push era) while the v21 name is shown; evidence is unchanged by registration — Owner decides whether v21 gets its own evidence goals (together with the m3 / m8 copy)"
+  ],
+  "acceptedNonEquivalences": "review minor 4: with all flags off the build differs from production v20 only in ways accepted here: the tacticBook slice in the cloud envelope (read and written, hidden), the manifest label v21 (matchAssemblerDepsCore.js:83; defined as behaviour / golden equivalence, not metadata identity), and the assembly-error card (shown only when the assembler rejects a match); flag-flip window case (2): the LoadingScreen / HUD copy is the copy confirmed on the v20 screen for that one match; flag-flip window case (3): the LoadingScreen / HUD show the stored display object (v21 copy or v2 name) while the classic / standard tactic plays, for that one match (the battle notice states the substitution for v2 plans)",
+  "implementationReview": {
+    "reviewedAt": "2026-10-30",
+    "verdict": "APPROVE WITH CHANGES (independent implementation review: 3 Major / 7 minor; all applied before the re-run)",
+    "findings": [
+      "M1 contradictions computed on the shipped engine => contradictions(binding, withheld, templateBalance) via effectiveChoices of the table engine; ruleSuppressed honours templateBalance rows; tacticBookView passes the table (gate S14)",
+      "M2 check_c3_phase_skeleton was not in the quick regression and goes red => added; replacement assertions registered below BEFORE editing",
+      "M3 check_tactic_save_3a M6 / M2 / P1 became vacuous or mislabelled => M6 runs under career.v21; M2 relabelled as case 3 equals the v20 golden; P1 compares a career.v21 binding with the legacy object; new M10 (M7 was taken): a career.v21 binding of a classic template outside the table resolves to the legacy knobs",
+      "minor 4 tactic-book default save name => name = bookName.trim() || cur.name (the v21 copy under the table)",
+      "minor 5 case 3 for a std plan reported \"標準運營 replaced by 標準運營\" => substitution is null for std (the same tactic is played; choices are still listed as dropped); v2 plans keep the substitution; the case 3 display gap (LoadingScreen / HUD show the stored display object while the classic / std tactic plays, one match in the flag-flip window) is added to acceptedNonEquivalences",
+      "minor 6 legacy rebuild and the legacy meta name used only the tacticId => classicLegacyTemplateOf(config, table): rebuild only a config that IS the shipped (or already balanced) classic + its variant; rename only a config that IS the balanced classic (gate S16)",
+      "minor 7 templateForBalance replaced a planted tpl.config by the registered one => fields applied on the passed tpl.config",
+      "minor 8 gate S11 now also enumerates pairs and checks per-phase dimensions through the resolved phase knobs; S13 is behavioural with injected rows (lookups take an optional rows argument); S10 / S12 labels state what is tested",
+      "minor 9 U5' compares the engine signature with mobaTacticById; D1' (browser) keeps the std plan and now asserts no substitution line for std",
+      "minor 10 AppShell writes tacticPlanBinding: null when a stale binding exists (registration text corrected: written when non-null OR to clear a stale one)"
+    ]
+  },
+  "ownerReview20261101": {
+    "registeredBefore": "every src edit of this round; written with no gate run on the new code",
+    "decisions": {
+      "item1": "classic.m3 / classic.m8 risk = 中 under v21.b1; positioning kept (name, emoji, focus); copy that contradicts the new values or has no evidence is deleted",
+      "item2": "classic.m7 detail = desc; results and replay show the v21 name",
+      "item3": "master switch and v20 fallback approved: std = standard tactic; v2 = standard tactic + substitution notice; tactic-book saves are never deleted. Supersedes the 2026-10-25 decision 4",
+      "item4": "the post-match tactic execution panel must not grade v21 with v20 goals that do not apply; unscored information may be shown; v21 goals need formal evidence",
+      "item5": "P6 fresh-seed development exclusion study and P7 formal stage-1 acceptance spec with independent review approved",
+      "item6": "P8 golden re-recording approved in principle: only after the formal freeze, old fixtures kept, differences reviewed case by case"
+    },
+    "implementationPlan": {
+      "I9_copy": {
+        "rule": "deletion only, no new claims. Phrase by phrase:",
+        "classic.m3": {
+          "risk": "高 => 中 (risk 0.8 => 0.5)",
+          "desc": "先手開團強起會戰 (deleted 一波決勝: no evidence)",
+          "detail": "輔助/坦克先手開團 (deleted 刺客切後排 and 適合有強控陣容: no evidence that this tactic changes target selection or reads crowd control)",
+          "cons": "吃溝通與先手品質 (kept: fit.stats comms / synergy / courage; deleted 撤退門檻極低: contradicts riskTolerance 0.5; deleted 團戰輸了就是崩盤: no evidence)"
+        },
+        "classic.m8": {
+          "risk": "低 => 中 (risk 0.2 => 0.5)",
+          "desc": "穩健發育拖到後期 (deleted 一波定勝: no evidence)",
+          "detail": "前期穩健防守 (earlyGame defensive and the lane plan unchanged; deleted 靠後期陣容強度決勝: no evidence)",
+          "cons": "null, line hidden (deleted 前期塔與資源全讓: dragon priority stays 0.5 and aggression rose to 0.5; deleted 被速推隊 20 分鐘內終結就沒有後期: no evidence)"
+        }
+      },
+      "I10_evidence": "resolver meta gets rebalanced: true ONLY under a table and only when the table changes that template (binding template, or a legacy config that is exactly the rebalanced classic + variant). The assembler adds evidenceGoals: \"unscored\" to tacticMeta only then. BattleEndScreen shows the counts without goals, marks and score, with the reason. mobaProgressAdapter reports tacticIntent false for such a match, so a v20 goal never writes into clubMastery (found while tracing the goals: BattleEndScreen.jsx:256 was registered earlier, the mastery write at mobaProgressAdapter.js:134 was NOT in any earlier registration). tacticIntentOf itself is unchanged; usage is still counted",
+      "I11_display": "liveTacticDisplayOf({tactic, tacticPlanBinding, ruleset}) in liveMatchSetup.js follows the Live matrix; AppShell passes it to LoadingScreen and GameView (displayTactic, HUD only; the start input stays tactic + binding). This REVERSES the accepted non-equivalence for flag-flip windows (2) and (3), which earlier allowed a stored display object to name a tactic that does not play: Owner 2026-10-30 continuation item 2 requires names to match the effective setup. When the flag does not change, the object returned is the same tactic or carries the same display values",
+      "I12_gate": "tools/browser_check_stage1_flows_3aB.mjs: the three browser items owed from the last report, through the real AppShell flow; check_stage1_split_3aB gains S17-S20 (copy, unscored, mastery, display matrix)",
+      "I13_exclusions": "exclusion rows change only as exclusion_v21b1_registration_3aB.json says, applied in a later commit from its result file"
+    },
+    "predictions": {
+      "note": "written before running anything on the new code. Whatever differs from these is logged in predictionOutcome with discoveredAfter, never added here",
+      "unchanged": [
+        "check_match_setup_3a 153/153 (v20 golden)",
+        "check_challenge_golden_v21, check_challenge_setup_3a",
+        "check_club_mastery_v1",
+        "check_save_bundle_b1b, check_save_hardening_b1c, check_cloud_save_b1d",
+        "browser_check_tactic_book_3a, browser_check_battle_notices_3aB",
+        "verify tactic24, runtime29; regress; regress2"
+      ],
+      "expectedRedSameAsBefore": [
+        "check_match_golden_v21a: the same 40 cases as before this round",
+        "check_career_golden_v21: setup hash as before",
+        "check_tactic_truth_3a T2 stale",
+        "identity_v17 E1 / E5 and hero_skills_phase1 (pre-existing)"
+      ],
+      "expectedEdits": [
+        "check_stage1_split_3aB S8 and S9b are extended, not relaxed"
+      ],
+      "afterExclusions": "check_stage1_split_3aB S13 goes red by design (it pins that no row is keyed); check_tactic_registry_3a and check_tactic_book_view_3a may need replacement assertions if they count rows; each is registered before editing that gate"
+    },
+    "predictionOutcome": [
+      {
+        "discoveredAfter": true,
+        "what": "the first browser run of tools/browser_check_stage1_flows_3aB.mjs found a white screen: liveDisplayTactic was declared before the tactic state in AppShell (temporal dead zone). No Node gate could see it. Fixed before anything was committed"
+      },
+      {
+        "discoveredAfter": true,
+        "what": "mobaProgressAdapter.js:134 (v20 goals writing tacticIntent into clubMastery) was not in any registration before de8e5da7; found while tracing the panel goals"
+      },
+      {
+        "discoveredAfter": true,
+        "what": "the first revision of P6 tightened the offer bar to z >= 3 and rel >= 0.05 for marginals. Review round 2 found this conflicts with the Owner 2026-10-13 ruling (do not just switch to z >= 3; re-verify marginals red and blue). Corrected to the original rule plus a stage-2 replication before any match was run"
+      },
+      {
+        "discoveredAfter": true,
+        "what": "predictions.unchanged listed check_club_mastery_v1 as if green. It is 264/265: \"送出的是套用後的 config（onNext(applied)）\" matches source text that is absent on origin/main and 103f2795 too. Not a regression of this round; the prediction assumed green without checking. The gate is not edited"
+      },
+      {
+        "discoveredAfter": false,
+        "what": "the rest of the first regression batch matched predictions: check_match_setup_3a 153/153, challenge golden 6/6, challenge setup 65/65, b1b, b1c, b1d, live setup 119/119, AI coach 11/11, resolver 139/139, assembler 227/227, book UI 9/9, book view 25/25, save 39/39, registry 35/35, ruleset 51/51, skeleton 171/171, laneframe 55/55, indicators 59/59, evidence scope 7/7; career golden red on setup hash and truth T2 stale, as predicted"
+      }
+    ],
+    "exclusionApplication": {
+      "registeredBefore": "any row or gate edit, while stage 2 was still running (no stage-2 result seen). Stage-1 results were already known; this entry fixes the mechanism, the row contents come mechanically from the two result files",
+      "design": "existing keyed rows measured by P6 get templateBalance null. New rows live in a separate table BALANCE_EXCLUSIONS in capabilityRegistry.js, not in MEASURED_EXCLUSIONS, because check_tactic_truth_3a T9 requires MEASURED_EXCLUSIONS to equal the rows derived from the truth fixture (the same reason REPLICATION_WITHHELD is its own table). measuredExclusion consults BALANCE_EXCLUSIONS only under its templateBalance",
+      "predictions": {
+        "redByDesign": [
+          "check_stage1_split_3aB S13 (\"no row is keyed\") => S13a: exactly the P6 existing rows carry templateBalance null, S13b: BALANCE_EXCLUSIONS equals what the two result files derive, row by row, S13c: under the shipped config every offer list of every template is unchanged, S13d: behaviour rows as before"
+        ],
+        "unchanged": [
+          "check_match_setup_3a 153/153",
+          "check_challenge_golden_v21, check_challenge_setup_3a",
+          "check_tactic_truth_3a: only T2 stale, T9 and T10 unchanged",
+          "check_tactic_registry_3a 35/35",
+          "check_tactic_replication_3a",
+          "check_tactic_book_view_3a 25/25",
+          "check_tactic_evidence_scope_3a 7/7",
+          "check_tactic_resolver_3a 139/139",
+          "check_tactic_indicators_3a 59/59"
+        ],
+        "unknownInAdvance": "check_tactic_resolver_3a XP1 (table-only counts) and browser_check_tactic_book_v21 may touch rows; anything red that is not listed here is logged in predictionOutcome with discoveredAfter"
+      },
+      "applied": {
+        "at": "2026-11-02, on top of a3e3fa73",
+        "rows": "exShipped (templateBalance null): m3 objectives.tower=high, m8 phases.mid.grouping=group, m8 phases.late.grouping=group, m8 phases.mid.objectiveOrder=baron. BALANCE_EXCLUSIONS (v21.b1): m3 teamfight.posture passive / standard / aggressive (unmeasurable, n 0), m8 phases.late.grouping=group (no_measured_effect, n 70, z 0.87288), m8 phases.mid.objectiveOrder=baron (no_measured_effect, n 100, z -0.376339), m8 phases.mid.grouping=group (not_replicated; n, rel and z per side as in REPLICATION_WITHHELD, not one top-level n and z: a literal deviation from the wording of the application rule, pinned by S13b)",
+        "playerVisibleUnderTable": "exactly two: classic.m3 teamfight.posture loses all three options (the dimension is no longer drawn), classic.m3 objectives.tower gains high. classic.m7 and classic.m8 offers do not change, because their keyed rows withheld those choices before too",
+        "winConditionExpansions": "none change on any template: 84 cells under v21.b1 (63 fills, 21 offer lists) identical before and after, pinned by S13c2",
+        "shippedConfig": "1827 cells identical before and after, pinned by S13c"
+      },
+      "outcome": [
+        {
+          "discoveredAfter": false,
+          "what": "S13 replaced by S13a-d as registered. Every gate listed under predictions.unchanged matched: check_match_setup_3a 153/153, challenge golden 6/6, challenge setup 65/65, registry 35/35, replication 53/53, book view 25/25, evidence scope 7/7, resolver 139/139, indicators 59/59; truth 33/34, T2 only"
+        },
+        {
+          "discoveredAfter": false,
+          "what": "unknownInAdvance: check_tactic_resolver_3a passed unchanged; browser_check_tactic_book_v21 is reported with the browser batch of this round"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "check_simulation_version_gate 82/83 (fingerprint 0578fa882d74b205 against the current value) was not in predictions.unchanged nor redByDesign of this entry. The general prediction of the first stage-1 registration covers it (the semantics files change, re-registered only at the freeze), but this gate was not run in the earlier batches of this round and was not run on a3e3fa73, so \"already red before the rows\" is an inference"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "review of the applied rows, APPROVE WITH CHANGES, one Major: the P6 registration says the win-condition effect is pinned after the rows are applied, and S13c only pinned the shipped config. S13c2 added. Minors applied: S13e2 pins the screen order that keeps contradiction hints off withdrawn choices, --report refuses once the result file exists, the P7 sentence on what a row change moves was corrected. Left as is, reported: withheld.reason is hard-coded no_measured_effect in offeredDetail (tacticChoiceMapping.js), so unmeasurable and not_replicated rows report that reason internally; nothing shows it to players, and changing it would move the shipped fill cells"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "the P6 tool selftest S8 was a false red from the moment it was added (it matched its own source text). It was first run after both P6 stages, so the selftest did not guard the P6 runs; the worker flag itself is verified by the source and the live record check. Fixed, 10/10"
+        },
+        {
+          "discoveredAfter": true,
+          "what": "commit 4371147b and the progress report to the Owner say stage 1 had 10 pass. The result file has 11 (19 rows: 11 pass, 3 marginal, 2 no effect, 3 no claim). History is not rewritten; the record uses 11"
+        }
+      ]
+    }
+  },
+  "honestLedgerOfEarlierDifferences": {
+    "note": "Owner 2026-11-01: differences found after the fact must not read as predictions. This separates what was truly predicted from what was registered only after being observed",
+    "predictedInAdvance": [
+      "check_match_ruleset_3a: \"R22 and siblings\" only. R19 and R20 are not named in any of the four commits; they count as covered by \"siblings\", no stronger",
+      "check_tactic_book_ui_3aB U5 (review M3), at f3986c44",
+      "career.v21 and balanceTool.v21 setup hash changes",
+      "check_tactic_book_view_3a V11, at f3986c44"
+    ],
+    "discoveredAfterTheFact": [
+      {
+        "what": "check_match_golden_v21a: 40 bind-* cases on career.v20 changed through the master switch. The registration predicted only career.v21 / balanceTool.v21 cases could change",
+        "predictionWas": "WRONG",
+        "recordedIn": "stage-1 doc, 2026-11-01"
+      },
+      {
+        "what": "check_c3_phase_skeleton, RS1 / RS2 / RS7 / RS8 and the two count labels: this gate was missing from the quick regression; the implementation review (M2) found it",
+        "predictionWas": "MISSING"
+      },
+      {
+        "what": "the 15 new reds of the baseline sweep at f3986c44 (quickRegression.secondPassReplacements, registered in 424d93ad): each replacement was written after the red was SEEN and before the gate was edited. So they are registered replacements, not predictions",
+        "predictionWas": "AFTER_OBSERVATION"
+      },
+      {
+        "what": "check_tactic_resolver_3a D1 / XP1 and check_career_v21_tactics_c6 V4: same class",
+        "predictionWas": "AFTER_OBSERVATION"
+      },
+      {
+        "what": "check_tactic_book_view_3a V13: no mention at f3986c44, first registered at 424d93ad",
+        "predictionWas": "AFTER_OBSERVATION"
+      },
+      {
+        "what": "check_tactic_save_3a replacements M1 M2 M4 M5 M6 M10 P1: f3986c44 only lists this gate under mustPass; the replacements come from implementation review M3 and were registered at 424d93ad",
+        "predictionWas": "AFTER_OBSERVATION"
+      }
+    ],
+    "correction": "the first version of this ledger (de8e5da7) listed V13 and the save replacements as predicted in advance. The independent review checked git history and found that wrong; corrected here. V11 was registered at f3986c44 and stays predicted"
+  }
+}

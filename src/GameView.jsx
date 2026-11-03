@@ -30,6 +30,8 @@ import { observerTokens } from "./battle/ui/BattleObserverHUD.jsx";
 import { useHudMode, hudSafeTop } from './battle/ui/hudStore.js';
 import { isDebugMode } from "./ui/debugMode.js";
 import { featureEnabled } from "./featureFlags.js";
+//  Phase 3a-B：開局提示的選項名稱與戰術書畫面同一份文案（不在這裡另寫）。
+import { dimensionLabel, choiceLabel } from "./screens/moba/tacticBook/tacticBookOptions.js";
 //  小地圖底圖走 Vite asset pipeline（內容雜湊檔名），不再用 ?rev= 查詢字串切版本。
 import riftAlbedoUrl from "./assets/moba/rift-v1/rift-albedo.png";
 import {
@@ -177,13 +179,13 @@ function Minimap({ mobile = false }) {
 
 const fmtClock = (sec) => { const t = Math.max(0, Math.floor(Number(sec) || 0)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
 
-export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, buildStrategy = null, talentSelections = null }) {
+export default function GameView({ roster = ROSTER, onContinue = null, autoStart = false, draft = null, tactic = null, displayTactic = null, tacticPlanBinding = null, buildStrategy = null, talentSelections = null }) {
   // Sprint19【C】：draft（Ban/Pick 結果）仍僅作 Presentation 傳遞。
   // Sprint24【D 升級】：tactic = MobaTacticConfig.v1 → start({tactic}) → engine.configureMatch
   //   （行為權重層；戰術現在「真的」進 LogicEngine，證據寫入 BattleResult.tacticExecution）。
   // Sprint29：playbackRate（1×/2×/4×）+ quality preset（low/medium/high）。
   //   ⚠ 兩者都**只影響呈現**：rate 只改 tick 的真實間隔（dt 恆定）、quality 只改怎麼畫。
-  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates, resumeProgress } = useLocalServer();
+  const { playing, start, pause, fastForward, fastForwarding, rate, setRate, rates, resumeProgress, assemblyError, droppedNotice, dismissDroppedNotice } = useLocalServer();
   //  ── Milestone O7：權威場次 ─────────────────────────────────────────────
   //  seed / sessionId 一律**從 Store 讀**（由 O6 的一次性令牌寫入），
   //  刻意**不接受 props 傳入** ⇒ 前端無法覆寫 seed、對手或場次資料。
@@ -192,6 +194,16 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
   const activeTimeSec = useProfileStore((st) => Number(st.matchmaking?.session?.activeMatch?.simulation?.timeSec) || 0);
   //  v16 Objective Layout：恢復進行中的場次時沿用存檔裡的配置（整場不換）；新場次為 null ⇒ start() 由 seed 推導一次
   const activeObjectiveLayout = useProfileStore((st) => st.matchmaking?.session?.activeMatch?.config?.objectiveLayout ?? null);
+  //  Phase 3a T4：開局被拒（assemblyError）時的出口。同一份輸入再進來一次會被拒絕第二次，所以不叫玩家「返回重進」，
+  //  而是直接提供放棄本場——既有的 abandonMatchSession()，與首頁「進行中的對戰」卡的「放棄本場」同一支、同一句確認。
+  const [abandonError, setAbandonError] = useState(null);
+  const abandonRejectedMatch = () => {
+    if (!window.confirm("放棄後將無法恢復本場比賽。確定要放棄嗎？")) return;
+    const r = useProfileStore.getState().abandonMatchSession();
+    if (!r.ok) { setAbandonError(r.errors?.[0]?.message ?? "無法放棄本場比賽"); return; }
+    setAbandonError(null);
+    onContinue?.();
+  };
   //  Q3.5-fix：對戰畫面的隊名。對手名來自本場的正式指派單（賽事＝賽程對手，
   //  排隊＝配對到的對手），**不是** data/roster.js 的 AI 預設「赤焰軍團」。
   //  訂閱的是字串原始值 ⇒ 名字一到就重繪（理由見 matchTeamNames.js 檔頭）。
@@ -205,6 +217,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
     c.backToDirector(); c.resetView();
     start({
       tactic,
+      tacticPlanBinding,
       //  Item System M3d：戰術頁選定的出裝策略（AppShell 從本場設定傳入；itemsV1 OFF 時為 null）
       buildStrategy,
       talentSelections,
@@ -267,7 +280,7 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
       {/* 3D：對局進行中相機由 cameraStore 管理（director/objectiveFocus/heroFocus/free）*/}
       <MobaRuntimeView3D quality={qualityId} roster={liveRoster} compactLabels={isMobile} playbackRate={rate} fogSide="blue" renderPaused={!!resumeProgress} />
       {/* Battle Presentation Layer：HUD / Timeline / 浮動大字 / TAB 記分板 / 終局畫面 */}
-      <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={tactic} onContinue={onContinue}
+      <BattlePresentationLayer roster={liveRoster} draft={draft} tactic={displayTactic ?? tactic} onContinue={onContinue}
         blueName={teamName} redName={oppName} />
 
       {/* Start / Stop / 鏡頭切換 */}
@@ -286,7 +299,69 @@ export default function GameView({ roster = ROSTER, onContinue = null, autoStart
           </div>
         </div>
       )}
-      {!playing && !resumeProgress && !hud.over && (
+      {/* Phase 3a T4：對戰資料被組裝器拒絕 ⇒ 不開打（也不換一套規則硬打），明講原因並提供返回。樣式沿用上面的恢復進度卡。 */}
+      {assemblyError && (
+        <div data-testid="battle-assembly-error" role="alert"
+          style={{ position: "absolute", inset: 0, zIndex: Z.controls, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,10,18,0.82)", padding: 16 }}>
+          <div style={{ width: "min(380px, 100%)", background: "rgba(10,16,28,0.96)", border: "1px solid rgba(248,113,113,0.6)", borderRadius: 12, padding: "16px 18px", color: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 6 }}>⚠ 這場比賽無法開始</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#cbd5e1", marginBottom: 8 }}>
+              對戰資料沒有通過開局檢查。為了避免打出與紀錄不一致的結果，系統沒有開打；用同一份設定再進來一次，結果會一樣。
+            </div>
+            {/*  有場次才有東西可以放棄（debug 入口沒有場次）。賽程比賽：放棄後賽程仍是「已出賽、未完成」，
+                 世界時間照舊擋住，玩家要到賽事頁重新出賽或按「棄權」才會收尾——所以這裡把兩條路都寫出來。 */}
+            {launch?.sessionId && (
+              <div data-testid="battle-assembly-error-exit-hint" style={{ fontSize: 12, lineHeight: 1.6, color: "#e2e8f0", marginBottom: 8 }}>
+                請放棄本場，之後可以重新配對。如果這是賽程比賽，放棄後請到賽事頁重新出賽，或按「棄權」結束這一場，日程才能繼續推進。
+              </div>
+            )}
+            <div style={{ fontSize: 11, lineHeight: 1.5, color: "#94a3b8", marginBottom: 6 }}>若一再發生，請回報下方代碼。</div>
+            <div data-testid="battle-assembly-error-codes" style={{ fontSize: 11, fontFamily: "ui-monospace,monospace", color: "#fca5a5", wordBreak: "break-all", marginBottom: 12 }}>
+              {(assemblyError.errors ?? []).slice(0, 4).map((e) => `${e.code}@${e.field}`).join("、") || assemblyError.stage}
+            </div>
+            {launch?.sessionId && (
+              <button data-testid="battle-assembly-error-abandon" onClick={abandonRejectedMatch}
+                style={{ minHeight: 42, width: "100%", marginBottom: 8, background: "linear-gradient(135deg,#ef4444,#b91c1c)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer" }}>
+                放棄本場
+              </button>
+            )}
+            {abandonError && <div data-testid="battle-assembly-error-abandon-failed" style={{ color: "#fca5a5", fontSize: 11, marginBottom: 8 }}>⚠ {abandonError}</div>}
+            <button data-testid="battle-assembly-error-back" onClick={() => onContinue?.()} disabled={!onContinue}
+              style={{ minHeight: 40, width: "100%", background: "rgba(8,14,24,0.9)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 800, cursor: onContinue ? "pointer" : "default", opacity: onContinue ? 1 : 0.5 }}>
+              ← 先離開這個畫面
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Phase 3a-B（Owner 2026-10-25 決策 4）：本場規則集不提供的戰術選擇（例如旗標回滾後恢復／開局）只從本場拿掉——
+           明講是哪幾個、戰術書裡的計畫不變。不擋操作，可關閉。 */}
+      {droppedNotice && !assemblyError && (
+        <div data-testid="battle-dropped-note" role="status"
+          style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", zIndex: Z.controls, width: "min(420px, calc(100% - 32px))", boxSizing: "border-box",
+            background: "rgba(10,16,28,0.94)", border: "1px solid rgba(251,191,36,0.6)", borderRadius: 10, padding: "8px 12px", color: "#fde68a", fontSize: 12, lineHeight: 1.6, display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
+            {/* Phase 3a-B 第一階段：本場規則集沒有戰術書（旗標關閉）而存的是 std／v2 模板 ⇒ 明講換成哪一個戰術，不無聲換模板。 */}
+            {droppedNotice.substitution && (
+              <span data-testid="battle-dropped-note-substitution" style={{ display: "block" }}>
+                本場規則未開放戰術書：「{droppedNotice.substitution.fromName ?? droppedNotice.substitution.fromTemplateId}」改用「{droppedNotice.substitution.toName}」（戰術書裡的計畫不變）
+              </span>
+            )}
+            {droppedNotice.dropped.length > 0 && (
+              <span data-testid="battle-dropped-note-dropped" style={{ display: "block" }}>
+                本場未使用的戰術選項：{droppedNotice.dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（本場規則不提供；戰術書裡的計畫不變）
+              </span>
+            )}
+            {(droppedNotice.kept ?? []).length > 0 && (
+              <span data-testid="battle-dropped-note-kept" style={{ display: "block" }}>
+                本場沿用開局時的戰術設定，包含目前已不再提供的選項：{droppedNotice.kept.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（比賽中途不會改變）
+              </span>
+            )}
+          </span>
+          <button type="button" data-testid="battle-dropped-note-close" aria-label="關閉提示" onClick={dismissDroppedNotice}
+            style={{ flexShrink: 0, minWidth: 32, minHeight: 32, background: "transparent", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, color: "#fff", cursor: "pointer" }}>✕</button>
+        </div>
+      )}
+      {!playing && !resumeProgress && !hud.over && !assemblyError && (
         <button onClick={begin} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: Z.controls, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "2px solid #93c5fd", borderRadius: 14, padding: "16px 40px", color: "#fff", fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", cursor: "pointer", boxShadow: "0 8px 40px rgba(59,130,246,0.6)" }}>
           ▶ 開始遊戲 / START
         </button>

@@ -162,7 +162,7 @@ export function fixtureCareerState(def, masteryLevel) {
  * @param {object} [opts]
  * @param {number} [opts.playerMasteryLevel] `drill_mirror` 要對齊的玩家熟練等級
  */
-export function fixtureSnapshot(key, { playerMasteryLevel = 1 } = {}) {
+export function fixtureSnapshot(key, { playerMasteryLevel = 1, simulationVersion = undefined } = {}) {
   const def = fixtureOpponentByKey(key);
   if (!def) return { ok: false, snapshot: null, errors: [{ code: "fixture", message: `未知的練習對手 ${key}` }] };
   const level = fixtureMasteryLevel(def, playerMasteryLevel);
@@ -177,6 +177,8 @@ export function fixtureSnapshot(key, { playerMasteryLevel = 1 } = {}) {
     //    `drill_rotation` 用較晚的時刻表示「近期發布」（新鮮度是可觀測事實）。
     now: def.recentLineupChange ? 2 : 0,
     intent: SNAPSHOT_INTENT.entry,
+    //  T16：缺少 ⇒ 權威層的預設（CHALLENGE_SIMULATION_VERSION）；gate／黃金基準建 v21 情境時才傳。
+    ...(simulationVersion ? { simulationVersion } : {}),
   });
   return { ok: r.ok, snapshot: r.snapshot, errors: r.errors, masteryLevel: level };
 }

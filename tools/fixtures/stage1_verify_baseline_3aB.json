@@ -1,0 +1,403 @@
+{
+ "schema": "esmo.verify-baseline.v1",
+ "purpose": "stage 1 formal acceptance step 6: no verify segment fails that is not failing here, compared by segment name and failure text. Never edited after it is written",
+ "commit": "1d0e219aae20a946bbc04d36349cb988e6e5ba7b",
+ "originMainAtRecording": "b4f8e0c367ef8678df23c125f97df41372e0c02e",
+ "recordedAt": "2026-11-01T18:53:49.871Z",
+ "totals": {
+  "segments": 105,
+  "pass": 35,
+  "skip": 0,
+  "fail": 70
+ },
+ "failing": [
+  {
+   "id": "ability_p02",
+   "status": "FAIL",
+   "failureText": "✅ 6c) 戰力仍由本場等級導出（既有機制未變）\n── 機制摘要 ──────────────────────────────────────────────────\n   能力 → 本場經驗速率（accuracy/apm/focus/mapAware/learning），限幅 0.94–1.06\n   全 100 分 ⇒ ×1.06｜全 70 分 ⇒ ×1｜全 40 分 ⇒ ×0.94\n   其餘交給引擎既有的 mlv → power/HP 曲線；傷害式一行未動\n19/20 通過"
+  },
+  {
+   "id": "active_match_r63",
+   "status": "FAIL",
+   "failureText": "✅ 10) CS result id 不再使用 Date/random，normal / fast / restore 可比對同一結果\n✅ 11) MOBA / CS 共用 1×/2×/4× 與快速完成 presentation\n✅ 12) Store 只有既有 matchmaking session 內保存 snapshot，無第二結果交易\n✅ 13) leave / refresh cleanup 會 pause，完成後 terminal 不會被覆寫\nR63 Active Match focused: 12/13 通過\n⚠ Node 無法證明真機觸控／視覺；需人工驗收 320/360/390/430 與瀏覽器 refresh。"
+  },
+  {
+   "id": "controls29b3",
+   "status": "FAIL",
+   "failureText": "✅    全場觀測：seed 42 完成回城 67 次（需 ≥5）；視覺（aura/badge/傳送閃光）接 state 與 recallEvents\n❌ 16) Minimap 與主場景座標一致（雙方都讀 gameData 常數：FOUNTAIN/PITS/CAMPS/snap.objectives；引擎目標座標 == gameData）\n16/18 通過\n⚠ 未實測（無瀏覽器/真機）：FPS、觸控手勢（上滑/下滑/點英雄/雙擊）、\n  手機 320/360/390/430 視覺、地圖可讀性體感、回城/泉水特效外觀、\n  Debug 快速完成比賽的實際 UI 流程 —— 需 Ray 依人工驗收清單實測"
+  },
+  {
+   "id": "cs_accuracy_calibration_r43",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_calibration_r43.mjs:53:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_calibration_r43.mjs:124:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_calibration_r43.mjs:137:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_accuracy_measurement_r24",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_measurement_r24.mjs:161:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_measurement_r24.mjs:704:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_measurement_r24.mjs:964:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_accuracy_semantics_r25",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_semantics_r25.mjs:65:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_semantics_r25.mjs:242:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_accuracy_semantics_r25.mjs:301:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_adaptability_measurement_r34",
+   "status": "FAIL",
+   "failureText": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_adaptability_measurement_r34.mjs:104:33)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_adaptability_measurement_r34.mjs:206:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_apm_calibration_r40",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_apm_calibration_r40.mjs:59:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_apm_calibration_r40.mjs:123:50)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_apm_calibration_r40.mjs:130:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_apm_measurement_r21",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_apm_measurement_r21.mjs:172:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_apm_measurement_r21.mjs:768:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_apm_measurement_r21.mjs:959:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_batch_calibration_r45",
+   "status": "FAIL",
+   "failureText": "CS Batch Calibration R45: FAIL Error: [MARKER] signature\n    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_batch_calibration_r45.mjs:68:55)\n    at TransformPluginContext.transform (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_batch_calibration_r45.mjs:85:477)\n    at PluginContainer.transform (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/worktrees/cs-fps-major-upgrade/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49100:19)\n    at loadAndTransform (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/worktrees/cs-fps-major-upgrade/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:49)\n    at async instantiateModule (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/worktrees/cs-fps-major-upgrade/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:52923:44)"
+  },
+  {
+   "id": "cs_bomb_result_semantics_r11",
+   "status": "FAIL",
+   "failureText": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_bomb_result_semantics_r11.mjs:259:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_bomb_result_semantics_r11.mjs:377:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_calibration_readiness_r17",
+   "status": "FAIL",
+   "failureText": "    at verifySourceAndEvidence (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_calibration_readiness_r17.mjs:206:3)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_calibration_readiness_r17.mjs:277:26)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_calibration_readiness_r17.mjs:297:3\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_clutch_measurement_r30",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_clutch_measurement_r30.mjs:183:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_clutch_measurement_r30.mjs:352:56)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_clutch_measurement_r30.mjs:372:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_clutch_r4",
+   "status": "FAIL",
+   "failureText": "CS True Clutch R4: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  },
+  {
+   "id": "cs_clutch_resilience_semantics_r32",
+   "status": "FAIL",
+   "failureText": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_clutch_resilience_semantics_r32.mjs:158:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+  },
+  {
+   "id": "cs_comms_measurement_r36",
+   "status": "FAIL",
+   "failureText": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_stats_measurement_r36.mjs:189:99)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_stats_measurement_r36.mjs:218:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_courage_calibration_r41",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_courage_calibration_r41.mjs:57:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_courage_calibration_r41.mjs:98:50)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_courage_calibration_r41.mjs:104:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_courage_measurement_r23",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_courage_measurement_r23.mjs:156:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_courage_measurement_r23.mjs:355:93)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_courage_measurement_r23.mjs:382:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_decision_measurement_r26",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_decision_measurement_r26.mjs:151:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_decision_measurement_r26.mjs:425:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_decision_measurement_r26.mjs:532:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_decision_semantics_r27",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_decision_semantics_r27.mjs:75:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_decision_semantics_r27.mjs:306:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_decision_semantics_r27.mjs:390:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_defuse_r6",
+   "status": "FAIL",
+   "failureText": "CS Defuse R6: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  },
+  {
+   "id": "cs_determinism_migration_r10",
+   "status": "FAIL",
+   "failureText": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_determinism_migration_r10.mjs:387:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_determinism_migration_r10.mjs:512:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_flash_attribution_r12",
+   "status": "FAIL",
+   "failureText": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_flash_attribution_r12.mjs:416:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_flash_attribution_r12.mjs:532:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_focus_measurement_r28",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_focus_measurement_r28.mjs:152:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_focus_measurement_r28.mjs:426:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_focus_measurement_r28.mjs:535:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_focus_semantic_correction_r44",
+   "status": "FAIL",
+   "failureText": "    at csR44R43Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:274:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_focus_semantic_correction_r44.mjs:88:67)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_focus_semantic_correction_r44.mjs:102:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_he_gameplay_r14",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_he_gameplay_r14.mjs:145:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_he_gameplay_r14.mjs:726:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_he_gameplay_r14.mjs:913:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_identity_consumers_r47",
+   "status": "FAIL",
+   "failureText": "    at csR48R47Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:224:14)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_identity_consumers_r47.mjs:245:18)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_identity_consumers_r47.mjs:310:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_instrument_r2",
+   "status": "FAIL",
+   "failureText": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_instrumentation_r2.mjs:252:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_instrumentation_r2.mjs:426:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_leadership_measurement_r36",
+   "status": "FAIL",
+   "failureText": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_stats_measurement_r36.mjs:189:99)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_stats_measurement_r36.mjs:218:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_learning_lifecycle_r16b",
+   "status": "FAIL",
+   "failureText": "    at readSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_learning_lifecycle_r16b.mjs:75:26)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_learning_lifecycle_r16b.mjs:195:19)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_learning_lifecycle_r16b.mjs:228:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_learning_measurement_r37",
+   "status": "FAIL",
+   "failureText": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_learning_measurement_r37.mjs:63:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+  },
+  {
+   "id": "cs_local_causal_framework_r22",
+   "status": "FAIL",
+   "failureText": "    at verifyProvenance (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_local_causal_framework_r22.mjs:144:3)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_local_causal_framework_r22.mjs:342:18)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_local_causal_framework_r22.mjs:364:7\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_mapaware_measurement_r37",
+   "status": "FAIL",
+   "failureText": "    at loadApi (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_mapaware_measurement_r37.mjs:34:71)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_mapaware_measurement_r37.mjs:48:21)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_mapaware_measurement_r37.mjs:74:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_mapaware_semantics_r18b",
+   "status": "FAIL",
+   "failureText": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_mapaware_semantics_r18b.mjs:257:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_mapaware_semantics_r18b.mjs:314:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_measure_r1",
+   "status": "FAIL",
+   "failureText": "CS Measurement R1: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  },
+  {
+   "id": "cs_molly_gameplay_r15",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_molly_gameplay_r15.mjs:106:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_molly_gameplay_r15.mjs:777:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_molly_gameplay_r15.mjs:998:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_player_smoke_los_r13",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_player_smoke_los_r13.mjs:121:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_player_smoke_los_r13.mjs:684:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_player_smoke_los_r13.mjs:876:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_positioning_calibration_r42",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_positioning_calibration_r42.mjs:53:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_positioning_calibration_r42.mjs:73:72)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_positioning_calibration_r42.mjs:74:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_positioning_measurement_r20",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_positioning_measurement_r20.mjs:149:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_positioning_measurement_r20.mjs:563:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_positioning_measurement_r20.mjs:634:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_reflex_calibration_r39",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_reflex_calibration_r39.mjs:66:18)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_reflex_calibration_r39.mjs:246:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_reflex_calibration_r39.mjs:287:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_reflex_read_chain_r19",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_reflex_read_chain_r19.mjs:74:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_reflex_read_chain_r19.mjs:223:3)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_reflex_read_chain_r19.mjs:252:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_resilience_measurement_r31",
+   "status": "FAIL",
+   "failureText": "    at gate (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_resilience_measurement_r31.mjs:65:55)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_resilience_measurement_r31.mjs:117:186)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_resilience_measurement_r31.mjs:123:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_result_metrics_r8",
+   "status": "FAIL",
+   "failureText": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_result_metrics_r8.mjs:545:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_result_metrics_r8.mjs:717:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_retreat_r5",
+   "status": "FAIL",
+   "failureText": "CS Retreat R5: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  },
+  {
+   "id": "cs_stat_wiring_r3",
+   "status": "FAIL",
+   "failureText": "CS Stat Wiring R3: FAIL [R15_LEGACY_R51_SYNERGY_BLOCK] expected=1 actual=0"
+  },
+  {
+   "id": "cs_synergy_measurement_r36",
+   "status": "FAIL",
+   "failureText": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_stats_measurement_r36.mjs:189:99)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_stats_measurement_r36.mjs:218:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_synergy_semantics_r16a",
+   "status": "FAIL",
+   "failureText": "    at csR15EvidenceSources (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:343:22)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_synergy_semantics_r16a.mjs:261:22)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_synergy_semantics_r16a.mjs:410:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_tactical_iq_measurement_r35",
+   "status": "FAIL",
+   "failureText": "    at csR47R46Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:203:16)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_tactical_iq_measurement_r35.mjs:118:33)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_tactical_iq_measurement_r35.mjs:182:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "cs_team_identity_consumers_r48",
+   "status": "FAIL",
+   "failureText": "    at csR48R47Source (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/cs_r15_legacy_source.mjs:224:14)\n    at main (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_identity_consumers_r48.mjs:213:25)\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_cs_team_identity_consumers_r48.mjs:277:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+  },
+  {
+   "id": "growth_ui_p1",
+   "status": "FAIL",
+   "failureText": "✅ §9d 膠囊不被文字撐破（nowrap 膠囊 ＋ 可換行外層）\n✅ §9e 長文字有省略處理\n✅ §9f 結算面板的選手列可換行\n✅ §9g 結算面板的選手名有寬度上限與省略號\n✅ §9h 名單卡的成長提示列可換行且可收縮\n🔴 P1 成長可視化：79/80 通過"
+  },
+  {
+   "id": "hero_skills_phase1",
+   "status": "FAIL",
+   "failureText": "  expected: '',\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.18.0\r"
+  },
+  {
+   "id": "hero_skills_round2",
+   "status": "FAIL",
+   "failureText": "PASS linghun:R bounded / finite / deterministic / selective fusion\nPASS R has separate windup / main burst / aftermath silhouettes\nPASS dash actor moves and lands, reduced motion stays at origin\nPASS canonical origin/target frame rotates symmetrically for both sides\nPASS compat adapter never leaks preview choreography into real attacks\nHero Skills Round 2: PASS 410/410"
+  },
+  {
+   "id": "milestone_b4",
+   "status": "FAIL",
+   "failureText": "  expected: 8,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.18.0\r"
+  },
+  {
+   "id": "milestone_e",
+   "status": "FAIL",
+   "failureText": "❌ 43) 先發列＝flex 列（選手列 flex:1 可壓縮 + 固定寬換人鈕），維持既有 320px 防護\n✅ 44) 新增的天賦區塊在既有捲動容器內，沒有新增固定定位或新的 z-index 層\n✅ 45) 重播播報列單行省略（長字串不撐破手機寬度）\n✅ 46) 賽後新面板沿用既有 Panel 版型與 flexWrap 欄位（手機自動換行，不新增水平捲動）\n46/49 通過\n{\"milestone\":\"E\",\"lineup\":{\"version\":\"MatchLineup.v1\",\"seats\":[\"b1\",\"b2\",\"b3\",\"b4\",\"b5\"],\"rookieSeat\":\"b3\"},\"replay\":{\"version\":\"MobaReplay.v1\",\"addedOptionalFields\":[\"ps\",\"tb\"],\"legacyPlayable\":true},\"engineTouched\":false,\"browserVerified\":false}"
+  },
+  {
+   "id": "milestone_f",
+   "status": "FAIL",
+   "failureText": "✅ 27) Replay contract 未改（版本字串與既有欄位）\n✅ 28) Milestone E 的名單資料流未動\n✅ 29) 地圖幾何與碰撞來源未動\n❌ 30) BattleResult.v2 契約未動\n29/30 通過\n{\"milestone\":\"F\",\"knobs\":{\"fightHoldT\":3,\"fightMaxDur\":20,\"fightMinDur\":2,\"fightHoldAfterT\":240,\"initiativeWindow\":22,\"initiativeAfterT\":240,\"initiativeHpMin\":0.42,\"initiativeRespondRange\":48,\"heroTowerGroupMin\":3,\"heroTowerGroupK\":0.62},\"engineOnlyV3\":true,\"browserVerified\":false}"
+  },
+  {
+   "id": "milestone_g",
+   "status": "FAIL",
+   "failureText": "✅ 27) 未改 Replay contract\n❌ 28) 未改 BattleResult.v2 與 Milestone E 名單資料流\n✅ 29) 面板疊層收斂在 battleLayout 的 Z 表（不散落魔術數字）\n✅ 30) 英雄面板疊在世界標籤之上、仍低於終局與重播\n27/30 通過\n{\"milestone\":\"G\",\"zoom\":{\"ZOOM_MIN\":0.35,\"ZOOM_MAX\":9,\"farthestDist\":1700,\"closestDist\":66.1},\"presentationOnly\":true,\"browserVerified\":\"tools/shot_milestone_g.mjs\"}"
+  },
+  {
+   "id": "milestone_h",
+   "status": "FAIL",
+   "failureText": "✅ 27) 未改公平性／節奏常數表\n✅ 28) 地圖幾何與碰撞來源完全不參與英雄定位層\n❌ 29) 未改 Replay contract 與 BattleResult.v2\n✅ 30) 英雄層與既有的戰術／能力層並存（三層各自獨立開關）\n30/31 通過\n{\"milestone\":\"H\",\"version\":\"MobaHeroProfile.v1\",\"arches\":6,\"optIn\":true,\"damageUntouched\":true}"
+  },
+  {
+   "id": "milestone_j",
+   "status": "FAIL",
+   "failureText": "✅ 34) 沒有任何定位因分類規則被隱藏（六個分頁都有人）\n✅ 35) 技能層沒有引入任何傷害乘數（點燃是獨立傷害源，非乘進普攻）\n✅ 36) toEngineSpells 對沒有技能資料的名單回 null（呼叫端就不會啟用這一層）\n✅ 37) toEngineSpells 會擋掉不合法的配置（技能數不對或未知 id）\n✅ 38) 地圖幾何未被本階段動到（塔位仍來自地圖呈現座標）\n❌ FAIL  37/39"
+  },
+  {
+   "id": "milestone_j_close",
+   "status": "FAIL",
+   "failureText": "── §4 邊界 ──\n✅ 29) 引擎仍然決定性（同 seed 兩次逐值相同）\n✅ 30) 未啟用技能層時第二格仍是舊行為（本輪沒動到 opt-in 邊界）\n✅ 31) 英雄池仍是 100 名\n✅ 32) 本輪沒有動到地圖幾何（塔位不變）\n❌ FAIL  33/35"
+  },
+  {
+   "id": "p06b_browser_presence",
+   "status": "FAIL",
+   "failureText": "PASS browser creates a real ActiveMatch.v1 :: active:session:moba:24f1621d\nPASS ActiveMatch card survives browser reload\nPASS ActiveMatch resume returns to business route\nFAIL browser product presence at 390px :: {\"width\":390,\"development\":true,\"active\":true,\"overflow\":6,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":360,\"scrollWidth\":378,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\\nCL\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":338,\"scrollWidth\":342,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n12.8萬 支持者\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":107,\"scrollWidth\":111,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":362,\"scrollWidth\":864,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}\nFAIL browser product presence at 360px :: {\"width\":360,\"development\":true,\"active\":true,\"overflow\":8,\"overflowInfo\":[{\"tag\":\"HEADER\",\"testid\":\"\",\"width\":338,\"scrollWidth\":356,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\\nCLUB XP\\n0 / \"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":316,\"scrollWidth\":320,\"text\":\"🦭\\n1\\nGSEAL\\n德國海豹\\nLv. 1\\nW2\\n資金\\n$120.0萬\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":44,\"scrollWidth\":48,\"text\":\"🦭\\n1\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":102,\"scrollWidth\":106,\"text\":\"資金\\n$120.0萬\\n1\"},{\"tag\":\"BUTTON\",\"testid\":\"\",\"width\":42,\"scrollWidth\":47,\"text\":\"1\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 則未讀訊息等待決定\"},{\"tag\":\"SMALL\",\"testid\":\"\",\"width\":86,\"scrollWidth\":88,\"text\":\"1 點可以投入團隊成長\"},{\"tag\":\"DIV\",\"testid\":\"\",\"width\":340,\"scrollWidth\":813,\"text\":\"MAIN STAGE\\nMOBA\\n\\n5v5 · 即時對戰\\n\\n進入賽前\\nTACTICAL UNIT\\nCS\"}]}\nP0.6B browser product-presence: 7/12 FAIL"
+  },
+  {
+   "id": "pacing29b1",
+   "status": "FAIL",
+   "failureText": "21/25 通過\n=== v2（S29A）vs v3（S29B1）· 各 20 seeds（戰術 M1）===\nv1: 5分p50=1 10分p50=6 15分p50=17(p90=24) 20分p50=26 終局p50=30 時長p50=20.4分（最短7.3） 擊殺曲線g3-g5=綠 過早結束下限=紅\nv2: 5分p50=2 10分p50=10 15分p50=14(p90=29) 20分p50=14 終局p50=14 時長p50=13.3分（最短10.8） 擊殺曲線g3-g5=綠 過早結束下限=紅\nv3(混合40): 5分p50=0 10分p50=0 15分p50=4(p90=6) 20分p50=11 終局p50=13 時長p50=20.6分（最短14.7） 擊殺曲線g3-g5=紅 過早結束下限=綠\n⚠ 視覺（3D 低模外觀 / HUD 版面 / 手機實機 FPS）→ 無瀏覽器，未實測（見交付報告）"
+  },
+  {
+   "id": "player_ui_r62",
+   "status": "FAIL",
+   "failureText": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_r62_player_ui_fixture.mjs:99:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+  },
+  {
+   "id": "progress25",
+   "status": "FAIL",
+   "failureText": "MOBA 失敗      |   80000 |    45 |   23.2\nCS 勝利        |  430000 |   243 |   55.0\nCS 失敗        |   80000 |    19 |   23.4\nMOBA 高表現(b3 carry) XP=71　低表現(b5 support) XP=50　隊均=55.2\nCS   高表現(b2 AWP)   XP=71　低表現(b5 IGL)     XP=45　隊均=55.0\n勝負差距：MOBA 均XP 55.2 vs 23.2　CS 均XP 55.0 vs 23.4"
+  },
+  {
+   "id": "q5_history",
+   "status": "FAIL",
+   "failureText": "✅ 7f) 畫面不自己判能不能換季（吃 Store 的 canRoll）\n✅ 7g) 畫面不自己算賽季天數（吃 Store 的 seasonDay）\n✅ 7h) **賽事頁不再拿絕對遊戲日對 84 天**\n✅ 7i) 經濟週期標籤不再顯示 S 號（全案唯一的賽季在賽事頁）\n✅ 7j) 換季不自動發生（要玩家按；Store 沒有把它掛在推進天數上）\n69/69 通過"
+  },
+  {
+   "id": "q7b_season_state_v2",
+   "status": "FAIL",
+   "failureText": "                                                                                    ^\r\n\r\nTypeError: Cannot read properties of undefined (reading 'id')\r\n    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_season_state_v2_migration_q7b.mjs:44:85\r\n\r\nNode.js v24.18.0\r"
+  },
+  {
+   "id": "quality_p03",
+   "status": "FAIL",
+   "failureText": "✅ §4-6e 中性對照組與未注入 baseline **每一場勝負都相同**（沒有新增偏斜）　baseline 藍勝 15/20、對照組藍勝 15/20\n❌ §4-6f 既有陣營偏斜已記錄（技能層 baseline 藍方勝率 < 50%，非 P0-3 造成）　⚠ 技術債：技能層陣營平衡，另案處理\n══ §5 可重現性 ══\n✅ §5a 同 seed ＋ 同能力 ⇒ 逐位元相同（6 seeds）　6/6\n✅ §5b 能力對調 ⇒ 優勢跟著換邊（兩邊都是高能力方領先）　藍高時 +2.86 級　紅高時 +1.9 級\n🔴 P0-3 戰鬥品質層：48/53 通過"
+  },
+  {
+   "id": "r61_ui_fixture",
+   "status": "FAIL",
+   "failureText": "    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/stage1-verify-baseline/tools/check_r61_ui_fixture.mjs:39:1\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\r\n    at async node:internal/modules/esm/loader:643:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\r\n\r\nNode.js v24.18.0\r"
+  },
+  {
+   "id": "stats28",
+   "status": "FAIL",
+   "failureText": "=== 固定比較 seed=4242、戰術 速推流、只改 b3 天賦 ===\nA 無天賦   b3 mods{join 0.041 obj 0.041 retreat 0.003 lane 0.005} │ KDA 3/2/0 撤退 11 團戰 30 目標 88 │ 隊 會戰 14 分推 0 龍爭 5 │ blue 7:7\nB 操作天賦 b3 mods{join 0.044 obj 0.041 retreat 0.011 lane 0.004} │ KDA 3/2/0 撤退 11 團戰 30 目標 88 │ 隊 會戰 14 分推 0 龍爭 5 │ blue 7:7\nC 戰術天賦 b3 mods{join 0.045 obj 0.051 retreat 0.009 lane 0.003} │ KDA 3/0/0 撤退 9 團戰 18 目標 95 │ 隊 會戰 10 分推 0 龍爭 3 │ blue 8:2\nD 團隊天賦 b3 mods{join 0.045 obj 0.046 retreat 0.003 lane 0.005} │ KDA 3/2/0 撤退 11 團戰 30 目標 88 │ 隊 會戰 14 分推 0 龍爭 5 │ blue 7:7\n多 seed 行為差異：B 9/12、C 8/12、D 10/12 seed（Support 8、Jungle 11）"
+  },
+  {
+   "id": "tactic24",
+   "status": "FAIL",
+   "failureText": "✅ 無戰術 ⇒ BattleResult.tactic/tacticExecution = null（向下相容）\n❌ BattleResult.v2 結構未變（schema/mode/winner/players 完整）\n✅ CsMatchResult.v1 未被修改引用 MOBA 戰術\n✅ CS 畫面零 MobaTacticConfig import\n✅ FPS 引擎零 MOBA 戰術字樣\n27/29 通過"
+  },
+  {
+   "id": "team_development_recovery",
+   "status": "FAIL",
+   "failureText": "════════════════════════════════════════\nUI Recovery Contract:    VIOLATED　(11/14)\nPersistence Integration: INTEGRATED\nGameplay Consumers:      NOT YET INTEGRATED\nTeam Development recovery contract: VIOLATED\n違反 3 條：4 分類 / 20 節點、首頁主要入口磚為「戰隊發展」、talentPick 路由仍保留給相容流程"
+  }
+ ],
+ "passing": [
+  "build",
+  "cs23",
+  "cs_distribution_baseline_r46",
+  "cs_identity_gap_r38",
+  "cs_learning_lifecycle_r55",
+  "cs_match_completion",
+  "cs_matchup_acceptance_r57",
+  "cs_roster_v1_r56",
+  "experience26",
+  "fairness_p0a",
+  "fairness_p0b",
+  "fairness_p0c",
+  "fairness_p0d",
+  "growth_p0",
+  "hero_presentation_l",
+  "m2_season_state_v2_sealing",
+  "map_topology_final",
+  "milestone_i",
+  "milestone_i_close",
+  "presentation29b2",
+  "q4_history",
+  "q6_playoffs",
+  "q7a_safety",
+  "r63_competition_integration",
+  "regress",
+  "regress2",
+  "roster_ui_r58",
+  "roster_ui_r581",
+  "roster_ui_r582",
+  "runtime29",
+  "simulation_version",
+  "tactical_ai_p1",
+  "tactical_ai_p2",
+  "talent27",
+  "team_development_v15"
+ ],
+ "skipped": []
+}

@@ -47,6 +47,8 @@ import {
 } from './battle/moba/skills/heroSkillLevels.js';
 import { curveKAt, phaseIndexOf } from './battle/moba/heroPowerCurve.js';
 import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './platform/contracts/objectiveLayout.js';
+//  Phase 3a-C2：戰術資料（knobs／Tactical Identity／戰術階段）的唯一讀取入口（static 模式＝設定值原樣回傳）。
+import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.js";
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -86,6 +88,9 @@ const OBJ_SKILL_ULT = new Set([
 ]);
 
 export class LogicEngine {
+  //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
+  //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
+  static SUPPORTS_LANE_FRAME = true;
   /**
    * @param {number} seed
    * @param {object|null} loadout   Hero Progress（英雄熟練 → power/tough 倍率）
@@ -101,6 +106,7 @@ export class LogicEngine {
     //  v16 Objective Layout：預設 STANDARD；_objPits=null ⇒ _pitOf 回傳原本的 PITS（逐位元不變）
     this.objectiveLayout = OBJECTIVE_LAYOUT.STANDARD; this._objPits = null; this._layoutConfigured = false;
     this.tacticOn = false;         // S24：未 configureMatch ⇒ 全部戰術程式碼不生效
+    this.director = null;          // Phase 3a-C2：Tactical Director（configureMatch 才建立；null ⇒ 讀取點走原式）
     this.playerStatsOn = false;    // S28：未 configurePlayers ⇒ 全部能力程式碼不生效
     this.heroesOn = false;         // H：未 configureHeroes ⇒ 全部英雄定位程式碼不生效
     this.hmod = {}; this.heroMeta = null;
@@ -361,15 +367,26 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
     this.tacticMeta = meta;
-    this.tk = { blue: blue ?? this._neutralKnobs(), red: red ?? this._neutralKnobs() };
+    const kBlue = blue ?? this._neutralKnobs(), kRed = red ?? this._neutralKnobs();
     //  Tactical Identity v1（moba-sim.v17）：同一份戰術契約的決策投影（toEngineTacticIdentity）。
     //  規則集 tacticIdentityV1 關閉或沒有傳 ⇒ null ⇒ 下面每個讀取點都走原式（逐位元不變）。
-    this.tid = identity && this.rules.tacticIdentityV1 ? { blue: identity.blue ?? null, red: identity.red ?? null } : null;
-    if (this.tid) this.tidObs = { blue: { protectCarry: 0, siegePreferred: 0 }, red: { protectCarry: 0, siegePreferred: 0 } };
+    const tid = identity && this.rules.tacticIdentityV1 ? { blue: identity.blue ?? null, red: identity.red ?? null } : null;
+    //  Phase 3a-C2：引擎內每一個戰術讀取點都經 this.director（static ⇒ 回傳的就是上面這兩份物件，參照相同）。
+    //  C3-1：組裝器只在 ruleset 的 tacticalDirector 為 core.v1 時傳 phases（每時期方針）；有才交給 Director，連同讀比賽時間的 clock。
+    //  沒傳 ⇒ 引數與 C3-1 之前完全相同（static）。每時期的挑選只在 Director 裡做，引擎不看 phases 的內容。
+    const directorArgs = { blue: kBlue, red: kRed, identity: tid };
+    if (phases) { directorArgs.phases = phases; directorArgs.clock = () => this.t; }
+    //  C3-1 laneFrame（TD-3A-23）：組裝器只在 ruleset 有 laneFrame 層時傳這個鍵；有才原樣交給 Director（轉換只在 Director 做）。
+    //  沒傳 ⇒ Director 的預設 legacyMirror（與之前逐參照相同）。
+    if (laneFrame !== null) directorArgs.laneFrame = laneFrame;
+    this.director = createTacticalDirector(directorArgs);
+    //  C3-1 E-1：舊的觀測欄位 this.tk／this.tid 已移除（aa38625 之後沒有任何讀者）；引擎內外都不得再有
+    //  （tools/check_tactical_director_3c.mjs 掃原始碼，允許清單 0 筆）。要看設定值請問 this.director。
+    if (this.director.hasIdentity()) this.tidObs = { blue: { protectCarry: 0, siegePreferred: 0 }, red: { protectCarry: 0, siegePreferred: 0 } };
     this._initTacV20();
     let y = (this.seed ^ 0x9e3779b9) | 0;
     this.rng2 = () => ((y = (y * 1103515245 + 12345) & 0x7fffffff) >>> 0) / 0x7fffffff;
@@ -393,7 +410,7 @@ export class LogicEngine {
     this._tfEp = { blue: null, red: null };
     this._tac = {};
     for (const side of ["blue", "red"]) {
-      const K = this.tk[side];
+      const K = this.director.knobs(side);
       const st = { gankLane: null, gankUntil: 0, gankNext: 25 + this.rng2() * 15, invadeUntil: 0,
         splitEvalT: -1, splitGo: false, splitTick: -99, pushTick: -99,
         roamUntil: 0, roamNext: 35 + this.rng2() * 15, inFight: false, dragonSeen: false, baronSeen: false,
@@ -419,14 +436,15 @@ export class LogicEngine {
     const pit = hot === this._pitOf("dragon") ? "dragonJoin" : hot === this._pitOf("baron") ? "baronJoin" : null;
     let base = K ? (pit ? K[pit] : K.joinFight) : 0.6;
     //  Tactical Identity：分階段參團偏移（前／中／後期）。未接線 ⇒ 不進這個分支。
-    const I = this.tid && K ? (K === this.tk.blue ? this.tid.blue : K === this.tk.red ? this.tid.red : null) : null;
+    //  以 knobs 物件參照反查該側 identity（Director 內與舊式逐字同序：藍方優先）。
+    const I = this.director && K ? this.director.identityOfKnobs(K) : null;
     if (I) base = clamp(base + I.phaseJoin[this._tidPhase()], 0.05, 0.98);
     if (!M) return base;
     return clamp(base + (pit ? M.objAdj : M.joinAdj), 0.05, 0.98);
   }
-  _tidOf(side) { return this.tid?.[side] ?? null; }
-  /** 戰術階段：前期 < 8 分、中期 8–16 分、後期 ≥ 16 分（實測對局中位數約 17–20 分）。 */
-  _tidPhase() { return this.t < 480 ? 0 : this.t < 960 ? 1 : 2; }
+  _tidOf(side) { return this.director ? this.director.identity(side) : null; }
+  /** 戰術階段（界線常數只住在 Director）。只在 identity 非 null 時被呼叫 ⇒ Director 必定存在。 */
+  _tidPhase() { return this.director.phase(this.t); }
 
   // ── S28 選手能力層（configurePlayers）───────────────────────────────────
   /**
@@ -2818,7 +2836,7 @@ export class LogicEngine {
   }
   /** v20 ⑤：本隊對龍／巴龍的評估分數（只用看得見的資訊）。回傳最高者 { key, v } 或 null。 */
   _objectiveEvalV20(side) {
-    const K = this.tacticOn ? this.tk[side] : null;
+    const K = this.tacticOn ? this.director.knobs(side) : null;
     const mine = this.players.filter((q) => !q.dead && q.side === side);
     const theirs = this.players.filter((q) => !q.dead && q.side !== side);
     const alive = this.players.filter((q) => !q.dead);
@@ -3292,8 +3310,9 @@ export class LogicEngine {
    * v20 ④ Gank 選路：以看得見的資訊評分，分數不夠就不出發（gankRecheckSec 後再看）。
    *   ＋ 敵方對線英雄殘血、壓線（離自家塔遠）、我方對線者在場且健康、Gank 偏好權重；
    *   － 敵方多人／敵方打野在附近、距離遠。積極的打野門檻低。
+   *   focus（C5R 強邊，只在 knobs 帶 gankFocusLane 的時期傳入）：那一路再加 gankFocusAdd × 0.2（gankFocusAdd 已是正規化後的增量），其他路不變。
    */
-  _gankPickV20(p, alive, w) {
+  _gankPickV20(p, alive, w, focus = null) {
     const R = this.rules;
     const wmax = Math.max(w.top, w.mid, w.bot) || 1;
     let best = null;
@@ -3303,6 +3322,7 @@ export class LogicEngine {
       const mine = alive.filter((q) => q.side === p.side && q.lane === lane && q.role !== "jungle");
       const center = laners[0].pos;
       let s = (w[lane] / wmax) * 0.2;
+      if (focus && focus.gankFocusLane === lane) s += focus.gankFocusAdd * 0.2;
       s += Math.max(...laners.map((q) => 1 - q.hp / q.maxHp)) * 0.6;
       const ownTw = this.frontTower(p.side, lane);   // 敵方在這路的前線塔
       if (ownTw && Math.min(...laners.map((q) => dist(q.pos, ownTw.pos))) > 22) s += 0.3;
@@ -4686,7 +4706,7 @@ export class LogicEngine {
    */
   _combatStep(p, effLane, alive, dt, lateFactor, pendingHits) {
     const R = this.rules;
-    const K = this.tacticOn ? this.tk[p.side] : null;
+    const K = this.tacticOn ? this.director.knobs(p.side) : null;
     const S = this.tacticOn ? this._tac[p.side] : null;
     // 回血：靠泉水快速回、脫離戰鬥緩慢回
     const nearFountain = dist(p.pos, FOUNTAIN[p.side]) < 10;
@@ -6409,7 +6429,7 @@ export class LogicEngine {
             }
           } else if (this.t >= T.objEvalT) {
             T.objEvalT = this.t + 12;
-            const K = this.tacticOn ? this.tk[side] : null;
+            const K = this.tacticOn ? this.director.knobs(side) : null;
             const chance0 = K ? (key === "baron" ? K.baronJoin : K.dragonJoin) : 0.6;
             //  Objective Stakes v1：後期大型目標值得冒險 ⇒ 出擊機率提高（仍是同一次擲骰）。
             //  Objective Stakes v1：情境判斷（人數／血量／龍魂攻防／經濟／後期／基地壓力），仍是同一次擲骰。
@@ -6502,7 +6522,7 @@ export class LogicEngine {
       }
       p.atkCd -= dt;
       // S24：K/S 只在啟用戰術時存在；未啟用 ⇒ 下方全部走原始路徑（含原 rng 序列）
-      const K = this.tacticOn ? this.tk[p.side] : null;
+      const K = this.tacticOn ? this.director.knobs(p.side) : null;
       const S = this.tacticOn ? this._tac[p.side] : null;
       // S28：M＝該選手能力 mods（未啟用/該席位無資料 ⇒ null ⇒ 下方全部走原始路徑）
       const M = this._mod(p);
@@ -6635,7 +6655,7 @@ export class LogicEngine {
         //  v20 ④：Gank 改評分選路——沒有值得抓的路就不出發，gankRecheckSec 後再看（不抽 rng）。
         let gpick = null;
         if (R.gankScoreV20 && this.t >= S.gankNext && !hot) {
-          gpick = this._gankPickV20(p, alive, K.gankWeights);
+          gpick = this._gankPickV20(p, alive, K.gankWeights, K.gankFocusLane ? K : null);
           if (!gpick) S.gankNext = this.t + (R.gankRecheckSec ?? 4);
         }
         if (this.t >= S.gankNext && !hot) {

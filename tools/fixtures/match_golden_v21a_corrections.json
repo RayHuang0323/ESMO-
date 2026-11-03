@@ -1,0 +1,197 @@
+{
+ "schema": "esmo.golden-version-fact-corrections.v1",
+ "fixture": "tools/fixtures/match_golden_v21a.json",
+ "fixtureGitHead": "0e3c022426f8869f88668c73997a7dca719b4b08",
+ "fixtureFingerprint": "29140fe0cb5a4c86",
+ "approval": "Owner 2026-10-25 Review decision 1 (option ①): approved AFTER the change was observed. This is a post-hoc correction, NOT a pre-registration; the original fixture is kept unchanged.",
+ "cause": "T16 stamps challenge snapshots/challenges with CHALLENGE_SIMULATION_VERSION (flag off = moba-sim.v20, the production value); the v21-A fixture was captured when the branch mis-stamped them moba-sim.v21 while running challenge.v20 rules. Engine behaviour is identical.",
+ "fields": [
+  "simulationVersion",
+  "challengeId",
+  "draft.hash"
+ ],
+ "rule": "for each listed case: digest, streamHash, configure calls and params must equal the fixture; the current ChallengeResult's three fields must equal 'new'; the current resultHash must equal newResultHash; replacing the three fields with 'old' must reproduce the fixture's resultHash (= every other field identical). Unlisted cases are compared exactly as before.",
+ "capturedAt": "a1b397fe5d929016d788529de8a8ca7a2dc48a13",
+ "cases": [
+  {
+   "id": "v20:challenge-draft-3",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:249851a8:09afa777",
+    "draft.hash": "7d2ef764"
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:ead19ebb:09afa777",
+    "draft.hash": "fe09d459"
+   },
+   "oldResultHash": "1fde2fbc",
+   "newResultHash": "f11c2357"
+  },
+  {
+   "id": "v20:challenge-nodraft-3",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:0089873a:481fc30a",
+    "draft.hash": null
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:ce935de4:481fc30a",
+    "draft.hash": null
+   },
+   "oldResultHash": "d31c63ef",
+   "newResultHash": "2d8352c8"
+  },
+  {
+   "id": "v20:challenge-draft-7",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:0e4648ce:57906157",
+    "draft.hash": "4c2478b3"
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:6b9ec668:57906157",
+    "draft.hash": "74766e1f"
+   },
+   "oldResultHash": "f72f7c4a",
+   "newResultHash": "41e21028"
+  },
+  {
+   "id": "v20:challenge-nodraft-7",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:07630859:3566206a",
+    "draft.hash": null
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:94aee17e:3566206a",
+    "draft.hash": null
+   },
+   "oldResultHash": "0eab3fdd",
+   "newResultHash": "033a52fd"
+  },
+  {
+   "id": "v20:challenge-draft-11",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:6d459677:d93afa37",
+    "draft.hash": "7fcce83b"
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:a4c2f5e8:d93afa37",
+    "draft.hash": "33c584b4"
+   },
+   "oldResultHash": "70281e18",
+   "newResultHash": "35719bf2"
+  },
+  {
+   "id": "v20:challenge-nodraft-11",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:f89dcd85:5a788a5a",
+    "draft.hash": null
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:78f182dd:5a788a5a",
+    "draft.hash": null
+   },
+   "oldResultHash": "abf270ef",
+   "newResultHash": "f8465e81"
+  },
+  {
+   "id": "v20:challenge-draft-19",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:3ec201a7:5c11dc57",
+    "draft.hash": "3e6aad8f"
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:d0d1ab0d:5c11dc57",
+    "draft.hash": "065e73bb"
+   },
+   "oldResultHash": "43f73b98",
+   "newResultHash": "0afa936f"
+  },
+  {
+   "id": "v20:challenge-nodraft-19",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:a8dd5b48:4fb3325a",
+    "draft.hash": null
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:62f46d7a:4fb3325a",
+    "draft.hash": null
+   },
+   "oldResultHash": "b9975fd2",
+   "newResultHash": "f594be09"
+  },
+  {
+   "id": "v20:challenge-draft-23",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:c1ebf0eb:7d23537d",
+    "draft.hash": "dcca8fc8"
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:974ab054:7d23537d",
+    "draft.hash": "e1ccef71"
+   },
+   "oldResultHash": "46009f7c",
+   "newResultHash": "05456bde"
+  },
+  {
+   "id": "v20:challenge-nodraft-23",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:20ec725e:b40ed854",
+    "draft.hash": null
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:9e1daeaf:b40ed854",
+    "draft.hash": null
+   },
+   "oldResultHash": "aed60b64",
+   "newResultHash": "e7ce1554"
+  },
+  {
+   "id": "v20:challenge-draft-29",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:d8712a24:8007f5c1",
+    "draft.hash": "7d6c8388"
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:cdcb5e7e:8007f5c1",
+    "draft.hash": "58657294"
+   },
+   "oldResultHash": "4c435564",
+   "newResultHash": "83d91f9d"
+  },
+  {
+   "id": "v20:challenge-nodraft-29",
+   "old": {
+    "simulationVersion": "moba-sim.v21",
+    "challengeId": "chal:0089873a:7467f854",
+    "draft.hash": null
+   },
+   "new": {
+    "simulationVersion": "moba-sim.v20",
+    "challengeId": "chal:ce935de4:7467f854",
+    "draft.hash": null
+   },
+   "oldResultHash": "03816dde",
+   "newResultHash": "03fe5045"
+  }
+ ]
+}

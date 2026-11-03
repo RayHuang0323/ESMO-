@@ -1,0 +1,85 @@
+{
+ "schema": "ExclusionV21b1Stage2Result.v1",
+ "at": "2026-11-01T16:35:00.745Z",
+ "run": {
+  "registration": "01427ae41908a8c8",
+  "plan": "e41c59ab484d33be",
+  "simVersion": "tacticTruthSim.v6",
+  "stage1": "3f4a9648b2646427",
+  "range": "65501-65900",
+  "gitHead": "4371147b034b2a2059fafa6c67c5996a029e06cf"
+ },
+ "seeds": "65501-65900",
+ "errored": 0,
+ "errorRule": null,
+ "rule": {
+  "minZ": 3,
+  "minRel": 0.05,
+  "sides": [
+   "blue",
+   "red"
+  ]
+ },
+ "rows": [
+  {
+   "template": "classic.m8",
+   "dimension": "teamfight.posture",
+   "choice": "passive",
+   "metric": "engageDecisionsPerMin",
+   "direction": "down",
+   "blue": {
+    "n": 400,
+    "rel": -0.076042,
+    "z": -7.180912,
+    "meets": true
+   },
+   "red": {
+    "n": 400,
+    "rel": -0.101799,
+    "z": -9.453285,
+    "meets": true
+   },
+   "verdict": "confirmed"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "phases.early.grouping",
+   "choice": "group",
+   "metric": "joinGoGeneralStartsPerMin.early",
+   "direction": "up",
+   "blue": {
+    "n": 400,
+    "rel": 0.089888,
+    "z": 4.626262,
+    "meets": true
+   },
+   "red": {
+    "n": 400,
+    "rel": 0.06129,
+    "z": 4.400306,
+    "meets": true
+   },
+   "verdict": "confirmed"
+  },
+  {
+   "template": "classic.m8",
+   "dimension": "phases.mid.grouping",
+   "choice": "group",
+   "metric": "joinGoGeneralStartsPerMin.mid",
+   "direction": "up",
+   "blue": {
+    "n": 400,
+    "rel": 0.042536,
+    "z": 2.193149,
+    "meets": false
+   },
+   "red": {
+    "n": 400,
+    "rel": 0.072589,
+    "z": 3.560399,
+    "meets": true
+   },
+   "verdict": "not_replicated"
+  }
+ ]
+}

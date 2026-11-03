@@ -36,11 +36,16 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
  * ⚠ **什麼時候不用 bump**：純呈現層、UI、文案、log。
  * ⚠ 版本字串一旦發布就**不可回收再用**：舊 Challenge 存著它。
  */
-export const MOBA_SIMULATION_VERSION = "moba-sim.v20";
+//  2026-10-09 moba-sim.v21 = **UNRELEASED CANDIDATE**（feature/moba-phase3a，Phase 3a Task 3）。
+//   ⚠ 正式站仍是 moba-sim.v20（指紋 050b3f66620f0f57 永不變更；正式站 smoke gate 仍期待 v20）。
+//   v21 只因語意檔案清單多收了 matchRuleset.js／matchAssembler.js 而換指紋：
+//   Live／Challenge／平衡工具經 assembleMatch 的結果與 v20 golden（tools/fixtures/match_golden_v20.json，
+//   39 案）逐位元相同（check_match_assembler_3a）。發布前須由 Owner 決定是否以此版號上線。
+export const MOBA_SIMULATION_VERSION = "moba-sim.v21";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -159,6 +164,64 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   //  · `SEAT_LANE_ZH` —— Draft 的 byRole 補位讀它。
   //    ⚠ 這張表看起來只是 UI 詞彙，但它現在決定「b4 該補哪一路的英雄」。
   "src/platform/contracts/matchLineup.js",
+
+  //  ── 2026-10-09（Phase 3a T3，moba-sim.v21 候選）：唯一組裝器 ───────────────────
+  //  · ruleset 的層與組裝順序（assemblyOrder）決定 configure* 呼不呼叫、以什麼順序呼叫。
+  "src/platform/contracts/matchRuleset.js",
+  //  · MatchSetup → LogicEngine 的唯一組裝點（Live／Challenge／平衡工具共用）：順序、短路、tool 覆寫。
+  "src/battle/moba/matchAssembler.js",
+  //  ── 2026-10-09（Phase 3a T5，moba-sim.v21 候選）：Challenge 改走組裝器 ─────────────
+  //  · 快照／DraftResult → MatchSetup 的轉換（取代 challengeRunner 內的 sideInputs 與 Heroes/Archetypes/Spells 組裝）。
+  "src/platform/challenge/challengeMatchSetup.js",
+  //  · 組裝器 deps 的 adapter 清單（唯一一份；Live 的 matchAssemblerDeps.js 只是其上補預設查表的薄層）。
+  "src/battle/moba/matchAssemblerDepsCore.js",
+  //  ── 2026-10-11（Phase 3a T7，moba-sim.v21 候選）：組裝路徑上其餘「決定引擎輸入」的模組 ───────────────
+  //  判準同上：**改它會不會讓同一份輸入跑出不同結果**。前面幾輪只收了組裝器、ruleset 與 Challenge builder，
+  //  Live 這一側與 deps 清單上的 adapter 還留在清單外——現在三個模式共用同一個組裝器，這個洞就不能留。
+  //  tools/check_match_setup_3a.mjs §V4 會自動檢查：組裝入口模組的每一條相對 import 都必須在這份清單裡（或是有理由的例外）。
+  //  · 出裝引擎 adapter（`toEngineItems`）：英雄陣容＋出裝策略 → configureItems 的設定（含各席位的購買序）。
+  "src/battle/moba/items/itemsEngineAdapter.js",
+  //  · `matchItemsConfig`／`normalizeBuildStrategy`：Live 的出裝設定與策略名稱正規化（deps 清單上的 adapter）。
+  "src/battle/moba/items/buildStrategyPrep.js",
+  //  · `BUILD_STRATEGIES`：組裝器驗證 buildStrategy 用的詞彙，也是上面兩支與出裝 runtime 的購買序來源。
+  "src/battle/moba/items/buildPolicy.js",
+  //  · `buildPlayerStatSlots`／`applyFatigueToLoadout`：Live 的選手素質席位與疲勞後 loadout（直接成為 configurePlayers／建構子輸入）。
+  "src/battle/moba/mobaRosterAdapter.js",
+  //  · Live 的 MatchSetup builder（seed 正規化、天賦選擇與出裝策略的濾除、紅方戰術來源）。
+  "src/battle/moba/liveMatchSetup.js",
+  //  · Live 用的 deps 層（在 core 上補預設查表 heroById 與模組內單例）。
+  "src/battle/moba/matchAssemblerDeps.js",
+  //  · MatchSetup 契約：哪些欄位合法、哪些被正規化／拒絕、生產／工具分界（tool_field_in_production）。
+  "src/platform/contracts/matchSetup.js",
+  //  ── 2026-10-11（Phase 3a T8，moba-sim.v21 候選）：戰術變體的數值來源 ────────────────────────────────
+  //  · 覆蓋層資料（由 TacticVariant 原樣遷移）：`applyVariant` 讀它 ⇒ Live 戰術設定（activeMatch.config.tactic）⇒ toEngineTactic。
+  //    ⚠ 改任何一個 changedFields 數值＝改比賽結果，所以資料檔本身必須在清單內，而不只是 MobaTacticConfig.js。
+  "src/platform/tactics/tacticOverlays.js",
+  //  · `applyVariant`／`TACTIC_VARIANTS`：決定哪些欄位准被覆蓋（allowed／forbidden）與如何套用。以前不在清單內（既有缺口），此處補上。
+  "src/platform/mastery/tacticVariant.js",
+  //  ── 2026-10-11（Phase 3a T9，moba-sim.v21 候選）：Tactic Resolver 與它決定的輸入 ─────────────────────
+  //  組裝器現在能接受 plan binding：binding → MobaTacticConfig → toEngineTactic／toEngineTacticIdentity。
+  //  · Resolver 與它的選擇對照表（CHOICE_MAPPING）：改任何一格＝同一份 binding 解析出不同旋鈕。
+  "src/battle/moba/tactics/tacticResolver.js",
+  //  · 選擇對照表（CHOICE_MAPPING）、applyChoice、提供清單與 plan 層語意檢查（fix 1 由 resolver 搬到 platform，plan 與 resolver 共用唯一一份）。
+  "src/platform/tactics/tacticChoiceMapping.js",
+  //  · 模板資料：binding 的起點設定（經典模板由 MobaTacticConfig 派生，v2 模板是新輸入）。
+  "src/platform/tactics/tacticTemplates.js",
+  //  · plan 驗證器（createTacticPlan）：決定哪些輸入被接受、標準形長什麼樣（resolver 每次都重新驗證）。
+  "src/platform/tactics/tacticPlan.js",
+  //  · 能力登錄表：哪些維度是 live、每個維度允許哪些選擇（plan 與 resolver 的接受範圍）。
+  "src/platform/tactics/capabilityRegistry.js",
+  //  ── 2026-10-15（Phase 3a-C2，moba-sim.v21 候選）：Tactical Director ────────────────────────────────
+  //  · LogicEngine 直接 import；引擎內每一個戰術讀取點（knobs／Tactical Identity／戰術階段界線 480／960 秒）都經它。
+  //    static 模式＝設定值原樣回傳，但改它（例如階段界線、identity 反查）就會改結果 ⇒ 必須在清單。
+  //    它 import 的 tacticalDirective.js 只供 directive() 契約視圖用，不在引擎熱路徑上 ⇒ C2 不收（C3 接上動態模式時再評估）。
+  "src/battle/moba/tactics/tacticalDirector.js",
+  //  ── 2026-10-25（Phase 3a-B T15，moba-sim.v21 候選）：AI 教練 v1 ─────────────────────────────────────
+  //  · career.v21（redTactic aiCoachV1）的紅方計畫在組裝時由它從對手隊伍推導（liveMatchSetup.buildLiveMatchSetup）：
+  //    改它的規則表＝同一份 live 輸入（同一個對手）組出不同的紅方 binding ⇒ 必須在清單。
+  //    （platform/challenge/challengeVersion.js 不收：它只決定**新**挑戰記下哪個版本，同 snapshotAuthority.js 的判準；
+  //     既有挑戰由記下的版本經 matchRuleset.challengeRulesetForVersion 決定規則集，那一段在清單內。）
+  "src/platform/tactics/aiCoach.js",
 ]);
 
 /**
@@ -410,6 +473,172 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //    回應吃距離、定位、溝通／配合／領導、風險傾向。④ Gank 評分選路、追擊先估擊殺。⑤ 龍／巴龍雙評估取代擲骰、懲戒在物件不迫近時清野。
   //  全部決定性（不新增亂數；Gank／物件改評分後少抽 rng）。⚠ 後果（已知且接受）：v19 歷史挑戰由 canReplay 明確拒絕；v1～v19 指紋全數保留。
   "moba-sim.v20": "050b3f66620f0f57",
+  //  2026-10-09 moba-sim.v21（feature/moba-phase3a，**UNRELEASED CANDIDATE**）：語意清單新增 matchRuleset.js 與
+  //  matchAssembler.js（Phase 3a T3 唯一組裝器）。LogicEngine 與所有 adapter 未改；Live／Challenge／runner 經組裝器
+  //  的結果與 v20 golden 39 案逐位元相同（configure 序列、引數雜湊、digest、streamHash）。
+  //  ⚠ v20 指紋不變、v1～v20 全數保留；正式站仍為 v20，發布前須 Owner 決定。
+  //  T3 fix round 1：組裝器改以正規席位順序（b1…b5, r1…r5）重建交給 adapter 的 roster／天賦選擇（同雜湊 ⇒ 同模擬由構造保證）；
+  //  golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 6b706cbfd4419710 未曾發布）。
+  //  T4（Live 改走組裝器）：matchAssembler.js 只多回傳 applied.depsFingerprint（deps 身分描述，不進引擎、不進 setup 雜湊）
+  //  ⇒ 不是語意變化；golden 39 案＋Live 9 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 d5af0958688d277a 未曾發布）。
+  //  T5（Challenge 改走組裝器）：runChallenge 經 challenge.v20 組裝，golden 12 個 Challenge 案經真實 runChallenge 逐位元相同；
+  //  語意清單新增 challengeMatchSetup.js、matchAssemblerDepsCore.js。v21 未發布 ⇒ 同版號重新登記（舊值 e94f45f2c87e9573 未曾發布）。
+  //  T6 fix（平衡工具 ESMO_BALANCE_ROOT 跨版本 A/B 必須量到同一棵樹）：組裝器不再 import 任何 adapter，引擎側 adapter
+  //  （PlayerMods／HeroMods／Passives／PowerCurve／Spells／matchItemsConfig／toEngineItems／Tactic／Identity／STANDARD_OPP_TACTIC）
+  //  改經 deps.engineAdapters，預設接線只在 matchAssemblerDepsCore.js；tool 規則集容忍舊樹引擎缺 configure 方法。
+  //  結果與 v20 golden 39 案逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 d8935d1e9c0f2f8f 未曾發布）。
+  //  T6 fix 1：tool 規則集只容忍引擎缺 v20 runner 有護欄的三個方法（TOOL_TOLERATED_ENGINE_METHODS）；tool 的技能層把
+  //  selectBattleTalents 的結果原樣交給 toEngineHeroSkills（production 空選擇仍 ⇒ null）。結果與 v20 golden 逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 fe407dd69bda620b 未曾發布）。
+  //  T7（跨模式一致 gate，3a-A 架構完成點）：語意清單再收 7 支組裝路徑上的模組（itemsEngineAdapter／buildStrategyPrep／buildPolicy／
+  //  mobaRosterAdapter／liveMatchSetup／matchAssemblerDeps／matchSetup.js；理由見清單內註解）。只增加清單、沒有改任何一支的程式碼
+  //  ⇒ 不是語意變化：Live／Challenge／runner 的結果與 v20 golden 39 案（live 9、challenge 12、runner 18）逐位元相同——
+  //  由 tools/check_match_setup_3a.mjs 走三個真實包裝逐案驗證（G-A2 39/39；G-A1 三個 ruleset × 6 seeds 同 setup 多路徑結果相同）。
+  //  ⚠ v20 指紋 050b3f66620f0f57 與 v1～v20 全表不變（gate V2 釘整表雜湊）；正式站仍為 v20；v21 發布前須 Owner 決定。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 5caac9332cdf1e21 未曾發布）。
+  //  T8（TacticPlan.v2／模板／覆蓋層）：三個 TacticVariant 的數值遷移到 tactics/tacticOverlays.js，tacticVariant.js 改為投影它；
+  //  語意清單新增這兩支（變體數值是 Live 戰術設定的來源，以前只靠 tacticVariant.js 的字面值而且不在清單內）。
+  //  行為不變：applyVariant 對 9 個戰術 × 9 種變體輸入（81 組）的輸出與遷移前逐位元相同（tools/check_tactic_plan_3a.mjs §O，
+  //  fixture 擷取自 a7adeb9）；LogicEngine、組裝器與所有 adapter 未改 ⇒ 不是語意變化，v20 golden 39 案維持逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 b6264e0fa16c3b2d 未曾發布）。
+  //  2026-10-11（Phase 3a T9）：語意清單新增 tacticResolver.js、tacticTemplates.js、tacticPlan.js、capabilityRegistry.js；組裝器多一條
+  //  binding 分支（經 deps.engineAdapters.resolveTactic；fix 1 起 legacy／std 也走它）、matchSetup/matchRuleset 多「ruleset 接受的戰術種類」檢查。
+  //  行為不變：legacy／std 路徑一個位元都沒動，golden 39 案＋Live 9 案以 binding 輸入皆逐位元相同（check_tactic_resolver_3a）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 e695aa910251481a 未曾發布）。
+  //  2026-10-12（Phase 3a T9 fix 1）：選擇對照表搬到 tacticChoiceMapping.js（新增進清單）；`split` 選擇連帶把 macro.splitPush 提到
+  //  classic.m2 的值（離開 split 降回 std 的值）；組裝器對 legacy／std／binding 一律經 resolveTactic。
+  //  legacy／std 路徑的旋鈕一個位元都沒動，golden 39 案＋Live 9 案（binding 輸入）仍逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 048375d5ab576f18 未曾發布）。
+  //  2026-10-12（Phase 3a T9 fix 2）：戰術 adapter 只在用到時才必要（STANDARD_OPP_TACTIC 只在有一方是 std 時）；resolver 輸出先驗形狀；
+  //  resolver 不再凍結投影回傳的物件（先複製）。合法輸入的旋鈕一個位元都沒動，golden 39 案仍逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 88f4175a94025c1a 未曾發布）。
+  //  2026-10-12（Phase 3a T9 fix 3）：組裝器把注入 resolver 的結果在護欄內一次讀成純資料（ok 須嚴格為 true）。合法輸入的旋鈕一個位元都沒動。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 b1271c151bed7955 未曾發布）。
+  //  2026-10-12（Phase 3a T10 事前登記）：capabilityRegistry.js 的 live 列多了 resolverFields／engineReads／gate（真實性 gate 的事前登記資料）與
+  //  CAPABILITIES／liveCapabilities 別名；isLiveChoice 多一個可省略的 simVersion 參數。都是純資料／查詢，解析器與對照表一個位元都沒動，
+  //  golden 39 案仍逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 0300a71fcbc3a7df 未曾發布）。
+  //  2026-10-12（Phase 3a T10 結果）：Registry 多了 MEASURED_EXCLUSIONS（G-A7 量測不到效果的選擇逐模板不提供；23 筆），
+  //  offeredChoiceDetail 多一個可省略的 opts.withMeasured 與 tacticBookOptions（UI 選項清單）；resolver 重新匯出它。
+  //  排除表只影響「提供給玩家挑哪些」（offeredChoices／tacticBookOptions）；createTacticPlan 驗的仍是結構上合法（withMeasured:false），
+  //  所以**不改任何輸入的解析結果**、不碰引擎與組裝器：golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 355cf3ef13b6b7e4 未曾發布）。
+  //  2026-10-13（Phase 3a T10 Phase 2 事前登記）：對照表與 Registry 多了五個整場型 live 維度（teamfight.posture／grouping、objectives.dragon／baron／tower），
+  //  數值全部引用既有模板在同一欄位上的值。既有十三個維度的解析一個位元都沒動；沒選這些新鍵的輸入解析結果不變，golden 39 案仍逐位元相同。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 5419139708e72275 未曾發布）。
+  //  2026-10-13（Phase 3a T10 Phase 2 結果）：MEASURED_EXCLUSIONS 多 7 筆（集結 tight、巨龍 low／high、巴龍 low／high、推塔 low，以及 classic.m3 上的推塔 high）。
+  //  只影響提供給玩家挑的清單，不改任何輸入的解析結果：golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 96d6b4652146eaf1 未曾發布）。
+  //  2026-10-13（Phase 3a T12）：liveMatchSetup.js 的藍方戰術多一個來源——opts.tacticPlanBinding（戰術書）優先，沒有才走 v1 戰術物件。
+  //  沒帶 binding 的輸入走的是原本那一行，golden 39 案仍逐位元相同；binding（classic.mN、無額外選擇）整場結果＝同一套經典戰術的 golden
+  //  （tools/check_tactic_save_3a.mjs M2）。v21 未發布 ⇒ 同版號重新登記（舊值 839ca79b396026b7 未曾發布）。
+  //  2026-10-14（Phase 3a-A 複驗撤下）：Registry 多了 REPLICATION_WITHHELD（4 筆：上路 split、下路 aggressive、b1 core、謹慎風險；複驗 seeds 1001–1400 紅藍雙方沒站住）
+  //  與 replicationWithheld 查詢；offeredChoiceDetail 預設再套用這張表（原因 not_replicated），withMeasured:false 兩張表都不套。
+  //  只影響提供給玩家挑的清單，不改任何輸入的解析結果（createTacticPlan／resolver 驗的仍是結構上合法）：golden 39 案仍逐位元相同。
+  //  同批另有：矛盾提示（tacticIndicators.js，不在語意清單內）改為證據含撤下選擇的規則不回報；planProblems 多一段註解——兩者都不改指紋（註解不計）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 e66f38390c351919 未曾發布）。
+  //  2026-10-15（Phase 3a-C1）：matchRuleset.js 多了可選層 tacticalDirector（缺少 ≡ "static"；validateRuleset 只收 "static"）與兩個讀取輔助。
+  //  v20 三份 ruleset 與 resolveRulesetForMode 的輸出逐字不變（tools/check_match_ruleset_3a.mjs R16／R17）、沒有任何檢查點讀它 ⇒ 不是語意變化：
+  //  golden 39 案仍逐位元相同。v21 未發布 ⇒ 同版號重新登記（舊值 a7d5b68e24d1f313 未曾發布）。
+  //  2026-10-15（Phase 3a-C2）：C2: engine tactic reads go through TacticalDirector (static); results bit-identical to the v21-A golden.
+  //  LogicEngine 的每一個戰術讀取點（knobs／Tactical Identity／戰術階段）改經 battle/moba/tactics/tacticalDirector.js（新增進語意清單）；
+  //  static 模式回傳設定的同一份物件，階段界線 480／960 原樣搬過去。v21-A golden 109 案與 v20 golden 39 案逐位元相同 ⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 29140fe0cb5a4c86 未曾發布）。
+  //  2026-10-15（Phase 3a-C3-1 E-1）：C3-1 E-1: observer fields removed, mode list merged; behaviour unchanged.
+  //  LogicEngine.configureMatch 不再指派 this.tk／this.tid（aa38625 之後沒有讀者）；TACTICAL_DIRECTOR_MODES 只在 matchRuleset.js 定義一份，
+  //  tacticalDirector.js 改為 import／轉出同一個物件。不改任何輸入的解析結果與引擎行為：golden 逐位元相同 ⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 ed0daff971db2d7a 未曾發布）。
+  //  2026-10-15（Phase 3a-C3-1）：C3-1: phase skeleton core.v1 + career.v21/balanceTool.v21; behaviour unchanged.
+  //  matchRuleset.js 多了 career.v21／balanceTool.v21（tacticalDirector "core.v1"）與 RS-1 擴充；Resolver 只在要求時多回每時期方針
+  //  （三份共用整場物件）；組裝器只在 core.v1 時把 phases 交給 configureMatch；Director core.v1 依 phase(clock()) 挑選。
+  //  v20 規則集與既有輸入的解析結果、configureMatch 引數完全不變（golden 131／153 逐位元相同）；v21 規則集下引擎輸出亦逐位元相同
+  //  （tools/check_c3_phase_skeleton.mjs G-AC1 ②）⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 eb0249883e225fc4 未曾發布）。
+  //  2026-10-16（Phase 3a-C3-1 laneFrame）：C3-1 laneFrame: red lane-keyed knobs team-relative under career.v21/balanceTool.v21; legacy unchanged.
+  //  matchRuleset.js 多了 laneFrame 層（legacyMirror｜teamRelative；缺少 ≡ legacyMirror），career.v21／balanceTool.v21 帶 teamRelative；
+  //  組裝器只在層存在時把 laneFrame 交給 configureMatch（並對未宣告支援的引擎報 deps_missing）；LogicEngine 原樣轉交；
+  //  tacticalDirector.js 在 teamRelative 下把紅方按路分的 knobs（LANE_KEYED_KNOBS）以 gameData.js 的映射轉成世界路名（TD-3A-23，Owner D-1 = A）。
+  //  **這是 v21 規則集下的語意變化**（紅方上下路不對稱的案例改變：事前登記的 9 個 v21-A 案，tools/check_laneframe_c3.mjs C3）；
+  //  v20 規則集與既有輸入完全不變（golden 131／153 逐位元相同）。v21 仍是未發布候選 ⇒ 依 TD-3A-23 §3.6 選項 1 同版號重新登記
+  //  （舊值 79436579b2f999cf 未曾發布）。
+  //  2026-10-21（Phase 3a-C3-2 前置）：C3-2 prereq: identityOfKnobs falls back to a construction-time knobs->identity map; behaviour unchanged.
+  //  tacticalDirector.js core.v1 的 identityOfKnobs 先查目前時期（不變），查不到才查建立時登記的「每份 knobs → 同時期 identity」。
+  //  今天三個時期共用同一份物件 ⇒ 第一步永遠命中，回答與之前逐參照相同（tools/check_tactical_director_3c.mjs C4）；
+  //  golden 131／153 與 v21 規則集下的引擎輸出逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 6c8db7e7cff3ae6a 未曾發布）。
+  //  2026-10-22（Phase 3a-C 每時期方針基礎建設）：C-infra: per-phase choices (objectiveOrder / grouping / focusLane) resolve to per-phase
+  //  objects; legacy phaseChoices only under tool rulesets; behaviour unchanged when no per-phase choice is given.
+  //  tacticChoiceMapping.js 多了 PHASE_CHOICE_MAPPING（每個值都是既有模板的值）；tacticResolver 在有每時期選擇時才另建該時期的物件，
+  //  沒有時三份仍共用整場物件（R-4）；matchSetup／matchAssembler 只在工具規則集接受 legacy 的 phaseChoices。
+  //  所有既有輸入都沒有每時期選擇 ⇒ golden 131／153 與 v21 規則集下的輸出逐位元相同 ⇒ 不是語意變化（新行為只在選了才出現）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 49faf7d28aa9ebfb 未曾發布）。
+  //  （同日審查後補強：static 收到每時期選擇改為拒絕、數值覆寫取較高者；仍只影響帶了每時期選擇的輸入。舊值 6a5ab2a437d9a28e 未曾發布。）
+  //  2026-10-22（Phase 3a-C3-2 收尾）：C3-2 closeout: six phase stances offered on n=400 replication evidence; registry data only.
+  //  capabilityRegistry.js：時期姿態的 G-A7 指標改為 phaseEngageDecisionsPerMin.<p>（舊指標列入 retiredClaims）、新增 REPLICATION_CONFIRMED（6 筆）、
+  //  REPLICATION_WITHHELD 多 2 筆 owner_hold（前期／中期 scaling）、MEASURED_EXCLUSIONS 拿掉被 n=400 複驗取代的 8 列時期姿態。
+  //  只改「提供給玩家挑哪些」與量測登記；同一份輸入（含帶這些選擇的計畫）解析出的旋鈕與引擎輸出都不變 ⇒ 不是語意變化。
+  //  ⚠ 但畫面載入舊存檔時的 offeredChoicesOnly（TacticScreen）不再拿掉這 6 個選擇 ⇒ 同一份**存檔計畫**送進對局的選擇會不同（預期行為）。
+  //  tacticIndicators.ruleSuppressed 只看 not_replicated（owner_hold 的證據成立，不抑制規則）；今天沒有規則引用時期姿態。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 6a57c36c98d8b7ee 未曾發布）。
+  //  （同日審查後補強：弱點模板照舊由真實性表判定、ruleSuppressed 只看 not_replicated（tacticIndicators.js）。舊值 2fc8cf8703647876 未曾發布。）
+  //  2026-10-22（真實性表以新指標整輪重測後）：MEASURED_EXCLUSIONS 加 4 筆弱點模板的時期姿態排除（classic.m4 前期 scaling、
+  //  v2.defensive_hold 中期 scaling、classic.m1 後期 defensive／scaling；n=40 的 phaseEngageDecisionsPerMin.<p>）。只改提供哪些選擇；
+  //  非時期的 72 列與前一版逐位元相同 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 a5ce0d283ead3e5c 未曾發布）。
+  //  2026-10-23（Phase 3a-C3-3／C4 升級 live）：Phase 3a-C3-3/C4 live: per-phase grouping/objectiveOrder (director rulesets only); per-match filter; behaviour unchanged for existing inputs.
+  //  capabilityRegistry.js：phases.<p>.grouping／objectiveOrder 改 live（requires Director core.v1）、REPLICATION_CONFIRMED／WITHHELD 加 C3-3／C4 列、
+  //  整場巨龍／巴龍的 G-A7 指標改為 contestShare（舊指標列入 retiredClaims；v21 證據只留在 REPLICATION_V21_SCOPE_ONLY，Owner 裁定不開放 v20）。
+  //  tacticChoiceMapping.js：objectiveOrder 加不覆寫值 none、共用 phaseProjectionOf（tacticResolver 改呼叫它，成功路徑輸出逐位元相同）、
+  //  選擇引擎提供每時期選擇、tacticBookOptions 依 Director 模式過濾。liveMatchSetup.js：本場規則集用不到的選擇只從本場 binding 拿掉（記在 notes）——
+  //  以前這種輸入會被組裝器拒絕（沒有輸出），現在開得了局；所有本來開得了局的輸入結果不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 21a219764652fd1d 未曾發布）。
+  //  2026-10-23（真實性表整輪重測後，Owner 裁定）：整場巨龍／巴龍的 G-A7 指標改回 v20 原本的 objectiveFightEntriesPerMin（v20 的能力與
+  //  排除表完全依 v20 既有證據；上面「改為 contestShare」那一段作廢，retiredClaims 與其封存檔一併拿掉）；MEASURED_EXCLUSIONS 加 9 筆
+  //  每時期型的弱點模板排除（classic.m2／m8，n=40）。只改提供哪些選擇 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 265bf51eeec97f55 未曾發布）。
+  //  2026-10-23（C5R 強邊一次受控重新設計，Owner 核准；review/tactic-book-3a/C5R_強邊重新設計.md）：LogicEngine._gankPickV20 多一個 focus 參數——
+  //  knobs 帶 gankFocusLane 時那一路加 gankFocusAdd × 0.2（不做最大值正規化），其他路不變；tacticChoiceMapping.phaseProjectionOf 的強邊改帶
+  //  gankFocusLane／gankFocusAdd、不再覆寫 gankWeights；tacticalDirector LANE_KEYED_KNOBS 加 gankFocusLane（值型）。這兩個欄位只在選了強邊
+  //  （design，只限工具規則集的 phaseChoices）的時期出現 ⇒ 所有既有輸入行為不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 24661fa8041eb9a3 未曾發布）。
+  //  同日（C5R 量測前審查後＋跨版本證據隔離）：gankFocusAdd 改為正規化後的增量（÷ 本來的最大權重，std 仍是 0.7）；MEASURED_EXCLUSIONS 加
+  //  scope 欄位與 2 筆只在 static 生效的時期姿態排除（v20 不用 v21 證據，Owner 2026-10-23），measuredExclusion／提供清單／開局過濾依模式套用。
+  //  既有輸入的模擬行為不變 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 e3ba74f04a6ba3e0 未曾發布）。
+  //  同日（隔離審查 #2）：liveMatchSetup 的 scope 判定改為直接查帶本場模式 scope 的列（與排除表順序無關）；行為不變 ⇒ 同版號重新登記（舊值 2ae772222d157170
+  //  未曾發布；C5R 量測在 2ae772222d157170 下開始與完成，這次改動只在開局過濾、不在量測路徑上）。
+  //  2026-10-24（Owner 第二輪 Review 核准）：C5R strong side live (v21 director rulesets only); C6 win-condition fill (design); stance+objectiveOrder plan fix.
+  //  capabilityRegistry.js：phases.<p>.focusLane 改 live（requires Director core.v1；宣稱 ganksOwnPerMin.<lane>.<p>）、REPLICATION_CONFIRMED 加 C5R 9 列、
+  //  新增 REPLICATION_PRESET_CONFIRMED（快速模式強邊 3 列，只留證據）；winCondition 仍是 design（列舉先登記）。
+  //  tacticChoiceMapping.js：WIN_CONDITION_PRESETS＋winConditionFill／effectiveChoices（只替沒選的維度預填既有選擇，tacticResolver 改用展開後的選擇；
+  //  沒有 winCondition ⇒ 展開結果＝原選擇，逐位元相同）；強邊列加 reads／phaseTouchedFieldsOf（資料說明，不影響解析）；
+  //  phaseOfferedDetail 修正：同一時期的 phases.<p>.stance（整場對照表的維度）不再被當成未知的每時期維度 ⇒「前期姿態＋前期物件優先」
+  //  以前整份計畫被拒絕（沒有輸出），現在接受；所有本來接受的計畫解析結果不變。強邊選了才出現的 knob 在 C5R 已登記。
+  //  ⇒ 所有既有輸入（含 v20、v21-A 黃金）的模擬行為不變（golden 131／setup 153 實跑相同）⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 70a8af6428b02a03 未曾發布）。
+  //  同日（C6 量測前審查 F3／F4）：winConditionFill 跟著 withMeasured、plan 層不再以「完整組合」拒絕帶勝利條件的計畫、戰術書的其他維度以展開後的選擇算提供清單；
+  //  勝利條件仍是 design ⇒ 所有既有輸入的模擬行為不變 ⇒ 不是語意變化。v21 未發布 ⇒ 同版號重新登記（舊值 30b44a789b4c7548 未曾發布）。
+  //  2026-10-24（C6 正式量測 tools/fixtures/phase_options_result_c6.json 後，Owner 核准前期滾雪球升為 v21 候選 live）：
+  //  capabilityRegistry.js：winCondition 改 live（requires Director core.v1 ⇒ v20／static 開局拿掉，量測前審查 F5）、REPLICATION_CONFIRMED 加
+  //  前期滾雪球、REPLICATION_WITHHELD 加控圖運營（insufficient）與中路分推（one_sided）；新增 WIN_CONDITION_COMPONENTS（資料說明）。
+  //  tacticChoiceMapping.js：帶 winCondition＝none 的計畫不再被拒絕（none＝不填任何格）。勝利條件只展開成既有 live 選擇（引擎不認得它），
+  //  沒有勝利條件的輸入解析結果逐位元相同 ⇒ 所有既有輸入（含 v20、v21-A 黃金）的模擬行為不變 ⇒ 不是語意變化。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 3d7ee3c4ac59f162 未曾發布；C6 量測在 3d7ee3c4ac59f162 下開始與完成）。
+  //  同日（升級後真實性表重測 tools/fixtures/tactic_truth_3a.json，58d999709c239ca4 下 163 批、0 失敗；舊 119 列逐位元相同）：
+  //  capabilityRegistry.js 的 MEASURED_EXCLUSIONS 照結果表推導加 6 筆弱點模板列（強邊 4、勝利條件 2，只對該模板不提供）。
+  //  這會改變「那幾個模板＋那幾個選擇」的計畫在開局被拿掉與否（勝利條件兩列本來就撤下）；其他輸入不變。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 58d999709c239ca4 未曾發布）；simulationVersion.js 被量測載入 ⇒ 真實性表再整輪重測。
+  //  2026-10-25（Phase 3a-B P1；Owner 2026-10-25 核准開工，所有 P1 語意變更合併登記一次）：
+  //  ① T16 challenge.v21（matchRuleset.js 新規則集＋旗標解析＋challengeRulesetForVersion；challengeRunner／challengeMatchSetup 依挑戰記下的
+  //     版本選規則集）：旗標關 ⇒ 新挑戰記 moba-sim.v20、跑 challenge.v20，與正式站逐位元相同（challenge setup 12/12）；旗標開 ⇒ challenge.v21。
+  //  ② T15 AI 教練 v1（aiCoach.js 加入本清單；career.v21 的 redTactic 改 aiCoachV1）：career.v21 有 AI 對手的 live 輸入紅方改用教練計畫
+  //     （事前登記 tools/fixtures/ai_coach_registration_3aB.json：v21-A 恰好 6 案改變）；career.v20、balanceTool.v20／v21 不變。
+  //  ③ 後期上／中／下強邊改回 design（capabilityRegistry.js：REPLICATION_CONFIRMED → REPLICATION_WITHHELD owner_hold）：提供清單少了這三個，
+  //     帶著它們的已存計畫照舊解析（同控圖運營）；其他輸入不變。
+  //  ④ liveMatchSetup.js 多回傳 droppedChoices（畫面提示用，不進 setup）。
+  //  v21 未發布 ⇒ 同版號重新登記（舊值 b37772a2f1777b03 未曾發布）；matchRuleset.js 被量測載入 ⇒ 真實性表必須在語意凍結後整輪重測（先跑預演批次）。
+  //  2026-10-25（Owner Review 決策 5，語意凍結前）：AI 教練加證據規則——模板以外的選擇只加在有紅藍複驗的 std 上（前期滾雪球 n=400、輔助任務 n=200）
+  //  （積極型＝std＋前期滾雪球、均衡型＝std＋依素質的輔助任務；v2 模板用純模板；不用強邊；不用未量過的「野區入侵＋前期滾雪球」）。
+  //  只改 career.v21 有 AI 對手時的紅方計畫；其他輸入不變。v21 未發布 ⇒ 同版號重新登記（舊值 e3acf891023937e9 未曾發布）。
+  //  2026-11-02（Phase 3a-B 第一階段語意凍結，Owner 正式核准）：模板修正表 v21.b1（career.v21／balanceTool.v21 的 templateBalance 層）、m3／m7／m8 文案與排除列、
+  //  Live 2×2 矩陣與總開關。v20 規則集與 Challenge v20 不變（v20 黃金 39 案逐位元相同）；旗標全關。v21 未發布 ⇒ 同版號重新登記（舊值 0578fa882d74b205 未曾發布）。
+  //  登記 tools/fixtures/stage1_formal_acceptance_registration_3aB.json。
+  //  2026-11-03（Phase 3a-B 第一階段 r2 語意凍結，Owner r3 裁定 E 項授權）：模板修正表 v21.b2（m6 M6_B、hard_engage HE_R、three_lane TLP_R 未證實候選；m3／m7／m8 與 v21.b1 同值）、
+  //  v21.b2 文案與排除列。v20 規則集與 Challenge v20 不變（v20 黃金 39 案逐位元相同）；旗標全關。v21 未發布 ⇒ 同版號重新登記（舊值 0cc52b48cfb9348a 未曾發布，舊凍結 7a6e9736 與結果保留）。
+  //  登記 tools/fixtures/stage1r2_formal_acceptance_registration_3aB.json。
+  "moba-sim.v21": "620196ccea5a8249",
 });
 
 export const isKnownSimulationVersion = (v) =>

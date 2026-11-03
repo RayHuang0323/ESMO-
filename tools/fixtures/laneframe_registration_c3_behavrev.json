@@ -1,0 +1,142 @@
+{
+  "schema": "esmo.laneframe-registration-addendum.v1",
+  "registeredAt": "2026-10-20",
+  "amends": {
+    "file": "tools/fixtures/laneframe_registration_c3.json",
+    "commit": "166ade7",
+    "section": "gates.behavioural (statistics, n, seeds, B1/B2/B3 pass rules, negativeControl sample)",
+    "unchanged": "the original file is not edited. Plans, arms, control, metrics, instrument (tools/measure_laneframe_c3.mjs worker runOne), ruleset balanceTool.v21 / laneFrame teamRelative, forced STANDARD+SWAPPED layouts and the diff-in-diff definition of effect and D are kept exactly. gates.sideBias stays as amended by laneframe_registration_c3_d20rev.json; static gates, regression pins and stopRule unchanged."
+  },
+  "originalEvidence": {
+    "result": "tools/fixtures/laneframe_result_c3.json (commit 21ab068): behavioural verdict fail, registered STOP (B1 n_reduced, B2 fail, B3 fail, negative control pass); seeds 9001-9100",
+    "rule": "preserved as-is and never overwritten; never re-analysed under the rules of this addendum and never re-labelled PASS. The measurement tool refuses to overwrite that file."
+  },
+  "authority": {
+    "owner2026-10-20": "Owner agreed in principle to revise the B2/B3 acceptance design and re-run on fresh seeds, without re-judging the seen results. Not accepted: |z| < 2 + sameSign as an equivalence PASS (non-significance is not equivalence). Required: (1) keep the STOP and all raw results; (2) accept B1 functional correctness separately from B2/B3 behavioural symmetry; (3) B2/B3 three states PASS/STOP/INCONCLUSIVE with equivalence margins and a confidence-interval rule derived from metric scale, existing baseline variability and game meaning, never from the observed differences; (4) report sameSign, z and raw effects but never claim equivalence from |z| < 2; (5) matches without the behaviour are N/A with occurrence rate and effective n reported; (6) handle multiplicity and sample size with an executable cap, no open-ended extension; (7) this addendum passes an independent review and is committed before running on pre-specified fresh seeds; (8) INCONCLUSIVE is never self-labelled a pass and is not re-run: evidence is kept and the Owner decides. v20 / v21-A goldens and side-bias thresholds unchanged; no tactic coefficient changes."
+  },
+  "whyRevised": [
+    "B3 tolerance |mean(D)| <= 5 % of |mean effect_blue| is a point-estimate rule whose width scales with the blue effect, which for most plan x lane cells is close to zero; for any cell whose blue effect is near zero the tolerance is near zero while sd(D) is of the order of the metric's match-to-match spread, so at n = 100 the rule cannot be met even when the true asymmetry is zero (a design property, independent of the observed differences).",
+    "A point estimate inside a tolerance is not an equivalence test: it ignores sampling error in both directions (passes noisy small samples, fails large precise ones).",
+    "The full-n requirement cannot be met for metrics that are undefined on matches without the behaviour (gankShare without ganks, B1 share without split ticks); excluding them silently is not acceptable either, so they become N/A with the occurrence rate reported."
+  ],
+  "disclosure": "The controller has seen the original study's results (21ab068). Margins in this addendum come only from the anchors listed under margins.*.anchor / margins.*.registered, all of which predate the original study; no observed difference, mean(D) or effect from the original study is used. The original study's sd(D) and effective-n share per row (nuisance parameters, not differences) are used only for the sample-size plan (sampleSize.assumptions). Fresh seeds make the decision data independent of what was seen. Review history (2026-10-20): a first draft of this addendum set the B3 margin at 0.025 x baseline (2.44 / 2.50 / 3.44); the independent review rejected it because (a) it would accept a red/blue gap as large as the known pre-fix asymmetry (tactic_followup_3a_replication.json: lanes.bot.stance=aggressive laneForward.bot blue +2.966, z 4.18, red +0.341) and (b) every original |mean(D)| fell inside it while the factor 0.5 x minRel had been chosen after the results were seen. The margin was replaced by one rule applied to both B2 and B3 (margins.rule). sameSign: no row of the original study violated sameSign under either the original (|z| >= 2) or the revised (|z| >= zStop) applicability, so the change of applicability is not tailored to the seen results.",
+  "seeds": {
+    "range": "16001-17600",
+    "n": 1600,
+    "seedSource": "tool (balance runner createMatchSetup with seedSource 'tool': the seed is used as-is, every seed is a distinct engine seed)",
+    "why": "outside every range of draft §1.3 (C3-C6_行為契約草案.md) and above the D-20 walkLimit 16000, so it can never overlap the side-bias continuation; never used by any measurement",
+    "negativeControlSeeds": "16001-16100"
+  },
+  "design": {
+    "ruleset": "balanceTool.v21",
+    "laneFrame": "teamRelative",
+    "layouts": [
+      "STANDARD",
+      "SWAPPED"
+    ],
+    "arms": "control (std vs std); each plan as blue vs std and as red vs std; plans std+top-split, std+bot-aggressive, classic.m4, classic.m5 (unchanged)",
+    "negativeControl": "neg:std+top-split@red with laneFrame legacyMirror, seeds 16001-16100 x 2 layouts only",
+    "matches": "1600 seeds x 18 (control 2 + 4 plans x 2 sides x 2 layouts) + 100 x 2 negative = 29000 matches",
+    "tick": "dt 0.5 s, stop at engine over or 3600 s (unchanged)",
+    "instrument": "every record must show layoutApplied = the forced layout (null counts as a mismatch), laneFrame = the arm (teamRelative; legacyMirror for the negative arm) and director mode core.v1 (balanceTool.v21; balanceTool.v20 would show static). Any mismatch => STOP(INSTRUMENT) for B1, B2 and B3 regardless of completeness"
+  },
+  "B1": {
+    "what": "functional correctness of the split-lane seat (separate acceptance from B2/B3)",
+    "perMatch": "own-lane split share = split ticks by the side's role for the plan's team-relative split lane / all split ticks of that side",
+    "na": "a match side with zero split ticks is N/A (counted; never a pass, never silently dropped)",
+    "violation": "any non-N/A match with share < 0.99 => B1 STOP (deterministic functional failure), regardless of completeness. Checked between chunks as well as at the end (not a statistical look)",
+    "pass": "no violation AND each side has >= 200 non-N/A matches (the originally registered per-arm sample, 100 seeds x 2 layouts) AND no OCCURRENCE_ASYMMETRY",
+    "occurrence": "per side: share of matches with >= 1 split tick; per seed o(s) = mean over layouts of [occ(red arm, red side) - occ(blue arm, blue side)], paired z; |z| >= zStop => OCCURRENCE_ASYMMETRY",
+    "inconclusive": "no violation but the pass conditions are not all met",
+    "negativeControl": "pooled own-lane share of the legacyMirror red arm must be < 0.5 (unchanged criterion); if it does not fail, the instrument cannot detect the bug => B1 STOP",
+    "params": {
+      "minShare": 0.99,
+      "minMatchesPerSide": 200,
+      "negativeMaxPooledShare": 0.5
+    }
+  },
+  "B2B3": {
+    "metrics": "B2 gankShare.<lane> (team frame), B3 laneForward.<lane> (role distance to own nexus, 60-480 s, alive, state 對線), lanes top/mid/bot; 4 plans x 6 metrics = 24 rows",
+    "D": "unchanged: D(s) = mean over the 2 layouts of [effect_red(s,L) - effect_blue(s,L)], effect_side = m(plan on that side vs std) - m(control, same side, same s, L)",
+    "na": "B2: a match side with zero ganks has no gankShare; B3: a role with < 20 lane samples has no laneForward. A seed is N/A for a row if any of its 8 values is N/A (same rule as fixed 2026-10-20). n_eff = non-N/A seeds",
+    "occurrence": "reported per row: n_eff, n_NA, occurrence rates of the 4 contributing match sides (plan@blue blue, plan@red red, control blue, control red); occurrence asymmetry o(s) = mean over layouts of [(occ(plan@red,red) - occ(control,red)) - (occ(plan@blue,blue) - occ(control,blue))], paired z; |z| >= zStop => OCCURRENCE_ASYMMETRY (the row cannot PASS; exclusion may be informative)",
+    "se": "SE = sd(D) / sqrt(n_eff); normal quantiles (n_eff in the hundreds)",
+    "pass": "the 90 % CI mean(D) +- z90 * SE lies strictly inside (-delta, +delta) (TOST, alpha 0.05 per row) AND n_eff >= 200 AND sameSign holds AND no OCCURRENCE_ASYMMETRY",
+    "stop": "the 99.9 % CI mean(D) +- zStop * SE lies entirely outside [-delta, +delta] (a meaningful asymmetry is demonstrated), OR a demonstrated sign reversal: |z_effect_blue| >= zStop AND sign(mean effect_red) != sign(mean effect_blue) AND |z_effect_red| >= zStop",
+    "inconclusive": "neither PASS nor STOP",
+    "sameSign": "applies where |z_effect_blue| >= zStop; requires sign(mean effect_red) = sign(mean effect_blue). The original applicability |z| >= 2 is still computed and reported (sameSignOriginalRule) but is not a PASS condition: with 24 rows and n = 1600 it would block PASS by chance alone in a large share of runs (about 2.3 % per row under no effect); a violation only yields INCONCLUSIVE, never a false PASS.",
+    "alsoReported": "mean effect blue/red with their z, mean(D), sd(D), SE, z_diff, CI90, CI99.9, delta, sameSign (both rules); z_diff is never a PASS criterion",
+    "gate": "per gate (B2, B3): STOP if any row is STOP; PASS if every row is PASS; otherwise INCONCLUSIVE",
+    "minNEff": "n_eff < 200 => the row cannot PASS (normal quantiles are only used where n_eff is in the hundreds)",
+    "params": {
+      "minNEffForPass": 200
+    }
+  },
+  "constants": {
+    "z90": 1.644854,
+    "zStop": 3.290527,
+    "zStopWhy": "two-sided 0.001 per test; Bonferroni over at most 50 STOP tests (24 margin tests + 24 sign-reversal tests + B1 occurrence) keeps the family-wise false STOP rate <= 0.05"
+  },
+  "margins": {
+    "rule": "delta(metric family) = 0.5 x the smallest statistically established (|z| >= 3) lane-stance effect on that metric family in the pre-existing fixtures (tactic_truth_3a.json at 21ab068, tactic_followup_3a_quickmode.json and tactic_followup_3a_replication.json, all committed 2026-10-14 or earlier, before the laneFrame fix and before the original behavioural study); where a margin was already registered before any behavioural data, the stricter of the two is used. Rationale: an asymmetry inside the margin is smaller than half of the smallest lane-stance effect the project has established on that metric, so it cannot hide that effect on one side. Template effects (tactic_followup_3a_templates.json) are not lane-stance effects and are not anchors.",
+    "gankShare": {
+      "delta": 0.05,
+      "unit": "share (0-1), absolute",
+      "anchor": "smallest established effect 0.104620 (quickmode, lanes.bot.stance=aggressive, blue, gankShare.bot, z 5.54; the others 0.118-0.129) => 0.5 x = 0.052310",
+      "registered": "0.05: the originally registered B2 tolerance (laneframe_registration_c3.json, 2026-10-15, before any behavioural data; basis TD-3A-23 §1.4-3 control baseline gap 0.000 / 0.009)",
+      "chosen": "0.05 = min(0.05, 0.052310)",
+      "anchorValue": 0.10462
+    },
+    "laneForward": {
+      "delta": {
+        "top": 1.483147,
+        "mid": 1.483147,
+        "bot": 1.483147
+      },
+      "unit": "world distance units (one margin for all lanes)",
+      "anchor": "smallest established effect 2.966293 (tactic_followup_3a_replication.json, lanes.bot.stance=aggressive, blue, laneForward.bot, z 4.18); the other established laneForward stance effects are 4.58-6.32 (tactic_truth_3a.json at 21ab068, std: lanes.top.stance=defensive blue +4.58 z 3.35, lanes.mid.stance=aggressive blue -5.28 z -3.23, red -6.32 z -4.22) => 0.5 x 2.966293 = 1.483147",
+      "knownAsymmetry": "the pre-fix red/blue gap on that same cell (blue +2.966 vs red +0.341, gap 2.625) is larger than delta, so a gap of that size cannot PASS",
+      "gameMeaning": "delta 1.48 is well below the shortest hero attack range 4 (src/LogicEngine.js towerRange comment: hero attack ranges 4-8.4)",
+      "limit": "one margin for the three lanes (the smallest anchor is a bot-lane effect); no lane-specific anchor exists for top/mid below 4.58",
+      "anchorValue": 2.966293
+    }
+  },
+  "sampleSize": {
+    "n": 1600,
+    "assumptions": "sd(D) and n_eff/n per row taken from the original study (nuisance parameters only); true D equal in every row (pessimistic for the joint figure); rows treated as independent",
+    "jointPassProbabilityIfTrueDIsZero": {
+      "B2": 0.996,
+      "B3": 0.918
+    },
+    "jointPassProbabilityIfTrueDIsQuarterDelta": {
+      "B2": 0.911,
+      "B3": 0.683
+    },
+    "jointPassProbabilityIfTrueDIsHalfDelta": {
+      "B2": 0.224,
+      "B3": 0.1
+    },
+    "anyStopProbabilityIfTrueDIs1.5Delta": {
+      "B2": 0.999,
+      "B3": 1
+    },
+    "falseStopIfTrueDIsZero": "< 0.001 per gate",
+    "alternativesConsidered": "n = 1200 (B3 joint pass 0.74 at D = 0 with the revised margin) is too likely to end INCONCLUSIVE; n = 2000 (0.975) costs 25 % more for a small gain; the metric itself is not changed (e.g. pooling ganks across layouts would cut variance but would change the registered metric)"
+  },
+  "stopLoss": {
+    "cap": "1600 seeds (29000 matches) is a hard cap: one decision look after the batch is complete, no interim decision look, no extension, no re-run. INCONCLUSIVE => evidence kept, Owner decides",
+    "chunks": "seeds run in ascending chunks of 200 with checkpoints (resume skips finished records)",
+    "operationalStops": "between chunks: any B1 violation => stop scheduling, B1 STOP immediately (a violation can only accumulate, so this is not optional stopping); B2/B3 are then reported incomplete — this couples the run (not the verdicts) of B1 and B2/B3 to avoid spending ~12 h on a functionally broken build; the Owner may order the remaining chunks to be run. Worker errors => the match is recorded in <arm>.errors.jsonl, its seed becomes N/A for every row and B1 (counted, never retried selectively); more than 20 errored matches, or more than 0.5 % of attempted matches (finished + errored) => stop scheduling, STOP(CIRCUIT_BREAKER), Owner decides",
+    "thresholdFlags": "B2/B3 verdicts are emitted only when the batch is complete (no optional stopping)",
+    "estimatedTime": "about 1.2-1.75 s per match with 2-3 workers => 10-14 h, single line",
+    "params": {
+      "chunkSeeds": 200,
+      "maxErroredMatches": 20,
+      "maxErroredShare": 0.005
+    },
+    "reportGuard": "--report-behavrev writes tools/fixtures/laneframe_result_c3_behavrev.json only once, only when the batch is complete (or halted by a STOP), and never overwrites it; interim reports go to --out=<path outside the repo>"
+  },
+  "verdictReporting": "B1, B2 and B3 are reported as separate verdicts (pass / stop / inconclusive) with the negative control; any STOP or INCONCLUSIVE => Owner decides. The result is written to tools/fixtures/laneframe_result_c3_behavrev.json (new file).",
+  "workers": 3,
+  "workersNote": "<= 3; fewer while CS jobs run (does not change results)"
+}

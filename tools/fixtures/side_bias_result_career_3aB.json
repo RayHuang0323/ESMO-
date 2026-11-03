@@ -1,0 +1,84 @@
+{
+ "schema": "esmo.side-bias-result.v1",
+ "path": "career",
+ "registration": "tools/fixtures/side_bias_registration_3aB.json",
+ "registrationHash": "3348f4a4ff6d97b2",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "6a3d94641ddc6d643e329ee51a4c5282f903caee",
+ "reportedAt": "2026-10-27T02:25:01.370Z",
+ "seedsWalked": 2029,
+ "lastSeed": 31057,
+ "invalidSeeds": [],
+ "perLayout": {
+  "STANDARD": {
+   "n": 1029,
+   "blueWin20": 0.39844509232264336,
+   "blueWin21": 0.4159378036929057,
+   "bias20": -0.10155490767735664,
+   "bias21": -0.08406219630709427,
+   "worsePp": -1.749271137026237,
+   "z": -0.888865958217648,
+   "durRatio": 1.0198915009041591,
+   "stop": false,
+   "warn": false
+  },
+  "SWAPPED": {
+   "n": 1000,
+   "blueWin20": 0.321,
+   "blueWin21": 0.355,
+   "bias20": -0.179,
+   "bias21": -0.14500000000000002,
+   "worsePp": -3.3999999999999977,
+   "z": -1.714555702058173,
+   "durRatio": 1.0173190984578886,
+   "stop": false,
+   "warn": false
+  }
+ },
+ "pureBlueAdvantage": {
+  "v20": -0.14027745383867832,
+  "v21": -0.11453109815354715
+ },
+ "dragonSideAdvantage": {
+  "v20": 0.038722546161321675,
+  "v21": 0.030468901846452873
+ },
+ "byOpponent": {
+  "team:743cf0ba": {
+   "n": 290,
+   "blueWin20": 0.5275862068965518,
+   "blueWin21": 0.6344827586206897
+  },
+  "team:306d3d98": {
+   "n": 290,
+   "blueWin20": 0.3758620689655172,
+   "blueWin21": 0.33793103448275863
+  },
+  "team:3fc06d78": {
+   "n": 290,
+   "blueWin20": 0.5206896551724138,
+   "blueWin21": 0.5655172413793104
+  },
+  "team:9c2b7210": {
+   "n": 290,
+   "blueWin20": 0.25862068965517243,
+   "blueWin21": 0.28620689655172415
+  },
+  "team:6a644e34": {
+   "n": 290,
+   "blueWin20": 0.33793103448275863,
+   "blueWin21": 0.35517241379310344
+  },
+  "team:39be6cbf": {
+   "n": 290,
+   "blueWin20": 0.2620689655172414,
+   "blueWin21": 0.2517241379310345
+  },
+  "team:1d48796f": {
+   "n": 289,
+   "blueWin20": 0.23875432525951557,
+   "blueWin21": 0.2698961937716263
+  }
+ },
+ "verdict": "PASS"
+}

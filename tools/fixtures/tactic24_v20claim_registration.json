@@ -1,0 +1,26 @@
+{
+  "schema": "esmo.tactic24-claim-registration.v1",
+  "registeredAt": "2026-10-25",
+  "status": "registered (before any match on these seeds)",
+  "authority": "Owner 2026-10-25 decision 2: the old m6/m4 gank-count claim is invalid (keep the history); design a check that fits the v20 score-based gank pick; do not lower the old threshold to pass, and do not swap in a new claim without evidence.",
+  "history": {
+    "oldClaim": "check_moba_tactic24 C4d: m6 (gankInterval 32) has >= 1.15 x the ganks of m4 (gankInterval 58), 40 seeds",
+    "status": "invalid since v20 (1d0e219): HEAD and v20 give m6 4.225 vs m4 4.35 (x0.971) with identical per-seed counts; v19 d146e02 gave 31.05 vs 19.25 (x1.61). Verified case-exact in the 3a-B kickoff review §2.",
+    "why": "v20 picks a gank lane by a visible-information score and does not depart below gankMinScore 0.8 (rechecks every gankRecheckSec 4 s). gankInterval now only sets the cooldown after a departure, and departures are rare (~4 per match), so the interval no longer drives the count."
+  },
+  "mechanism": {
+    "source": "LogicEngine._gankPickV20: lane score starts with (w[lane] / max(w)) * 0.2",
+    "m6": "gankWeights top 1 / mid 1.7 / bot 1 => mid 0.2, top and bot 0.118 (the side lanes are marked down by 0.082)",
+    "m4": "gankWeights 0.4 / 0.4 / 0.4 => every lane 0.2",
+    "prediction": "m6 sends a larger share of its ganks to mid than m4 does. The total count is not predicted to be higher (the side-lane markdown can only remove departures)."
+  },
+  "seeds": { "range": "19001-19200", "n": 200, "path": "engine (new LogicEngine(seed) + configureMatch, same as check_moba_tactic24; tools/check_study_seed_plan_3aB.mjs)", "tactics": "blue m6 or m4 vs red std, cap 1800 s, dt 0.5 (same as the gate)" },
+  "claim": {
+    "metric": "blue mid-gank share pooled over the seeds = sum(exec.blue.midGanks) / sum(exec.blue.topGanks + midGanks + botGanks)",
+    "pass": "share(m6) / share(m4) >= 1.15 (the gate's existing ratio convention) AND two-proportion z (pooled counts) >= 2",
+    "otherwise": "no new claim: the old assertion is retired with its history recorded, nothing replaces it"
+  },
+  "adoption": "If the claim passes on these fresh seeds, check_moba_tactic24 replaces C4d with the same rule on its own 40 OBS seeds (ratio >= 1.15). If the gate's 40 seeds do not reach 1.15, the claim is not adopted (reported, not tuned).",
+  "reportOnly": ["total ganks per match m6 vs m4", "minimum gap between consecutive gank departures per tactic (s)"],
+  "tool": "tools/measure_tactic24_v20claim.mjs --run (writes tools/fixtures/tactic24_v20claim_result.json; refuses to run twice)"
+}

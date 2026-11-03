@@ -1,0 +1,372 @@
+{
+ "schema": "esmo.challenge-c1-m0-result.v1",
+ "registration": "tools/fixtures/challenge_c1_calibration_registration_3aB.json",
+ "registrationHash": "ac0a3ebaec95518e",
+ "fingerprint": "0578fa882d74b205",
+ "gitHead": "3aaec8798a364b824505be60edf76133463d34b2",
+ "reportedAt": "2026-10-29T17:55:34.961Z",
+ "statsNote": "challenger (R0) win rate, unresolved = 0.5, Wilson 95% intervals, unadjusted; strictWin = challengerWin only (the slice3 scoring). challenge.v20 has a fixed STANDARD layout, so its halves are null and the paired v21 - v20 difference includes the layout change. Descriptive baseline, no verdict",
+ "outcome": "BASELINE",
+ "matches": 4000,
+ "errored": [],
+ "errorRule": null,
+ "r0Hash": {
+  "moba-sim.v20": [
+   "e90cfb5b"
+  ],
+  "moba-sim.v21": [
+   "2470cae0"
+  ]
+ },
+ "r0Deterministic": true,
+ "rows": [
+  {
+   "arm": "v20.drill_mirror",
+   "version": "moba-sim.v20",
+   "fixture": "drill_mirror",
+   "n": 400,
+   "rate": 0.50625,
+   "lo": 0.4574279363739676,
+   "hi": 0.5549531556185364,
+   "strictWin": {
+    "rate": 0.4825,
+    "lo": 0.4339296820630707,
+    "hi": 0.5314032603579181
+   },
+   "layoutNote": "layout fixed STANDARD (challenge.v20)",
+   "unresolved": 19,
+   "medianDurationSec": 1220.5,
+   "standard": null,
+   "swapped": null,
+   "targetBand": "0.45-0.60 (a real chance on the first match, not a guaranteed win; review C1 #m5: with the slice3 gate N = 16 a true 0.35 would fail its > 0.20 check about 12% of the time and 0.45 about 3%, so the lower bound is 0.45 to avoid adding to the registered flaky gate; inside the gate's < 0.85)",
+   "inProposedBand": null
+  },
+  {
+   "arm": "v20.drill_balanced",
+   "version": "moba-sim.v20",
+   "fixture": "drill_balanced",
+   "n": 400,
+   "rate": 0.21,
+   "lo": 0.17293709734247628,
+   "hi": 0.2525802342053385,
+   "strictWin": {
+    "rate": 0.2075,
+    "lo": 0.17063353432585826,
+    "hi": 0.24993136042495495
+   },
+   "layoutNote": "layout fixed STANDARD (challenge.v20)",
+   "unresolved": 2,
+   "medianDurationSec": 1071,
+   "standard": null,
+   "swapped": null,
+   "targetBand": "0.25-0.45",
+   "inProposedBand": null
+  },
+  {
+   "arm": "v20.drill_topheavy",
+   "version": "moba-sim.v20",
+   "fixture": "drill_topheavy",
+   "n": 400,
+   "rate": 0.2025,
+   "lo": 0.16603317911938578,
+   "hi": 0.24462684203742427,
+   "strictWin": {
+    "rate": 0.1925,
+    "lo": 0.15686042573701753,
+    "hi": 0.2339898482317861
+   },
+   "layoutNote": "layout fixed STANDARD (challenge.v20)",
+   "unresolved": 8,
+   "medianDurationSec": 1251.5,
+   "standard": null,
+   "swapped": null,
+   "targetBand": "0.15-0.35",
+   "inProposedBand": null
+  },
+  {
+   "arm": "v20.drill_veteran",
+   "version": "moba-sim.v20",
+   "fixture": "drill_veteran",
+   "n": 400,
+   "rate": 0.0225,
+   "lo": 0.011881448169963291,
+   "hi": 0.04220312360273175,
+   "strictWin": {
+    "rate": 0.0225,
+    "lo": 0.011881448169963291,
+    "hi": 0.04220312360273175
+   },
+   "layoutNote": "layout fixed STANDARD (challenge.v20)",
+   "unresolved": 0,
+   "medianDurationSec": 926,
+   "standard": null,
+   "swapped": null,
+   "targetBand": "0.05-0.20 (hard but not structurally lost: > 0.05)",
+   "inProposedBand": null
+  },
+  {
+   "arm": "v20.drill_rotation",
+   "version": "moba-sim.v20",
+   "fixture": "drill_rotation",
+   "n": 400,
+   "rate": 0.11625,
+   "lo": 0.08842642264508153,
+   "hi": 0.1513745290151734,
+   "strictWin": {
+    "rate": 0.115,
+    "lo": 0.08733247792422089,
+    "hi": 0.14999225533753324
+   },
+   "layoutNote": "layout fixed STANDARD (challenge.v20)",
+   "unresolved": 1,
+   "medianDurationSec": 1073,
+   "standard": null,
+   "swapped": null,
+   "targetBand": "0.20-0.40",
+   "inProposedBand": null
+  },
+  {
+   "arm": "v21.drill_mirror",
+   "version": "moba-sim.v21",
+   "fixture": "drill_mirror",
+   "n": 400,
+   "rate": 0.66875,
+   "lo": 0.6212116416451221,
+   "hi": 0.7130778421524857,
+   "strictWin": {
+    "rate": 0.655,
+    "lo": 0.607138117953469,
+    "hi": 0.69991296346063
+   },
+   "layoutNote": null,
+   "unresolved": 11,
+   "medianDurationSec": 1198,
+   "standard": {
+    "n": 204,
+    "rate": 0.7524509803921569,
+    "lo": 0.6889237388703361,
+    "hi": 0.8066459642112415
+   },
+   "swapped": {
+    "n": 196,
+    "rate": 0.5816326530612245,
+    "lo": 0.5116516622148126,
+    "hi": 0.6484751582269772
+   },
+   "targetBand": "0.45-0.60 (a real chance on the first match, not a guaranteed win; review C1 #m5: with the slice3 gate N = 16 a true 0.35 would fail its > 0.20 check about 12% of the time and 0.45 about 3%, so the lower bound is 0.45 to avoid adding to the registered flaky gate; inside the gate's < 0.85)",
+   "inProposedBand": false
+  },
+  {
+   "arm": "v21.drill_balanced",
+   "version": "moba-sim.v21",
+   "fixture": "drill_balanced",
+   "n": 400,
+   "rate": 0.32375,
+   "lo": 0.27975965769260736,
+   "hi": 0.37109354811878004,
+   "strictWin": {
+    "rate": 0.32,
+    "lo": 0.2761833561331949,
+    "hi": 0.3672411944826901
+   },
+   "layoutNote": null,
+   "unresolved": 3,
+   "medianDurationSec": 1043,
+   "standard": {
+    "n": 204,
+    "rate": 0.36764705882352944,
+    "lo": 0.304495867673473,
+    "hi": 0.4356908899342436
+   },
+   "swapped": {
+    "n": 196,
+    "rate": 0.2780612244897959,
+    "lo": 0.2200609730480304,
+    "hi": 0.3445942338758532
+   },
+   "targetBand": "0.25-0.45",
+   "inProposedBand": true
+  },
+  {
+   "arm": "v21.drill_topheavy",
+   "version": "moba-sim.v21",
+   "fixture": "drill_topheavy",
+   "n": 400,
+   "rate": 0.4775,
+   "lo": 0.4289965818287492,
+   "hi": 0.5264314869982364,
+   "strictWin": {
+    "rate": 0.4725,
+    "lo": 0.4240683265333157,
+    "hi": 0.5214548686996666
+   },
+   "layoutNote": null,
+   "unresolved": 4,
+   "medianDurationSec": 1249,
+   "standard": {
+    "n": 204,
+    "rate": 0.4803921568627451,
+    "lo": 0.41282923514435305,
+    "hi": 0.5486799141308641
+   },
+   "swapped": {
+    "n": 196,
+    "rate": 0.4744897959183674,
+    "lo": 0.4057448120499269,
+    "hi": 0.5442155565620136
+   },
+   "targetBand": "0.15-0.35",
+   "inProposedBand": false
+  },
+  {
+   "arm": "v21.drill_veteran",
+   "version": "moba-sim.v21",
+   "fixture": "drill_veteran",
+   "n": 400,
+   "rate": 0.0225,
+   "lo": 0.011881448169963291,
+   "hi": 0.04220312360273175,
+   "strictWin": {
+    "rate": 0.0225,
+    "lo": 0.011881448169963291,
+    "hi": 0.04220312360273175
+   },
+   "layoutNote": null,
+   "unresolved": 0,
+   "medianDurationSec": 963.5,
+   "standard": {
+    "n": 204,
+    "rate": 0.00980392156862745,
+    "lo": 0.0026926628164722806,
+    "hi": 0.03503606906395974
+   },
+   "swapped": {
+    "n": 196,
+    "rate": 0.03571428571428571,
+    "lo": 0.017405530293636673,
+    "hi": 0.07187317844368328
+   },
+   "targetBand": "0.05-0.20 (hard but not structurally lost: > 0.05)",
+   "inProposedBand": false
+  },
+  {
+   "arm": "v21.drill_rotation",
+   "version": "moba-sim.v21",
+   "fixture": "drill_rotation",
+   "n": 400,
+   "rate": 0.305,
+   "lo": 0.2619118577039247,
+   "hi": 0.3517980721299507,
+   "strictWin": {
+    "rate": 0.3025,
+    "lo": 0.25953861492842695,
+    "hi": 0.34921887810844693
+   },
+   "layoutNote": null,
+   "unresolved": 2,
+   "medianDurationSec": 1225.5,
+   "standard": {
+    "n": 204,
+    "rate": 0.32107843137254904,
+    "lo": 0.2608240387839678,
+    "hi": 0.3879469483523898
+   },
+   "swapped": {
+    "n": 196,
+    "rate": 0.288265306122449,
+    "lo": 0.22940250687220998,
+    "hi": 0.3552685526068974
+   },
+   "targetBand": "0.20-0.40",
+   "inProposedBand": true
+  }
+ ],
+ "v21MinusV20": [
+  {
+   "fixture": "drill_mirror",
+   "v21MinusV20": {
+    "n": 400,
+    "mean": 0.1625,
+    "sd": 0.6545340227730094,
+    "se": 0.03272670113865047,
+    "z": 4.965364498901062,
+    "lo": 0.09835566576824509,
+    "hi": 0.22664433423175492
+   }
+  },
+  {
+   "fixture": "drill_balanced",
+   "v21MinusV20": {
+    "n": 400,
+    "mean": 0.11375,
+    "sd": 0.6274313610124664,
+    "se": 0.03137156805062332,
+    "z": 3.625894625874141,
+    "lo": 0.0522617266207783,
+    "hi": 0.1752382733792217
+   }
+  },
+  {
+   "fixture": "drill_topheavy",
+   "v21MinusV20": {
+    "n": 400,
+    "mean": 0.275,
+    "sd": 0.6287793003282666,
+    "se": 0.03143896501641333,
+    "z": 8.747107287292405,
+    "lo": 0.2133796285678299,
+    "hi": 0.33662037143217016
+   }
+  },
+  {
+   "fixture": "drill_veteran",
+   "v21MinusV20": {
+    "n": 400,
+    "mean": 0,
+    "sd": 0.2123976976214366,
+    "se": 0.01061988488107183,
+    "z": 0,
+    "lo": -0.020814974366900784,
+    "hi": 0.020814974366900784
+   }
+  },
+  {
+   "fixture": "drill_rotation",
+   "v21MinusV20": {
+    "n": 400,
+    "mean": 0.18875,
+    "sd": 0.5415085560641923,
+    "se": 0.027075427803209616,
+    "z": 6.971265657254912,
+    "lo": 0.13568216150570916,
+    "hi": 0.24181783849429084
+   }
+  }
+ ],
+ "ladder": {
+  "moba-sim.v20": {
+   "easiestToHardest": [
+    "drill_mirror",
+    "drill_balanced",
+    "drill_topheavy",
+    "drill_rotation",
+    "drill_veteran"
+   ],
+   "spread": 0.48374999999999996,
+   "strictSpread": 0.45999999999999996,
+   "slice3Gradient": true
+  },
+  "moba-sim.v21": {
+   "easiestToHardest": [
+    "drill_mirror",
+    "drill_topheavy",
+    "drill_balanced",
+    "drill_rotation",
+    "drill_veteran"
+   ],
+   "spread": 0.64625,
+   "strictSpread": 0.6325000000000001,
+   "slice3Gradient": true
+  }
+ }
+}

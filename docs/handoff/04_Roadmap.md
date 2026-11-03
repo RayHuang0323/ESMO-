@@ -2885,3 +2885,20 @@ NEXT_SPRINT = NOT_STARTED
 - 正式站 smoke gate 版本期待值 v19 → v20（只改版本事實，commit `92245f4`）。
 - 維持不變：Map Topology FROZEN；CS／FPS、Online／DB 未碰；既有紅燈與技術債照舊。
 - Phase 3 尚未開始（Owner 指示）。
+
+## 2026-10-09 MOBA Tactical AI Phase 3：教練戰術系統（架構已核准，3a 待開工）
+
+- 正式架構：`docs/design/MOBA_Tactical_AI_Phase3_正式架構.md`（Owner 核准 Q1～Q12 與三點補充）；決策過程：`docs/design/MOBA_Tactical_AI_Phase3_教練戰術系統提案.md`。
+- 3a 實作計畫：`docs/superpowers/plans/2026-10-09-moba-phase3a-foundation.md`（17 個任務；預估約 15 個工作階段＋23～28 小時驗證計算，±30%）。
+- 目標：專業、可長期擴充的電競經理人戰術系統——單機賽季、快速模擬、觀戰、同步／非同步線上共用同一套輸入（`MatchSetup.v1`）、同一支組裝器、同一套戰術規則；戰術計畫只含選擇（`TacticPlan.v2`），數值只在版本化的模板／覆蓋層／Resolver。
+
+| 階段 | 內容 | 模擬版本 |
+|---|---|---|
+| **3a-A 地基（對等）** | 明確 ruleset、MatchSetup、唯一組裝器（Live／Challenge／balance runner）、TacticPlan.v2、經典＋v2 模板、Resolver（與 v20 投影等價）、Capability Registry＋真實性 gate、戰術書 UI（快速／標準）、指標、存檔 | v21 未發布候選（Live 與 v20 逐位元對等；不獨立發布，v20 指紋不動） |
+| **3a-B 新行為** | AI 教練 v1、`challenge.v21`（技能 ON、佈局依 seed、裝備維持 OFF） | v21（2026-10-25：P0＋P1 完成於本機 `feature/moba-phase3a`；旗標未啟用；P2 發布量測待 Owner 核准，順序見 08 同日一節。2026-10-27：P2 可獨立執行項目完成，**兩項 STOP 阻擋發布**——G-A8 主導戰術（v20 同 seeds 同樣存在，其中兩個 v2 模板為反事實；修正方案待 Owner）、Challenge 側偏（雙向配對研究已登記，開跑待 Owner 確認）；見 `review/tactic-book-3a/3a-B_P2_執行紀錄.md`。2026-10-28：雙向研究 SIDE_CONFIRMED、G-A8 旋鈕診斷 DIAGNOSED，兩項 STOP 仍在；修正偏向方案 C（模板，仍屬語意變更），待 Owner。2026-10-29：修正規劃完成（`review/tactic-book-3a/3a-B_修正規劃.md`）——G-A8 篩選只選出 m3（m7 仍 STOP，需第二輪）、Challenge 階梯 ATTRIBUTED／陣容翻轉來自 skills 與 growth；版本化修正只在 v21 規則集；兩項 STOP 仍在，9 項待 Owner。2026-10-29／30：修正規劃第二輪（`review/tactic-book-3a/3a-B_修正規劃_第二輪.md`）——m3／m7／m8 都有 v21 候選（M3_C、M7_M、M8_C），C2 顯示真鏡像中技能層藍方優勢 +6.9pp（校準消不掉），C1 基線完成；未凍結，D1–D8 待 Owner。2026-10-30：修正規劃第三輪（`review/tactic-book-3a/3a-B_修正規劃_第三輪.md`）——D5 結算順序診斷 INCONCLUSIVE（`players` 順序成分 +0.9，不支持引擎順序修正）、D8 three_lane_pressure／m1 只有重新設計層級的候選；兩項 STOP 仍在；未凍結，D1–D4、D9–D12 待 Owner。2026-10-30 第四輪（`review/tactic-book-3a/3a-B_修正規劃_第四輪_發布拆分.md`）——mid_jungle_sync 原版未重現、停止篩選；分階段發布（戰術書／AI 教練 v21 先、Challenge 留 v20）技術上可行，但需新 Challenge 旗標、總開關與獨立驗收規格（約 15–18 小時），確認性 G-A8 仍有約四成到接近六成的 STOP 風險；未凍結，待 Owner。2026-11-03 語意已凍結，正式 G-A8 判定 STOP（hard_engage_stack、three_lane_pressure、m6），第一階段不能發布；一輪有界平衡研究後，Owner 裁定採 v21.b2 並凍結；正式 G-A8 判 STOP（`classic.m5`），v21 不能發布，等 Owner 決定產品階段（`review/tactic-book-3a/3a-B_第一階段r2_凍結準備.md` §14）；旗標全關。2026-11-01 第一階段最小實作完成於本機分支 feature/moba-phase3a-stage1（`review/tactic-book-3a/3a-B_第一階段_最小實作.md`）：修正表 v21.b1、Challenge 專用旗標、總開關、v21 文案；快速回歸與瀏覽器通過；未凍結、旗標未開，凍結前提待 Owner） |
+| **3b 深度** | Tactical Director、席位任務、主 Call、團戰指揮、包夾、資源交換、兵線、條件應變、配合度負擔、紅方素質注入、單機教練介入＋CommandLog、賽後計畫執行報告、專業模式 | v22 |
+| **3c 跨模式** | 非同步預約介入、Challenge 自訂計畫、同步線上協議規格（固定延遲＋公平操作時窗）、**賽季 AI 對 AI 戰術校準（必要交付）**、多路帶線 | v23＋SIMULATOR_VERSION 升版 |
+
+- 依賴：3a-A → 3a-B → 3b → 3c；Phase 3 完成條件含 3c 的 T2 校準 gate（G-C3），不得延後結案。
+- 保護：v1～v20 指紋、舊 Replay、Challenge（v20 以前由 `canReplay` 明確拒絕）、存檔鍵名與 B1 系列 gate、CS／FPS、正式站行為（3a-A 發布後逐位元不變）；Map Topology FROZEN；Online／DB 不實作。
+- 狀態：**等待 Owner 核准開工**；本節只記錄規劃，尚未修改任何遊戲程式。

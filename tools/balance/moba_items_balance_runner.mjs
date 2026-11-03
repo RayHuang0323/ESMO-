@@ -25,6 +25,12 @@ import os from "node:os";
 import path from "node:path";
 import { fork } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+//  Phase 3a T6：對局組裝只走唯一的組裝器（runner 自己不再呼叫任何 e.configure*）。
+//  這些是 runner 所在樹的契約／組裝器；被量測的引擎與 adapter 仍由 M（ESMO_BALANCE_ROOT 指的樹）提供。
+import { createMatchSetup } from "../../src/platform/contracts/matchSetup.js";
+import { rulesetById } from "../../src/platform/contracts/matchRuleset.js";
+import { assembleMatch } from "../../src/battle/moba/matchAssembler.js";
+import { buildMatchAssemblerDepsFrom } from "../../src/battle/moba/matchAssemblerDepsCore.js";
 
 //  Objective Stakes v16 A/B：`ESMO_BALANCE_ROOT` ⇒ 從另一棵原始碼樹載入引擎（例如乾淨的 v15 基準），
 //  runner 本身（名單、設定、量測）不變 ⇒ 兩邊同一個 runner。未設定 ⇒ 與舊行為相同。
@@ -112,50 +118,96 @@ export function mirroredRoster(seed, M) {
   return roster;
 }
 
-//  rosterOverride：gate 指定陣容（例如保證 100 名英雄都上場）；不傳 ⇒ 與原本相同由 seed 挑鏡像陣容。
-export function configure(seed, config, M, incomeK = 1, rosterOverride = null) {
-  const roster = rosterOverride ?? mirroredRoster(seed, M);
-  const e = new M.LE.LogicEngine(seed);
-  if (RULE_OVERRIDES) e.rules = { ...e.rules, ...RULE_OVERRIDES };
-  //  v16 Objective Layout：與 useLocalServer.start 同序（建構後、任何 configure 之前）。
-  //  `ESMO_BALANCE_LAYOUT=STANDARD|SWAPPED` 只供診斷強制指定；預設由 seed 推導（與正式流程相同的契約函式）。
-  if (M.objectiveLayout && typeof e.configureObjectiveLayout === "function") {
+/**
+ * Phase 3a T6：把 (seed, config, M, incomeK, roster) 轉成一份 `balanceTool.v20` MatchSetup（純函式；只讀 M 的「有沒有」，
+ * 不呼叫任何 adapter）。M 缺哪個模組 ⇒ 對應的層在 ruleset 裡關掉（規則集只能關、不能開）：
+ *   · M.skills 缺 ⇒ heroSkills／heroPassives／heroPowerCurve／battleTalents 全關（passives／curve 只疊在 skills 之上）
+ *   · M.talents／M.passives／M.curves 缺 ⇒ 各自的層關
+ *   · M.objectiveLayout 缺 ⇒ objectiveLayout 層 "standard"（不呼叫 configureObjectiveLayout；舊樹沒有這個契約）
+ *   · 舊樹的引擎沒有 configureObjectiveLayout／HeroPassives／HeroPowerCurve ⇒ 組裝器在 tool 規則集下略過該呼叫（v20 的 typeof 護欄）
+ *   · M.tactic 沒有 toEngineTacticIdentity ⇒ tacticIdentity 關（identity: null）
+ * `ESMO_BALANCE_LAYOUT` 在呼叫當下讀取（不是載入時）；`RULE_OVERRIDES` 仍是載入時讀的模組常數。
+ */
+//  Phase 3a T10：`tactic`（可省略）＝ { blue, red } 兩側的戰術輸入（`{kind:"std"}`／`{kind:"binding",binding}`…）。
+//  不傳 ⇒ 兩側 std（與 T6 起完全相同）。真實性 gate（check_tactic_truth_3a）用它把單一選擇綁在一側。
+//  C3-1 E-1：`rulesetId`（可省略）＝要用哪個 balanceTool 規則集。預設 "balanceTool.v20"（與原本逐字相同）；
+//  環境變數 `ESMO_BALANCE_RULESET` 在呼叫當下讀取（worker 繼承），同樣預設 v20。未知 id ⇒ 丟錯（不退回 v20）。
+//  balanceTool.v21（C3-1 Task 2 起）＝balanceTool.v20 的層＋tacticalDirector "core.v1"：組裝器向 Resolver 要每時期方針交給 Director。
+export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic = null, rulesetId = process.env.ESMO_BALANCE_RULESET || "balanceTool.v20") {
+  const base = rulesetById(rulesetId);
+  if (!base || base.kind !== "tool") throw new Error(`balance_ruleset_unknown: ${rulesetId}`);
+  const skills = !!M.skills;
+  const layoutOn = !!M.objectiveLayout;
+  const ruleset = { ...base, layers: { ...base.layers,
+    heroSkills: skills,
+    heroPassives: skills && !!M.passives,
+    heroPowerCurve: skills && !!M.curves,
+    battleTalents: skills && !!M.talents,
+    tacticIdentity: !!M.tactic.toEngineTacticIdentity,
+    objectiveLayout: layoutOn ? base.layers.objectiveLayout : "standard" } };
+  //  C3-1 laneFrame：`ESMO_BALANCE_LANEFRAME`（呼叫當下讀取）＝覆寫工具規則集的 laneFrame 層（負對照用 legacyMirror）。
+  //  只在規則集本來就有這一層時接受（v20 沒有 ⇒ 丟錯，不默默略過）；值由 createMatchSetup／validateRuleset 檢查。未設定 ⇒ 不動。
+  const laneFrameOverride = process.env.ESMO_BALANCE_LANEFRAME;
+  if (laneFrameOverride) {
+    if (!("laneFrame" in base.layers)) throw new Error(`balance_laneframe_unsupported: ${rulesetId} has no laneFrame layer`);
+    ruleset.layers.laneFrame = laneFrameOverride;
+  }
+  const tool = {};
+  if (RULE_OVERRIDES) tool.ruleOverrides = RULE_OVERRIDES;
+  if (layoutOn) {
     const forced = process.env.ESMO_BALANCE_LAYOUT;
-    e.configureObjectiveLayout(forced === "STANDARD" || forced === "SWAPPED" ? forced : M.objectiveLayout.objectiveLayoutForSeed(seed));
+    //  v20：環境變數優先，否則 `M.objectiveLayout.objectiveLayoutForSeed(seed)`——值一律來自被量測的那棵樹（M），
+    //  不讓 setup 契約用 runner 所在樹的推導函式默默頂替。
+    tool.forcedLayout = forced === "STANDARD" || forced === "SWAPPED" ? forced : M.objectiveLayout.objectiveLayoutForSeed(seed);
   }
-  const heroMods = M.profile.toEngineHeroMods(roster, M.heroes.heroById);
-  if (heroMods) e.configureHeroes(heroMods);
-  //  與 useLocalServer.start() 同序：configureHeroes 之後掛 Hero Skills。
-  if (M.skills) {
-    const selected = M.talents?.selectBattleTalents(roster) ?? null;
-    const sk = M.skills.toEngineHeroSkills(roster, selected);
-    if (sk) e.configureHeroSkills(sk);
-    const pv = sk && M.passives ? M.passives.toEngineHeroPassives(roster) : null;
-    if (pv && typeof e.configureHeroPassives === "function") e.configureHeroPassives(pv);
-    const pc = sk && M.curves ? M.curves.toEngineHeroPowerCurve(roster) : null;
-    if (pc && typeof e.configureHeroPowerCurve === "function") e.configureHeroPowerCurve(pc);
-  }
-  const blue = {}, red = {};
-  for (const [pid, m] of Object.entries(M.arche.toEngineArchetypes(roster))) (pid[0] === "r" ? red : blue)[pid] = m;
-  e.configureArchetypes({ blue, red, meta: null });
-  e.configureSpells(M.loadout.toEngineSpells(roster));
-  //  Tactical Identity：與 useLocalServer 相同地傳入（std 對 std ⇒ 全中性，結果逐位元不變）。
-  const ident = M.tactic.toEngineTacticIdentity ? { blue: M.tactic.toEngineTacticIdentity(M.tactic.STANDARD_OPP_TACTIC), red: M.tactic.toEngineTacticIdentity(M.tactic.STANDARD_OPP_TACTIC) } : null;
-  e.configureMatch({ blue: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), red: M.tactic.toEngineTactic(M.tactic.STANDARD_OPP_TACTIC), meta: null, identity: ident });
   let strategySide = null;
   if (config !== "off") {
-    const strategies = {};
-    if (config !== "standard") {
+    if (config === "standard") tool.itemsStrategies = { blue: "standard", red: "standard" };
+    else {
       strategySide = seed % 2 === 0 ? "blue" : "red";
-      for (const pid of Object.keys(roster)) strategies[pid] = (pid[0] === "b") === (strategySide === "blue") ? config : "standard";
+      tool.itemsStrategies = { blue: strategySide === "blue" ? config : "standard", red: strategySide === "red" ? config : "standard" };
     }
-    const itemsCfg = M.adapter.toEngineItems({ roster, heroLookup: M.heroes.heroById, strategies, defaultStrategy: "standard" });
-    e.configureItems(itemsCfg);
-    //  M4b 量測：倍率直接寫進裝備 runtime（不動 LogicEngine ⇒ moba-sim 指紋不變）。
-    //  configureItems 當下只有出生購買（花開局金錢，不入帳）⇒ 第一個 tick 前設定等同從頭生效。
-    if (incomeK !== 1) e.items.incomeK = incomeK;
+    if (incomeK !== 1) tool.incomeK = incomeK;
   }
-  return { e, roster, strategySide };
+  const plainRoster = Object.fromEntries(Object.entries(roster).map(([seat, row]) =>
+    [seat, { heroId: row.heroId, ...(Array.isArray(row.spells) ? { spells: row.spells } : {}) }]));
+  const built = createMatchSetup({ ruleset, seed, roster: plainRoster, tactic: tactic ?? { blue: { kind: "std" }, red: { kind: "std" } }, tool,
+    meta: { sessionId: null, mode: "balance", opponentId: null, seedSource: "tool" } });
+  if (!built.ok) throw new Error(`balance MatchSetup rejected: ${built.errors.map((x) => `${x.code}@${x.field}`).join(",")}`);
+  return { setup: built.setup, strategySide };
+}
+
+//  rosterOverride：gate 指定陣容（例如保證 100 名英雄都上場）；不傳 ⇒ 與原本相同由 seed 挑鏡像陣容。
+//  組裝順序（layout → heroes → skills → archetypes → spells → match → items）與短路條件全在 matchAssembler；
+//  這裡只決定「哪些層開」與「用哪個引擎／adapter」。deps 走共用核心（唯一一份 adapter 清單），M 提供的模組以覆寫注入。
+//  ⚠ 與 v20 的兩個差異（沒有任何呼叫端會觸發；契約刻意不放寬）：rosterOverride 必須恰好是 b1–b5／r1–r5 十個席位
+//    （每席 { heroId, spells? }），否則丟 `MatchSetup rejected: roster_invalid…`（v20 會照跑）；config 若不是已知出裝策略
+//    （off／standard／early／scaling／counter／survival）丟 `build_strategy_unknown`（v20 會把未知名稱直接當策略送進 adapter）。
+export function configure(seed, config, M, incomeK = 1, rosterOverride = null, tactic = null, rulesetId = undefined) {
+  const roster = rosterOverride ?? mirroredRoster(seed, M);
+  const { setup, strategySide } = buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic, rulesetId);
+  //  英雄側 adapter：同樣全來自 M；M 沒有的明確給 undefined（對應層已關），不讓 core 的預設悄悄頂替。
+  const adapters = {
+    toEngineHeroSkills: M.skills?.toEngineHeroSkills, selectBattleTalents: M.talents?.selectBattleTalents,
+    battleTalentOptions: M.talents?.battleTalentOptions, toEngineArchetypes: M.arche.toEngineArchetypes,
+    COMBAT_ARCHETYPE_CONTRACT_VERSION: M.arche.COMBAT_ARCHETYPE_CONTRACT_VERSION,
+  };
+  //  引擎側 adapter 也全部來自 M（ESMO_BALANCE_ROOT 跨版本 A/B 量到的是同一棵樹）；M 缺的模組＝對應層已在 setup 關掉。
+  const engineAdapters = {
+    toEngineHeroMods: M.profile.toEngineHeroMods, toEngineSpells: M.loadout.toEngineSpells, toEngineItems: M.adapter.toEngineItems,
+    toEngineTactic: M.tactic.toEngineTactic, toEngineTacticIdentity: M.tactic.toEngineTacticIdentity,
+    STANDARD_OPP_TACTIC: M.tactic.STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION: M.tactic.MOBA_TACTIC_VERSION,
+    toEngineHeroPassives: M.passives?.toEngineHeroPassives, toEngineHeroPowerCurve: M.curves?.toEngineHeroPowerCurve,
+    //  runner 不套選手素質、也不走 production 的出裝（matchItemsConfig）⇒ 明確給 undefined：不讓 core 的預設（runner 所在樹）悄悄頂替。
+    toEnginePlayerMods: undefined, matchItemsConfig: undefined,
+    //  ⚠ resolveTactic（戰術輸入的編排）刻意不注入：它來自 runner 所在的樹，和組裝器本身一樣是「編排」；
+    //    它收到的投影（toEngineTactic／Identity）與 STANDARD_OPP_TACTIC 仍是上面 M 的那一份 ⇒ 量到的旋鈕是被量測那棵樹的。
+    //    tools/check_balance_runner_setup_3a.mjs P2b 驗：std 輸入時被呼叫的投影是 M 的包裝。
+  };
+  const deps = buildMatchAssemblerDepsFrom({ LogicEngine: M.LE.LogicEngine, heroLookup: M.heroes.heroById, heroAdapters: adapters, engineAdapters });
+  const r = assembleMatch(setup, deps);
+  if (!r.ok) throw new Error(`balance assembleMatch failed: ${r.errors.map((x) => `${x.code}@${x.field}`).join(",")}`);
+  return { e: r.engine, roster, strategySide };
 }
 
 /** 各側塔況：路線塔（上中下 9 座）倒幾座、其餘非主堡塔（門牙塔）倒幾座、主堡血量。 */

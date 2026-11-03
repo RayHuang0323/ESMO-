@@ -23,6 +23,7 @@ import crypto from "node:crypto";
 import { execFile, execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { stripComments } from "./lib/stripComments.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /**
@@ -437,19 +438,37 @@ let lastOnSnapshot = null;
     for (const ent of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
       const rel = `${d}/${ent.name}`;
       if (ent.isDirectory()) { if (!["src/battle/moba/items", "src/debug"].includes(rel)) walk(rel); }
-      //  註解行不算呼叫（例如 simulationVersion.js 的版本判定說明）
+      //  註解不算呼叫（例如 simulationVersion.js 的版本判定說明）。Phase 3a：組裝器用 call("configureItems", cfg) 呼叫，
+      //  所以連「以方法名字串呼叫」的寫法也一併算（比原本只認 configureItems( 更嚴）。
       else if (/\.(jsx?|mjs)$/.test(ent.name) && rel !== "src/LogicEngine.js"
-        && /configureItems\s*\(|toEngineItems\s*\(|debugSetInventory\s*\(/.test(read(rel).split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n"))) callers.push(rel);
+        && /configureItems\s*\(|["']configureItems["']|toEngineItems\s*\(|debugSetInventory\s*\(/.test(stripComments(read(rel)))) callers.push(rel);
     }
   };
   walk("src");
-  //  M3a（Owner D1）：useLocalServer 可以呼叫，但必須受 itemsV1 開關保護，正式 PvE 預設 true。
-  const uls = read("src/useLocalServer.js");
+  //  M3a（Owner D1）：正式流程可以呼叫，但必須受 itemsV1 開關保護，正式 PvE 預設 true。
+  //  Phase 3a T3／T4：引擎組裝搬到唯一組裝器（battle/moba/matchAssembler.js）⇒ 唯一允許的呼叫者從 useLocalServer 改成組裝器；
+  //  hook 與 Live builder 不得再自己呼叫。保護鏈（意圖不變：裝備 opt-in、DEV 開關不進正式站）：
+  //    組裝器 items 步驟開頭 `if (!E.items) return;` ← setup 的 effectiveLayers.items 由規則集層推導
+  //    ← 規則集層 items＝FEATURE_FLAGS.itemsV1（resolveRulesetForMode）；DEV 網址開關只在 import.meta.env.DEV 內讀、只在 allowTool 時生效。
+  const code8 = (rel) => stripComments(read(rel));
+  const uls = code8("src/useLocalServer.js");
+  const asm8 = code8("src/battle/moba/matchAssembler.js");
+  const lms8 = code8("src/battle/moba/liveMatchSetup.js");
   const { FEATURE_FLAGS } = await load("src/featureFlags.js");
-  const guarded = FEATURE_FLAGS.itemsV1 === true && !/debugSetInventory/.test(uls)
-    && /featureEnabled\("itemsV1"\)\s*\|\|\s*\(import\.meta\.env\.DEV && itemsDevRequested\(\)\)/.test(uls);
-  const unguarded = callers.filter((f) => !(f === "src/useLocalServer.js" && guarded));
-  ck("G8", "正式流程只有 useLocalServer 呼叫 configureItems，且受 itemsV1 開關保護（正式 PvE 預設 ON）；沒有人呼叫 debugSetInventory", unguarded.length === 0, unguarded.join(","));
+  const live8 = await load("src/battle/moba/liveMatchSetup.js");
+  const itemsLayer = (f, devSwitch, allowTool) => live8.resolveLiveRuleset({ flags: f, dev: devSwitch, allowTool }).ruleset.layers.items;
+  const guarded = FEATURE_FLAGS.itemsV1 === true && !/debugSetInventory/.test(uls + asm8 + lms8)
+    && /items\(\)\s*\{\s*if \(!E\.items\) return;/.test(asm8)
+    && /items:\s*L\.items === true && hasRoster/.test(code8("src/platform/contracts/matchSetup.js"))
+    && /items:\s*on\("itemsV1"\)/.test(code8("src/platform/contracts/matchRuleset.js"))
+    && /flags:\s*FEATURE_FLAGS/.test(uls)
+    && /import\.meta\.env\.DEV\s*\?\s*\{[^}]*items:\s*itemsDevRequested\(\)[^}]*\}\s*:\s*null/.test(uls)
+    && /allowTool:\s*import\.meta\.env\.DEV === true/.test(uls)
+    && itemsLayer({ itemsV1: false }, null, false) === false && itemsLayer({ itemsV1: true }, null, false) === true
+    && itemsLayer({ itemsV1: false }, { items: true }, false) === false && itemsLayer({ itemsV1: false }, { items: true }, true) === true;
+  const unguarded = callers.filter((f) => !(f === "src/battle/moba/matchAssembler.js" && guarded));
+  ck("G8", "正式流程只有唯一組裝器（useLocalServer → assembleMatch）呼叫 configureItems，且受 itemsV1 層保護（正式 PvE 預設 ON）；沒有人呼叫 debugSetInventory",
+    unguarded.length === 0 && callers.includes("src/battle/moba/matchAssembler.js") && /assembleMatch\(/.test(uls), unguarded.join(",") || `callers=${callers.join(",")} guarded=${guarded}`);
   const main = read("src/main.jsx");
   ck("G8", "DEV Item Inspector 只掛在 import.meta.env.DEV && ?debug=items（正式 build 被移除）",
     /import\.meta\.env\.DEV && debugMode === "items"/.test(main) && !/ItemInspector/.test(read("src/AppShell.jsx")));

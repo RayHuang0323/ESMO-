@@ -182,12 +182,12 @@ const SEGMENTS = [
   { id: "regress2", script: "tools/regress2.mjs", shape: /節奏門檻 8\/8 通過/, note: "節奏門檻" },
   { id: "runtime29", script: "tools/check_moba_runtime29.mjs", shape: /35\/35 通過/, note: "S29 執行期（flat：9 段委派；§29 順序公平性既有紅燈 TD-21）" },
   { id: "q4_history", script: "tools/check_competition_q4.mjs", shape: /68\/68 通過/, note: "Q4 FinalStandings / award historical gate" },
-  { id: "q5_history", script: "tools/check_competition_q5.mjs", shape: /66\/66 通過/, note: "Q5 cross-season history gate" },
+  { id: "q5_history", script: "tools/check_competition_q5.mjs", shape: /\b(\d+)\/\1 通過/, note: "Q5 cross-season history gate" },
   { id: "q6_playoffs", script: "tools/check_competition_q6.mjs", shape: /57\/57 通過/, note: "Q6 stage/playoff historical gate" },
   { id: "q7a_safety", script: "tools/check_q7a_safety.mjs", shape: /18\/18/, note: "Q7a single live session / same-day fixture safety" },
   { id: "q7b_season_state_v2", script: "tools/check_season_state_v2_migration_q7b.mjs", shape: /SeasonState v2 Q7b: 35\/35 PASS/, note: "Q7b/3b-M1 SeasonState.v2 migration-safe foundation" },
   { id: "m2_season_state_v2_sealing", script: "tools/check_season_state_v2_sealing_m2.mjs", shape: /SeasonState v2 M2 sealing: 24\/24 PASS/, note: "3b-M2 Event / Season sealing boundaries" },
-  { id: "hero_skills_round2", script: "tools/check_hero_skills_round2.mjs", shape: /Hero Skills Round 2: PASS 17\/17/, note: "Elemental choreography / pose / mirror" },
+  { id: "hero_skills_round2", script: "tools/check_hero_skills_round2.mjs", shape: /Hero Skills Round 2: PASS (\d+)\/\1\b/, note: "Elemental choreography / pose / mirror" },
   { id: "hero_skills_phase1", script: "tools/check_hero_skills_phase1.mjs", shape: /Hero Skills Phase 1: PASS 10\/10/, note: "Hero skill contract / replacement boundary" },
   { id: "hero_presentation_l", script: "tools/check_hero_presentation_l.mjs", shape: /✅ PASS/, note: "Historical presentation compatibility" },
   { id: "pacing29b1", script: "tools/check_moba_pacing29b1.mjs", shape: /\d+\/\d+ 通過/, note: "Pacing gate" },
@@ -201,6 +201,22 @@ const SEGMENTS = [
   { id: "tactical_ai_p2", script: "tools/check_moba_tactical_ai_p2.mjs", shape: /MOBA Tactical AI Phase 2：\d+\/\d+ PASS/, note: "Tactical AI Phase 2（moba-sim.v20）：Combat Intent／兵線優先／Team Call／Gank 評分／物件與懲戒" },
   { id: "fairness_p0d", script: "tools/check_moba_nexus_wave_p0d.mjs", args: ["--out=tmp/hero-skills/seed608.json"], shape: /"pass": true/, note: "P0-D seed608" },
   { id: "simulation_version", script: "tools/check_simulation_version_gate.mjs", shape: /PASS|通過/, note: "Simulation fingerprint" },
+  { id: "live_setup_3a", script: "tools/check_live_setup_3a.mjs", shape: /Live Setup 3a：\d+\/\d+ PASS/, note: "Phase 3a T4：Live hook → MatchSetup → 唯一組裝器（golden live 9 案逐位元、舊存檔恢復、規則集壽命、共用 deps）" },
+  { id: "match_setup_3a", script: "tools/check_match_setup_3a.mjs", shape: /Match Setup 3a：\d+\/\d+ PASS/, note: "Phase 3a T7：跨模式一致（golden 39 案走真實包裝、同 setup 多路徑、RS-1、正式組裝掃描、語意清單；153 檢查，約 5 分鐘）" },
+  { id: "tactic_registry_3a", script: "tools/check_tactic_registry_3a.mjs", shape: /Capability Registry 3a：\d+\/\d+ PASS/, note: "Phase 3a T10 G-A5：Registry ↔ resolver ↔ 引擎（resolverFields 真的變、engineReads 真的被讀、UI 選項清單＝offeredChoices；秒級）" },
+  //  tactic_truth_3a 跑的是**快速模式**（驗證已提交的結果表 tools/fixtures/tactic_truth_3a.json，秒級）。
+  //  重新量測（約 1.5–2 小時、workers ≤ 3、可續跑）：node tools/check_tactic_truth_3a.mjs --measure --dir=<repo 外的資料夾>；
+  //  改了引擎語意檔、對照表或 Registry 的 live 列之後，快速模式會因結果表過期而紅，必須重新量測。
+  { id: "tactic_truth_3a", script: "tools/check_tactic_truth_3a.mjs", shape: /Tactic Truth 3a：\d+\/\d+ PASS/, note: "Phase 3a T10 G-A7：每個 live 選項在模擬裡有量得到的效果（快速模式驗證結果表；--measure 才重新模擬）" },
+  { id: "tactic_indicators_3a", script: "tools/check_tactic_indicators_3a.mjs", shape: /Tactic Indicators 3a：\d+\/\d+ PASS/, note: "Phase 3a T11：計畫輪廓、席位任務適性（係數只來自 STAT_MAP）、配合度負擔、矛盾提示（每條對得到 G-A7 結果表）" },
+  { id: "tactic_save_3a", script: "tools/check_tactic_save_3a.mjs", shape: /Tactic Save 3a：\d+\/\d+ PASS/, note: "Phase 3a T12：戰術書存檔切片（公開動作自行存檔、上限 5 份、舊存檔相容）、binding 進本場設定＝v20 golden、熟練度鍵不變" },
+  { id: "tactic_book_view_3a", script: "tools/check_tactic_book_view_3a.mjs", shape: /Tactic Book View 3a：\d+\/\d+ PASS/, note: "Phase 3a T13：戰術書 view-model（畫面選項＝Registry live 扣掉量測排除、每個選項都解析得出引擎設定）與接線；瀏覽器行為另跑 browser_check_tactic_book_3a" },
+  { id: "tactic_replication_3a", script: "tools/check_tactic_replication_3a.mjs", shape: /Tactic Replication 3a：\d+\/\d+ PASS/, note: "Phase 3a-A：複驗撤下清單（REPLICATION_WITHHELD）＝複驗結果檔推出（不多不少）、21 模板的提供清單、已存計畫仍可解析；秒級" },
+  { id: "tactical_directive_3c", script: "tools/check_tactical_directive_3c.mjs", shape: /Tactical Directive 3c：(\d+)\/\1 PASS/, note: "Phase 3a-C1：TacticalDirective.v1 契約（knobs／identity 欄位集合＝既有投影、驗證反例、深凍結不改輸入；C2 起只有 tacticalDirector.js import 它；秒級）" },
+  { id: "tactical_director_3c", script: "tools/check_tactical_director_3c.mjs", shape: /Tactical Director 3c：(\d+)\/\1 PASS/, note: "Phase 3a-C2 G-AC2：引擎（剝註解）不直接讀 this.tk／this.tid（允許清單 0 筆：C3-1 E-1 已移除觀測欄位）、階段界線只在 Director、每時期挑選只在 Director（S7）、Director 行為（同參照、identity 反查、phase 邊界、directive 有效且凍結、不擲骰）；秒級" },
+  { id: "match_golden_v21a", script: "tools/check_match_golden_v21a.mjs", shape: /Match Golden v21-A：(\d+)\/\1 PASS/, note: "Phase 3a-C1 G-AC1 參照：v20 的 39 案＋21 模板＋提供的選擇（binding）＋紅方 binding 共 109 案重跑，digest／streamHash／resultHash／configure 序列逐案相同（約 7 分鐘）" },
+  { id: "c3_phase_skeleton", script: "tools/check_c3_phase_skeleton.mjs", shape: /C3 Phase Skeleton：(\d+)\/\1 PASS/, note: "Phase 3a-C3-1：Director core.v1 時期骨架（479.9/480、959.9/960 邊界只變宣告的欄位、三份相同 ⇒ 同參照）、Resolver／組裝器的 phases、RS-1 擴充（career.v21／balanceTool.v21、旗標關＝v20 逐字相同）、G-AC1 ②（golden live＋runner 案在 v21 規則集下 digest／streamHash／resultHash 逐案相同；約 6 分鐘）" },
+  { id: "laneframe_c3", script: "tools/check_laneframe_c3.mjs", shape: /LaneFrame C3：(\d+)\/\1 PASS/, note: "Phase 3a-C3-1 laneFrame（TD-3A-23，D-1 = A）：事前登記檔 laneframe_registration_c3.json 的 A1–A5（186 組輸入；teamRelative 0／legacy 120）、C1、規則集層與能力檢查、C3（v21 規則集下改變集合恰好＝登記的 9 個 v21-A 案；約 6 分鐘）" },
   { id: "build", script: "node_modules/vite/bin/vite.js", args: ["build"], shape: /built in/, note: "production build" },
 ];
 

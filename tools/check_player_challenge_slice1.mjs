@@ -18,6 +18,7 @@
 //    Pricing Authority / CS —— 那些在這一輪根本不存在，驗它們只會產生假的安全感。
 // ============================================================================
 import { readFileSync } from "node:fs";
+import { challengeDraftSourceFacts, recordConfigureCalls } from "./lib/challengeAssemblySource.mjs";
 import {
   SQUAD_SNAPSHOT_VERSION, SNAPSHOT_SEATS, SNAPSHOT_INPUTS, SLICE1_CAPTURED_INPUTS,
   FORBIDDEN_CLIENT_KEYS, createSquadSnapshot, validateSquadSnapshot,
@@ -31,6 +32,9 @@ import {
 import {
   MOBA_SIMULATION_VERSION, KNOWN_SIMULATION_VERSIONS, canReplay, isKnownSimulationVersion,
 } from "../src/platform/contracts/simulationVersion.js";
+//  Phase 3a-B T16（版本事實）：快照與挑戰記下的是 Challenge 目前的模擬版本（旗標關＝moba-sim.v20，與正式站相同；旗標開＝v21），
+//  不再是整個 build 的 MOBA_SIMULATION_VERSION。判準不變：記下的＝目前的、不同就不可重播。
+import { CHALLENGE_SIMULATION_VERSION } from "../src/platform/challenge/challengeVersion.js";
 import {
   SNAPSHOT_AUTHORITY, PUBLISH_REASONS, publishDefensiveSnapshot,
   publishThrottle, validatePublishRequest, normalizeCombatStats, COMBAT_STAT_KEYS,
@@ -89,7 +93,7 @@ const snapA = pubA.snapshot;
 ck("① schema 正確", snapA?.schema === SQUAD_SNAPSHOT_VERSION, snapA?.schema);
 ck("① 帶簽發者標記", snapA?.issuedBy === SNAPSHOT_AUTHORITY.id, snapA?.issuedBy);
 ck("① 帶 issuedAt", Number.isFinite(snapA?.issuedAt), String(snapA?.issuedAt));
-ck("① 帶 simulationVersion", snapA?.simulationVersion === MOBA_SIMULATION_VERSION, snapA?.simulationVersion);
+ck("① 帶 simulationVersion（＝Challenge 目前版本）", snapA?.simulationVersion === CHALLENGE_SIMULATION_VERSION, snapA?.simulationVersion);
 ck("① 宣告 capturedInputs（涵蓋範圍寫進快照本身）",
   JSON.stringify(snapA?.capturedInputs) === JSON.stringify([...SLICE1_CAPTURED_INPUTS]),
   (snapA?.capturedInputs ?? []).join(","));
@@ -247,7 +251,7 @@ ck("③ runner 原始碼不含任何亂數呼叫（seed 只讀不生）",
 // ══════════════════════════════════════════════════════════════════════════
 console.log("\n── ④ simulationVersion ──");
 
-ck("④ challenge 記錄了 simulationVersion", ch1.challenge.simulationVersion === MOBA_SIMULATION_VERSION);
+ck("④ challenge 記錄了 simulationVersion（＝Challenge 目前版本）", ch1.challenge.simulationVersion === CHALLENGE_SIMULATION_VERSION);
 ck("④ 目前版本在已知清單裡", isKnownSimulationVersion(MOBA_SIMULATION_VERSION));
 ck("④ 未記錄版本 ⇒ 不可重播", !canReplay(undefined).ok);
 ck("④ 不明版本 ⇒ 不可重播", !canReplay("moba-sim.v999").ok);
@@ -261,11 +265,11 @@ ck("④ 拒絕原因是可直接顯示的中文",
 ck("④ 版本相同 ⇒ 可重播", canReplay(MOBA_SIMULATION_VERSION).ok);
 ck("④ 舊版 challenge 一律不可重播（跨版本不假裝算得出同一結果）",
   !challengeReplayability({ ...ch1.challenge, simulationVersion: "moba-sim.v0" },
-    { challengerSnapshot: snapA, defenderSnapshot: snapDef, currentSimulationVersion: MOBA_SIMULATION_VERSION }).ok);
+    { challengerSnapshot: snapA, defenderSnapshot: snapDef, currentSimulationVersion: CHALLENGE_SIMULATION_VERSION }).ok);
 ck("④ 引用錯快照 ⇒ 明確報「快照不符」，不與版本問題混為一談",
   /快照與這場記錄的不符/.test(challengeReplayability(ch1.challenge, {
     challengerSnapshot: snapDef, defenderSnapshot: snapDef,
-    currentSimulationVersion: MOBA_SIMULATION_VERSION,
+    currentSimulationVersion: CHALLENGE_SIMULATION_VERSION,
   }).reason ?? ""));
 ck("④ 不做 migration framework（原始碼明說）",
   /不做 migration framework/.test(read("src/platform/contracts/simulationVersion.js")));
@@ -419,26 +423,23 @@ ck("⑦ ⋯⋯而且結果因此不同（證明它真的被用了，不是裝飾
 //    不存在的鍵仍然要回 false（否則 `snapshotCovers` 等於永遠說 yes）。
 ck("⑦ 不存在的輸入鍵一律回 false（snapshotCovers 不是永遠說 yes）",
   !snapshotCovers(snapA, "heroPick") && !snapshotCovers(snapA, "archetypes") && !snapshotCovers(snapA, "spells"));
-ck("⑦ Slice 5：runner 真的呼叫 configureHeroes / Archetypes / Spells",
-  /eng\.configureHeroes/.test(code(runnerSrc))
-  && /eng\.configureArchetypes/.test(code(runnerSrc))
-  && /eng\.configureSpells/.test(code(runnerSrc)));
+//  Phase 3a T5：runner 不再自己呼叫 eng.configure*，改走唯一組裝器（challenge.v20 順序 Players→Match→Heroes→Archetypes→Spells）。
+//  這兩條的意圖不變，改指向事實現在所在的檔案（證據單一實作：tools/lib/challengeAssemblySource.mjs，先剝註解再比對）。
+const draftFacts = challengeDraftSourceFacts();
+ck("⑦ Slice 5：runner（經唯一組裝器）真的呼叫 configureHeroes / Archetypes / Spells",
+  draftFacts.assemblerRunsDraftSteps, JSON.stringify(draftFacts.details));
 //  ⚠ 這一條才是重點：三支 configure 都必須關在 `draftDeclared` 裡面。
 //    放到外面 ⇒ 沒宣告選角的舊快照也會被注入 ⇒ 它們的重播全部對不上，
 //    而且沒有任何錯誤訊息。
-ck("⑦ 三支 configure 都關在 draftDeclared 條件裡（未宣告 ⇒ 不注入）",
-  (() => {
-    const src = code(runnerSrc);
-    const i = src.indexOf("if (draftDeclared) {", src.indexOf("const blue = sideInputs"));
-    if (i < 0) return false;
-    const tail = src.slice(i);
-    const end = tail.indexOf("for (let t = CHALLENGE_DT");
-    if (end < 0) return false;
-    const block = tail.slice(0, end);
-    return ["configureHeroes", "configureArchetypes", "configureSpells"]
-      .every((fn) => block.includes(`eng.${fn}(`)
-        && src.split(`eng.${fn}(`).length - 1 === block.split(`eng.${fn}(`).length - 1);
-  })());
+{
+  //  原始碼：roster（三步驟唯一輸入）只在 draftDeclared 時進 builder；契約與組裝器各自短路。
+  //  行為：未宣告 draftPolicy 的那一場（runNoLo 同款輸入）實際跑一次，三支 configure 都沒被呼叫。
+  const { LogicEngine: LE } = await import("../src/LogicEngine.js");
+  const probed = recordConfigureCalls(LE, () => runChallenge({ challenge: chNoLo.challenge, challengerSnapshot: noLoadoutA, defenderSnapshot: noLoadoutD }));
+  const heroLayerCalls = probed.calls.filter((m) => ["configureHeroes", "configureArchetypes", "configureSpells"].includes(m));
+  ck("⑦ 三支 configure 都關在 draftDeclared 條件裡（未宣告 ⇒ 不注入）",
+    draftFacts.draftStepsGated && probed.result.ok && heroLayerCalls.length === 0, `calls=${probed.calls.join(",")}`);
+}
 //  紅方對映
 ck("⑦ 防守方做 b→r 席位對映（快照本身不綁陣營）", toRedSeat("b3") === "r3");
 

@@ -14,7 +14,8 @@
 import { runGate, finishGate } from "./browser/harness.mjs";
 //  ⚠ 從**本機原始碼**讀目前版本，拿去比對正式站存下來的值。
 //    這正是要抓的東西：部署沒生效 ⇒ 正式站記的還是舊版號 ⇒ 這裡會紅。
-import { MOBA_SIMULATION_VERSION } from "../src/platform/contracts/simulationVersion.js";
+//  Phase 3a-B T16（版本事實）：正式站記下的是 Challenge 目前的模擬版本（旗標關＝v20），本機以同一個常數比對。
+import { CHALLENGE_SIMULATION_VERSION as MOBA_SIMULATION_VERSION } from "../src/platform/challenge/challengeVersion.js";
 
 const J = (raw) => JSON.parse(String(raw).replace(/^"|"$/g, ""));
 const PROD = "https://rayhuang0323.github.io/ESMO-/";

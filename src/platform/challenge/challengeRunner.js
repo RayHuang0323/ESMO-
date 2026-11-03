@@ -26,41 +26,35 @@
 //  ⇒ 同一份防守快照可以在不同場次站不同邊，雜湊不變。
 //
 //  純函式：不 import React / zustand / localStorage / 亂數 / 時鐘。
+//
+//  ── Phase 3a Task 5：組裝改走唯一組裝器 ───────────────────────────────────
+//  本檔不再自己 new LogicEngine、不再自己呼叫任何 configure*。引擎只有一個組裝點：
+//  `battle/moba/matchAssembler.js` 的 assembleMatch，規則集 `challenge.v20`
+//  （順序 Players → Match → Heroes → Archetypes → Spells；沒有技能／被動／曲線／天賦／裝備／版面層）。
+//  這裡只剩：護欄 → 決定快照宣告了哪些輸入 → buildChallengeMatchSetup（challengeMatchSetup.js）
+//  → assembleMatch → tick 迴圈 → 建結果。結果與 v20 逐位元相同（tools/check_challenge_setup_3a.mjs）。
 // ============================================================================
-import { LogicEngine } from "../../LogicEngine.js";
-import { toEnginePlayerMods } from "../../battle/moba/mobaPlayerStats.js";
-import { toEngineTactic, toEngineTacticIdentity, mobaTacticById, MOBA_TACTIC_VERSION } from "../contracts/MobaTacticConfig.js";
-import { SNAPSHOT_SEATS, SNAPSHOT_INPUTS, snapshotCovers } from "../contracts/squadSnapshot.js";
+import { mobaTacticById } from "../contracts/MobaTacticConfig.js";
+import { SNAPSHOT_INPUTS, snapshotCovers } from "../contracts/squadSnapshot.js";
 import { assertSeedFrozen, challengeReplayability } from "../contracts/challengeInstance.js";
-import { MOBA_SIMULATION_VERSION } from "../contracts/simulationVersion.js";
-//  Slice 5：Draft 成為戰鬥輸入。⚠ 三支都是**既有**的引擎轉換點，不是新寫的。
-import { toEngineHeroMods } from "../../battle/moba/mobaHeroProfile.js";
-import { toEngineArchetypes, COMBAT_ARCHETYPE_CONTRACT_VERSION } from "../../data/heroCombatArchetypes.js";
-import { buildLoadout as buildHeroLoadout, toEngineSpells } from "../../battle/moba/mobaHeroLoadout.js";
-import { draftResultToRoster, validateDraftResult } from "./draftResult.js";
+//  T16：目前版本＝本 build 在正式旗標下的 Challenge 版本；每一場的規則集由它記下的版本凍結（challengeRulesetForVersion）。
+import { CHALLENGE_SIMULATION_VERSION } from "./challengeVersion.js";
+import { challengeRulesetForVersion } from "../contracts/matchRuleset.js";
+import { validateDraftResult } from "./draftResult.js";
+//  Phase 3a Task 5：唯一組裝器與它的 deps（查表是注入的 heroOf，所以用 core 的 builder；見 matchAssemblerDepsCore.js 檔頭）。
+import { assembleMatch } from "../../battle/moba/matchAssembler.js";
+import { buildMatchAssemblerDepsFrom } from "../../battle/moba/matchAssemblerDepsCore.js";
+import { buildChallengeMatchSetup, CHALLENGE_HERO_LOOKUP_LABEL, toRedSeat } from "./challengeMatchSetup.js";
 
 /** 模擬步長與上限。⚠ 與 `useLocalServer.js` 的 `DT_SIM` 對齊；改這裡等於改模擬語意。 */
 export const CHALLENGE_DT = 0.5;
 export const CHALLENGE_MAX_T = 1800;
 
-/** 藍方席位 → 紅方席位（b3 → r3）。 */
-export const toRedSeat = (seat) => `r${seat.slice(1)}`;
+/** 藍方席位 → 紅方席位（b3 → r3）。定義在 challengeMatchSetup.js（builder 需要它），這裡原樣轉出。 */
+export { toRedSeat };
 
-/**
- * 把一份快照攤成引擎要的 slots / loadout。
- * @param {object} snapshot
- * @param {"blue"|"red"} side
- */
-function sideInputs(snapshot, side) {
-  const slots = [];
-  const loadout = {};
-  for (const seat of SNAPSHOT_SEATS) {
-    const engineSeat = side === "red" ? toRedSeat(seat) : seat;
-    slots.push({ id: engineSeat, playerId: snapshot.seats.find((s) => s.seat === seat)?.playerId ?? null, stats: snapshot.combat.stats[seat] });
-    loadout[engineSeat] = { ...snapshot.combat.loadout[seat] };
-  }
-  return { slots, loadout };
-}
+/** 組裝階段的錯誤 → runChallenge 的錯誤項（`{ code, message }`）。stage 是 "setup"（MatchSetup）或 "assemble"（組裝器）。 */
+const stageErrors = (stage, errors) => errors.map((e) => ({ code: `${stage}_${e.code}`, message: `${e.field}: ${e.message}` }));
 
 /**
  * 跑一場 Challenge。**第一次跑與重播都走這一支。**
@@ -74,7 +68,7 @@ function sideInputs(snapshot, side) {
  */
 export function runChallenge({
   challenge = null, challengerSnapshot = null, defenderSnapshot = null,
-  currentSimulationVersion = MOBA_SIMULATION_VERSION,
+  currentSimulationVersion = CHALLENGE_SIMULATION_VERSION,
   //  Slice 5：這一場凍結的 Draft，以及英雄查表。
   //  ⚠ 查表**注入**，本檔不 import 英雄庫（396KB data URI，Node verifier 會吃到）。
   draftResult = null, heroOf = null,
@@ -84,6 +78,10 @@ export function runChallenge({
     challengerSnapshot, defenderSnapshot, currentSimulationVersion,
   });
   if (!rep.ok) return { ok: false, result: null, errors: [{ code: "replay", message: rep.reason }] };
+
+  //  ── T16：規則集由這一場記下的模擬版本決定（第一次跑與重播相同；旗標日後改動不影響）──
+  const ruleset = challengeRulesetForVersion(challenge.simulationVersion);
+  if (!ruleset) return { ok: false, result: null, errors: [{ code: "replay", message: `這場使用 ${challenge.simulationVersion} 的模擬語意，沒有對應的挑戰規則集，不可重播` }] };
 
   //  ── 紅線①：seed 只讀不生 ──────────────────────────────────────────────
   const seed = challenge.matchSeed;
@@ -122,10 +120,8 @@ export function runChallenge({
     }
   }
 
-  const blue = sideInputs(challengerSnapshot, "blue");
-  const red = sideInputs(defenderSnapshot, "red");
-
   //  ── 紅線②：只用宣告過的輸入 ───────────────────────────────────────────
+  //  ⚠ 這三個判斷與 draftDeclared 原樣保留在這裡（Phase 3a Task 5 只換「怎麼組」，不換「組哪些」）。
   const useLoadout = snapshotCovers(challengerSnapshot, SNAPSHOT_INPUTS.heroLoadout)
     && snapshotCovers(defenderSnapshot, SNAPSHOT_INPUTS.heroLoadout);
   const useStats = snapshotCovers(challengerSnapshot, SNAPSHOT_INPUTS.playerStats)
@@ -133,14 +129,7 @@ export function runChallenge({
   const useTactic = snapshotCovers(challengerSnapshot, SNAPSHOT_INPUTS.tactic)
     && snapshotCovers(defenderSnapshot, SNAPSHOT_INPUTS.tactic);
 
-  const loadout = useLoadout ? { ...blue.loadout, ...red.loadout } : null;
-  const eng = new LogicEngine(seed, loadout);
-
-  if (useStats) {
-    const mods = toEnginePlayerMods({ blue: blue.slots, red: red.slots });
-    if (mods) eng.configurePlayers(mods);
-  }
-
+  let tactics = null;
   if (useTactic) {
     const bt = mobaTacticById(challenge.challengerTacticId);
     const rt = mobaTacticById(challenge.defenderTacticId);
@@ -150,46 +139,33 @@ export function runChallenge({
         errors: [{ code: "tactic", message: `查不到戰術（挑戰方 ${challenge.challengerTacticId} / 防守方 ${challenge.defenderTacticId}）` }],
       };
     }
-    eng.configureMatch({
-      blue: toEngineTactic(bt),
-      red: toEngineTactic(rt),
-      //  Tactical Identity v1：與 useLocalServer 同一個 builder（Live 與 Challenge 不分叉）。
-      identity: { blue: toEngineTacticIdentity(bt), red: toEngineTacticIdentity(rt) },
-      meta: {
-        tacticId: bt.tacticId, tacticName: bt.name,
-        version: MOBA_TACTIC_VERSION, opponentTacticId: rt.tacticId,
-      },
+    tactics = { blue: bt, red: rt };
+  }
+
+  //  ── 組裝：快照 → MatchSetup（challenge.v20）→ 唯一組裝器 ────────────────
+  //  Slice 5 的「選角真的進引擎」也在這條路上：draftDeclared 時 setup 帶 roster，
+  //  組裝器照規則集的順序呼叫 Heroes → Archetypes → Spells（三支都是既有的轉換點，不是為 Challenge 另寫）。
+  //  ⚠ 被拒絕的 setup／組裝（或 builder／adapter 丟出的例外）一律回錯誤結果，不外洩例外。
+  let assembled;
+  try {
+    const built = buildChallengeMatchSetup({
+      rulesetId: ruleset.rulesetId,
+      seed, opponentKey: challenge.opponentKey ?? null,
+      challengerSnapshot, defenderSnapshot,
+      use: { loadout: useLoadout, stats: useStats, tactic: useTactic },
+      tactics, draftResult: draftDeclared ? draftResult : null, heroOf,
     });
+    if (!built.ok) return { ok: false, result: null, errors: stageErrors("setup", built.errors) };
+    const deps = buildMatchAssemblerDepsFrom({ heroLookup: heroOf, heroLookupLabel: CHALLENGE_HERO_LOOKUP_LABEL });
+    assembled = assembleMatch(built.setup, deps);
+  } catch (e) {
+    return { ok: false, result: null, errors: [{ code: "assembly_exception", message: String(e?.message ?? e) }] };
   }
+  if (!assembled.ok) return { ok: false, result: null, errors: stageErrors("assemble", assembled.errors) };
+  const eng = assembled.engine;
 
-  //  ── Slice 5：選角真的進引擎 ──────────────────────────────────────────
-  //  ⚠ 三支都是**既有**的轉換點（`useLocalServer.start()` 用的同一組），
-  //    不是為 Challenge 另寫的第二套。差別只在資料來源：
-  //    正式生涯走 Ban/Pick 畫面，這裡走**凍結的 DraftResult**。
-  let draftUsed = null;
-  if (draftDeclared) {
-    const roster = draftResultToRoster(draftResult);
-    //  英雄物件（含 arch）與召喚師技能都由既有函式算出，不自己拼資料。
-    const withHero = Object.fromEntries(Object.entries(roster)
-      .map(([seat, v]) => [seat, { ...v, hero: heroOf(v.heroId) ?? null }]));
-    const spellRoster = buildHeroLoadout(withHero, heroOf);
-
-    const heroMods = toEngineHeroMods(withHero, heroOf);
-    if (heroMods) eng.configureHeroes(heroMods);
-
-    const archMods = toEngineArchetypes(withHero);
-    if (archMods && Object.keys(archMods).length) {
-      const b = {}, r = {};
-      for (const [pid, mod] of Object.entries(archMods)) (String(pid)[0] === "r" ? r : b)[pid] = mod;
-      eng.configureArchetypes({ blue: b, red: r,
-        meta: { version: COMBAT_ARCHETYPE_CONTRACT_VERSION, seats: Object.keys(archMods).length } });
-    }
-
-    const spellMods = toEngineSpells(spellRoster);
-    if (spellMods) eng.configureSpells(spellMods);
-
-    draftUsed = { hash: draftResult.hash, heroes: { ...draftResult.assignment } };
-  }
+  //  ⚠ 這一場實際用了哪一份 Draft（雜湊 ＋ 席位英雄），讓重播可逐值比對。
+  const draftUsed = draftDeclared ? { hash: draftResult.hash, heroes: { ...draftResult.assignment } } : null;
 
   for (let t = CHALLENGE_DT; t <= CHALLENGE_MAX_T && !eng.over; t += CHALLENGE_DT) eng.tick(CHALLENGE_DT);
 

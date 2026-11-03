@@ -1,0 +1,1939 @@
+{
+  "schema": "esmo.phase-options-result.v1",
+  "registration": "tools/fixtures/phase_options_registration_c5r.json",
+  "studyId": "phase-options-c5r",
+  "reportedAt": "2026-10-23T17:15:33.073Z",
+  "gitHead": "735b16a0aad15c33747fedb5c0d71d17308a9dd3",
+  "dirtyFilesUnderSrcTools": 0,
+  "simulationVersion": "moba-sim.v21",
+  "fingerprint": "2ae772222d157170",
+  "batchStartedUnder": {
+    "study": "phase-options-c5r",
+    "registration": "tools/fixtures/phase_options_registration_c5r.json",
+    "startedAt": "2026-10-23T12:16:02.465Z",
+    "gitHead": "735b16a0aad15c33747fedb5c0d71d17308a9dd3",
+    "dirtyFilesUnderSrcTools": 0,
+    "simulationVersion": "moba-sim.v21",
+    "fingerprint": "2ae772222d157170"
+  },
+  "stale": [],
+  "complete": true,
+  "finishedMatches": 10000,
+  "erroredMatches": 0,
+  "erroredSeeds": [],
+  "instrumentMismatch": 0,
+  "rules": {
+    "minZ": 3,
+    "minRel": 0.05,
+    "minValidPairs": 200,
+    "text": "per claim per side: paired over seeds (treatment arm vs control, same side). OK = sign matches direction AND z in the direction >= 3 AND |rel| >= 5 %. ganksOwnPerMin is defined (0 allowed) whenever the phase lasted >= 60 s in the match; valid pairs < 200 on either side => unmeasurable (no fallback registered). Guard: ganksPerMin.<p> (team total) of the same side must not fall (z <= -3 AND |rel| >= 5 % on either side => guard_failed); a guard with < 200 valid pairs on either side makes the option unmeasurable. A strong-side option needs BOTH phase claims and BOTH guards on BOTH sides. Red/blue symmetry = both sides must pass (one side alone stays design) plus the control symmetry check below. Precedence: unmeasurable > reversed > guard_failed > confirmed > one_sided > insufficient. Same thresholds and precedence as the approved C5 registration; only the claim metric changed (share -> focus-lane count, per Owner)."
+  },
+  "rows": [
+    {
+      "id": "focusTopEarly",
+      "dimension": "phases.early.focusLane",
+      "choice": "top",
+      "phase": "early",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.top.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.02721584984358709,
+            "meanB": 0.0819603753910323,
+            "diff": 0.05474452554744527,
+            "sd": 0.08507477407516573,
+            "z": 12.869743385760177,
+            "rel": 2.0114942528735624
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.031282586027111606,
+            "meanB": 0.08196037539103228,
+            "diff": 0.050677789363920776,
+            "sd": 0.07883881182617143,
+            "z": 12.85605102107785,
+            "rel": 1.6199999999999992
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.top.early",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 12.869743385760177,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 12.85605102107785,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2496350364963506,
+            "diff": 0.037226277372262806,
+            "sd": 0.08671038410570557,
+            "z": 8.586348164916803,
+            "rel": 0.1752577319587629
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2552659019812307,
+            "diff": 0.03879040667361838,
+            "sd": 0.09614505757851236,
+            "z": 8.06914211725174,
+            "rel": 0.17919075144508667
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 8.586348164916803,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 8.06914211725174,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2496350364963506,
+            "diff": 0.037226277372262806,
+            "sd": 0.08671038410570557,
+            "z": 8.586348164916803,
+            "rel": 0.1752577319587629
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2552659019812307,
+            "diff": 0.03879040667361838,
+            "sd": 0.09614505757851236,
+            "z": 8.06914211725174,
+            "rel": 0.17919075144508667
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusMidEarly",
+      "dimension": "phases.early.focusLane",
+      "choice": "mid",
+      "phase": "early",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.mid.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.0181438998957247,
+            "meanB": 0.06381647549530763,
+            "diff": 0.045672575599582946,
+            "sd": 0.0803963208312976,
+            "z": 11.361857141552926,
+            "rel": 2.517241379310349
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.013138686131386855,
+            "meanB": 0.04160583941605846,
+            "diff": 0.028467153284671542,
+            "sd": 0.06273663850530697,
+            "z": 9.0751286530162,
+            "rel": 2.1666666666666683
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.mid.early",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 11.361857141552926,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 9.0751286530162,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2465067778936394,
+            "diff": 0.03409801876955163,
+            "sd": 0.08843559792584807,
+            "z": 7.7113785781473,
+            "rel": 0.16053019145802647
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2424400417101148,
+            "diff": 0.025964546402502616,
+            "sd": 0.06855889562086956,
+            "z": 7.574377086260684,
+            "rel": 0.11994219653179183
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 7.7113785781473,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 7.574377086260684,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2465067778936394,
+            "diff": 0.03409801876955163,
+            "sd": 0.08843559792584807,
+            "z": 7.7113785781473,
+            "rel": 0.16053019145802647
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2424400417101148,
+            "diff": 0.025964546402502616,
+            "sd": 0.06855889562086956,
+            "z": 7.574377086260684,
+            "rel": 0.11994219653179183
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusBotEarly",
+      "dimension": "phases.early.focusLane",
+      "choice": "bot",
+      "phase": "early",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.bot.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.16704900938477607,
+            "meanB": 0.35849843587069846,
+            "diff": 0.19144942648592303,
+            "sd": 0.16307061456290423,
+            "z": 23.480554972958874,
+            "rel": 1.1460674157303365
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.17205422314911398,
+            "meanB": 0.36976016684045865,
+            "diff": 0.1977059436913454,
+            "sd": 0.16802483640806887,
+            "z": 23.532942857470466,
+            "rel": 1.1490909090909083
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.bot.early",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 23.480554972958874,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 23.532942857470466,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.39666319082377444,
+            "diff": 0.18425443169968736,
+            "sd": 0.16451500572682165,
+            "z": 22.399711307264354,
+            "rel": 0.8674521354933729
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.4032325338894681,
+            "diff": 0.18675703858185613,
+            "sd": 0.17109568439624648,
+            "z": 21.830712941810848,
+            "rel": 0.8627167630057796
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 22.399711307264354,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 21.830712941810848,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.39666319082377444,
+            "diff": 0.18425443169968736,
+            "sd": 0.16451500572682165,
+            "z": 22.399711307264354,
+            "rel": 0.8674521354933729
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.4032325338894681,
+            "diff": 0.18675703858185613,
+            "sd": 0.17109568439624648,
+            "z": 21.830712941810848,
+            "rel": 0.8627167630057796
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusTopMid",
+      "dimension": "phases.mid.focusLane",
+      "choice": "top",
+      "phase": "mid",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.top.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.0810937791062933,
+            "meanB": 0.16173826463985466,
+            "diff": 0.0806444855335613,
+            "sd": 0.12599226631739743,
+            "z": 12.801497725329135,
+            "rel": 0.9944595802824395
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.08266630884722215,
+            "meanB": 0.160488290937082,
+            "diff": 0.0778219820898598,
+            "sd": 0.12992334248083773,
+            "z": 11.9796767238093,
+            "rel": 0.941399019444363
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.top.mid",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 12.801497725329135,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 11.9796767238093,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3260703395930418,
+            "diff": 0.0750167698769413,
+            "sd": 0.13627751165009863,
+            "z": 11.009412920534054,
+            "rel": 0.2988078200273059
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3313795479902393,
+            "diff": 0.05774183988878437,
+            "sd": 0.13990655039485503,
+            "z": 8.254344021179982,
+            "rel": 0.2110156538344334
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 11.009412920534054,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 8.254344021179982,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3260703395930418,
+            "diff": 0.0750167698769413,
+            "sd": 0.13627751165009863,
+            "z": 11.009412920534054,
+            "rel": 0.2988078200273059
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3313795479902393,
+            "diff": 0.05774183988878437,
+            "sd": 0.13990655039485503,
+            "z": 8.254344021179982,
+            "rel": 0.2110156538344334
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusMidMid",
+      "dimension": "phases.mid.focusLane",
+      "choice": "mid",
+      "phase": "mid",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.mid.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.05472476388695906,
+            "meanB": 0.1147211349151637,
+            "diff": 0.05999637102820461,
+            "sd": 0.09816862852697447,
+            "z": 12.223125030562896,
+            "rel": 1.0963294634241771
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.055667586495410676,
+            "meanB": 0.12650800614583413,
+            "diff": 0.07084041965042344,
+            "sd": 0.10331167505069969,
+            "z": 13.713923351965565,
+            "rel": 1.272561361291703
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.mid.mid",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 12.223125030562896,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 13.713923351965565,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.30667189219411833,
+            "diff": 0.05561832247801775,
+            "sd": 0.12254679111781853,
+            "z": 9.07707529029387,
+            "rel": 0.22153966000528377
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3282158178029806,
+            "diff": 0.054578109701525615,
+            "sd": 0.1224191979624734,
+            "z": 8.91659324843087,
+            "rel": 0.19945390597004273
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 9.07707529029387,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 8.91659324843087,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.30667189219411833,
+            "diff": 0.05561832247801775,
+            "sd": 0.12254679111781853,
+            "z": 9.07707529029387,
+            "rel": 0.22153966000528377
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3282158178029806,
+            "diff": 0.054578109701525615,
+            "sd": 0.1224191979624734,
+            "z": 8.91659324843087,
+            "rel": 0.19945390597004273
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusBotMid",
+      "dimension": "phases.mid.focusLane",
+      "choice": "bot",
+      "phase": "mid",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.bot.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.11523502672284815,
+            "meanB": 0.2391292322032504,
+            "diff": 0.12389420548040221,
+            "sd": 0.15656334337242617,
+            "z": 15.826719436578202,
+            "rel": 1.0751436347420673
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.13530381275882217,
+            "meanB": 0.2417601709440339,
+            "diff": 0.10645635818521187,
+            "sd": 0.14341937893910284,
+            "z": 14.845463559065363,
+            "rel": 0.7867949617574294
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.bot.mid",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 15.826719436578202,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 14.845463559065363,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3606122184839267,
+            "diff": 0.10955864876782603,
+            "sd": 0.15952760828013737,
+            "z": 13.73538410673547,
+            "rel": 0.43639550272763866
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3715256918800782,
+            "diff": 0.09788798377862337,
+            "sd": 0.16571370841752814,
+            "z": 11.81410816442382,
+            "rel": 0.35772841564047164
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 13.73538410673547,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 11.81410816442382,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3606122184839267,
+            "diff": 0.10955864876782603,
+            "sd": 0.15952760828013737,
+            "z": 13.73538410673547,
+            "rel": 0.43639550272763866
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3715256918800782,
+            "diff": 0.09788798377862337,
+            "sd": 0.16571370841752814,
+            "z": 11.81410816442382,
+            "rel": 0.35772841564047164
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusTopLate",
+      "dimension": "phases.late.focusLane",
+      "choice": "top",
+      "phase": "late",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.top.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.09313226857351029,
+            "meanB": 0.16851808410385785,
+            "diff": 0.07538581553034761,
+            "sd": 0.15417529302393548,
+            "z": 7.447642942251553,
+            "rel": 0.8094489341344111
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.08143381126011398,
+            "meanB": 0.15079908921192978,
+            "diff": 0.06936527795181573,
+            "sd": 0.15475670844651354,
+            "z": 6.827105895558535,
+            "rel": 0.8517994783548909
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.top.late",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 7.447642942251553,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 6.827105895558535,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.2118325143414227,
+            "meanB": 0.28637199907605543,
+            "diff": 0.07453948473463268,
+            "sd": 0.1645625597627497,
+            "z": 6.899209686399978,
+            "rel": 0.3518793371563965
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.20941470090022304,
+            "meanB": 0.2693476829124323,
+            "diff": 0.05993298201220916,
+            "sd": 0.14651111940275063,
+            "z": 6.230735174551382,
+            "rel": 0.28619281146247993
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 6.899209686399978,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 6.230735174551382,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.2118325143414227,
+            "meanB": 0.28637199907605543,
+            "diff": 0.07453948473463268,
+            "sd": 0.1645625597627497,
+            "z": 6.899209686399978,
+            "rel": 0.3518793371563965
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.20941470090022304,
+            "meanB": 0.2693476829124323,
+            "diff": 0.05993298201220916,
+            "sd": 0.14651111940275063,
+            "z": 6.230735174551382,
+            "rel": 0.28619281146247993
+          }
+        },
+        {
+          "metric": "gankShare.top.late",
+          "blue": {
+            "n": 152,
+            "meanA": 0.4643640350877193,
+            "meanB": 0.5723684210526314,
+            "diff": 0.10800438596491228,
+            "sd": 0.27313465558887406,
+            "z": 4.875131995160056,
+            "rel": 0.23258559622195987
+          },
+          "red": {
+            "n": 155,
+            "meanA": 0.38118279569892477,
+            "meanB": 0.4950537634408601,
+            "diff": 0.11387096774193547,
+            "sd": 0.2953024433121295,
+            "z": 4.800780175104902,
+            "rel": 0.29873060648801125
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusMidLate",
+      "dimension": "phases.late.focusLane",
+      "choice": "mid",
+      "phase": "late",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.mid.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.029896115942235138,
+            "meanB": 0.053733576761288156,
+            "diff": 0.023837460819053004,
+            "sd": 0.08047950501857813,
+            "z": 4.511476380872898,
+            "rel": 0.7973430684143524
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.028129082832421107,
+            "meanB": 0.053001562692759664,
+            "diff": 0.02487247986033855,
+            "sd": 0.07779107628555781,
+            "z": 4.870048654454087,
+            "rel": 0.8842264786419182
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.mid.late",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 4.511476380872898,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 4.870048654454087,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.2118325143414227,
+            "meanB": 0.23100076307198883,
+            "diff": 0.019168248730566082,
+            "sd": 0.08743301409080496,
+            "z": 3.339265715285629,
+            "rel": 0.0904877553389727
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.20941470090022304,
+            "meanB": 0.23474080083357196,
+            "diff": 0.025326099933348886,
+            "sd": 0.10229569019246527,
+            "z": 3.7709864489095914,
+            "rel": 0.12093754557095619
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 3.339265715285629,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 3.7709864489095914,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.2118325143414227,
+            "meanB": 0.23100076307198883,
+            "diff": 0.019168248730566082,
+            "sd": 0.08743301409080496,
+            "z": 3.339265715285629,
+            "rel": 0.0904877553389727
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.20941470090022304,
+            "meanB": 0.23474080083357196,
+            "diff": 0.025326099933348886,
+            "sd": 0.10229569019246527,
+            "z": 3.7709864489095914,
+            "rel": 0.12093754557095619
+          }
+        },
+        {
+          "metric": "gankShare.mid.late",
+          "blue": {
+            "n": 152,
+            "meanA": 0.12883771929824558,
+            "meanB": 0.20339912280701752,
+            "diff": 0.07456140350877194,
+            "sd": 0.22433736427781023,
+            "z": 4.097644289885747,
+            "rel": 0.5787234042553193
+          },
+          "red": {
+            "n": 155,
+            "meanA": 0.12903225806451613,
+            "meanB": 0.18161290322580645,
+            "diff": 0.05258064516129032,
+            "sd": 0.17093181023420378,
+            "z": 3.8297362682732827,
+            "rel": 0.4075
+          }
+        }
+      ]
+    },
+    {
+      "id": "focusBotLate",
+      "dimension": "phases.late.focusLane",
+      "choice": "bot",
+      "phase": "late",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.bot.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.08880412982567727,
+            "meanB": 0.1712590840326761,
+            "diff": 0.08245495420699885,
+            "sd": 0.16662667744886364,
+            "z": 7.537307138439668,
+            "rel": 0.928503599650806
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.09985180680768792,
+            "meanB": 0.16906445519132024,
+            "diff": 0.06921264838363234,
+            "sd": 0.17705112245200594,
+            "z": 5.9543008691014405,
+            "rel": 0.6931536904177825
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.bot.late",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 7.537307138439668,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 5.9543008691014405,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.2118325143414227,
+            "meanB": 0.28144655963865867,
+            "diff": 0.06961404529723612,
+            "sd": 0.168246107389259,
+            "z": 6.302253076660828,
+            "rel": 0.32862776289873585
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.20941470090022304,
+            "meanB": 0.27563610327516314,
+            "diff": 0.06622140237494008,
+            "sd": 0.1841417757967175,
+            "z": 5.477596521024221,
+            "rel": 0.31622136406981133
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 6.302253076660828,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 5.477596521024221,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.late",
+          "blue": {
+            "n": 232,
+            "meanA": 0.2118325143414227,
+            "meanB": 0.28144655963865867,
+            "diff": 0.06961404529723612,
+            "sd": 0.168246107389259,
+            "z": 6.302253076660828,
+            "rel": 0.32862776289873585
+          },
+          "red": {
+            "n": 232,
+            "meanA": 0.20941470090022304,
+            "meanB": 0.27563610327516314,
+            "diff": 0.06622140237494008,
+            "sd": 0.1841417757967175,
+            "z": 5.477596521024221,
+            "rel": 0.31622136406981133
+          }
+        },
+        {
+          "metric": "gankShare.bot.late",
+          "blue": {
+            "n": 152,
+            "meanA": 0.40679824561403505,
+            "meanB": 0.536951754385965,
+            "diff": 0.1301535087719298,
+            "sd": 0.27546691616377217,
+            "z": 5.825164946720713,
+            "rel": 0.31994609164420484
+          },
+          "red": {
+            "n": 155,
+            "meanA": 0.4897849462365591,
+            "meanB": 0.5697849462365591,
+            "diff": 0.08,
+            "sd": 0.24612729141369827,
+            "z": 4.04665391683446,
+            "rel": 0.16333699231613613
+          }
+        }
+      ]
+    },
+    {
+      "id": "strongSideTop",
+      "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+      "choice": "top",
+      "phase": "early+mid",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.top.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.02721584984358709,
+            "meanB": 0.0819603753910323,
+            "diff": 0.05474452554744527,
+            "sd": 0.08507477407516573,
+            "z": 12.869743385760177,
+            "rel": 2.0114942528735624
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.031282586027111606,
+            "meanB": 0.08196037539103228,
+            "diff": 0.050677789363920776,
+            "sd": 0.07883881182617143,
+            "z": 12.85605102107785,
+            "rel": 1.6199999999999992
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.top.early",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 12.869743385760177,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 12.85605102107785,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        },
+        {
+          "metric": "ganksOwnPerMin.top.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.0810937791062933,
+            "meanB": 0.16046377110672208,
+            "diff": 0.07936999200042873,
+            "sd": 0.1343453696906548,
+            "z": 11.815813553260076,
+            "rel": 0.9787432880196011
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.08266630884722215,
+            "meanB": 0.15447656122926737,
+            "diff": 0.0718102523820452,
+            "sd": 0.1440928953963531,
+            "z": 9.967216244009583,
+            "rel": 0.8686761678782547
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.top.mid",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 11.815813553260076,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 9.967216244009583,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2496350364963506,
+            "diff": 0.037226277372262806,
+            "sd": 0.08671038410570557,
+            "z": 8.586348164916803,
+            "rel": 0.1752577319587629
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2552659019812307,
+            "diff": 0.03879040667361838,
+            "sd": 0.09614505757851236,
+            "z": 8.06914211725174,
+            "rel": 0.17919075144508667
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 8.586348164916803,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 8.06914211725174,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.33005066855628806,
+            "diff": 0.07899709884018755,
+            "sd": 0.16505041957987235,
+            "z": 9.572480826316072,
+            "rel": 0.3146623205936485
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3284181262630696,
+            "diff": 0.05478041816161474,
+            "sd": 0.17982568265236967,
+            "z": 6.092613396887651,
+            "rel": 0.20019323558032479
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 9.572480826316072,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 6.092613396887651,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2496350364963506,
+            "diff": 0.037226277372262806,
+            "sd": 0.08671038410570557,
+            "z": 8.586348164916803,
+            "rel": 0.1752577319587629
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2552659019812307,
+            "diff": 0.03879040667361838,
+            "sd": 0.09614505757851236,
+            "z": 8.06914211725174,
+            "rel": 0.17919075144508667
+          }
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.33005066855628806,
+            "diff": 0.07899709884018755,
+            "sd": 0.16505041957987235,
+            "z": 9.572480826316072,
+            "rel": 0.3146623205936485
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3284181262630696,
+            "diff": 0.05478041816161474,
+            "sd": 0.17982568265236967,
+            "z": 6.092613396887651,
+            "rel": 0.20019323558032479
+          }
+        },
+        {
+          "metric": "gankShare.top.late",
+          "blue": {
+            "n": 103,
+            "meanA": 0.465210355987055,
+            "meanB": 0.4320388349514563,
+            "diff": -0.03317152103559869,
+            "sd": 0.456635268860229,
+            "z": -0.7372496015907015,
+            "rel": -0.07130434782608693
+          },
+          "red": {
+            "n": 96,
+            "meanA": 0.3819444444444446,
+            "meanB": 0.4109375,
+            "diff": 0.02899305555555555,
+            "sd": 0.37970629455765653,
+            "z": 0.7481381606065779,
+            "rel": 0.07590909090909087
+          }
+        }
+      ]
+    },
+    {
+      "id": "strongSideMid",
+      "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+      "choice": "mid",
+      "phase": "early+mid",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.mid.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.0181438998957247,
+            "meanB": 0.06381647549530763,
+            "diff": 0.045672575599582946,
+            "sd": 0.0803963208312976,
+            "z": 11.361857141552926,
+            "rel": 2.517241379310349
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.013138686131386855,
+            "meanB": 0.04160583941605846,
+            "diff": 0.028467153284671542,
+            "sd": 0.06273663850530697,
+            "z": 9.0751286530162,
+            "rel": 2.1666666666666683
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.mid.early",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 11.361857141552926,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 9.0751286530162,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        },
+        {
+          "metric": "ganksOwnPerMin.mid.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.05472476388695906,
+            "meanB": 0.11294464765250091,
+            "diff": 0.058219883765541845,
+            "sd": 0.11352538727136094,
+            "z": 10.256716169816404,
+            "rel": 1.06386724455865
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.055667586495410676,
+            "meanB": 0.12282128650168771,
+            "diff": 0.06715370000627702,
+            "sd": 0.12114385086690538,
+            "z": 11.086604813323193,
+            "rel": 1.206333959023233
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.mid.mid",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 10.256716169816404,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 11.086604813323193,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2465067778936394,
+            "diff": 0.03409801876955163,
+            "sd": 0.08843559792584807,
+            "z": 7.7113785781473,
+            "rel": 0.16053019145802647
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2424400417101148,
+            "diff": 0.025964546402502616,
+            "sd": 0.06855889562086956,
+            "z": 7.574377086260684,
+            "rel": 0.11994219653179183
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 7.7113785781473,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 7.574377086260684,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3069255916143644,
+            "diff": 0.05587202189826376,
+            "sd": 0.15649652154573665,
+            "z": 7.140353197171218,
+            "rel": 0.22255019899316955
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.31651856884160084,
+            "diff": 0.04288086074014586,
+            "sd": 0.15501719179070128,
+            "z": 5.532400664055646,
+            "rel": 0.15670669454754815
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 7.140353197171218,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 5.532400664055646,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.2465067778936394,
+            "diff": 0.03409801876955163,
+            "sd": 0.08843559792584807,
+            "z": 7.7113785781473,
+            "rel": 0.16053019145802647
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.2424400417101148,
+            "diff": 0.025964546402502616,
+            "sd": 0.06855889562086956,
+            "z": 7.574377086260684,
+            "rel": 0.11994219653179183
+          }
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3069255916143644,
+            "diff": 0.05587202189826376,
+            "sd": 0.15649652154573665,
+            "z": 7.140353197171218,
+            "rel": 0.22255019899316955
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.31651856884160084,
+            "diff": 0.04288086074014586,
+            "sd": 0.15501719179070128,
+            "z": 5.532400664055646,
+            "rel": 0.15670669454754815
+          }
+        },
+        {
+          "metric": "gankShare.mid.late",
+          "blue": {
+            "n": 117,
+            "meanA": 0.1260683760683761,
+            "meanB": 0.14102564102564102,
+            "diff": 0.014957264957264956,
+            "sd": 0.29434634881748883,
+            "z": 0.5496502942276202,
+            "rel": 0.11864406779661014
+          },
+          "red": {
+            "n": 118,
+            "meanA": 0.1327683615819209,
+            "meanB": 0.14689265536723164,
+            "diff": 0.014124293785310726,
+            "sd": 0.2868818108609679,
+            "z": 0.5348164197743803,
+            "rel": 0.10638297872340419
+          }
+        }
+      ]
+    },
+    {
+      "id": "strongSideBot",
+      "dimension": "quick.strongSide (phases.early.focusLane + phases.mid.focusLane)",
+      "choice": "bot",
+      "phase": "early+mid",
+      "verdict": "confirmed",
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.bot.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.16704900938477607,
+            "meanB": 0.35849843587069846,
+            "diff": 0.19144942648592303,
+            "sd": 0.16307061456290423,
+            "z": 23.480554972958874,
+            "rel": 1.1460674157303365
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.17205422314911398,
+            "meanB": 0.36976016684045865,
+            "diff": 0.1977059436913454,
+            "sd": 0.16802483640806887,
+            "z": 23.532942857470466,
+            "rel": 1.1490909090909083
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.bot.early",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 23.480554972958874,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 23.532942857470466,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        },
+        {
+          "metric": "ganksOwnPerMin.bot.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.11523502672284815,
+            "meanB": 0.24680894172249473,
+            "diff": 0.13157391499964655,
+            "sd": 0.17538589366732624,
+            "z": 15.003933583075648,
+            "rel": 1.1417875167078764
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.13530381275882217,
+            "meanB": 0.23967760831150187,
+            "diff": 0.10437379555267977,
+            "sd": 0.19409659972781956,
+            "z": 10.754829883577816,
+            "rel": 0.7714032104825096
+          },
+          "direction": "up",
+          "registeredMetric": "ganksOwnPerMin.bot.mid",
+          "usedFallback": false,
+          "ok": {
+            "blue": {
+              "zDir": 15.003933583075648,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 10.754829883577816,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.39666319082377444,
+            "diff": 0.18425443169968736,
+            "sd": 0.16451500572682165,
+            "z": 22.399711307264354,
+            "rel": 0.8674521354933729
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.4032325338894681,
+            "diff": 0.18675703858185613,
+            "sd": 0.17109568439624648,
+            "z": 21.830712941810848,
+            "rel": 0.8627167630057796
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 22.399711307264354,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 21.830712941810848,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3689231033980727,
+            "diff": 0.11786953368197224,
+            "sd": 0.20182428540533734,
+            "z": 11.680411348440739,
+            "rel": 0.46949953277008905
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3642295636652578,
+            "diff": 0.09059185556380277,
+            "sd": 0.21913570426947726,
+            "z": 8.268105452354714,
+            "rel": 0.3310649551640542
+          },
+          "direction": "up",
+          "ok": {
+            "blue": {
+              "zDir": 11.680411348440739,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            },
+            "red": {
+              "zDir": 8.268105452354714,
+              "ok": true,
+              "reversed": false,
+              "harmful": false
+            }
+          }
+        }
+      ],
+      "reported": [
+        {
+          "metric": "ganksPerMin.early",
+          "blue": {
+            "n": 400,
+            "meanA": 0.21240875912408774,
+            "meanB": 0.39666319082377444,
+            "diff": 0.18425443169968736,
+            "sd": 0.16451500572682165,
+            "z": 22.399711307264354,
+            "rel": 0.8674521354933729
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.21647549530761231,
+            "meanB": 0.4032325338894681,
+            "diff": 0.18675703858185613,
+            "sd": 0.17109568439624648,
+            "z": 21.830712941810848,
+            "rel": 0.8627167630057796
+          }
+        },
+        {
+          "metric": "ganksPerMin.mid",
+          "blue": {
+            "n": 400,
+            "meanA": 0.25105356971610066,
+            "meanB": 0.3689231033980727,
+            "diff": 0.11786953368197224,
+            "sd": 0.20182428540533734,
+            "z": 11.680411348440739,
+            "rel": 0.46949953277008905
+          },
+          "red": {
+            "n": 400,
+            "meanA": 0.27363770810145505,
+            "meanB": 0.3642295636652578,
+            "diff": 0.09059185556380277,
+            "sd": 0.21913570426947726,
+            "z": 8.268105452354714,
+            "rel": 0.3310649551640542
+          }
+        },
+        {
+          "metric": "gankShare.bot.late",
+          "blue": {
+            "n": 78,
+            "meanA": 0.41880341880341876,
+            "meanB": 0.5096153846153845,
+            "diff": 0.09081196581196582,
+            "sd": 0.5989989691558448,
+            "z": 1.3389498265459516,
+            "rel": 0.2168367346938776
+          },
+          "red": {
+            "n": 74,
+            "meanA": 0.4605855855855856,
+            "meanB": 0.375,
+            "diff": -0.0855855855855856,
+            "sd": 0.5722151430152154,
+            "z": -1.2866402687248448,
+            "rel": -0.1858190709046455
+          }
+        }
+      ]
+    }
+  ],
+  "controlSymmetry": [
+    {
+      "metric": "gankShare.top.early",
+      "blue": 0.13965686274509806,
+      "red": 0.16817738791423004,
+      "diff": 0.028520525169131977,
+      "ok": true
+    },
+    {
+      "metric": "gankShare.mid.early",
+      "blue": 0.08416666666666665,
+      "red": 0.05930799220272904,
+      "diff": -0.024858674463937615,
+      "ok": true
+    },
+    {
+      "metric": "gankShare.bot.early",
+      "blue": 0.7761764705882352,
+      "red": 0.7725146198830409,
+      "diff": -0.003661850705194314,
+      "ok": true
+    },
+    {
+      "metric": "gankShare.top.mid",
+      "blue": 0.31460622710622693,
+      "red": 0.2940217391304347,
+      "diff": -0.02058448797579221,
+      "ok": true
+    },
+    {
+      "metric": "gankShare.mid.mid",
+      "blue": 0.21094322344322344,
+      "red": 0.18881340579710149,
+      "diff": -0.022129817646121958,
+      "ok": true
+    },
+    {
+      "metric": "gankShare.bot.mid",
+      "blue": 0.4744505494505492,
+      "red": 0.5171648550724638,
+      "diff": 0.04271430562191458,
+      "ok": true
+    }
+  ],
+  "sideAsymmetry": [
+    {
+      "id": "focusTopEarly",
+      "metric": "ganksOwnPerMin.top.early",
+      "n": 400,
+      "diff": 0.004066736183524505,
+      "sd": 0.11355208199924749,
+      "z": 0.7162768153474202,
+      "flagged": false
+    },
+    {
+      "id": "focusMidEarly",
+      "metric": "ganksOwnPerMin.mid.early",
+      "n": 400,
+      "diff": 0.01720542231491136,
+      "sd": 0.10051065326659792,
+      "z": 3.423601728918248,
+      "flagged": true
+    },
+    {
+      "id": "focusBotEarly",
+      "metric": "ganksOwnPerMin.bot.early",
+      "n": 400,
+      "diff": -0.0062565172054223125,
+      "sd": 0.2415637012653139,
+      "z": -0.5180014358656199,
+      "flagged": false
+    },
+    {
+      "id": "focusTopMid",
+      "metric": "ganksOwnPerMin.top.mid",
+      "n": 400,
+      "diff": 0.002822503443701516,
+      "sd": 0.18195951005596167,
+      "z": 0.3102342320919038,
+      "flagged": false
+    },
+    {
+      "id": "focusMidMid",
+      "metric": "ganksOwnPerMin.mid.mid",
+      "n": 400,
+      "diff": -0.010844048622218803,
+      "sd": 0.1412737485162885,
+      "z": -1.535182400992002,
+      "flagged": false
+    },
+    {
+      "id": "focusBotMid",
+      "metric": "ganksOwnPerMin.bot.mid",
+      "n": 400,
+      "diff": 0.017437847295190313,
+      "sd": 0.2232301252644328,
+      "z": 1.5623202535530432,
+      "flagged": false
+    },
+    {
+      "id": "focusTopLate",
+      "metric": "ganksOwnPerMin.top.late",
+      "n": 232,
+      "diff": 0.006020537578531887,
+      "sd": 0.22454743864734278,
+      "z": 0.40838629422477046,
+      "flagged": false
+    },
+    {
+      "id": "focusMidLate",
+      "metric": "ganksOwnPerMin.mid.late",
+      "n": 232,
+      "diff": -0.001035019041285553,
+      "sd": 0.11427871460757377,
+      "z": -0.1379516772786164,
+      "flagged": false
+    },
+    {
+      "id": "focusBotLate",
+      "metric": "ganksOwnPerMin.bot.late",
+      "n": 232,
+      "diff": 0.013242305823366517,
+      "sd": 0.24402383011602005,
+      "z": 0.8265618689885399,
+      "flagged": false
+    },
+    {
+      "id": "strongSideTop",
+      "metric": "ganksOwnPerMin.top.early",
+      "n": 400,
+      "diff": 0.004066736183524505,
+      "sd": 0.11355208199924749,
+      "z": 0.7162768153474202,
+      "flagged": false
+    },
+    {
+      "id": "strongSideTop",
+      "metric": "ganksOwnPerMin.top.mid",
+      "n": 400,
+      "diff": 0.007559739618383532,
+      "sd": 0.19977639847135925,
+      "z": 0.756820092486283,
+      "flagged": false
+    },
+    {
+      "id": "strongSideMid",
+      "metric": "ganksOwnPerMin.mid.early",
+      "n": 400,
+      "diff": 0.01720542231491136,
+      "sd": 0.10051065326659792,
+      "z": 3.423601728918248,
+      "flagged": true
+    },
+    {
+      "id": "strongSideMid",
+      "metric": "ganksOwnPerMin.mid.mid",
+      "n": 400,
+      "diff": -0.008933816240735179,
+      "sd": 0.1632554573308778,
+      "z": -1.0944585114393546,
+      "flagged": false
+    },
+    {
+      "id": "strongSideBot",
+      "metric": "ganksOwnPerMin.bot.early",
+      "n": 400,
+      "diff": -0.0062565172054223125,
+      "sd": 0.2415637012653139,
+      "z": -0.5180014358656199,
+      "flagged": false
+    },
+    {
+      "id": "strongSideBot",
+      "metric": "ganksOwnPerMin.bot.mid",
+      "n": 400,
+      "diff": 0.027200119446966826,
+      "sd": 0.2623775355588755,
+      "z": 2.073357338998508,
+      "flagged": false
+    }
+  ],
+  "flags": [
+    "SIDE_ASYMMETRY (|z| >= 3): focusMidEarly ganksOwnPerMin.mid.early blue−red 0.017 z 3.42, strongSideMid ganksOwnPerMin.mid.early blue−red 0.017 z 3.42 — document before any promotion",
+    "OWNER_DECISION: confirmed focusTopEarly, focusMidEarly, focusBotEarly, focusTopMid, focusMidMid, focusBotMid, focusTopLate, focusMidLate, focusBotLate, strongSideTop, strongSideMid, strongSideBot — promotion to live follows the Registry/truth-table rules, Owner decides"
+  ],
+  "summary": {
+    "focusTopEarly": "confirmed",
+    "focusMidEarly": "confirmed",
+    "focusBotEarly": "confirmed",
+    "focusTopMid": "confirmed",
+    "focusMidMid": "confirmed",
+    "focusBotMid": "confirmed",
+    "focusTopLate": "confirmed",
+    "focusMidLate": "confirmed",
+    "focusBotLate": "confirmed",
+    "strongSideTop": "confirmed",
+    "strongSideMid": "confirmed",
+    "strongSideBot": "confirmed"
+  }
+}

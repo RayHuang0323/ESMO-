@@ -26146,3 +26146,709 @@ Owner 授權與串行 Release Gate 見 review/cs-major-upgrade/RELEASE_V1.md。�
 Owner人工驗收完成且明確授權正常main push／Pages／正式站Smoke。保存75044c9c，隔離整合最新main 1d0e219a，產品release a8438c9a正常fast-forward push，Pages39074829702 build/deploy success。MOBA／SeasonState來源保留main，其他worktree與未提交內容保留，未force push或刪鎖。
 
 三圖六場116回合45安包15拆彈、輸出與Owner版一致；12段CS CPU、五項H規則、4229幀全欄Replay與Result、Competition完成。新本機及線上桌機／390各63/63，正式站MOBA11/11、HTTP64/64匹配精確CI artifact。首輪缺report與本機缺省env比對失敗均保留；補工具參數與按CI三空env重build後有效PASS，沒有改產品或斷言。MOBA progress25 32/33、controls29b3 16/18為main已知工具債務，具名CSREL-1／2，未洗綠。詳細來源／native／風險／最新SHA見review/cs-major-upgrade/RELEASE_V1.md及本機final-closure.json。真手機、長時卡頓與長OT容量仍保留，不開始下一Sprint。
+
+## 2026-10-14 Phase 3a-A（教練戰術系統：架構）— 驗收未跑完，等 Owner Review（owner: Claude，local commit，未 push／deploy／整合 main）
+
+分支 `feature/moba-phase3a`（從 v20 `1d0e219` 分出，本節之前 57 個提交）。本節補記整個 3a-A；先前 T0–T13 的過程只寫在 `08_目前待辦與風險.md`。
+給 Owner 的總結：`review/tactic-book-3a/3a-A驗收總結.md`（五項驗收）、《戰術能力缺口》、《模板行為分群》。
+
+**狀態：3a-A 的架構項目已實作；T14 全套驗收沒有跑完；T13 未驗收；「戰術產品完整」未達成。3a-B 未開始。是否算完成、是否發布由 Owner 決定。**
+
+**完成項（已提交）**
+- T0–T7：v20 黃金基準 39 案；`MatchRuleset.v1`、`MatchSetup.v1`、唯一組裝器 `assembleMatch`；Live／Challenge／balance runner 全部改走同一支組裝器（與 v20 逐位元相同）；跨模式一致 gate；`moba-sim.v21` 未發布候選指紋。
+- T8–T9：`TacticPlan.v2`（只記選擇）、21 個模板與覆蓋層、`tacticResolver.v1`（與 v20 投影等價）。
+- T10：Capability Registry（48 維度：18 live、30 design）＋真實性 gate G-A7（91 列、`MEASURED_EXCLUSIONS` 30 筆）。
+- T11：戰術指標（計畫輪廓、席位適性、配合度負擔、矛盾提示）。
+- T12：戰術書存檔切片、binding 進本場設定。
+- T13（**未驗收**）：戰術書畫面骨架；`browser_check_tactic_book_3a` 30/30。三步驟／確認頁／對手情報／快速模式未做。
+- 追加量測（事前登記後才跑）：templates 1,260 場、replication 8,000 場、quickmode 5,600 場；結果 `1fbace0`、`7bd02ee`。
+- 本輪：複驗撤下清單 `REPLICATION_WITHHELD`（上路帶線、上路核心、下路進攻、風險謹慎；沒有調任何係數）＋ gate `check_tactic_replication_3a`（31 項）；矛盾提示不回報證據含被撤下選擇的規則（3 條）；`check_tactic_registry_3a` F4 改為明列例外；v21 候選指紋重新登記為 `a7d5b68e24d1f313`。實作 subagent＋獨立 reviewer 兩輪（第一輪要求修正：矛盾提示仍陳述沒站住的效果、F4 被靜默放寬；第二輪可合入）。
+
+**數字**
+- std 提供的非預設選項 12 → 8（畫面剩 5 個維度）；21 模板合計 393 → 322。
+- 322 個裡，在該模板自己身上用新 seeds 紅藍雙方複驗通過的只有 std 的 8 個（2.5%）；185 個是「改回標準值」、從未量過。
+- 18 個 live 維度：只有 5 個提供不同於標準的選擇；12 個只能改回標準值；1 個（`seats.b1.priority`）無任何可選項。
+- 模板：210 組兩兩比較 195 組量得出差別、15 組量不出；說明文字 93 條宣稱中相符 14、反向 5。
+
+**驗證（2026-10-14 實跑，撤下之後的程式）**
+- `npm run build` ✓ built in 25.25s；`regress` 結束率 15/15（平均 20.8 分）；`regress2` 節奏門檻 8/8。
+- 3a Node gate 16 支全過：ruleset 20、setup contract 85、match_setup 153（golden 39 案＝v20）、assembler 227、live_setup 119、challenge_setup 65、balance_runner 122、plan 219、resolver 136、registry 31、truth 25（未過期）、indicators 59、save 38、book_view 20、replication 31、simulation_version_gate 81。
+- `browser_check_tactic_book_3a` 30/30（變更後兩次）。
+- verify 以外的 MOBA／Replay／Challenge gate 76 支逐支跑：52 支通過、24 支沒通過。24 支在 v20 基準 worktree（`.sprints/v20-baseline-1d0e219`）逐支重跑對照：
+  - 與基準失敗項目完全相同 13 支：`check_moba_map`、`milestone_b1`／`b2`／`b_fix`／`c`／`c_fix`／`d_fix3`、`minions_h3`、`runtime_followup_baseline`、`runtime_map_h1` 61/5、`tail_rootcause_p0c`、`combat_credibility` 42/45、`lane_jungle_balance` 19/20。
+  - `items_m3`：基準 62/67、本分支 61/67；多的 G6 是「相對 HEAD 無改動」守衛（當時變更未提交）。提交 `d520116` 後重跑：62/67，失敗項目與基準完全相同。
+  - 範圍守衛被 3a 的預期改動觸發 2 支（**本分支才有**）：`combat_feedback` X3／X4（基準 50/50）、`online_foundation_v2a` X6／X7（基準 90/90）。整合 main 前逐條確認。
+  - 逾時（10 分上限）未完成 5 支：`cs_c5d_side_bias_audit`、`recovery29b4`、`result_layout`、`roam_quality`、`worldscale29b5`。`recovery29b4`（6 條）與 `worldscale29b5`（12 條）逾時前已印出失敗，含順序公平性位移 18pp（TD-21）；有的與基準紀錄相同、有的無基準對照 ⇒ 未驗證，不得因逾時當成沒有。
+  - 執行不完整 1 支：`camera_replay29b6` 12 條失敗——4 條與基準相同（7／8／10 速度／17）；6 條（18–23）是子驗證在記憶體告急時啟動失敗（exit 3221225794）；2 條（10 replay mapMeta fallback、15 戰報 safe area）基準 400 秒沒跑到那段，所讀的原始碼本分支未動，推定既有、未實測。
+  - 沒執行 2 支：`nav_chrome_h2close`、`runtime_flicker_h2`（需先起 dev server）。
+- 批次清單漏掉、事後補跑：`check_player_challenge_slice6` 30/30、`slice7` 35/35。
+- 原始 log：session scratchpad 的 `accept/`（不在 repo；`extra_out/summary.txt`、`base_out*/`、`nodegates_final/`）。
+
+**未完成項（欠的驗收）**
+- `node tools/verify.mjs` 全套（113 段）：01:20 啟動，前 17 段十幾秒內跑完後卡在第 18 段（`cs_matchup_acceptance_r57`），約 01:40 被 Claude Code 的記憶體保護整批中止（確切時刻未記錄），只跑 17 段（4 PASS、13 FAIL，13 支都是 CS 歷史 gate，未對照基準）。**沒有重跑**（保護機制要求等使用者指示）。原因之一是協調者把 verify 與 gate 批次同時跑。⇒ CS 保護、`runtime29`、`stats28` 等本輪沒有證據。
+- 其餘瀏覽器 gate 在變更後未重跑。變更前（`1fbace0`）：`live_assembly_parity_3a` 25/25、`exit_flush` 12/12、`moba_combat_feedback` 18/18、`moba_gameplay_presentation` 10/10、`challenge_manual_draft` 26/27（TD-3A-13，既有）。`moba_variant_prep` 連接埠被占（TD-3A-15）。
+- 上面 8 支逾時／無效／沒執行的 gate。
+- T13 三步驟／確認頁／對手情報；快速模式；3a-B（T15–T17）。
+
+**已知風險**
+- 戰術書很薄（見數字）；模板說明文字與實測不符的部分沒有處理；8 個模板的預設值就是被撤下的選擇。
+- 追加量測結果檔沒有引擎雜湊，過期無法機械偵測（TD-3A-11）。
+- 機器認可記憶體長期在 40／44.8 GB；長驗收只能單線跑，建議重開機後再跑 verify 全套。
+- 待 Owner 決定的 9 件事見驗收總結第 5 節與 `08_目前待辦與風險.md` 同日一節。
+
+## 2026-10-15 Phase 3a-A 最終驗收：113 段 verify、v20 基準對照、tactic24 修正（owner: Claude，local commit，未 push／deploy／整合 main）
+
+接續上一節「未完成項（欠的驗收）」。2026-10-14 重開機後單線跑完；過程與原始 log 在 `.superpowers/sdd/2026-10-09-moba-phase3a-foundation/progress.md`（2026-10-14 13:00、2026-10-15 00:45／01:10 三節）與同目錄 `checkpoints/2026-10-14-verify/`、`checkpoints/2026-10-15-acceptance/`（git-ignored）。
+
+**狀態：上一節欠的驗收全部有結果；與 v20 對照後沒有發現新的回歸；本分支造成的紅燈只有 tactic24 一條，已修。3a-A 仍待 Owner 正式核准；3a-B 未開始。**
+
+**完成項**
+- `node tools/verify.mjs` 全 113 段都有結果：**43 PASS／70 FAIL／0 TIMEOUT**。98 段先跑完：94 段在 2026-10-14 11:34–12:46（HEAD `c90eb81`）、4 段在 01:20（`d520116`，程式與 `c90eb81` 相同，後者只改文件）；剩下 15 段 18:15–18:24 用 `--resume --only=<15 段>` 補跑：15/15 PASS（fairness_p0c、map_topology_final、tactical_ai_p1、tactical_ai_p2、fairness_p0d、simulation_version、3a 的 8 段、build ✓ built in 17.97s）。
+  - 通過的重點段：`regress`、`regress2`、`runtime29`（107 秒）、`experience26`（CLAUDE.md 列為既有紅 TD-19，這次通過）、`talent27`、`cs23`。
+- **v20 基準對照**（`.sprints/v20-baseline-1d0e219`，detached `1d0e219`，同樣經 verify runner 實跑 70 段紅燈，比對每段的失敗行，只正規化時間／埠號／路徑／雜湊）：
+  - 67 段失敗行與 v20 逐字相同（含數值，例如 quality_p03 死亡對稱 8.15 vs 4.8）⇒ 既有。46 段是 CS（多數在 0–2 秒載入守衛就紅：`LIVE_SOURCE_SHA256`、`R15_LEGACY_R51_SYNERGY_BLOCK`、`[MARKER] signature`），依 Owner 規定只記錄、不修。
+  - 2 段斷言全過、exit 0，是 `verify.mjs` 的 `shape` 過期：`q5_history`（69/69）、`hero_skills_round2`（410/410）⇒ TD-3A-16。
+  - `tactic24`：其餘失敗行與 v20 相同，**只多一條**「useLocalServer → assembleMatch → engine.configureMatch」⇒ 本分支造成（T9 把投影搬進 resolver 後 gate 文字沒跟上）。v20 這段第一次跑時被休眠凍結、喚醒判 `TIMEOUT 12986s`，結果作廢，單獨重跑 516 秒。
+- **瀏覽器 gate**（一次一支；截圖用 `ESMO_REVIEW_OUT` 導到 scratchpad，不寫 repo）：`live_assembly_parity_3a` 25/25、`exit_flush` 12/12、`moba_gameplay_presentation` 10/10；`challenge_manual_draft` 26/27，v20 實跑同樣 26/27 紅在同一條 ⇒ TD-3A-13 確認為既有；`moba_variant_prep` 斷言 16/16 通過但行程不結束 ⇒ TD-3A-17；`moba_combat_feedback` 第一次 9/12（桌機 WebGL context 遺失，環境），重跑分支 17/18 兩次、v20 17/18 一次，都只紅 desktop O1 團戰截圖 ⇒ TD-3A-18。
+- **上一節 8 支沒有結果的 gate**：`result_layout` 49/49、`roam_quality` 18/18、`cs_c5d_side_bias_audit` exit 0（`NO_T_SIDE_SYSTEMIC_BIAS`，CS 線只記錄）。`recovery29b4` 20/21、`worldscale29b5` 17/20、`camera_replay29b6` 14/16 用 `SKIP_NESTED=1` 跑（直接跑會巢狀展開完整 runtime29，跑不完；巢狀子項都是 verify 段）⇒ TD-3A-19；`nav_chrome_h2close` 13/15、`runtime_flicker_h2` 25/31（自起 5173 dev server）⇒ TD-3A-20。五支在 v20 上都紅在同幾條。
+- **tactic24 修正**（Owner 2026-10-15 核准）：`tools/check_moba_tactic24.mjs` 那條接線檢查改成「組裝器呼叫 `A.resolveTactic`，`configureMatch` 收到的是 `clone(resolved.blue.knobs)`／`clone(resolved.red.knobs)`」＋行為驗證「`resolveTactic` 對 m1–m8（legacy）與 std 產出的 knobs 與 `toEngineTactic` 逐值相同」，`assembleMatch` 呼叫與 standard 對手退路兩個條件保留。突變實驗 7 種全部變紅（藍紅對調、傳 config 不傳 knobs、resolver 投影偏 0.01、legacy 被當 std、組裝器不呼叫 resolver、useLocalServer 不呼叫組裝器、拿掉 std 退路）。`node tools/verify.mjs --only=tactic24`：**27/29**，修的那條通過；剩下兩條（m6／m4 gank ×0.97、BattleResult.v2 字串）與 v20 逐字相同。檢查數維持 29。⇒ **本分支造成的紅燈：0**。
+
+**未完成項**
+- 3a-A 正式核准（Owner）；T13 三步驟／確認頁／對手情報；快速模式；3a-B（T15–T17）。
+- 上一節的範圍守衛 2 支（`combat_feedback` X3／X4、`online_foundation_v2a` X6／X7）仍是本分支才有，整合 main 前逐條確認。
+- 70 段既有紅燈本身沒有修（不屬本輪；CS 那 46 段屬 Codex 的 CS 線）。
+
+**已知風險／新登記技術債**（全文見 `08_目前待辦與風險.md` 2026-10-15 一節）
+- TD-3A-16 verify `shape` 過期 2 段；TD-3A-17 `moba_variant_prep` 跑完不結束；TD-3A-18 `combat_feedback` 團戰截圖靠真實時間取樣；TD-3A-19 29b4／29b5／29b6 必須 `SKIP_NESTED=1`；TD-3A-20 H.2 時代兩支瀏覽器 gate 的既有紅。
+- 休眠會讓 verify 當下那段被判 TIMEOUT（計時器把休眠時間算進去），結果要作廢重跑；瀏覽器 gate 不可跨休眠。
+- 停背景批次時 `TaskStop` 沒有停乾淨（bash＋`timeout`＋node 繼續往下跑），要自己查行程。
+
+**tactic24 修正的獨立審查**（sonnet，fresh context，只給驗收條件）：**APPROVED**，Critical 0／Important 0。逐條：29 項斷言數不變、其餘 28 項與 HEAD 逐字相同；舊條件逐一保留或被更嚴的檢查取代（拿掉 std 退路、knobs 不是契約投影都會紅）；probe 的判斷式與 gate 相同；7 個突變全部有效。Reviewer 另加 10 個突變，8 個抓得到；抓不到的 2 個是「組裝器迴圈內把 `resolved[side]` 存成對面那一方」與「組裝器傳 `{}` 而非自己的 adapters 給 resolver」——舊 gate 同樣抓不到，不算變弱，列為 Minor 未處理（可再加一條 regex 或改跑真正的 `assembleMatch` 來補）。
+
+## 2026-10-15 Phase 3a-A Architecture — ACCEPTED（Owner 正式核准；local commit，未 push／deploy／整合 main）
+
+**狀態：Owner 核准 Phase 3a-A 基礎架構驗收通過。範圍只限架構、相容性與已完成的測試，不代表完整戰術書產品已完成。開發暫停，等 Owner 決定 3a-B、戰術行為引擎（暫名 3a-C）與 3b 的順序。**
+
+**核准依據**：上一節的最終驗收（verify 113 段、v20 基準對照、瀏覽器 gate、8 支補跑）與 tactic24 修正（`b1ba62b`，獨立審查 APPROVED）。
+
+**明確記錄**
+- 3a-A Architecture：**ACCEPTED**。
+- 未完成（不在核准範圍內）：T13 的三步驟流程、確認頁、對手情報；快速模式。
+- verify **不宣稱全綠**：113 段 43 PASS／70 FAIL；70 段歷史紅燈的失敗行與 v20（`1d0e219`）逐字相同，屬基準已知差異。
+- `moba-sim.v21` 仍是**未發布候選**（指紋 `a7d5b68e24d1f313`）。
+- tactic24 審查發現的兩個突變盲點補登為 TD-3A-21（組裝器把藍紅解析結果存反）、TD-3A-22（組裝器傳 `{}` 而非自己的 adapters 給 resolver）；舊版檢查同樣抓不到。全文見 `08_目前待辦與風險.md`。
+
+**未完成項**：同上；另整合 main 前仍要逐條確認兩支範圍守衛（`combat_feedback` X3／X4、`online_foundation_v2a` X6／X7）。
+
+**已知風險**：戰術書很薄、模板說明與實測不符的部分未處理（見 2026-10-14 一節）；TD-3A-11～22。
+
+## 2026-10-15 Phase 3a-C0：量測工具整理（不改模擬語意；owner: Claude，local commit，未 push／deploy／整合 main）
+
+依 Owner 2026-10-15 夜間授權（C0 → C1 → C2 依序）執行。計畫 `docs/superpowers/plans/2026-10-15-moba-phase3a-c0-c2.md`；SDD 帳 `.superpowers/sdd/2026-10-15-moba-phase3a-c0-c2/progress.md`。
+
+**完成項**
+- Task 1（`0e6e4c7`、修正 `d7c5498`）：真實性表的過期判定改為「依實際載入的檔案」——量測 worker 用 Node 的模組載入掛鉤記下載入的 repo 檔案與內容雜湊（`meta.loadedFiles`），取代原本對全部語意檔的文字雜湊；快速模式多跑一場探針，出現沒記錄的新依賴就判過期。原本刻意排除的三個檔（能力登記表、選擇對照表、解析器）照舊不做文字雜湊（改由 registryHash／mappingHash／resolvedHash 涵蓋）——第一版漏了這點，獨立審查抓到（會讓「填排除表」本身使結果表過期），修正後複審通過。追加量測工具：結果檔改帶同一組雜湊＋載入檔案（TD-3A-11 的後續量測部分），當掉 worker 手上的場次會重新排入（最多 2 次，TD-3A-12）。三份既有追加量測結果檔仍只有 gitHead，複驗 gate 對它們維持原本的版本字串檢查並明印「legacy provenance」。
+- Task 3（`91f00d9`）：tactic24 接線檢查補上兩個盲點（TD-3A-21：`resolved[side] = snap`；TD-3A-22：`A.resolveTactic(t, A, …)`），仍是 29 項；verify 的 `q5_history`、`hero_skills_round2` 改用「通過數＝總數」的寫法（TD-3A-16）。審查通過。
+- Task 2（`bbbfda6`）：真實性表以新格式整輪重測（102 批、4,080 場、0 失敗、69.4 分鐘，workers=3）；91 列、排除推導 30 筆、紅藍不對稱 6 筆與重測前逐位元相同，只有 meta 不同（`engineHash` → `loadedFiles` 68 個檔）。`MEASURED_EXCLUSIONS` 不需改。
+
+**驗證（2026-10-15 03:52–03:58 實跑，HEAD `bbbfda6`）**
+- `check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactic_registry_3a` 31/31、`check_tactic_indicators_3a` 59/59、`check_tactic_book_view_3a` 20/20、`check_simulation_version_gate` 81/81（v21 候選指紋未變）、`check_match_setup_3a` 153/153（v20 黃金 39 案相同）、`npm run build` ✓ built in 17.01s。
+- `node tools/verify.mjs --only=q5_history,hero_skills_round2,tactic24`：前兩段 PASS；tactic24 27/29，接線檢查 ✅，兩條紅與 v20 相同（m6／m4 gank ×0.97、BattleResult.v2）。
+- 獨立審查：Task 1 一輪修正後通過（第一版把刻意排除的三個檔重新納入文字雜湊，會造成循環過期）；Task 3 一次通過。
+
+**未完成項**：C1、C2（見後續節）；C3～C10 未開始（勝利條件與戰術行為契約待 Owner 核定）。
+
+**已知風險**
+- 新判定不再保護「量測時根本沒載入」的語意檔（例：`liveMatchSetup.js`）；改由每次量測的載入聯集＋快速模式探針把關。
+- gate 進入點、量測來源函式庫、`stripComments` 不在記錄內（與舊制度相同涵蓋範圍，不是退步）。
+- 三份既有追加量測結果檔仍無法機械判斷是否過期（下次重測時自動帶雜湊）。
+
+## 2026-10-15 Phase 3a-C1：Director 契約、規則集可選層、v21-A 黃金基準（不改模擬行為；owner: Claude，local commit，未 push／deploy／整合 main）
+
+**完成項**
+- Task 5（`7196d7a`）：`TacticalDirective.v1` 契約（`src/platform/contracts/tacticalDirective.js`）——「某一方目前生效的戰術」＝`{ schema, side, phase, knobs, identity }`，`knobs`／`identity` 的欄位集合直接取自既有兩個投影（`toEngineTactic`／`toEngineTacticIdentity`），沒有自己的詞彙或數值。C1 沒有任何程式載入它。gate `check_tactical_directive_3c` 61/61（verify 段 `tactical_directive_3c`）。
+- Task 6（`0e3c022`）：規則集新增可選層 `layers.tacticalDirector`，**沒寫＝static**，目前只接受 `"static"`；v20 三個規則集物件逐位元不變（gate 以字面值與雜湊釘住）。`check_match_ruleset_3a` 40/40。`matchRuleset.js` 是語意檔 ⇒ v21 候選指紋依慣例重新登記 `a7d5b68e24d1f313` → `29140fe0cb5a4c86`（v1–v20 未動）。
+- Task 7（`04ae0aa`、補強 `9dd1a14`）：v21-A 黃金基準（C2 的 G-AC1 參考）——109 案：v20 的 39 案、21 個模板（藍方 binding）×2 seeds、標準模板目前提供的 8 個選項×2 seeds、紅方 binding 12 案（紅方分推上／中路、保護 ADC／中路、雙方都非標準；走平衡工具 runner）。每案記錄 digest、stream hash（每 10 秒取樣 10 人位置／血量／擊殺）、結束時完整快照雜湊與 configure 呼叫序列。檢查模式 `Match Golden v21-A：127/127 PASS`（約 400 秒；verify 段 `match_golden_v21a`）。紅方案例由獨立審查指出覆蓋缺口後補上（原 97 筆紀錄不動、順序不變）。
+- Task 8：真實性表重測（`8a1718e`；4,080 場、0 失敗、69.7 分鐘）——91 列與所有非 meta 區段逐位元相同，只有 `matchRuleset.js`／`simulationVersion.js` 的載入雜湊改變。
+
+**驗證（2026-10-15 05:38–06:00 實跑，HEAD `8a1718e`）**
+- `check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 40/40、`check_simulation_version_gate` 81/81、`check_match_assembler_3a` 227/227、`check_live_setup_3a` 119/119、`check_challenge_setup_3a` 65/65、`check_balance_runner_setup_3a` 122/122、`check_match_setup_3a` 153/153（v20 黃金 39 案相同）、**`check_match_golden_v21a` 127/127**、`regress` 結束率 15/15（平均 20.8 分）、`regress2` 節奏門檻 8/8、`npm run build` ✓ built in 16.64s。
+- 獨立審查：Task 5＋6 一次通過；Task 7 一次通過，另依審查的覆蓋建議補紅方案例並經範圍複審通過。
+
+**已知風險／留給 C2、C3**
+- `MatchSetup` 目前不認得 `tacticalDirector` 這個鍵（基準規則集沒有）：C2 的 Director 只走「沒寫＝static」，不需要；C3 要啟用新模式時必須另立 v21 規則集，不得改 v20 物件。
+- 黃金基準的 F8 證明紅方計畫有改變對局，但不是逐一證明 splitLane／protectRole 讀取點本身被執行（沒有逐讀取點計數器）。
+- 指紋每重新登記一次，`simulationVersion.js` 本身（量測時會載入）就讓真實性表過期一次 ⇒ C1、C2 各需整輪重測約 70 分鐘。
+
+## 2026-10-15 Phase 3a-C2：Tactical Director 核心（static）＋引擎戰術讀取點等價搬遷（模擬結果逐位元不變；owner: Claude，local commit，未 push／deploy／整合 main）
+
+**狀態：C2 驗收通過。引擎所有戰術讀取（旋鈕、戰術身分、時期）改由 `TacticalDirector` 提供；static 模式回傳的就是 `configureMatch` 收到的同一份物件，對局結果與 C1 的 v21-A 黃金基準、v20 黃金基準逐位元相同。沒有任何新戰術效果。**
+
+**完成項**
+- 盤點（Task 9，唯讀）：`src/LogicEngine.js` 約 75 個戰術讀取點（12 個旋鈕欄位、10 個戰術身分欄位、時期函式），並記下兩個不能弄錯的耦合：旋鈕物件「是不是 null」決定用哪條亂數流；`_joinChance` 靠物件同一性從旋鈕推出身分投影。
+- Task 10（`2746191`、gate 強化 `a67b302e`）：新增 `src/battle/moba/tactics/tacticalDirector.js`（`knobs(side)` 回傳同一個物件、`identity(side)`、`identityOfKnobs(K)`、`phase(t)`＝唯一一份 480／960 秒邊界、`directive(side, t)`＝`TacticalDirective.v1` 契約視圖；不抽亂數、不複製）。引擎 11 個運算式改為向 Director 取資料；`this.tk`／`this.tid` 只保留給兩支外部工具讀（`tacticTruthSim`、`check_tactical_identity_v17`），是 gate 裡唯一允許的兩處。Director 列入模擬語意檔；v21 候選指紋 `29140fe0cb5a4c86` → `ed0daff971db2d7a`（v1–v20 未動）。
+- 新 gate `check_tactical_director_3c`（G-AC2，64 項）：剝註解後整份掃描，引擎內不得再直接讀 `this.tk`／`this.tid`（含多行解構、別名、`(this).tk`、`Reflect.get`、字串鍵），`.tk`／`.tid` 記號總數必須剛好 2；480／960（含 `480.0`、`8*60` 等寫法）只能出現在 Director；引擎不得呼叫 `directive()`（否則契約檔必須加入語意檔清單）；並以行為測試確認 Director 與舊算式一致、不消耗亂數。C1 的 `check_tactical_directive_3c` B1 由「沒有程式載入契約」更新為「只有 Director 載入契約」（階段事實更新，獨立審查確認不是放寬）。
+
+**驗證**
+- 真實性表重測（`0f37847`；4,080 場、0 失敗、70.4 分鐘）：91 列與所有非 meta 區段逐位元相同。
+- C2 驗收關卡（2026-10-15 09:14–09:40 實跑，HEAD `0f37847`）全過：`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactical_director_3c` 64/64（G-AC2）、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 40/40、`check_simulation_version_gate` 82/82、`check_tactic_registry_3a` 31/31、`check_tactic_plan_3a` 219/219、`check_tactical_identity_v17` 22/22、`check_match_assembler_3a` 227/227、`check_live_setup_3a` 119/119、`check_challenge_setup_3a` 65/65、`check_balance_runner_setup_3a` 122/122、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 127/127（G-AC1，109 案逐位元相同）**、`regress` 15/15（平均 20.8 分）、`regress2` 8/8、`npm run build` ✓ built in 16.61s。
+- 獨立審查（opus）：Approved，0 Critical／0 Important；審查員另以「反向套用 diff 重建 C2 之前的引擎」做差分，12 種設定 × 2 seeds（含黃金基準沒走到的分支：舊版引擎狀態機＋身分層、身分層關閉、雙方共用同一份旋鈕、重複 configure）24／24 相同。gate 強化的兩個 Minor 已修並經範圍複審。
+- 過程事件：06:14–07:47 筆電電池耗盡進入睡眠（系統事件 Kernel-Power 42／107），只暫停了一支 gate，不影響結果；之後接上電源。
+
+**未完成項**：C3～C10 未開始（勝利條件與戰術行為契約待 Owner 核定）。
+
+**已知風險／留給 C3**
+- 工具仍讀 `e.tk`／`e.tid`，`tacticTruthSim` 另有一份 `PHASE_EDGES = [480, 960]`：C3 應改用 Director API 後拿掉這兩個觀察欄位。
+- G-AC2 仍無法偵測執行期組出來的鍵（`"t"+"k"`）、整個物件反射、或用其他算式得到 480／960（gate 檔頭已註明）。
+- 雙方傳入同一份旋鈕物件時，紅方會拿到藍方的身分投影（既有行為，已保留並由 gate 釘住）。
+
+## 2026-10-15 Phase 3a-C0～C2 全分支最終審查與補正（owner: Claude，local commit，未 push／deploy／整合 main）
+
+**最終審查（opus，範圍 `96d86af..f5cb309`，18 個 commit）**：結論「修完再整合」，0 Critical。審查員自行補跑 6 支快速 gate，以及 legacy 指紋差分（`git archive ef560aa` 的 C2 前樹 vs HEAD，`moba_items_legacy_fingerprint` seeds 7／42／99 × bare／configured）→ 6 組 IDENTICAL。
+
+**補正 1：C2 驗收漏跑計畫要求的兩段（我的疏漏）。** 上一節 C2 驗收列的 `regress`／`regress2` 用的是裸 `LogicEngine`、從不呼叫 `configureMatch`，所以 Director 根本沒被建立，不能當 C2 的證據。補跑（HEAD `f5cb309`）：`node tools/verify.mjs --only=tactic24,runtime29` → **tactic24 27/29**（接線檢查 ✅；紅的兩條 m6／m4 gank ×0.97、BattleResult.v2 與 v20 基準逐字相同，數值與 C2 前相同）、**runtime29 flat 35/35**。計畫 Task 10 要求的驗證段至此全部有實跑結果：G-AC1（v21-A 黃金 127/127）、G-A2（v20 黃金 153/153）、G-AC2（64/64）、tactic24、runtime29、legacy 指紋差分（審查員實跑）、regress、regress2、真實性表重測。
+
+**補正 2：08 對 C0 效益的說法過頭。** 「量測時沒載入的語意檔改了不再讓表過期」技術上成立，但專案規定改任何語意檔都要重新登記 v21 指紋，而 `simulationVersion.js` 本身是量測時會載入的檔 ⇒ 照規矩走的流程仍會讓真實性表過期（審查員實測：只改指紋字串即判過期）。方向保守（只會誤判過期，不會誤判新鮮）。是否把 `simulationVersion.js` 比照三個例外檔處理，屬縮小安全 gate 涵蓋範圍，列為 Owner 決定，未做。
+
+**補正 3：** `check_simulation_version_gate` 由 81 → 82 項，是因為新增語意檔 `tacticalDirector.js`（每支語意檔一項檢查）。v21-A 黃金檢查約 7 分鐘（109 案實測約 400 秒）。
+
+**修正波（審查的 Important 3 與小項；只動工具與兩份 review 文件，不動 `src/`、量測工具與 fixture ⇒ 不需重新登記指紋或重測）**：`69a083a`——v21-A 黃金檢查改為「照 fixture 內存的參數重跑每一案」（不再從目前的戰術書提供清單推案例，提供清單日後合法改變不會誤報紅；提供清單差異改為資訊行），並把 fixture 的錄製 gitHead `0e3c0224…` 與指紋 `29140fe0cb5a4c86` 釘成檢查工具內的常數（重錄必須看得見地改這兩個常數），檢查項 127 → 131（P1、P2 與兩個負向自檢），`Match Golden v21-A：131/131 PASS`（109 案仍逐位元相同）；錄製工具的乾淨檢查加入 `tools/lib`；verify 註記改為約 7 分鐘。`8289e20`——C3～C6 草稿的 4 個一致性小項與 C7 兩處措辭。範圍複審：全部 ADDRESSED，無新問題。
+
+**留給 C3 的前提（審查判定）**：工具改讀 Director（`tacticTruthSim` 讀 `e.tk`、自有 `PHASE_EDGES`，否則 C3 改時期界線時量測分桶會悄悄錯位）；兩份 `TACTICAL_DIRECTOR_MODES`（`tacticalDirector.js:18`、`matchRuleset.js:16`）合一；量測與 runner 路徑要有 v21 規則集（目前跑 v20 規則集、標 v21 版本）；引擎內其他用途的 480／960 要用具名常數或放在別的模組（G-AC2 會紅）。
+
+## 2026-10-15 Phase 3a-C3 開工前置作業（不改模擬語意；owner: Claude，local commit，未 push／deploy／整合 main）
+
+計畫 `docs/superpowers/plans/2026-10-15-moba-phase3a-c3-prep.md`；SDD 帳 `.superpowers/sdd/2026-10-15-moba-phase3a-c3-prep/progress.md`。這一輪沒有改 `src/`，沒有開始 C3～C6 新戰術行為，沒有修紅方對調。
+
+**完成項**
+- 工具改讀 Director（`aa38625`）：`tools/lib/tacticTruthSim.mjs` 的時期分桶改問 `e.director.phase(t)`（刪掉重複的 `PHASE_EDGES`），分推路改問 `e.director.knobs(side)`；`check_tactical_identity_v17` B1 改用 `e.director?.hasIdentity()`。新舊量測程式 3 組對局逐項相同；identity_v17 22/22；獨立審查通過。引擎的 `this.tk`／`this.tid` 觀察欄位已無人讀，留給 C3 第一個 src 改動移除。
+- 真實性表重測（`e55fdc9`）：4,080 場、0 失敗，91 列與所有非 meta 區段逐位元相同（只有量測程式雜湊改變）。
+- CLAUDE.md 現役 gate 補上 Phase 3a 戰術層規範（`db47eb6`；備份 `_backup_20261015_CLAUDE.md`）：v21-A 黃金 131、v20 黃金 153、單一讀取來源 64 等；`regress`／`regress2` 不呼叫 `configureMatch`，不能當戰術層證據；真實性表重測規則；黃金出處釘死；v20 規則集不得改。
+- TD-3A-23 紅方路線對調修正方案（`e345060`，提案）：影響比原記錄大——Player Challenge 防守方固定紅方，m2／m4／m5 防守隊伍（含練習對手 drill_topheavy、drill_rotation）在正式對局中對調；證據列只有 m5「下路 Gank」受影響；凍結對調行為的黃金案例共 10 個。提案：Director 為唯一的「隊伍相對 → 世界」轉換點、規則集層 `laneFrame`（沒寫＝舊行為，只在新 v21 規則集開，沒寫時不得把鍵傳給引擎，否則 v20／v21-A 呼叫雜湊會變）、三類紅藍對稱 gate。`simulationVersion.js`：建議把登記資料搬到模擬不載入的檔（需 Owner 核准），核准前維持現狀，不豁免任何檔。
+- Owner 決策表（`3a2c4a2`）：D-1～D-20＋W-1～W-4，四種勝利條件先講；擋 C3 的是 D-13、D-15（含 D-7 旗標名）、D-19 的 C3 部分、D-20；D-1 擋 C5。C3 開工清單（同 commit）：前置條件 P-1～P-10、C3 第一個 src 改動要順手處理的技術債 7 項、C3 任務與事前登記指標、驗收 Gate（含具體數字）。
+- 每份文件都經獨立審查；TD-3A-23 方案與開工清單各修一輪。
+
+**驗證（HEAD `e55fdc9`，實跑）**：`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_tactical_director_3c` 64/64、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 40/40、`check_simulation_version_gate` 82/82（v21 候選指紋 `ed0daff971db2d7a` 未變）、`check_tactic_registry_3a` 31/31、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 131/131（C2 Director 等價）**、`verify --only=tactic24,runtime29`：tactic24 27/29（兩條紅與 v20 逐字相同）、runtime29 flat 35/35、`check_tactical_identity_v17` 22/22（`aa38625`）、`npm run build` ✓ built in 19.09s。
+
+**未完成項**：所有 Owner 決策（D-1～D-20、W-1～W-4、TD-3A-23 修正與否、`simulationVersion.js` 處理方式）；C3 實作。
+
+**過程事件**：上午子代理撞到 API 用量上限（14:10 重置後接續）；下午休眠時兩個子代理斷網中止，重新派工補完；重測跨越休眠，只是暫停，結果逐位元相同。
+
+## 2026-10-21 Phase 3a-C3-1：時期骨架（Director core.v1）＋紅方上下路對調修正（laneFrame，TD-3A-23 D-1=A）（改模擬語意，僅在 v21 規則集下；owner: Claude，local commit，未 push／deploy／整合 main）
+
+計畫 `docs/superpowers/plans/2026-10-15-moba-phase3a-c3-1-laneframe.md`；SDD 帳 `.superpowers/sdd/2026-10-15-moba-phase3a-c3-1-laneframe/progress.md`。沒有開始 C3-2～C6；v20 規則集、v20／v21-A 黃金基準、既有側偏門檻、戰術係數都沒改。
+
+**完成項（commit 依序）**
+- `f384939` 計畫與開工清單狀態（Owner 2026-10-15 核准 D-13、D-15＋旗標名 `mobaTacticalDirectorV21`、模式 `core.v1`）。
+- `b3cbd1d` E-1：移除引擎觀察欄位 `tk`／`tid`、`TACTICAL_DIRECTOR_MODES` 合併為一份、平衡 runner 可選規則集（行為不變）。
+- `166ade7` laneFrame 事前登記（實作前）：`tools/fixtures/laneframe_registration_c3.json`＋`review/tactic-book-3a/laneFrame_事前登記.md`。
+- `452c88d` C3-1 時期骨架：Director `core.v1`、Resolver 預先產出 early／mid／late 三份方針（目前三份相同、同一參考）、`career.v21`／`balanceTool.v21` 掛在旗標後（行為不變；新 gate `check_c3_phase_skeleton`）。
+- `fab35dd` laneFrame：`career.v21`／`balanceTool.v21` 下紅方以「隊伍相對」解讀路名（`laneOffset`／`splitLane`／`gankWeights`）；legacy 規則集不變；登記的 9 個 v21-A 案例改變，其餘逐位元相同（新 gate `check_laneframe_c3`）。模擬指紋 `6c8db7e7cff3ae6a`（`moba-sim.v21` 候選，未發布）。
+- `d31dbcd` D-20 側偏修訂登記（Owner 2026-10-20：career 規則集、seed 9101 起奇數、以 effectiveSeed 計、m4 分層只有 z≥3 才 STOP）。
+- `21ab068` 第一次量測結果（原始證據，永不覆寫）：career 側偏 **pass**；行為研究依登記 **STOP**（B3 容許值結構上達不到、B2 一列超出、樣本不足）⇒ 交 Owner。
+- `b6dcb3d` 行為研究修訂登記（Owner 2026-10-20 裁定：B1 與 B2／B3 分開驗收；B2／B3 改等價檢定 PASS／STOP／INCONCLUSIVE；全新 seeds；先審查再跑）：`tools/fixtures/laneframe_registration_c3_behavrev.json`＋`review/tactic-book-3a/laneFrame_行為研究修訂登記.md`。容許範圍 Δ＝既有 fixture 中最小已確立（|z|≥3）路線姿態效果的一半：gankShare 0.05、laneForward 1.483；TOST 90 % CI；STOP＝99.9 % CI 整段在 Δ 外或顯著反向（Bonferroni）；seeds 16001–17600（1600 個，29,000 場，單次判定、硬上限）。獨立審查第一輪 APPROVE WITH CHANGES（B3 初稿容許值過寬會接受修正前的已知不對稱等），修正後 APPROVE。
+- `7f1fee9` 真實性表重測：4,080 場，91 列逐位元相同，只有 6 個語意檔的 `loadedFiles` 雜湊改變；33/33。
+- `7b96c11` 修訂行為研究結果（單次判定）：29,000 場、失敗 0、儀器不符 0。
+  - **B1 PASS**：藍 3181/3200、紅 3180/3200 場有分推，違規 0，發生率差 z −0.16；負對照（legacyMirror）照預期失敗（pooled 0）。
+  - **B2 PASS**（12/12 列）：|meanD| ≤ 0.017，所有 CI90 在 ±0.05 內。
+  - **B3 PASS**（12/12 列）：所有 CI90 在 ±1.483 內。
+  - **揭露**：classic.m4（AI objective 風格）laneForward.mid z_diff 2.33（CI90 [0.14, 0.83]）、bot z_diff 2.57（CI90 [0.31, 1.42]）——依登記的等價判準 PASS，但若套被否決的 |z|<2 規則會不過；bot 上界接近 Δ。如實記錄，不重跑。
+- career 側偏（D-20，2,007 seeds）：整體 STANDARD worse −0.6 pp z −0.70、SWAPPED +0.6 pp z 0.77；m4 分層 −4.5 pp／+3.9 pp，z −0.70／0.77；非 m4 對局 v20 與 v21 逐場相同（866／855，差異 0）；整體中位時長變化 0.2 %／1.2 %（m4 分層 2.6 %／6.2 %，皆在 WARN ±10 % 內）⇒ pass。
+
+**驗證（HEAD `7b96c11`，實跑）**：`check_laneframe_c3` 54/54、`check_c3_phase_skeleton` 170/170、`check_tactical_director_3c` 80/80、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 43/43、`check_simulation_version_gate` 82/82、`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 131/131**、`verify --only=tactic24,runtime29`：tactic24 27/29（紅的兩條＝登記排除的既有紅燈：m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS、`npm run build` built in 18.28s。登記的新增回歸 gate（`clarifications.newRegressionGates`）沒有新紅燈。
+
+**未完成項／已知殘留**
+- Player Challenge 防守方（固定紅方）仍是對調行為：沒有建立 `challenge.v21`（D-16 屬 3a-B）。
+- TD-3A-23 §7 第 2／4／5／6 項待 Owner。
+- C3-2 前置條件（T2 審查）：`identityOfKnobs` 依目前時期查表＋建構時 Map 備援；Director gate 掃描禁止把 knobs 存在 state；必要時每 tick 鎖定時間。
+- 側偏代表性（D-20 已揭露接受）；斷路器數值由控制者訂定；laneForward 三路共用一個 Δ（最小錨點是下路效果）。
+
+**過程事件**：行為研究共 29,000 場，因使用者休眠以 STOP 檔安全暫停 2 次，因 Claude Code 記憶體保護被停掉 3 次（Chrome 佔用記憶體）；每次續跑都確認該輪（200 seeds × 18 場＝3,600 場）剩餘場數＝3600−該輪已完成、JSONL 沒有半行、HEAD 與工作樹未變。完整 gate 批次被記憶體保護停掉一次並留下重複的孤兒行程，已清除，golden_v21a 改在前景重跑。
+
+## 2026-10-21 Phase 3a-C3-2：時期姿態（前置條件＋分時期儀器＋事前登記研究）（行為不變；owner: Claude，local commit，未 push／deploy／整合 main）
+
+計畫 `docs/superpowers/plans/2026-10-21-moba-phase3a-c3-2-phase-stance.md`；SDD 帳 `.superpowers/sdd/2026-10-21-moba-phase3a-c3-2-phase-stance/progress.md`。Owner 2026-10-21 核准 C3-1 驗收後授權 C3-2；沒有開始 C3-3、C4～C6。姿態的作用欄位與係數（`PHASE_ENGAGE`）沒改，只換指標；v20／v21-A 黃金基準、量測排除表、真實性表的 G-A7 指標都沒動。
+
+**完成項（commit 依序）**
+- `036cee0` 前置條件：
+  - `identityOfKnobs` 先查目前時期，查不到改查建立時的「knobs → 同時期 identity」對照表，不再回 null。今天三個時期共用同一份物件，回答逐參照相同。
+  - `check_tactical_director_3c` 新增 C 段（整支增為 97 項）：引擎不得把 knobs／identity 存進跨 tick 的狀態（屬性、物件字面值、陣列、push／set／assign）；`this.t` 只在建構子與 tick 開頭寫；tick 在推進時間前不問 Director。
+  - `check_c3_phase_skeleton` D3b／D3c 是**刻意的契約變更**（別的時期的物件 null → 該時期的 identity），168/170 → 170/170。
+  - v21 候選指紋 `6c8db7e7cff3ae6a` → `49faf7d28aa9ebfb`。
+- `fa8d90d` 分時期儀器 `tools/lib/phaseBucketSim.mjs`＋自檢 gate `check_phase_bucket_c3`（21 項）：
+  - 時期一律問 Director；480／960 邊界、三桶相加＝整場值。
+  - 與未改動的 `tacticTruthSim` 跨儀器相同；每分鐘比率逐桶重算；legacy 路徑與 std 輸入對局相同；每個選項只動該時期的 `phaseEngage`。
+- `b0c94b2` 事前登記 `tools/fixtures/phase_stance_registration_c3_2.json`＋`review/tactic-book-3a/C3-2_時期姿態事前登記.md`＋量測工具 `tools/measure_phase_stance_c3.mjs`：
+  - seeds 3001–3400、balanceTool.v21、兩個指標（接戰決策／只數開始）、兩側 z ≥ 3 且 |Δ| ≥ 5 %、有效配對 ≥ 200。
+  - 獨立審查 APPROVE WITH CHANGES（斷路器、判定優先序、過期批次、未完整結束碼），修正後複審全部 ADDRESSED。
+- `f4a4ae9` 研究結果（6,800 場、失敗 0、儀器不符 0，單次判定）：
+
+| 選項 | 判定 | 藍方 決策／開始（相對差，z） | 紅方 決策／開始（相對差，z） |
+|---|---|---|---|
+| 前期 aggressive | **confirmed** | +21.3 % (18.5)／+13.2 % (11.5) | +19.7 % (16.2)／+11.9 % (10.0) |
+| 前期 defensive | **confirmed** | −9.1 % (−8.2)／−5.6 % (−5.1) | −10.7 % (−9.8)／−7.6 % (−7.1) |
+| 前期 scaling | insufficient | −4.6 % (−4.5)／−2.9 % (−2.9) | −6.5 % (−5.7)／−4.6 % (−4.3) |
+| 中期 aggressive | **confirmed** | +13.1 % (11.0)／+12.3 % (12.3) | +13.5 % (11.8)／+11.5 % (11.2) |
+| 中期 defensive | **confirmed** | −12.9 % (−12.4)／−9.9 % (−9.8) | −13.0 % (−12.5)／−10.8 % (−11.6) |
+| 中期 scaling | duty_cycle_only | −7.0 % (−7.3)／−5.1 % (−5.3) | −6.2 % (−6.6)／−4.9 % (−6.1) |
+| 後期 defensive | **confirmed** | −12.4 % (−8.3)／−11.4 % (−8.4) | −15.2 % (−9.7)／−15.1 % (−10.1) |
+| 後期 scaling | **confirmed** | +9.6 % (5.8)／+10.4 % (6.6) | +10.1 % (5.5)／+9.0 % (5.5) |
+
+  後期有效配對 303／400（每側）。兩個沒過的 scaling 選項方向都對。中期 scaling 只差 5 % 幅度（紅方只數開始 −4.9 %，z −6.1）；前期 scaling 四格裡有三格幅度不到 5 %，藍方只數開始的 z 也只有 −2.90（未達 3）。係數 −0.05 本來就比 defensive 的 −0.08 小；依登記維持排除（design），不放大係數。
+
+**驗證**：`0efb759` 真實性表在新指紋下重測：4,080 場、0 失敗，91 列逐位元相同（只有 `tacticalDirector.js`／`simulationVersion.js` 的 `loadedFiles` 雜湊改變），`check_tactic_truth_3a` 33/33；HEAD `0efb759` 實跑：`check_tactical_director_3c` 97/97、`check_tactical_directive_3c` 61/61、`check_match_ruleset_3a` 43/43、`check_simulation_version_gate` 82/82、`check_tactic_truth_3a` 33/33、`check_tactic_replication_3a` 31/31、`check_phase_bucket_c3` 21/21、`check_c3_phase_skeleton` 170/170、`check_laneframe_c3` 54/54、**`check_match_setup_3a` 153/153（v20 黃金 39 案）**、**`check_match_golden_v21a` 131/131**、`verify --only=tactic24,runtime29`：tactic24 27/29（紅的兩條＝既有紅燈 m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS；`npm run build` built in 17.64s。沒有新回歸
+
+**未完成項／待 Owner**
+- **OWNER_DECISION**：6 個 confirmed 選項要不要開放給玩家。量測排除表必須與真實性表（G-A7：`fightEntriesPerMin.<p>`、seeds 1–40）逐筆一致，要開放就得改這條 gate 規則或重新登記 G-A7 的指標。
+- **D-18**：前期／中期 scaling 要不要動用一次性重新設計（備用區段 7001–7400），或直接留 design。
+- 後期樣本是以比賽長度（處理後結果）篩選的，已揭露。
+
+### 2026-10-22 更正：C3-2 研究的證據範圍是「英雄技能關閉」（上一節 `a6ea6e6` 的結果須以本更正閱讀）
+- 量測 worker 沒設 `ESMO_BALANCE_SKILLS` ⇒ runner 靜默關掉英雄技能／被動／成長曲線；`f4a4ae9` 的 6,800 場全在技能關閉下跑完。真實性表、複驗、laneFrame 研究都是技能開。儀器檔頭寫「skills on」不實；自檢 gate 兩個儀器都沒開技能，跨儀器比對抓不到；最終審查也沒抓到。2026-10-22 controller 讀 C7 §5（同一個坑）時發現。
+- 處理：原結果檔保留不動（＝技能關閉下的行為證據），**不**用來標記 live；以修正後的儀器在全新 seeds 18001–18400 做複驗（`tools/fixtures/phase_stance_registration_c3_2_rev1.json`，選項／指標／門檻原樣沿用），只有 rev1 再次 confirmed 的選項才進入 live 收尾。
+- 儀器修正：worker 在載入前設 skills on／talents off；每筆紀錄記錄實際載入的層，不符即 STOP(INSTRUMENT)；`check_phase_bucket_c3` 增為 23 項（L1／L2）。
+
+## 2026-10-22 Phase 3a-C3-2 收尾（6 個時期姿態開放）＋ C7 診斷＋ C3-3／C4／C5 事前登記（owner: Claude，local commit，未 push／deploy／整合 main）
+
+**C3-2 rev1 複驗（技能開，修正後儀器）**
+- `bb1f4cc` seeds 18001–18400：6,800 場、0 失敗；8 個時期姿態紅藍兩側全部 confirmed（前期／中期 scaling 也 confirmed）。
+- 依 Owner 裁示：前期 aggressive／defensive、中期 aggressive／defensive、後期 defensive／scaling 共 6 項標記 live（`REPLICATION_CONFIRMED`）；前期／中期 scaling 維持 design（`owner_hold`），不放大係數，D-18 未動用。
+- 原始 `f4a4ae9`（技能關）結果檔與歷史指標全部保留不動；主張指標改為 `phaseEngageDecisionsPerMin.<p>`，舊主張以 retired 保留。
+
+**收尾實作（`3302d60`、`1220939`，合併 `4b1b414`）**
+- 真實性表推導：n=400 複驗只取代 **std primary** 列；弱點模板仍由真實性表判定。
+- 審查修正：T13 檢查複驗檔形狀；`ruleSuppressed` 忽略 owner_hold；V7 指標綁定；V8 封存 C3-2 前真實性表（與 `0efb759` 逐位元相同）。
+
+**真實性表重測（`69a5109`，之後二次重測確認）**
+- 第一次：4,080 場、0 失敗；72 列非時期列與前版逐位元相同，19 列時期列依新指標改變。
+- 新增 4 筆**只限單一模板**的排除（n=40 量不到 ⇒ 只在該模板不提供）：classic.m4 前期 scaling、v2.defensive_hold 中期 scaling、classic.m1 後期 defensive／scaling。std 與其他模板照常提供 6 項。
+- N6 負向對照改挑「沒被複驗取代」的列（重測後第一個通過列變成被取代的時期列），嚴格程度不變。
+- 改排除表 ⇒ 重新登記指紋 `21a219764652fd1d`（前值 `a5ce0d283ead3e5c` 未發布）；`simulationVersion.js` 會被載入 ⇒ 依規範整輪二次重測：4,080 場、0 失敗，**91 列與 `69a5109` 逐位元相同**，`check_tactic_truth_3a` 34/34。
+
+**C7 診斷（`d97c5ff`，seeds 1401–1800，4,000 場、0 失敗）**
+- §4-A 路線姿態（topDef／midAggr）：兩側都是**行為反轉**，原因不是 gank 權重（midAggr 中路回城 +33–40 %）⇒ 依契約 C5-4 第 3 步，引擎修正需 Owner 決定；路線姿態維持排除，強邊不依賴它。
+- §4-B tight：joinGo 一般開始兩側都動（藍 +10.8 % z5.19、紅 +18.9 % z7.90），進路線只有紅方 ⇒ C3-3 改用 roll 指標（一般 joinGo 開始）。
+- §4-D baronHigh：原指標未反轉（雜訊）；巴龍坑戰鬥秒數 +22.7 %／+26.6 %、中期爭奪占比 z5.03／z3.15 ⇒ 巴龍選項可登記。
+
+**事前登記（`9e5bd77`，合併 `b22b008`；任何量測之前）**
+- C3-3 seeds 18401–18800（groupEarly／Mid／Late，主張 `joinGoGeneralStartsPerMin.<p>`，後期預期檢定力不足已揭露）。
+- C4 seeds 3401–3800（dragon／baron／towers first 分時期、dragonHigh／Low、baronHigh；主張爭奪占比，取得占比只報告；前期不能選巴龍；天花板檢查與 towers laneOffset 已揭露）。
+- C5 seeds 3801–4200（focus 三路×三時期＋快速模式強邊三路〔前期＋中期〕；主張 gankShare，守門 ganksPerMin；對照組紅藍對稱檢查 0.10；資源傾斜與輔助保護**不做**）。
+- 儀器：新計數 `joinGoGeneralStarts`（排除龍／巴龍坑）＋ X2 與 C7 儀器同場相等（`check_phase_study_c3` 9/9）；`check_phase_options_arms_3c` 決定性探針：每個選項只動自己的時期／欄位／側。獨立審查 APPROVE WITH CHANGES 9 項，全部修正後提交。
+
+**驗證（HEAD `b22b008`，2026-10-22 實跑）**
+- `check_tactic_truth_3a` 34/34；`check_match_golden_v21a` 131/131；`check_match_setup_3a` 153/153（v20 黃金 39 案）。
+- `verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條紅燈，與 v20 相同）、runtime29 PASS。
+- 快速 gate：複驗 40、指標 59、戰術書 21、Registry 31、計畫 219、解析器 136、Director 97、規則集 43、directive 61、權限 15、時期選擇 22、量測儀器 9、版本 82，全綠。
+
+**未完成／待 Owner**
+- §4-A 路線姿態行為反轉的引擎修正（要不要修）。
+- 前期／中期 scaling：rev1 已 confirmed 但依裁示 hold，要不要開放。
+- `simulationVersion.js` 參與真實性表過期判定：每改一次 Registry 資料就要多一輪約 72 分鐘重測，是否調整待 Owner 決定。
+- 證據範圍：以上皆為 balanceTool.v21 量測，不等於正式 career.v21 驗證。
+
+### 2026-10-22 C3-3 成團行動：結果與一項事前登記說明的偏離（`c70ba926` 結果、`1144757` 解讀）
+- 2,800 場、0 失敗；groupEarly／Mid／Late 紅藍兩側全部 confirmed（前期 +10.7 %／+16.0 %，中期 +24.9 %／+16.8 %，後期 +26.1 %／+29.2 %，z 3.90–7.95）。後期是處理後篩選（n 237），證據較前期／中期弱。
+- **偏離（說明，不影響判定）**：登記說主張指標只算一般熱點、`joinGoStartsPerMin` 含龍／巴龍坑；在交戰狀態機下熱點都是新物件，坑位集結又走 `_objJoinV3`，所以兩個指標相同、都不含坑位。事前審查 MAJOR #1 的修正實際上沒有作用。實際量到的就是 `joinFight` 驅動的參團決策，正是成團選項唯一改動的 knob ⇒ 判定不變。獨立審查 APPROVE WITH CHANGES（5 項 MINOR，已修進解讀文件）。
+- 升級 live：等 C4／C5 跑完後與其他通過項一起處理（Registry 改動會觸發指紋與真實性表整輪重測，只重測一次）。
+
+### 2026-10-22 C4 物件優先：結果（`a68fd71f` 結果、`5f37092` 解讀）
+- 9,200 場、0 失敗（中途依 STOP 暫停一次、同資料夾續跑，批次 `c70ba926` → 報告 `b2a78afb`，研究相關檔案無變更）。
+- confirmed（紅藍兩側）：前／中／後期龍優先、中期巴龍優先、前／中期推塔優先、全場龍 high／low、全場巴龍 high。
+- 維持 design：後期巴龍優先 one_sided（藍 z 2.29）；後期推塔優先 insufficient（幅度過 5 % 但 z 1.72／2.86）。原因只列假設，不放大係數。
+- 主張是「出現占比」（存活期間該側英雄進坑 9 單位內），取得占比只報告；取得變化是出現的 2–7 倍。推塔優先連帶 laneOffset +0.012 需在 Registry 與文案揭露；全場選項要走真實性表／複驗規則才能離開排除表。前期仍不能選巴龍。
+- 獨立審查 APPROVE WITH CHANGES（6 項 MINOR：出處、出現的定義、天花板實測值、根因改為假設、對手側與跨時期外溢未量），已修進解讀文件。
+
+## 2026-10-23 Phase 3a-C3-3／C4／C5 結果與升級 live（local，未 push／deploy／整合 main）
+
+**完成**
+- C3-3 成團（`c70ba926`＋解讀／審查 `1144757c` `a236154c` `b2a78afb`）：前／中／後期 group 紅藍皆 confirmed（+10.7～+29.2 %）。
+- C4 物件優先（`a68fd71f`＋`5f37092d` `9d7c340e`）：前期 dragon／towers、中期 dragon／baron／towers、後期 dragon confirmed；後期 baron one_sided、後期 towers insufficient ⇒ 不提供。指標是「出現在坑邊」（contest），不是「拿到」。
+- C5 主攻路（`4e0e97a9`＋`4b4f3189` `82d7f030`）：12 個選項全部未過（前中期 guard_failed：占比上升但抓人總數 −7.4～−45.9 %；後期 unmeasurable）。根因是 `_gankPickV20` 以最大值正規化權重；focusLane 維持 design，不調係數。
+- Owner 裁定（2026-10-22 晚）：不以 v21 證據開放 v20 整場龍 high／low、巴龍 high；v20 能力與排除表依 v20 既有證據。
+- 升級（開發分支 `feature/moba-phase3a-cdev`，合併 `05eead97`）：每時期 grouping／objectiveOrder 改 live（只在有 Director core.v1 的 v21 規則集）；戰術書依規則集過濾；`liveMatchSetup.bindingForRuleset` 只從本場拿掉本場規則集用不到的選擇（存檔不動）。
+- 真實性表第一輪重測發現 v20 巴龍 high 會因換指標而開放 ⇒ 整場龍／巴龍指標改回 `objectiveFightEntriesPerMin`、補 9 筆弱點模板排除（`52516994`）；指紋 `24661fa8041eb9a3`；第二輪重測（`714e6f43`，5,320 場、0 失敗）：119 列＝91 列與 `9c88d3d0` 逐位元相同＋28 列 v21。
+
+**驗證（開發分支 HEAD `714e6f43`／`1a09f923`，實跑）**：registry 34/34、plan 219/219、resolver 138/138、book view 24/24、phase choices 22/22、replication 51/51、indicators 59/59、phase study 10/10、truth 34/34、version 82/82、director 97/97、directive 61/61、ruleset 43/43、bucket 23/23、skeleton 170/170、laneframe 54/54、tactic save 38/38、golden v21a 131/131、match setup 153/153、`verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條）、runtime29 PASS；`npm run build` OK（dist 0 筆 DEV 開關字串）。合併後在 `05eead97` 複跑 version／truth／replication／registry／book view／phase choices 全綠。
+
+**審查**：C5 解讀 APPROVE WITH CHANGES（已修）；升級第一次 REJECT（已修）；最終獨立複審 APPROVE WITH CHANGES（#1–#3、#6 已修 `1a09f923`）。
+
+**未完成／風險**：見 08 同日一節。C6 未開始（Owner 指示本輪完成後停止）。
+
+## 2026-10-24 Phase 3a-C5R 強邊重新設計（12／12 confirmed，未升級）＋ 跨版本證據隔離 ＋ C6 規劃（local，未 push／deploy／整合 main）
+
+**依據**：Owner 2026-10-23 第二輪決策（C5 一次受控重新設計；v20 不得用 v21 證據擴充選項；前／中期 scaling 維持 design；simulationVersion.js 過期判定維持保守；C5 收尾與 C6 規劃後停止）。
+
+**完成**
+- C5 根因：`_gankPickV20` 權重項以最大值正規化 ⇒ 舊強邊沒有提高指定路、反而壓低其他兩路 ⇒ 抓人總量下降。C7 §4-A 路線姿態反轉來自 `laneOffset`（站位），與強邊無關（不改，仍待 Owner）。
+- 修法（`c2922cee` `45298098` `735b16a0`）：只在選了強邊的時期，指定路評分加 `gankFocusAdd × 0.2`（增量＝投影權重差 ÷ 本來最大權重；std 0.7）；不再覆寫 gankWeights；新 knob `gankFocusLane`（laneFrame 值型）／`gankFocusAdd`；沒選強邊 ⇒ 逐位元不變。量測前審查 APPROVE WITH CHANGES ⇒ 全修 ⇒ 複審 APPROVE。
+- 正式量測（`77eaf56b`，seeds 8201–8600，10,000 場，0 失敗，中途被記憶體保護中斷一次、同資料夾續跑；量測時指紋 `2ae772222d157170`，之後的 `70a8af6428b02a03` 只改開局過濾、不在量測路徑上，將來升級前要再確認結果未過期）：**12／12 紅藍 confirmed**；守門全隊抓人總量全部上升（+9～+87 %）；對照紅藍對稱通過；⚑ SIDE_ASYMMETRY 前期中路（z 3.42，已記錄）；⚑ OWNER_DECISION（未升級）。解讀與結果審查（APPROVE WITH CHANGES，全修）：`d3f60797`，`review/tactic-book-3a/C5R_強邊重新設計.md` §7–§9。
+- 跨版本證據隔離（`45298098` `62e29ff7`）：`MEASURED_EXCLUSIONS` 可帶 `scope:"static"`；戰術書與開局依本場模式過濾；v20 失去中期 aggressive（v20 證據沒過）。新 gate `check_tactic_evidence_scope_3a`（7/7）；v20 規則集與歷史指紋未動。隔離審查 APPROVE WITH CHANGES ⇒ 全修。
+- 指紋 `moba-sim.v21`＝`70a8af6428b02a03`（未發布）；dev 合併 `45eff649`。
+- 真實性表整輪重測（`c13aebe4`，5,320 場，0 失敗，中斷一次續跑）：119 列與前一版**逐位元相同**；推導排除 +2 筆 static 列；truth 34/34（T9b 轉綠）。
+- 戰術書 Browser Gate（`98e5523e`）：桌機 1366＋手機 390 **31/31**。O2 的「時期姿態是 design」舊黑名單過期（C3-2 已 live）⇒ 拿掉；新增 O2b 釘住畫面上的 v20 隔離。
+- C6 四種勝利條件可行方案：`review/tactic-book-3a/C6_勝利條件_可行方案.md`（前期滾雪球可行；控圖運營原案不可行、變體 A 待 Owner；分推只有中路版本、待 D-5；後期團戰維持 design）。**未實作**。
+
+**驗證（MOBA 分支，指紋 70a8af6428b02a03，實跑）**：version 82/82、evidence scope 7/7、book view 24/24、registry 34/34、phase choices 24/24、phase study 10/10、replication 51/51、laneframe 55/55、director 97/97、directive 61/61、ruleset 43/43、resolver 138/138、match setup 153/153、golden v21a 131/131、truth 34/34、skeleton 170/170、bucket 23/23、tactic save 38/38、plan 219/219、indicators 59/59、browser tactic book 31/31；`verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條：m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS；`npm run build` built in 17.48s，dist 0 筆 `heroSkillsDev`。
+
+**未完成／風險**：見 08 同日一節。強邊升級、C6 實作都未開始（等 Owner Review）。
+
+## 2026-10-24 Phase 3a 第三輪：C5 強邊升級＋C6 勝利條件（前期滾雪球升級 live，v21 only；local，未 push／deploy／整合 main）
+
+**依據**：Owner 2026-10-24 第三輪決策（C5 方案 (a) 12 個強邊升為 v21 候選 live；C6 前期滾雪球／控圖運營變體 A／中路分推實驗、後期團戰維持 design）＋ Owner 核准方案 1（前期滾雪球升為 v21 候選 live；控圖運營、中路分推維持 design；不得宣稱提升勝率；紅方前期經濟 z=3.60 列為發布前側偏風險）。
+
+**完成**
+- C5 升級（`82bf781f`）：12 個強邊選項進 `REPLICATION_CONFIRMED`，只在 v21 規則集＋對應旗標提供；v20 不變。
+- C6 事前登記（`74fde76e`）→ 量測前審查 APPROVE WITH CHANGES、F1–F9 全修（`e72ff87c`）→ 複審 APPROVE（`6d4e4f78`）。
+- C6 正式量測（`b564377f`，write-once `tools/fixtures/phase_options_result_c6.json`）：7,600／7,600 場、0 失敗、0 儀器不一致，量測時指紋 `3d7ee3c4ac59f162`；中途被記憶體保護中斷兩次、同資料夾續跑。
+  - 前期滾雪球 **confirmed**：前期開戰決策 +15.6 %／+14.2 %（z 13.9／12.7），前期巨龍爭奪 +15.1 %／+10.3 %。
+  - 控圖運營 **insufficient**：實際取得 confirmed（巨龍 +17.3 %／+17.6 %、巴龍 +26.7 %／+37.6 %），但「更多到場」的後期巨龍備援 z 2.82／2.96 < 3 ⇒ 不標 confirmed，維持 design。
+  - 中路分推 **one_sided**：紅方分推 z −2.07 ⇒ 維持 design（圍攻 confirmed）。
+  - 區分性：滾雪球 vs 控圖、控圖 vs 分推 distinct；滾雪球 vs 分推 not_distinct（分推沒升級，不影響）。
+  - 強邊 × 積極：衝突 4／4、暴增 2／2、上限 4／4 都通過；前期組合÷對照 藍 1.990（上限 2.0），主要來自強邊本身（藍 +98 %、紅 +87 %）。
+  - 只報告不判定：勝率 藍 52.8→53.5 %（z 0.21）、紅 47.3→52.8 %（z 1.54），比賽時長不顯著；**紅方前期經濟 z 3.60**（控圖運營也有同樣紅方型態 z 3.34）。
+- 解讀與結果審查（`348f5a55`，C6 文件 §8／§8.10）：APPROVE WITH CHANGES，全修（配對數 154／169、升級待 Owner、側偏用詞）。
+- 升級（`72146d30`，Owner 核准方案 1）：`winCondition` 在 v21 Director 規則集變 live（需要 `tacticalDirector:core.v1`）；前期滾雪球進 `REPLICATION_CONFIRMED`；控圖運營／中路分推進 `REPLICATION_WITHHELD`（不提供，已存計畫仍可解析）；`winCondition:"none"` 不再被拒；真實性儀器 `tacticTruthSim.v6`（每時期座位參戰，與 `phaseStudySim.v2` 同定義）；真實性計畫展開勝利條件；指紋 `moba-sim.v21`＝`58d999709c239ca4`（同版本重新登記；沒選勝利條件的輸入逐位元相同）。
+- 新 gate：`check_career_v21_tactics_c6`（6/6，正式 Live 組裝路徑：旗標 → `resolveLiveRuleset` → `buildLiveMatchSetup` → `assembleMatch` → Director）、`browser_check_tactic_book_v21`（23/23，桌機 1366＋手機 390，只在測試分頁攔截 `featureFlags.js` 把 v21 旗標打開，不改 src）。
+- 真實性表整輪重測兩次：
+  - #1（`de69565a`，指紋 `58d999709c239ca4`，163 批、0 失敗，被記憶體保護中斷 2 次、同資料夾續跑）：舊 119 列與前一版**逐位元相同**；新增 28 列（強邊、勝利條件）；推導出 6 筆弱點模板排除，照結果原樣加進 `MEASURED_EXCLUSIONS`（強邊 classic.m1 前期上路／後期上路／後期下路、classic.m2 後期中路；勝利條件 classic.m2 控圖運營、v2.mid_solo_split 中路分推，這兩個本來就撤下），只對該模板不提供；Registry U1 勝利條件分支補上「預設本身被量測排除」這個缺席原因（U1 定義本來就含量測排除表）。
+  - 排除表改動在 `capabilityRegistry.js`（語意檔）⇒ 指紋重新登記 `b37772a2f1777b03`（同版號，未發布）⇒ simulationVersion.js 改了 ⇒ #2（`d14170c6`，163 批、0 失敗，中斷 3 次續跑）：147 列、推導排除、不對稱清單全部與 #1 **逐位元相同**（只有 meta.loadedFiles 不同）；truth 34/34。
+
+**驗證（MOBA 分支，指紋 b37772a2f1777b03，實跑）**：version 82/82、registry 35/35、plan 219/219、resolver 139/139、phase choices 24/24、book view 25/25、replication 53/53、evidence scope 7/7、win condition 11/11、career v21 6/6、indicators 59/59、laneframe 55/55、director 97/97、directive 61/61、ruleset 43/43、phase study 10/10、match setup 153/153、golden v21a 131/131、truth 34/34；`verify --only=tactic24,runtime29`：tactic24 27/29（既有兩條：m6 Gank 次數、BattleResult.v2 結構）、runtime29 PASS；`npm run build` built in 18.61s，dist 0 筆 `heroSkillsDev`；browser 戰術書 v21 23/23、static 31/31。
+
+**有效能力（只在 v21，旗標開＋Director core.v1）**：12 個強邊選項；勝利條件「前期滾雪球」（只填補玩家沒指定的格，玩家明確設定優先；沒有隱藏加成）。v20 不變。
+
+**未完成／風險**：見 08 同日一節。前期滾雪球確認的是**戰術行為**，不得宣稱提升勝率。
+
+**最終獨立審查**：APPROVE WITH CHANGES（無重大問題）⇒ 全修：Registry U1 的勝利條件「預設本身被量測排除」改為要求排除表真的有這一列（不再依賴兩個 reason 字串剛好相同）；08 補上「std 後期中路強邊只靠 C5R n=400 提供、真實性表 n=40 列 fail」；08 弱點模板一句標明 n=400 複驗是 C5R。審查自行比對了三個 commit 的真實性表（119／147 列逐位元相同）與 C6 數字。修正後 registry 35/35。
+
+## 2026-10-25 Phase 3a-B 開工審查＋v21 發布風險盤點（只有文件；local，未 push／deploy／整合 main）
+
+**依據**：Owner 2026-10-25 接受第三輪成果（C5 12 個強邊＋C6 前期滾雪球維持 v21 候選 live；控圖運營／中路分推／後期團戰維持 design，不為湊數改係數），指示先做 3a-B 開工審查與 v21 發布風險盤點，不實作。
+
+**完成**
+- 開工清單：`review/tactic-book-3a/3a-B_開工清單.md`（一致性核對、tactic24 確切案例、std 後期中路強邊、經濟／疊加研究 E1、career.v21 行為研究 E2、v20 過濾 UI、真實性表成本、Roadmap 缺口、P0–P3 清單與成本）。
+- tactic24 兩條紅改以**確切案例**確認（不再只看 27/29）：HEAD、v20 發布 `1d0e219` 逐值相同（m6／m4 40 seeds 逐場 Gank 數相同，4.225 vs 4.35＝×0.9713；`res.schema`＝`BattleResult.v3`）；v19 發布 `d146e02` 是 31.05 vs 19.25（×1.61 通過）⇒ m6／m4 那條自 v20 評分選路起失效，BattleResult 那條是 v14 升 v3 後的版本事實過期。
+- std 後期中路強邊：n=40 的 23 組配對**全部 A＝B**；探針確認 Resolver 有給 `gankFocusAdd=0.7`、引擎後期選路幾乎都低於出發門檻（49 次中 48 次不出發）⇒ 罕見事件、非接線問題；C5R n=232 每分鐘 0.030→0.054。
+
+- 獨立審查：APPROVE WITH CHANGES（5 major），全部採納（清單 §12）：沒有任何複驗來源被機械驗證過期與否；v20 下儲存是另存副本、不是移除；career.v21 對「無 v21 專用選擇」的輸入有黃金（phase skeleton G／laneframe C3），缺的是 v21 專用選擇與 challenge.v21；前期經濟紅＞藍出現在所有有前期作用的臂，原因不明、不歸因巨龍；T15 會讓 career.v21 setup 雜湊全變，須先登記預期變動集合。
+
+**驗證（HEAD `b5a27c17`，實跑）**：`check_simulation_version_gate` 82/82、`check_tactic_truth_3a` 34/34、`check_tactic_replication_3a` 53/53；`ESMO_VERIFY_FLAT=1 node tools/check_moba_tactic24.mjs` 27/29（兩條紅如上）。本輪沒有改 src／tools，沒有新的大型量測。
+
+**未完成／風險**：見 08 同日一節。3a-B 功能未開始，等 Owner Review。
+
+## 2026-10-25 Phase 3a-B P0＋P1（Owner 核准開工；local，未 push／deploy／整合 main，旗標未啟用）
+
+**依據**：Owner 2026-10-25 正式核准 3a-B 開工（八項決策＋額外要求）。執行紀錄：`review/tactic-book-3a/3a-B_P0P1_執行紀錄.md`。
+
+**完成**
+- P0-1 證據延續重播：六份歷史研究 130 臂、2,600 場，與原始逐場紀錄**逐值相同（0 不同）**，罕見路徑（每臂 ≥10 個 A≠B seeds）包含在內；原始紀錄核對為各結果檔的來源（`tools/fixtures/evidence_carryforward_3a.json`，在 `02936f55`／`b37772a2f1777b03` 下）。
+- P0-2 tactic24 29/29（原 27/29）：BattleResult 依 `BATTLE_RESULT_VERSION`；m6／m4 舊次數宣稱失效（保留歷史），換成事前登記的 v20 機制宣稱「m6 中路 Gank 占比 ≥ m4 ×1.15」，新 seeds 19001–19200 ×1.48、z 6.21（群集 z 5.89）。
+- P0-3 既有 jsonl 重分析（非證據）：紅＞藍的六臂共用同一對照組；2 倍抓人來自強邊本身（交互作用 ≈0）。±150 金在 n=400 檢定能力 0.13–0.42 ⇒ E1 草案改提 n=1200（draft，待 Owner）。
+- seed 計畫與 effectiveSeed 去重（19/19）；E2、AI 教練事前登記（實作前 `3da6b9ff`）。
+- P1：T16 `challenge.v21`（旗標控制、每場規則集由記下的版本凍結、旗標關記 moba-sim.v20＝正式站）；T15 AI 教練 v1（`aiCoach.js`、career.v21 `redTactic aiCoachV1`）；後期強邊改回 design（owner_hold）；T13 三步驟／對手情報／確認頁；決策 4 的提示（另存、重複、已滿、開局未使用選項）；真實性表預演批次；`moba-sim.v21` 重新登記 `e3acf891023937e9`；challenge.v21 黃金（`ae3c9e47` 釘死）。
+- 獨立審查 APPROVE WITH CHANGES（3 major／8 minor），採納後見執行紀錄 §8。
+
+**驗證（實跑）**：version 83/83、ruleset 51/51、registry 35/35、replication 53/53、AI 教練 10/10、UI 8/8、book view 25/25、director 97/97、directive 61/61、career v21 C6 6/6、win condition 11/11、phase choices 24/24、evidence scope 7/7、seed plan 19/19、challenge 黃金 v21 6/6、setup 153/153、assembler 227/227、live setup 118/118、skeleton 171/171（career.v21 改變集合＝登記 14、其餘 83 相同）、laneFrame 55/55、challenge setup 65/65、slice1 108／2 79／3 100／4 60／5 71／6 30／7 35／8 122、verify tactic24（29/29）＋runtime29 PASS、build OK、瀏覽器 tactic book v21 30/30、static 31/31。
+- **未過**：`check_match_golden_v21a` 119/131（12 個 Challenge 案只差 simulationVersion／challengeId／draft.hash 三個身分欄位，引擎行為全同；未登記 ⇒ 交 Owner）；`check_tactic_truth_3a` T2 過期（語意凍結後整輪重測，屬 P2）。
+- **未經瀏覽器實測**：對戰畫面的「本場未使用的戰術選項」提示（只有 Node 資料流 U5）；真實 AI 對手下的對手情報畫面（瀏覽器只驗了沒有場次的標準對手）。
+
+**未完成／風險**：見 08 同日一節。
+
+## 2026-10-27 Phase 3a-B P2（發布量測；local，未 push／deploy／整合 main，旗標未啟用，未碰 CS）
+
+**依據**：Owner 2026-10-25 條件式核准 P2；2026-10-27 當機後恢復（不重開、不重跑有效量測）；同日 Owner 兩次裁定（G-A8 方案 (b)＋(c)、Challenge 側偏方案 (a)）。執行紀錄：`review/tactic-book-3a/3a-B_P2_執行紀錄.md`。語意凍結 `176ccac0`、指紋 `0578fa882d74b205`，P2 期間 `src/` 未改。
+
+**完成**
+- 真實性表正式重測 6,520 場（147 列逐位元相同，`1d64ecd6`）；challenge.v21 黃金重錄＋釘死（`0e0cb5a2` `17f41038`）；證據延續重播 2,600/2,600 逐值相同（`d130c7e4`）。
+- E1 經濟／疊加 8,400 場 **PASS**（WARN：藍方前期抓人比 ≥ 1.9 三臂；C6 紅＞藍前期經濟在 n=1200 未重現，`1eaeee2c`）；E2 career.v21 正式入口 1,600 場 **PASS**（`a161b443`）。
+- G-A8 8,400 場 **STOP**（m3 68.3%、m7 67.3%、m1／three_lane_pressure／mid_jungle_sync 60.3%，`0024a067`）；v20 對照（事前登記＋審查，可比性 8/8）8,400 場：五個 STOP 模板 v20 逐位元相同＝PRE_EXISTING（兩個 v2 模板為反事實），classic.m2 只有 v20 是 STOP（`6a3d9464` `f7abd883`）。**G-A8 維持 STOP**，修正方案 A／B／C 待 Owner。
+- 側偏 career 4,058 場 **PASS**（`c07e0481`）；challenge 4,098 場 **STOP**（STANDARD 側偏惡化 +4.10pp z 3.46、SWAPPED +7.60pp z 4.56，`b2af521b`）；雙向配對研究已登記＋審查 APPROVE、V1–V4 5/5（`64980533`），**4,098 場正式跑等 Owner 確認**。
+- career.v21 黃金 24 案釘死（`7e28b1d3`）；`check_tactic_book_view_3a` V11 過期原始碼比對修正（`fb7045a1`，假紅，非回歸）。
+- 單位定義（Owner 第 4 點）：側偏惡化 pp 與藍方勝率變動 pp 兩欄並列、都用未四捨五入值（見執行紀錄 §5）。
+
+**驗證（實跑）**
+- Node gate 42 支逐支單線：42/42（version 83、ruleset 51、registry 35、replication 53、AI 教練 11、book UI 9、book view 25、plan 219、resolver 139、save 38、indicators 59、evidence scope 7、seed plan 19、directive 61、director 97、career v21 C6 6、win condition 11、phase choices 24、bucket 23、laneFrame 55、skeleton 171、setup 契約 85、assembler 227、live setup 118、challenge setup 65、balance runner 122、challenge 黃金 6、career 黃金 5、match setup 153、truth 34、b1b 86、b1c 76、b1d 126、slice1–8 108/79/100/60/71/30/35/122、v21-A 黃金 137/137）。
+- `npm run build`：built in 33.39s，dist 0 個檔案含 `heroSkillsDev`。
+- `node tools/verify.mjs` 全套：51/118 段通過、67 段紅；67 段**全部**在 v20 發布基準（`v20-baseline-1d0e219` 狀態檔，10-14）就紅，失敗訊息逐字相同 67/67（CS 研究線、milestone 舊斷言、stats28／progress25、pacing29b1／controls29b3 等）⇒ **沒有新的回歸**。tactic24、runtime29、experience26、regress 15/15、regress2 8/8、所有 Phase 3a 段 PASS。
+- 瀏覽器（單線）：tactic book v21 30/30、static 31/31、battle notices 3a-B 11/11、exit flush 12/12、Player Challenge slice8 50/50（桌機＋390）。
+- 獨立 Reviewer（P2 收尾）：APPROVE WITH CHANGES（1 Major：側偏兩欄單位四捨五入不一致；8 minor：判準措辭、challenge 佈局是 seed 分層、v2 列數、舊資料選擇性引用、相關係數共線與「高端」說法過頭、反事實但書、雙向研究限定、05 引用懸空）→ 全部採納。
+
+**未完成／風險**：見 08 同日一節。兩項 STOP（G-A8、Challenge 側偏）阻擋 v21 發布；雙向研究等 Owner 確認才開跑；偏弱模板（defensive_hold 28.5%、m8 36.3%、mid_solo_split 42.3%）列入後續平衡評估。
+
+## 2026-10-28 Phase 3a-B P2 續：Challenge 雙向研究＋G-A8 旋鈕診斷（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS）
+
+依 Owner 2026-10-27 裁定執行（核准雙向研究正式開跑、核准 G-A8 方案 A；B／C 未授權；兩項 STOP 保留）。詳細見 `review/tactic-book-3a/3a-B_P2_執行紀錄.md` §8–§10。
+
+**完成**
+- Challenge 雙向配對研究：Owner 確認 `d3ae9ae2`；新跑 4,098 場，錯誤 0，結果 `6a805453`。**SIDE_CONFIRMED ⇒ STOP 維持**：SWAPPED 側偏 v20 −1.2pp → v21 +3.1pp（惡化 +1.9pp，z 3.86）；STANDARD −2.7 → +0.8（惡化 −1.9）。v21 純藍方 +2.0pp、巨龍側 −1.2pp。另見陣容強弱大幅變動：mirror 對 topheavy −23.0pp、rotation 對 balanced +30.3pp。
+- G-A8 方案 A 旋鈕診斷：登記 `1768e753`→`e110d401`→`c7aa5b0a`（兩輪審查）；驗證 5/5（legacy 路徑 180 場與 G-A8 逐場相同）；正式 18,400 場，錯誤 0，結果 `85f173a2`。**DIAGNOSED；G-A8 維持 STOP**。m3／m7 為 KNOB_DRIVEN（邊界），m7 主要是 riskTolerance；mid_jungle_sync 旋鈕 × 內容交互；three_lane_pressure、defensive_hold 為 CONTENT_DRIVEN；m1、mid_solo_split 未判定。玩家選得到的 aggression 0.85／0.25 在 std 上沒有旗標（沒偵測到，不等於安全）。
+- 白話分析：偏向方案 C（改模板），但 `tacticTemplates.js` 是語意檔，C 與 B 一樣會換 v21 候選指紋、重做全部 P2 證據（約 10 小時以上）。
+- 獨立 Reviewer：結果與分析 APPROVE WITH CHANGES（7 Major／5 minor）全部採納。
+
+**未完成／待 Owner**：方案 C 最小版本是否核准（需事前登記、新 seeds 重跑 G-A8）；弱端模板是否一起處理；是否另立挑戰模式陣容平衡項目。兩項 STOP 在，v21 不發布。
+
+**風險**：每個診斷標籤都用 G-A8 已用過的 seeds，多個落在邊界；任何修正都要新 seeds＋原門檻。
+
+## 2026-10-29 Phase 3a-B 修正規劃：G-A8 方案 C 篩選＋Challenge 層級階梯（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS；`src/` 未改）
+
+依 Owner 2026-10-28 裁定（方案 C 原則核准、B 暫不採用；Challenge 另立側偏與陣容平衡項目；兩項 STOP 保留、門檻不放寬；本輪只做設計與必要診斷）。設計文件：`review/tactic-book-3a/3a-B_修正規劃.md`。
+
+**完成**
+- 模板共用查證：`tacticTemplates.js` 不在 v20 正式版（`1d0e219`）；classic.m1–m8 由 `MOBA_TACTICS` 派生；本分支 v20 規則集也接受 binding ⇒ 不能直接改模板或 `MOBA_TACTICS`。提出最小版本化修正：只存在 v21 規則集的 `templateBalance: "v21.b1"` 修正表（比照 laneFrame 先例），v20 規則集永不帶此鍵。
+- 研究登記＋兩輪審查（`60a1ddc1` `38251747`）；seed plan 26/26。
+- Challenge 層級階梯 18,392 場，錯誤 0（`e7da437a`）：**ATTRIBUTED**，唯一過 Bonferroni 的是 STANDARD frame@v20 +2.3pp；SWAPPED 惡化為 DIFFUSE_OR_UNDERPOWERED（skills +1.7、layout +1.7，皆含 0）。陣容翻轉：mirror 對 topheavy 來自 growth −19.3pp、rotation 對 balanced 來自 skills +33.2pp（未逐英雄量測）。v21 端拿掉 frame 幾乎無效果。
+- G-A8 候選篩選 9,200 場（新 seeds 41001–41400），錯誤 0，驗證 4/4（`a0a00956`）：**SCREENED，G-A8 維持 STOP**。m3 選出 M3_C（aggression 0.6／risk 0.5，63.0 → 54.0）；m7 重現 STOP 61.5% 但 NO_CANDIDATE；m1、mid_jungle_sync、mid_solo_split 新 seeds 未重現（但 std 控制組也回落 3pp，mid_jungle_sync／three_lane_pressure 相對 std 幾乎未回落）；defensive_hold、m8 重現 WARN 弱且 NO_CANDIDATE。
+- 修正規劃 §1–§5：逐模板處置、Challenge 根因與方案 C1–C4（不加紅藍補償）、統一驗證評估（開發期篩選 → 一次凍結 → 一次性重驗約 16–19 小時）、9 項待核准。
+- 獨立 Reviewer：APPROVE WITH CHANGES（8 Major／4 minor）全部採納（修正規劃 §6）。
+
+**驗證（實跑）**：階梯 `--report` 加總檢查 3/3、layout 在 STANDARD 為 0；篩選 `--validate` 4/4 PASS（208 場）；std 對照 51.75%（OK）。本輪未改 `src/`，未跑 build／gate（無程式變更）。
+
+**未完成／待 Owner**：m3 修正核准；m7／m8 第二輪篩選；C2 逐英雄診斷、C1 fixture 校準、C3 順序旗標；統一驗證流程；career 確認 seeds。**只修 m3 無法解除 G-A8 STOP**。
+
+**風險**：本輪長量測被記憶體保護砍 4 次（背景約 37 個 Codex node 行程），全靠同資料夾斷點續跑救回，結果無遺失。
+
+## 2026-10-29／30 Phase 3a-B 修正規劃第二輪：m7／m8 篩選、Challenge C2／C1 基線（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS；`src/` 未改；未凍結語意、未跑整套 P2 重驗）
+
+依 Owner 2026-10-29 裁定（七項）。設計文件：`review/tactic-book-3a/3a-B_修正規劃_第二輪.md`。
+
+**完成**
+- G-A8 第二輪（m7／m8＋m3 描述性複驗）：5,600 場，錯誤 0（`dc5c03ec`）。
+  - **m8 SELECTED M8_C 47.3%**（對 BASE +14.8）。
+  - m7 四個旋鈕臂都 ≥ 57.75%，NO_CANDIDATE。
+  - m3 M3_C 在新 seeds 為 55.8%，與先前一致。
+  - 旋鈕研究的 K +11.5pp 在新區塊**沒有重現**（同設定 55.75 對 62.5，z≈3.1）。
+- m7 第三輪（內容組）：登記與兩輪審查（`b5106335`）；4,800 場，錯誤 0（`3aaec879`）。
+  - **SELECTED M7_M 47.8%**（旋鈕 0.5／0.5＋節奏 standard＋三路 standard；對 BASE −19.5）。
+  - m7 的強度來自「三路 aggressive」與「高旋鈕」的組合，單獨改任一項都不夠。
+  - 採用 M 要改 v21 文案：風險高→中，削弱「速戰速決」「全線壓制」。
+- Challenge C2 逐英雄／陣容診斷：9,680 場，錯誤 0（`be02333f`），判定 DIAGNOSED。
+  - rotation 對 balanced 的翻轉由四套技能組承擔：chichuan +23、binghe +15.5、bingshuang +11.8、dadi +11.0。
+  - 隊對隊全項拉平後，mirror 對 topheavy 為 88.8%。topheavy 的整組選手數值（含不可調的 spread）約值 35pp；base／mastery 單獨的效果未量。
+  - **真鏡像**中技能層讓藍方多勝 +6.9pp（z 3.40，SKILL_LAYER_SIDE_EFFECT），集中在 topheavyDef（+16.0）；階梯真實配對的 STANDARD 技能步驟只有 +0.1。成長層無側別效應。
+  - TD-3A-23：TD3A23_CONSISTENT（對稱戰術逐場相同）。
+- 技能紅藍對稱程式審計（唯讀）：規則本身沒有側別分支；不對稱來自同 tick 結算順序，以及 `heroSkillsOn` 連帶的十個系統。
+- C1 練習對手難度階梯：登記與兩輪審查（`440f37eb`）。M0 基線 4,000 場，錯誤 0（`316132ef`），判定 BASELINE。
+  - v21 只算勝：mirror 65.5、topheavy 47.3、balanced 32.0、rotation 30.3、veteran 2.3。
+  - 除 veteran 外，比 v20 容易 +11 到 +28pp（M0 拆不出原因）。
+- career 確認研究（新 seeds 51001–55999）：登記草案與去重（`2628237d`）。
+
+**驗證（實跑）**：
+- 篩選 validate 5/5 PASS；C1 validate 6/6 PASS；C2 V1 基準臂逐場相同。
+- seed plan 31/31；篩選工具 selftest 8/8；C1 工具 selftest 7/7。
+- 本輪未改 `src/`，所以沒跑 build／gate。
+
+**未完成／待 Owner**（設計文件 §9 D1–D7）：
+- m7 M7_M 與文案改動、m8 M8_C；
+- 練習對手的區間、順序與 veteran 定位，之後才跑 S1 篩選；
+- 側偏路徑：B 校準消不掉技能層的藍方優勢；建議先核准工具層 `players` 陣列重排診斷（約 2,400 場、1 小時，不改語意）；路徑 A 需要撤銷「不加旗標、不改共用引擎」；
+- 凍結前是否篩 three_lane_pressure／m1（D8）；
+- defensive_hold 內容設計。
+
+**可否一次凍結**：G-A8 的修正可以一次涵蓋，但除非先篩 three_lane_pressure／m1，確認時很可能仍是 STOP；challenge 側偏若只走路徑 B，凍結後預期仍是 STOP。凍結後一次性重驗約 17–20 小時。
+
+**審查**：獨立 Reviewer APPROVE WITH CHANGES（6 Major／8 minor），全部採納（設計文件 §10）。
+
+**風險**：three_lane_pressure／m1 與 m7 成因相同但本輪沒有篩選，凍結後 G-A8 仍可能因它們 STOP。
+
+## 2026-10-30 Phase 3a-B 修正規劃第三輪：D5 結算順序診斷、D8 three_lane_pressure／m1 篩選（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS；`src/` 未改；未凍結語意、未跑正式 P2 重驗）
+
+依 Owner 2026-10-30 核准 D5＋D8。設計文件：`review/tactic-book-3a/3a-B_修正規劃_第三輪.md`。
+
+**完成**：
+- 工具與登記（`1a1a09f2`）：`tools/measure_challenge_order_3aB.mjs`（新）、`challenge_order_registration_3aB.json`、`ga8_fix_screen4_registration_3aB.json`、seed plan 新增兩個區塊。兩份登記都經獨立審查（D5 3 Major／5 minor、D8 1 Major／6 minor，全部採納）。
+- D8 第四輪篩選（`cb867eca`）：seeds 57801–58200，5,600 場，錯誤 0。
+  - three_lane_pressure：BASE 60.0 STOP 已重現。工具 SELECTED TLP_C0 54.8，但對 BASE −5.3（−12.2..+1.7）未能分開；清楚改善的是 TLP_C 47.5（三路 standard＋旋鈕 0.5／0.5，−12.5，−19.2..−5.8）。兩者都屬重新設計。
+  - classic.m1：BASE 59.8 WARN strong（差一勝即 STOP）。SELECTED M1_F 52.5（中路 standard＋旋鈕＋節奏），對 BASE −7.3（−14.0..−0.5）顯示改善，但校正多重比較後不成立，也屬重新設計。
+  - 只調旋鈕的臂都未能與 BASE 分開（同 m7）。
+- D5 結算順序診斷（`ac3e9e46`）：6,160 場，錯誤 0，V1 重建臂逐場與 C2 相同。判定 **INCONCLUSIVE**。
+  - 新 seeds 上鏡像技能步驟：藍在前 +4.8（HINT；C2 篩選值 +6.9）、紅在前 +2.9。
+  - 順序成分 O +0.9（−1.9..+3.7）NONE；位置成分 P +3.9（+1.1..+6.6，z 2.77）HINT；先處理者優勢約 0。
+  - C2 的陣容分布（topheavyDef +16.0）沒有重現。L1→L1o 組裝順序步驟逐場相同（實測為 0）。
+- 設計文件獨立審查：APPROVE WITH CHANGES（3 Major／10 minor），全部採納。
+
+**驗證（實跑）**：
+- D8 validate 5/5 PASS；D5 validate 6/6 PASS、selftest 6/6；seed plan 33/33 PASS。
+- 兩次 `--report` 都在無錯誤、無遺失下產出結果檔。
+- 本輪未改 `src/`，所以沒跑 build／gate。
+
+**結論與建議（Owner 決定）**：
+- 側偏：`players` 順序只解釋很小一部分，**不建議修改引擎結算順序**；challenge 側偏 STOP 維持，剩下的來源是位置（版圖）或未反轉的藍方固定結構，本研究分不開（可選 P-1：SWAPPED 雙向四臂約 4,800 場）。
+- G-A8：three_lane_pressure 建議列為內容設計問題（D9 ②）；m1 建議不修、接受確認風險（D10 ②）。
+- 一次凍結：**尚不具備**。不再需要等引擎修正；剩下的是 Owner 決策 D1、D2、D4、D9–D12，以及 C1 S1（1.0–2.2 小時）。照建議凍結時，G-A8 確認至少一個 STOP 約七成至七成五，challenge 側偏預期仍 STOP。
+
+**未完成／待 Owner**：D1–D4（保留）、D9–D12（新增），見設計文件 §3.2。
+
+**風險**：mid_jungle_sync（原 60.3 STOP）從未篩選；D5 期間電腦睡眠約 6.5 小時，行程未中斷、結果不受影響。
+
+## 2026-10-30 Phase 3a-B 第四輪：mid_jungle_sync 有界篩選、分階段發布可行性（local，未 push／deploy／整合 main，旗標未啟用，未碰 CS；`src/` 未改；未凍結、未跑 P2 重驗）
+
+依 Owner 2026-10-30 第二次裁定（接受 D5／D8；m3／m7／m8 為 v21 候選；three_lane_pressure 不失去三路特色、m1 不修；mid_jungle_sync 一次有界篩選；veteran 保留 Boss；不改引擎、不加紅藍補償）。設計文件：`review/tactic-book-3a/3a-B_修正規劃_第四輪_發布拆分.md`。
+
+**完成**：
+- mid_jungle_sync 第五輪篩選：登記 `ad98ff2f`（只放保留定位的臂；審查 2 Major／5 minor 全部採納，含窮舉的停止規則），結果 `eb115578`。
+  - seeds 58201–58600，2,400 場，錯誤 0；STD 53.3%。
+  - 原版 52.3%（47.3..57.2），**未重現**（G-A8 60.3）。四個候選都沒和原版分開；旋鈕研究的 K +8.5 沒有重現。
+  - 依登記：**STOP_NO_REASONABLE_CANDIDATE，最後一輪**，模板不改。
+- m7 M7_M：核對後確認保留前期入侵（入侵機率 0.8、前期 aggressive）；中路跟進入侵與前期接戰總偏移減弱。v21 文案提案（風險中、重點打野、只寫直接效果），待 Owner 定稿。
+- 分階段發布可行性（唯讀程式碼審查；審查 5 Major／7 minor 全部採納）：
+  - Live 與 Challenge 共用同一個旗標 ⇒ 要新增 `mobaChallengeV21`，只改解析分支，`challenge.v21` 物件不動。
+  - 旗標關閉 ≠ 正式站：戰術書（21 模板）不看旗標，合併本身就是發布 ⇒ 要做總開關 F2。
+  - 回退只能靠旗標：程式回退會刪掉戰術書。
+  - 第一階段要有獨立的正式驗收規格（約 15–18 小時）。
+
+**驗證（實跑）**：第五輪 validate 5/5（試跑與正式各一次）；seed plan 34/34；selftest 由 Reviewer 跑 8/8。本輪未改 `src/`，所以沒跑 build／gate。
+
+**未完成／待 Owner**：
+- 確認 mid_jungle_sync 停止結果；m3／m7／m8 v21 文案定稿；風格模板退路是否套 v21 修正。
+- 核准 F1–F4 與第一階段驗收規格方向。
+- 事前決定確認性 G-A8 仍 STOP 時第一階段怎麼辦（不得以排除模板當 PASS）。
+
+**風險**：
+- 確認性 G-A8 至少一個 STOP 約四成到接近六成（36–57%）。
+- 與目前 origin/main（含 CS Major v1.0）尚未合併驗證。
+- 第二階段改 Challenge 語意檔要升 v22。
+
+## 2026-10-30／11-01 Phase 3a-B 第一階段：發布規格登記與最小實作（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未跑正式 P2 重驗、未啟用發布旗標）
+
+依 Owner 2026-10-30 第三次裁定與後續指示。文件：`review/tactic-book-3a/3a-B_第一階段_最小實作.md`；登記：`tools/fixtures/stage1_release_registration_3aB.json`。
+
+**完成**：
+- 事前登記＋兩輪獨立審查（`f3986c44`）。
+- 最小實作（`src/` 16 檔＋新畫面檔 TacticScreenV20.jsx）：
+  - 版本化修正表 `TEMPLATE_BALANCE["v21.b1"]`（m3 0.6／0.5、m7 M7_M、m8 0.5／0.5），只有 career.v21／balanceTool.v21 的 `templateBalance` 層讀得到；v20 規則集與 challenge.v21 逐位元不變。
+  - 選擇引擎、指標、矛盾提示、確認頁、名稱都用本場修正表；計畫合法性改聯集。
+  - 新旗標 `mobaChallengeV21`（預設關）：只開 Live v21 時 Challenge 仍是 v20。
+  - 總開關：旗標關 ⇒ 正式站 v20 戰術畫面逐字副本、不用戰術書 binding；Live 2×2 矩陣依本場規則集。
+  - AI 退回固定戰術：由 id 重建、只套一次；m7 v21 文案（前期野區入侵）。
+- 兩次實作審查（3 Major／7 minor；5 minor），全部採納；第二批替代斷言先登記（`424d93ad`）再改 gate。
+
+**驗證（實跑）**：
+- build ✓；新 gate check_stage1_split_3aB 44/44。
+- v20 黃金（check_match_setup_3a）153/153、Challenge 黃金／組裝／slice1–8、存檔 b1b／b1c／b1d、live／AI 教練／balance runner、Phase 3a 全部 gate、skeleton 171、laneframe 55、resolver 139、verify tactic24 29/29＋runtime29 35/35、regress 15/15、regress2 8/8：全綠。
+- 瀏覽器：tactic_book_v21 30/30、tactic_book_3a 31/31、battle_notices 11/11。
+- 預期紅、未重錄：v21a 黃金 40 案（career.v20＋binding 的 bind-* 案）、career 黃金 setup 雜湊；真實性表 T2 過期（凍結時重測）。
+- 既有紅（改動前基準就紅）：tactical_identity_v17 E1／E5、hero_skills_phase1。
+
+**待 Owner（凍結前提）**：m3／m8 v21 文案；m7 detail 與 v21 名稱進賽果；總開關取代 10-25 決策 4；v20 下 std／v2 計畫處理；賽後執行度目標是否 v21 化。開發期：m3／m7／m8 量測排除列在 v21.b1 重新判定；第一階段正式驗收另行登記。
+
+**風險**：確認性 G-A8 至少一個 STOP 約 36–57%（STOP 即停止發布並回報）；瀏覽器沒直接看到 v2 替換那一行與讀取畫面／HUD 的 v21 文案。
+
+## 2026-11-02 Phase 3a-B 第一階段：Owner 2026-11-01 Review 落實、P6／P7 完成（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未啟用旗標、未跑正式 P2）
+
+文件：`review/tactic-book-3a/3a-B_第一階段_最小實作.md` §6、§8。
+
+**完成**：
+- Owner 決策 1–4：m3／m8 文案、m7 detail 與 v21 名稱、總開關與 v20 回退、賽後面板未評分（含專精戰術意圖不計）。
+- 三項瀏覽器驗收：新 gate `browser_check_stage1_flows_3aB` 42/42，走真正的 AppShell。抓到一個 Node gate 看不到的白畫面（TDZ），已修。
+- P6：1,900＋3,200 場，0 錯誤。11 通過、2 複驗確認、1 未站住、2 無效果、3 沒有宣稱。套用後玩家可見的差異只有 m3：團戰姿態撤下、推塔高開放；勝利條件展開沒有變。
+- P7：正式驗收規格登記，兩輪審查（APPROVE WITH CHANGES，全採納）。**只核准規格，工具條件未完成。**
+
+**驗證（實跑）**：build ✓；v20 黃金 153/153；Challenge 黃金 6/6、setup 65/65；存檔 b1b／b1c／b1d；split 62/62；Phase 3a 全部 gate；verify tactic24／runtime29 PASS；regress 15/15、regress2 8/8；瀏覽器 30/30、31/31、11/11、42/42。
+
+**已知紅（無新增回歸）**：v21a 97/137（同 40 案，未重錄）、career 黃金 4/5、truth 33/34（T2）、simulation version 82/83（指紋）、club mastery 264/265（origin/main 也紅）。
+
+**事後才發現的差異**：見文件 §8.4，包含 P6 第一次開跑作廢（`--worker` 撞名）、自我檢查 S8 假紅且開跑前沒跑過、第一階段通過數誤報為 10（正確 11）。
+
+**未完成**：凍結前 3 項 Owner 決策與 8 項開發工作（文件 §6）。P8 未執行。
+
+**風險**：確認性 G-A8 至少一個 STOP 約 36–57%。與目前 origin/main 尚未合併驗證。
+
+## 2026-11-02 Phase 3a-B 第一階段：凍結前 8 項工作與 Freeze Readiness Gate（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未改 CS；未凍結、未重錄 Golden、未跑正式 P2、旗標全關）
+
+報告：`review/tactic-book-3a/3a-B_最終凍結就緒報告.md`。
+
+**完成**：
+- 三項 Owner 決策與已知驗證缺口入檔（勝率組合 NOT TESTED、不算 PASS；第 2、3 項標明是實作者解讀）。
+- 8 項工作：G-A8／career 側偏／E1／E2 確認登記與 `--reg`；真實性計畫用修正表（163 批不變）；`exKey` 納入 templateBalance；step 4b 工具與登記；旗標回滾演練 gate；verify 基準（`1d0e219a`）。
+- Freeze Readiness Gate：118 段逐段比對基準、四次彩排（只用已觀察 Seeds）、兩輪獨立審查（APPROVE WITH CHANGES，工具缺陷都已修）。
+
+**驗證（實跑）**：verify 比對：既有失敗 67 段（失敗行、狀態、tail 相同）、新回歸 0、環境問題 0、基準之外 3 段（全部登記到凍結）。正式 gate 清單 48 支 43 綠，5 紅都已登記。formal acceptance 45/45、回滾演練 15/15、split 62/62、v20 黃金 153/153、Challenge 全綠。
+
+**事後才發現、已修的工具缺陷**：見報告 §6。最嚴重的是核對 gate 在登記填完後會真的啟動正式量測、verify 比對看不到已紅段裡的新紅燈、G-A8 紅方檢查誤判（會讓正式 G-A8 在第 2 個 seed 中止）。
+
+**未完成**：Owner 5 項決定（`openOwnerDecisions`）；真實性表預演與證據重播（等「矛盾」定義後才能看數字，所以沒跑）；P8；凍結。
+
+**風險**：確認性 G-A8 至少一個 STOP 約 36–57%。與目前 origin/main 尚未合併驗證。
+
+## 2026-11-02 晚 Phase 3a-B 第一階段：Owner 五項決策落實、凍結前診斷（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未重錄 Golden、未跑正式 P2、旗標全關）
+
+文件：`review/tactic-book-3a/3a-B_最終凍結建議.md`。
+
+**完成**：
+- Owner 五項決策與三項確認入檔，先經獨立審查（APPROVE WITH CHANGES），修正都在有任何預演數字之前提交。
+- 真實性表 4a 預演（6,520 場，已觀察 seeds 1–40）：判定 OK。147 列 142 列逐位元相同，只有事前登記的 m8 5 列變動，無 CONTRADICTION。只作診斷。
+- 證據重播：2,600／2,600 相同。只作診斷，沒有跑 `--report`。
+- 新工具：`tools/lib/p6Contradiction.mjs`、`tools/check_truth_preview_3aB.mjs`；step 4b 加每側 n ≥ 200。
+
+**驗證（實跑）**：52 支 gate：47 綠，5 紅都已登記。formal acceptance 49/49、回滾演練 15/15、split 62/62、v20 黃金 153/153、Challenge 全綠、瀏覽器 6 支全綠、build ✓。14,746 筆紀錄 0 筆落在保留區段。
+
+**建議**：核准語意凍結並跑正式驗收（約 17 小時）。這不是發布建議；確認性 G-A8 至少一個 STOP 約 36–57%。
+
+**更正**：先前估「真實性表預演約 70 分鐘」是錯的，實測約 128 分鐘。
+
+**待 Owner**：核准凍結；確認三項解讀（「停止調查」＝停止並回報、4b 混合情況判 FAILED、矛盾只算同模板的列）。
+
+## 2026-11-03 Phase 3a-B 第一階段正式驗收：G-A8 判定 STOP，停止（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_正式驗收紀錄.md`。
+
+**完成**：Owner 三項判定入檔；凍結 commit `7a6e9736`、指紋 `0cc52b48cfb9348a`；五份確認登記；獨立審查（0 Blocker、0 Major）；正式 G-A8（Seeds 43001–43400，8,400 場，錯誤 0，對照 52.8%）。
+
+**結果**：**STOP**。`v2.hard_engage_stack` 62.3%（下界 57.5）、`v2.three_lane_pressure` 61.3%（下界 56.5）、`classic.m6` 60.8%（下界 56.0）。三個都不在修正表裡。修正表模板都離開 STOP 區：m3 59.0%（WARN）、m7 47.5%、m8 42.0%（WARN）。
+
+**未做**：career 側偏、E1、E2、4a、重播、4b 都沒有開始（工具拒跑已實測）；沒有重抽 Seeds、沒有調門檻。機制分析未做，未經核准不擴大調查。
+
+**待 Owner**：下一步裁定與 Seeds 政策。43001–43400 已觀察，不得再當確認用；另外四個保留區段未觀察。
+
+**風險**：`m5`、`m3`、`m1` 也在門檻下方不遠，只修這三個，下一次確認仍可能出現別的 STOP。
+
+## 2026-11-03 Phase 3a-B 平衡修正研究：一輪有界篩選，判定 PRODUCT_DECISION_NEEDED（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_平衡修正研究.md`；整合前檢查：`review/tactic-book-3a/3a-B_整合前檢查.md`。
+
+**完成**：診斷（只用既有資料與引擎程式）；事前登記與獨立審查（0 Blocker，7 Major 全部在跑比賽前改完）；篩選 Seeds 69001–69800，18 臂 14,400 場，錯誤 0，對照 48.3%，結果檔 `tools/fixtures/ga8_fix_screen6_result_3aB.json`（commit `aaa5954b`）；判讀的獨立審查（0 Blocker，9 Major，已改入文件，沒有再審第三次）；唯讀整合前檢查。
+
+**結果**：`hard_engage_stack` 有候選 HE_R 54.9%（對 BASE −6.0）；`classic.m6` 有候選 M6_B 50.2%（−8.5）；`three_lane_pressure` **沒有合理候選**（TLP_R 57.1%，差 2 場進帶內，不改判；TLP_E 60.1、TLP_F 62.4）；m5、m1 在帶內但與 BASE 分不開（M5_A 56.6 邊界、M1_B 54.6）；m3 修正表 55.5 未重現。**沒有證據支持單一共同根因。**
+
+**未做**：沒有改模板、門檻、旗標；沒有凍結、P2、Golden；沒有動用保留 Seeds；沒有加開第七輪。正式 G-A8 維持 STOP，凍結版本 `7a6e9736` 與證據未動，Challenge v21 STOP 保留。
+
+**待 Owner**：`three_lane` 怎麼處理（採 TLP_R／下架／重新設計／修改發布條件）、m5 m1 要不要一起修、`defensive_hold` 的處理、新 G-A8 確認區段（尚未指派）。
+
+**風險**：建議的組合一次過 G-A8 的估計只有約 32–67%（加事前登記的下架退路約 50–76%）；排除列工作量未知；`hard_engage` 修正會改變 career.v21 的 AI 對手；模板可能變得太像；選出的讀數有贏家詛咒；模板搭配玩家選項仍 NOT TESTED；篩選只對 std，沒有量相剋。
+
+## 2026-11-03 Phase 3a-B 第一階段 r2：最後修正版的凍結準備（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未跑正式 G-A8、未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_第一階段r2_凍結準備.md`。登記：`tools/fixtures/stage1r2_release_registration_3aB.json`、`stage1r2_formal_acceptance_registration_3aB.json`。
+
+**完成**：修正表 `v21.b2`（m6 M6_B、hard_engage HE_R、three_lane TLP_R 未證實候選；m3、m7、m8 同 v21.b1；v21.b1 保留）；文案只刪不寫；defensive_hold 只刪「適合陣容比對手弱的時候」；排除列開發期研究（Seeds 69801–69900，200 場，m6 入侵 z 6.95 通過，m6 團戰姿態撤下）；4601–5000 去重後指派給 G-A8；五份正式登記 READY_FOR_FREEZE；獨立審查 APPROVE WITH CHANGES 全部採納；整合前檢查（origin/main 仍 b4f8e0c3，無新重疊）。
+
+**驗證**：Build ✓；Gate 46 支 40 綠 6 紅（都在預期內）；tactic24、runtime29 PASS；v20 黃金 153/153；分流 73/73；正式驗收核對 59/59；回滾 15/15；瀏覽器 tactic_book_v21 30/30、tactic_book_3a 31/31、battle_notices 11/11。
+
+**未驗**：`browser_check_stage1_flows_3aB` 沒有完整結果（批次被記憶體保護中止；我把還活著的孤兒停掉，當時約 50%，印出 B2d 紅，判斷是斷言範圍太大，已改，未在瀏覽器驗過）；重跑要 Owner 同意。AI skirmish 在 career 黃金的比賽結果沒有逐案看。
+
+**未做**：沒有凍結、沒有跑正式 G-A8、沒有重錄 Golden、沒有下架狀態或工具；m5、m1 不動；69901–70300 未使用。
+
+**待 Owner**：流程 Gate 重跑；m6 團戰姿態撤下、three_lane 風險標示、M6_B 節奏、hard_engage 是否仍算強開、其他「適合…」句、凍結前要不要預演；核准新凍結。
+
+**風險**：依 Owner 裁定的組合，估計新 G-A8 全部不判 STOP 約 25–37%（m5 36%、m1 22% 最大）；再次 STOP 會白費凍結前工作並用掉 4601–5000。Challenge v21 STOP 保留，只擋第二階段。
+
+**補記（同一輪，第二次審查後）**：Gate 46 支第一次是 38 綠 8 紅，LaneFrame、Skeleton 只差固定數字，更新後 40 綠 6 紅（log `esmo-measure/logs-stage1/r2.gates.rerun.log`、`r2.gates.rerun2.log`）。4b 是 14 個選項＋4 組對照、14,400 場，約 5.1 小時。瀏覽器流程 Gate 的斷言再次修改，仍沒有完整結果。
+
+## 2026-11-03 Phase 3a-B r2 Owner r3：文案定稿與凍結前核對（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_第一階段r2_凍結準備.md` §13。**完成**：hard_engage 缺點改成「隊員更常加入團戰，留在各路的人手就比較少。」（Owner 第 4 點；規則的唯一例外，逐字釘住）；hard_engage、three_lane 的「適合…」句刪除（第 5 點）；three_lane 風險維持高（第 2 點）；m6 舊存檔安全解析（第 1 點）。
+
+**驗證**：瀏覽器 stage1_flows 單獨跑 47/47；Build ✓；Gate 46 支 40 綠 6 紅（都是登記的 6 支）；v20 黃金 153/153；分流 75/75；career 黃金 24 案全部只差 setupHash。凍結前獨立審查 0 Blocker，「可以凍結」。
+
+**風險**：Golden 沒有打 skirmish 隊伍的案例（Seed %7＝5），差異是 0 不代表沒影響。舊 H.2 樣本有 10 個 Seed 在保留區段（4 個會實際打到：4640、66400、66944、67168），判定不是污染，已揭露。Seed 計畫與 SDD 帳：SDD 被 git 忽略，不在 commit 裡。
+
+## 2026-11-03 Phase 3a-B r2：正式 G-A8 判 STOP（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_第一階段r2_凍結準備.md` §14。**結果**：凍結 `78ccc817`，Seeds 4601–5000，8,400 場，錯誤 0，對照 48.75%。STOP：`classic.m5` 62.75%（下界 58.0%）。WARN 7 列；`hard_engage` 再 1 勝就 STOP。
+
+**驗證**：不依賴量測工具從原始紀錄重算，21 列 0 差異、紀錄異常 0。
+
+**未完成**：依 Owner r3 第 G 項立即停止，其餘正式驗收沒跑；沒有重抽 Seeds、沒有新研究、沒有重錄 Golden。
+
+**風險**：v21 目前不能發布。建議暫停 v21 發布、旗標關閉，等 Owner 決定產品階段。SDD 帳被 git 忽略，不在 commit 裡。

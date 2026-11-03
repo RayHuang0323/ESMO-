@@ -2,12 +2,14 @@
 // （任務單建議 scripts/，依本專案 tools/ 慣例放置）
 // A) 契約 B) 接線（結構）C) 引擎行為（同seed異戰術/重現性/不寫死勝負）D) CS 隔離
 import fs from "fs";
+import { stripComments } from "./lib/stripComments.mjs";
 const A = []; const ck = (n, c) => A.push([n, c]);
 
 const { MOBA_TACTICS, MOBA_TACTIC_VERSION, STANDARD_OPP_TACTIC, validateMobaTacticConfig, toEngineTactic, mobaTacticById } =
   await import("../src/platform/contracts/MobaTacticConfig.js");
 const { LogicEngine } = await import("../src/LogicEngine.js");
 const { snapshotToBattleResult } = await import("../src/battle/battleResult.js");
+const { BATTLE_RESULT_VERSION } = await import("../src/platform/contracts/battleResultVersion.js");
 const { PITS, dist } = await import("../src/gameData.js");   // S29：C4b 目標投入度觀測
 
 // ── A. 契約 ────────────────────────────────────────────────────────────────
@@ -37,8 +39,26 @@ const gv = fs.readFileSync("src/GameView.jsx", "utf8");
 //    （本專案第五次踩到關鍵字掃描；規則見 05_Sprint紀錄.md：禁改/禁用類斷言驗行為。）
 ck("GameView start({tactic}) 傳入引擎驅動層",
   /start\(\{\s*tactic\b/.test(gv) && (gv.match(/\bbegin\b/g) || []).length >= 3);
-const uls = fs.readFileSync("src/useLocalServer.js", "utf8");
-ck("useLocalServer → engine.configureMatch（含 standard 對手）", uls.includes("configureMatch") && uls.includes("STANDARD_OPP_TACTIC"));
+//  Phase 3a T4：Live 的引擎組裝搬到唯一組裝器。意圖不變（戰術契約的 knobs 真的進 engine.configureMatch、
+//  查不到對手設定時用 standard 對手），改指向事實現在所在的檔案；先剝註解再比對（原本的 includes 連註解都算）。
+const strip24 = stripComments;   // tools/lib/stripComments.mjs（唯一實作）
+const uls = strip24(fs.readFileSync("src/useLocalServer.js", "utf8"));
+const asm24 = strip24(fs.readFileSync("src/battle/moba/matchAssembler.js", "utf8"));
+const lms24 = strip24(fs.readFileSync("src/battle/moba/liveMatchSetup.js", "utf8"));
+//  Phase 3a T9 起投影搬進 resolver（組裝器 resolveTactic → knobs → configureMatch），原本比對
+//  `A.toEngineTactic(blueCfg)` 的字面從 T9 起就是假紅燈。改成：組裝器把 resolver 的 knobs 交給
+//  configureMatch（結構）＋ resolver 的 knobs 真的等於契約投影 toEngineTactic（行為，legacy 與 std 都驗）。
+const { resolveTactic: resolve24 } = await import("../src/battle/moba/tactics/tacticResolver.js");
+const knobsOf24 = (input) => { const r = resolve24(input, { toEngineTactic, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION }, { identity: false }); return r.ok ? r.knobs : null; };
+const sameKnobs24 = (a, b) => a !== null && JSON.stringify(a) === JSON.stringify(b);
+ck("useLocalServer → assembleMatch → engine.configureMatch（含 standard 對手）",
+  /assembleMatch\(/.test(uls)
+  && /A\.resolveTactic\(\s*t\s*,\s*A\s*,/.test(asm24)      // 第 2 參數必須是組裝器自己的 adapters（A），不是 {}／別的物件（TD-3A-21）
+  && /\}\s*else\s+resolved\[side\]\s*=\s*snap\s*;/.test(asm24)   // 結果以迴圈自己的 side 為鍵寫回，不得交叉（TD-3A-22）
+  && /call\("configureMatch",\s*\{\s*blue:\s*clone\(resolved\.blue\.knobs\),\s*red:\s*clone\(resolved\.red\.knobs\)/.test(asm24)
+  && MOBA_TACTICS.every((t) => sameKnobs24(knobsOf24({ kind: "legacy", config: t }), toEngineTactic(t)))
+  && sameKnobs24(knobsOf24({ kind: "std" }), toEngineTactic(STANDARD_OPP_TACTIC))
+  && /opponentTeam\s*\?\s*mobaTacticForTeamStyle\(opponentTeam\.style\)\s*:\s*STANDARD_OPP_TACTIC/.test(lms24));
 const le = fs.readFileSync("src/LogicEngine.js", "utf8");
 ck("LogicEngine 無 tactic 直接寫 winner / 無傷害係數", !/tactic\w*[^\n]*winner\s*=/.test(le) && !/tactic\w*[^\n]*(dmgAmt|power)\s*\*=/.test(le) && !le.includes("damage *="));
 
@@ -146,14 +166,20 @@ const d2 = rk.reduce((s, v, i) => s + (v - rb[i]) ** 2, 0);
 const rho = 1 - (6 * d2) / (n8 * (n8 * n8 - 1));
 ck(`objJoin knob → objRate 行為單調（8 套戰術 Spearman ρ=${rho.toFixed(2)}；門檻 ≥ 0.40）`, rho >= 0.40);
 
-// C4d. Gank 節奏：m6 全圖游走（gankInterval 32）> m4 龍堆運營（58）——機制上必然。
-//   S29：4 seeds 合計 → 40 seeds 平均 + 容忍區（實測 ×1.35，門檻 ×1.15）。
-const gankOf = (id) => mean(OBS_SEEDS.map((s) => {
-  const x = run(s, id).tacticExec.blue; return x.topGanks + x.midGanks + x.botGanks;
-}));
-const g6 = gankOf("m6"), g4 = gankOf("m4");
-ck(`m6 全圖游走 Gank 次數 > m4 龍堆運營（${OBS_SEEDS.length} seeds 平均 ${g6.toFixed(1)} vs ${g4.toFixed(1)} = ×${(g6 / g4).toFixed(2)}；門檻 ×1.15）`,
-  g6 >= g4 * 1.15);
+// C4d. Gank 選路：m6 全圖游走（gankWeights 中 1.7／側 1）的中路 Gank 占比 > m4 龍堆運營（三路均等）。
+//   ⚠ 歷史：原宣稱是「m6 Gank 次數 ≥ m4 ×1.15」（gankInterval 32 vs 58；S29 實測 ×1.35）。v20（1d0e219）起 Gank 改成評分選路、
+//     分數不到 gankMinScore 不出發，gankInterval 只剩出發後的冷卻 ⇒ 次數不再由它決定（HEAD／v20 都是 4.225 vs 4.35＝×0.97；v19 d146e02 ×1.61）。
+//     舊宣稱失效、保留紀錄（3a-B 開工清單 §2；Owner 2026-10-25 決策 2：不降門檻湊 PASS、沒有證據不換新宣稱）。
+//   新宣稱依 v20 機制：評分的權重項是 (w[路]/max(w))×0.2 ⇒ m6 的兩側被扣 0.082、中路不變；m4 三路相同 ⇒ m6 的中路占比較高。
+//   事前登記 tools/fixtures/tactic24_v20claim_registration.json；新 seeds 19001–19200 的證據 tools/fixtures/tactic24_v20claim_result.json
+//   （0.452 vs 0.305＝×1.48，z 6.21，PASS）。本 gate 在自己的 40 seeds 上用同一條規則（占比比 ≥ ×1.15，沿用原門檻的慣例）。
+const gankLanes = (id) => OBS_SEEDS.reduce((a, s) => {
+  const x = run(s, id).tacticExec.blue; return { mid: a.mid + x.midGanks, total: a.total + x.topGanks + x.midGanks + x.botGanks };
+}, { mid: 0, total: 0 });
+const L6 = gankLanes("m6"), L4 = gankLanes("m4");
+const share6 = L6.mid / Math.max(1, L6.total), share4 = L4.mid / Math.max(1, L4.total);
+ck(`m6 全圖游走的中路 Gank 占比 > m4 龍堆運營（${OBS_SEEDS.length} seeds 合計 ${L6.mid}/${L6.total}＝${share6.toFixed(3)} vs ${L4.mid}/${L4.total}＝${share4.toFixed(3)}，×${(share6 / share4).toFixed(2)}；門檻 ×1.15）`,
+  L4.total > 0 && share6 >= share4 * 1.15);
 
 // C5. 戰術不保證勝負：同一戰術跨 16 seeds，兩種勝方都出現
 for (const id of ["m3", "m8"]) {
@@ -169,7 +195,9 @@ ck("BattleResult.tactic 留下相同 tacticId/version", res.tactic?.tacticId ===
 ck("BattleResult.tacticExecution = 引擎統計（blue/red 齊備）", !!res.tacticExecution?.blue && !!res.tacticExecution?.red);
 const res0 = snapshotToBattleResult(run(4242, null), []);
 ck("無戰術 ⇒ BattleResult.tactic/tacticExecution = null（向下相容）", res0.tactic === null && res0.tacticExecution === null);
-ck("BattleResult.v2 結構未變（schema/mode/winner/players 完整）", res.schema === "BattleResult.v2" && res.mode === "moba" && res.players.length === 10);
+//  Phase 3a-B（Owner 2026-10-25）：schema 依正式版本常數驗證。原斷言寫死 "BattleResult.v2"，MOBA v14（6d93a973）升 v3 後就是過期的版本事實
+//  （HEAD／v20 1d0e219／v19 d146e02 三點的 schema 都是 v3）；這不是放寬：仍要求 schema 恰好等於契約目前宣告的版本。
+ck(`BattleResult 結構未變（schema＝${BATTLE_RESULT_VERSION}／mode／winner／players 完整）`, res.schema === BATTLE_RESULT_VERSION && res.mode === "moba" && res.players.length === 10);
 
 // ── D. CS 隔離（S23 流程不受影響）──────────────────────────────────────────
 const csres = fs.readFileSync("src/platform/contracts/CsMatchResult.js", "utf8");

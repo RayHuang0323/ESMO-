@@ -1,0 +1,211 @@
+{
+ "schema": "esmo.ga8-fix-screen-registration.v1",
+ "studyId": "ga8-fix-screen-3aB",
+ "stage": "Phase 3a-B fix planning: G-A8 plan C candidate screening (Owner ruling 2026-10-28 items 1-2)",
+ "registeredAt": "2026-10-28",
+ "status": "registered; screening only; runnable after the independent review (review.reviewedAt + an APPROVE verdict) and a passing --validate; never changes the G-A8 STOP, never a release PASS, never a template change",
+ "authority": "Owner 2026-10-28: plan C approved in principle, plan B not adopted; m3 / m7 first, with m8 and defensive_hold; m1, three_lane_pressure, mid_jungle_sync, mid_solo_split each handled on evidence, no blind coefficient changes; this round designs and diagnoses only (no semantics change, no full P2 re-run)",
+ "tool": "tools/measure_ga8_fix_screen_3aB.mjs (--plan / --validate / --run / --report / --selftest); result tools/fixtures/ga8_fix_screen_result_3aB.json",
+ "semantics": "src/ is not modified. Every arm is a complete MobaTacticConfig passed as a legacy tactic input on balanceTool.v21 (the path the knob study validated against the G-A8 binding path, 180/180 identical); the candidate configs exist only inside this tool",
+ "path": "same as G-A8: balanceTool.v21 (Director core.v1, laneFrame teamRelative, skills on, talents off), opponent = std plan with no choices, the arm side plays blue on odd seeds and red on even seeds",
+ "seeds": {
+  "range": "41001-41400",
+  "n": 400,
+  "path": "tool (seed as-is)",
+  "rule": "fresh block G-A8.fixScreen of tools/fixtures/study_seed_plan_3aB.json: disjoint from G-A8 (25001-25400, also used by the knob study) and from the reserved confirmatory block 43001-43400. Screening seeds are never used to confirm a fix"
+ },
+ "arms": {
+  "STD": {
+   "template": "std",
+   "change": {},
+   "why": "control; must be within 0.50 +/- 0.05 (instrument sanity, as G-A8)"
+  },
+  "BASE_classic.m3": {
+   "template": "classic.m3",
+   "change": {},
+   "why": "unchanged; does the G-A8 STOP reproduce on fresh seeds"
+  },
+  "BASE_classic.m7": {
+   "template": "classic.m7",
+   "change": {},
+   "why": "unchanged"
+  },
+  "BASE_classic.m1": {
+   "template": "classic.m1",
+   "change": {},
+   "why": "unchanged; G-A8 60.3% was borderline (lower bound 55.5)"
+  },
+  "BASE_v2.three_lane_pressure": {
+   "template": "v2.three_lane_pressure",
+   "change": {},
+   "why": "unchanged; borderline. No candidate (review): the knob study labels it CONTENT_DRIVEN with no knob effect detected and no content field named by evidence => NO_CANDIDATE_REGISTERED; if BASE reproduces, the Owner decides on a content study"
+  },
+  "BASE_v2.mid_jungle_sync": {
+   "template": "v2.mid_jungle_sync",
+   "change": {},
+   "why": "unchanged; borderline"
+  },
+  "BASE_v2.defensive_hold": {
+   "template": "v2.defensive_hold",
+   "change": {},
+   "why": "unchanged"
+  },
+  "BASE_classic.m8": {
+   "template": "classic.m8",
+   "change": {},
+   "why": "unchanged"
+  },
+  "BASE_v2.mid_solo_split": {
+   "template": "v2.mid_solo_split",
+   "change": {},
+   "why": "unchanged; WARN weak only, UNRESOLVED; no candidate this round (no evidence that names a field)"
+  },
+  "M3_A": {
+   "template": "classic.m3",
+   "change": {
+    "macro.aggression": 0.7,
+    "macro.riskTolerance": 0.6
+   },
+   "why": "knob study: m3 is KNOB_DRIVEN, the two knobs cannot be separated (order dependent) => move both; 0.7 / 0.6 is the knob pair of v2.three_lane_pressure, inside the shipped range"
+  },
+  "M3_B": {
+   "template": "classic.m3",
+   "change": {
+    "macro.aggression": 0.65,
+    "macro.riskTolerance": 0.55
+   },
+   "why": "a second, larger step toward 0.5 for both knobs (the bot_duo_pressure pair)"
+  },
+  "M3_C": {
+   "template": "classic.m3",
+   "change": {
+    "macro.aggression": 0.6,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "review: knob study m3 with both knobs at 0.5 gave 54.5% and A / B are predicted around 0.58-0.61; the largest step keeps aggression above std (0.6) and risk at the player-reachable 0.5"
+  },
+  "M7_A": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.7,
+    "macro.riskTolerance": 0.6
+   },
+   "why": "knob study: risk is the main contributor, but risk back to 0.5 alone still gave 60.0% => move both knobs"
+  },
+  "M7_B": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.65,
+    "macro.riskTolerance": 0.55
+   },
+   "why": "larger step for both"
+  },
+  "M7_C": {
+   "template": "classic.m7",
+   "change": {
+    "macro.aggression": 0.6,
+    "macro.riskTolerance": 0.5
+   },
+   "why": "review: knob study m7 fully neutral 55.75%, risk 0.5 alone 60.0% => a knob-only fix for m7 can at best reach about the WARN boundary; this is the largest knob step that keeps m7 above std aggression"
+  },
+  "M1_A": {
+   "template": "classic.m1",
+   "change": {
+    "macro.aggression": 0.55
+   },
+   "why": "knob study: Shapley aggression share +5.8 (1.0..10.5), risk share -0.5 (-5.2..4.2) => only aggression is supported; one step 0.65 -> 0.55 (aggression 0.5 gave 52.8% on the G-A8 seeds)"
+  },
+  "MJS_A": {
+   "template": "v2.mid_jungle_sync",
+   "change": {
+    "macro.aggression": 0.55
+   },
+   "why": "knob study: KNOB_DRIVEN, strong only with its own content (I +11.3); smaller step first"
+  },
+  "MJS_B": {
+   "template": "v2.mid_jungle_sync",
+   "change": {
+    "macro.aggression": 0.5
+   },
+   "why": "aggression 0.5 gave 51.7% on the G-A8 seeds"
+  },
+  "M8_A": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.4,
+    "macro.riskTolerance": 0.35
+   },
+   "why": "knob study: knob share -7.0 and content share -11.5; knobs back to 0.5 still gave 43.3% => knob step alone may not be enough"
+  },
+  "M8_B": {
+   "template": "classic.m8",
+   "change": {
+    "macro.aggression": 0.4,
+    "macro.riskTolerance": 0.35,
+    "lanePlan.jungle": "gank"
+   },
+   "why": "same knob step plus one content field: the jungler ganks instead of farming (the field m8 and defensive_hold share and std does not)"
+  },
+  "DH_A": {
+   "template": "v2.defensive_hold",
+   "change": {
+    "lanePlan.jungle": "gank"
+   },
+   "why": "CONTENT_DRIVEN (content share -22.8). defensive_hold vs std differs in many fields; the jungle focus (farm vs gank) is shared with m8 (the other weak template) and std ganks; single content field 1"
+  },
+  "DH_B": {
+   "template": "v2.defensive_hold",
+   "change": {
+    "objectives.dragonPriority": 0.5
+   },
+   "why": "single content field 2: defensive_hold (28.5%) and m8 (36.3%) differ mainly in the mid-game stance and dragon / baron priorities; the mid-game stance arm was dropped on review (it would make the template nearly identical to m8, which is itself weak), so the dragon priority (0.35 -> std 0.5) is screened instead"
+  },
+  "DH_C": {
+   "template": "v2.defensive_hold",
+   "change": {
+    "lanePlan.jungle": "gank",
+    "objectives.dragonPriority": 0.5,
+    "macro.aggression": 0.35,
+    "macro.riskTolerance": 0.35
+   },
+   "why": "both content fields plus a knob step"
+  }
+ },
+ "candidateRules": [
+  "every candidate config passes validateMobaTacticConfig",
+  "every numeric value stays inside the range the eight classic templates and three overlays already cover (template rule 1); enum values are existing values",
+  "the resolved engine knobs of every candidate differ from every other template's resolved knobs (template rule 3)",
+  "only the declared fields differ from the template (V2)"
+ ],
+ "thresholds": "the G-A8 rules, unchanged: STOP = win rate >= 0.60 and lower 95% bound > 0.55; WARN strong >= 0.57; WARN weak <= 0.43; control 0.50 +/- 0.05",
+ "selectionRule": [
+  "a candidate qualifies only inside the band 0.43 < win rate < 0.57 for both kinds (an overshoot to the other WARN side never qualifies)",
+  "SELECTED: the first qualifying candidate in the listed order (smaller change first) with 0.45 <= win rate <= 0.55; a qualifying candidate only in 0.43-0.45 or 0.55-0.57 => SELECTED_BORDERLINE (winner's-curse margin: a point just inside the band has a large chance of WARN again on 400 confirmatory seeds); none => NO_CANDIDATE",
+  "the order within a template is A, B, C as listed (A is the smallest change)",
+  "a template whose BASE arm has no flag on the screening seeds gets verdict NOT_REPRODUCED (the screened candidate is still reported as screenedCandidate); its proposal is no change and the confirmatory G-A8 decides, unless the Owner prefers the screened candidate",
+  "the selection is a proposal for the Owner, not a fix; the selected values must be confirmed by a full G-A8 run on the reserved fresh seeds 43001-43400 with the original thresholds after an Owner-approved, versioned template change"
+ ],
+ "report": [
+  "per arm: win rate, 95% CI, G-A8 label, blue / red halves, STANDARD / SWAPPED split, median duration; paired difference to STD for every arm (BASE included)",
+  "per candidate: paired difference to its BASE arm with 95% CI (the expected-impact estimate)",
+  "per template: reproduction status of BASE vs the committed G-A8 label, verdict and selected / screened candidate",
+  "multiplicity: 23 arms on one seed block; intervals are unadjusted 95%"
+ ],
+ "validation": {
+  "V1": "the STD and every BASE arm on the first 10 screening seeds reproduce the same configs through the binding path (tacticInputOf template with no choices): win and duration identical",
+  "V2": "every candidate is valid, inside the shipped range, distinct after resolution, and differs from its template only in the declared fields",
+  "V3": "every candidate resolves to engine knobs that differ from its BASE (non-vacuous); the live probe covers retreatAt, laneOffset, engageBias, retreatFloorShift, commitShift and also gankWeights, gankIntervalK, phaseEngage, phaseJoin, dragonJoin, baronJoin so content-field changes are seen in the engine; on 2 seeds per candidate the engine t=0 values equal the expectation"
+ },
+ "liveCheck": "every record: balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off, and the t=0 Director probe equals the arm's expectation; any mismatch => HALT",
+ "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
+ "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
+ "matches": "23 arms x 400 = 9,200 (about 3.2 h at 1.25 s per match, 3 workers)",
+ "notClaimed": "no template is changed; G-A8 stays STOP; the screening result is an expected-impact estimate for the Owner's decision",
+ "checkpointing": "per match; resume in the same folder",
+ "outOfScope": "classic.m5 (59.75%), classic.m6 (59.0%) and v2.hard_engage_stack (57.5%) were WARN strong in G-A8 and are not screened: the Owner ruling names the templates to handle; they are re-checked by the confirmatory G-A8 (all 21 templates)",
+ "copyImpact": "any selected content change contradicts the current player copy and needs a copy change: DH_A / DH_C (defensive_hold desc says the jungler ganks clearly less often), DH_B / DH_C (desc says it contests dragon less in early and mid game), M8_B (m8 jungler farms); m3 / m7 knob changes keep their copy direction but the tactic book indicator bars are computed from the values and move",
+ "review": {
+  "reviewedAt": "2026-10-28",
+  "verdict": "APPROVE WITH CHANGES (round 1; 5 Major / 7 minor, all applied: band 0.43-0.57 for both kinds, SELECTED only within 0.45-0.55 else SELECTED_BORDERLINE, MJS order swapped (smaller change first), TLP_A dropped (CONTENT_DRIVEN, no named field), M3_C / M7_C added and the m7 knob-only limit stated, DH_B mid-game stance replaced by dragon priority, M1_A aggression only, probe extended to content-driven knobs, NOT_REPRODUCED implemented, vsStd for BASE, out-of-scope templates and copy impact stated, confirm registration committed)"
+ }
+}

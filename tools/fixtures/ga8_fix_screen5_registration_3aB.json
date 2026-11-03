@@ -1,0 +1,117 @@
+{
+ "schema": "esmo.ga8-fix-screen-registration.v1",
+ "studyId": "ga8-fix-screen5-3aB",
+ "stage": "Phase 3a-B fix planning round 4 (Owner 2026-10-30, item 3): one bounded G-A8 plan C screening for v2.mid_jungle_sync, identity-keeping candidates only; if no reasonable candidate is found the screening stops (no further rounds)",
+ "registeredAt": "2026-10-30",
+ "status": "registered; screening only; runnable after the independent review (review.reviewedAt + an APPROVE verdict) and a passing --validate; never changes the G-A8 STOP, never a release PASS, never a template change",
+ "authority": "Owner 2026-10-30 (second ruling of the day): approve one bounded candidate screening for mid_jungle_sync with fresh seeds, pre-registration and an independent reviewer; if there is still no reasonable candidate, stop and do not add more research. three_lane_pressure must not lose its three-lane identity (applied here too: every arm keeps the template identity). No src change, no freeze, no P2 re-run; thresholds unchanged; both STOPs stay",
+ "tool": "tools/measure_ga8_fix_screen_3aB.mjs --reg=tools/fixtures/ga8_fix_screen5_registration_3aB.json (--plan / --validate / --run / --report); the same instrument as rounds 1-4, unchanged",
+ "resultFile": "tools/fixtures/ga8_fix_screen5_result_3aB.json",
+ "expectedArms": 6,
+ "kinds": {
+  "v2.mid_jungle_sync": "strong"
+ },
+ "probe": "v3",
+ "confirmRisk": true,
+ "semantics": "src/ is not modified. Every arm is a complete MobaTacticConfig passed as a legacy tactic input on balanceTool.v21 (validated equal to the binding path by V1); the candidate configs exist only inside this registration",
+ "path": "same as G-A8 and rounds 1-2: balanceTool.v21 (Director core.v1, laneFrame teamRelative, skills on, talents off), opponent = std plan with no choices, the arm side plays blue on odd seeds and red on even seeds",
+ "seeds": {
+  "range": "58201-58600",
+  "n": 400,
+  "path": "tool (seed as-is)",
+  "rule": "fresh block G-A8.fixScreen5 of tools/fixtures/study_seed_plan_3aB.json: disjoint from G-A8 (25001-25400, also used by the knob study), rounds 1-4 (41001-41400, 57001-58200), the reserved confirmatory block 43001-43400 and every other used or reserved block. Screening seeds are never used to confirm a fix"
+ },
+ "evidenceBasis": "mid_jungle_sync = std plus mid aggressive, support roam, midGame aggressive, aggression 0.6, grouping 0.6, dragon 0.65, baron 0.55, carry mid, supportRoamRate 0.5 (tacticTemplates.js:114-124; riskTolerance and tempo are std). G-A8 60.25 STOP (55.4..65.1; blue 58.5 / red 62.0; STANDARD 60.1 / SWAPPED 60.4); v20 identical (PRE_EXISTING). Knob study on the same seeds: aggression 0.6 -> 0.5 gives 51.75 (K +8.5, KNOB_DRIVEN, hint FAVOURS_C). The content-caveat of the knob study: the phase stance (midGame aggressive) shifts the same engage score as aggression, hence MJS_B / MJS_C. The m7 / three_lane_pressure / m1 rounds: lane-group changes were the effective ones, but they remove the template identity; for mid_jungle_sync the mid lane is the identity and is never changed (Owner item 2 applied by analogy). These are hypotheses for the arm list, not evidence of a fix. Review m3: the knob study K Bonferroni interval (-1.2..18.2) crosses 0, and its C (content at std knobs) is -3.0 (-9.7..3.7): with aggression 0.5 the content is about std. This supports MJS_A; it gives no evidence for the two extra MJS_D fields",
+ "arms": {
+  "STD": {
+   "template": "std",
+   "change": {},
+   "why": "control; must be within 0.50 +/- 0.05 (instrument sanity, as G-A8)"
+  },
+  "BASE_v2.mid_jungle_sync": {
+   "template": "v2.mid_jungle_sync",
+   "change": {},
+   "why": "unchanged; reproduction on fresh seeds (G-A8 60.25 STOP on 25001-25400; never screened before) and the paired baseline of every candidate"
+  },
+  "MJS_A": {
+   "template": "v2.mid_jungle_sync",
+   "change": {
+    "macro.aggression": 0.5
+   },
+   "why": "knob only: aggression 0.6 -> 0.5 (engageBias +0.024 -> 0; the aggro term of laneOffset +0.004 -> 0 on all three lanes, lane.mid 0.054 -> 0.05, MobaTacticConfig.js:240). The risk label 中, the mid lane, the gank focus, the support roam and the mid-game stance are kept. Review M1 (copy-gate rules): engage.mid 0.104 -> 0.08 drops from plain to slight, so the desc sentence 中期隊伍更敢主動接戰 needs 稍微 (a v21 copy change). Hint (not evidence): the knob study on the G-A8 seeds that selected this template measured FULL 60.25 vs NEUTRAL 51.75, K +8.5 (1.5..15.5; Bonferroni -1.2..18.2 crosses 0), but the m7 K did not replicate on fresh seeds. Smallest change, listed first"
+  },
+  "MJS_B": {
+   "template": "v2.mid_jungle_sync",
+   "change": {
+    "macro.midGame": "standard"
+   },
+   "why": "mid-game stance aggressive -> standard (phaseEngage mid +0.08 -> 0, phaseJoin mid +0.04 -> 0); knobs kept. Review M1 (copy-gate rules): engage.mid becomes same, so 中期隊伍更敢主動接戰 is removed, and join.dragon.mid 0.75 -> 0.71 (slight), so 中期對龍的爭奪更願意參與 needs 稍微; the difference between mid-game and early / late dragon contest disappears, which weakens the category 中期控圖 (a v21 copy change and a weaker category basis). The name 中野聯動 and the mid / jungle / support plan are kept"
+  },
+  "MJS_C": {
+   "template": "v2.mid_jungle_sync",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.midGame": "standard"
+   },
+   "why": "MJS_A plus MJS_B: both engage-channel inputs neutral (the m7 / three_lane_pressure / m1 results were combinations of two inputs that did not separate from BASE alone); copy impact as MJS_B plus the MJS_A laneOffset note"
+  },
+  "MJS_D": {
+   "template": "v2.mid_jungle_sync",
+   "change": {
+    "macro.aggression": 0.5,
+    "macro.midGame": "standard",
+    "macro.grouping": 0.5,
+    "economy.supportRoamRate": 0.3
+   },
+   "why": "MJS_C plus grouping 0.6 -> 0.5 (joinFight 0.63 -> 0.60) and supportRoamRate 0.5 -> 0.3 (support roam stays: roamK 1.5 x 0.3 = 0.45 > std 0.3). Review M1 (copy-gate rules): support.roam 0.45 is slight, so desc 輔助比較常離開下路 and cons 輔助離開下路的次數比平常多 both need 稍微; plus the MJS_B / C copy changes; the evidence goal 輔助遊走 3 gets harder. Review m3: the knob study gives no evidence for the two extra fields; this is the end-point arm (the largest identity-keeping change: only the skeleton mid aggressive, jungle gank toward mid, support roam, carry mid, dragon 0.65 / baron 0.55 is left). Listed last"
+  }
+ },
+ "compareTo": {},
+ "candidateRules": [
+  "every candidate config passes validateMobaTacticConfig",
+  "every numeric value stays inside the range the eight classic templates and three overlays already cover (template rule 1); enum values are existing values",
+  "the resolved engine knobs of every candidate differ from every other template's resolved knobs and from every other candidate (template rule 3)",
+  "only the declared fields differ from the template (V2)"
+ ],
+ "thresholds": "the G-A8 rules, unchanged: STOP = win rate >= 0.60 and lower 95% bound > 0.55; WARN strong >= 0.57; WARN weak <= 0.43; control 0.50 +/- 0.05",
+ "selectionRule": [
+  "unchanged from rounds 1-4: a candidate qualifies only inside the band 0.43 < win rate < 0.57 (an overshoot to the weak side never qualifies)",
+  "SELECTED: the first qualifying candidate in the listed order with 0.45 <= win rate <= 0.55; a qualifying candidate only in 0.43-0.45 or 0.55-0.57 => SELECTED_BORDERLINE; none => NO_CANDIDATE",
+  "listed order (listedOrder, asserted by V2): MJS_A, MJS_B, MJS_C, MJS_D (by copy impact: none, one sentence, one sentence plus knob, plus weaker support roam); fixed before the run and not re-ordered after seeing results",
+  "as round 4 (review #1, stricter, registered before the run; the tool is unchanged): a SELECTED or BORDERLINE candidate is reported as SHOWS_IMPROVEMENT only if its paired vsBase upper 95% bound is < 0, otherwise as IN_BAND_NOT_DISTINGUISHED_FROM_BASE; the report names the first candidate in the listed order whose vsBase upper bound is < 0 (FIRST_DISTINGUISHED); if the selected candidate is not distinguished and a later one is, both go to the Owner",
+  "BASE not reproduced (below 0.57 on this block): the tool sets NOT_REPRODUCED and selected = null; the candidate appears only as screenedCandidate (descriptive); see the outcome table",
+  "review M2, exhaustive outcome table fixed before the run (Owner item 3, bounded). A REASONABLE candidate is (i) the tool SELECTED or SELECTED_BORDERLINE arm if it SHOWS_IMPROVEMENT, and (ii) the FIRST_DISTINGUISHED arm if its rate is inside the qualifying band 0.43 < rate < 0.57 (also when it is not the tool selection). Outcomes: REASONABLE_CANDIDATE = at least one arm satisfies (i) or (ii); if (i) and (ii) name different arms, both go to the Owner; a BORDERLINE arm always goes to the Owner as an explicit decision. STOP_NO_REASONABLE_CANDIDATE = every other case, including NO_CANDIDATE, a selection that is IN_BAND_NOT_DISTINGUISHED_FROM_BASE with no in-band distinguished arm, NOT_REPRODUCED, and the tool outcomes INSTRUMENT (control out of range or more than 1% errors) and INCONCLUSIVE. After INSTRUMENT / INCONCLUSIVE only the Owner may decide to re-run this same registration unchanged (no arm change, no new seeds chosen after seeing data, no new round). Whatever the outcome, this is the LAST screening round for mid_jungle_sync: STOP_NO_REASONABLE_CANDIDATE leaves it unchanged with its confirmation risk",
+  "nothing is changed by this study; an accepted candidate is a v21 fix candidate only (Owner decision, including its v21 copy change), confirmed by the confirmatory G-A8 after the single freeze"
+ ],
+ "report": [
+  "per arm: win rate, 95% CI, G-A8 label, blue / red halves, STANDARD / SWAPPED split, median duration; paired difference to STD for every arm",
+  "per candidate: paired difference to BASE with 95% CI and the confirmation risks",
+  "per template: reproduction status of BASE vs the committed G-A8 label, verdict and selected / screened candidate; the SHOWS_IMPROVEMENT / FIRST_DISTINGUISHED status and the stop-rule outcome (computed in the design doc from the tool vsBase intervals)",
+  "multiplicity and power: 4 candidates on one block, unadjusted 95% intervals. Review m4: SHOWS_IMPROVEMENT always uses the UNADJUSTED vsBase upper bound < 0; a Bonferroni-over-4 label (|z| >= 2.50) is descriptive only and computed in the design doc from the vsBase mean / se (the tool does not compute it). Review m2: the MDE of a paired candidate - BASE difference is about 9.3-9.9 pp (round-4 vsBase sd 0.666-0.708); the knob-study K +8.5 is below it, so even if K replicated exactly the power to reach SHOWS_IMPROVEMENT is only about 0.66: a STOP_NO_REASONABLE_CANDIDATE can be a false negative, and the report says so"
+ ],
+ "validation": {
+  "V1": "the STD and BASE arms on the first 10 screening seeds reproduce the same configs through the binding path (tacticInputOf template with no choices): win and duration identical",
+  "V2": "every candidate is valid, inside the shipped range, distinct after resolution from every template and every other candidate, and differs from its template only in the declared fields; 6 arms; the candidate order equals listedOrder",
+  "V3": "V3a every candidate resolves to engine knobs that differ from its BASE (non-vacuous); V3b on the validate matches the t=0 Director probe (v3) equals each arm's expectation"
+ },
+ "liveCheck": "every record: balanceTool.v21, Director core.v1, laneFrame teamRelative, skills on, talents off, and the t=0 Director probe equals the arm's expectation; any mismatch => HALT",
+ "errors": "errored matches are never retried; more than 1% errored => STOP(INSTRUMENT)",
+ "fingerprint": "0578fa882d74b205 (frozen at 176ccac0; the tool refuses to run on another fingerprint)",
+ "matches": "6 arms x 400 = 2,400 (about 50 min at 1.26 s per match measured in round 4, 3 workers); single line",
+ "notClaimed": "no template is changed; G-A8 stays STOP; excluding a failing template is never a G-A8 PASS (Owner 2026-10-30); the screening result is an expected-impact estimate for the Owner decision",
+ "checkpointing": "per match; resume in the same folder",
+ "outOfScope": "every lane-plan change of the mid lane (the identity: 中路的站位推得比平常更前面, 打野抓人較偏向中路) and the support lane plan; the dragon / baron priorities (中期對龍的爭奪更願意參與, the category 中期控圖); three_lane_pressure, m1 (Owner item 2), m3 / m7 / m8 (accepted candidates), mid_solo_split, defensive_hold",
+ "copyImpact": "review M1: measured with the copy-gate rules (tools/lib/tacticEffectSheet.mjs templateCopyViolations; BASE has 0 violations). EVERY arm needs a v21 copy change, and whichever arm is chosen is an Owner decision: MJS_A 中期隊伍更敢主動接戰 -> 稍微; MJS_B / C 中期隊伍更敢主動接戰 removed and 中期對龍的爭奪更願意參與 -> 稍微 (the category 中期控圖 loses its mid-vs-early/late dragon distinction); MJS_D as MJS_C plus 輔助比較常離開下路 / 輔助離開下路的次數比平常多 -> 稍微. Keeping engage.mid at plain would need aggression >= 0.583, so every aggression arm needs the copy change. risk 中 is the std label and stays for every arm. Evidence goals (donor m6): 中路 Gank 3, Gank 擊殺 2, 輔助遊走 3; the gank weights (mid 1.7) are unchanged by every arm; MJS_D makes 輔助遊走 3 harder",
+ "probeNote": "probe v3 as rounds 3-4 (v2 fields plus gankInterval, invadeChance, invadeWithMid). Review m5: there is no tempo arm in this round, and the probe does not include joinFight or roamRate, so the live probe cannot tell MJS_D from MJS_C; those two fields are guarded only by the V2 config diff (declared fields only) and the V1 binding-path check",
+ "listedOrder": [
+  "MJS_A",
+  "MJS_B",
+  "MJS_C",
+  "MJS_D"
+ ],
+ "review": {
+  "reviewedAt": "2026-10-30",
+  "verdict": "APPROVE WITH CHANGES (independent reviewer; 2 Major / 5 minor, all applied)",
+  "round1": "2026-10-30 APPROVE WITH CHANGES: M1 copy impact measured with the copy-gate rules (templateCopyViolations): every arm needs a v21 copy change (MJS_A engage.mid plain -> slight; MJS_B / C engage.mid same and join.dragon.mid slight, weakening 中期控圖; MJS_D also support.roam slight) => copyImpact and every why rewritten, every arm an Owner decision; M2 exhaustive outcome table (REASONABLE_CANDIDATE = a selected / borderline arm that SHOWS_IMPROVEMENT or the in-band FIRST_DISTINGUISHED arm; STOP_NO_REASONABLE_CANDIDATE otherwise, including INSTRUMENT / INCONCLUSIVE; only the Owner may re-run the same registration unchanged; last round regardless; BORDERLINE always to the Owner); m1 MJS_A laneOffset note; m2 MDE 9.3-9.9 pp and power about 0.66 for K +8.5 (a stop can be a false negative); m3 knob-study Bonferroni interval and C added; m4 Bonferroni label descriptive, SHOWS_IMPROVEMENT on the unadjusted bound, computed in the doc; m5 probeNote corrected (no tempo arm; joinFight / roamRate not in the probe). Verified by the reviewer: thresholds identical to the tool (rateCI 71, selectCandidate 78, reproduced 85, control 259); --plan 6 arms / 2,400; --selftest 8/8; seeds disjoint; every value in the shipped range and identity kept; G-A8 and knob-study numbers; engine-knob arithmetic; Bonferroni 0.05/4 => 2.50"
+ }
+}

@@ -1,0 +1,382 @@
+{
+ "schema": "esmo.challenge-golden.v21",
+ "gitHead": "1d64ecd62a3a1ab362a7a9973a1c46ca4011a23a",
+ "simVersion": "moba-sim.v21",
+ "fingerprint": "0578fa882d74b205",
+ "node": "v24.18.0",
+ "inputs": "tools/fixtures/match_golden_v20.json challenge params, snapshots stamped moba-sim.v21",
+ "cases": [
+  {
+   "id": "challenge-draft-3",
+   "params": {
+    "id": "challenge-draft-3",
+    "path": "challenge",
+    "seed": 3,
+    "draft": true,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 0
+   },
+   "matchSeed": 3,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "03af9b1b1d99a7f1",
+   "layout": "SWAPPED",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": true,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "198fe78ed81ecd23",
+   "outcome": "defenderWin",
+   "durationSec": 1286,
+   "score": {
+    "challenger": 22,
+    "defender": 22
+   }
+  },
+  {
+   "id": "challenge-nodraft-3",
+   "params": {
+    "id": "challenge-nodraft-3",
+    "path": "challenge",
+    "seed": 3,
+    "draft": false,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 0
+   },
+   "matchSeed": 3,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "2226ebb467631e8d",
+   "layout": "SWAPPED",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": false,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "77a5fa9182f30e63",
+   "outcome": "defenderWin",
+   "durationSec": 874,
+   "score": {
+    "challenger": 1,
+    "defender": 1
+   }
+  },
+  {
+   "id": "challenge-draft-7",
+   "params": {
+    "id": "challenge-draft-7",
+    "path": "challenge",
+    "seed": 7,
+    "draft": true,
+    "tacticIds": [
+     "m8",
+     "m3"
+    ],
+    "index": 1
+   },
+   "matchSeed": 7,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "fc06076a2ebd691d",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": true,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "02cc11ff167685eb",
+   "outcome": "defenderWin",
+   "durationSec": 867,
+   "score": {
+    "challenger": 2,
+    "defender": 10
+   }
+  },
+  {
+   "id": "challenge-nodraft-7",
+   "params": {
+    "id": "challenge-nodraft-7",
+    "path": "challenge",
+    "seed": 7,
+    "draft": false,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 1
+   },
+   "matchSeed": 7,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "74f14483551d6833",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": false,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "fbe0b6176f36ad76",
+   "outcome": "defenderWin",
+   "durationSec": 880,
+   "score": {
+    "challenger": 1,
+    "defender": 6
+   }
+  },
+  {
+   "id": "challenge-draft-11",
+   "params": {
+    "id": "challenge-draft-11",
+    "path": "challenge",
+    "seed": 11,
+    "draft": true,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 2
+   },
+   "matchSeed": 11,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "667719dfe667b8c8",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": true,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "c86511c740a8454e",
+   "outcome": "defenderWin",
+   "durationSec": 1238,
+   "score": {
+    "challenger": 9,
+    "defender": 20
+   }
+  },
+  {
+   "id": "challenge-nodraft-11",
+   "params": {
+    "id": "challenge-nodraft-11",
+    "path": "challenge",
+    "seed": 11,
+    "draft": false,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 2
+   },
+   "matchSeed": 11,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "5a5e32e6d279caae",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": false,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "a3bd4229f8e71d4e",
+   "outcome": "defenderWin",
+   "durationSec": 1027,
+   "score": {
+    "challenger": 5,
+    "defender": 4
+   }
+  },
+  {
+   "id": "challenge-draft-19",
+   "params": {
+    "id": "challenge-draft-19",
+    "path": "challenge",
+    "seed": 19,
+    "draft": true,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 3
+   },
+   "matchSeed": 19,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "84955ea91c7fed05",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": true,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "b50cc9fde85baa22",
+   "outcome": "challengerWin",
+   "durationSec": 954,
+   "score": {
+    "challenger": 13,
+    "defender": 2
+   }
+  },
+  {
+   "id": "challenge-nodraft-19",
+   "params": {
+    "id": "challenge-nodraft-19",
+    "path": "challenge",
+    "seed": 19,
+    "draft": false,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 3
+   },
+   "matchSeed": 19,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "7ea051f95cc2b77b",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": false,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "34da394599faf08e",
+   "outcome": "challengerWin",
+   "durationSec": 1101,
+   "score": {
+    "challenger": 9,
+    "defender": 1
+   }
+  },
+  {
+   "id": "challenge-draft-23",
+   "params": {
+    "id": "challenge-draft-23",
+    "path": "challenge",
+    "seed": 23,
+    "draft": true,
+    "tacticIds": [
+     "m8",
+     "m3"
+    ],
+    "index": 4
+   },
+   "matchSeed": 23,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "cf15834381f00c02",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": true,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "ec407ded3c104d36",
+   "outcome": "challengerWin",
+   "durationSec": 831,
+   "score": {
+    "challenger": 18,
+    "defender": 0
+   }
+  },
+  {
+   "id": "challenge-nodraft-23",
+   "params": {
+    "id": "challenge-nodraft-23",
+    "path": "challenge",
+    "seed": 23,
+    "draft": false,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 4
+   },
+   "matchSeed": 23,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "f2e255be36cd2361",
+   "layout": "STANDARD",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": false,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "b4c4a29070f7c011",
+   "outcome": "challengerWin",
+   "durationSec": 1131,
+   "score": {
+    "challenger": 10,
+    "defender": 4
+   }
+  },
+  {
+   "id": "challenge-draft-29",
+   "params": {
+    "id": "challenge-draft-29",
+    "path": "challenge",
+    "seed": 29,
+    "draft": true,
+    "tacticIds": [
+     "m6",
+     "m1"
+    ],
+    "index": 5
+   },
+   "matchSeed": 29,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "79de35e379cc0517",
+   "layout": "SWAPPED",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": true,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "0554c1ac898de6bc",
+   "outcome": "defenderWin",
+   "durationSec": 1147,
+   "score": {
+    "challenger": 17,
+    "defender": 13
+   }
+  },
+  {
+   "id": "challenge-nodraft-29",
+   "params": {
+    "id": "challenge-nodraft-29",
+    "path": "challenge",
+    "seed": 29,
+    "draft": false,
+    "tacticIds": [
+     "m4",
+     "m7"
+    ],
+    "index": 5
+   },
+   "matchSeed": 29,
+   "simulationVersion": "moba-sim.v21",
+   "setupHash": "ed5bf737051c80c7",
+   "layout": "SWAPPED",
+   "ruleset": "challenge.v21",
+   "director": "core.v1",
+   "laneFrame": "teamRelative",
+   "skillsEffective": false,
+   "itemsEffective": false,
+   "talentsEffective": false,
+   "resultHash": "08ea31c9a171b6d8",
+   "outcome": "unresolved",
+   "durationSec": 1800,
+   "score": {
+    "challenger": 21,
+    "defender": 23
+   }
+  }
+ ]
+}

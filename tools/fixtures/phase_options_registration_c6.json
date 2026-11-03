@@ -1,0 +1,695 @@
+{
+  "schema": "esmo.phase-options-registration.v1",
+  "studyId": "phase-options-c6",
+  "stage": "Phase 3a-C6 win conditions (early snowball, objective control variant A, mid-lane split pressure) as presets of already-live choices; plus the strong-side x aggressive-stance combination check (C5 promotion condition)",
+  "registeredAt": "2026-10-24",
+  "status": "REGISTERED AND APPROVED (independent re-review 2026-10-24) — fixed before any run; nothing changes after the run starts.",
+  "authority": {
+    "owner2026_10_24": "Owner approved: early snowball implement+verify; objective control variant A (mid baron, late dragon) conditionally — confirm objective spawn timing and contestable windows first, judge 'more presence' and 'actual capture' separately, no confirmed without control effect; split pressure only as a mid-lane experiment; teamfight scaling stays design (no D-18). C6 combines verified capabilities only, no hidden bonus, no second tactic engine; explicit player choices win, the win condition only fills unspecified fields. Add a C6 distinctness test; verify strong side + aggressive stance together does not cause an unreasonable gank surge or tactic conflict. Metrics, seeds, thresholds pre-registered and approved by an independent reviewer before the formal run.",
+    "contract": "review/tactic-book-3a/C3-C6_行為契約草案.md §5 (presets of C3-C5 per-phase fields; R-8 fill only unspecified; no own coefficients; distinctness one metric per pair, z>=3 both sides, |rel|>=5%; seeds 4201-4600; one redesign on 8601-9000)",
+    "plan": "review/tactic-book-3a/C6_勝利條件_可行方案.md (+ §7 registration and timing check added with this file)",
+    "implementation": "src/platform/tactics/tacticChoiceMapping.js WIN_CONDITION_PRESETS / winConditionFill (the same function the resolver uses; the study input expands it via tools/lib/phaseStudySim.mjs studyInput -> effectiveTacticChoices)"
+  },
+  "seeds": {
+    "range": "4201-4600",
+    "n": 400,
+    "note": "C6 block from the contract §1.3 table; never registered before (fixed gate seed 4242 in tools/regress.mjs is a listed D-19 exception, not a registered sample). Spare for the single allowed redesign: 8601-9000."
+  },
+  "resultFixture": "tools/fixtures/phase_options_result_c6.json",
+  "design": {
+    "ruleset": "balanceTool.v21 (tacticalDirector core.v1, laneFrame teamRelative)",
+    "instrument": "tools/lib/phaseStudySim.mjs phaseStudySim.v2 (v2 only adds seatFightsPh, goldAtPhaseEnd and the metrics seatFightEntriesPerMin.<seat>.<p|p+p>, goldLeadAt.<p>, win, durationMin; every v1 counter unchanged; the C5R result re-reported with v2 reproduces every claim/guard/report/symmetry number exactly)",
+    "arms": "control = std, no choices, both sides. Each option twice: treatment on blue (red = control) and on red (blue = control); same seed = pair. 1 control arm + 9 options x 2 sides = 19 arms x 400 seeds = 7,600 matches.",
+    "winConditionInput": "input.choices = { winCondition: id } expanded by effectiveTacticChoices on std (core.v1 offer list). On std all components are filled (no skips): earlySnowball = phases.early.stance aggressive, phases.mid.stance aggressive, phases.early.objectiveOrder dragon; objectiveControl = early dragon, mid baron, late dragon, mid group, late group; midSplitPressure = lanes.mid.stance split (whole-match; splitPush floor rule of the existing mapping), phases.mid.objectiveOrder towers.",
+    "checkArms": "check.* options re-run already-live single choices (early/mid aggressive, early/mid focus bot) on these seeds only as parts of the combination check; they are not new evidence for those choices and do not change their Registry status. Bot lane = worst case (early focus bot raised early team ganks +87 % in C5R)."
+  },
+  "objectiveTiming": {
+    "source": "src/battle/moba/matchProgression.js v3 rules: dragonSpawn 240 s, baronSpawn 480 s, dragonRespawn 150 s, baronRespawn 210 s; Director phases early 0-480, mid 480-960, late 960+",
+    "consequence": "early phase: dragon only (first at 240 s); baron first spawns exactly at the mid-phase start, so 'mid baron' is contestable for the whole mid phase; late: both. Objective appearances are bucketed by the phase in which they spawn (instrument rule, contract §3.3). The per-phase appearance counts of the control arm (objApps) are reported in the interpretation as the measured contestable windows."
+  },
+  "winConditionExpected": {
+    "earlySnowball": [
+      [
+        "phases.early.objectiveOrder",
+        "dragon"
+      ],
+      [
+        "phases.early.stance",
+        "aggressive"
+      ],
+      [
+        "phases.mid.stance",
+        "aggressive"
+      ]
+    ],
+    "objectiveControl": [
+      [
+        "phases.early.objectiveOrder",
+        "dragon"
+      ],
+      [
+        "phases.late.grouping",
+        "group"
+      ],
+      [
+        "phases.late.objectiveOrder",
+        "dragon"
+      ],
+      [
+        "phases.mid.grouping",
+        "group"
+      ],
+      [
+        "phases.mid.objectiveOrder",
+        "baron"
+      ]
+    ],
+    "midSplitPressure": [
+      [
+        "lanes.mid.stance",
+        "split"
+      ],
+      [
+        "phases.mid.objectiveOrder",
+        "towers"
+      ]
+    ]
+  },
+  "options": [
+    {
+      "id": "earlySnowball",
+      "dimension": "winCondition",
+      "choice": "earlySnowball",
+      "phase": "early+mid+late",
+      "label": "前期滾雪球：前期進攻、中期進攻、前期多去龍坑",
+      "input": {
+        "choices": {
+          "winCondition": "earlySnowball"
+        }
+      },
+      "claims": [
+        {
+          "metric": "engageDecisionsPerMin.early",
+          "direction": "up",
+          "group": "engage"
+        },
+        {
+          "metric": "engageStartsPerMin.early",
+          "direction": "up",
+          "group": "engage"
+        },
+        {
+          "metric": "contestShare.dragon.early",
+          "direction": "up",
+          "group": "objective",
+          "fallbackMetric": "contestShare.dragon.early+mid"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "objectiveControl",
+      "dimension": "winCondition",
+      "choice": "objectiveControl",
+      "phase": "early+mid+late",
+      "label": "控圖運營（變體 A）：前期龍、中期巴龍、後期龍、中／後期成團",
+      "input": {
+        "choices": {
+          "winCondition": "objectiveControl"
+        }
+      },
+      "claims": [
+        {
+          "metric": "contestShare.dragon.early",
+          "direction": "up",
+          "group": "presence",
+          "fallbackMetric": "contestShare.dragon.early+mid"
+        },
+        {
+          "metric": "contestShare.baron.mid",
+          "direction": "up",
+          "group": "presence",
+          "fallbackMetric": "contestShare.baron.mid+late"
+        },
+        {
+          "metric": "contestShare.dragon.late",
+          "direction": "up",
+          "group": "presence",
+          "fallbackMetric": "contestShare.dragon.mid+late"
+        },
+        {
+          "metric": "captureShare.dragon.early+mid+late",
+          "direction": "up",
+          "group": "capture"
+        },
+        {
+          "metric": "captureShare.baron.mid+late",
+          "direction": "up",
+          "group": "capture"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "midSplitPressure",
+      "dimension": "winCondition",
+      "choice": "midSplitPressure",
+      "phase": "early+mid+late",
+      "label": "中路分推牽制：中路帶線（整場）＋中期推塔優先",
+      "input": {
+        "choices": {
+          "winCondition": "midSplitPressure"
+        }
+      },
+      "claims": [
+        {
+          "metric": "seatFightEntriesPerMin.b3.mid+late",
+          "direction": "down",
+          "group": "split"
+        },
+        {
+          "metric": "siegeWindowsPerMin.mid",
+          "direction": "up",
+          "group": "siege"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "chkAggrEarly",
+      "dimension": "check.strongSideAggressive",
+      "choice": "chkAggrEarly",
+      "phase": "early",
+      "label": "檢查臂：前期進攻（單獨）",
+      "input": {
+        "choices": {
+          "phases": {
+            "early": {
+              "stance": "aggressive"
+            }
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "engageDecisionsPerMin.early",
+          "direction": "up"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "chkFocusBotEarly",
+      "dimension": "check.strongSideAggressive",
+      "choice": "chkFocusBotEarly",
+      "phase": "early",
+      "label": "檢查臂：前期強邊下路（單獨）",
+      "input": {
+        "choices": {
+          "phases": {
+            "early": {
+              "focusLane": "bot"
+            }
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.bot.early",
+          "direction": "up"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "chkComboEarly",
+      "dimension": "check.strongSideAggressive",
+      "choice": "chkComboEarly",
+      "phase": "early",
+      "label": "檢查臂：前期進攻＋前期強邊下路",
+      "input": {
+        "choices": {
+          "phases": {
+            "early": {
+              "stance": "aggressive",
+              "focusLane": "bot"
+            }
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "engageDecisionsPerMin.early",
+          "direction": "up"
+        },
+        {
+          "metric": "ganksOwnPerMin.bot.early",
+          "direction": "up"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "chkAggrMid",
+      "dimension": "check.strongSideAggressive",
+      "choice": "chkAggrMid",
+      "phase": "mid",
+      "label": "檢查臂：中期進攻（單獨）",
+      "input": {
+        "choices": {
+          "phases": {
+            "mid": {
+              "stance": "aggressive"
+            }
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "engageDecisionsPerMin.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "chkFocusBotMid",
+      "dimension": "check.strongSideAggressive",
+      "choice": "chkFocusBotMid",
+      "phase": "mid",
+      "label": "檢查臂：中期強邊下路（單獨）",
+      "input": {
+        "choices": {
+          "phases": {
+            "mid": {
+              "focusLane": "bot"
+            }
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "ganksOwnPerMin.bot.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    },
+    {
+      "id": "chkComboMid",
+      "dimension": "check.strongSideAggressive",
+      "choice": "chkComboMid",
+      "phase": "mid",
+      "label": "檢查臂：中期進攻＋中期強邊下路",
+      "input": {
+        "choices": {
+          "phases": {
+            "mid": {
+              "stance": "aggressive",
+              "focusLane": "bot"
+            }
+          }
+        }
+      },
+      "claims": [
+        {
+          "metric": "engageDecisionsPerMin.mid",
+          "direction": "up"
+        },
+        {
+          "metric": "ganksOwnPerMin.bot.mid",
+          "direction": "up"
+        }
+      ],
+      "guards": [],
+      "report": [
+        "win",
+        "durationMin",
+        "goldLeadAt.early",
+        "goldLeadAt.mid",
+        "ganksPerMin.early",
+        "ganksPerMin.mid",
+        "ganksPerMin.late",
+        "engageDecisionsPerMin.mid",
+        "engageStartsPerMin.mid",
+        "contestShare.dragon.mid",
+        "contestShare.baron.late",
+        "captureShare.dragon.early+mid+late",
+        "captureShare.baron.mid+late",
+        "joinGoGeneralStartsPerMin.mid",
+        "joinGoGeneralStartsPerMin.late",
+        "siegeWindowsPerMin.late",
+        "seatFightEntriesPerMin.b3.mid+late"
+      ]
+    }
+  ],
+  "contrasts": [
+    {
+      "id": "distinct_snowball_vs_objective",
+      "a": "objectiveControl",
+      "b": "earlySnowball",
+      "metric": "engageStartsPerMin.early",
+      "direction": "up",
+      "note": "contract §5.0 table row 1 (snowball higher)"
+    },
+    {
+      "id": "distinct_snowball_vs_split",
+      "a": "earlySnowball",
+      "b": "midSplitPressure",
+      "metric": "seatFightEntriesPerMin.b3.mid+late",
+      "direction": "down",
+      "note": "contract §5.0 row 2 (split lower); seat b3 = mid laner, own side"
+    },
+    {
+      "id": "distinct_objective_vs_split",
+      "a": "objectiveControl",
+      "b": "midSplitPressure",
+      "metric": "seatFightEntriesPerMin.b3.mid+late",
+      "direction": "down",
+      "note": "contract §5.0 row 4 (split lower)"
+    }
+  ],
+  "interactions": [
+    {
+      "id": "surge_ganks_early",
+      "combo": "chkComboEarly",
+      "parts": [
+        "chkAggrEarly",
+        "chkFocusBotEarly"
+      ],
+      "metric": "ganksPerMin.early",
+      "direction": "up"
+    },
+    {
+      "id": "surge_ganks_mid",
+      "combo": "chkComboMid",
+      "parts": [
+        "chkAggrMid",
+        "chkFocusBotMid"
+      ],
+      "metric": "ganksPerMin.mid",
+      "direction": "up"
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "conflict_focus_early",
+      "combo": "chkComboEarly",
+      "part": "chkFocusBotEarly",
+      "metric": "ganksOwnPerMin.bot.early",
+      "direction": "up"
+    },
+    {
+      "id": "conflict_aggr_early",
+      "combo": "chkComboEarly",
+      "part": "chkAggrEarly",
+      "metric": "engageDecisionsPerMin.early",
+      "direction": "up"
+    },
+    {
+      "id": "conflict_focus_mid",
+      "combo": "chkComboMid",
+      "part": "chkFocusBotMid",
+      "metric": "ganksOwnPerMin.bot.mid",
+      "direction": "up"
+    },
+    {
+      "id": "conflict_aggr_mid",
+      "combo": "chkComboMid",
+      "part": "chkAggrMid",
+      "metric": "engageDecisionsPerMin.mid",
+      "direction": "up"
+    }
+  ],
+  "ceilings": [
+    {
+      "id": "level_ganks_combo_early_vs_ctrl",
+      "arm": "chkComboEarly",
+      "versus": "ctrl",
+      "metric": "ganksPerMin.early",
+      "maxRatio": 2
+    },
+    {
+      "id": "level_ganks_combo_early_vs_focus",
+      "arm": "chkComboEarly",
+      "versus": "chkFocusBotEarly",
+      "metric": "ganksPerMin.early",
+      "maxRatio": 1.1
+    },
+    {
+      "id": "level_ganks_combo_mid_vs_ctrl",
+      "arm": "chkComboMid",
+      "versus": "ctrl",
+      "metric": "ganksPerMin.mid",
+      "maxRatio": 2
+    },
+    {
+      "id": "level_ganks_combo_mid_vs_focus",
+      "arm": "chkComboMid",
+      "versus": "chkFocusBotMid",
+      "metric": "ganksPerMin.mid",
+      "maxRatio": 1.1
+    }
+  ],
+  "reportedMetrics": [
+    "win",
+    "durationMin",
+    "goldLeadAt.early",
+    "goldLeadAt.mid",
+    "ganksPerMin.early",
+    "ganksPerMin.mid",
+    "ganksPerMin.late",
+    "engageDecisionsPerMin.mid",
+    "engageStartsPerMin.mid",
+    "contestShare.dragon.mid",
+    "contestShare.baron.late",
+    "captureShare.dragon.early+mid+late",
+    "captureShare.baron.mid+late",
+    "joinGoGeneralStartsPerMin.mid",
+    "joinGoGeneralStartsPerMin.late",
+    "siegeWindowsPerMin.late",
+    "seatFightEntriesPerMin.b3.mid+late"
+  ],
+  "rules": {
+    "minZ": 3,
+    "minRel": 0.05,
+    "minValidPairs": 200,
+    "verdict": "per option and side, same-seed pairs vs the control on the same side; precedence unmeasurable > reversed > guard_failed > confirmed (every claim OK on both sides) > one_sided > insufficient. fallbackMetric only if the registered metric has < 200 valid pairs on a side.",
+    "groups": "claims carry a group; each group gets its own verdict (same rules). The option's verdict still needs every claim, so a win condition is confirmed only if every group is confirmed. objectiveControl: presence (arrived within 9 units, contestShare) and capture (our side took it, captureShare) are judged separately; presence without capture is reported as 'presence only' and is NOT confirmed (Owner: no confirmed without control effect).",
+    "distinctness": "contrast b-arm minus a-arm on the same side and seed: distinct = direction matches, z >= 3 and |rel| >= 5 % on BOTH sides; reversed if either side z <= -3 in the opposite direction; unmeasurable if < 200 pairs; else not_distinct. One metric per pair (contract §5.0 multiple-comparison rule; 3 tests per side).",
+    "interaction": "per seed (combo - ctrl) - (partA - ctrl) - (partB - ctrl); flagged if, on EITHER side, z >= 3 and the mean is >= 5 % of the control mean in the registered direction (up = surge beyond the sum of the parts). Unmeasurable if < 200 pairs.",
+    "conflict": "combo vs the part on the same side; flagged if, on EITHER side, the part's own claim metric is lower in the combo with z <= -3 and |rel| >= 5 % (the other choice cancels it).",
+    "ceiling": "absolute level check (review F6): mean(arm) / mean(versus) >= maxRatio on EITHER side => flagged. Combo vs control >= 2.0 (team ganks doubled) and combo vs strong-side-only >= 1.10 (aggressive adds >= 10 % on top of the strong side). Report to the Owner only.",
+    "expansion": "winConditionExpected is checked at run time for every match of a win-condition arm (effectiveTacticChoices on std); a mismatch is written to selfCheck = instrument mismatch => the run stops (review F2)."
+  },
+  "promotionRule": {
+    "winCondition": "A win condition may be promoted to live (v21 director rulesets only) only if: its verdict is confirmed; each contrast with another promoted direction is distinct (a not_distinct/reversed pair means the two may not both go live -> D-17, Owner decides, both stay design until then); any SIDE_ASYMMETRY flag on it is investigated and documented. teamfightScaling is not measured and stays design.",
+    "combination": "If any interaction or conflict is flagged or unmeasurable, the strong-side x aggressive combination is reported to the Owner as a finding; no coefficient, cap or engine change is made in this round (Owner: no hidden bonus, no rule change without Owner). Strong side and aggressive stance stay live as approved.",
+    "notMeasuredHere": "win rate, economy (gold lead), match length and side bias are REPORTED ONLY (win, goldLeadAt.early/mid, durationMin). Owner: they must be validated before any formal release; nothing here claims a direction is favourable."
+  },
+  "controlSymmetry": {
+    "metrics": [
+      "contestShare.dragon.early+mid+late",
+      "contestShare.baron.mid+late",
+      "captureShare.dragon.early+mid+late",
+      "captureShare.baron.mid+late",
+      "gankShare.bot.early"
+    ],
+    "maxAbsDiff": 0.1,
+    "relative": {
+      "metrics": [
+        "seatFightEntriesPerMin.b3.mid+late",
+        "engageStartsPerMin.early",
+        "siegeWindowsPerMin.mid"
+      ],
+      "maxRelDiff": 0.1
+    },
+    "note": "own-side counts of the control arm; a difference above tolerance flags CONTROL_ASYMMETRY (verdicts unchanged; investigate before promotion). Capture shares can legitimately differ by map side (known dragon-side advantage); a flag there is documented, not hidden."
+  },
+  "sideAsymmetry": {
+    "minZ": 3,
+    "note": "flag only; flagged options are not promoted until investigated and documented (same rule as C5R)"
+  },
+  "notClaimed": {
+    "outcome": "no win-rate, economy or match-length claim; those are report-only",
+    "stateDependence": "win conditions do not react to game state (R-2); 'press the lead' halves are 3b",
+    "sideLaneSplit": "only the mid-lane split is measured; top split stays withheld (one_sided) and side-lane split pressure is not claimed",
+    "teamfightScaling": "not measured; stays design (early scaling owner_hold, late baron not replicated)",
+    "checkArms": "check.* rows are not new Registry evidence"
+  },
+  "power": {
+    "note": "Effect sizes seen before on n=400 (both sides): early/mid aggressive engage decisions +11..+16 % (z 10-14, C3-2 rev1); dragon/baron contest +6..+35 % (z 5.5-8, C4); mid split seat fight entries -12 % (REP, whole match); capture shares have never been claimed, so the capture group is the most likely to fail. Late-phase pairs are ~230 (>= 200)."
+  },
+  "ownerItems": [
+    "D-17: if a contrast is not distinct, which direction to keep / merge / redesign",
+    "objective control: presence-only result (capture not confirmed) keeps it design",
+    "combination finding (if flagged): whether to cap or change anything (not done here)",
+    "formal-release validation of win rate, economy, length and side bias for any promoted direction"
+  ],
+  "reviewHistory": [
+    {
+      "date": "2026-10-24",
+      "stage": "pre-run review of 82bf781f + 74fde76e",
+      "verdict": "APPROVE WITH CHANGES",
+      "fixed": "F1 goldAtPhaseEnd always null (instrument, + self-check); F2 run-time expansion check; F3 fill honours withMeasured; F4 plan validity with player overrides / own value kept / offer lists on expanded choices; F6 absolute ceilings; F7 control symmetry on claim-related metrics with relative tolerance; F8 contract differences documented; F9 check arms out of OWNER_DECISION. F5 (winCondition requires core.v1) is applied at promotion. F10 no change (leavesOf sorts)."
+    },
+    {
+      "date": "2026-10-24",
+      "stage": "re-review of e72ff87c",
+      "verdict": "APPROVE",
+      "note": "registration may be run as-is at e72ff87c / fingerprint 3d7ee3c4ac59f162; nit: CONTROL_ASYMMETRY flag text now prints relative entries (text only); carried to promotion: winCondition requires core.v1 + bindingForRuleset gate, tactic-book browser gate re-run."
+    }
+  ]
+}
