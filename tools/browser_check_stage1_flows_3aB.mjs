@@ -160,7 +160,7 @@ const result = await runGate({
       ck("B2c m6（v21.b2）：中風險、新優勢與缺點；已刪的詞不在", (t6 ?? "").includes(`${COPY.m6.risk}風險`) && (t6 ?? "").includes(COPY.m6.detail) && (t6 ?? "").includes(COPY.m6.cons) && !/碾壓|雪上加霜/.test(t6 ?? ""));
       ck("B2c2 m6（v21.b2）：團戰姿態整個維度不顯示", await ev(`return !document.querySelector('[data-testid="tb-dim-teamfight.posture"]');`) === true);
       const the = await pickTpl("v2.hard_engage_stack");
-      ck("B2d hard_engage（v21.b2）：中風險、無代價句；「撤退的時機」「投入團戰的門檻」不在", (the ?? "").includes(`${COPY.he.risk}風險`) && (the ?? "").includes(COPY.he.cons) && !/投入團戰的門檻|撤退的時機比平常/.test(the ?? ""));
+      ck("B2d hard_engage（v21.b2）：中風險、無代價句；舊的整句都不在（這兩個詞組單獨出現在 defensive_hold 的描述是正當的，所以比整句）", (the ?? "").includes(`${COPY.he.risk}風險`) && (the ?? "").includes(COPY.he.cons) && (the ?? "").includes(COPY.he.desc) && !["隊伍加入團戰的程度比平常高很多，投入團戰的門檻也稍微比較低。", "隊伍撤退的時機比平常稍微晚一點，投入團戰的門檻也比平常稍微低一些。"].some((x) => (the ?? "").includes(x)));
       const tdh = await pickTpl("v2.defensive_hold");
       ck("B2e defensive_hold（v21.b2）：沒有「比對手弱」；缺點還在", !(tdh ?? "").includes("比對手弱") && (tdh ?? "").includes(COPY.dh.cons));
       const ttl = await pickTpl("v2.three_lane_pressure");

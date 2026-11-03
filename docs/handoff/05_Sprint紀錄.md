@@ -25211,3 +25211,19 @@ Owner 指示的五項驗收全部完成；但對照過程揭露一項疑似新�
 **待 Owner**：`three_lane` 怎麼處理（採 TLP_R／下架／重新設計／修改發布條件）、m5 m1 要不要一起修、`defensive_hold` 的處理、新 G-A8 確認區段（尚未指派）。
 
 **風險**：建議的組合一次過 G-A8 的估計只有約 32–67%（加事前登記的下架退路約 50–76%）；排除列工作量未知；`hard_engage` 修正會改變 career.v21 的 AI 對手；模板可能變得太像；選出的讀數有贏家詛咒；模板搭配玩家選項仍 NOT TESTED；篩選只對 std，沒有量相剋。
+
+## 2026-11-03 Phase 3a-B 第一階段 r2：最後修正版的凍結準備（本機分支 feature/moba-phase3a-stage1；未 push／deploy／整合 main，未碰 CS；未凍結、未跑正式 G-A8、未重錄 Golden、旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_第一階段r2_凍結準備.md`。登記：`tools/fixtures/stage1r2_release_registration_3aB.json`、`stage1r2_formal_acceptance_registration_3aB.json`。
+
+**完成**：修正表 `v21.b2`（m6 M6_B、hard_engage HE_R、three_lane TLP_R 未證實候選；m3、m7、m8 同 v21.b1；v21.b1 保留）；文案只刪不寫；defensive_hold 只刪「適合陣容比對手弱的時候」；排除列開發期研究（Seeds 69801–69900，200 場，m6 入侵 z 6.95 通過，m6 團戰姿態撤下）；4601–5000 去重後指派給 G-A8；五份正式登記 READY_FOR_FREEZE；獨立審查 APPROVE WITH CHANGES 全部採納；整合前檢查（origin/main 仍 b4f8e0c3，無新重疊）。
+
+**驗證**：Build ✓；Gate 46 支 40 綠 6 紅（都在預期內）；tactic24、runtime29 PASS；v20 黃金 153/153；分流 73/73；正式驗收核對 59/59；回滾 15/15；瀏覽器 tactic_book_v21 30/30、tactic_book_3a 31/31、battle_notices 11/11。
+
+**未驗**：`browser_check_stage1_flows_3aB` 沒有完整結果（批次被記憶體保護中止；我把還活著的孤兒停掉，當時約 50%，印出 B2d 紅，判斷是斷言範圍太大，已改，未在瀏覽器驗過）；重跑要 Owner 同意。AI skirmish 在 career 黃金的比賽結果沒有逐案看。
+
+**未做**：沒有凍結、沒有跑正式 G-A8、沒有重錄 Golden、沒有下架狀態或工具；m5、m1 不動；69901–70300 未使用。
+
+**待 Owner**：流程 Gate 重跑；m6 團戰姿態撤下、three_lane 風險標示、M6_B 節奏、hard_engage 是否仍算強開、其他「適合…」句、凍結前要不要預演；核准新凍結。
+
+**風險**：依 Owner 裁定的組合，估計新 G-A8 全部不判 STOP 約 25–37%（m5 36%、m1 22% 最大）；再次 STOP 會白費凍結前工作並用掉 4601–5000。Challenge v21 STOP 保留，只擋第二階段。

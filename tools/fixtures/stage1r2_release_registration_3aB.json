@@ -277,6 +277,16 @@
         "what": "check_tactic_truth_3a T14 and check_truth_preview S7 pin 13 choices and 2 reachable rows",
         "why": "the v21.b2 study adds classic.m6 jungle.focus=invade, and the truth table has a row for it: weak, pass, z 4.55, n 40. The review named the row before the study ran; I did not update the pins until T14 went red",
         "handling": "pins moved to 14 and 3 by name; a reversed row still fails"
+      },
+      {
+        "what": "check_laneframe_c3 C3 and check_c3_phase_skeleton G1b pin the derived table case count at 6",
+        "why": "the derived list grew to 12 by the registered rule: 6 (m3, m7, m8) plus 6 (m6, hard_engage, three_lane). The registration said the set is derived; I missed the literal count next to it",
+        "handling": "pin moved to 12; the set is still derived from the table and compared exactly"
+      },
+      {
+        "what": "browser_check_stage1_flows B2d red, gate stopped by me at about 50 percent",
+        "why": "the batch survived the memory reap and I stopped the orphan gate. B2d banned two phrases that legitimately appear in the defensive_hold description on the same page (project rule: ask whether X can appear legitimately). Diagnosed by reading, not re-run",
+        "handling": "assertion compares the old whole sentences, which no other template has. browser_check_stage1_flows_3aB has NO complete result on this code: re-run needs the Owner to say so after the memory reap"
       }
     ]
   },

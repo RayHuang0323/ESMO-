@@ -362,7 +362,7 @@ if (STATIC_ONLY) {
   const specs = L.specsFromFixture({ cases: scope });
   ck(`C3 範圍＝v21-A fixture 的 live＋runner 案（${scope.length}；challenge ${fixture.cases.length - scope.length} 案不重跑：career.v21 只涵蓋 live／runner，challenge.v21 由 check_challenge_golden_v21 另驗）；登記清單 ${LF.C3_EXPECTED_CHANGED.length} 個 id 全部在範圍內（登記總數 ${LF.C3_TOTAL_EXPECTED}）`,
     LF.C3_EXPECTED_CHANGED.length === LF.C3_TOTAL_EXPECTED && LF.C3_EXPECTED_CHANGED.every((id) => scope.some((c) => c.id === id))
-    && LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.length === 6 && LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.every((id) => scope.some((c) => c.id === id)));
+    && LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.length === 12 && LF.TEMPLATE_BALANCE_EXPECTED_CHANGED.every((id) => scope.some((c) => c.id === id)));
   process.env.ESMO_BALANCE_RULESET = "balanceTool.v21";
   const observed = [], failed = [];
   const t0 = Date.now();

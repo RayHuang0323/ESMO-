@@ -3,6 +3,7 @@
 - 日期：2026-11-03
 - 依據：Owner Review 2026-11-03（逐字在 `tools/fixtures/ga8_fix_screen6_registration_3aB.json` 的 `ownerReview`）
 - 凍結版本 `7a6e9736` 與 G-A8 證據都保留，不覆寫、不重新判定。本輪不重新凍結、不跑 P2、不重錄 Golden、不改門檻。
+- **後續：** Owner 已裁定採 HE_R、M6_B、TLP_R（未證實候選），不設下架退路，m5、m1 不動。§6 的建議只是當時的提案，現況見 `3a-B_第一階段r2_凍結準備.md`。
 
 ## 1. 這輪在問什麼
 
