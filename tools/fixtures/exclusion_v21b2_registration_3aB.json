@@ -126,5 +126,15 @@
   }
  ],
  "reportListings": "the stage-1 report prints every option offered today that the study does not offer. Applying the rows also lists every win-condition expansion that changes on classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure (before / after of winConditionFill) in the stage-1 doc",
- "ownerVisibleConsequence": "classic.m6 teamfight.posture: passive, standard and aggressive are selected with no registered claim (own null), so the rule withdraws them under v21.b2, exactly as for classic.m3: the dimension disappears on classic.m6 for players. v2.hard_engage_stack and v2.three_lane_pressure keep aggression, so no knob delta moves and no row is selected. risk.tolerance offered only balanced before and after, so it was never drawn: no screen effect. Other templates: 0 cells of 588 move between v21.b1 and v21.b2"
+ "ownerVisibleConsequence": "classic.m6 teamfight.posture: passive, standard and aggressive are selected with no registered claim (own null), so the rule withdraws them under v21.b2, exactly as for classic.m3: the dimension disappears on classic.m6 for players. v2.hard_engage_stack and v2.three_lane_pressure keep aggression, so no knob delta moves and no row is selected. risk.tolerance offered only balanced before and after, so it was never drawn: no screen effect. Other templates: 0 cells of 588 move between v21.b1 and v21.b2",
+ "outcome": {
+  "result": "tools/fixtures/exclusion_v21b2_result_3aB.json",
+  "matches": 200,
+  "errored": 0,
+  "rows": {
+   "classic.m6 jungle.focus=invade": "pass, z 6.95, rel +0.98, offered",
+   "classic.m6 teamfight.posture passive, standard, aggressive": "no_claim, withheld"
+  },
+  "stage2": "not needed: no marginal row, seeds 69901-70300 not used"
+ }
 }

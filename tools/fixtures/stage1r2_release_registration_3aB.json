@@ -272,6 +272,11 @@
         "what": "tools/measure_exclusion_v21b2_3aB.mjs selftest S6 was vacuous and 200 of 400 stage-1 matches bought nothing",
         "why": "my copy of the old tool. Found by the independent review",
         "handling": "S6 pins the plan; controls only for templates with a measured row"
+      },
+      {
+        "what": "check_tactic_truth_3a T14 and check_truth_preview S7 pin 13 choices and 2 reachable rows",
+        "why": "the v21.b2 study adds classic.m6 jungle.focus=invade, and the truth table has a row for it: weak, pass, z 4.55, n 40. The review named the row before the study ran; I did not update the pins until T14 went red",
+        "handling": "pins moved to 14 and 3 by name; a reversed row still fails"
       }
     ]
   },

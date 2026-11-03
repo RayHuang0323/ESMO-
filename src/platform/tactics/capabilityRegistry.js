@@ -453,10 +453,14 @@ const BALANCE_EXCLUSIONS_V21_B1 = [
   { ...ex("classic.m8", "phases.mid.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.mid", 100, -0.376339), templateBalance: "v21.b1" },
   { template: "classic.m8", dimension: "phases.mid.grouping", choice: "group", reason: "not_replicated", verdict: "not_replicated", metric: "joinGoGeneralStartsPerMin.mid", blue: { n: 400, rel: 0.042536, z: 2.193149 }, red: { n: 400, rel: 0.072589, z: 3.560399 }, templateBalance: "v21.b1" },
 ];
-//  v21.b2（stage1r2_release_registration_3aB.json）：m3／m7／m8 與 v21.b1 同值 ⇒ 同一批列、同一份證據。m6、hard_engage、three_lane 的列由開發期研究決定。
+//  v21.b2（stage1r2_release_registration_3aB.json）：m3／m7／m8 與 v21.b1 同值 ⇒ 同一批列、同一份證據。m6、hard_engage、three_lane 由開發期研究決定
+//  （tools/fixtures/exclusion_v21b2_result_3aB.json，seeds 69801–69900）：只有 m6 的團戰姿態 3 項沒有宣稱、不提供（與 m3 同一條規則）；m6 jungle.focus=invade z 6.95 通過，不列。
 export const BALANCE_EXCLUSIONS = deepFreeze([
   ...BALANCE_EXCLUSIONS_V21_B1,
   ...BALANCE_EXCLUSIONS_V21_B1.map((x) => ({ ...x, templateBalance: "v21.b2" })),
+  { ...ex("classic.m6", "teamfight.posture", "passive", "unmeasurable", null, 0, null), templateBalance: "v21.b2" },
+  { ...ex("classic.m6", "teamfight.posture", "standard", "unmeasurable", null, 0, null), templateBalance: "v21.b2" },
+  { ...ex("classic.m6", "teamfight.posture", "aggressive", "unmeasurable", null, 0, null), templateBalance: "v21.b2" },
 ]);
 const EXCLUSION_ROWS = Object.freeze([...MEASURED_EXCLUSIONS, ...BALANCE_EXCLUSIONS]);
 /**

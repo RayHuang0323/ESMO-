@@ -127,7 +127,7 @@
   },
   {
    "item": "development exclusion study of v21.b2 and its rows",
-   "status": "see exclusion_v21b2_registration_3aB.json; pending until its result is applied"
+   "status": "done: result committed, rows applied; 4b has 14 choices plus 4 controls, 14,400 matches"
   }
  ],
  "notInStage1": "Challenge side-bias confirmation 45001-49999, C1 calibration, challenge.v21 golden: stage 2. v21 post-match evidence goals: need their own formal evidence (Owner 2026-11-01 item 4); until then rebalanced templates show unscored counts",
@@ -560,7 +560,7 @@
    "reservedSeeds": "scan of 14,746 recorded matches of the preview, the replay, the four rehearsals and P6: 0 in a reserved block"
   }
  },
- "effortMeasured": "about 17 h single line by the 1.1-1.4 s per match measured on 2026-11-02: G-A8 8,400, career 4,018, E1 8,400, E2 1,600, truth 6,520 (the preview took about 128 min, not the 70 min estimated earlier), replay 2,600, 4b 12,800, plus gates, verify and browser. r2: step 4b grows by 800 matches per added offer and by 800 per added template control; see exclusion_v21b2_confirm_registration_3aB.json",
+ "effortMeasured": "about 17 h single line by the 1.1-1.4 s per match measured on 2026-11-02: G-A8 8,400, career 4,018, E1 8,400, E2 1,600, truth 6,520 (the preview took about 128 min, not the 70 min estimated earlier), replay 2,600, 4b 12,800, plus gates, verify and browser. r2: step 4b grows by 800 matches per added offer and by 800 per added template control; see exclusion_v21b2_confirm_registration_3aB.json. step 4b is 14 choices plus 4 controls x 2 sides x 400 = 14,400 matches",
  "ownerApproval20261102": {
   "verbatim": [
    "Owner 正式核准 Phase 3a-B Stage 1 語意凍結及有條件正式驗收。",

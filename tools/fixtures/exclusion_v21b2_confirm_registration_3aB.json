@@ -110,6 +110,13 @@
     "choice": "bot",
     "metric": "ganksOwnPerMin.bot.mid",
     "direction": "up"
+   },
+   {
+    "template": "classic.m6",
+    "dimension": "jungle.focus",
+    "choice": "invade",
+    "metric": "invasionsActed",
+    "direction": "up"
    }
   ],
   "controls": "one per side and template (classic.m3, classic.m7, classic.m8)",

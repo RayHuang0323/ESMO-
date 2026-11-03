@@ -65,7 +65,7 @@ if (flag("selftest")) {
   ck("S6 矛盾優先於不一致；std 的主要列即使反向也不是（模板不同）", d((p) => { p.rows[0].verdict = "reversed"; p.rows[1].z = 9; }).verdict === "CONTRADICTION" && contradictionsOf([row("p", "std", "phases.early.grouping", "group", "reversed", -5)], offered).length === 0);
   const real = p6OfferedKeys(), fx = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/tactic_truth_3a.json"), "utf8"));
   const reach = truthRowsOfOffered(fx.rows, real).map((r) => r.key).sort();
-  ck("S7 登記的範圍如實：P6 提供 13 個選擇，真實性表只有 2 列碰得到（m3 推塔高在 v20 量、m8 前期集結在修正表上量）", real.size === 13 && J(reach) === J(["weak|classic.m3|objectives.tower|high|blue", "weak|classic.m8|phases.early.grouping|group|blue|v21"]), J(reach));
+  ck("S7 登記的範圍如實：P6 與 v21.b2 研究提供 14 個選擇，真實性表只有 3 列碰得到（m3 推塔高在 v20 量、m8 前期集結在修正表上量、m6 入侵）", real.size === 14 && J(reach) === J(["weak|classic.m3|objectives.tower|high|blue", "weak|classic.m6|jungle.focus|invade|blue", "weak|classic.m8|phases.early.grouping|group|blue|v21"]), J(reach));
   ck("S8 登記會變的 5 列都在目前的結果表裡", EXPECTED_TO_CHANGE.every((k) => fx.rows.some((r) => r.key === k)));
   console.log(`\nselftest：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
   process.exit(fail ? 1 : 0);

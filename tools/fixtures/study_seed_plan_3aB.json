@@ -292,7 +292,7 @@
     },
     {
       "id": "exclusion.v21b2.marginal",
-      "purpose": "stage 2 of exclusion.v21b2: blue and red re-verification of the stage-1 marginal rows on fresh seeds (Owner 2026-10-13 rule). Run only if stage 1 has a marginal row. Development decision only",
+      "purpose": "stage 2 of exclusion.v21b2: blue and red re-verification of the stage-1 marginal rows on fresh seeds (Owner 2026-10-13 rule). Run only if stage 1 has a marginal row. Development decision only. NOT USED: stage 1 had no marginal row, so this block stays unobserved",
       "path": "tool",
       "range": "69901-70300",
       "step": 1

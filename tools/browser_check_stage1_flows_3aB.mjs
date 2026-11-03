@@ -158,6 +158,7 @@ const result = await runGate({
       ck("B2b m3 選項（P6）：團戰姿態整個維度不顯示、推塔高有提供", await ev(`return !document.querySelector('[data-testid="tb-dim-teamfight.posture"]') && !!document.querySelector('[data-testid="tb-choice-objectives.tower-high"]');`) === true);
       const t6 = await pickTpl("classic.m6");
       ck("B2c m6（v21.b2）：中風險、新優勢與缺點；已刪的詞不在", (t6 ?? "").includes(`${COPY.m6.risk}風險`) && (t6 ?? "").includes(COPY.m6.detail) && (t6 ?? "").includes(COPY.m6.cons) && !/碾壓|雪上加霜/.test(t6 ?? ""));
+      ck("B2c2 m6（v21.b2）：團戰姿態整個維度不顯示", await ev(`return !document.querySelector('[data-testid="tb-dim-teamfight.posture"]');`) === true);
       const the = await pickTpl("v2.hard_engage_stack");
       ck("B2d hard_engage（v21.b2）：中風險、無代價句；「撤退的時機」「投入團戰的門檻」不在", (the ?? "").includes(`${COPY.he.risk}風險`) && (the ?? "").includes(COPY.he.cons) && !/投入團戰的門檻|撤退的時機比平常/.test(the ?? ""));
       const tdh = await pickTpl("v2.defensive_hold");

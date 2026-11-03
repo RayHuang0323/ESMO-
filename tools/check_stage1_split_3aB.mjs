@@ -517,6 +517,11 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
     dh.desc === sdh.desc.replace("適合陣容比對手弱的時候。", "") && dh.detail === dh.desc && dh.cons === sdh.cons && dh.risk === sdh.config.risk && !dh.desc.includes("比對手弱") && sdh.desc.includes("比對手弱") && !isRebalancedTemplate("v2.defensive_hold", TB) && sig(templateConfigFor("v2.defensive_hold", TB)) === sig(sdh.config));
   ck("S20e m5、m1 不在數值表也沒有文案覆寫（Owner 第 4 點）", ["classic.m5", "classic.m1"].every((t) => !(t in TEMPLATE_BALANCE[TB]) && !(t in TEMPLATE_COPY[TB])));
   ck("S20f 每個數值表模板賽後都不用出貨版目標評分（m6、hard_engage、three_lane 跟著 m3／m7／m8）", Object.keys(TEMPLATE_BALANCE[TB]).every((t) => isRebalancedTemplate(t, TB)));
+  const engB2 = choiceEngineFor(TB);
+  const m6Posture = bind("classic.m6", { teamfight: { posture: "passive" } });
+  const m6View = tacticBookView({ templateId: "classic.m6", tacticalDirector: "core.v1", templateBalance: TB });
+  ck("S20h m6 團戰姿態在 v21.b2 下撤下（戰術書不列）、jungle.focus=invade 留著；帶姿態的舊計畫仍解析得到；出貨版提供清單不變",
+    m6View.ok && !m6View.dimensions.some((d) => d.dimension === "teamfight.posture") && engB2.offeredDetail("classic.m6", "jungle.focus", [], {}, { tacticalDirector: "core.v1" }).offered.includes("invade") && !!m6Posture && resolveTactic({ kind: "binding", binding: m6Posture }, {}, { templateBalance: TB }).ok && choiceEngineFor(null).offeredDetail("classic.m6", "teamfight.posture", [], {}, { tacticalDirector: "core.v1" }).offered.length === 3);
   ck("S20g v21.b1 的值與文案還在（舊證據解析得到），沒有規則集讀它", J(Object.keys(TEMPLATE_BALANCE[TB1]).sort()) === J(["classic.m3", "classic.m7", "classic.m8"]) && !!TEMPLATE_COPY[TB1]["classic.m7"] && Object.values(MATCH_RULESETS).every((r) => r.layers?.templateBalance !== TB1));
 }
 console.log(`\nStage-1 Split 3a-B：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
