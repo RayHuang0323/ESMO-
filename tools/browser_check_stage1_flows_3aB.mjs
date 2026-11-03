@@ -162,11 +162,11 @@ const result = await runGate({
       ck("B2c m6（v21.b2）：中風險（看自己的卡片）、新優勢與缺點；已刪的詞不在", cardRisk(await card("classic.m6"), COPY.m6.risk) && (t6 ?? "").includes(COPY.m6.detail) && (t6 ?? "").includes(COPY.m6.cons) && !/碾壓|雪上加霜/.test(t6 ?? ""));
       ck("B2c2 m6（v21.b2）：團戰姿態整個維度不顯示", await ev(`return !document.querySelector('[data-testid="tb-dim-teamfight.posture"]');`) === true);
       const the = await pickTpl("v2.hard_engage_stack");
-      ck("B2d hard_engage（v21.b2）：中風險、無代價句；舊的整句都不在（這兩個詞組單獨出現在 defensive_hold 的描述是正當的，所以比整句）", cardRisk(await card("v2.hard_engage_stack"), COPY.he.risk) && (the ?? "").includes(COPY.he.cons) && (the ?? "").includes(COPY.he.desc) && !["隊伍加入團戰的程度比平常高很多，投入團戰的門檻也稍微比較低。", "隊伍撤退的時機比平常稍微晚一點，投入團戰的門檻也比平常稍微低一些。"].some((x) => (the ?? "").includes(x)));
+      ck("B2d hard_engage（v21.b2）：中風險、無代價句；舊的整句都不在（這兩個詞組單獨出現在 defensive_hold 的描述是正當的，所以比整句）", cardRisk(await card("v2.hard_engage_stack"), COPY.he.risk) && (the ?? "").includes(COPY.he.cons) && (the ?? "").includes(COPY.he.desc) && !["隊伍加入團戰的程度比平常高很多，投入團戰的門檻也稍微比較低。", "隊伍撤退的時機比平常稍微晚一點，投入團戰的門檻也比平常稍微低一些。", "隊員默契好的時候"].some((x) => (the ?? "").includes(x)));
       const tdh = await pickTpl("v2.defensive_hold");
       ck("B2e defensive_hold（v21.b2）：沒有「比對手弱」；缺點還在", !(tdh ?? "").includes("比對手弱") && (tdh ?? "").includes(COPY.dh.cons));
       const ttl = await pickTpl("v2.three_lane_pressure");
-      ck("B2f three_lane（v21.b2）：文案不變、風險標示高（看自己的卡片）", cardRisk(await card("v2.three_lane_pressure"), COPY.tl.risk) && (ttl ?? "").includes(COPY.tl.cons));
+      ck("B2f three_lane（v21.b2）：缺點不變、風險標示高（看自己的卡片）；沒有「比對手強」", cardRisk(await card("v2.three_lane_pressure"), COPY.tl.risk) && (ttl ?? "").includes(COPY.tl.cons) && !(ttl ?? "").includes("比對手強"));
       const t8 = await pickTpl("classic.m8");
       const m8cons = await ev("return JSON.stringify([...document.querySelectorAll('span')].some(s=>s.innerText==='缺點：'));");
       ck("B3 m8：中風險、v21 優勢；缺點整行不顯示；沒有已刪除的句子", (t8 ?? "").includes(`${COPY.m8.risk}風險`) && (t8 ?? "").includes(COPY.m8.detail) && !m8cons && !/全讓|20 分鐘|一波定勝/.test(t8 ?? ""), String(m8cons));

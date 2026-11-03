@@ -257,7 +257,8 @@ const COPY_V21_B1 = {
   },
   "classic.m8": { risk: "中", desc: "穩健發育拖到後期", detail: "前期穩健防守", cons: null },
 };
-const HARD_ENGAGE_DESC_V21_B2 = "隊伍加入團戰的程度比平常高很多。中期隊伍更敢主動接戰。中期對巴龍的爭奪更願意參與，後期對巴龍的爭奪也稍微更願意參與。輔助出手救人的時機也比較早。適合陣容有強力控制和後排輸出、隊員默契好的時候。";
+const HARD_ENGAGE_DESC_V21_B2 = "隊伍加入團戰的程度比平常高很多。中期隊伍更敢主動接戰。中期對巴龍的爭奪更願意參與，後期對巴龍的爭奪也稍微更願意參與。輔助出手救人的時機也比較早。";
+const THREE_LANE_DESC_V21_B2 = "上、中、下三路的站位都推得比平常更前面，打野出來抓人的次數也比平常多。前期隊伍更敢主動接戰。輔助比較少離開下路，出手救人的時機也比較早。";
 const DEFENSIVE_HOLD_DESC_V21_B2 = "上、中、下三路的站位全部往後退，打野抓人的次數明顯比平常少。前期和中期不太主動接戰，後期接戰的傾向和平常差不多。前期和中期對龍的爭奪也比較少參與。撤退的時機比平常稍微早一點，投入團戰的門檻也比較高。輔助比較少離開下路，出手救人的時機也比較早。";
 export const TEMPLATE_BALANCE = deepFreeze({
   "v21.b1": TABLE_V21_B1,
@@ -273,7 +274,9 @@ export const TEMPLATE_COPY = deepFreeze({
   "v21.b2": {
     ...COPY_V21_B1,
     "classic.m6": { risk: "中", detail: "中單與打野高機動游走", cons: "游走撲空就虧線" },
-    "v2.hard_engage_stack": { risk: "中", desc: HARD_ENGAGE_DESC_V21_B2, detail: HARD_ENGAGE_DESC_V21_B2, cons: "這套打法沒有特別明顯的短處，但也不代表比較強。" },
+    "v2.hard_engage_stack": { risk: "中", desc: HARD_ENGAGE_DESC_V21_B2, detail: HARD_ENGAGE_DESC_V21_B2, cons: "隊員更常加入團戰，留在各路的人手就比較少。" },
+    //  只拿掉沒有量過的「適合…」句（Owner r3 第 5 點）；風險維持高：三路前壓仍是核心玩法，標示不單憑 riskTolerance（第 2 點）。
+    "v2.three_lane_pressure": { desc: THREE_LANE_DESC_V21_B2, detail: THREE_LANE_DESC_V21_B2 },
     "v2.defensive_hold": { desc: DEFENSIVE_HOLD_DESC_V21_B2, detail: DEFENSIVE_HOLD_DESC_V21_B2 },
   },
 });

@@ -327,8 +327,12 @@
       },
       "cons": {
         "from": "NO_CONS_SENTENCE",
-        "to": "隊伍把重心放在集結打團，多人參戰時，留在各路的人手就比較少。",
-        "why": "item 4: a trade-off from the setting (grouping 0.9, join.fight higher in all phases). A logical consequence, no win rate, no measured effect. The copy gate has no cost row for this template, so its rule would demand NO_CONS_SENTENCE; the Owner ruling overrides that rule for this one sentence, pinned word for word by S20b"
+        "to": "隊員更常加入團戰，留在各路的人手就比較少。",
+        "why": "item 4: a trade-off from the setting (grouping 0.9, join.fight higher in all phases). A logical consequence, no win rate, no measured effect. The copy gate has no cost row for this template, so its rule would demand NO_CONS_SENTENCE; the Owner ruling overrides that rule for this one sentence, pinned word for word by S20b",
+        "firstDraft": {
+          "text": "隊伍把重心放在集結打團，多人參戰時，留在各路的人手就比較少。",
+          "why": "rejected by the copy gate IMPOSSIBLE list before any browser or measurement run: the engine has no formation or first-strike choice, joinFight is only the chance of joining a fight. So 集結 described something the engine does not have, which item 4 forbids"
+        }
       }
     },
     "v2.three_lane_pressure": {

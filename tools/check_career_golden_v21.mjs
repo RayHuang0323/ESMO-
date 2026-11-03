@@ -78,7 +78,7 @@ ck("P 出處釘死（重錄必須看得見地改 PINNED_*）", fx.gitHead === PI
 ck("P2 fixture 指紋＝目前登記的 moba-sim.v21 指紋", fx.fingerprint === SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v21"]);
 const got = await runAll(), bad = [];
 for (const w of fx.cases) { const g = got.find((x) => x.id === w.id); const d = ["setupHash", "phasesHash", "finalHash", "winner", "duration"].filter((k) => JSON.stringify(g?.[k]) !== JSON.stringify(w[k])); if (d.length) bad.push(`${w.id}: ${d.join(",")}`); }
-ck(`R ${fx.cases.length} 案重跑：setup／phases／終局 snapshot 雜湊、勝方、時長逐位元相同`, bad.length === 0, bad.slice(0, 3).join(" | "));
+ck(`R ${fx.cases.length} 案重跑：setup／phases／終局 snapshot 雜湊、勝方、時長逐位元相同`, bad.length === 0, bad.join(" | "));
 ck("S 每一案 career.v21／core.v1／teamRelative、紅方是 AI 教練 binding、藍方的選擇沒有被拿掉；兩種配置都有",
   got.every((r) => r.ruleset === "career.v21" && r.director === "core.v1" && r.laneFrame === "teamRelative" && r.redKind === "binding" && r.dropped.length === 0) && new Set(got.map((r) => r.layout)).size === 2);
 console.log(`\nCareer Golden v21：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);

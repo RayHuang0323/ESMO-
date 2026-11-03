@@ -35,7 +35,7 @@ import { snapshotToBattleResult } from "../src/battle/battleResult.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
 import { STYLE_TEMPLATES, aiCoachSummary, aiCoachPlan } from "../src/platform/tactics/aiCoach.js";
 import { AI_TEAMS } from "../src/platform/competition/aiTeams.js";
-import { effectSheet, templateCopyViolations, NO_CONS_SENTENCE } from "./lib/tacticEffectSheet.mjs";
+import { effectSheet, templateCopyViolations, copyViolationsOf, IMPOSSIBLE } from "./lib/tacticEffectSheet.mjs";
 import { contradictions, effectiveChoices } from "../src/platform/tactics/tacticIndicators.js";
 import { templateGroups, tacticBookView, opponentIntelOf, offeredChoicesOnly, keptUnofferedChoices } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
 import { MEASURED_EXCLUSIONS, BALANCE_EXCLUSIONS, REPLICATION_WITHHELD, liveRows, measuredExclusion, replicationWithheld } from "../src/platform/tactics/capabilityRegistry.js";
@@ -502,14 +502,19 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
   ck("S20a m6：風險中、名稱與重點不變；優勢與缺點只刪不寫；已登記要刪的詞都不在；v20 文案不變",
     m6.risk === "中" && m6.name === s6.name && m6.focus === s6.focus && m6.desc === s6.desc && m6.detail === "中單與打野高機動游走" && m6.cons === "游走撲空就虧線" && onlyDeletes(m6.detail, s6.detail) && onlyDeletes(m6.cons, s6.cons)
     && !/碾壓|高風險|雪上加霜/.test([m6.desc, m6.detail, m6.cons].join("")) && s6.risk === "高" && s6.cons.includes("高風險"), J(m6));
+  const m6Cfg = templateConfigFor("classic.m6", TB), m6S = templateById("classic.m6").config;
+  ck("S20a2 m6 保留中野快節奏遊走定位：節奏 fast、中路前壓、打野抓人、輔助遊走都沒動；文案沒有說比賽更快結束（Owner r3 第 3 點）", m6Cfg.macro.tempo === "fast" && ["mid", "jungle", "support"].every((l) => m6Cfg.lanePlan[l] === m6S.lanePlan[l]) && J(Object.keys(TEMPLATE_BALANCE[TB]["classic.m6"]).sort()) === J(["macro.aggression", "macro.riskTolerance"]) && !/更快結束|必然|一定|速戰速決|提早結束/.test([m6.desc, m6.detail, m6.cons].join("")));
   const he = templateCopyFor("v2.hard_engage_stack", TB), she = templateById("v2.hard_engage_stack");
-  ck("S20b hard_engage：風險中；描述只少「投入門檻較低」那一句，優勢＝描述；缺點是效果表規定的無代價句；文案閘門零違規；v20 文案不變",
-    he.risk === "中" && he.name === she.name && he.desc === she.desc.replace("，投入團戰的門檻也稍微比較低。", "。") && he.detail === he.desc && he.cons === NO_CONS_SENTENCE && !templateCopyViolations({ desc: he.desc, cons: he.cons }, effectSheet(templateConfigFor("v2.hard_engage_stack", TB))).length && she.desc.includes("投入團戰的門檻"), J(he));
+  const HE_CONS = "隊員更常加入團戰，留在各路的人手就比較少。";
+  const heSheet = effectSheet(templateConfigFor("v2.hard_engage_stack", TB));
+  //  缺點是 Owner r3 第 4 點的取捨句（效果表沒有代價列，一般規則會要求無代價句；這裡是 Owner 裁定的唯一例外，逐字釘住）：只講設定的邏輯取捨，不講勝率或實測。
+  ck("S20b hard_engage：名稱與風險中保留強開定位；描述只少「投入門檻較低」和「適合…」兩句，優勢＝描述；缺點＝Owner 裁定的取捨句，依據是 grouping 與 join.fight，沒有勝率或實測字眼；描述文案閘門零違規；v20 文案不變",
+    he.risk === "中" && he.name === she.name && he.name === "抱團強開" && he.desc === she.desc.replace("，投入團戰的門檻也稍微比較低。", "。").replace("適合陣容有強力控制和後排輸出、隊員默契好的時候。", "") && he.detail === he.desc && he.cons === HE_CONS && !/勝|贏|更強|傷害|金錢|經濟|實測|必然/.test(he.cons) && !IMPOSSIBLE.some(([re]) => re.test(he.cons)) && templateConfigFor("v2.hard_engage_stack", TB).macro.grouping === 0.9 && heSheet["join.fight.mid"]?.dir === "higher" && !copyViolationsOf(he.desc, heSheet).length && she.desc.includes("投入團戰的門檻") && she.cons.includes("撤退"), J(he));
   const heCfg = templateConfigFor("v2.hard_engage_stack", TB);
   ck("S20b2 hard_engage：只動 risk；抱團、中期姿態、巴龍優先、輔助保護、aggression 都與出貨版相同", J(Object.keys(TEMPLATE_BALANCE[TB]["v2.hard_engage_stack"])) === J(["macro.riskTolerance"]) && heCfg.macro.aggression === she.config.macro.aggression && heCfg.macro.grouping === she.config.macro.grouping && heCfg.macro.midGame === she.config.macro.midGame && heCfg.objectives.baronPriority === she.config.objectives.baronPriority && heCfg.lanePlan.support === she.config.lanePlan.support);
   const tl = templateCopyFor("v2.three_lane_pressure", TB), stl = templateById("v2.three_lane_pressure"), tlCfg = templateConfigFor("v2.three_lane_pressure", TB);
-  ck("S20c three_lane（未證實候選）：只動 risk；三路前壓、快節奏、aggression 與出貨版相同；沒有文案覆寫；文案閘門零違規；風險標示維持高（交 Owner）",
-    J(Object.keys(TEMPLATE_BALANCE[TB]["v2.three_lane_pressure"])) === J(["macro.riskTolerance"]) && ["top", "mid", "adc"].every((l) => tlCfg.lanePlan[l] === "aggressive" && stl.config.lanePlan[l] === "aggressive") && tlCfg.macro.tempo === "fast" && tlCfg.macro.aggression === stl.config.macro.aggression && !("v2.three_lane_pressure" in TEMPLATE_COPY[TB]) && tl.risk === "高" && !templateCopyViolations({ desc: tl.desc, cons: tl.cons }, effectSheet(tlCfg)).length);
+  ck("S20c three_lane（未證實候選）：只動 risk；三路前壓、快節奏、aggression 與出貨版相同；描述只少「適合…」句，缺點不變；文案閘門零違規；風險標示維持高（Owner r3 第 2 點）",
+    J(Object.keys(TEMPLATE_BALANCE[TB]["v2.three_lane_pressure"])) === J(["macro.riskTolerance"]) && ["top", "mid", "adc"].every((l) => tlCfg.lanePlan[l] === "aggressive" && stl.config.lanePlan[l] === "aggressive") && tlCfg.macro.tempo === "fast" && tlCfg.macro.aggression === stl.config.macro.aggression && tl.desc === stl.desc.replace("適合前期陣容就比對手強的時候。", "") && tl.detail === tl.desc && tl.cons === stl.cons && tl.risk === "高" && !("risk" in TEMPLATE_COPY[TB]["v2.three_lane_pressure"]) && !templateCopyViolations({ desc: tl.desc, cons: tl.cons }, effectSheet(tlCfg)).length);
   const reg = JSON.parse(read("tools/fixtures/stage1r2_release_registration_3aB.json"));
   ck("S20c2 three_lane 在登記裡明確標成未證實候選、不得稱為已通過（Owner 第 2 點）；原始碼也有這句話", /UNPROVEN/.test(reg.table.entries["v2.three_lane_pressure"].status) && /Never called passed/.test(reg.table.entries["v2.three_lane_pressure"].status) && read("src/platform/tactics/tacticTemplates.js").includes("未證實候選"));
   const dh = templateCopyFor("v2.defensive_hold", TB), sdh = templateById("v2.defensive_hold");
@@ -522,6 +527,14 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
   const m6View = tacticBookView({ templateId: "classic.m6", tacticalDirector: "core.v1", templateBalance: TB });
   ck("S20h m6 團戰姿態在 v21.b2 下撤下（戰術書不列）、jungle.focus=invade 留著；帶姿態的舊計畫仍解析得到；出貨版提供清單不變",
     m6View.ok && !m6View.dimensions.some((d) => d.dimension === "teamfight.posture") && engB2.offeredDetail("classic.m6", "jungle.focus", [], {}, { tacticalDirector: "core.v1" }).offered.includes("invade") && !!m6Posture && resolveTactic({ kind: "binding", binding: m6Posture }, {}, { templateBalance: TB }).ok && choiceEngineFor(null).offeredDetail("classic.m6", "teamfight.posture", [], {}, { tacticalDirector: "core.v1" }).offered.length === 3);
+  const savedM6 = { teamfight: { posture: "passive" } }, savedM6B = bind("classic.m6", savedM6);
+  const droppedM6 = offeredChoicesOnly("classic.m6", [], savedM6, { tacticalDirector: "core.v1", templateBalance: TB });
+  const keptM6 = keptUnofferedChoices(savedM6B, "core.v1", TB), keptM60 = keptUnofferedChoices(savedM6B, "core.v1", null);
+  const rtBook = normalizeTacticBook(JSON.parse(J(addTacticPlan(normalizeTacticBook(null), { plan: createTacticPlan({ templateId: "classic.m6", overlayIds: [], choices: savedM6 }).plan, name: "m6 舊計畫" }).book)));
+  const liveOldSave = buildLiveMatchSetup(liveInputs({ flags: { ...golden.featureFlags, mobaTacticalDirectorV21: true }, tacticPlanBinding: savedM6B }));
+  const v20OldSave = buildLiveMatchSetup(liveInputs({ flags: { ...golden.featureFlags }, tacticPlanBinding: savedM6B }));
+  ck("S20i m6 舊存檔帶團戰姿態（Owner r3 第 1 點）：存檔讀回不掉；v21.b2 戰術書載入時拿掉、恢復比賽時標成沿用；開局組得起來；v20 仍是正式站的 m6，提供清單不變",
+    rtBook.plans?.length === 1 && J(droppedM6.choices) === "{}" && keptM6.some((x) => x.dimension === "teamfight.posture") && !keptM60.some((x) => x.dimension === "teamfight.posture") && liveOldSave.ok && liveOldSave.setup.tactic.blue.kind === "binding" && v20OldSave.ok && v20OldSave.setup.tactic.blue.kind === "legacy" && sig(v20OldSave.setup.tactic.blue.config) === sig(mobaTacticById("m6")), J({ d: droppedM6.choices, keptM6, keptM60, plans: rtBook.plans?.length, live: liveOldSave.ok, v20: v20OldSave.ok }));
   ck("S20g v21.b1 的值與文案還在（舊證據解析得到），沒有規則集讀它", J(Object.keys(TEMPLATE_BALANCE[TB1]).sort()) === J(["classic.m3", "classic.m7", "classic.m8"]) && !!TEMPLATE_COPY[TB1]["classic.m7"] && Object.values(MATCH_RULESETS).every((r) => r.layers?.templateBalance !== TB1));
 }
 console.log(`\nStage-1 Split 3a-B：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
