@@ -1,0 +1,146 @@
+{
+ "schema": "ExclusionV21b1Confirm.v1",
+ "studyId": "exclusion-v21b2-confirm-3aB",
+ "stage": "Phase 3a-B stage 1 r2 formal acceptance step 4b",
+ "registeredAt": "2026-11-03",
+ "status": "READY_FOR_FREEZE (prepared 2026-11-03 under the Owner review of the balance study; not registered: no new freeze is approved, so the tool refuses to run). Nothing here may change after the first match",
+ "authority": "Owner 2026-10-13 (marginal and new evidence re-verified on fresh seeds, blue and red), Owner 2026-11-01 item 5, stage1r2_formal_acceptance_registration_3aB.json step 4",
+ "tool": "node tools/measure_exclusion_v21b2_3aB.mjs --confirm-plan | --confirm-run --dir=<new folder outside the repo> --workers=3 | --confirm-report --dir=<same>",
+ "result": "tools/fixtures/exclusion_v21b2_confirm_result_3aB.json",
+ "question": "do the choices offered on classic.m3 / m7 / m8 (P6, identical values in v21.b1 and v21.b2) and on classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure under v21.b2 still meet the replication rule, on both sides, on the frozen semantics?",
+ "seeds": {
+  "range": "65101-65500",
+  "n": 400,
+  "step": 1,
+  "path": "tool (seed as-is)",
+  "block": "exclusion.v21b1.confirm of tools/fixtures/study_seed_plan_3aB.json (never run)",
+  "rule": "disjoint from the P6 blocks 65001-65100, 65501-65900 and the v21.b2 development blocks 69801-69900, 69901-70300"
+ },
+ "design": "balanceTool.v21 (template table v21.b1). For each side: the template plus that one choice on that side, std on the other, paired by seed against the template without the choice on that side. Same instrument as P6 stage 2 (runTruthMatch, items standard, skills on)",
+ "plan": {
+  "rule": "every row of the two P6 result files with stage-1 pass or stage-2 confirmed; the tool refuses if this list differs from what those files derive",
+  "items": [
+   {
+    "template": "classic.m7",
+    "dimension": "lanes.mid.stance",
+    "choice": "split",
+    "metric": "seatFightEntriesPerMin.b3",
+    "direction": "down"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "teamfight.posture",
+    "choice": "passive",
+    "metric": "engageDecisionsPerMin",
+    "direction": "down"
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "teamfight.posture",
+    "choice": "passive",
+    "metric": "engageDecisionsPerMin",
+    "direction": "down"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "teamfight.posture",
+    "choice": "aggressive",
+    "metric": "engageDecisionsPerMin",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "teamfight.posture",
+    "choice": "aggressive",
+    "metric": "engageDecisionsPerMin",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m3",
+    "dimension": "objectives.tower",
+    "choice": "high",
+    "metric": "siegeWindowsPerMin",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m8",
+    "dimension": "phases.early.grouping",
+    "choice": "group",
+    "metric": "joinGoGeneralStartsPerMin.early",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.early.focusLane",
+    "choice": "top",
+    "metric": "ganksOwnPerMin.top.early",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.early.focusLane",
+    "choice": "mid",
+    "metric": "ganksOwnPerMin.mid.early",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.early.focusLane",
+    "choice": "bot",
+    "metric": "ganksOwnPerMin.bot.early",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.mid.focusLane",
+    "choice": "top",
+    "metric": "ganksOwnPerMin.top.mid",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.mid.focusLane",
+    "choice": "mid",
+    "metric": "ganksOwnPerMin.mid.mid",
+    "direction": "up"
+   },
+   {
+    "template": "classic.m7",
+    "dimension": "phases.mid.focusLane",
+    "choice": "bot",
+    "metric": "ganksOwnPerMin.bot.mid",
+    "direction": "up"
+   }
+  ],
+  "controls": "one per side and template (classic.m3, classic.m7, classic.m8)",
+  "matches": "(13 arms + 3 controls) x 2 sides x 400 = 12,800",
+  "expectedEffort": "about 3.6 h single line at the 1.05 s/match measured in P6"
+ },
+ "decisionRule": {
+  "confirmed": "on BOTH sides n >= 200 valid pairs, z >= 3 and relative effect >= 0.05 in the claimed direction",
+  "source": "the replication rule of tactic_followup_3a_replication.json, the same as P6 stage 2",
+  "notReplicated": "a side with n >= 200 valid pairs misses the rule",
+  "overall": {
+   "PASS": "every item confirmed, no errored match",
+   "FAILED": "any item not_replicated: a failed check of the formal acceptance (stopRules.anyOtherRed), reported to the Owner; rows are not edited to make it pass",
+   "INCONCLUSIVE": "any item with fewer than 200 valid pairs on a side and none not_replicated, or any errored match up to 1% of the planned matches, which gives no verdict on any item: the Owner decides",
+   "STOP": "more than 1% errored"
+  },
+  "minValidPairsPerSide": 200,
+  "minValidPairsAuthority": "Owner Review 2026-11-02 decision 3; lowering it after the fact is forbidden",
+  "achievability": "checked before registering, from the P6 raw records, no reserved seed: all 13 metrics are valid in 100 of 100 matches on the blue side and in 100 of 100 on the red side of the same matches (a proxy: stage 1 ran blue arms only); the two stage-2 items measured 400 of 400 on both sides. Expected about 400 per side, far above the floor",
+  "order": "not_replicated when a side with n >= 200 misses the rule; otherwise inconclusive when a side has n < 200; otherwise confirmed",
+  "inconclusive": "no side misses the rule and a side has n < 200 valid pairs",
+  "mixedCase": "a side with n >= 200 that misses the rule makes the item not_replicated and the study FAILED, even when the other side has n < 200; that other side is recorded in insufficientSides (Owner approval 2026-11-02)"
+ },
+ "noRetries": "no re-run, no seed swap, no metric swap, no seed dropped by hand",
+ "notClaimed": "behaviour only. No win-rate claim for a table template combined with a choice: that is a known verification gap and not a pass (stage1r2_formal_acceptance_registration_3aB.json knownVerificationGaps)",
+ "fingerprint": "TBD_AT_FREEZE",
+ "review": null,
+ "requiresResult": {
+  "file": "tools/fixtures/ga8_fix2_confirm_result_3aB.json",
+  "verdict": "PASS",
+  "why": "stopRules.ga8: the confirmatory G-A8 runs FIRST and a STOP halts every other formal measurement; INCONCLUSIVE goes to the Owner. Enforced by the tool, not by procedure",
+  "registration": "tools/fixtures/ga8_fix2_confirm_registration_3aB.json"
+ }
+}

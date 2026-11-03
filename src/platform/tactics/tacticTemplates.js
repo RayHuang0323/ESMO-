@@ -235,26 +235,46 @@ export const templateIdOfLegacyTactic = (tacticId) =>
 //     ⚠ 不得出現 lanePlan 的 split、carryPriority（席位優先）、std 或 classic.m2：計畫合法性的聯集規則與對照表的上下限依賴這一點。
 //   · TEMPLATE_COPY：只給畫面看的文案，**永遠不進引擎設定**。m7 文案逐字照 Owner，detail 沿用 desc（Owner 2026-11-01 第 2 點）。
 //     m3／m8（Owner 2026-11-01 第 1 點）：風險改中、定位不變；只刪不符合新數值或沒有證據的句子，不新增宣稱（逐句理由見 stage1_release_registration_3aB.json I9）。
+//   · v21.b2（Owner 平衡研究 Review；登記 stage1r2_release_registration_3aB.json）：career.v21／balanceTool.v21 現在讀這張。v21.b1 留著，舊的排除列與結果還解析得到，沒有規則集讀它。
+//     m3／m7／m8 與 v21.b1 同值。m6＝篩選臂 M6_B、hard_engage＝HE_R（ga8_fix_screen6）。
+//     ⚠ three_lane_pressure＝TLP_R 是**未證實候選**（Owner 第 2 點）：篩選規則判 NO_REASONABLE_CANDIDATE，不得稱為已通過；三路前壓與快節奏不動。
+//     defensive_hold 只有文案（Owner 第 5 點），不在修正數值裡，所以賽後評分不受影響。
+const TABLE_V21_B1 = {
+  "classic.m3": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 },
+  "classic.m7": {
+    "macro.aggression": 0.5, "macro.riskTolerance": 0.5, "macro.tempo": "standard",
+    "lanePlan.top": "standard", "lanePlan.mid": "standard", "lanePlan.adc": "standard",
+  },
+  "classic.m8": { "macro.aggression": 0.5, "macro.riskTolerance": 0.5 },
+};
+const COPY_V21_B1 = {
+  "classic.m3": { risk: "中", desc: "先手開團強起會戰", detail: "輔助/坦克先手開團", cons: "吃溝通與先手品質" },
+  "classic.m7": {
+    name: "前期野區入侵", risk: "中", focus: "打野",
+    desc: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
+    detail: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
+    cons: "入侵失利可能讓隊伍失去前期節奏",
+  },
+  "classic.m8": { risk: "中", desc: "穩健發育拖到後期", detail: "前期穩健防守", cons: null },
+};
+const HARD_ENGAGE_DESC_V21_B2 = "隊伍加入團戰的程度比平常高很多。中期隊伍更敢主動接戰。中期對巴龍的爭奪更願意參與，後期對巴龍的爭奪也稍微更願意參與。輔助出手救人的時機也比較早。適合陣容有強力控制和後排輸出、隊員默契好的時候。";
+const DEFENSIVE_HOLD_DESC_V21_B2 = "上、中、下三路的站位全部往後退，打野抓人的次數明顯比平常少。前期和中期不太主動接戰，後期接戰的傾向和平常差不多。前期和中期對龍的爭奪也比較少參與。撤退的時機比平常稍微早一點，投入團戰的門檻也比較高。輔助比較少離開下路，出手救人的時機也比較早。";
 export const TEMPLATE_BALANCE = deepFreeze({
-  "v21.b1": {
-    "classic.m3": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 },
-    "classic.m7": {
-      "macro.aggression": 0.5, "macro.riskTolerance": 0.5, "macro.tempo": "standard",
-      "lanePlan.top": "standard", "lanePlan.mid": "standard", "lanePlan.adc": "standard",
-    },
-    "classic.m8": { "macro.aggression": 0.5, "macro.riskTolerance": 0.5 },
+  "v21.b1": TABLE_V21_B1,
+  "v21.b2": {
+    ...TABLE_V21_B1,
+    "classic.m6": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 },
+    "v2.hard_engage_stack": { "macro.riskTolerance": 0.5 },
+    "v2.three_lane_pressure": { "macro.riskTolerance": 0.5 },
   },
 });
 export const TEMPLATE_COPY = deepFreeze({
-  "v21.b1": {
-    "classic.m3": { risk: "中", desc: "先手開團強起會戰", detail: "輔助/坦克先手開團", cons: "吃溝通與先手品質" },
-    "classic.m7": {
-      name: "前期野區入侵", risk: "中", focus: "打野",
-      desc: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
-      detail: "打野開局主動入侵敵方野區，前期積極尋找接戰機會",
-      cons: "入侵失利可能讓隊伍失去前期節奏",
-    },
-    "classic.m8": { risk: "中", desc: "穩健發育拖到後期", detail: "前期穩健防守", cons: null },
+  "v21.b1": COPY_V21_B1,
+  "v21.b2": {
+    ...COPY_V21_B1,
+    "classic.m6": { risk: "中", detail: "中單與打野高機動游走", cons: "游走撲空就虧線" },
+    "v2.hard_engage_stack": { risk: "中", desc: HARD_ENGAGE_DESC_V21_B2, detail: HARD_ENGAGE_DESC_V21_B2, cons: "這套打法沒有特別明顯的短處，但也不代表比較強。" },
+    "v2.defensive_hold": { desc: DEFENSIVE_HOLD_DESC_V21_B2, detail: DEFENSIVE_HOLD_DESC_V21_B2 },
   },
 });
 export const TEMPLATE_BALANCE_IDS = Object.freeze(Object.keys(TEMPLATE_BALANCE));

@@ -302,18 +302,18 @@ try {
   const c20 = RS.MATCH_RULESETS["career.v20"], b20 = RS.MATCH_RULESETS["balanceTool.v20"];
   const omit = (o, ...ks) => { const rest = { ...o }; for (const k of ks) delete rest[k]; return rest; };
   //  C3-1 laneFrame 起 v21 的層另帶 laneFrame "teamRelative"（只有這兩個 v21 新鍵；其餘層與 v20 逐字相同）。
-  //  Phase 3a-B 第一階段（RS1'／RS2'／RS7'，事前登記 stage1_release_registration_3aB）：v21 另帶 templateBalance "v21.b1"。
+  //  Phase 3a-B 第一階段（RS1'／RS2'／RS7'，事前登記 stage1_release_registration_3aB）：v21 另帶 templateBalance "v21.b2"。
   const V21_KEYS = ["tacticalDirector", "laneFrame", "templateBalance"];
   //  Phase 3a-B T15（事前登記 tools/fixtures/ai_coach_registration_3aB.json）：career.v21 的 redTactic 改成 aiCoachV1（career.v20 仍是 styleTemplate）；
   //  其餘層與 v20 逐字相同的要求不變。balanceTool.v21 的 redTactic 仍是 std（RS2 原樣）。
   const C21_KEYS = [...V21_KEYS, "redTactic"];
-  ck("RS1' career.v21＝career.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋redTactic aiCoachV1（T15）＋templateBalance v21.b1（第一階段）、simVersion moba-sim.v21、正式；releaseRequirements＝v20 的＋mobaTacticalDirectorV21",
-    c21.kind === "production" && c21.simVersion === "moba-sim.v21" && c21.layers.tacticalDirector === "core.v1" && c21.layers.laneFrame === "teamRelative" && c21.layers.templateBalance === "v21.b1"
+  ck("RS1' career.v21＝career.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋redTactic aiCoachV1（T15）＋templateBalance v21.b2（第一階段）、simVersion moba-sim.v21、正式；releaseRequirements＝v20 的＋mobaTacticalDirectorV21",
+    c21.kind === "production" && c21.simVersion === "moba-sim.v21" && c21.layers.tacticalDirector === "core.v1" && c21.layers.laneFrame === "teamRelative" && c21.layers.templateBalance === "v21.b2"
     && c21.layers.redTactic === "aiCoachV1" && c20.layers.redTactic === "styleTemplate"
     && L.stableStringify(omit(c21.layers, ...C21_KEYS)) === L.stableStringify(omit(c20.layers, "redTactic"))
     && J(c21.releaseRequirements) === J([...c20.releaseRequirements, "mobaTacticalDirectorV21"]) && RS.validateRuleset(c21).ok);
-  ck("RS2' balanceTool.v21＝balanceTool.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋templateBalance v21.b1（第一階段）、工具、不需旗標",
-    b21.kind === "tool" && b21.layers.templateBalance === "v21.b1" && b21.layers.tacticalDirector === "core.v1" && b21.layers.laneFrame === "teamRelative" && L.stableStringify(omit(b21.layers, ...V21_KEYS)) === L.stableStringify(b20.layers)
+  ck("RS2' balanceTool.v21＝balanceTool.v20 的層＋tacticalDirector core.v1＋laneFrame teamRelative＋templateBalance v21.b2（第一階段）、工具、不需旗標",
+    b21.kind === "tool" && b21.layers.templateBalance === "v21.b2" && b21.layers.tacticalDirector === "core.v1" && b21.layers.laneFrame === "teamRelative" && L.stableStringify(omit(b21.layers, ...V21_KEYS)) === L.stableStringify(b20.layers)
     && b21.releaseRequirements.length === 0 && RS.validateRuleset(b21).ok);
   const v = (r) => RS.validateRuleset(r);
   const noFlag = { ...c21, releaseRequirements: c21.releaseRequirements.filter((f) => f !== "mobaTacticalDirectorV21") };
@@ -343,10 +343,10 @@ try {
     ck("RS6b 旗標關（＋challenge 旗標開）的輸出串雜湊＝check_match_ruleset_3a R17 釘的 11093581c4605dae（C3-1 之前的值）",
       createHash("sha256").update(outs.join("\n")).digest("hex").slice(0, 16) === "11093581c4605dae");
   }
-  ck("RS7' 旗標開 ⇒ career.v21（帶 templateBalance v21.b1；其餘層照旗標關閉；releaseRequirements 末尾多列 mobaTacticalDirectorV21），每一種都通過 validateRuleset 與 createMatchSetup",
+  ck("RS7' 旗標開 ⇒ career.v21（帶 templateBalance v21.b2；其餘層照旗標關閉；releaseRequirements 末尾多列 mobaTacticalDirectorV21），每一種都通過 validateRuleset 與 createMatchSetup",
     combos.every((f) => { const r = RS.resolveRulesetForMode({ mode: "career", flags: { ...f, mobaTacticalDirectorV21: true } });
       const r20 = RS.resolveRulesetForMode({ mode: "career", flags: f });
-      return r.rulesetId === "career.v21" && r.layers.tacticalDirector === "core.v1" && r.layers.laneFrame === "teamRelative" && r.layers.redTactic === "aiCoachV1" && r.layers.templateBalance === "v21.b1"
+      return r.rulesetId === "career.v21" && r.layers.tacticalDirector === "core.v1" && r.layers.laneFrame === "teamRelative" && r.layers.redTactic === "aiCoachV1" && r.layers.templateBalance === "v21.b2"
         && L.stableStringify(omit(r.layers, ...C21_KEYS)) === L.stableStringify(omit(r20.layers, "redTactic"))
         && J(r.releaseRequirements) === J([...r20.releaseRequirements, "mobaTacticalDirectorV21"]) && Object.isFrozen(r) && v(r).ok
         && createMatchSetup({ ruleset: r, seed: 1, meta: { seedSource: "local" } }).ok; }));

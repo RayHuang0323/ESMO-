@@ -1,0 +1,122 @@
+{
+ "schema": "ExclusionV21b1Registration.v1",
+ "studyId": "exclusion-v21b2-3aB",
+ "registeredAt": "2026-11-03",
+ "status": "registered before the first match; development measurement, NOT a formal acceptance and NOT a G-A8 result",
+ "authority": "Owner review of the balance study: confirm the effect on choices and exclusion rows, keep added testing small; same rules as Owner 2026-11-01 item 5 and Owner 2026-10-13",
+ "question": "Which choices should be offered on classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure under template table v21.b2? classic.m3 / m7 / m8 keep their v21.b1 evidence: their values are identical in both tables, checked by check_stage1_split_3aB S3b",
+ "scope": {
+  "templates": [
+   "classic.m6",
+   "v2.hard_engage_stack",
+   "v2.three_lane_pressure"
+  ],
+  "ruleset": "balanceTool.v21",
+  "templateBalance": "v21.b2",
+  "selectionRule": "mechanical, from code, no results seen: every live (dimension, choice) structurally offered on the template under v21.b2 and not covered by an unscoped template \"*\" row, with at least one of: A an existing row keyed to that template; B the weak batch of the current truth plan; C the smallest knob delta among non-std templates under v21.b2 (same formula as the truth plan) falling only on these three templates (classic.m6, v2.hard_engage_stack, v2.three_lane_pressure) (a tie with a template outside the table means own, claim and delta did not move, so the shipped evidence stands; anything that moved is caught by E); D newly offered under v21.b2 compared to the shipped config; E the table changed its own choice, its claim or its knob delta compared to the shipped config. A selected choice with no registered claim (own null, for example classic.m3 teamfight.posture) is not run and is decided no_claim",
+  "outOfScope": "\"*\" rows: std-level decisions (n=400 replication or std primary rows), unchanged by a template fix. classic.m7 lanes.top.stance=split and classic.m8 phases.late.objectiveOrder=baron are keyed rows also covered by a \"*\" not_replicated row, so they stay withheld whatever this study would say and are not measured",
+  "winCondition": "an ordinary row of this rule. Exclusion rows feed winConditionFill (tacticChoiceMapping.js), so a saved plan with a win condition may expand differently under v21.b2 once rows change; this only affects career.v21, is pinned by the regression after the rows are applied, and is listed in the result report"
+ },
+ "seeds": {
+  "range": "69801-69900",
+  "n": 100,
+  "step": 1,
+  "note": "fresh block, unused by any study; scan 2026-11-03: only three literals inside the July H.2 scattered sample on an old engine"
+ },
+ "design": "same as truth-table weak batches: blue = the template with the choice, red = std, control = the template with no choice on the same seed, mirrored roster, items standard, skills on; blue arm only (red replication is out of scope for a development study)",
+ "decisionRule": {
+  "authority": "Owner 2026-10-13: keep the original measurement and acceptance rule, do NOT just switch to z >= 3; marginal choices are re-verified with independent fresh seeds, blue and red; insufficient evidence may not be labelled live",
+  "metricAndDirection": "the registered claim of the row given the template's own choice under v21.b2 (claimFor), never chosen after seeing data",
+  "stage1": {
+   "design": "blue arm, seeds 69801-69900",
+   "pass": "paired z >= 3 in the claimed direction with n >= 20: offered",
+   "marginal": "2 <= z < 3: goes to stage 2",
+   "noEffect": "|z| < 2: withheld, reason no_measured_effect",
+   "reversed": "z against the direction <= -2: withheld, reason reversed_effect",
+   "unmeasurable": "n < 20 or z null: withheld, reason unmeasurable",
+   "noClaim": "no registered claim: withheld, reason unmeasurable; a metric is never invented",
+   "sameAs": "TRUTH_GATE: minZ 2, marginalBelowZ 3, verdict labels of check_tactic_truth_3a"
+  },
+  "stage2": {
+   "range": "69901-70300",
+   "n": 400,
+   "design": "only the stage-1 marginal rows, each with blue and red arms against std, controls per side and per template, run after the stage-1 result is committed",
+   "confirmed": "on BOTH sides z >= 3 and relative effect >= 0.05 in the claimed direction: offered. The replication rule of tactic_followup_3a_replication.json",
+   "notReplicated": "anything else: withheld, reason not_replicated",
+   "honesty": "pre-freeze: a development confirmation. It does not replace the post-freeze step 4b"
+  },
+  "noRetries": "no re-run, no seed swap, no metric swap, no seed dropped. errorRule: any errored match means no verdict at all (undecided, reported to the Owner); more than 1% is a STOP"
+ },
+ "application": {
+  "order": "report first; the rows are applied in a later commit from the result file",
+  "existingKeyedRow": "every existing classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure row in this study gets templateBalance null: it keeps withholding on the shipped config exactly as today (v20 and every table-less path) and stops applying under v21.b2. If the choice is not offered by this study, a new row keyed \"v21.b2\" carries this study's reason, metric, n and z",
+  "newRows": "every other selected choice not offered by this study gets a new row keyed \"v21.b2\"",
+  "offered": "pass, or stage-2 confirmed: no row under v21.b2; the post-freeze confirmation (formal acceptance step 4b) still has to pass",
+  "v20": "the v20 offer lists, check_match_setup_3a (v20 golden 39 cases) and the Challenge goldens stay byte-identical, verified by those gates and check_stage1_split_3aB S13",
+  "gatesThatChange": "check_stage1_split_3aB S13 (it pins that no row is keyed), check_tactic_registry_3a and check_tactic_book_view_3a if they count rows: replacement assertions registered before editing"
+ },
+ "limits": "multiple comparisons are not corrected. Stage 1 is blue only, the same as the truth-table weak batches. Options offered today can be withdrawn; every one is listed for the Owner",
+ "plan": {
+  "count": 4,
+  "runBatches": 1,
+  "noClaim": 3,
+  "controls": 3,
+  "matches": 400,
+  "items": [
+   {
+    "template": "classic.m6",
+    "dimension": "jungle.focus",
+    "choice": "invade",
+    "own": "gank",
+    "metric": "invasionsActed",
+    "direction": "up",
+    "delta": 0.35,
+    "reasons": [
+     "B_weak_now",
+     "C_weakest_under_table"
+    ]
+   },
+   {
+    "template": "classic.m6",
+    "dimension": "teamfight.posture",
+    "choice": "passive",
+    "own": null,
+    "metric": null,
+    "direction": null,
+    "delta": 0.084,
+    "reasons": [
+     "E_changed_by_table"
+    ]
+   },
+   {
+    "template": "classic.m6",
+    "dimension": "teamfight.posture",
+    "choice": "standard",
+    "own": null,
+    "metric": null,
+    "direction": null,
+    "delta": 0.024,
+    "reasons": [
+     "E_changed_by_table"
+    ]
+   },
+   {
+    "template": "classic.m6",
+    "dimension": "teamfight.posture",
+    "choice": "aggressive",
+    "own": null,
+    "metric": null,
+    "direction": null,
+    "delta": 0.06,
+    "reasons": [
+     "E_changed_by_table"
+    ]
+   }
+  ]
+ },
+ "expectedEffort": "stage 1: 400 matches, about 10 minutes, single line, workers 3; stage 2 only if the one measured row is marginal: 1,600 matches, about 35 minutes",
+ "review": null,
+ "reviewRounds": [],
+ "reportListings": "the stage-1 report prints every option offered today that the study does not offer. Applying the rows also lists every win-condition expansion that changes on classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure (before / after of winConditionFill) in the stage-1 doc",
+ "ownerVisibleConsequence": "classic.m6 teamfight.posture: passive, standard and aggressive are selected with no registered claim (own null), so the rule withdraws them under v21.b2, exactly as for classic.m3. v2.hard_engage_stack and v2.three_lane_pressure keep aggression, so no knob delta moves and no row is selected. risk.tolerance=balanced becomes their own value on all three, so it stops being a non-default choice. Other templates: 0 cells of 588 move between v21.b1 and v21.b2"
+}

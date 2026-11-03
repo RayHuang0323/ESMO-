@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================================
-//  tools/check_formal_acceptance_3aB.mjs — 第一階段正式驗收規格的機械核對（Phase 3a-B；登記 tools/fixtures/stage1_formal_acceptance_registration_3aB.json preFreezeWork W9）
+//  tools/check_formal_acceptance_3aB.mjs — 第一階段 r2 正式驗收規格的機械核對（Phase 3a-B；登記 tools/fixtures/stage1r2_formal_acceptance_registration_3aB.json；上一輪的登記與結果保留，已凍結在 7a6e9736）
 //
 //  不跑任何保留 seed。核對的事：
 //    D  Owner 決策與已知驗證缺口都寫在登記檔；缺口不算 PASS
@@ -29,13 +29,13 @@ const FX = (f) => path.join(ROOT, "tools/fixtures", f);
 const R = (f) => JSON.parse(fs.readFileSync(FX(f), "utf8"));
 const same = (a, b) => stableStringify(a) === stableStringify(b);
 
-const P7 = R("stage1_formal_acceptance_registration_3aB.json");
+const P7 = R("stage1r2_formal_acceptance_registration_3aB.json");
 const FORMAL = {
-  ga8: { file: "ga8_fix_confirm_registration_3aB.json", original: "ga8_registration_3aB.json", block: "G-A8.fixConfirm", range: (r) => r.seeds.range, step: () => 1, tool: "measure_ga8_3aB" },
-  sideBias: { file: "sidebias_career_fixconfirm_registration_3aB.json", original: "side_bias_registration_3aB.json", block: "sideBias.career.fixConfirm", range: (r) => r.paths.career.seeds.range, step: (r) => r.paths.career.seeds.step, tool: "measure_side_bias_3aB", extra: ["--path=career"] },
-  e1: { file: "e1_fix_confirm_registration_3aB.json", original: "e1_registration_3aB.json", block: "E1.fixConfirm", range: (r) => r.seeds.control, step: () => 1, tool: "measure_e1_3aB" },
-  e2: { file: "e2_fix_confirm_registration_3aB.json", original: "e2_registration_3aB.json", block: "E2.fixConfirm", range: (r) => r.seeds.range, step: (r) => r.seeds.step, tool: "measure_e2_3aB" },
-  confirm: { file: "exclusion_v21b1_confirm_registration_3aB.json", original: null, block: "exclusion.v21b1.confirm", range: (r) => r.seeds.range, step: (r) => r.seeds.step, tool: "measure_exclusion_v21b1_3aB" },
+  ga8: { file: "ga8_fix2_confirm_registration_3aB.json", original: "ga8_registration_3aB.json", block: "G-A8.fix2Confirm", range: (r) => r.seeds.range, step: () => 1, tool: "measure_ga8_3aB" },
+  sideBias: { file: "sidebias_career_fix2confirm_registration_3aB.json", original: "side_bias_registration_3aB.json", block: "sideBias.career.fixConfirm", range: (r) => r.paths.career.seeds.range, step: (r) => r.paths.career.seeds.step, tool: "measure_side_bias_3aB", extra: ["--path=career"] },
+  e1: { file: "e1_fix2_confirm_registration_3aB.json", original: "e1_registration_3aB.json", block: "E1.fixConfirm", range: (r) => r.seeds.control, step: () => 1, tool: "measure_e1_3aB" },
+  e2: { file: "e2_fix2_confirm_registration_3aB.json", original: "e2_registration_3aB.json", block: "E2.fixConfirm", range: (r) => r.seeds.range, step: (r) => r.seeds.step, tool: "measure_e2_3aB" },
+  confirm: { file: "exclusion_v21b2_confirm_registration_3aB.json", original: null, block: "exclusion.v21b1.confirm", range: (r) => r.seeds.range, step: (r) => r.seeds.step, tool: "measure_exclusion_v21b2_3aB" },
 };
 for (const f of Object.values(FORMAL)) f.reg = R(f.file);
 const filled = Object.values(FORMAL).filter((f) => /^registered/.test(f.reg.status)).length;
@@ -65,6 +65,16 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   ck("D5 STOP 規則原文還在：G-A8 0.60／0.55、STOP 後不放寬、不換 seeds、Challenge STOP 保留", /win rate >= 0.60 AND the lower 95% bound > 0.55/.test(P7.stopRules.ga8) && /No relaxed threshold, no new seeds, no template dropped/.test(P7.stopRules.ga8) && /stays/.test(P7.stopRules.challenge));
 }
 
+// ── O r2 的 Owner 裁定與歷史 ─────────────────────────────────────────────────
+{
+  const v = (P7.ownerReviewR2?.verbatim ?? []).join("\n");
+  ck("O1 Owner 平衡研究 Review 逐字保存：HE_R、M6_B、TLP_R 未證實、不核准下架退路、m5 m1 不動、defensive_hold 只刪宣稱、4601–5000", /HE_R/.test(v) && /M6_B/.test(v) && /未證實候選/.test(v) && /不核准本輪 G-A8 STOP 後的條件式下架退路/.test(v) && /m5、m1 保留原樣/.test(v) && /defensive_hold 僅移除/.test(v) && /4601–5000/.test(v));
+  ck("O2 沒有下架狀態：登記明寫，判定狀態與工具裡都沒有 drop", /NOT approved/.test(P7.stopRules.noConditionalDrop ?? "") && !/drop/i.test(fs.readFileSync(path.join(ROOT, "tools/measure_ga8_3aB.mjs"), "utf8").replace(/\/\/.*$/gm, "").replace(/dropped|dropSeed|dropIn/gi, "")));
+  ck("O3 three_lane 在正式登記也標成未證實候選", P7.unprovenCandidates?.[0]?.template === "v2.three_lane_pressure" && /UNPROVEN/.test(P7.unprovenCandidates[0].status) && /never called passed/.test(P7.unprovenCandidates[0].rule));
+  ck("O4 上一輪是歷史：凍結 7a6e9736、結果 STOP 記在 previousRound；舊登記檔還在、沒有被這輪改", P7.previousRound?.freeze?.commit?.startsWith("7a6e9736") && P7.previousRound?.outcome?.ga8?.verdict === "STOP" && R("stage1_formal_acceptance_registration_3aB.json").formalOutcome?.ga8?.verdict === "STOP" && R("ga8_fix_confirm_registration_3aB.json").fingerprint === "0cc52b48cfb9348a" && R("ga8_fix_confirm_result_3aB.json").verdict === "STOP");
+  ck("O5 G-A8 確認登記的修正表是 v21.b2、與規則集讀的同一張；範圍與原始登記相同", FORMAL.ga8.reg.templateBalance === "v21.b2" && same(FORMAL.ga8.reg.templates, R("ga8_registration_3aB.json").templates));
+}
+
 // ── R 確認登記 ───────────────────────────────────────────────────────────────
 {
   for (const [id, f] of Object.entries(FORMAL)) {
@@ -87,9 +97,10 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   const e2 = FORMAL.e2.reg, e2o = R(FORMAL.e2.original);
   const d4 = fieldsSame(e2, e2o, e2.copiedFrom.unchangedFields);
   ck("R5 E2：臂、宣稱、規則、錯誤規則與原始登記逐欄相同", !d4.length, d4.join());
-  const c = FORMAL.confirm.reg, r1 = R("exclusion_v21b1_result_3aB.json").rows, r2 = R("exclusion_v21b1_stage2_result_3aB.json").rows;
-  const want = r1.filter((x) => x.verdict === "pass" || (x.verdict === "marginal" && r2.find((y) => y.template === x.template && y.dimension === x.dimension && y.choice === x.choice)?.verdict === "confirmed")).map((x) => ({ template: x.template, dimension: x.dimension, choice: x.choice, metric: x.metric, direction: x.direction }));
-  ck("R6 step 4b：清單＝P6 提供的 13 個選擇（由兩份結果檔推出）；門檻與 P6 第二階段同一條（z ≥ 3、rel ≥ 0.05、紅藍都要）", same(c.plan.items, want) && want.length === 13 && /z >= 3 and relative effect >= 0.05/.test(c.decisionRule.confirmed) && /BOTH/.test(c.decisionRule.confirmed));
+  const c = FORMAL.confirm.reg, rows = (file) => (fs.existsSync(FX(file)) ? R(file).rows : []);
+  const offered = (r1, r2) => r1.filter((x) => x.verdict === "pass" || (x.verdict === "marginal" && r2.find((y) => y.template === x.template && y.dimension === x.dimension && y.choice === x.choice)?.verdict === "confirmed")).map((x) => ({ template: x.template, dimension: x.dimension, choice: x.choice, metric: x.metric, direction: x.direction }));
+  const wantP6 = offered(rows("exclusion_v21b1_result_3aB.json"), rows("exclusion_v21b1_stage2_result_3aB.json")), want = [...wantP6, ...offered(rows("exclusion_v21b2_result_3aB.json"), rows("exclusion_v21b2_stage2_result_3aB.json"))];
+  ck(`R6 step 4b：清單＝P6 的 13 個選擇＋v21.b2 研究提供的 ${want.length - wantP6.length} 個（由結果檔推出）；門檻與 P6 第二階段同一條（z ≥ 3、rel ≥ 0.05、紅藍都要）`, same(c.plan.items, want) && wantP6.length === 13 && /z >= 3 and relative effect >= 0.05/.test(c.decisionRule.confirmed) && /BOTH/.test(c.decisionRule.confirmed));
   ck("R7b step 4b：每側 n ≥ 200 才能確認；不足 INCONCLUSIVE；overall 不會因樣本不足變成 PASS", c.decisionRule.minValidPairsPerSide === 200 && /forbidden/.test(c.decisionRule.minValidPairsAuthority) && /fewer than 200/.test(c.decisionRule.overall.INCONCLUSIVE));
   ck("R7 step 4b：沒站住＝失敗（回報，不改列）；有錯誤場次＝不判定；review 留到凍結", /not edited/.test(c.decisionRule.overall.FAILED) && /no verdict/.test(c.decisionRule.overall.INCONCLUSIVE) && (POST_FREEZE || c.review === null));
   const pre = ["sideBias", "e1", "e2", "confirm"].map((id) => FORMAL[id].reg.requiresResult);
@@ -113,20 +124,21 @@ const FP_NOW = SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION];
   const rs = Object.entries(FORMAL).map(([id, f]) => [id, ...toRange(f.range(f.reg))]);
   const over = rs.flatMap((a, i) => rs.slice(i + 1).filter((b) => a[1] <= b[2] && b[1] <= a[2]).map((b) => `${a[0]}/${b[0]}`));
   ck("S2 五份確認登記的 seeds 彼此不重疊", !over.length, over.join());
-  const seen = [["ga8 原始", "25001-25400"], ["E1 原始", "21001-22200"], ["E2 原始", "23001-23799"], ["career 原始", "27001-31999"], ["G-A8 篩選", "41001-41400"], ["P6 第一階段", "65001-65100"], ["P6 第二階段", "65501-65900"]].map(([n, s]) => [n, ...toRange(s)]);
+  const seen = [["ga8 原始", "25001-25400"], ["E1 原始", "21001-22200"], ["E2 原始", "23001-23799"], ["career 原始", "27001-31999"], ["G-A8 篩選", "41001-41400"], ["P6 第一階段", "65001-65100"], ["P6 第二階段", "65501-65900"], ["G-A8 上一輪確認", "43001-43400"], ["第五輪篩選", "58201-58600"], ["第四輪篩選", "57801-58200"], ["第六輪篩選", "69001-69800"], ["v21.b2 第一階段", "69801-69900"], ["v21.b2 第二階段", "69901-70300"]].map(([n, s]) => [n, ...toRange(s)]);
   const reuse = rs.flatMap((a) => seen.filter((b) => a[1] <= b[2] && b[1] <= a[2]).map((b) => `${a[0]}/${b[0]}`));
   ck("S3 都不與已觀察過的區段重疊（原始研究、篩選、P6 兩階段）", !reuse.length, reuse.join());
   const run = spawnSync(process.execPath, ["tools/check_study_seed_plan_3aB.mjs"], { cwd: ROOT, encoding: "utf8" });
   ck("S4 check_study_seed_plan_3aB 全綠（有效 seed 去重）", run.status === 0, (run.stdout ?? "").trim().split("\n").slice(-1)[0]);
-  ck("S5 P7 的 step 1–4 寫的 seeds 與登記相同", /43001-43400/.test(P7.order[0].seeds) && /51001-55999/.test(P7.order[1].seeds) && /66001-67200/.test(P7.order[2].seeds) && /67501-68299/.test(P7.order[2].seeds) && /65101-65500/.test(P7.order[3].seeds));
+  ck("S5 P7 的 step 1–4 寫的 seeds 與登記相同", /4601-5000/.test(P7.order[0].seeds) && /51001-55999/.test(P7.order[1].seeds) && /66001-67200/.test(P7.order[2].seeds) && /67501-68299/.test(P7.order[2].seeds) && /65101-65500/.test(P7.order[3].seeds));
 }
 
 // ── P 規模與 X 拒跑 ──────────────────────────────────────────────────────────
 {
-  const tool = (f, ...a) => spawnSync(process.execPath, [`tools/${f.tool}.mjs`, ...(f.tool === "measure_exclusion_v21b1_3aB" ? [] : [`--reg=tools/fixtures/${f.file}`]), ...(f.extra ?? []), ...a], { cwd: ROOT, encoding: "utf8" });
+  const tool = (f, ...a) => spawnSync(process.execPath, [`tools/${f.tool}.mjs`, ...(f.tool === "measure_exclusion_v21b2_3aB" ? [] : [`--reg=tools/fixtures/${f.file}`]), ...(f.extra ?? []), ...a], { cwd: ROOT, encoding: "utf8" });
   const planOf = (id) => (tool(FORMAL[id], id === "confirm" ? "--confirm-plan" : "--plan").stdout ?? "").trim();
   const pg = planOf("ga8"), ps = planOf("sideBias"), pe1 = planOf("e1"), pe2 = planOf("e2"), pc = planOf("confirm");
-  ck("P1 計畫規模：G-A8 8,400、career 4,018（走到 55017）、E1 8,400、E2 1,600、step 4b 12,800", /8400 場/.test(pg) && /走到 55017/.test(ps) && /4018 場/.test(ps) && /共 8400 場/.test(pe1) && /1600 場/.test(pe2) && /12800 場/.test(pc), J([pg, ps, pe2, pc]).slice(0, 220));
+  const items4b = FORMAL.confirm.reg.plan.items, want4b = (items4b.length + new Set(items4b.map((x) => x.template)).size) * 2 * 400;
+  ck(`P1 計畫規模：G-A8 8,400、career 4,018（走到 55017）、E1 8,400、E2 1,600、step 4b ${want4b}`, /8400 場/.test(pg) && /走到 55017/.test(ps) && /4018 場/.test(ps) && /共 8400 場/.test(pe1) && /1600 場/.test(pe2) && new RegExp(`${want4b} 場`).test(pc), J([pg, ps, pe2, pc]).slice(0, 220));
   const tmp = path.join(os.tmpdir(), `esmo-formal-never-${process.pid}`);
   const bad = [];
   for (const [id, f] of Object.entries(FORMAL)) {
@@ -166,7 +178,10 @@ const oneMatch = (toolFile, args, task) => new Promise((resolve) => {
   const { resolveTactic } = await import("../src/battle/moba/tactics/tacticResolver.js");
   const { tacticInputOf } = await import("./lib/tacticTruthSim.mjs");
   const m7 = tacticInputOf({ templateId: "classic.m7", choices: {} });
-  ck("W1b tableApplied 不是空轉：m7 修正表下的旋鈕與出貨版不同", J(resolveTactic(m7, {}, { phases: true, templateBalance: "v21.b1" }).phases[0].knobs) !== J(resolveTactic(m7, {}, { phases: true, templateBalance: null }).phases[0].knobs));
+  ck("W1b tableApplied 不是空轉：m7、m6、hard_engage、three_lane 修正表下的旋鈕都與出貨版不同", ["classic.m7", "classic.m6", "v2.hard_engage_stack", "v2.three_lane_pressure"].every((t) => { const x = tacticInputOf({ templateId: t, choices: {} }); return J(resolveTactic(x, {}, { phases: true, templateBalance: "v21.b2" }).phases[0].knobs) !== J(resolveTactic(x, {}, { phases: true, templateBalance: null }).phases[0].knobs); }) && !!m7);
+  const newCases = [];
+  for (const [tpl, seed] of [["classic.m6", 25001], ["v2.hard_engage_stack", 25002], ["v2.three_lane_pressure", 25001]]) { const m = await oneMatch("measure_ga8_3aB.mjs", ["--ga8-worker", reg(FORMAL.ga8.file)], { id: `${tpl}#${seed}`, key: tpl, seed, template: tpl }); newCases.push([tpl, m.rec?.tableApplied, m.error ?? null]); }
+  ck("W1c G-A8 worker：三個新修正表模板（已觀察的 seed）的 tableApplied 都成立", newCases.every(([, t]) => t === true), J(newCases));
   const s = await oneMatch("measure_side_bias_3aB.mjs", ["--sb-worker", reg(FORMAL.sideBias.file)], { id: "career.v21#27001", key: "career.v21", seed: 27001, arm: "career.v21", path: "career" });
   ck("W2 career 側偏 worker（已觀察的 27001）：career.v21、core.v1、紅方 AI 教練 binding", s.rec?.ruleset === "career.v21" && s.rec?.director === "core.v1" && s.rec?.engineSeed === 27001 && s.rec?.redKind === "binding", J(s.error ?? { rs: s.rec?.ruleset, red: s.rec?.redKind }));
   const e1 = await oneMatch("measure_e1_3aB.mjs", ["--e1-worker", reg(FORMAL.e1.file)], { id: "snowball@blue#21001", key: "snowball@blue", seed: 21001, arm: "snowball", side: "blue" });
@@ -174,7 +189,7 @@ const oneMatch = (toolFile, args, task) => new Promise((resolve) => {
   const e2 = await oneMatch("measure_e2_3aB.mjs", ["--e2-worker", reg(FORMAL.e2.file)], { id: "ctrl#23001", key: "ctrl", seed: 23001, arm: "ctrl" });
   ck("W4 E2 worker（已觀察的 23001）：career.v21 正式入口、紅方 binding、選擇沒被拿掉", e2.rec?.ruleset === "career.v21" && e2.rec?.redKind === "binding" && !e2.rec?.dropped?.length && e2.rec?.engineSeed === 23001, J(e2.error ?? { rs: e2.rec?.ruleset, red: e2.rec?.redKind }));
   const armC = { templateId: "classic.m3", choices: { objectives: { tower: "high" } } };
-  const c = await oneMatch("measure_exclusion_v21b1_3aB.mjs", ["--exclusion-worker"], { id: "c|red|x#65001", key: "c|red|x", seed: 65001, red: armC });
+  const c = await oneMatch("measure_exclusion_v21b2_3aB.mjs", ["--exclusion-worker"], { id: "c|red|x#65001", key: "c|red|x", seed: 65001, red: armC });
   ck("W5 step 4b worker（已觀察的 65001，紅方帶選擇）：seed 與任務相符", c.rec?.seed === 65001 && c.rec?.taskId === "c|red|x#65001", J(c.error ?? { s: c.rec?.seed }));
 }
 

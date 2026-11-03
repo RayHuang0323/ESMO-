@@ -2,7 +2,7 @@
   "schema": "Stage1R2ReleaseRegistration.v1",
   "studyId": "stage1.r2.release",
   "registeredAt": "2026-11-03, before any src change of this round",
-  "status": "REGISTERED, implementation not started. Preparation only: no freeze, no formal G-A8, no golden re-recording",
+  "status": "REGISTERED 7a999b9c before any src change; implemented after it. Preparation only: no freeze, no formal G-A8, no golden re-recording",
   "authority": "Owner Review after the bounded balance study (below, verbatim)",
   "ownerReview": {
     "verbatim": [
@@ -30,39 +30,128 @@
   },
   "table": {
     "id": "v21.b2",
-    "readBy": ["career.v21", "balanceTool.v21"],
-    "notReadBy": ["career.v20", "balanceTool.v20", "challenge.v20", "challenge.v21"],
+    "readBy": [
+      "career.v21",
+      "balanceTool.v21"
+    ],
+    "notReadBy": [
+      "career.v20",
+      "balanceTool.v20",
+      "challenge.v20",
+      "challenge.v21"
+    ],
     "entries": {
-      "classic.m3": { "values": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 }, "source": "same as v21.b1", "status": "v21 candidate" },
-      "classic.m7": { "values": { "macro.aggression": 0.5, "macro.riskTolerance": 0.5, "macro.tempo": "standard", "lanePlan.top": "standard", "lanePlan.mid": "standard", "lanePlan.adc": "standard" }, "source": "same as v21.b1", "status": "v21 candidate" },
-      "classic.m8": { "values": { "macro.aggression": 0.5, "macro.riskTolerance": 0.5 }, "source": "same as v21.b1", "status": "v21 candidate" },
-      "classic.m6": { "values": { "macro.aggression": 0.6, "macro.riskTolerance": 0.5 }, "source": "screen6 arm M6_B", "status": "v21 candidate" },
-      "v2.hard_engage_stack": { "values": { "macro.riskTolerance": 0.5 }, "source": "screen6 arm HE_R, aggression stays 0.7", "status": "v21 candidate" },
-      "v2.three_lane_pressure": { "values": { "macro.riskTolerance": 0.5 }, "source": "screen6 arm TLP_R, aggression stays 0.7", "status": "UNPROVEN v21 candidate (Owner item 2): the screening rule gave NO_REASONABLE_CANDIDATE, 57.1%, vs BASE -2.1 (-6.7..+2.5). Never called passed. Three-lane forward lanes and fast tempo are unchanged" }
+      "classic.m3": {
+        "values": {
+          "macro.aggression": 0.6,
+          "macro.riskTolerance": 0.5
+        },
+        "source": "same as v21.b1",
+        "status": "v21 candidate"
+      },
+      "classic.m7": {
+        "values": {
+          "macro.aggression": 0.5,
+          "macro.riskTolerance": 0.5,
+          "macro.tempo": "standard",
+          "lanePlan.top": "standard",
+          "lanePlan.mid": "standard",
+          "lanePlan.adc": "standard"
+        },
+        "source": "same as v21.b1",
+        "status": "v21 candidate"
+      },
+      "classic.m8": {
+        "values": {
+          "macro.aggression": 0.5,
+          "macro.riskTolerance": 0.5
+        },
+        "source": "same as v21.b1",
+        "status": "v21 candidate"
+      },
+      "classic.m6": {
+        "values": {
+          "macro.aggression": 0.6,
+          "macro.riskTolerance": 0.5
+        },
+        "source": "screen6 arm M6_B",
+        "status": "v21 candidate"
+      },
+      "v2.hard_engage_stack": {
+        "values": {
+          "macro.riskTolerance": 0.5
+        },
+        "source": "screen6 arm HE_R, aggression stays 0.7",
+        "status": "v21 candidate"
+      },
+      "v2.three_lane_pressure": {
+        "values": {
+          "macro.riskTolerance": 0.5
+        },
+        "source": "screen6 arm TLP_R, aggression stays 0.7",
+        "status": "UNPROVEN v21 candidate (Owner item 2): the screening rule gave NO_REASONABLE_CANDIDATE, 57.1%, vs BASE -2.1 (-6.7..+2.5). Never called passed. Three-lane forward lanes and fast tempo are unchanged"
+      }
     },
-    "notInTable": { "classic.m5": "Owner item 4", "classic.m1": "Owner item 4", "v2.defensive_hold": "copy only, Owner item 5, not a balance entry, so post-match scoring stays as it is" },
+    "notInTable": {
+      "classic.m5": "Owner item 4",
+      "classic.m1": "Owner item 4",
+      "v2.defensive_hold": "copy only, Owner item 5, not a balance entry, so post-match scoring stays as it is"
+    },
     "absoluteValues": "as v21.b1: applying twice equals applying once"
   },
   "copy": {
     "rule": "Same rule as the Owner 2026-11-01 decision for m3 and m8: only remove sentences the new values no longer support or that have no evidence; no new claims. Shown only on screens, never in the engine config. v21 only: the template objects tacticTemplates.v1 and MOBA_TACTICS stay byte-identical, v20 unchanged",
     "classic.m6": {
-      "risk": { "from": "高", "to": "中", "why": "riskTolerance 0.5 is the neutral value; same rule as m3 at 0.6/0.5 (Owner 2026-11-01 item 1)" },
-      "desc": { "keep": "中野聯動全圖製造人數差" },
-      "detail": { "from": "中單與打野高機動游走，靠支援差碾壓節奏", "to": "中單與打野高機動游走", "why": "碾壓 has no evidence: M6_B reads 50.2% vs std. Lane plan and gank interval are unchanged, so the first half holds" },
-      "cons": { "from": "游走撲空就虧線；高風險換節奏，落後時雪上加霜", "to": "游走撲空就虧線", "why": "高風險 no longer holds at riskTolerance 0.5; 落後時雪上加霜 has no evidence" }
+      "risk": {
+        "from": "高",
+        "to": "中",
+        "why": "riskTolerance 0.5 is the neutral value; same rule as m3 at 0.6/0.5 (Owner 2026-11-01 item 1)"
+      },
+      "desc": {
+        "keep": "中野聯動全圖製造人數差"
+      },
+      "detail": {
+        "from": "中單與打野高機動游走，靠支援差碾壓節奏",
+        "to": "中單與打野高機動游走",
+        "why": "碾壓 has no evidence: M6_B reads 50.2% vs std. Lane plan and gank interval are unchanged, so the first half holds"
+      },
+      "cons": {
+        "from": "游走撲空就虧線；高風險換節奏，落後時雪上加霜",
+        "to": "游走撲空就虧線",
+        "why": "高風險 no longer holds at riskTolerance 0.5; 落後時雪上加霜 has no evidence"
+      }
     },
     "v2.hard_engage_stack": {
-      "risk": { "from": "高", "to": "中", "why": "riskTolerance 0.5; same rule as m3" },
-      "desc": { "remove": "投入團戰的門檻也稍微比較低", "why": "copy gate: commit row is same under 0.7/0.5 (registration screen6 copyImpact.HE_R)" },
-      "cons": { "from": "隊伍撤退的時機比平常稍微晚一點，投入團戰的門檻也比平常稍微低一些。", "to": "NO_CONS_SENTENCE of tools/lib/tacticEffectSheet.mjs", "why": "copy gate: retreat and commit rows are same, the template has no cost row left, and the gate's rule then requires that sentence" }
+      "risk": {
+        "from": "高",
+        "to": "中",
+        "why": "riskTolerance 0.5; same rule as m3"
+      },
+      "desc": {
+        "remove": "投入團戰的門檻也稍微比較低",
+        "why": "copy gate: commit row is same under 0.7/0.5 (registration screen6 copyImpact.HE_R)"
+      },
+      "cons": {
+        "from": "隊伍撤退的時機比平常稍微晚一點，投入團戰的門檻也比平常稍微低一些。",
+        "to": "NO_CONS_SENTENCE of tools/lib/tacticEffectSheet.mjs",
+        "why": "copy gate: retreat and commit rows are same, the template has no cost row left, and the gate's rule then requires that sentence"
+      }
     },
     "v2.three_lane_pressure": {
       "text": "unchanged: screen6 copyImpact.TLP_R is empty",
-      "risk": { "keep": "高", "why": "the Owner's copy instruction names item 1 only. The forward lanes stay, so the label is not plainly false. Listed for the Owner to confirm" }
+      "risk": {
+        "keep": "高",
+        "why": "the Owner's copy instruction names item 1 only. The forward lanes stay, so the label is not plainly false. Listed for the Owner to confirm"
+      }
     },
     "v2.defensive_hold": {
-      "desc": { "remove": "適合陣容比對手弱的時候。", "why": "Owner item 5. Everything else stays" },
-      "risk": { "keep": "低" },
+      "desc": {
+        "remove": "適合陣容比對手弱的時候。",
+        "why": "Owner item 5. Everything else stays"
+      },
+      "risk": {
+        "keep": "低"
+      },
       "balance": "no table entry"
     },
     "gate": "the copy gate copyViolationsOf runs on the table copy against the effect sheet of the table config, for the v2 templates under v21.b2. classic templates are outside that gate, as today"
@@ -79,9 +168,23 @@
   },
   "predictions": {
     "registeredBeforeRunning": true,
-    "mustStayGreenAsTheyAre": ["check_match_setup_3a 153/153 (v20 golden)", "check_challenge_setup_3a", "check_tactic_replication_3a", "check_tactic_plan_3a", "check_ai_coach_3a"],
-    "redBeforeAndStaysRed": { "check_match_golden_v21a": "97/137 at the frozen state: the same 40 cases expected; any extra red must be a case that uses one of the three new table templates", "check_career_golden_v21": "3/5, same checks (P2 and setupHash), match results may move through AI skirmish teams and that is reported", "check_challenge_golden_v21": "5/6 unchanged", "check_club_mastery_v1": "264/265 existing debt" },
-    "becomesRedUntilFreeze": { "check_simulation_version_gate": "fingerprint differs from the registered 0cc52b48cfb9348a until a freeze registers a new one; expected 82/83", "check_tactic_truth_3a": "T2 stale as before, possibly T-gates that pin the plan: reported, not re-measured" },
+    "mustStayGreenAsTheyAre": [
+      "check_match_setup_3a 153/153 (v20 golden)",
+      "check_challenge_setup_3a",
+      "check_tactic_replication_3a",
+      "check_tactic_plan_3a",
+      "check_ai_coach_3a"
+    ],
+    "redBeforeAndStaysRed": {
+      "check_match_golden_v21a": "97/137 at the frozen state: the same 40 cases expected; any extra red must be a case that uses one of the three new table templates",
+      "check_career_golden_v21": "3/5, same checks (P2 and setupHash), match results may move through AI skirmish teams and that is reported",
+      "check_challenge_golden_v21": "5/6 unchanged",
+      "check_club_mastery_v1": "264/265 existing debt"
+    },
+    "becomesRedUntilFreeze": {
+      "check_simulation_version_gate": "fingerprint differs from the registered 0cc52b48cfb9348a until a freeze registers a new one; expected 82/83",
+      "check_tactic_truth_3a": "T2 stale as before, possibly T-gates that pin the plan: reported, not re-measured"
+    },
     "changedAssertionsVisibly": {
       "check_stage1_split_3aB": "S1, S2b, S4a extended to six templates, S5b, S11 scope, S13a-c2, S14 and S17 keep their meaning under v21.b2; the pinned hash of S13c2 is updated visibly; shipped hash S13c must NOT change. New: copy under v21.b2, defensive_hold copy-only, v21.b1 values of m3 m7 m8 identical to v21.b2",
       "check_match_ruleset_3a": "the pinned career.v21 and balanceTool.v21 strings change b1 to b2 and nothing else",
@@ -96,8 +199,18 @@
     "ifAPredictionFails": "recorded here as it is, investigated before any gate edit. A gate is not edited to make it green without the reason written down"
   },
   "seedsPlanned": {
-    "ga8Confirm": { "range": "4601-5000", "n": 400, "step": 1, "path": "tool", "status": "to be assigned by this round's plan after the scan, the seed gate and the independent Reviewer (Owner item 6)" },
-    "exclusionDevelopment": { "stage1": "69801-69900", "stage2": "69901-70300", "status": "proposed: unused and unreserved, scan before use" },
+    "ga8Confirm": {
+      "range": "4601-5000",
+      "n": 400,
+      "step": 1,
+      "path": "tool",
+      "status": "to be assigned by this round's plan after the scan, the seed gate and the independent Reviewer (Owner item 6)"
+    },
+    "exclusionDevelopment": {
+      "stage1": "69801-69900",
+      "stage2": "69901-70300",
+      "status": "proposed: unused and unreserved, scan before use"
+    },
     "scan20261103": {
       "4601-5000": "3,468 measurement jsonl files on disk: none has a seed in the block. Registrations and tools: only the plan's own reservation and two notes saying it is reserved. One literal: seed 4640 in review/moba-runtime/h2/baseline_after.json, a 240-seed sample scattered across 0-99968 from July (H.2, engine before v18, no tactic comparison)",
       "layout": "4601-5000 has STANDARD 213 and SWAPPED 187 (43001-43400 was 199/201); sides are 200/200",
@@ -110,5 +223,40 @@
     "notThisRound": "no freeze, no fingerprint registration, no formal G-A8, no golden re-recording, no v20 change, no LogicEngine change, no G-A8 threshold change, no flags, no push, deploy, main, CS",
     "ga8": "all 21 templates under the original rule; STOP stops. The conditional drop was not approved (Owner item 3): no drop state, no drop tool"
   },
-  "backlog": { "defensive_hold": "content redesign: technical and product backlog (Owner item 5)" }
+  "backlog": {
+    "defensive_hold": "content redesign: technical and product backlog (Owner item 5)"
+  },
+  "predictionOutcome": {
+    "gateRunBeforeAnyGateEdit": "46 gates at the implementation with no gate edited: 33 green, 13 red. Log outside the repo: esmo-measure/logs-stage1/r2.gates.predict.log",
+    "asPredicted": [
+      "check_simulation_version_gate 82/83 (computed 186fc5dffe519a89 at that point)",
+      "check_match_ruleset_3a R22",
+      "check_laneframe_c3 C3 and check_c3_phase_skeleton RS1p RS2p RS7p G G1c: six extra bind-template cases, exactly the classic.m6, hard_engage and three_lane ones",
+      "check_challenge_golden_v21 5/6",
+      "check_career_golden_v21 3/5 (P2, setupHash)",
+      "check_tactic_truth_3a 36/37 (T2)",
+      "check_match_golden_v21a 97/137",
+      "check_club_mastery_v1 264/265",
+      "check_stage1_split S1 S2b S13b",
+      "check_stage1_rollback_drill C1",
+      "check_match_setup_3a 153/153, check_ai_coach_3a, check_tactic_plan_3a, check_tactic_replication_3a, check_challenge_setup_3a green"
+    ],
+    "notPredicted": [
+      {
+        "what": "check_stage1_split S6 first case and S19c",
+        "why": "S6 compared with the old literal table id. S19c used the filter classic-outside-the-table, and classic.m6 had been outside it while the gate constant still said v21.b1",
+        "handling": "both resolved by the table constant alone; no assertion weakened"
+      },
+      {
+        "what": "check_study_seed_plan E3 after assigning 4601-5000",
+        "why": "E3 computes used-range endpoints as if every used block could have run through the forced-odd career path: 4600 maps to 4601. C6 (4201-4600) ran on balanceTool.v21, tool path, seed as it is",
+        "handling": "used ranges may state a path with evidence, one row does, unstated rows keep the conservative rule, N5 pins this. Owner item 6 asks for full de-duplication: this is listed for the independent Reviewer"
+      },
+      {
+        "what": "exclusion plan: m6 teamfight.posture",
+        "why": "the registration said offered lists can change without naming this. The knob delta moves, own stays null, no registered claim, so the same rule as m3 withdraws the three options under v21.b2",
+        "handling": "not a gate problem; a visible player difference, reported to the Owner"
+      }
+    ]
+  }
 }

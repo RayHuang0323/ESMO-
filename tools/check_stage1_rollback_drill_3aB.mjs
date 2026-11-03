@@ -55,7 +55,7 @@ const { stripComments } = await import("./lib/stripComments.mjs");
 
 const SHIPPED = Object.freeze({ heroSkillsV1: true, heroBattleTalentsV1: true, itemsV1: true });
 const OFF = SHIPPED, ON = Object.freeze({ ...SHIPPED, mobaTacticalDirectorV21: true });
-const TB = "v21.b1";
+const TB = "v21.b2";
 const RUN = Object.freeze({ dt: 0.5, maxT: 3600, every: 20 });
 const RESUME_AT = 300;
 const golden = JSON.parse(read("tools/fixtures/match_golden_v20.json")), G = golden.inputs;
@@ -82,9 +82,9 @@ const playResumed = (engine) => {
 
 // ── A 存檔 ───────────────────────────────────────────────────────────────────
 const BOOK_PLANS = [
-  plan("classic.m3", { teamfight: { posture: "passive" } }),   // v21.b1 下已撤
+  plan("classic.m3", { teamfight: { posture: "passive" } }),   // v21.b2 下已撤
   plan("classic.m7", { phases: { early: { focusLane: "bot" } } }),
-  plan("classic.m8", { phases: { mid: { grouping: "group" } } }),   // v21.b1 下未站住
+  plan("classic.m8", { phases: { mid: { grouping: "group" } } }),   // v21.b2 下未站住
   plan("std", { winCondition: "earlySnowball" }),
   plan("v2.jungle_invasion"),
 ];

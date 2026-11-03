@@ -13,7 +13,7 @@
 //    S8  文案：v21 下 m7 的每個顯示面＝Owner 文案；v20 與模板物件不變；引擎設定不帶文案
 //    S9  TacticScreenV20.jsx＝1d0e219（＝origin/main）的 TacticScreen.jsx（只差第 2 行）；AppShell 以同一個解析函式切換；binding 鍵只在需要時寫
 //    S10 存檔：tacticBook 仍是雲端切片；帶修正表模板與 v21 選擇的計畫讀回原樣
-//    S11 畫面＝引擎：m3／m7／m8 在出貨版與 v21.b1 下，畫面上每個維度的值＝解析後的引擎設定；提供的非預設選項都不是空轉
+//    S11 畫面＝引擎：v21.b2 的六個模板在出貨版與 v21.b2 下，畫面上每個維度的值＝解析後的引擎設定；提供的非預設選項都不是空轉
 //    S12 名稱：career.v21 下 m7 的賽果／重播名稱是「前期野區入侵」；v20 不變
 //    S13a–e 排除表：P6 判定過的列只在出貨版生效、修正表下的列在 BALANCE_EXCLUSIONS（與結果檔逐欄相同）；出貨版提供清單逐位元不變；查表條件含 templateBalance
 // ============================================================================
@@ -24,7 +24,7 @@ import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { MATCH_RULESETS, resolveRulesetForMode, challengeSimulationVersionFor, challengeRulesetForVersion, TEMPLATE_BALANCES, templateBalanceOf, tacticalDirectorModeOf } from "../src/platform/contracts/matchRuleset.js";
 import { MOBA_TACTICS, STANDARD_OPP_TACTIC, mobaTacticById, mobaTacticForTeamStyle, toEngineTactic, toEngineTacticIdentity, TEAM_STYLE_TACTIC } from "../src/platform/contracts/MobaTacticConfig.js";
-import { TACTIC_TEMPLATE_LIST, templateById, TEMPLATE_BALANCE, TEMPLATE_BALANCE_IDS, TEMPLATE_COPY, templateConfigFor, templateCopyFor } from "../src/platform/tactics/tacticTemplates.js";
+import { TACTIC_TEMPLATE_LIST, templateById, TEMPLATE_BALANCE, TEMPLATE_BALANCE_IDS, TEMPLATE_COPY, templateConfigFor, templateCopyFor, isRebalancedTemplate } from "../src/platform/tactics/tacticTemplates.js";
 import { stableStringify } from "../src/platform/contracts/squadSnapshot.js";
 import { resolveTactic, resolveTacticBinding, bindTacticPlanToCurrentVersions } from "../src/battle/moba/tactics/tacticResolver.js";
 import { createTacticPlan } from "../src/platform/tactics/tacticPlan.js";
@@ -33,7 +33,9 @@ import { buildLiveMatchSetup, resolveLiveRuleset, balancedLegacyTactic, v20Tacti
 import { mobaResultToTransaction } from "../src/platform/progress/adapters/mobaProgressAdapter.js";
 import { snapshotToBattleResult } from "../src/battle/battleResult.js";
 import { prepareLiveMatch } from "../src/useLocalServer.js";
-import { STYLE_TEMPLATES, aiCoachSummary } from "../src/platform/tactics/aiCoach.js";
+import { STYLE_TEMPLATES, aiCoachSummary, aiCoachPlan } from "../src/platform/tactics/aiCoach.js";
+import { AI_TEAMS } from "../src/platform/competition/aiTeams.js";
+import { effectSheet, templateCopyViolations, NO_CONS_SENTENCE } from "./lib/tacticEffectSheet.mjs";
 import { contradictions, effectiveChoices } from "../src/platform/tactics/tacticIndicators.js";
 import { templateGroups, tacticBookView, opponentIntelOf, offeredChoicesOnly, keptUnofferedChoices } from "../src/screens/moba/tacticBook/tacticBookOptions.js";
 import { MEASURED_EXCLUSIONS, BALANCE_EXCLUSIONS, REPLICATION_WITHHELD, liveRows, measuredExclusion, replicationWithheld } from "../src/platform/tactics/capabilityRegistry.js";
@@ -57,7 +59,7 @@ const PIN = Object.freeze({
   tactics: "797c7374a8a2f3c9", std: "5f1c0667216f472d",
   templates: { "classic.m1": "e64937f0bd9c51dd", "classic.m2": "4019739e7646c0d4", "classic.m3": "83a92e6da48b3202", "classic.m4": "5d789467ba39db00", "classic.m5": "f364027ad702dab8", "classic.m6": "12adf99f3fb7046a", "classic.m7": "e02f61855a1fc28f", "classic.m8": "b3a47f87ec99d4ae", "std": "f306b8dc02822fd8", "v2.three_lane_pressure": "028b99166c97d60a", "v2.jungle_invasion": "e83adedbd34d020f", "v2.bot_duo_pressure": "62c02ca6999d4ca7", "v2.mid_jungle_sync": "0016bfbb74b4f37b", "v2.support_roamer": "504d72dfa6ffaca1", "v2.dragon_pit_macro": "18ea6a6d3a73d598", "v2.top_solo_split": "e132edd08bc7de1f", "v2.mid_solo_split": "daf4e9445b3cf499", "v2.hard_engage_stack": "f040e091ffc4b0e5", "v2.protect_core_scaling": "3956a07fad6e1702", "v2.standard_macro": "2e646c574bb36a5f", "v2.defensive_hold": "80d1ffaeeb36010b" },
 });
-const TB = "v21.b1";
+const TB = "v21.b2", TB1 = "v21.b1";
 const SHIPPED_FLAGS = Object.freeze({ heroSkillsV1: true, heroBattleTalentsV1: true, itemsV1: true });
 const STAGE1_FLAGS = Object.freeze({ ...SHIPPED_FLAGS, mobaTacticalDirectorV21: true });
 const ALL_ON_FLAGS = Object.freeze({ ...STAGE1_FLAGS, mobaChallengeV21: true });
@@ -71,7 +73,7 @@ const bind = (templateId, choices = {}, overlayIds = []) => { const c = createTa
   const same = ["career.v20", "challenge.v20", "balanceTool.v20", "challenge.v21"].filter((id) => h(MATCH_RULESETS[id]) !== PIN.rulesets[id]);
   const v20Key = ["career.v20", "challenge.v20", "balanceTool.v20", "challenge.v21"].filter((id) => "templateBalance" in MATCH_RULESETS[id].layers);
   const v21Only = ["career.v21", "balanceTool.v21"].filter((id) => MATCH_RULESETS[id].layers.templateBalance !== TB || h(withoutTb(MATCH_RULESETS[id])) !== PIN.rulesets[id]);
-  ck("S1 三份 v20 規則集與 challenge.v21 逐位元等於改動前；它們都沒有 templateBalance；career.v21／balanceTool.v21 只多了 templateBalance v21.b1",
+  ck("S1 三份 v20 規則集與 challenge.v21 逐位元等於改動前；它們都沒有 templateBalance；career.v21／balanceTool.v21 只多了 templateBalance v21.b2（原本 v21.b1，登記 stage1r2_release_registration_3aB.json）",
     !same.length && !v20Key.length && !v21Only.length, J({ same, v20Key, v21Only }));
 }
 // ── S2 旗標解析 ──────────────────────────────────────────────────────────────
@@ -81,7 +83,7 @@ const bind = (templateId, choices = {}, overlayIds = []) => { const c = createTa
     .filter(([k, f, m]) => h(r(f, m)) !== PIN.resolve[k]).map(([k]) => k);
   ck("S2a 旗標全關／出貨旗標：Live 與 Challenge 的解析結果與改動前逐位元相同", !pinned.length, pinned.join(","));
   const s1Live = r(STAGE1_FLAGS, "career"), s1Ch = r(STAGE1_FLAGS, "challenge");
-  ck("S2b 第一階段旗標（Live v21 開、Challenge 未開）：Live＝career.v21（帶 v21.b1）、Challenge＝challenge.v20、新挑戰記 moba-sim.v20",
+  ck("S2b 第一階段旗標（Live v21 開、Challenge 未開）：Live＝career.v21（帶 v21.b2）、Challenge＝challenge.v20、新挑戰記 moba-sim.v20",
     s1Live.rulesetId === "career.v21" && templateBalanceOf(s1Live) === TB && s1Ch === MATCH_RULESETS["challenge.v20"] && challengeSimulationVersionFor(STAGE1_FLAGS) === "moba-sim.v20");
   ck("S2c 三個旗標都開：Challenge＝challenge.v21（物件與改動前相同）；任何一個沒開 ⇒ challenge.v20",
     r(ALL_ON_FLAGS, "challenge") === MATCH_RULESETS["challenge.v21"] && h(r(ALL_ON_FLAGS, "challenge")) === PIN.rulesets["challenge.v21"]
@@ -95,7 +97,7 @@ const bind = (templateId, choices = {}, overlayIds = []) => { const c = createTa
   const table = TEMPLATE_BALANCE[TB];
   const keys = Object.keys(table).sort();
   const forbidden = Object.entries(table).flatMap(([id, f]) => Object.entries(f).filter(([p, v]) => v === "split" || p.startsWith("economy.carryPriority") || p.startsWith("lanePlan.support")).map(([p]) => `${id}:${p}`));
-  ck("S3b 修正表只有 classic.m3／m7／m8；不碰帶線、席位優先、std、classic.m2", J(keys) === J(["classic.m3", "classic.m7", "classic.m8"]) && !forbidden.length && !("std" in table) && !("classic.m2" in table), forbidden.join(","));
+  ck("S3b v21.b2 恰好是 m3／m6／m7／m8、hard_engage、three_lane（m5、m1、defensive_hold 不在裡面；Owner 第 4、5 點）；m3／m7／m8 與 v21.b1 同值；不碰帶線、席位優先、std、classic.m2", J(keys) === J(["classic.m3", "classic.m6", "classic.m7", "classic.m8", "v2.hard_engage_stack", "v2.three_lane_pressure"]) && ["classic.m3", "classic.m7", "classic.m8"].every((t) => J(TEMPLATE_BALANCE[TB1][t]) === J(table[t])) && J(Object.keys(TEMPLATE_BALANCE[TB1]).sort()) === J(["classic.m3", "classic.m7", "classic.m8"]) && !forbidden.length && !("std" in table) && !("classic.m2" in table), forbidden.join(","));
   //  已出貨範圍：所有模板設定裡這個欄位出現過的值（數值取 [min, max]；列舉取集合）。
   const outOfRange = [];
   for (const [id, f] of Object.entries(table)) for (const [p, v] of Object.entries(f)) {
@@ -105,13 +107,14 @@ const bind = (templateId, choices = {}, overlayIds = []) => { const c = createTa
   ck("S3c 修正表每一項落在已出貨範圍內（數值在所有模板的 [min,max]、列舉是既有值）", !outOfRange.length, outOfRange.join(","));
   const sigs = new Map(TACTIC_TEMPLATE_LIST.map((t) => [sig(t.config), t.templateId]));
   const coll = keys.filter((id) => { const s = sig(templateConfigFor(id, TB)); return sigs.has(s) || keys.some((o) => o !== id && sig(templateConfigFor(o, TB)) === s); });
-  ck("S3d 修正後的三個旋鈕組彼此不同，也不等於任何出貨模板", !coll.length, coll.join(","));
+  ck("S3d 修正後的六個旋鈕組彼此不同，也不等於任何出貨模板", !coll.length, coll.join(","));
   const twice = keys.filter((id) => { const once = templateConfigFor(id, TB); const again = structuredClone(once); for (const [p, v] of Object.entries(table[id])) setPathIn(again, p, v); return sig(again) !== sig(once); });
   ck("S3e 修正值是絕對值：在修正後的設定上再套一次不變", !twice.length, twice.join(","));
 }
 // ── S4 Resolver ──────────────────────────────────────────────────────────────
 {
-  const regs = { "classic.m3": ["tools/fixtures/ga8_fix_screen_registration_3aB.json", "M3_C"], "classic.m7": ["tools/fixtures/ga8_fix_screen3_registration_3aB.json", "M7_M"], "classic.m8": ["tools/fixtures/ga8_fix_screen2_registration_3aB.json", "M8_C"] };
+  const S6 = "tools/fixtures/ga8_fix_screen6_registration_3aB.json";
+  const regs = { "classic.m3": ["tools/fixtures/ga8_fix_screen_registration_3aB.json", "M3_C"], "classic.m7": ["tools/fixtures/ga8_fix_screen3_registration_3aB.json", "M7_M"], "classic.m8": ["tools/fixtures/ga8_fix_screen2_registration_3aB.json", "M8_C"], "classic.m6": [S6, "M6_B"], "v2.hard_engage_stack": [S6, "HE_R"], "v2.three_lane_pressure": [S6, "TLP_R"] };
   const bad = [];
   for (const [id, [file, arm]] of Object.entries(regs)) {
     const a = JSON.parse(read(file)).arms[arm];
@@ -122,14 +125,14 @@ const bind = (templateId, choices = {}, overlayIds = []) => { const c = createTa
     if (!v.ok || stableStringify([v.knobs, v.identity]) !== sig(expect)) bad.push(`${id}/v21≠${arm}`);
     if (!s.ok || stableStringify([s.knobs, s.identity]) !== sig(templateById(id).config)) bad.push(`${id}/shipped≠today`);
   }
-  ck("S4a 修正表下 m3／m7／m8（沒有選擇）解析＝篩選臂 M3_C／M7_M／M8_C 的旋鈕；沒有修正表＝出貨模板", !bad.length, bad.join(","));
-  //  聯集：m7 的 phases.early.focusLane=top 在出貨版是空轉（上路本來就積極）、在 v21.b1 下有效果 ⇒ 計畫合法、兩個方向都解析得出來。
+  ck("S4a 修正表下六個模板（沒有選擇）解析＝篩選臂 M3_C／M7_M／M8_C／M6_B／HE_R／TLP_R 的旋鈕；沒有修正表＝出貨模板", !bad.length, bad.join(","));
+  //  聯集：m7 的 phases.early.focusLane=top 在出貨版是空轉（上路本來就積極）、在修正表下有效果 ⇒ 計畫合法、兩個方向都解析得出來。
   const p = createTacticPlan({ templateId: "classic.m7", overlayIds: [], choices: { phases: { early: { focusLane: "top" } } } });
   const shipOnly = choiceEngineFor(null).planProblems(templateById("classic.m7"), [], { phases: { early: { focusLane: "top" } } }).length;
   const b = p.ok ? bindTacticPlanToCurrentVersions(p.plan) : null;
   const r21 = b && resolveTactic({ kind: "binding", binding: b }, {}, { templateBalance: TB, phases: true });
   const r20 = b && resolveTactic({ kind: "binding", binding: b }, {}, { phases: true });
-  ck("S4b 計畫合法性是聯集：m7 前期強邊上路（出貨版不提供、v21.b1 提供）可以建立，在兩種設定下都解析得出來；planHash 與規則集無關",
+  ck("S4b 計畫合法性是聯集：m7 前期強邊上路（出貨版不提供、修正表提供）可以建立，在兩種設定下都解析得出來；planHash 與規則集無關",
     shipOnly > 0 && p.ok && r21?.ok === true && r20?.ok === true && b.planHash === bind("classic.m7", { phases: { early: { focusLane: "top" } } }).planHash);
   const unknown = resolveTactic({ kind: "binding", binding: bind("classic.m7") }, {}, { templateBalance: "v99" });
   ck("S4c 不認得的修正表 id ⇒ 明確拒絕（template_balance_unknown），不默默用出貨版", unknown.ok === false && unknown.errors[0]?.code === "template_balance_unknown");
@@ -148,7 +151,13 @@ const bind = (templateId, choices = {}, overlayIds = []) => { const c = createTa
   }
   ck(`S5a 風格模板退路：修正表下由 id 重建一次（${Object.entries(TEAM_STYLE_TACTIC).map(([s, t]) => `${s}→${t}`).join("、")}）；套兩次＝套一次；沒有修正表 ⇒ 同一個物件`, !bad.length, bad.join(","));
   const coachPicks = Object.values(STYLE_TEMPLATES).flatMap((r) => [...Object.values(r.byBest), r.otherwise]);
-  ck("S5b AI 教練的 STYLE_TEMPLATES 不會選到修正表裡的模板（修正只經 Resolver 套一次）", !coachPicks.some((id) => id in TEMPLATE_BALANCE[TB]), coachPicks.join(","));
+  const inTable = coachPicks.filter((id) => id in TEMPLATE_BALANCE[TB]);
+  ck("S5b AI 教練的 STYLE_TEMPLATES 只有一個在修正表裡：skirmish 的 v2.hard_engage_stack（Owner 第 1 點的連帶影響；登記 stage1r2）", J(inTable) === J(["v2.hard_engage_stack"]) && STYLE_TEMPLATES.skirmish.otherwise === "v2.hard_engage_stack", coachPicks.join(","));
+  const skirmish = AI_TEAMS.find((t) => t.style === "skirmish");
+  const coach = aiCoachPlan({ team: skirmish, tacticalDirector: "core.v1", templateBalance: TB });
+  const coachBind = coach.ok ? bindTacticPlanToCurrentVersions(coach.plan) : null;
+  const rT = coachBind && resolveTactic({ kind: "binding", binding: coachBind }, {}, { templateBalance: TB }), r0 = coachBind && resolveTactic({ kind: "binding", binding: coachBind }, {}, {});
+  ck("S5c skirmish 教練：計畫是沒有選擇的 hard_engage；經 Resolver 在修正表下＝HE_R 旋鈕（只套一次），沒有修正表＝出貨版；教練不多加選擇", coach.ok && coach.plan.templateId === "v2.hard_engage_stack" && !leavesOf(coach.plan.choices ?? {}).length && !!rT?.ok && stableStringify([rT.knobs, rT.identity]) === sig(templateConfigFor("v2.hard_engage_stack", TB)) && stableStringify([r0.knobs, r0.identity]) === sig(templateById("v2.hard_engage_stack").config), J(coach.plan ?? coach.errors));
 }
 // ── S6 Live 2×2 矩陣 ─────────────────────────────────────────────────────────
 const golden = JSON.parse(read("tools/fixtures/match_golden_v20.json")), G = golden.inputs;
@@ -256,7 +265,7 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
 // ── S11 畫面＝引擎 ───────────────────────────────────────────────────────────
 {
   const bad = []; let checked = 0, pairsN = 0, phaseN = 0;
-  for (const id of ["classic.m3", "classic.m7", "classic.m8"]) for (const tb of [null, TB]) {
+  for (const id of ["classic.m3", "classic.m6", "classic.m7", "classic.m8", "v2.hard_engage_stack", "v2.three_lane_pressure"]) for (const tb of [null, TB]) {
     const mode = tb ? "core.v1" : "static";
     const engine = choiceEngineFor(tb);
     const viewOf = (choices) => tacticBookView({ templateId: id, choices, tacticalDirector: mode, templateBalance: tb });
@@ -304,7 +313,7 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
       if (!out?.ok || !(wholeChanged || phaseChanged)) bad.push(`${id}/${tb}/${d.dimension}=${c.id} phase no-op`);
     }
   }
-  ck(`S11 畫面＝引擎：m3／m7／m8 × 出貨版／v21.b1 × 單一選擇＋兩兩組合（${pairsN} 組），畫面上的值＝解析後的引擎設定（${checked} 格）；提供的非預設選項都改變旋鈕；時期維度的非預設選項（${phaseN} 個）解析後整場設定或該時期方針真的改變`, !bad.length && checked > 0 && pairsN > 0 && phaseN > 0, bad.slice(0, 6).join(" | "));
+  ck(`S11 畫面＝引擎：v21.b2 的六個模板 × 出貨版／v21.b2 × 單一選擇＋兩兩組合（${pairsN} 組），畫面上的值＝解析後的引擎設定（${checked} 格）；提供的非預設選項都改變旋鈕；時期維度的非預設選項（${phaseN} 個）解析後整場設定或該時期方針真的改變`, !bad.length && checked > 0 && pairsN > 0 && phaseN > 0, bad.slice(0, 6).join(" | "));
 }
 // ── S12 名稱 ─────────────────────────────────────────────────────────────────
 {
@@ -318,7 +327,8 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
     && p20.ok && p20.applied.replayConfig?.tacticName === "前期壓制" && p20l.ok && p20l.applied.tacticMeta?.tacticName === "前期壓制", J([p21.applied?.tacticMeta?.tacticName, p20.applied?.replayConfig?.tacticName]));
 }
 //  修正表下的勝利條件（展開＋提供清單，21 模板）：審查指出登記的「套用後要釘住」只釘了出貨版。套用前後逐格相同（0 格改變），雜湊在 a3e3fa73 的傾印上算。
-const TABLE_WC_HASH = "9c766baa4750461c";
+//  v21.b1 的值是 9c766baa4750461c；v21.b2 的 84 格與 v21.b1 逐格相同（scratchpad 比對，差異 0），雜湊變只因為鍵裡的表 id。
+const TABLE_WC_HASH = "cb0e50ae7fc52473";
 const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
 // ── S13 排除表 ───────────────────────────────────────────────────────────────
 {
@@ -341,14 +351,26 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
     return { ...base, metric: r.metric ?? null, n: r.n, z: r.z ?? null, templateBalance: TB };
   });
   const canon = (rows) => rows.map((x) => stableStringify(x)).sort();
+  //  v21.b2 的新模板（m6、hard_engage、three_lane）：開發期研究結果（exclusion_v21b2_*；研究完成前沒有列）。
+  const readRows = (rel) => (fs.existsSync(path.join(ROOT, rel)) ? JSON.parse(read(rel)).rows : []);
+  const B2_1 = readRows("tools/fixtures/exclusion_v21b2_result_3aB.json"), B2_2 = readRows("tools/fixtures/exclusion_v21b2_stage2_result_3aB.json");
+  const b2Stage2 = (r) => B2_2.find((x) => key(x) === key(r));
+  const b2Offered = (r) => r.verdict === "pass" || (r.verdict === "marginal" && b2Stage2(r)?.verdict === "confirmed");
+  const b2Derived = B2_1.filter((r) => !b2Offered(r)).map((r) => {
+    const base = { template: r.template, dimension: r.dimension, choice: r.choice, reason: reasonOf(r) };
+    if (r.verdict === "marginal") { const s = b2Stage2(r), pick = (a) => ({ n: a.n, rel: a.rel, z: a.z }); return { ...base, verdict: s.verdict, metric: s.metric, blue: pick(s.blue), red: pick(s.red), templateBalance: TB }; }
+    return { ...base, metric: r.metric ?? null, n: r.n, z: r.z ?? null, templateBalance: TB };
+  });
   const eng = choiceEngineFor(TB), wrong = [];
   for (const r of P6_1) {
     const d = eng.offeredDetail(r.template, r.dimension, [], {}, { tacticalDirector: "core.v1" });
     const on = d.offered.includes(r.choice);
     if (on !== offeredByStudy(r)) wrong.push(`${key(r)} offered=${on}`);
   }
-  ck(`S13b 排除表：BALANCE_EXCLUSIONS＝兩份 P6 結果檔逐欄推出的 ${derived.length} 列；P6 ${P6_1.length} 列在 v21.b1／core.v1 下提供與否都照判定`,
-    J(canon(BALANCE_EXCLUSIONS)) === J(canon(derived)) && !wrong.length && BALANCE_EXCLUSIONS.every((x) => x.templateBalance === TB), J({ wrong, table: canon(BALANCE_EXCLUSIONS), derived: canon(derived) }));
+  for (const r of B2_1) { const d = eng.offeredDetail(r.template, r.dimension, [], {}, { tacticalDirector: "core.v1" }); if (d.offered.includes(r.choice) !== b2Offered(r)) wrong.push(`${key(r)} b2 offered=${d.offered.includes(r.choice)}`); }
+  const wantRows = canon([...derived, ...derived.map((x) => ({ ...x, templateBalance: TB1 })), ...b2Derived]);
+  ck(`S13b 排除表：BALANCE_EXCLUSIONS＝P6 結果逐欄推出的 ${derived.length} 列（v21.b1、v21.b2 各一份，m3／m7／m8 同值）＋v21.b2 研究推出的 ${b2Derived.length} 列；P6 ${P6_1.length} 列與研究 ${B2_1.length} 列在 v21.b2／core.v1 下提供與否都照判定`,
+    J(canon(BALANCE_EXCLUSIONS)) === J(wantRows) && !wrong.length && BALANCE_EXCLUSIONS.every((x) => x.templateBalance === TB || x.templateBalance === TB1), J({ wrong, table: canon(BALANCE_EXCLUSIONS), want: wantRows }));
   //  S13c：出貨版（沒有修正表）每個模板×每個 live 維度×三種模式的提供清單與勝利條件展開，與套用排除列之前（a3e3fa73 上算的）逐位元相同。
   const shipped = {}, e0 = choiceEngineFor(null);
   for (const mode of ["static", "core.v1", null]) for (const t of TACTIC_TEMPLATE_LIST) {
@@ -357,15 +379,15 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
   }
   const shippedHash = createHash("sha256").update(stableStringify(shipped)).digest("hex").slice(0, 16);
   ck(`S13c 排除表：出貨版 ${Object.keys(shipped).length} 格提供清單與勝利條件展開，與套用排除列之前逐位元相同（${SHIPPED_OFFERS_HASH}）`, shippedHash === SHIPPED_OFFERS_HASH, shippedHash);
-  //  S13c2：v21.b1 下每個模板的勝利條件展開與提供清單（玩家戰術書與引擎共用），之後任何改動都要看得見地改這個雜湊。
+  //  S13c2：v21.b2 下每個模板的勝利條件展開與提供清單（玩家戰術書與引擎共用），之後任何改動都要看得見地改這個雜湊。
   const tableWc = {}, eT = choiceEngineFor(TB);
   for (const t of TACTIC_TEMPLATE_LIST) {
     const d = eT.offeredDetail(t.templateId, "winCondition", [], {}, { tacticalDirector: "core.v1" });
-    tableWc[`offer|v21.b1|core.v1|${t.templateId}|winCondition`] = d ? { offered: d.offered, own: d.own, withheld: d.withheld } : null;
-    for (const wc of Object.keys(WIN_CONDITION_PRESETS)) { const f = eT.winConditionFill(t.templateId, [], { winCondition: wc }); tableWc[`fill|v21.b1|${t.templateId}|${wc}`] = { filled: f.filled, skipped: f.skipped }; }
+    tableWc[`offer|${TB}|core.v1|${t.templateId}|winCondition`] = d ? { offered: d.offered, own: d.own, withheld: d.withheld } : null;
+    for (const wc of Object.keys(WIN_CONDITION_PRESETS)) { const f = eT.winConditionFill(t.templateId, [], { winCondition: wc }); tableWc[`fill|${TB}|${t.templateId}|${wc}`] = { filled: f.filled, skipped: f.skipped }; }
   }
   const tableWcHash = createHash("sha256").update(stableStringify(tableWc)).digest("hex").slice(0, 16);
-  ck(`S13c2 排除表：v21.b1 下 ${Object.keys(tableWc).length} 格勝利條件展開與提供清單，與套用排除列之前逐位元相同（${TABLE_WC_HASH}）`, tableWcHash === TABLE_WC_HASH, tableWcHash);
+  ck(`S13c2 排除表：v21.b2 下 ${Object.keys(tableWc).length} 格勝利條件展開與提供清單與釘值相同（只要動就要看得見地改）（${TABLE_WC_HASH}）`, tableWcHash === TABLE_WC_HASH, tableWcHash);
   //  S13d：行為（植入的列）：帶 templateBalance 的只在那個設定下生效（含 null）；不帶的兩種設定都生效（量測排除與複驗撤下同一條規則）。
   const rowsM = [{ template: "classic.m7", dimension: "lanes.top.stance", choice: "aggressive", templateBalance: TB }, { template: "classic.m7", dimension: "jungle.tempo", choice: "slow" }, { template: "classic.m7", dimension: "risk.tolerance", choice: "bold", templateBalance: null }];
   const rowsR = [{ template: "*", dimension: "teamfight.posture", choice: "passive", reason: "not_replicated", templateBalance: TB }];
@@ -373,7 +395,7 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
     && !!measuredExclusion("classic.m7", "jungle.tempo", "slow", null, TB, rowsM) && !!measuredExclusion("classic.m7", "jungle.tempo", "slow", null, null, rowsM)
     && measuredExclusion("classic.m7", "risk.tolerance", "bold", null, TB, rowsM) === null && !!measuredExclusion("classic.m7", "risk.tolerance", "bold", null, null, rowsM)
     && !!replicationWithheld("classic.m3", "teamfight.posture", "passive", TB, rowsR) && replicationWithheld("classic.m3", "teamfight.posture", "passive", null, rowsR) === null
-    //  查表預設走兩張表：m3 團戰姿態只在 v21.b1 下被撤、推塔高只在出貨版下被撤。
+    //  查表預設走兩張表：m3 團戰姿態只在修正表下被撤、推塔高只在出貨版下被撤。
     && !!measuredExclusion("classic.m3", "teamfight.posture", "passive", null, TB) && measuredExclusion("classic.m3", "teamfight.posture", "passive", null, null) === null
     && measuredExclusion("classic.m3", "objectives.tower", "high", null, TB) === null && !!measuredExclusion("classic.m3", "objectives.tower", "high", null, null);
   ck("S13d 排除表：植入的列與實際的列都實測：帶 templateBalance 的只在那個設定下生效（含 null）、不帶的兩種設定都生效", behave);
@@ -389,7 +411,7 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
   const contraView = tacticBookView({ templateId: "classic.m3", choices: screenChoices, tacticalDirector: "core.v1", templateBalance: TB });
   ck("S13e2 排除表：m3 存檔帶團戰保守＋推塔高，照畫面的順序（先 offeredChoicesOnly 再 tacticBookView）沒有矛盾提示；推塔高留著、姿態被拿掉",
     contraView.ok && contraView.contradictions.length === 0 && J(screenChoices) === J({ objectives: { tower: "high" } }), J({ screenChoices, c: contraView.contradictions }));
-  ck("S13e 排除表：存檔裡帶 m3 團戰姿態的計畫在 v21.b1 下仍可解析；戰術書不列該維度、載入時拿掉、恢復比賽時標成沿用；出貨版不受影響",
+  ck("S13e 排除表：存檔裡帶 m3 團戰姿態的計畫在 v21.b2 下仍可解析；戰術書不列該維度、載入時拿掉、恢復比賽時標成沿用；出貨版不受影響",
     savedR?.ok === true && savedV.ok && !savedV.dimensions.some((d) => d.dimension === "teamfight.posture") && J(dropped.dropped) === J([{ dimension: "teamfight.posture", choice: "passive" }])
     && J(kept) === J([{ dimension: "teamfight.posture", choice: "passive" }]) && kept0.length === 0, J({ ok: savedR?.ok, dropped: dropped.dropped, kept, kept0 }));
 }
@@ -400,7 +422,7 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
   const c21 = contradictions(b, undefined, TB).map((x) => x.id), c20 = contradictions(b).map((x) => x.id);
   const view21 = tacticBookView({ templateId: "classic.m8", choices: { objectives: { tower: "high" } }, tacticalDirector: "core.v1", templateBalance: TB });
   const eff21 = effectiveChoices(b, TB);
-  ck("S14 矛盾提示用本場修正表下的有效選擇：m8＋推塔高在 v21.b1 下團戰姿態是 standard ⇒ 沒有「主動接戰變少」；出貨版下有；戰術書畫面（v21）與函式一致",
+  ck("S14 矛盾提示用本場修正表下的有效選擇：m8＋推塔高在修正表下團戰姿態是 standard ⇒ 沒有「主動接戰變少」；出貨版下有；戰術書畫面（v21）與函式一致",
     !c21.includes("siege_vs_passive_fights") && c20.includes("siege_vs_passive_fights") && eff21["teamfight.posture"] === "standard" && J(view21.contradictions.map((x) => x.id)) === J(c21), J({ c21, c20 }));
 }
 // ── S15 存檔預設名稱（實作審查 minor 4） ───────────────────────────────────────
@@ -420,9 +442,9 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
 // ── S17 m3／m8 文案（Owner 2026-11-01 第 1 點；逐句理由見登記 I9） ───────────────────
 {
   const m3 = templateCopyFor("classic.m3", TB), m8 = templateCopyFor("classic.m8", TB), s3 = templateCopyFor("classic.m3"), s8 = templateCopyFor("classic.m8");
-  ck("S17a v21.b1：m3、m8 風險＝中；名稱與重點（定位）不變", m3.risk === "中" && m8.risk === "中" && m3.name === "強開團" && m8.name === "後期決戰" && m3.focus === "輔助" && m8.focus === "下路", J({ m3, m8 }));
+  ck("S17a 修正表：m3、m8 風險＝中；名稱與重點（定位）不變", m3.risk === "中" && m8.risk === "中" && m3.name === "強開團" && m8.name === "後期決戰" && m3.focus === "輔助" && m8.focus === "下路", J({ m3, m8 }));
   const banned = /撤退門檻極低|崩盤|一波決勝|刺客切後排|強控|全讓|20 分鐘|一波定勝|決勝/;
-  ck("S17b v21.b1：已登記要刪的句子都不在文案裡；m8 缺點整行拿掉（null）", ![m3.desc, m3.detail, m3.cons, m8.desc, m8.detail].some((x) => banned.test(x ?? "")) && m8.cons === null, J({ m3, m8 }));
+  ck("S17b 修正表：已登記要刪的句子都不在文案裡；m8 缺點整行拿掉（null）", ![m3.desc, m3.detail, m3.cons, m8.desc, m8.detail].some((x) => banned.test(x ?? "")) && m8.cons === null, J({ m3, m8 }));
   ck("S17c 只刪不寫：v21 文案的每個逗號分句都在出貨版同一欄出現過", [["desc", m3, s3], ["detail", m3, s3], ["cons", m3, s3], ["desc", m8, s8], ["detail", m8, s8]].every(([k, a, z]) => a[k].split(/[，；]/).every((p) => z[k].includes(p))));
   ck("S17d 出貨版文案（v20）不變；文案不進引擎設定", s3.risk === "高" && s8.risk === "低" && s3.cons.includes("撤退門檻極低") && sig(templateConfigFor("classic.m3", TB)) === sig({ ...templateConfigFor("classic.m3", TB), ...TEMPLATE_COPY[TB]["classic.m3"] }));
 }
@@ -471,6 +493,31 @@ const SHIPPED_OFFERS_HASH = "4406efb8afa3a585";
   ck("S19c 旗標沒變（v21、修正表沒動的經典模板）：顯示欄位與確認時的設定相同", !same.length, same.join(","));
   const shell = stripComments(read("src/AppShell.jsx"));
   ck("S19d AppShell：讀取畫面與 HUD 用顯示物件；開局輸入仍是 tactic＋binding", shell.includes("<LoadingScreen draft={draft} tactic={liveDisplayTactic}") && shell.includes("<GameView autoStart draft={draft} tactic={tactic} displayTactic={liveDisplayTactic} tacticPlanBinding={tacticPlanBinding}"));
+}
+// ── S20 v21.b2 的文案與範圍（Owner 平衡研究 Review；逐句理由見 stage1r2_release_registration_3aB.json copy）──────────────
+{
+  const clauses = (s) => (s ?? "").split(/[，；。]/).map((x) => x.trim()).filter(Boolean);
+  const onlyDeletes = (a, z) => clauses(a).every((p) => clauses(z).includes(p));
+  const m6 = templateCopyFor("classic.m6", TB), s6 = templateCopyFor("classic.m6");
+  ck("S20a m6：風險中、名稱與重點不變；優勢與缺點只刪不寫；已登記要刪的詞都不在；v20 文案不變",
+    m6.risk === "中" && m6.name === s6.name && m6.focus === s6.focus && m6.desc === s6.desc && m6.detail === "中單與打野高機動游走" && m6.cons === "游走撲空就虧線" && onlyDeletes(m6.detail, s6.detail) && onlyDeletes(m6.cons, s6.cons)
+    && !/碾壓|高風險|雪上加霜/.test([m6.desc, m6.detail, m6.cons].join("")) && s6.risk === "高" && s6.cons.includes("高風險"), J(m6));
+  const he = templateCopyFor("v2.hard_engage_stack", TB), she = templateById("v2.hard_engage_stack");
+  ck("S20b hard_engage：風險中；描述只少「投入門檻較低」那一句，優勢＝描述；缺點是效果表規定的無代價句；文案閘門零違規；v20 文案不變",
+    he.risk === "中" && he.name === she.name && he.desc === she.desc.replace("，投入團戰的門檻也稍微比較低。", "。") && he.detail === he.desc && he.cons === NO_CONS_SENTENCE && !templateCopyViolations({ desc: he.desc, cons: he.cons }, effectSheet(templateConfigFor("v2.hard_engage_stack", TB))).length && she.desc.includes("投入團戰的門檻"), J(he));
+  const heCfg = templateConfigFor("v2.hard_engage_stack", TB);
+  ck("S20b2 hard_engage：只動 risk；抱團、中期姿態、巴龍優先、輔助保護、aggression 都與出貨版相同", J(Object.keys(TEMPLATE_BALANCE[TB]["v2.hard_engage_stack"])) === J(["macro.riskTolerance"]) && heCfg.macro.aggression === she.config.macro.aggression && heCfg.macro.grouping === she.config.macro.grouping && heCfg.macro.midGame === she.config.macro.midGame && heCfg.objectives.baronPriority === she.config.objectives.baronPriority && heCfg.lanePlan.support === she.config.lanePlan.support);
+  const tl = templateCopyFor("v2.three_lane_pressure", TB), stl = templateById("v2.three_lane_pressure"), tlCfg = templateConfigFor("v2.three_lane_pressure", TB);
+  ck("S20c three_lane（未證實候選）：只動 risk；三路前壓、快節奏、aggression 與出貨版相同；沒有文案覆寫；文案閘門零違規；風險標示維持高（交 Owner）",
+    J(Object.keys(TEMPLATE_BALANCE[TB]["v2.three_lane_pressure"])) === J(["macro.riskTolerance"]) && ["top", "mid", "adc"].every((l) => tlCfg.lanePlan[l] === "aggressive" && stl.config.lanePlan[l] === "aggressive") && tlCfg.macro.tempo === "fast" && tlCfg.macro.aggression === stl.config.macro.aggression && !("v2.three_lane_pressure" in TEMPLATE_COPY[TB]) && tl.risk === "高" && !templateCopyViolations({ desc: tl.desc, cons: tl.cons }, effectSheet(tlCfg)).length);
+  const reg = JSON.parse(read("tools/fixtures/stage1r2_release_registration_3aB.json"));
+  ck("S20c2 three_lane 在登記裡明確標成未證實候選、不得稱為已通過（Owner 第 2 點）；原始碼也有這句話", /UNPROVEN/.test(reg.table.entries["v2.three_lane_pressure"].status) && /Never called passed/.test(reg.table.entries["v2.three_lane_pressure"].status) && read("src/platform/tactics/tacticTemplates.js").includes("未證實候選"));
+  const dh = templateCopyFor("v2.defensive_hold", TB), sdh = templateById("v2.defensive_hold");
+  ck("S20d defensive_hold：只拿掉「適合陣容比對手弱的時候」；不在數值表（旋鈕與賽後評分都不變）；v20 文案不變",
+    dh.desc === sdh.desc.replace("適合陣容比對手弱的時候。", "") && dh.detail === dh.desc && dh.cons === sdh.cons && dh.risk === sdh.config.risk && !dh.desc.includes("比對手弱") && sdh.desc.includes("比對手弱") && !isRebalancedTemplate("v2.defensive_hold", TB) && sig(templateConfigFor("v2.defensive_hold", TB)) === sig(sdh.config));
+  ck("S20e m5、m1 不在數值表也沒有文案覆寫（Owner 第 4 點）", ["classic.m5", "classic.m1"].every((t) => !(t in TEMPLATE_BALANCE[TB]) && !(t in TEMPLATE_COPY[TB])));
+  ck("S20f 每個數值表模板賽後都不用出貨版目標評分（m6、hard_engage、three_lane 跟著 m3／m7／m8）", Object.keys(TEMPLATE_BALANCE[TB]).every((t) => isRebalancedTemplate(t, TB)));
+  ck("S20g v21.b1 的值與文案還在（舊證據解析得到），沒有規則集讀它", J(Object.keys(TEMPLATE_BALANCE[TB1]).sort()) === J(["classic.m3", "classic.m7", "classic.m8"]) && !!TEMPLATE_COPY[TB1]["classic.m7"] && Object.values(MATCH_RULESETS).every((r) => r.layers?.templateBalance !== TB1));
 }
 console.log(`\nStage-1 Split 3a-B：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
 process.exit(fail ? 1 : 0);

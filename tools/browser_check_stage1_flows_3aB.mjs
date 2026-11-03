@@ -19,8 +19,8 @@ import { MOBA_TACTICS, STANDARD_OPP_TACTIC } from "../src/platform/contracts/Mob
 const OUT = process.env.ESMO_REVIEW_OUT ?? "review/tactic-book-3a/gate";
 mkdirSync(OUT, { recursive: true });
 const FLAG_LINE = "mobaTacticalDirectorV21: false,";
-const TB = "v21.b1";
-const COPY = { m3: templateCopyFor("classic.m3", TB), m7: templateCopyFor("classic.m7", TB), m8: templateCopyFor("classic.m8", TB) };
+const TB = "v21.b2";
+const COPY = { m3: templateCopyFor("classic.m3", TB), m7: templateCopyFor("classic.m7", TB), m8: templateCopyFor("classic.m8", TB), m6: templateCopyFor("classic.m6", TB), he: templateCopyFor("v2.hard_engage_stack", TB), dh: templateCopyFor("v2.defensive_hold", TB), tl: templateCopyFor("v2.three_lane_pressure", TB) };
 const V2_ID = "v2.jungle_invasion", V2_NAME = templateById(V2_ID).name;
 const STD_NAME = STANDARD_OPP_TACTIC.name;
 
@@ -156,6 +156,14 @@ const result = await runGate({
       ck("B2 m3：中風險、v21 優勢與缺點；沒有已刪除的句子", (t3 ?? "").includes(`${COPY.m3.risk}風險`) && (t3 ?? "").includes(COPY.m3.detail) && (t3 ?? "").includes(COPY.m3.cons) && !/撤退門檻極低|崩盤|刺客切後排/.test(t3 ?? ""));
       await shot("stage1_b_m3_copy");
       ck("B2b m3 選項（P6）：團戰姿態整個維度不顯示、推塔高有提供", await ev(`return !document.querySelector('[data-testid="tb-dim-teamfight.posture"]') && !!document.querySelector('[data-testid="tb-choice-objectives.tower-high"]');`) === true);
+      const t6 = await pickTpl("classic.m6");
+      ck("B2c m6（v21.b2）：中風險、新優勢與缺點；已刪的詞不在", (t6 ?? "").includes(`${COPY.m6.risk}風險`) && (t6 ?? "").includes(COPY.m6.detail) && (t6 ?? "").includes(COPY.m6.cons) && !/碾壓|雪上加霜/.test(t6 ?? ""));
+      const the = await pickTpl("v2.hard_engage_stack");
+      ck("B2d hard_engage（v21.b2）：中風險、無代價句；「撤退的時機」「投入團戰的門檻」不在", (the ?? "").includes(`${COPY.he.risk}風險`) && (the ?? "").includes(COPY.he.cons) && !/投入團戰的門檻|撤退的時機比平常/.test(the ?? ""));
+      const tdh = await pickTpl("v2.defensive_hold");
+      ck("B2e defensive_hold（v21.b2）：沒有「比對手弱」；缺點還在", !(tdh ?? "").includes("比對手弱") && (tdh ?? "").includes(COPY.dh.cons));
+      const ttl = await pickTpl("v2.three_lane_pressure");
+      ck("B2f three_lane（v21.b2）：文案不變、風險標示高", (ttl ?? "").includes(`${COPY.tl.risk}風險`) && (ttl ?? "").includes(COPY.tl.cons));
       const t8 = await pickTpl("classic.m8");
       const m8cons = await ev("return JSON.stringify([...document.querySelectorAll('span')].some(s=>s.innerText==='缺點：'));");
       ck("B3 m8：中風險、v21 優勢；缺點整行不顯示；沒有已刪除的句子", (t8 ?? "").includes(`${COPY.m8.risk}風險`) && (t8 ?? "").includes(COPY.m8.detail) && !m8cons && !/全讓|20 分鐘|一波定勝/.test(t8 ?? ""), String(m8cons));

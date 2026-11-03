@@ -10,53 +10,292 @@
     "layout": "objectiveLayoutForSeed(effectiveSeed) decides STANDARD/SWAPPED; reported per study, walking studies stop when both layouts reach the target"
   },
   "usedRanges": [
-    { "range": "1-40", "source": "G-A7 truth table (capabilityRegistry TRUTH_GATE)" },
-    { "range": "1-200", "source": "balance runner default seedStart=1 (regress / historical side bias, inferred; draft §1.3)" },
-    { "range": "1001-1400", "source": "3a-A replication and quick mode (tactic_followup_3a_*.json)" },
-    { "range": "1401-1800", "source": "C7 diagnostics (c7_diag_registration_3c.json)" },
-    { "range": "2001-2060", "source": "3a-A templates study" },
-    { "range": "3001-3400", "source": "C3-2 phase stance (observed)" },
-    { "range": "3401-3800", "source": "C4 (phase_options_registration_c4.json)" },
-    { "range": "3801-4200", "source": "C5 (phase_options_registration_c5.json, superseded)" },
-    { "range": "4201-4600", "source": "C6 (phase_options_registration_c6.json)" },
-    { "range": "5001-6000", "source": "balance first check / side bias (laneframe_registration_c3.json)" },
-    { "range": "8201-8600", "source": "C5R (phase_options_registration_c5r.json)" },
-    { "range": "9001-9100", "source": "C3-1 laneFrame behaviour symmetry" },
-    { "range": "9101-16000", "source": "C3-1 laneFrame D-20 side bias continuation (odd seeds, walkLimit 16000)" },
-    { "range": "16001-17600", "source": "C3-1 laneFrame behaviour revision" },
-    { "range": "18001-18400", "source": "C3-2 rev1 phase stance" },
-    { "range": "18401-18800", "source": "C3-3 grouping" }
+    {
+      "range": "1-40",
+      "source": "G-A7 truth table (capabilityRegistry TRUTH_GATE)"
+    },
+    {
+      "range": "1-200",
+      "source": "balance runner default seedStart=1 (regress / historical side bias, inferred; draft §1.3)"
+    },
+    {
+      "range": "1001-1400",
+      "source": "3a-A replication and quick mode (tactic_followup_3a_*.json)"
+    },
+    {
+      "range": "1401-1800",
+      "source": "C7 diagnostics (c7_diag_registration_3c.json)"
+    },
+    {
+      "range": "2001-2060",
+      "source": "3a-A templates study"
+    },
+    {
+      "range": "3001-3400",
+      "source": "C3-2 phase stance (observed)"
+    },
+    {
+      "range": "3401-3800",
+      "source": "C4 (phase_options_registration_c4.json)"
+    },
+    {
+      "range": "3801-4200",
+      "source": "C5 (phase_options_registration_c5.json, superseded)"
+    },
+    {
+      "range": "4201-4600",
+      "source": "C6 (phase_options_registration_c6.json)",
+      "path": "tool",
+      "pathEvidence": "phase_options_registration_c6.json design.ruleset is balanceTool.v21 and tools/lib/phaseStudySim.mjs passes the seed to the balance runner as it is, so seed 4600 ran as engine seed 4600. Scan 2026-11-03: no measurement file has a seed in 4601-5000"
+    },
+    {
+      "range": "5001-6000",
+      "source": "balance first check / side bias (laneframe_registration_c3.json)"
+    },
+    {
+      "range": "8201-8600",
+      "source": "C5R (phase_options_registration_c5r.json)"
+    },
+    {
+      "range": "9001-9100",
+      "source": "C3-1 laneFrame behaviour symmetry"
+    },
+    {
+      "range": "9101-16000",
+      "source": "C3-1 laneFrame D-20 side bias continuation (odd seeds, walkLimit 16000)"
+    },
+    {
+      "range": "16001-17600",
+      "source": "C3-1 laneFrame behaviour revision"
+    },
+    {
+      "range": "18001-18400",
+      "source": "C3-2 rev1 phase stance"
+    },
+    {
+      "range": "18401-18800",
+      "source": "C3-3 grouping"
+    }
   ],
   "reservedRanges": [
-    { "range": "4601-5000", "source": "draft §1.3: unassigned, Owner assignment only" },
-    { "range": "6001-7000", "source": "draft §1.3: C8 behaviour family sampling" },
-    { "range": "7001-8200", "source": "draft §1.3: redesign spares C3 stance / C3 grouping / C4" },
-    { "range": "8601-9000", "source": "draft §1.3: redesign spare C6" }
+    {
+      "range": "6001-7000",
+      "source": "draft §1.3: C8 behaviour family sampling"
+    },
+    {
+      "range": "7001-8200",
+      "source": "draft §1.3: redesign spares C3 stance / C3 grouping / C4"
+    },
+    {
+      "range": "8601-9000",
+      "source": "draft §1.3: redesign spare C6"
+    }
   ],
   "studies": [
-    { "id": "tactic24.v20claim", "purpose": "evidence for the replacement of the m6/m4 gank-count claim (P0-2); same engine path as check_moba_tactic24 (LogicEngine + configureMatch, no assembler)", "path": "engine", "range": "19001-19200", "step": 1 },
-    { "id": "E1", "purpose": "v21 options: red/blue economy equivalence and stacking safety (P2-2). If the Owner keeps n=400 only the prefix 21001-21400 is used; the block is reserved for n=1200", "path": "tool", "range": "21001-22200", "step": 1 },
-    { "id": "E2", "purpose": "career.v21 behaviour acceptance through the formal live entry (P2-3; after the AI coach)", "path": "career", "range": "23001-23799", "step": 2, "opponents": "AI_TEAMS[seed % AI_TEAMS.length] (same rule as measure_laneframe_c3)" },
-    { "id": "G-A8", "purpose": "dominant-plan sweep, every template vs std (P2-4); tool path unless its registration chooses career (then odd seeds of 25001-25799)", "path": "tool", "range": "25001-25400", "step": 1 },
-    { "id": "sideBias.career.v21", "purpose": "side bias n>=1000 per layout on career.v21 (P2-5)", "path": "career", "range": "27001-31999", "step": 2, "walk": { "targetPerLayout": 1000 }, "opponents": "AI_TEAMS[seed % AI_TEAMS.length]" },
-    { "id": "sideBias.challenge.v21", "purpose": "side bias n>=1000 per layout on challenge.v21 (P2-5; after T16). The walked seeds 33001-37097 are reused, diagnostic only, by the bidirectional study (challenge_bidir_registration_3aB.json) the layer ladder (challenge_ladder_registration_3aB.json) the C2 per-hero / per-lineup diagnosis (challenge_c2_registration_3aB.json) and the D5 settlement-order diagnosis (challenge_order_registration_3aB.json; its V1 rebuild arms only, 20 seeds per C2 mirror arm); confirmatory re-runs use the reserved fresh block 45001-49999", "path": "challenge", "range": "33001-37999", "step": 2, "walk": { "targetPerLayout": 1000 } },
-    { "id": "G-A8.fixScreen", "purpose": "fix-candidate screening for the G-A8 problem templates (Owner 2026-10-28 item 1; tools/fixtures/ga8_fix_screen_registration_3aB.json). Screening only: never used to confirm a fix", "path": "tool", "range": "41001-41400", "step": 1 },
-    { "id": "G-A8.fixScreen2", "purpose": "second fix-candidate screening for classic.m7 / classic.m8 plus an unbiased re-estimate of the round-1 m3 selection (Owner 2026-10-29 item 2; tools/fixtures/ga8_fix_screen2_registration_3aB.json). Screening only: never used to confirm a fix", "path": "tool", "range": "57001-57400", "step": 1 },
-    { "id": "G-A8.fixScreen3", "purpose": "third fix-candidate screening for classic.m7 only (content groups on std knobs) after the second screening found NO_CANDIDATE (Owner 2026-10-29 items 1-2; tools/fixtures/ga8_fix_screen3_registration_3aB.json). Screening only: never used to confirm a fix", "path": "tool", "range": "57401-57800", "step": 1 },
-    { "id": "G-A8.fixScreen4", "purpose": "fourth fix-candidate screening for v2.three_lane_pressure and classic.m1 (Owner 2026-10-30 approved D8; tools/fixtures/ga8_fix_screen4_registration_3aB.json). Screening only: never used to confirm a fix", "path": "tool", "range": "57801-58200", "step": 1 },
-    { "id": "G-A8.fixScreen6", "purpose": "sixth (bounded, last) fix-candidate screening after the formal G-A8 STOP (Owner Review 2026-11-03; tools/fixtures/ga8_fix_screen6_registration_3aB.json). Development only: never confirms a fix", "path": "tool", "range": "69001-69800", "step": 1 },
-    { "id": "G-A8.fixScreen5", "purpose": "fifth (bounded, last) fix-candidate screening for v2.mid_jungle_sync, identity-keeping arms only (Owner 2026-10-30 second ruling item 3; tools/fixtures/ga8_fix_screen5_registration_3aB.json). Screening only: never used to confirm a fix", "path": "tool", "range": "58201-58600", "step": 1 },
-    { "id": "challenge.order.d5", "purpose": "D5 settlement-order diagnosis (Owner 2026-10-30; tools/fixtures/challenge_order_registration_3aB.json): blue-first and red-first true mirrors on the same fresh seeds (review D5 #1). Diagnostic only: never used to confirm a fix", "path": "challenge", "range": "62001-64999", "step": 2 },
-    { "id": "exclusion.v21b1", "purpose": "P6 development study of the classic.m3 / m7 / m8 exclusion rows under template table v21.b1 (Owner 2026-11-01 item 5; tools/fixtures/exclusion_v21b1_registration_3aB.json). Development decision only: never a formal acceptance or a G-A8 result", "path": "tool", "range": "65001-65100", "step": 1 },
-    { "id": "exclusion.v21b1.marginal", "purpose": "P6 stage 2: blue and red re-verification of the stage-1 marginal rows on fresh seeds (Owner 2026-10-13 rule; exclusion_v21b1_registration_3aB.json decisionRule.stage2). Development decision only", "path": "tool", "range": "65501-65900", "step": 1 },
-    { "id": "exclusion.v21b1.confirm", "purpose": "RESERVED, not run: post-freeze red and blue confirmation of the choices P6 offers on classic.m3 / m7 / m8 under v21.b1 (stage1_formal_acceptance_registration_3aB.json step 4b)", "path": "tool", "range": "65101-65500", "step": 1 },
-    { "id": "E1.fixConfirm", "purpose": "RESERVED, not run: E1 re-run after the stage-1 freeze; the original block 21001-22200 has been observed (stage1_formal_acceptance_registration_3aB.json step 3)", "path": "tool", "range": "66001-67200", "step": 1 },
-    { "id": "E2.fixConfirm", "purpose": "RESERVED, not run: E2 re-run after the stage-1 freeze; the original block 23001-23799 has been observed (stage1_formal_acceptance_registration_3aB.json step 3)", "path": "career", "range": "67501-68299", "step": 2, "opponents": "AI_TEAMS[seed % AI_TEAMS.length] (same rule as E2)" },
-    { "id": "challenge.c1.baseline", "purpose": "C1 baseline ladder: the new-save reference challenger vs each practice fixture on challenge.v20 and challenge.v21 (draft tools/fixtures/challenge_c1_calibration_registration_3aB.json part M0; runnable only after its review and validate)", "path": "challenge", "range": "59001-59799", "step": 2 },
-    { "id": "challenge.c1.screen", "purpose": "RESERVED, not run: C1 calibration candidate screen on challenge.v21 (part S1; needs the Owner's target bands)", "path": "challenge", "range": "59801-60599", "step": 2 },
-    { "id": "challenge.c1.confirm", "purpose": "RESERVED, not run: C1 calibration confirmation after the single freeze (part CF; fresh seeds)", "path": "challenge", "range": "61001-61799", "step": 2 },
-    { "id": "G-A8.fixConfirm", "purpose": "RESERVED, not run: the confirmatory G-A8 re-run after an Owner-approved template fix, with the original thresholds (draft tools/fixtures/ga8_fix_confirm_registration_3aB.json); disjoint from the G-A8 and screening seeds", "path": "tool", "range": "43001-43400", "step": 1 },
-    { "id": "sideBias.challenge.fixConfirm", "purpose": "RESERVED, not run: challenge side bias re-run after an Owner-approved fix (fresh seeds; the 33001-37999 block informed the diagnosis)", "path": "challenge", "range": "45001-49999", "step": 2, "walk": { "targetPerLayout": 1000 } },
-    { "id": "sideBias.career.fixConfirm", "purpose": "RESERVED, not run: career side bias confirmatory re-run after the fix freeze on fresh seeds (Owner 2026-10-29 item 6 chose fresh seeds; draft registration tools/fixtures/sidebias_career_fixconfirm_registration_3aB.json, runnable only after the freeze fingerprint is filled in)", "path": "career", "range": "51001-55999", "step": 2, "walk": { "targetPerLayout": 1000 }, "opponents": "AI_TEAMS[seed % AI_TEAMS.length]" }
+    {
+      "id": "tactic24.v20claim",
+      "purpose": "evidence for the replacement of the m6/m4 gank-count claim (P0-2); same engine path as check_moba_tactic24 (LogicEngine + configureMatch, no assembler)",
+      "path": "engine",
+      "range": "19001-19200",
+      "step": 1
+    },
+    {
+      "id": "E1",
+      "purpose": "v21 options: red/blue economy equivalence and stacking safety (P2-2). If the Owner keeps n=400 only the prefix 21001-21400 is used; the block is reserved for n=1200",
+      "path": "tool",
+      "range": "21001-22200",
+      "step": 1
+    },
+    {
+      "id": "E2",
+      "purpose": "career.v21 behaviour acceptance through the formal live entry (P2-3; after the AI coach)",
+      "path": "career",
+      "range": "23001-23799",
+      "step": 2,
+      "opponents": "AI_TEAMS[seed % AI_TEAMS.length] (same rule as measure_laneframe_c3)"
+    },
+    {
+      "id": "G-A8",
+      "purpose": "dominant-plan sweep, every template vs std (P2-4); tool path unless its registration chooses career (then odd seeds of 25001-25799)",
+      "path": "tool",
+      "range": "25001-25400",
+      "step": 1
+    },
+    {
+      "id": "sideBias.career.v21",
+      "purpose": "side bias n>=1000 per layout on career.v21 (P2-5)",
+      "path": "career",
+      "range": "27001-31999",
+      "step": 2,
+      "walk": {
+        "targetPerLayout": 1000
+      },
+      "opponents": "AI_TEAMS[seed % AI_TEAMS.length]"
+    },
+    {
+      "id": "sideBias.challenge.v21",
+      "purpose": "side bias n>=1000 per layout on challenge.v21 (P2-5; after T16). The walked seeds 33001-37097 are reused, diagnostic only, by the bidirectional study (challenge_bidir_registration_3aB.json) the layer ladder (challenge_ladder_registration_3aB.json) the C2 per-hero / per-lineup diagnosis (challenge_c2_registration_3aB.json) and the D5 settlement-order diagnosis (challenge_order_registration_3aB.json; its V1 rebuild arms only, 20 seeds per C2 mirror arm); confirmatory re-runs use the reserved fresh block 45001-49999",
+      "path": "challenge",
+      "range": "33001-37999",
+      "step": 2,
+      "walk": {
+        "targetPerLayout": 1000
+      }
+    },
+    {
+      "id": "G-A8.fixScreen",
+      "purpose": "fix-candidate screening for the G-A8 problem templates (Owner 2026-10-28 item 1; tools/fixtures/ga8_fix_screen_registration_3aB.json). Screening only: never used to confirm a fix",
+      "path": "tool",
+      "range": "41001-41400",
+      "step": 1
+    },
+    {
+      "id": "G-A8.fixScreen2",
+      "purpose": "second fix-candidate screening for classic.m7 / classic.m8 plus an unbiased re-estimate of the round-1 m3 selection (Owner 2026-10-29 item 2; tools/fixtures/ga8_fix_screen2_registration_3aB.json). Screening only: never used to confirm a fix",
+      "path": "tool",
+      "range": "57001-57400",
+      "step": 1
+    },
+    {
+      "id": "G-A8.fixScreen3",
+      "purpose": "third fix-candidate screening for classic.m7 only (content groups on std knobs) after the second screening found NO_CANDIDATE (Owner 2026-10-29 items 1-2; tools/fixtures/ga8_fix_screen3_registration_3aB.json). Screening only: never used to confirm a fix",
+      "path": "tool",
+      "range": "57401-57800",
+      "step": 1
+    },
+    {
+      "id": "G-A8.fixScreen4",
+      "purpose": "fourth fix-candidate screening for v2.three_lane_pressure and classic.m1 (Owner 2026-10-30 approved D8; tools/fixtures/ga8_fix_screen4_registration_3aB.json). Screening only: never used to confirm a fix",
+      "path": "tool",
+      "range": "57801-58200",
+      "step": 1
+    },
+    {
+      "id": "G-A8.fixScreen6",
+      "purpose": "sixth (bounded, last) fix-candidate screening after the formal G-A8 STOP (Owner Review 2026-11-03; tools/fixtures/ga8_fix_screen6_registration_3aB.json). Development only: never confirms a fix",
+      "path": "tool",
+      "range": "69001-69800",
+      "step": 1
+    },
+    {
+      "id": "G-A8.fixScreen5",
+      "purpose": "fifth (bounded, last) fix-candidate screening for v2.mid_jungle_sync, identity-keeping arms only (Owner 2026-10-30 second ruling item 3; tools/fixtures/ga8_fix_screen5_registration_3aB.json). Screening only: never used to confirm a fix",
+      "path": "tool",
+      "range": "58201-58600",
+      "step": 1
+    },
+    {
+      "id": "challenge.order.d5",
+      "purpose": "D5 settlement-order diagnosis (Owner 2026-10-30; tools/fixtures/challenge_order_registration_3aB.json): blue-first and red-first true mirrors on the same fresh seeds (review D5 #1). Diagnostic only: never used to confirm a fix",
+      "path": "challenge",
+      "range": "62001-64999",
+      "step": 2
+    },
+    {
+      "id": "exclusion.v21b1",
+      "purpose": "P6 development study of the classic.m3 / m7 / m8 exclusion rows under template table v21.b1 (Owner 2026-11-01 item 5; tools/fixtures/exclusion_v21b1_registration_3aB.json). Development decision only: never a formal acceptance or a G-A8 result",
+      "path": "tool",
+      "range": "65001-65100",
+      "step": 1
+    },
+    {
+      "id": "exclusion.v21b1.marginal",
+      "purpose": "P6 stage 2: blue and red re-verification of the stage-1 marginal rows on fresh seeds (Owner 2026-10-13 rule; exclusion_v21b1_registration_3aB.json decisionRule.stage2). Development decision only",
+      "path": "tool",
+      "range": "65501-65900",
+      "step": 1
+    },
+    {
+      "id": "exclusion.v21b1.confirm",
+      "purpose": "RESERVED, not run: post-freeze red and blue confirmation of the choices P6 offers on classic.m3 / m7 / m8 under v21.b1 (stage1_formal_acceptance_registration_3aB.json step 4b)",
+      "path": "tool",
+      "range": "65101-65500",
+      "step": 1
+    },
+    {
+      "id": "E1.fixConfirm",
+      "purpose": "RESERVED, not run: E1 re-run after the stage-1 freeze; the original block 21001-22200 has been observed (stage1_formal_acceptance_registration_3aB.json step 3)",
+      "path": "tool",
+      "range": "66001-67200",
+      "step": 1
+    },
+    {
+      "id": "E2.fixConfirm",
+      "purpose": "RESERVED, not run: E2 re-run after the stage-1 freeze; the original block 23001-23799 has been observed (stage1_formal_acceptance_registration_3aB.json step 3)",
+      "path": "career",
+      "range": "67501-68299",
+      "step": 2,
+      "opponents": "AI_TEAMS[seed % AI_TEAMS.length] (same rule as E2)"
+    },
+    {
+      "id": "challenge.c1.baseline",
+      "purpose": "C1 baseline ladder: the new-save reference challenger vs each practice fixture on challenge.v20 and challenge.v21 (draft tools/fixtures/challenge_c1_calibration_registration_3aB.json part M0; runnable only after its review and validate)",
+      "path": "challenge",
+      "range": "59001-59799",
+      "step": 2
+    },
+    {
+      "id": "challenge.c1.screen",
+      "purpose": "RESERVED, not run: C1 calibration candidate screen on challenge.v21 (part S1; needs the Owner's target bands)",
+      "path": "challenge",
+      "range": "59801-60599",
+      "step": 2
+    },
+    {
+      "id": "challenge.c1.confirm",
+      "purpose": "RESERVED, not run: C1 calibration confirmation after the single freeze (part CF; fresh seeds)",
+      "path": "challenge",
+      "range": "61001-61799",
+      "step": 2
+    },
+    {
+      "id": "G-A8.fixConfirm",
+      "purpose": "OBSERVED 2026-11-03: the confirmatory G-A8 at freeze 7a6e9736 ran on this block (result ga8_fix_confirm_result_3aB.json, verdict STOP). It may not be used again as a confirmation",
+      "path": "tool",
+      "range": "43001-43400",
+      "step": 1
+    },
+    {
+      "id": "sideBias.challenge.fixConfirm",
+      "purpose": "RESERVED, not run: challenge side bias re-run after an Owner-approved fix (fresh seeds; the 33001-37999 block informed the diagnosis)",
+      "path": "challenge",
+      "range": "45001-49999",
+      "step": 2,
+      "walk": {
+        "targetPerLayout": 1000
+      }
+    },
+    {
+      "id": "sideBias.career.fixConfirm",
+      "purpose": "RESERVED, not run: career side bias confirmatory re-run after the fix freeze on fresh seeds (Owner 2026-10-29 item 6 chose fresh seeds; draft registration tools/fixtures/sidebias_career_fixconfirm_registration_3aB.json, runnable only after the freeze fingerprint is filled in)",
+      "path": "career",
+      "range": "51001-55999",
+      "step": 2,
+      "walk": {
+        "targetPerLayout": 1000
+      },
+      "opponents": "AI_TEAMS[seed % AI_TEAMS.length]"
+    },
+    {
+      "id": "G-A8.fix2Confirm",
+      "purpose": "RESERVED, not run: the confirmatory G-A8 after a new freeze of table v21.b2 (Owner review of the balance study item 6, assigning the former unassigned range 4601-5000; registration ga8_fix2_confirm_registration_3aB.json). Scan 2026-11-03 in stage1r2_release_registration_3aB.json seedsPlanned.scan20261103",
+      "path": "tool",
+      "range": "4601-5000",
+      "step": 1
+    },
+    {
+      "id": "exclusion.v21b2",
+      "purpose": "development study of the classic.m6 / v2.hard_engage_stack / v2.three_lane_pressure exclusion rows under table v21.b2 (tools/fixtures/exclusion_v21b2_registration_3aB.json). Development decision only: never a formal acceptance or a G-A8 result",
+      "path": "tool",
+      "range": "69801-69900",
+      "step": 1
+    },
+    {
+      "id": "exclusion.v21b2.marginal",
+      "purpose": "stage 2 of exclusion.v21b2: blue and red re-verification of the stage-1 marginal rows on fresh seeds (Owner 2026-10-13 rule). Run only if stage 1 has a marginal row. Development decision only",
+      "path": "tool",
+      "range": "69901-70300",
+      "step": 1
+    }
   ]
 }

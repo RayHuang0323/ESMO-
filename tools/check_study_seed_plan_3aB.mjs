@@ -80,7 +80,9 @@ for (const st of studies) {
 const all = [...eff.values()].flat();
 ck("E2 所有研究之間 effectiveSeed 不相交", all.length === new Set(all).size, `${all.length} 個／不同 ${new Set(all).size}`);
 //  已用區段在強制奇數的路徑下也不得撞到（例：已用的偶數上界 18800 在 career 路徑會變成 18801）。
-const usedEff = new Set(PLAN.usedRanges.flatMap((u) => { const [a, b] = parse(u.range); return [EFFECTIVE.career(a), EFFECTIVE.career(b), a, b]; }));
+//  已用區段若標明組裝路徑（usedRanges[].path，要附 pathEvidence），端點只用那條路徑算；沒標明的維持保守算法（當成也可能走過強制奇數的路徑）。
+const usedEndpoints = (u) => { const [a, b] = parse(u.range); return u.path ? [EFFECTIVE[u.path](a), EFFECTIVE[u.path](b), a, b] : [EFFECTIVE.career(a), EFFECTIVE.career(b), a, b]; };
+const usedEff = new Set(PLAN.usedRanges.flatMap(usedEndpoints));
 ck("E3 研究的 effectiveSeed 不等於任何已用區段端點的 effectiveSeed", all.every((s) => !usedEff.has(s)));
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -110,6 +112,8 @@ console.log("\n§N 反向測試");
 ck("N1 career 路徑：偶數 seed 2k 的 effectiveSeed 是 2k+1（混進去就會重複）", EFFECTIVE.career(23002) === 23003 && EFFECTIVE.challenge(33002) === 33003);
 ck("N2 區段重疊抓得到", overlaps("21001-22200", "22200-22300") && !overlaps("21001-22200", "22201-22300"));
 ck("N3 漏列抓得到（拿掉 C6 的 4201-4600 ⇒ 有區段不在清單內）", scanned.some((x) => !within(x.range, PLAN.usedRanges.filter((u) => u.range !== "4201-4600"))));
+{ const c6 = PLAN.usedRanges.find((u) => u.range === "4201-4600");
+  ck("N5 E3 的保守算法還在：不標明路徑時 4600 算成 4601（會擋下 4601–5000）；只有這一列標明 tool 且附證據，C6 登記真的是 balanceTool.v21 工具路徑", usedEndpoints({ range: "4201-4600" }).includes(4601) && c6?.path === "tool" && !usedEndpoints(c6).includes(4601) && !!c6.pathEvidence && PLAN.usedRanges.filter((u) => u.path).length === 1 && /balanceTool\.v21/.test(JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/phase_options_registration_c6.json"), "utf8")).design.ruleset)); }
 ck("N4 tool 路徑會把 seed 原樣交給引擎（相鄰的偶數、奇數是兩個不同的引擎種子）", EFFECTIVE.tool(21002) === 21002 && EFFECTIVE.tool(21003) === 21003);
 
 console.log(`\n${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);

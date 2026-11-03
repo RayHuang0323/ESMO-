@@ -57,7 +57,7 @@ function bestRoleOf(roster) {
  * @returns {{ ok: true, plan: object, summary: object } | { ok: false, errors: object[] }}
  */
 //  templateBalance（Phase 3a-B 第一階段）：本場規則集的模板修正表；提供清單與「模板自己的值」用修正後的模板（與玩家的戰術書同一份）。
-//  STYLE_TEMPLATES 目前不會選到修正表裡的模板（classic.m3／m7／m8；gate 直接斷言），所以這只是讓兩邊永遠同源。
+//  STYLE_TEMPLATES 在 v21.b2 下只會選到一個修正表裡的模板：skirmish 的 v2.hard_engage_stack（gate 直接斷言），修正只經 Resolver 套一次；提供清單與文案都與玩家同一張表。所以這只是讓兩邊永遠同源。
 export function aiCoachPlan({ team, tacticalDirector = "static", templateBalance = null } = {}) {
   const rule = STYLE_TEMPLATES[team?.style];
   const roster = Array.isArray(team?.roster) ? team.roster : [];

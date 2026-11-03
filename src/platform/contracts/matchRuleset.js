@@ -35,7 +35,7 @@ export const laneFrameOf = (r) => r?.layers?.laneFrame ?? DEFAULT_LANE_FRAME;
 //  Phase 3a-B 第一階段（Owner 2026-10-30 第 2 點；事前登記 tools/fixtures/stage1_release_registration_3aB.json）：可選層 templateBalance
 //  ＝模板修正表 id（platform/tactics/tacticTemplates.js 的 TEMPLATE_BALANCE；本檔不 import 它，gate 斷言兩份清單相同）。
 //  缺少 ≡ 出貨版模板。只有 career.v21／balanceTool.v21 帶；三份 v20 規則集與 challenge.v21（第二階段）永不帶 ⇒ 它們的 setup 雜湊逐位元不變。
-export const TEMPLATE_BALANCES = Object.freeze(["v21.b1"]);
+export const TEMPLATE_BALANCES = Object.freeze(["v21.b1", "v21.b2"]);
 /** 讀取 ruleset 的 templateBalance 層；缺少 ≡ null（出貨版模板）。 */
 export const templateBalanceOf = (r) => r?.layers?.templateBalance ?? null;
 /** 正式規則集 releaseRequirements 只能列這些正式旗標（DEV 網址開關、未登錄的名字一律拒絕）。 */
@@ -58,10 +58,10 @@ export const MATCH_RULESETS = Object.freeze({
   //  Phase 3a-B T15（Owner 2026-10-25 決策 5；事前登記 tools/fixtures/ai_coach_registration_3aB.json）：career.v21 的紅方戰術＝AI 教練 v1
   //  （redTactic "aiCoachV1"：賽前依 AI 隊伍自己的風格與選手素質、只用戰術書會提供的選項排計畫；platform/tactics/aiCoach.js）。
   "career.v21": R({ rulesetId: "career.v21", kind: "production", simVersion: "moba-sim.v21",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "aiCoachV1", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative", templateBalance: "v21.b1" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "aiCoachV1", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative", templateBalance: "v21.b2" },
     releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1", "mobaTacticalDirectorV21"] }),
   "balanceTool.v21": R({ rulesetId: "balanceTool.v21", kind: "tool", simVersion: "moba-sim.v21",
-    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative", templateBalance: "v21.b1" },
+    layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "none", objectiveLayout: "bySeed", redTactic: "std", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative", templateBalance: "v21.b2" },
     releaseRequirements: [] }),
   //  Phase 3a-B T16（正式架構 §3 補充 1 的表；Owner 2026-10-25 決策 6）：技能／被動／曲線 ON、天賦 OFF（Challenge 沒有天賦選擇資料）、
   //  裝備 OFF（featureFlags 的 Competitive／Challenge 邊界）、佈局 bySeed、組裝順序＝Live、Director core.v1、laneFrame teamRelative

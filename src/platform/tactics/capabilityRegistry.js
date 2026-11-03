@@ -445,13 +445,18 @@ export const MEASURED_EXCLUSIONS = deepFreeze([
  * tools/check_stage1_split_3aB.mjs S13b 逐列比對。凍結前的開發期量測：正式效力要等凍結後的確認（正式驗收 step 4b）。
  * m3 的團戰姿態：修正後的數值不落在任何選項上，沒有事前登記的指標可以量 ⇒ reason unmeasurable、n 0；不臨時發明指標。
  */
-export const BALANCE_EXCLUSIONS = deepFreeze([
+const BALANCE_EXCLUSIONS_V21_B1 = [
   { ...ex("classic.m3", "teamfight.posture", "passive", "unmeasurable", null, 0, null), templateBalance: "v21.b1" },
   { ...ex("classic.m3", "teamfight.posture", "standard", "unmeasurable", null, 0, null), templateBalance: "v21.b1" },
   { ...ex("classic.m3", "teamfight.posture", "aggressive", "unmeasurable", null, 0, null), templateBalance: "v21.b1" },
   { ...ex("classic.m8", "phases.late.grouping", "group", "no_measured_effect", "joinGoGeneralStartsPerMin.late", 70, 0.87288), templateBalance: "v21.b1" },
   { ...ex("classic.m8", "phases.mid.objectiveOrder", "baron", "no_measured_effect", "contestShare.baron.mid", 100, -0.376339), templateBalance: "v21.b1" },
   { template: "classic.m8", dimension: "phases.mid.grouping", choice: "group", reason: "not_replicated", verdict: "not_replicated", metric: "joinGoGeneralStartsPerMin.mid", blue: { n: 400, rel: 0.042536, z: 2.193149 }, red: { n: 400, rel: 0.072589, z: 3.560399 }, templateBalance: "v21.b1" },
+];
+//  v21.b2（stage1r2_release_registration_3aB.json）：m3／m7／m8 與 v21.b1 同值 ⇒ 同一批列、同一份證據。m6、hard_engage、three_lane 的列由開發期研究決定。
+export const BALANCE_EXCLUSIONS = deepFreeze([
+  ...BALANCE_EXCLUSIONS_V21_B1,
+  ...BALANCE_EXCLUSIONS_V21_B1.map((x) => ({ ...x, templateBalance: "v21.b2" })),
 ]);
 const EXCLUSION_ROWS = Object.freeze([...MEASURED_EXCLUSIONS, ...BALANCE_EXCLUSIONS]);
 /**

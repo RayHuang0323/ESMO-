@@ -196,12 +196,12 @@ const SIX = [plan("classic.m1"), plan("classic.m2"), plan("classic.m3"), plan("s
   const withChoice = prepareLiveMatch(on21(withOpts({ tactic: undefined, tacticPlanBinding: chosen })));
   const noChoice21 = prepareLiveMatch(on21(withOpts({ tactic: undefined, tacticPlanBinding: bindTacticPlanToCurrentVersions(plan("std")) })));
   ck("M6' career.v21：帶選擇的 binding 組得起來，setup 雜湊與同模板沒選擇的不同、整場旋鈕也不同（選擇真的進了本場設定）", withChoice.ok && noChoice21.ok && withChoice.setupHash !== noChoice21.setupHash
-    && J(resolveTactic({ kind: "binding", binding: chosen }, {}, { templateBalance: "v21.b1" }).knobs) !== J(resolveTactic({ kind: "binding", binding: bindTacticPlanToCurrentVersions(plan("std")) }, {}, { templateBalance: "v21.b1" }).knobs)
+    && J(resolveTactic({ kind: "binding", binding: chosen }, {}, { templateBalance: "v21.b2" }).knobs) !== J(resolveTactic({ kind: "binding", binding: bindTacticPlanToCurrentVersions(plan("std")) }, {}, { templateBalance: "v21.b2" }).knobs)
     && withChoice.applied.replayConfig?.tacticId === "std");
   //  M10（實作審查 M3）：修正表以外的經典模板，career.v21 的 binding 解析＝同一個經典的 legacy 旋鈕（修正表不碰它）。
-  const r21 = resolveTactic({ kind: "binding", binding }, {}, { templateBalance: "v21.b1" }), rLeg = resolveTactic({ kind: "legacy", config: mobaTacticById(tid) });
+  const r21 = resolveTactic({ kind: "binding", binding }, {}, { templateBalance: "v21.b2" }), rLeg = resolveTactic({ kind: "legacy", config: mobaTacticById(tid) });
   const { TEMPLATE_BALANCE } = await import("../src/platform/tactics/tacticTemplates.js");
-  ck(`M10 career.v21：修正表以外的 classic.${tid} 的 binding 解析＝legacy ${tid} 的旋鈕與 identity（前置：classic.${tid} 不在修正表）`, !(`classic.${tid}` in TEMPLATE_BALANCE["v21.b1"]) && r21.ok && rLeg.ok && J([r21.knobs, r21.identity]) === J([rLeg.knobs, rLeg.identity]));
+  ck(`M10 career.v21：修正表以外的 classic.${tid} 的 binding 解析＝legacy ${tid} 的旋鈕與 identity（前置：classic.${tid} 不在修正表）`, !(`classic.${tid}` in TEMPLATE_BALANCE["v21.b2"]) && r21.ok && rLeg.ok && J([r21.knobs, r21.identity]) === J([rLeg.knobs, rLeg.identity]));
   ck("M7 沒有 binding 也沒有戰術 ⇒ 藍方 null（＝v20 行為）", (() => { const r = prepareLiveMatch(withOpts({ tactic: undefined })); return r.ok && r.setup.tactic.blue === null; })());
 
   const hook = stripComments(fs.readFileSync(path.join(ROOT, "src/useLocalServer.js"), "utf8"));
