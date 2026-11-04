@@ -1,0 +1,13 @@
+{
+  "schema": "esmo.merge-registration.v1",
+  "purpose": "The verify baseline stage1_verify_baseline_3aB.json was recorded at the fork point of the feature branch. After the real merge, merge-base origin/main HEAD no longer returns that fork point, so gates read it from this record and recompute it from the merge commit parents. The baseline fixture itself is not edited.",
+  "mergeCommit": "29cdf9dcb67cda5bc2db70746ee0869628a9f745",
+  "mainParent": "b4f8e0c367ef8678df23c125f97df41372e0c02e",
+  "branchParent": "e11f0e4fc9d59be715aa029f577676e3d23ffce6",
+  "forkPoint": "1d0e219aae20a946bbc04d36349cb988e6e5ba7b",
+  "ownerApproval": "Owner final review 2026-11-04, item 3: handle the formal acceptance B1 merge base registration in an independent traceable commit, reviewed; no old STOP changed, no gate loosened, no golden re-recorded, known reds not renamed PASS.",
+  "notChanged": [
+    "tools/fixtures/stage1_verify_baseline_3aB.json",
+    "tools/fixtures/stage1_verify_baseline_logs_3aB.json"
+  ]
+}

@@ -210,7 +210,13 @@ const oneMatch = (toolFile, args, task) => new Promise((resolve) => {
   if (!fs.existsSync(f)) ck("B1 verify 基準存在（tools/record_verify_baseline_3aB.mjs --record）", false, "尚未記錄");
   else {
     const b = JSON.parse(fs.readFileSync(f, "utf8"));
-    const base = execFileSync("git", ["merge-base", "origin/main", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
+    //  合併之後 merge-base origin/main HEAD 不再是分支點；分支點改由合併 commit 的兩個父節點重算（登記：stage1_merge_registration_3aB.json）。基準本身不動（B2）。
+    const reg = JSON.parse(fs.readFileSync(FX("stage1_merge_registration_3aB.json"), "utf8"));
+    const gitOut = (...a) => execFileSync("git", a, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    const isAncestor = (a, c) => { try { gitOut("merge-base", "--is-ancestor", a, c); return true; } catch { return false; } };
+    const regOk = (r) => { const [m, p1, p2, ...rest] = gitOut("rev-list", "--parents", "-n", "1", r.mergeCommit).split(" "); return m === r.mergeCommit && p1 === r.mainParent && p2 === r.branchParent && !rest.length && gitOut("merge-base", r.mainParent, r.branchParent) === r.forkPoint && isAncestor(r.mergeCommit, "HEAD"); };
+    ck("B1a 合併登記成立：合併 commit 的父節點相符、分支點由兩個父節點重算相同、合併 commit 在目前歷史裡；竄改任一欄位都不成立", regOk(reg) && !regOk({ ...reg, forkPoint: reg.mainParent }) && !regOk({ ...reg, mainParent: reg.branchParent }), `${reg.mergeCommit.slice(0, 8)} 分支點 ${reg.forkPoint.slice(0, 8)}`);
+    const base = reg.forkPoint;
     ck("B1 verify 基準存在：commit＝分支點、每段都有結果、失敗段都有文字", b.commit === base && b.totals.segments === b.passing.length + b.skipped.length + b.failing.length && b.failing.every((x) => x.id && typeof x.failureText === "string"), `${b.commit.slice(0, 8)} 通過 ${b.totals.pass}／跳過 ${b.totals.skip}／失敗 ${b.totals.fail}`);
     const last = execFileSync("git", ["log", "--format=%H", "--", "tools/fixtures/stage1_verify_baseline_3aB.json"], { cwd: ROOT, encoding: "utf8" }).trim().split("\n").filter(Boolean);
     ck("B2 verify 基準提交後沒有被改過（只有一個 commit）", last.length <= 1, `${last.length} commit`);
