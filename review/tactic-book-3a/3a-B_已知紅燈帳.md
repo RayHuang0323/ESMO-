@@ -13,7 +13,7 @@
 | 同上 | R 24 案 | 預期變化（只差 `setupHash`） | 同一次重錄 |
 | `check_challenge_golden_v21` 5/6 | P2 | 指紋差異 | 同一次重錄 |
 | `check_tactic_truth_3a` 36/37 | T2 | 表過期 | 下次語意凍結整輪重測 |
-| `check_formal_acceptance_3aB` 59/60 | B1 | 合併基準不同 | 真正合併時，用看得見、Owner 核准的 commit 重新登記 |
+| `check_formal_acceptance_3aB` 59/60（在 `08dc1686`） | B1 | 合併基準不同 | 已於 `66da3df2` 依 Owner 2026-11-04 最終 Review 第 3 項重新登記，另新增 B1a，經 Reviewer 檢查。**基準檔沒有改，這不是放寬**；實跑結果見 `3a-B_整合驗證報告.md` §12 |
 | `check_club_mastery_v1` 264/265 | 1 條 | main 既有 | 技術債 |
 | `check_player_challenge_slice3` 97–100/100 | §③ | flaky 統計 Gate | 技術債，不放寬 |
 
@@ -30,3 +30,17 @@
 | `cs_major_tactical_edge_runtime` | 8/10 | crossfire 情境未觸發 | 原 CS 工作區 10 月就紅 |
 | `cs_gameplay_legacy_exact_equivalence` | 1/3 | Legacy 沒有下包情境；模擬雜湊不同 | 原 CS 工作區 10 月就紅；舊封存與現行來源不再等價 |
 | 另外 75 段 | 見 `3a-B_整合_verify對照.json` | 47 段停在來源指紋或標記 | TD-3aB-1 |
+
+## 合併進 main 之後失去保護的舊 Gate（Reviewer 2026-11-04）
+
+這些 Gate 拿會移動的 `origin/main` 當對照。`origin/main` 等於 HEAD 之後，比對會變空。**它們的綠不再是證據，也不是回歸訊號。** 這輪沒有改它們，登記為 TD-3aB-9。
+
+| Gate | 位置 | 失去的保護 |
+|---|---|---|
+| `check_match_source_v0c` | X2、F2 | 指定檔案對 `origin/main` 沒有差異 |
+| `check_fan_ui_f4` | 19、20 | 平衡相關檔案沒有變更 |
+| `check_moba_combat_feedback` | X3、X4 | 沒動語意檔 |
+| `check_online_foundation_v2a` | X5–X7 | 沒碰戰術 |
+| `check_cs_loading_v2_sim_equivalence` | 預設 `--ref origin/main` | 模擬對照變成自己比自己；要比對就明確傳 `--ref` |
+
+`record_verify_baseline_3aB` 合併後不得重錄基準；基準已存在時工具會拒絕，B2 也會擋。

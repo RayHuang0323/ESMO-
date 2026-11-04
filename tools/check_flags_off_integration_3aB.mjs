@@ -88,7 +88,7 @@ let pass = 0, fail = 0;
 const ck = (l, ok, n = "") => { ok ? pass++ : fail++; console.log(`${ok ? "✅" : "❌"} ${l}${n ? `　${n}` : ""}`); };
 const ROOT = path.resolve(path.dirname(SELF), "..");
 const BASE = arg("baseline");
-if (!BASE || !fs.existsSync(path.join(BASE, "src/featureFlags.js"))) { console.error("需要 --baseline=<origin/main 的乾淨 worktree>"); process.exit(2); }
+if (!BASE || !fs.existsSync(path.join(BASE, "src/featureFlags.js"))) { console.error("需要 --baseline=<合併前 main（stage1_merge_registration_3aB.json 的 mainParent）的乾淨 worktree>"); process.exit(2); }
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "esmo-flags-off-"));
 const tmp = (n) => path.join(TMP, n);
 const run = (cwd, scenario, lsIn, lsOut) => JSON.parse(execFileSync(process.execPath, [SELF, `--child=${scenario}`, ...(lsIn ? [`--in=${lsIn}`] : []), `--out=${lsOut}`], { cwd, encoding: "utf8", maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "pipe"] }).split("\n").find((l) => l.startsWith("CHILD:")).slice(6));
@@ -178,6 +178,9 @@ for (const [n, f] of [["新局", "int.fresh.json"], ["舊存檔往前讀", "int.
 //  固定在合併當時的兩個父節點（stage1_merge_registration_3aB.json）：合併進 main 之後 origin/main 就不再代表「合併前的 main」。
 const MR = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/stage1_merge_registration_3aB.json"), "utf8"));
 const merge = MR.forkPoint;
+//  合併之後 origin/main 就是整合內容，拿它當對照樹會變成自己比自己，所以直接擋。
+const baseHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: BASE, encoding: "utf8" }).trim();
+ck("M0 對照樹就是合併前的 main，不是自己比自己", baseHead === MR.mainParent, baseHead.slice(0, 8));
 const mainTouched = new Set(git("diff", "--name-only", merge, MR.mainParent).split("\n").filter(Boolean));
 const semText = fs.readFileSync(path.join(ROOT, "src/platform/contracts/simulationVersion.js"), "utf8");
 const sem = [...new Set([...semText.matchAll(/"(src\/[^"]+\.(?:js|jsx|mjs))"/g)].map((m) => m[1]))];
