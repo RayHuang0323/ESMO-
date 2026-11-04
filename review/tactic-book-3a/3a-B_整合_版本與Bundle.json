@@ -1,0 +1,151 @@
+{
+ "schema": "release-markers-3aB.v1",
+ "versions": {
+  "MOBA_REPLAY_VERSION": {
+   "merged": "MobaReplay.v1",
+   "main": "MobaReplay.v1"
+  },
+  "COMBAT_STATE_REPLAY_VERSION": {
+   "merged": "CombatStateReplay.v1",
+   "main": "CombatStateReplay.v1"
+  },
+  "MOBA_SIMULATION_VERSION": {
+   "merged": "moba-sim.v21",
+   "main": "moba-sim.v20",
+   "note": "內部候選標籤；Owner 決策 2 暫時保留，技術債 TD-3aB-3"
+  },
+  "CHALLENGE_SIMULATION_VERSION": "moba-sim.v20"
+ },
+ "bundle": {
+  "merged": {
+   "all": 133771801,
+   "code": 7076202,
+   "gzip": 2325333,
+   "js": 11,
+   "entry": {
+    "file": "assets/index-BDSgvqP6.js",
+    "bytes": 5062134,
+    "gzip": 1706834,
+    "sha256": "9b4f390c253fc20634d94445e94a10651148a9fb1bd1e8bcd6cee46bcb15a7ef"
+   }
+  },
+  "main": {
+   "all": 133591230,
+   "code": 6895631,
+   "gzip": 2273390,
+   "js": 10,
+   "entry": {
+    "file": "assets/index-C5yaAE4B.js",
+    "bytes": 4882232,
+    "gzip": 1655321,
+    "sha256": "bec8486228a450a5e08d404322c76c88c0b0ee01d6dac25d9e7a0bc16d52f2e3"
+   }
+  }
+ },
+ "sensitive": {
+  "service_role": {
+   "merged": 3,
+   "main": 3
+  },
+  "JWT": {
+   "merged": 0,
+   "main": 0
+  },
+  "sb_secret": {
+   "merged": 0,
+   "main": 0
+  },
+  "OpenAI key": {
+   "merged": 0,
+   "main": 0
+  },
+  "GitHub token": {
+   "merged": 0,
+   "main": 0
+  },
+  "AWS key": {
+   "merged": 0,
+   "main": 0
+  },
+  "private key": {
+   "merged": 0,
+   "main": 0
+  },
+  "supabase project url": {
+   "merged": 0,
+   "main": 0
+  },
+  "password literal": {
+   "merged": 0,
+   "main": 0
+  },
+  "api key literal": {
+   "merged": 0,
+   "main": 0
+  },
+  "windows user path": {
+   "merged": 0,
+   "main": 0
+  },
+  "local repo path": {
+   "merged": 0,
+   "main": 0
+  },
+  "owner mail or machine user": {
+   "merged": 0,
+   "main": 0
+  },
+  "email": {
+   "merged": 3,
+   "main": 3
+  },
+  "review path": {
+   "merged": 0,
+   "main": 0
+  },
+  "Owner note": {
+   "merged": 2,
+   "main": 2
+  },
+  "reserved seeds label": {
+   "merged": 0,
+   "main": 0
+  }
+ },
+ "v21Text": {
+  "戰術書": {
+   "merged": 20,
+   "main": 0
+  },
+  "moba-sim.v21": {
+   "merged": 6,
+   "main": 0
+  },
+  "career.v21": {
+   "merged": 4,
+   "main": 0
+  },
+  "challenge.v21": {
+   "merged": 6,
+   "main": 0
+  },
+  "balanceTool.v21": {
+   "merged": 3,
+   "main": 0
+  },
+  "v21.b2": {
+   "merged": 9,
+   "main": 0
+  },
+  "classic.m5": {
+   "merged": 0,
+   "main": 0
+  },
+  "G-A8": {
+   "merged": 0,
+   "main": 0
+  }
+ },
+ "pass": 30,
+ "fail": 0
+}

@@ -1,6 +1,6 @@
 # Phase 3a-B 旗標關閉：測試性整合驗證報告
 
-- 日期：2026-11-04。依 Owner Review（第三次 G-A8 STOP 之後）第 A–D 項。
+- 日期：2026-11-04。依 Owner Review（第三次 G-A8 STOP 之後）第 A–D 項；**最後一輪結果見 §11，§1、§3、§7–§10 已更新**。
 - **這是測試性整合，不是合併 main。** 沒有 Push、Deploy，沒有啟用 v21，沒有改 CS，沒有重錄 Golden，沒有用保留 Seeds。
 - 合併樹：`integration/moba-3aB-flags-off-test`，合併 commit `29cdf9dc`（父：`origin/main` `b4f8e0c3`、`feature/moba-phase3a-stage1` `e11f0e4f`），真 merge、`--no-ff`。
 - 對照樹：`.sprints/moba-3aB-main-baseline`，分離 HEAD 在 `b4f8e0c3`。
@@ -10,10 +10,10 @@
 
 | 問題 | 答案 |
 |---|---|
-| 新增回歸 | **沒有找到。** 合併樹所有紅燈都能對到 main 或原分支上的同一個紅燈，或是可解釋的預期變化。限制見 §8 |
+| 新增回歸 | **沒有找到。** 159 段 verify 全部跑過；合併樹所有紅燈都能對到 main 或原分支上的同一個紅燈，或是可解釋的預期變化。限制見 §8 |
 | 旗標關閉是否安全 | Node 26/26、打包後瀏覽器 25/25。玩家看不到戰術書，存檔沒有 v21 標記，帶計畫的舊存檔不會被改寫 |
-| 能不能宣稱全綠 | **不能。** 有 Golden 紅燈、main 帶來的 verify 紅燈，33 段 CS verify 沒跑，**CS 瀏覽器正式流程也沒有跑成** |
-| 是否建議合併 main | **建議，但有條件**（§9）。現在還不應該合併 |
+| 能不能宣稱全綠 | **不能。** 有 Golden 紅燈，還有 main 帶來的 81 段 verify 紅燈（`3a-B_已知紅燈帳.md`） |
+| 是否建議合併 main | **技術條件已具備，等 Owner 最終 Review**（§9）。還沒有合併 |
 
 ## 2. 合併本身
 
@@ -30,7 +30,8 @@
 | v20 Golden | `check_match_setup_3a` | **153/153** |
 | 旗標關閉跨樹 | `check_flags_off_integration_3aB`（新） | **26/26** |
 | verify | 選定 118 段（另 8 段已直接跑） | 43 綠、75 紅；**75 段在乾淨 main 上全部同樣紅，失敗行相同**（§5） |
-| 瀏覽器 | 13 支 | **12 支全綠，CS 正式流程沒有跑成**（見下表） |
+| CS verify 補跑 | 33 段 | **27 綠、6 紅；6 紅在乾淨 main 上失敗行相同**（§11） |
+| 瀏覽器 | 13 支 | **13 支全綠**（見下表） |
 
 **各系統的 Node 證據：**
 
@@ -42,7 +43,7 @@
 | 存檔 | `check_save_bundle_b1b`、`check_save_hardening_b1c`、`check_cloud_save_b1d`、S1–S8（跨樹） |
 | Replay | `check_battle_result_v3_replay`、`check_replay_display_text` 22、`check_replay_team_buff_scrub` 3/3 |
 | Challenge | slice 1、2、4–8 全綠；C1–C6（跨樹：同 Seed 同結果，兩邊互相重播成功） |
-| CS（Node） | `cs23`、`cs_major_utility_rules`、`cs_major_tactical_coordinator`、`cs_bounds_sampler`、`cs_identity_gap_r38`、`cs_roster_v1_r56` 綠；紅的段與 main 相同（§5）；33 段沒跑 |
+| CS（Node） | `cs23`、`cs_major_utility_rules`、`cs_major_tactical_coordinator`、`cs_bounds_sampler`、`cs_identity_gap_r38`、`cs_roster_v1_r56` 綠；紅的段與 main 相同（§5、§11）；33 段已補跑 |
 | Season、生涯、Retention | world time、time block v2／v3、lifecycle、offseason、age drift、retirement、contract、general match、retention 全綠 |
 
 **瀏覽器 Gate（合併樹，一次一支）：**
@@ -61,7 +62,7 @@
 | `browser_check_competition_hub_shell` | **27/27** | dev server |
 | `browser_check_competition_shared_ui` | **15/15** | dev server |
 | `browser_check_prod_moba_result_replay_release`（指向本機預覽，不是正式站） | **25/25**（批次外層被停之後，以孤兒狀態跑完） | 打包結果，390＋1366 |
-| `browser_check_cs_major_formal_flow` | **沒有跑成**：`HARNESS_FAIL` 0/0。這棵樹沒有 `review/cs-major-upgrade/evidence`，Gate 在開瀏覽器前就停了。**不是產品失敗，也不算通過** | 打包結果，1366 |
+| `browser_check_cs_major_formal_flow` | **63/63（1366）、63/63（390）**。第一次因為缺輸出資料夾 `HARNESS_FAIL` 0/0，建資料夾後重跑（§11） | 打包結果 |
 
 ## 4. 紅燈逐項分類（Node Gate）
 
@@ -162,22 +163,21 @@ v21-A Golden 錄製時，binding 會走到引擎。Stage 1 分流之後，`caree
 
 ### 要讓 Owner 知道的三件事
 
-1. **版本常數。** 合併樹的 `MOBA_SIMULATION_VERSION` 是 `moba-sim.v21`（main 是 v20）。逐一查過讀取者：只進 manifest 或作預設值，實際路徑都傳 Challenge 的 v20，存檔沒有 v21 標記。**行為安全，但名字不對。** 改它會動到語意檔與指紋登記，要真實性表整輪重測。要改或保留由 Owner 決定（§9 第 1 項）。
-2. **v21 的程式和文字會進公開 bundle。** dist 的主 bundle 有 20 處「戰術書」、6 處 `moba-sim.v21`。玩家介面看不到，但有人讀 JS 就看得到模板與文案。Bundle 是 5.06 MB，沒有量和 main 的差距。
+1. **版本常數（Owner 決定暫時保留，TD-3aB-3）。** 合併樹的 `MOBA_SIMULATION_VERSION` 是 `moba-sim.v21`（main 是 v20）。逐一查過讀取者：只進 manifest 或作預設值，實際路徑都傳 Challenge 的 v20，存檔沒有 v21 標記。**行為安全，但名字不對。** 改它會動到語意檔與指紋登記，要真實性表整輪重測。
+2. **v21 的程式和文字會進公開 bundle（Owner 已接受）。** dist 的主 bundle 有 20 處「戰術書」、6 處 `moba-sim.v21`。玩家介面看不到，但有人讀 JS 就看得到模板與文案。大小與敏感資訊已量（§11）。
 3. **回滾。** 合併後多一個 `tacticBook` 切片（加進 `CLOUD_PROFILE_KEYS`）。退回 main 之後，存檔時這個欄位會被丟掉。旗標關閉時玩家做不出計畫，所以實際沒有資料會損失。
 
 ## 8. 沒有驗證到的
 
 | 項目 | 原因 |
 |---|---|
-| 33 段 CS verify 沒跑：`cs_owner4f_side_audit`、`cs_owner4e_closure`、`cs_awareness_steering`、`cs_owner4_contact_runtime`、`cs_owner4d_closure`、`cs_utility_purchase_named30`、`cs_utility_purchase_plan_runtime`、`cs_owner5_runtime`、`cs_gameplay_legacy_exact_equivalence`、`cs_gameplay_authenticity_diagnostic`、`cs_gameplay_authenticity_fixture_retry`、`cs_gameplay_authenticity_matrix`、`cs_visibility_bounds`、`cs_major_navigation_cache`、`cs_major_room_fixtures`、`cs_major_shader_warmup`、`cs_major_scene_v1`、`cs_major_camera_framing`、`cs_camera_recovery`、`cs_major_character_v1`、`cs_major_weapon_sockets`、`cs_major_support_grip`、`cs_major_gunplay_sockets`、`cs_major_animation_lifecycle`、`cs_major_weapon_pose_layers`、`cs_major_weapon_handling`、`cs_major_pov_weapon`、`cs_major_tailored_clothing`、`cs_major_audio_pool`、`cs_major_ambient_audio`、`cs_major_audio_playback`、`cs_major_tactical_runtime`、`cs_major_tactical_edge_runtime` | 重型矩陣；靜態閉包推論碰不到，但沒有實跑 |
-| **CS 瀏覽器正式流程** | Gate 沒有跑成（見 §3）。CS 只有 Hub 殼層的瀏覽器證據（`competition_hub_shell` 27/27），**沒有打過一場 CS**。要跑得先建 evidence 資料夾；因為批次剛被記憶體保護停掉，依規定等 Owner 開口才跑 |
+| CS 玩法驗收 | 矩陣 55 場只證明對局跑完，Gate 固定輸出 `GAMEPLAY_ACCEPTANCE=NOT_ASSESSED`。正式流程用快速完成，只打 Mirage |
 | verify 的盲區 | 已經紅的段如果多一條新紅，只有失敗行比對看得到；47 段停在第一步，看不到行為 |
 | 手機真機 FPS、觸控 | 這台機器做不到；瀏覽器 390 不等於真機 |
 | 正式站 smoke | 沒有部署 |
 | 真 Supabase | `REMOTE_E2E_NOT_RUN`，沒有憑證 |
 | Training 的瀏覽器流程 | 沒有專屬瀏覽器 Gate，只有 Node |
-| 比賽內 Quick Finish 以外的自然跑完 | 這輪瀏覽器用快速完成 |
+| 比賽內 Quick Finish 以外的自然跑完 | 瀏覽器都用快速完成；Node 的 CS 矩陣是完整模擬 |
 | 整季連續遊玩 | 沒有這種 Gate |
 | 合併之後 main 又前進 | 真正合併前要重新 fetch 再跑一次 |
 
@@ -185,20 +185,20 @@ v21-A Golden 錄製時，binding 會走到引擎。Stage 1 分流之後，`caree
 
 ## 9. 合併 main 的建議
 
-**建議安全合併，但不是現在。** 程式面沒有阻擋。合併前要做完：
+**技術條件已具備，建議在 Owner 最終 Review 後合併。** 程式面沒有阻擋。逐項狀態：
 
-1. **Owner 決定版本常數：** 建議保留 `moba-sim.v21` 不動，因為改它要重測真實性表，而且行為已證實安全；另外在紀錄裡寫明「常數是候選標籤」。如果 Owner 要 main 上的名字絕對正確，就要排一輪重測。
-2. **Owner 接受 v21 程式與文字進公開 bundle**（§7 第 2 項）。不接受就要多做一層建置時排除，那是新工作。
-3. **跑 CS 瀏覽器正式流程**（這輪沒有跑成），並**補跑 33 段 CS verify**，放在 main 對照的同一輪，或由 Owner 明確接受不跑。
-4. **已知紅燈帳**一起合併（§6），B1 用看得見的 commit 重新登記。
-5. **重新 fetch**，main 有新 commit 就重跑這份報告的 Gate；受監看的語意檔被碰到就停下來回報。
-6. **合併的方式：** 真 merge，不 Rebase、不 Squash，保留 304 個 commit 的歷史。**Push main 會觸發部署**，所以要連同正式站 smoke 一起排，先確認正式站 `moba-sim.v20` 相關的 smoke 期待值。
+1. ✅ **版本常數：** Owner 決定暫時保留，技術債 TD-3aB-3；`check_release_markers_3aB` 釘住正式路徑仍是 v20。
+2. ✅ **公開 bundle：** Owner 已接受；敏感資訊沒有比 main 多，主 bundle 多 3.68%（§11）。
+3. ✅ **CS 瀏覽器正式流程與 33 段 CS verify 都跑完了**（§11）。
+4. **已知紅燈帳**已寫好（`3a-B_已知紅燈帳.md`），跟著合併。⏳ B1 要在真正合併時，用看得見、Owner 核准的 commit 重新登記。
+5. ⏳ **合併當下重新 fetch**，main 有新 commit 就重跑這份報告的 Gate；受監看的語意檔被碰到就停下來回報。這輪結束時 `origin/main` 仍是 `b4f8e0c3`。
+6. **合併的方式：** 真 merge，不 Rebase、不 Squash，保留原分支的 commit 歷史。⏳ **Push main 會觸發部署**，所以要連同正式站 smoke 一起排，先確認正式站 `moba-sim.v20` 相關的 smoke 期待值。
 
 **不合併的代價：** main 和分支會繼續分岔。CS 線每動一次，下次整合要重驗的範圍就更大。
 
 ## 10. Phase 3a-B 暫停後的下一個里程碑
 
-**建議：「全賽季玩家閉環」。** 玩家從開局打完整季，MOBA v20、CS Major、Training、Competition Hub、休賽期接起來沒有斷點，桌機和手機都能走完。
+**Owner 已正式採用「全賽季玩家閉環」，方案 B 暫緩。** MVP 範圍見 `docs/design/全賽季玩家閉環_MVP提案.md`（取代下面的工程排序）。玩家從開局打完整季，MOBA v20、CS Major、Training、Competition Hub、休賽期接起來沒有斷點，桌機和手機都能走完。
 
 **為什麼是這個，不是直接做方案 B：**
 
@@ -219,3 +219,86 @@ v21-A Golden 錄製時，binding 會走到引擎。Stage 1 分流之後，`caree
 **方案 B** 排在這之後或平行，規劃見 `3a-B_下一階段B_前瞻驗收規劃.md`。**Phase 3b** 仍被 3a-B 擋住，不開始。
 
 **需要 Owner 判斷：** 上面只是工程端看到的缺口。這個方向沒有玩家資料支持，如果 Owner 有更優先的產品目標（例如內容或線上），應該以那個為準。
+
+## 11. 最後一輪（Owner 核准的四項決策之後）
+
+### 結論
+
+**具備最終放行的技術條件，等 Owner Review。** 沒有找到新回歸，也沒有需要停下來的情況。仍有的紅燈全部登記在 `3a-B_已知紅燈帳.md`。合併、Push、部署都沒有做。
+
+### A. CS 正式流程
+
+- **evidence 來源：** `review/cs-major-upgrade/evidence` 被 git 忽略（`.gitignore:55`），原始資料在 `worktrees/cs-fps-major-upgrade`（約 6 GB、2,479 項，HEAD 也是 `b4f8e0c3`）。
+- **這支 Gate 不讀那些資料。** 程式碼第 31–33 行只把這個資料夾當輸出根目錄，要求新的子資料夾；它引用的 harness 與兩支 probe 也沒有碰。所以建一個空的被忽略資料夾就是正確做法，**沒有假 fixture，沒有放寬**，也沒有搬資料。
+- **結果：** 1366 **63/63**（53 秒）、390 **63/63**（49 秒）。`fixtureInjected`、`localStorageCleared`、`localStorageSeeded` 都是 false，console 與 page error 0，自己開的 Chrome 都確認關閉。
+- **走了什麼：** 首頁 → 賽前 → 配對 → Mirage → 戰術 → 真比賽 → 快速完成 → 結果（`cs_cf34fe42`，7:13）→ 入帳入史 → 返回首頁，沒有第二次完成。兩個寬度比賽 ID 與比分相同。
+- **限制：** 只打一張圖、一般對戰、快速完成。這是 main 既有的 Gate 範圍。
+
+### B. 33 段 CS verify
+
+單線，一次一段，走 `tools/verify.mjs`，每段前有記憶體閘門。合計 38 分鐘，比上一輪說的「重型矩陣」輕得多。
+
+| 結果 | 段數 |
+|---|---|
+| 合併樹綠 | **27** |
+| 合併樹紅 | **6** |
+| 紅的段在乾淨 main 同樣紅，失敗行相同 | **6** |
+| **main 綠、合併後紅** | **0** |
+
+6 紅裡 5 段連整份 log 都相同，包含模擬雜湊；`cs_major_support_grip` 只差每次隨機的 UUID。CS 矩陣 **55/55，新跑 55 場、重用 0**。證據：`3a-B_整合_CS33段.json`。
+
+**輸入來源。** 有 4 段要讀舊證據或計畫，都從 CS 工作區逐檔複製到兩棵樹被忽略的資料夾，雜湊比對相同，原檔沒動：6 個檔案，雜湊在同一份 JSON 的 `inputs`。環境變數照原始紀錄：矩陣用 `authenticity-ui-v7` 計畫（`authenticity-final55-v11-*`）；診斷與 Mirage 重驗用 `authenticity-before` 計畫與原本的比賽 ID。
+
+**我的一次設定錯誤。** 第一次把 `c-runtime-simulation-new-source.json.gz` 放進去，`cs_major_tactical_runtime` 因此回報「fixture 已存在」而紅。這支是要自己產生 fixture。改成指定新的輸出路徑後 **34/34**。不算回歸，也不算 CS 的紅燈。
+
+**要讓 Owner 知道：** `cs_gameplay_authenticity_*` 每場會呼叫 Codex CLI 做一次唯讀額度查詢（`account/rateLimits/read`），這是這支 Gate 的原始設計。這輪約 59 次，都沒有開對話或額度異動；額度夠，沒有觸發暫停。
+
+### C. 版本、旗標、存檔、Replay、Bundle
+
+`check_release_markers_3aB` **30/30**（新）、`check_flags_off_integration_3aB` **26/26**、`browser_check_flags_off_release_3aB` **25/25**，都是這輪重跑。Replay 25/25 是上一輪的結果，測的是同一份 dist：**重建結果與受測 dist 581 個檔案雜湊全同。**
+
+| 項目 | 合併樹 | main | 結果 |
+|---|---|---|---|
+| 發布旗標（原始碼、bundle） | false | 沒有這兩個旗標 | ✓ |
+| Challenge 新場次與重播版本 | `moba-sim.v20` | `moba-sim.v20` | ✓ |
+| `career.v20`、`challenge.v20` 規則集 | `moba-sim.v20` | 同 | ✓ |
+| 內部常數 `MOBA_SIMULATION_VERSION` | `moba-sim.v21` | `moba-sim.v20` | Owner 暫留，TD-3aB-3 |
+| v20 場次可重播；v21 場次不會被當 v20 重播 | 是 | — | ✓ |
+| `mobaReplay.js`、`battleResultVersion.js` | 逐位元相同 | — | ✓ |
+| 打完一場後所有 localStorage 的 v21 標記 | 0 | — | ✓ |
+| CS 模擬 worker | `fpsSim.worker-CDdfgY2S.js` | 同一個，雜湊相同 | ✓ |
+
+| Bundle | 合併樹 | main | 差距 |
+|---|---|---|---|
+| 主 bundle | 5,062,134 B（4.828 MiB） | 4.656 MiB | **+175.7 KiB（+3.68%）** |
+| 主 bundle gzip | 1.628 MiB | 1.579 MiB | **+50.3 KiB（+3.11%）** |
+| 全部 JS／CSS／HTML | 6.748 MiB | 6.576 MiB | +176.3 KiB（+2.62%） |
+| 全部 JS／CSS／HTML gzip | 2.218 MiB | 2.168 MiB | +50.7 KiB（+2.28%） |
+| dist 全部檔案 | 127.575 MiB | 127.403 MiB | +0.14% |
+
+前面寫的「5.06 MB」是同一個檔案，用十進位算。
+
+**敏感資訊（打包結果，17 類比對，合併樹沒有比 main 多）：** 金鑰、JWT、私鑰、Supabase 專案網址、Windows 使用者路徑、本機 repo 路徑、Owner 帳號都是 0。出現的只有：`service_role` 3 處（防呆偵測器與錯誤文案）、email 3 處（GSAP 授權註解），兩棵樹相同。source map 沒有。比對是模式清單，**不能保證涵蓋所有可能的敏感內容**。
+
+**v21 文字（已接受）：** 「戰術書」20、`moba-sim.v21` 6、`career.v21` 4、`challenge.v21` 6、`balanceTool.v21` 3、`v21.b2` 9；main 都是 0。**內部 Gate 名 `G-A8` 沒有進 bundle。**
+
+**main 帶來的一件事：** `dist/artifacts/cs-final-integration/owner-review.html`（中文內部驗收頁）會公開發布。這不是這個分支造成的，也不是金鑰，但 Owner 可能想知道（TD-3aB-8）。
+
+**Golden 紅燈帳保留，沒有重錄。**
+
+### D. 紀錄
+
+- `3a-B_決策紀錄.md`：SDD 帳本被 git 忽略，重要決策記到這裡。
+- `3a-B_已知紅燈帳.md`、`3a-B_整合_CS33段.json`、`3a-B_整合_版本與Bundle.json`。
+- `docs/design/全賽季玩家閉環_MVP提案.md`（第 E 項）。
+
+### 放行前還沒做的（都是合併當下才能做）
+
+1. Owner 最終 Review。
+2. 重新 fetch，確認 main 沒有前進；有就重跑。
+3. B1 用看得見的 commit 重新登記。
+4. 排 Push 與正式站 smoke，Push main 會觸發部署。
+
+### 這輪之後仍然沒有驗證到
+
+手機真機、正式站 smoke、真 Supabase、整季連續遊玩、Training 瀏覽器流程。verify 有 47 段停在第一步看不到行為（TD-3aB-1）；這次 CS 的主要證據改靠模擬 worker 雜湊相同、`src/battle/fps` 零差異、正式流程與 55 場矩陣。

@@ -2910,3 +2910,9 @@ NEXT_SPRINT = NOT_STARTED
 - **下一個里程碑（建議）：全賽季玩家閉環。** MOBA v20、CS Major、Training、Competition Hub、休賽期連起來打完一整季，桌機與手機。順序：恢復 verify 訊號 → 整季連續遊玩 Gate → 手機真機 → 雲端真 E2E → 技術債收斂。
 - **方案 B（前瞻驗收）：** 只有規劃，`review/tactic-book-3a/3a-B_下一階段B_前瞻驗收規劃.md`。四個面向：玩家戰術差異、真實 v20 基準、模板相剋、公平性。排在里程碑之後或平行。
 - **Phase 3b：** 仍被 3a-B 擋住，不開始。
+
+## 2026-11-04 Owner 決定：下一個里程碑「全賽季玩家閉環」
+
+- **正式採用**，方案 B（MOBA 平衡重設）暫緩，Phase 3a-B 維持暫停，Phase 3b 不開始。
+- **MVP（範圍等 Owner 核准）：** `docs/design/全賽季玩家閉環_MVP提案.md`。招募、訓練、MOBA／CS 賽事、排名、賽季結算、休賽期、存檔續玩接成同一份存檔的一次遊玩。W0 盤點 → W1 Node 整季驅動 → W2 瀏覽器連續遊玩 → W3 只修阻斷 → W4 Owner 試玩。**不做大型重構。**
+- **起點：** Owner 放行整合、main 更新之後。整合驗證結果：`review/tactic-book-3a/3a-B_整合驗證報告.md` §11。

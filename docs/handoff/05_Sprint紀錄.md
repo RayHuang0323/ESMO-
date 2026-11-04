@@ -26864,3 +26864,17 @@ Owner人工驗收完成且明確授權正常main push／Pages／正式站Smoke�
 **未完成**：`browser_check_cs_major_formal_flow` 沒有跑成（`HARNESS_FAIL` 0/0：這棵樹沒有被 git 忽略的 `review/cs-major-upgrade/evidence`，還沒開瀏覽器就停）。33 段 CS verify 沒跑。批次外層與防休眠被記憶體保護停掉，依規定不重啟，等 Owner。
 
 **風險**：合併樹 `MOBA_SIMULATION_VERSION` 是 `moba-sim.v21`（讀取者都查過，行為安全，名字待 Owner 決定）；v21 程式與文字會進公開 bundle；verify 有 47 段停在過期的來源指紋或標記，走不到行為斷言。分支未動，紀錄只 commit 在整合分支。
+
+## 2026-11-04 Phase 3a-B 整合最後一輪（本機 integration/moba-3aB-flags-off-test；未 push／deploy，未合併 main，未改 CS，未重錄 Golden，旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_整合驗證報告.md` §11。Owner 四項決策：單跑 CS 正式流程；暫留內部常數 `moba-sim.v21`；接受 v21 程式留在公開 Bundle；下一個里程碑採用「全賽季玩家閉環」，方案 B 暫緩。決策進版控：`3a-B_決策紀錄.md`。
+
+**完成**：CS 正式流程查明 evidence 只是輸出根目錄，建空的被忽略資料夾後跑通。33 段 CS verify 補完並對照 main。新 Gate `check_release_markers_3aB`。`3a-B_已知紅燈帳.md`。`docs/design/全賽季玩家閉環_MVP提案.md`。
+
+**驗證**：`browser_check_cs_major_formal_flow` 1366 **63/63**、390 **63/63**。CS verify 33 段 **27 綠 6 紅，6 紅在 main 失敗行相同，main 綠合併後紅 0 段**；矩陣 55/55 全部新跑。`check_release_markers_3aB` 30/30、`check_flags_off_integration_3aB` 26/26、`browser_check_flags_off_release_3aB` 25/25。Build ✓（main 19.16s、合併 20.15s），重建與受測 dist 581 檔雜湊全同。主 bundle +175.7 KiB（+3.68%），gzip +50.3 KiB。敏感資訊沒有比 main 多。CS worker 雜湊與 main 相同。
+
+**未完成**：沒有合併 main，等 Owner 最終 Review。B1 重新登記、重新 fetch、Push 與正式站 smoke 都在合併當下做。手機真機、正式站、真 Supabase、整季連續遊玩都沒有驗。
+
+**風險**：main 帶來 81 段 verify 紅燈，47 段走不到行為斷言。CS 矩陣只證明對局跑完（`GAMEPLAY_ACCEPTANCE=NOT_ASSESSED`）。`owner-review.html` 公開發布（main 既有）。
+
+**教訓**：1）讀 Gate 的程式再放輸入，`cs_major_tactical_runtime` 的 fixture 是輸出，我預先放舊檔害它紅了一次。2）CS verify 段要環境變數與被忽略的輸入，只有 CS 工作區有，沒有紀錄就跑不起來；設定已寫進報告 §11。

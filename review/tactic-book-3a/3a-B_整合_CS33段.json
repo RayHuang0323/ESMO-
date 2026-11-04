@@ -1,0 +1,374 @@
+{
+ "schema": "integration-3aB-cs33.v1",
+ "mergedHead": "79cc4276",
+ "mainHead": "b4f8e0c3",
+ "note": "one segment at a time through tools/verify.mjs; reports and run folders stay outside the repo",
+ "inputs": {
+  "source": "D:/OneDrive/文件/GitHub/ESMO/worktrees/cs-fps-major-upgrade",
+  "sourceHead": "b4f8e0c367ef8678df23c125f97df41372e0c02e",
+  "files": [
+   {
+    "path": "review/cs-major-upgrade/evidence/owner4d-review-20261015/tactical-exact-memo.json",
+    "bytes": 1044699,
+    "sha256": "d015d7fef696a4b33dd8b118f5f291ed0f23137ff1d09a4545825d3dc30c6507",
+    "sourceMtime": "2026-10-15T11:54:07.772Z",
+    "tracked": false
+   },
+   {
+    "path": "review/cs-major-upgrade/evidence/authenticity-closure-20261012/final-v11-utility-review-20261013.md",
+    "bytes": 4431,
+    "sha256": "84c8d56e22f15e01c02c182cd69d1b47e1583561d76bc8d40186343f141ed5fc",
+    "sourceMtime": "2026-10-13T09:57:28.301Z",
+    "tracked": false
+   },
+   {
+    "path": "review/cs-major-upgrade/evidence/retention-policy-20261011/e-final-source-recovery.json.gz",
+    "bytes": 653711,
+    "sha256": "adf060de48c15a988fcf5e9626d1ce92120982d1513211ef25d387a3d2971fe9",
+    "sourceMtime": "2026-10-11T16:21:28.796Z",
+    "tracked": false
+   },
+   {
+    "path": "review/cs-major-upgrade/evidence/retention-policy-20261011/c-runtime-simulation-new-source.json.gz",
+    "bytes": 11997542,
+    "sha256": "da0ef29ed6877614dae19752dcd0329ae12b5980f7c06462a03cfb3a0178da2a",
+    "sourceMtime": "2026-10-11T14:57:41.781Z",
+    "tracked": false
+   },
+   {
+    "path": "tools/.cs-major-verifier-recovery/authenticity-before-20261012.coverage-plan.json",
+    "bytes": 19089,
+    "sha256": "f0913fdeeee3bfa3e7a8c435e394f5e8a95a35191d7296ecb949337e04f849ce",
+    "sourceMtime": "2026-10-11T17:01:59.515Z",
+    "tracked": false
+   },
+   {
+    "path": "tools/.cs-major-verifier-recovery/authenticity-ui-v7-20261012.coverage-plan.json",
+    "bytes": 42728,
+    "sha256": "dc2fa8e991fa69e7fc1968347d391576fdd025932077a38ad7dfcb231864ea78",
+    "sourceMtime": "2026-10-11T18:00:33.397Z",
+    "tracked": false
+   }
+  ]
+ },
+ "rows": [
+  {
+   "id": "cs_owner4f_side_audit",
+   "status": "PASS",
+   "ms": 387946,
+   "finishedAt": "2026-11-04T06:47:35.599Z",
+   "last": "SUMMARY {\"schema\":\"CsSideBiasAudit.v1\",\"verdict\":\"NO_T_SIDE_SYSTEMIC_BIAS\",\"pairs\":9,\"aggregate\":{\"bySide\":{\"t\":{\"rounds\":350,\"roundWins\":180,\"roundWinRate\":0.5"
+  },
+  {
+   "id": "cs_owner4e_closure",
+   "status": "FAIL",
+   "ms": 36665,
+   "finishedAt": "2026-11-04T06:31:20.396Z",
+   "last": "FAIL inferno all five roles have real survival-time duties and legal route samples rifler missing actual canonical duty"
+  },
+  {
+   "id": "cs_awareness_steering",
+   "status": "PASS",
+   "ms": 100,
+   "finishedAt": "2026-11-04T06:29:20.865Z",
+   "last": "RESULT=PASS"
+  },
+  {
+   "id": "cs_owner4_contact_runtime",
+   "status": "PASS",
+   "ms": 47772,
+   "finishedAt": "2026-11-04T06:32:08.323Z",
+   "last": "RESULT=PASS"
+  },
+  {
+   "id": "cs_owner4d_closure",
+   "status": "PASS",
+   "ms": 6607,
+   "finishedAt": "2026-11-04T06:29:27.580Z",
+   "last": "CS Owner4D Closure: 13/13 PASS"
+  },
+  {
+   "id": "cs_utility_purchase_named30",
+   "status": "PASS",
+   "ms": 487178,
+   "finishedAt": "2026-11-04T06:55:44.016Z",
+   "last": "CS Utility Purchase Plan Runtime: 30/30 PASS"
+  },
+  {
+   "id": "cs_utility_purchase_plan_runtime",
+   "status": "PASS",
+   "ms": 74509,
+   "finishedAt": "2026-11-04T06:33:34.806Z",
+   "last": "CS Utility Purchase Plan Runtime: 4/4 PASS"
+  },
+  {
+   "id": "cs_owner5_runtime",
+   "status": "PASS",
+   "ms": 11730,
+   "finishedAt": "2026-11-04T06:32:20.172Z",
+   "last": "CS Owner5 Runtime: 6/6 PASS"
+  },
+  {
+   "id": "cs_gameplay_legacy_exact_equivalence",
+   "status": "FAIL",
+   "ms": 17582,
+   "finishedAt": "2026-11-04T06:35:04.945Z",
+   "last": "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"
+  },
+  {
+   "id": "cs_gameplay_authenticity_diagnostic",
+   "status": "PASS",
+   "ms": 52622,
+   "finishedAt": "2026-11-04T06:56:37.776Z",
+   "last": "GAMEPLAY_ACCEPTANCE=NOT_ASSESSED; inspect actual per-round objective/utility audits, UNKNOWN and missing scenarios remain open"
+  },
+  {
+   "id": "cs_gameplay_authenticity_fixture_retry",
+   "status": "PASS",
+   "ms": 40176,
+   "finishedAt": "2026-11-04T06:57:19.006Z",
+   "last": "GAMEPLAY_ACCEPTANCE=NOT_ASSESSED; inspect actual per-round objective/utility audits, UNKNOWN and missing scenarios remain open"
+  },
+  {
+   "id": "cs_gameplay_authenticity_matrix",
+   "status": "PASS",
+   "ms": 891193,
+   "finishedAt": "2026-11-04T07:12:24.728Z",
+   "last": "GAMEPLAY_ACCEPTANCE=NOT_ASSESSED; inspect actual per-round objective/utility audits, UNKNOWN and missing scenarios remain open"
+  },
+  {
+   "id": "cs_visibility_bounds",
+   "status": "PASS",
+   "ms": 182,
+   "finishedAt": "2026-11-04T06:29:27.872Z",
+   "last": "CS visibility bounds: 8/8 PASS"
+  },
+  {
+   "id": "cs_major_navigation_cache",
+   "status": "FAIL",
+   "ms": 38463,
+   "finishedAt": "2026-11-04T06:34:13.413Z",
+   "last": "Node.js v24.18.0\r"
+  },
+  {
+   "id": "cs_major_room_fixtures",
+   "status": "PASS",
+   "ms": 9675,
+   "finishedAt": "2026-11-04T06:29:37.692Z",
+   "last": "CS Major Room Fixtures: 15/15 PASS"
+  },
+  {
+   "id": "cs_major_shader_warmup",
+   "status": "PASS",
+   "ms": 131,
+   "finishedAt": "2026-11-04T06:29:37.955Z",
+   "last": "CS Major Shader Warmup: 12/12 PASS"
+  },
+  {
+   "id": "cs_major_scene_v1",
+   "status": "FAIL",
+   "ms": 6375,
+   "finishedAt": "2026-11-04T06:29:44.451Z",
+   "last": "CS Major Scene v1: 118/120 PASS"
+  },
+  {
+   "id": "cs_major_camera_framing",
+   "status": "PASS",
+   "ms": 115,
+   "finishedAt": "2026-11-04T06:29:44.681Z",
+   "last": "CS Major camera framing: 16/16 PASS"
+  },
+  {
+   "id": "cs_camera_recovery",
+   "status": "PASS",
+   "ms": 110,
+   "finishedAt": "2026-11-04T06:29:44.900Z",
+   "last": "CS camera recovery: 21/21 checks passed"
+  },
+  {
+   "id": "cs_major_character_v1",
+   "status": "PASS",
+   "ms": 906,
+   "finishedAt": "2026-11-04T06:29:45.923Z",
+   "last": "CS Major Character v1: 87/87 PASS"
+  },
+  {
+   "id": "cs_major_weapon_sockets",
+   "status": "PASS",
+   "ms": 1354,
+   "finishedAt": "2026-11-04T06:29:47.396Z",
+   "last": "CS Major Weapon Sockets B1: 63/63 PASS"
+  },
+  {
+   "id": "cs_major_support_grip",
+   "status": "FAIL",
+   "ms": 15975,
+   "finishedAt": "2026-11-04T06:30:03.495Z",
+   "last": "CS Major Support Grip B7: 19/21 PASS"
+  },
+  {
+   "id": "cs_major_gunplay_sockets",
+   "status": "PASS",
+   "ms": 190,
+   "finishedAt": "2026-11-04T06:30:03.795Z",
+   "last": "CS Major Gunplay Sockets: 18/18 PASS"
+  },
+  {
+   "id": "cs_major_animation_lifecycle",
+   "status": "PASS",
+   "ms": 1916,
+   "finishedAt": "2026-11-04T06:30:05.825Z",
+   "last": "CS Major Animation Lifecycle B2: 19/19 PASS"
+  },
+  {
+   "id": "cs_major_weapon_pose_layers",
+   "status": "PASS",
+   "ms": 2348,
+   "finishedAt": "2026-11-04T06:30:08.291Z",
+   "last": "CS Major Weapon Pose Layers B4: 26/26 PASS"
+  },
+  {
+   "id": "cs_major_weapon_handling",
+   "status": "PASS",
+   "ms": 17730,
+   "finishedAt": "2026-11-04T06:30:26.122Z",
+   "last": "CS Major Weapon Handling B7: 21/21 PASS"
+  },
+  {
+   "id": "cs_major_pov_weapon",
+   "status": "PASS",
+   "ms": 1437,
+   "finishedAt": "2026-11-04T06:30:27.674Z",
+   "last": "CS Major POV Weapon B5: 41/41 PASS"
+  },
+  {
+   "id": "cs_major_tailored_clothing",
+   "status": "PASS",
+   "ms": 3218,
+   "finishedAt": "2026-11-04T06:30:30.988Z",
+   "last": "CS Major Tailored Clothing B6: 37/37 PASS"
+  },
+  {
+   "id": "cs_major_audio_pool",
+   "status": "PASS",
+   "ms": 79,
+   "finishedAt": "2026-11-04T06:30:31.179Z",
+   "last": "CS Major Audio Pool B3: 22/22 PASS"
+  },
+  {
+   "id": "cs_major_ambient_audio",
+   "status": "PASS",
+   "ms": 92,
+   "finishedAt": "2026-11-04T06:30:31.361Z",
+   "last": "CS Major Ambient Audio B7: 14/14 PASS"
+  },
+  {
+   "id": "cs_major_audio_playback",
+   "status": "PASS",
+   "ms": 73,
+   "finishedAt": "2026-11-04T06:30:31.523Z",
+   "last": "CS Major Audio Playback B3: 26/26 PASS"
+  },
+  {
+   "id": "cs_major_tactical_runtime",
+   "status": "PASS",
+   "ms": 82990,
+   "finishedAt": "2026-11-04T06:41:06.585Z",
+   "last": "CS Major Tactical Runtime C2-C4: 34/34 PASS"
+  },
+  {
+   "id": "cs_major_tactical_edge_runtime",
+   "status": "FAIL",
+   "ms": 27763,
+   "finishedAt": "2026-11-04T06:34:47.186Z",
+   "last": "FAIL 同回合至少兩位crossfire選手真到不同anchor: 情境未觸發：同回合兩人到點不足"
+  }
+ ],
+ "reds": [
+  {
+   "id": "cs_owner4e_closure",
+   "merged": "FAIL",
+   "main": "FAIL",
+   "wholeLogSame": true,
+   "failLinesSame": true,
+   "failLines": 4,
+   "onlyMerged": [],
+   "onlyMain": [],
+   "failSample": [
+    "FAIL mirage all five roles have real survival-time duties and legal route samples rifler missing actual canonical duty",
+    "FAIL instrumented canonical Mirage is exactly Owner4D simulation after removing only new observations Expected values to be strictly equal:",
+    "FAIL dust2 all five roles have real survival-time duties and legal route samples rifler missing actual canonical duty",
+    "FAIL inferno all five roles have real survival-time duties and legal route samples rifler missing actual canonical duty"
+   ]
+  },
+  {
+   "id": "cs_gameplay_legacy_exact_equivalence",
+   "merged": "FAIL",
+   "main": "FAIL",
+   "wholeLogSame": true,
+   "failLinesSame": true,
+   "failLines": 2,
+   "onlyMerged": [],
+   "onlyMain": [],
+   "failSample": [
+    "FAIL both complete canonical Legacy simulations with real plant scenario: AssertionError [ERR_ASSERTION]: plant metadata scenario NOT_TRIGGERED",
+    "FAIL full simulation JSON SHA exact equivalence: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+   ]
+  },
+  {
+   "id": "cs_major_navigation_cache",
+   "merged": "FAIL",
+   "main": "FAIL",
+   "wholeLogSame": true,
+   "failLinesSame": true,
+   "failLines": 1,
+   "onlyMerged": [],
+   "onlyMain": [],
+   "failSample": [
+    "RangeError: Invalid string length"
+   ]
+  },
+  {
+   "id": "cs_major_scene_v1",
+   "merged": "FAIL",
+   "main": "FAIL",
+   "wholeLogSame": true,
+   "failLinesSame": true,
+   "failLines": 2,
+   "onlyMerged": [],
+   "onlyMain": [],
+   "failSample": [
+    "FAIL dust2/desktop 幾何有限與有界預算 triangles=35258, batches=60",
+    "FAIL inferno/desktop 幾何有限與有界預算 triangles=37436, batches=73"
+   ]
+  },
+  {
+   "id": "cs_major_support_grip",
+   "merged": "FAIL",
+   "main": "FAIL",
+   "wholeLogSame": false,
+   "failLinesSame": true,
+   "failLines": 2,
+   "onlyMerged": [],
+   "onlyMain": [],
+   "failSample": [
+    "FAIL 受擊、權威換彈與死亡完整交还原動畫 AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+    "FAIL 跨角色私有姿態、無新增Mesh／geometry／材質，dispose還原 AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+   ]
+  },
+  {
+   "id": "cs_major_tactical_edge_runtime",
+   "merged": "FAIL",
+   "main": "FAIL",
+   "wholeLogSame": true,
+   "failLinesSame": true,
+   "failLines": 2,
+   "onlyMerged": [],
+   "onlyMain": [],
+   "failSample": [
+    "FAIL 至少兩人crossfire真合法導航且不同anchor: 情境未觸發：crossfireGroups=0",
+    "FAIL 同回合至少兩位crossfire選手真到不同anchor: 情境未觸發：同回合兩人到點不足"
+   ]
+  }
+ ]
+}
