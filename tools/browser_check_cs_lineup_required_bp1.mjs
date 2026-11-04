@@ -3,7 +3,8 @@
 //  tools/browser_check_cs_lineup_required_bp1.mjs — Season E2E BP-1：玩家實際走一次
 //
 //  執行：先 build，再 node tools/browser/run-gate.mjs tools/browser_check_cs_lineup_required_bp1.mjs --timeout 1500000
-//  打打包結果（vite preview），1366 與 390 各一次，每個寬度都是全新 profile 狀態：
+//  部署後：設 ESMO_PROD_URL=<正式站網址>，同一支打正式站，不起本機 preview。
+//  打打包結果（vite preview 或正式站），1366 與 390 各一次，隔離 profile，每個寬度都先清空這個 profile 的存檔：
 //    N  開新局 → 賽事中心 CS 分頁 → 開始 CS 賽季 → 真 UI 走到 CS 比賽日
 //    P  比賽日：沒有出戰按鈕、沒有內部錯誤，有看得懂的提示與賽前頁入口；**存檔裡先發仍是 0 人**
 //    Q  進賽前頁：先發仍是 0 人（不得偷偷填）；返回會回到賽事中心 CS 分頁，提示還在
@@ -19,15 +20,16 @@ import { createServer } from "node:net";
 import { runGate, finishGate, killProcessTree } from "./browser/harness.mjs";
 import { clickFpsDNative } from "./browser/fpsReplayUiProbe.mjs";
 
-if (!existsSync("dist/index.html")) { console.error("找不到 dist/index.html，要先 build"); process.exit(2); }
+const PROD = process.env.ESMO_PROD_URL ?? null;
+if (!PROD && !existsSync("dist/index.html")) { console.error("找不到 dist/index.html，要先 build"); process.exit(2); }
 const freePort = () => new Promise((res, rej) => { const s = createServer(); s.once("error", rej); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => res(port)); }); });
-const port = await freePort();
-const preview = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], { stdio: "ignore" });
-const url = `http://127.0.0.1:${port}/ESMO-/`;
+const port = PROD ? 0 : await freePort();
+const preview = PROD ? null : spawn(process.execPath, ["node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], { stdio: "ignore" });
+const url = PROD ?? `http://127.0.0.1:${port}/ESMO-/`;
 const t0 = Date.now();
 let up = false;
 while (Date.now() - t0 < 60000 && !up) { try { up = (await fetch(url)).ok; } catch { /* not yet */ } if (!up) await new Promise((r) => setTimeout(r, 500)); }
-if (!up) { killProcessTree?.(preview.pid); console.error("vite preview 沒有起來"); process.exit(2); }
+if (!up) { if (preview) killProcessTree?.(preview.pid); console.error("目標網址沒有起來"); process.exit(2); }
 
 const J = (raw) => { const s = String(raw); for (const t of [s, s.replace(/^"|"$/g, "")]) { try { return JSON.parse(t); } catch { /* next */ } } return null; };
 const tid = (id) => "[data-testid=\"" + id + "\"]";
@@ -176,6 +178,5 @@ const result = await runGate({
     ck("E2 console error 0", errs.length === 0, errs.slice(0, 4).join(" ¦ ").slice(0, 500));
   },
 });
-killProcessTree?.(preview.pid);
-try { preview.kill(); } catch { /* best effort */ }
+if (preview) { killProcessTree?.(preview.pid); try { preview.kill(); } catch { /* best effort */ } }
 await finishGate(result);
