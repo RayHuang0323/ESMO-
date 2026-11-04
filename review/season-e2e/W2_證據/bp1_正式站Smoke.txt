@@ -1,0 +1,7 @@
+=== deploy run: 41872630615 completed success
+=== entry on site: assets/index-D__R6aI1.js
+=== prod_bp1 exit=0 114s reds=0 | CS 先發不足提示 BP-1：78/78　RESULT=PASS　耗時 112794ms
+=== prod_release exit=0 191s reds=0 | Prod release 3a-B（verify）：90/90　RESULT=PASS　耗時 191156ms
+=== cs_prod_1366 exit=0 52s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+=== cs_prod_390 exit=0 52s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+ALLDONE

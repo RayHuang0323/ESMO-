@@ -1,0 +1,16 @@
+=== build exit=0 22s reds=0 | ✓ built in 20.64s
+=== node_bp1 exit=0 1s reds=0 | CS Lineup Required BP-1：26/26 PASS
+=== cs_season_contract exit=0 1s reds=0 | PASS mutation sentinel catches a single-game regression of the Competition contract — memory-only 
+=== cs_competition_hub exit=0 0s reds=0 | CS Season M4-C competition hub: 31/31 PASS
+=== cs_season_m2 exit=0 1s reds=0 | CS Season M2 player fixture: 55/55 PASS
+=== competition_shared_ui exit=0 0s reds=0 | Competition shared UI: 28/28 PASS
+=== save_bundle exit=0 2s reds=0 | Backend B1B：86/86 PASS
+=== save_hardening exit=0 1s reds=0 | Backend B1C：76/76 PASS
+=== match_setup exit=0 242s reds=0 | Match Setup 3a：153/153 PASS
+=== markers exit=0 2s reds=0 | 30/30 通過
+=== browser_bp1 exit=0 117s reds=0 | CS 先發不足提示 BP-1：78/78　RESULT=PASS　耗時 115598ms
+=== browser_hub_shell exit=0 55s reds=0 | 27/27 通過
+=== browser_flags_off exit=0 119s reds=0 | Flags-off release 3a-B（打包結果的玩家流程）：25/25　RESULT=PASS　耗時 117137ms
+=== cs_formal_1366 exit=0 48s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+=== cs_formal_390 exit=0 49s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+ALLDONE

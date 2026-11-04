@@ -1,0 +1,543 @@
+{
+ "case": "quota",
+ "url": "http://127.0.0.1:58133/ESMO-/",
+ "nonUi": [
+  {
+   "file": "024-every10-f110.json",
+   "day": 254,
+   "why": "第 254 天。前面 110 個賽程是 W1 Node 真模擬，不是 UI。之後每一場都是真 UI"
+  }
+ ],
+ "steps": [
+  {
+   "name": "起點",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 14367,
+     "esmo.profile.v1": 3554626,
+     "esmo.season.v1": 1631187
+    },
+    "total": 5200229,
+    "day": 254,
+    "funds": 17099025,
+    "fans": 214150,
+    "tx": 110,
+    "csHistory": 30,
+    "awards": 14,
+    "settlements": 110,
+    "moba": {
+     "season": 3,
+     "final": false,
+     "total": 140,
+     "open": 116,
+     "mineOpen": 29,
+     "launched": [],
+     "outcomes": 24
+    },
+    "cs": {
+     "season": 3,
+     "final": false,
+     "total": 56,
+     "open": 40,
+     "mineOpen": 10,
+     "launched": [],
+     "outcomes": 16
+    },
+    "seasonHist": 50,
+    "heroSig": 14367,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 2,
+    "histCs": 2,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   }
+  },
+  {
+   "name": "第 1 場 moba",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 14510,
+     "esmo.season.v1": 1620080,
+     "esmo.profile.v1": 3596859,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5231527,
+    "day": 256,
+    "funds": 17099025,
+    "fans": 214150,
+    "tx": 110,
+    "csHistory": 30,
+    "awards": 14,
+    "settlements": 110,
+    "moba": {
+     "season": 3,
+     "final": false,
+     "total": 140,
+     "open": 113,
+     "mineOpen": 29,
+     "launched": [
+      "fx:moba:4b85766c"
+     ],
+     "outcomes": 27
+    },
+    "cs": {
+     "season": 3,
+     "final": false,
+     "total": 56,
+     "open": 40,
+     "mineOpen": 10,
+     "launched": [],
+     "outcomes": 16
+    },
+    "seasonHist": 50,
+    "heroSig": 14510,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 2,
+    "histCs": 2,
+    "corrupt": []
+   },
+   "notice": {
+    "on": true,
+    "message": "進度沒有存起來",
+    "retry": true
+   },
+   "ok": true,
+   "why": null,
+   "err": null,
+   "moved": false,
+   "room": 10172
+  },
+  {
+   "name": "重新整理之後",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 14510,
+     "esmo.season.v1": 1620080,
+     "esmo.profile.v1": 3596859,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5231527,
+    "day": 256,
+    "funds": 17099025,
+    "fans": 214150,
+    "tx": 110,
+    "csHistory": 30,
+    "awards": 14,
+    "settlements": 110,
+    "moba": {
+     "season": 3,
+     "final": false,
+     "total": 140,
+     "open": 113,
+     "mineOpen": 29,
+     "launched": [
+      "fx:moba:4b85766c"
+     ],
+     "outcomes": 27
+    },
+    "cs": {
+     "season": 3,
+     "final": false,
+     "total": 56,
+     "open": 40,
+     "mineOpen": 10,
+     "launched": [],
+     "outcomes": 16
+    },
+    "seasonHist": 50,
+    "heroSig": 14510,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 2,
+    "histCs": 2,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   }
+  },
+  {
+   "name": "重新整理後再打一次",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 14510,
+     "esmo.season.v1": 1620080,
+     "esmo.profile.v1": 3596859,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5231527,
+    "day": 256,
+    "funds": 17099025,
+    "fans": 214150,
+    "tx": 110,
+    "csHistory": 30,
+    "awards": 14,
+    "settlements": 110,
+    "moba": {
+     "season": 3,
+     "final": false,
+     "total": 140,
+     "open": 113,
+     "mineOpen": 29,
+     "launched": [
+      "fx:moba:4b85766c"
+     ],
+     "outcomes": 27
+    },
+    "cs": {
+     "season": 3,
+     "final": false,
+     "total": 56,
+     "open": 40,
+     "mineOpen": 10,
+     "launched": [],
+     "outcomes": 16
+    },
+    "seasonHist": 50,
+    "heroSig": 14510,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 2,
+    "histCs": 2,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "mode": null
+  }
+ ],
+ "findings": [],
+ "played": 1,
+ "failure": {
+  "at": "第 1 場 moba",
+  "mode": "moba",
+  "before": {
+   "sizes": {
+    "esmo.heroProgress.v2": 14367,
+    "esmo.profile.v1": 3555859,
+    "esmo.season.v1": 1631187
+   },
+   "total": 5201462,
+   "day": 256,
+   "funds": 17099025,
+   "fans": 214150,
+   "tx": 110,
+   "csHistory": 30,
+   "awards": 14,
+   "settlements": 110,
+   "moba": {
+    "season": 3,
+    "final": false,
+    "total": 140,
+    "open": 113,
+    "mineOpen": 29,
+    "launched": [],
+    "outcomes": 27
+   },
+   "cs": {
+    "season": 3,
+    "final": false,
+    "total": 56,
+    "open": 40,
+    "mineOpen": 10,
+    "launched": [],
+    "outcomes": 16
+   },
+   "seasonHist": 50,
+   "heroSig": 14367,
+   "offSeasonOpen": false,
+   "players": 5,
+   "histMoba": 2,
+   "histCs": 2,
+   "corrupt": []
+  },
+  "after": {
+   "sizes": {
+    "esmo.heroProgress.v2": 14510,
+    "esmo.season.v1": 1620080,
+    "esmo.profile.v1": 3596859,
+    "esmo.ui.itemsChipHintSeen.v1": 1
+   },
+   "total": 5231527,
+   "day": 256,
+   "funds": 17099025,
+   "fans": 214150,
+   "tx": 110,
+   "csHistory": 30,
+   "awards": 14,
+   "settlements": 110,
+   "moba": {
+    "season": 3,
+    "final": false,
+    "total": 140,
+    "open": 113,
+    "mineOpen": 29,
+    "launched": [
+     "fx:moba:4b85766c"
+    ],
+    "outcomes": 27
+   },
+   "cs": {
+    "season": 3,
+    "final": false,
+    "total": 56,
+    "open": 40,
+    "mineOpen": 10,
+    "launched": [],
+    "outcomes": 16
+   },
+   "seasonHist": 50,
+   "heroSig": 14510,
+   "offSeasonOpen": false,
+   "players": 5,
+   "histMoba": 2,
+   "histCs": 2,
+   "corrupt": []
+  },
+  "notice": {
+   "on": true,
+   "message": "進度沒有存起來",
+   "retry": true
+  },
+  "r": {
+   "mode": "moba",
+   "ok": true,
+   "resultSave": [
+    "進度沒有存起來",
+    "剛才的進度可能沒有保存。"
+   ]
+  }
+ },
+ "q": {
+  "errorsAtFailure": {
+   "page": [],
+   "console": []
+  },
+  "retryAvailable": true,
+  "afterRetry": {
+   "notice": {
+    "on": true,
+    "message": "進度沒有存起來",
+    "retry": true
+   },
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 14510,
+     "esmo.season.v1": 1620080,
+     "esmo.profile.v1": 3596859,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5231527,
+    "day": 256,
+    "funds": 17099025,
+    "fans": 214150,
+    "tx": 110,
+    "csHistory": 30,
+    "awards": 14,
+    "settlements": 110,
+    "moba": {
+     "season": 3,
+     "final": false,
+     "total": 140,
+     "open": 113,
+     "mineOpen": 29,
+     "launched": [
+      "fx:moba:4b85766c"
+     ],
+     "outcomes": 27
+    },
+    "cs": {
+     "season": 3,
+     "final": false,
+     "total": 56,
+     "open": 40,
+     "mineOpen": 10,
+     "launched": [],
+     "outcomes": 16
+    },
+    "seasonHist": 50,
+    "heroSig": 14510,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 2,
+    "histCs": 2,
+    "corrupt": []
+   }
+  },
+  "screenWhenFailed": [
+   "進度沒有存起來",
+   "剛才的進度可能沒有保存。",
+   "推塔進度"
+  ],
+  "afterReload": {
+   "sizes": {
+    "esmo.heroProgress.v2": 14510,
+    "esmo.season.v1": 1620080,
+    "esmo.profile.v1": 3596859,
+    "esmo.ui.itemsChipHintSeen.v1": 1
+   },
+   "total": 5231527,
+   "day": 256,
+   "funds": 17099025,
+   "fans": 214150,
+   "tx": 110,
+   "csHistory": 30,
+   "awards": 14,
+   "settlements": 110,
+   "moba": {
+    "season": 3,
+    "final": false,
+    "total": 140,
+    "open": 113,
+    "mineOpen": 29,
+    "launched": [
+     "fx:moba:4b85766c"
+    ],
+    "outcomes": 27
+   },
+   "cs": {
+    "season": 3,
+    "final": false,
+    "total": 56,
+    "open": 40,
+    "mineOpen": 10,
+    "launched": [],
+    "outcomes": 16
+   },
+   "seasonHist": 50,
+   "heroSig": 14510,
+   "offSeasonOpen": false,
+   "players": 5,
+   "histMoba": 2,
+   "histCs": 2,
+   "corrupt": []
+  },
+  "noticeAfterReload": {
+   "on": false,
+   "message": null,
+   "retry": false
+  },
+  "corrupt": [],
+  "partialWrite": {
+   "profileChanged": true,
+   "seasonChanged": true,
+   "heroChanged": true,
+   "txBefore": 110,
+   "txAfter": 110,
+   "fundsBefore": 17099025,
+   "fundsAfter": 17099025
+  },
+  "replay": {
+   "mode": null,
+   "why": null,
+   "err": null,
+   "advanced": true,
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 14510,
+     "esmo.season.v1": 1620080,
+     "esmo.profile.v1": 3596859,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5231527,
+    "day": 256,
+    "funds": 17099025,
+    "fans": 214150,
+    "tx": 110,
+    "csHistory": 30,
+    "awards": 14,
+    "settlements": 110,
+    "moba": {
+     "season": 3,
+     "final": false,
+     "total": 140,
+     "open": 113,
+     "mineOpen": 29,
+     "launched": [
+      "fx:moba:4b85766c"
+     ],
+     "outcomes": 27
+    },
+    "cs": {
+     "season": 3,
+     "final": false,
+     "total": 56,
+     "open": 40,
+     "mineOpen": 10,
+     "launched": [],
+     "outcomes": 16
+    },
+    "seasonHist": 50,
+    "heroSig": 14510,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 2,
+    "histCs": 2,
+    "corrupt": []
+   }
+  },
+  "afterSecondReload": {
+   "sizes": {
+    "esmo.heroProgress.v2": 14510,
+    "esmo.season.v1": 1620080,
+    "esmo.profile.v1": 3596859,
+    "esmo.ui.itemsChipHintSeen.v1": 1
+   },
+   "total": 5231527,
+   "day": 256,
+   "funds": 17099025,
+   "fans": 214150,
+   "tx": 110,
+   "csHistory": 30,
+   "awards": 14,
+   "settlements": 110,
+   "moba": {
+    "season": 3,
+    "final": false,
+    "total": 140,
+    "open": 113,
+    "mineOpen": 29,
+    "launched": [
+     "fx:moba:4b85766c"
+    ],
+    "outcomes": 27
+   },
+   "cs": {
+    "season": 3,
+    "final": false,
+    "total": 56,
+    "open": 40,
+    "mineOpen": 10,
+    "launched": [],
+    "outcomes": 16
+   },
+   "seasonHist": 50,
+   "heroSig": 14510,
+   "offSeasonOpen": false,
+   "players": 5,
+   "histMoba": 2,
+   "histCs": 2,
+   "corrupt": []
+  }
+ },
+ "errors": {
+  "page": [],
+  "console": []
+ }
+}
