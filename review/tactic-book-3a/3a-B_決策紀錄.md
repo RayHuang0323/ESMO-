@@ -13,9 +13,9 @@
 | 2 | v21 發布暫停，`mobaTacticalDirectorV21`、`mobaChallengeV21` 維持關閉，正式站維持 v20 | 不得開旗標 |
 | 3 | 暫時保留內部常數 `moba-sim.v21`；正式 v20 對局、存檔、Replay 必須維持 v20；版本差異記為技術債（TD-3aB-3） | 不改常數，不重測真實性表；由 `check_release_markers_3aB` 釘住 |
 | 4 | 接受 v21 程式留在公開 Bundle，旗標關閉；要檢查敏感資訊與大小 | 不做建置時排除 |
-| 5 | 下一個產品里程碑：**全賽季玩家閉環** | `docs/design/全賽季玩家閉環_MVP提案.md` |
+| 5 | 下一階段：**Season End-to-End Audit v1（W0–W4）**。同一份生涯能玩 MOBA 與 CS，各自完成賽季進入下一季，**不強迫同步結算**；先 W0，不未經確認開發賽季功能；跨 CS 模擬或共用引擎的重大修正先回報 | `review/season-e2e/W0_現況盤點.md`、`docs/design/全賽季玩家閉環_MVP提案.md` |
 | 6 | 方案 B（MOBA 平衡重設）暫緩，只有規劃 | `3a-B_下一階段B_前瞻驗收規劃.md`；不跑量測 |
-| 7 | 整合只在獨立 worktree，**未核准合併 main**；不 Rebase、不 Squash、不 Force Push | `3a-B_整合驗證報告.md` |
+| 7 | ~~整合只在獨立 worktree~~ **11-04 最終 Review 核准合併與部署**；不 Rebase、不 Squash、不 Force Push；正式站出問題不部署舊版回滾（會破壞 `tacticBook`），先停止回報 | `3a-B_整合驗證報告.md` §12 |
 | 8 | Golden 紅燈不重錄、不放寬、不宣稱 PASS，逐案登記 | 報告 §4、§6 |
 | 9 | CS 線只驗證與記錄，不在 MOBA 分支修 | TD-3aB-1、TD-3aB-2、TD-3aB-7 |
 
@@ -37,6 +37,7 @@
 | 11-03 | 第三次 G-A8 | STOP：`classic.m5` 62.75%；獨立重算 0 差異 | `9ff121ed`、`e11f0e4f` |
 | 11-04 | **接受 STOP，方案 A 只限獨立 worktree 測試性整合** | 合併 `29cdf9dc`，紀錄 `79cc4276`，沒有新回歸 | `3a-B_整合驗證報告.md` |
 | 11-04 | **接受整合成果，核准最後一輪；上面決策 3、4、5、6** | 見報告 §11 | `3a-B_整合驗證報告.md` |
+| 11-04 | **最終 Review：核准合併 main 與有條件部署；B1 用獨立 commit，交 Reviewer** | 發布 `bd063ac7`，Deploy Run `41809170806` 成功，正式站 Smoke 全綠 | 報告 §12 |
 
 ## 只在帳本裡、這裡補上的工程細節
 
@@ -52,4 +53,4 @@
 
 - 「PASS」的 CS 矩陣只代表對局跑完。該 Gate 固定輸出 `GAMEPLAY_ACCEPTANCE=NOT_ASSESSED`。
 - 方案 B 的門檻都是提案，沒有核准。
-- 全賽季閉環的範圍是提案，等 Owner 核准。
+- W1–W4 依 W0 結果推進，W3 的修正要 Owner 確認。

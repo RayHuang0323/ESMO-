@@ -1,0 +1,201 @@
+{
+ "url": "https://rayhuang0323.github.io/ESMO-/",
+ "widths": {
+  "390": {
+   "q1": {
+    "fresh": {
+     "day": null,
+     "moba": false,
+     "cs": false,
+     "csSeats": 0,
+     "funds": null
+    },
+    "nextStopText": "下一站：第 85 天進入第 2 生涯年度（還有 77 天）",
+    "advanceButton": true,
+    "afterFirstAdvance": {
+     "day": 36,
+     "moba": false,
+     "cs": false,
+     "csSeats": 0,
+     "funds": 892000
+    }
+   },
+   "q2": {
+    "afterOpeningHub": {
+     "day": 36,
+     "moba": true,
+     "cs": false,
+     "csSeats": 0,
+     "funds": 892000
+    },
+    "noSeasonText": "還沒有 CS 賽季。開季會排定一整季的官方聯賽賽程，之後每到比賽日就能出戰。 ｜ 開始 CS 賽季",
+    "openButton": "開始 CS 賽季",
+    "afterOpenCs": {
+     "day": 36,
+     "moba": true,
+     "cs": true,
+     "csSeats": 0,
+     "funds": 892000
+    },
+    "nextStopWithBoth": "下一站：第 41 天有你的比賽（還有 5 天）",
+    "advanceSteps": [
+     "36→41",
+     "41→41"
+    ],
+    "blockedAt": {
+     "day": 41,
+     "moba": true,
+     "cs": true,
+     "csSeats": 0,
+     "funds": 892000
+    },
+    "nextStopWhenBlocked": "下一站：今天有你的比賽（就是今天）"
+   },
+   "q3": {
+    "mobaButtons": [
+     "←",
+     "進行中 今天 第 1 賽季 常規賽 常規賽 0/14 第",
+     "未開始 亞洲巡迴賽 春季站 常規賽 0/7 第 7 名 ",
+     "未開始 亞洲巡迴賽 夏季站 常規賽 0/7 第 7 名 ",
+     "未開始 亞洲巡迴賽 秋季總站 常規賽 0/7 第 7 名",
+     "⚔️ 出賽",
+     "棄權"
+    ],
+    "csButtons": [
+     "←",
+     "出戰今日聯賽賽程"
+    ],
+    "csToday": "今日有你的聯賽賽程",
+    "csPlayButton": true,
+    "csPlayError": "申請單不是物件",
+    "stillOnHub": true,
+    "afterPlay": {
+     "day": 41,
+     "moba": true,
+     "cs": true,
+     "csSeats": 0,
+     "funds": 892000
+    }
+   },
+   "q4": {
+    "mobaForfeitClicked": true,
+    "afterMobaForfeit": {
+     "before": 41,
+     "after": 41,
+     "nextStop": "下一站：今天有你的比賽（就是今天）"
+    },
+    "prepOpened": "← 🎯 CS 賽前準備 攻防戰術模擬 · 訓練賽 ⚔️ 一般對戰 今日 0/3 場 累積成長與收益，不計入正式賽季 1. 確認出賽陣容 2. 尋找對手 3. 雙方確認 4. 進入 Ban/Pick ⚙️ 出戰 📜 歷史 出戰陣容（5 人） 隊伍戰力 0 自由搭配五人，職業不需各一人。主要／次要定位適性供戰術配置參考",
+    "autoFillButton": "⚡ 自動填入（一隊優先・定位相符・排除不可出賽）",
+    "afterAutoFill": {
+     "day": 41,
+     "moba": true,
+     "cs": true,
+     "csSeats": 5,
+     "funds": 892000
+    },
+    "retryError": null,
+    "retryLeftHub": true,
+    "retryScreen": "← 🎯 CS 賽前準備 攻防戰術模擬 · 訓練賽 🏆 生涯季賽 計入排名、巡迴積分與冠軍 1. 確認出賽陣容 2. 尋找對手 3. 雙方確認 4. 進入 Ban/Pick ⚙️ 出戰 📜 歷史 出戰陣容（5 人） 隊伍戰力 82 自由搭配五人，職業不需各一人。主要／次要定位適性供戰術配置參考。 正式賽事 Map "
+   },
+   "pageErrorsSoFar": 0
+  },
+  "1366": {
+   "q1": {
+    "fresh": {
+     "day": null,
+     "moba": false,
+     "cs": false,
+     "csSeats": 0,
+     "funds": null
+    },
+    "nextStopText": "下一站：第 85 天進入第 2 生涯年度（還有 77 天）",
+    "advanceButton": true,
+    "afterFirstAdvance": {
+     "day": 36,
+     "moba": false,
+     "cs": false,
+     "csSeats": 0,
+     "funds": 892000
+    }
+   },
+   "q2": {
+    "afterOpeningHub": {
+     "day": 36,
+     "moba": true,
+     "cs": false,
+     "csSeats": 0,
+     "funds": 892000
+    },
+    "noSeasonText": "還沒有 CS 賽季。開季會排定一整季的官方聯賽賽程，之後每到比賽日就能出戰。 ｜ 開始 CS 賽季",
+    "openButton": "開始 CS 賽季",
+    "afterOpenCs": {
+     "day": 36,
+     "moba": true,
+     "cs": true,
+     "csSeats": 0,
+     "funds": 892000
+    },
+    "nextStopWithBoth": "下一站：第 41 天有你的比賽（還有 5 天）",
+    "advanceSteps": [
+     "36→41",
+     "41→41"
+    ],
+    "blockedAt": {
+     "day": 41,
+     "moba": true,
+     "cs": true,
+     "csSeats": 0,
+     "funds": 892000
+    },
+    "nextStopWhenBlocked": "下一站：今天有你的比賽（就是今天）"
+   },
+   "q3": {
+    "mobaButtons": [
+     "←",
+     "進行中 今天 第 1 賽季 常規賽 常規賽 0/14 第",
+     "未開始 亞洲巡迴賽 春季站 常規賽 0/7 第 7 名 ",
+     "未開始 亞洲巡迴賽 夏季站 常規賽 0/7 第 7 名 ",
+     "未開始 亞洲巡迴賽 秋季總站 常規賽 0/7 第 7 名",
+     "⚔️ 出賽",
+     "棄權"
+    ],
+    "csButtons": [
+     "←",
+     "出戰今日聯賽賽程"
+    ],
+    "csToday": "今日有你的聯賽賽程",
+    "csPlayButton": true,
+    "csPlayError": "申請單不是物件",
+    "stillOnHub": true,
+    "afterPlay": {
+     "day": 41,
+     "moba": true,
+     "cs": true,
+     "csSeats": 0,
+     "funds": 892000
+    }
+   },
+   "q4": {
+    "mobaForfeitClicked": true,
+    "afterMobaForfeit": {
+     "before": 41,
+     "after": 41,
+     "nextStop": "下一站：今天有你的比賽（就是今天）"
+    },
+    "prepOpened": "← 🎯 CS 賽前準備 攻防戰術模擬 · 訓練賽 ⚔️ 一般對戰 今日 0/3 場 累積成長與收益，不計入正式賽季 1. 確認出賽陣容 2. 尋找對手 3. 雙方確認 4. 進入 Ban/Pick ⚙️ 出戰 📜 歷史 出戰陣容（5 人） 隊伍戰力 0 自由搭配五人，職業不需各一人。主要／次要定位適性供戰術配置參考",
+    "autoFillButton": "⚡ 自動填入（一隊優先・定位相符・排除不可出賽）",
+    "afterAutoFill": {
+     "day": 41,
+     "moba": true,
+     "cs": true,
+     "csSeats": 5,
+     "funds": 892000
+    },
+    "retryError": null,
+    "retryLeftHub": true,
+    "retryScreen": "← 🎯 CS 賽前準備 攻防戰術模擬 · 訓練賽 🏆 生涯季賽 計入排名、巡迴積分與冠軍 1. 確認出賽陣容 2. 尋找對手 3. 雙方確認 4. 進入 Ban/Pick ⚙️ 出戰 📜 歷史 出戰陣容（5 人） 隊伍戰力 82 自由搭配五人，職業不需各一人。主要／次要定位適性供戰術配置參考。 正式賽事 Map "
+   },
+   "pageErrorsSoFar": 0
+  }
+ }
+}

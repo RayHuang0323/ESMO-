@@ -2916,3 +2916,14 @@ NEXT_SPRINT = NOT_STARTED
 - **正式採用**，方案 B（MOBA 平衡重設）暫緩，Phase 3a-B 維持暫停，Phase 3b 不開始。
 - **MVP（範圍等 Owner 核准）：** `docs/design/全賽季玩家閉環_MVP提案.md`。招募、訓練、MOBA／CS 賽事、排名、賽季結算、休賽期、存檔續玩接成同一份存檔的一次遊玩。W0 盤點 → W1 Node 整季驅動 → W2 瀏覽器連續遊玩 → W3 只修阻斷 → W4 Owner 試玩。**不做大型重構。**
 - **起點：** Owner 放行整合、main 更新之後。整合驗證結果：`review/tactic-book-3a/3a-B_整合驗證報告.md` §11。
+
+## 2026-11-04 Phase 3a-B 旗標關閉已發布；下一階段 Season End-to-End Audit v1
+
+- **已發布：** main `bd063ac7`，Deploy Run 41809170806。玩家仍是 v20；v21 程式在 Bundle 裡，旗標關閉。
+- **暫停：** MOBA v21、方案 B、第七輪平衡研究、Phase 3b。
+- **Season End-to-End Audit v1：** 同一份生涯能玩 MOBA 與 CS，各自完成賽季進入下一季，不強迫同步。
+  - **W0 盤點：已完成**，`review/season-e2e/W0_現況盤點.md`，等 Owner。
+  - W1 Node 真模擬整季（要跑到第 253 天以上才會遇到休賽期）。
+  - W2 瀏覽器連續遊玩關鍵節點，桌機與 390，標示非 UI 區段。
+  - W3 只修阻斷，不重構、不新增賽事。
+  - W4 Owner 一季試玩清單與手機真機檢查項目。

@@ -1,0 +1,79 @@
+HEAD 57df97a9 status=1
+=== build exit=0 32s reds=0 | [32m✓ built in 30.56s[39m
+=== final rebuild vs tested dist: files 581 different 0 
+=== check_match_setup_3a exit=0 218s reds=0 | Match Setup 3a：153/153 PASS
+=== check_live_setup_3a exit=0 98s reds=0 | Live Setup 3a：119/119 PASS
+=== check_match_assembler_3a exit=0 148s reds=0 | Match Assembler 3a：227/227 PASS
+=== check_match_setup_contract_3a exit=0 0s reds=0 | Match Setup 契約 3a：85/85 PASS
+=== check_match_ruleset_3a exit=0 1s reds=0 | Match Ruleset 3a：51/51 PASS
+=== check_tactical_director_3c exit=0 2s reds=0 | Tactical Director 3c：97/97 PASS
+=== check_tactical_directive_3c exit=0 0s reds=0 | Tactical Directive 3c：61/61 PASS
+=== check_simulation_version_gate exit=0 2s reds=0 | simulationVersion Gate：83/83 PASS
+=== check_stage1_split_3aB exit=0 169s reds=0 | Stage-1 Split 3a-B：75/75 PASS
+=== check_stage1_rollback_drill_3aB exit=0 27s reds=0 | Stage-1 Rollback Drill 3a-B：15/15 PASS
+=== check_formal_acceptance_3aB exit=0 64s reds=0 | Formal Acceptance 3a-B：61/61 PASS
+=== check_match_golden_v21a exit=1 282s reds=40 | Match Golden v21-A：97/137 FAIL
+=== check_career_golden_v21 exit=1 64s reds=2 | Career Golden v21：3/5 FAIL
+=== check_challenge_golden_v21 exit=1 33s reds=1 | Challenge Golden v21：5/6 FAIL
+=== check_tactic_truth_3a exit=1 16s reds=1 | Tactic Truth 3a：36/37 FAIL
+=== check_club_mastery_v1 exit=1 1s reds=0 | Club Mastery v1：264/265 FAIL
+=== check_battle_result_v3_replay exit=0 2s reds=0 | BattleResult v3 / Replay targeted PASS: BattleResult.v3 + v2 legacy read + resultSummary schema
+=== check_replay_display_text exit=0 0s reds=0 | REPLAY_DISPLAY_TEXT: 22 PASS / 0 FAIL
+=== check_replay_team_buff_scrub exit=0 81s reds=0 | Replay team-buff scrub：3/3　RESULT=PASS　耗時 80s
+=== check_training_competition_integration exit=0 0s reds=0 | 🟢 Training × Competition integration：13/13 通過
+=== check_competition_release_gate exit=0 440s reds=0 | failed 0/11
+=== check_competition_shared_ui exit=0 0s reds=0 | Competition shared UI: 28/28 PASS
+=== check_competition_visual_shell exit=0 1s reds=0 | Competition visual shell: 22/22 PASS
+=== check_cs_competition_hub exit=0 1s reds=0 | CS Season M4-C competition hub: 31/31 PASS
+=== check_r63_competition_integration exit=0 1s reds=0 | R63 × Competition combined gate: 19/19 passed
+=== check_cs_season_lifecycle exit=0 1s reds=0 | CS Season M1 lifecycle: 54/54 PASS
+=== check_cs_season_m2 exit=0 0s reds=0 | CS Season M2 player fixture: 55/55 PASS
+=== check_save_bundle_b1b exit=0 0s reds=0 | CLOUD_BUNDLE_SIZE    = 19870
+=== check_save_hardening_b1c exit=0 0s reds=0 | Backend B1C：76/76 PASS
+=== check_cloud_save_b1d exit=0 0s reds=0 |     **不是** Supabase，也不冒充遠端 E2E。
+=== check_recruit_o exit=0 0s reds=0 | 41/41 通過
+=== check_world_time_v1 exit=0 1s reds=0 |    ⚠ 一般競技比賽的時間成本已由 V2 定案：不加天，改由每日容量承擔（見 check_ti
+=== check_time_block_v2 exit=0 0s reds=0 |    ⚠ 本輪不做：衰退／退休／生涯階段／Off-season／AI 老化。
+=== check_time_block_v3 exit=0 0s reds=0 |    ⚠ 本輪不做：Lifecycle／衰退／退休／Off-season／真人競技／定時賽事。
+=== check_offseason_session_v6 exit=0 0s reds=0 |    續約扣錢、放走不扣錢、補強走既有 Recruit 與 V4 估值；沒錢也能靠青訓地板走下�
+=== check_general_match_v7a exit=0 0s reds=0 | ✅ 全數通過
+=== check_retention_v7b exit=0 1s reds=0 | ✅ 全數通過
+=== check_player_challenge_slice1 exit=0 17s reds=0 | Player Challenge Slice 1：108/108 PASS
+=== check_player_challenge_slice2 exit=0 15s reds=0 | Player Challenge Slice 2：79/79 PASS
+=== check_player_challenge_slice3 exit=0 104s reds=0 | Player Challenge Slice 3：100/100 PASS
+=== check_player_challenge_slice4 exit=0 22s reds=0 | Player Challenge Slice 4：60/60 PASS
+=== check_player_challenge_slice5 exit=0 36s reds=0 | Player Challenge Slice 5：71/71 PASS
+=== check_player_challenge_slice6 exit=0 0s reds=0 | Player Challenge Slice 6：30/30 PASS
+=== check_player_challenge_slice7 exit=0 1s reds=0 | Player Challenge Slice 7：35/35 PASS
+=== check_player_challenge_slice8 exit=0 12s reds=0 | Player Challenge Slice 8：122/122 PASS
+=== regress exit=0 49s reds=0 | 結束率 15/15 | 平均時長 20.8分 | 平均擊殺 14.0 | 0殺場 0 | 撤退鎖死 1 | 平均hot 63% | 平�
+=== regress2 exit=0 55s reds=0 | 節奏門檻 8/8 通過
+=== markers exit=0 2s reds=0 | 30/30 通過
+=== flags_off_node exit=0 28s reds=0 | Flags-Off Integration 3a-B：27/27 PASS
+=== verify_v20 exit=0 668s reds=0 | 狀態檔：D:\OneDrive\文件\GitHub\ESMO\.sprints\moba-3aB-integration\tools\.verify-state.json　（--resum
+=== verify tactic24 PASS 29/29 通過
+=== verify runtime29 PASS ⚠ FPS / draw calls / triangles / heap / DPR / 視覺 → **無瀏覽器，未量測**（見交付報告）
+=== verify cs23 PASS 28/28 通過
+=== browser_check_flags_off_release_3aB exit=0 112s reds=0 | Flags-off release 3a-B（打包結果的玩家流程）：25/25　RESULT=PASS　耗時 109451ms
+=== browser_check_stage1_flows_3aB exit=0 215s reds=0 | Stage-1 flows 3a-B（真正的 AppShell 流程）：47/47　RESULT=PASS　耗時 214712ms
+=== browser_check_exit_flush exit=0 39s reds=0 | B1C 離開頁面的保底存檔（真瀏覽器）：12/12　RESULT=PASS　耗時 38321ms
+=== browser_check_cloud_save_ui exit=0 56s reds=0 | B1D 雲端存檔畫面（桌機 ＋ 手機）：29/29　RESULT=PASS　耗時 55694ms
+=== browser_check_challenge_lifecycle exit=0 62s reds=0 | Slice 7 挑戰生命週期：21/21　RESULT=PASS　耗時 61890ms
+=== browser_check_competition_hub_shell exit=0 53s reds=0 | 27/27 通過
+=== browser_check_competition_shared_ui exit=0 50s reds=0 | 15/15 通過
+=== browser_check_time_controls exit=0 48s reds=0 | ✅ browser_check_time_controls：21/21 通過
+=== browser_check_offseason exit=0 47s reds=0 | ✅ browser_check_offseason：18/18 通過
+=== cs_formal_1366 exit=0 52s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+=== cs_formal_390 exit=0 49s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+=== rehearsal_capture_old_bundle exit=0 53s reds=0 | Prod release 3a-B（capture）：8/8　RESULT=PASS　耗時 52645ms
+=== rehearsal_verify_new_bundle exit=1 240s reds=2 |    evidence: {"name":"Prod release 3a-B（verify）","verdict":"PRODUCT_FAIL","pass":79,"fail":2,"elapsedMs":2
+ALLDONE
+
+--- production ---
+=== entry on site: assets/index-DfJdspjA.js
+=== prod_release exit=0 195s reds=0 | Prod release 3a-B（verify）：90/90　RESULT=PASS　耗時 194684ms
+=== cs_prod_1366 exit=0 47s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+=== cs_prod_390 exit=0 48s reds=0 | CS Major E formal production flow final: 63/63 RESULT=PASS
+=== prod_replay exit=0 382s reds=0 | 正式站 MOBA Battle → Result → Replay：25/25　RESULT=PASS　耗時 381619ms
+=== prod_b1c exit=0 92s reds=0 | 正式站 B1C — Save Hardening：38/38　RESULT=PASS　耗時 91881ms
+ALLDONE

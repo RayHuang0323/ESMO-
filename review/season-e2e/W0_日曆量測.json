@@ -1,0 +1,309 @@
+{
+ "schema": "season-e2e-w0.v1",
+ "note": "scripted results, not real simulation; calendar and boundaries only",
+ "careerYearDays": 84,
+ "runs": [
+  {
+   "name": "moba_only",
+   "startDay": 1,
+   "endDay": 188,
+   "seasons": {
+    "moba": {
+     "season": 3,
+     "total": 140,
+     "mine": 35,
+     "myFirst": 188,
+     "myLast": 266,
+     "lastAny": 266
+    },
+    "cs": null
+   },
+   "history": {
+    "moba": 2,
+    "cs": 0
+   },
+   "offSeasonOpened": [],
+   "yearsAtFinal": {},
+   "sameDayDouble": 0,
+   "finals": {
+    "moba:1": {
+     "day": 92,
+     "careerYear": 2,
+     "dayOfYear": 8
+    },
+    "moba:2": {
+     "day": 183,
+     "careerYear": 3,
+     "dayOfYear": 15
+    }
+   },
+   "rolled": {
+    "moba:1": {
+     "day": 92,
+     "ok": true,
+     "reason": null
+    },
+    "moba:2": {
+     "day": 183,
+     "ok": true,
+     "reason": null
+    }
+   },
+   "nextStopMismatch": 1,
+   "saves": 5,
+   "saveFailures": [],
+   "breaks": []
+  },
+  {
+   "name": "both_day1",
+   "startDay": 1,
+   "endDay": 188,
+   "seasons": {
+    "moba": {
+     "season": 3,
+     "total": 140,
+     "mine": 35,
+     "myFirst": 188,
+     "myLast": 266,
+     "lastAny": 266
+    },
+    "cs": {
+     "season": 3,
+     "total": 56,
+     "mine": 14,
+     "myFirst": 180,
+     "myLast": 258,
+     "lastAny": 258
+    }
+   },
+   "history": {
+    "moba": 2,
+    "cs": 2
+   },
+   "offSeasonOpened": [],
+   "yearsAtFinal": {},
+   "sameDayDouble": 22,
+   "finals": {
+    "cs:1": {
+     "day": 88,
+     "careerYear": 2,
+     "dayOfYear": 4
+    },
+    "moba:1": {
+     "day": 92,
+     "careerYear": 2,
+     "dayOfYear": 8
+    },
+    "cs:2": {
+     "day": 175,
+     "careerYear": 3,
+     "dayOfYear": 7
+    },
+    "moba:2": {
+     "day": 183,
+     "careerYear": 3,
+     "dayOfYear": 15
+    }
+   },
+   "rolled": {
+    "cs:1": {
+     "day": 88,
+     "ok": true,
+     "reason": null
+    },
+    "moba:1": {
+     "day": 92,
+     "ok": true,
+     "reason": null
+    },
+    "cs:2": {
+     "day": 175,
+     "ok": true,
+     "reason": null
+    },
+    "moba:2": {
+     "day": 183,
+     "ok": true,
+     "reason": null
+    }
+   },
+   "nextStopMismatch": 13,
+   "saves": 9,
+   "saveFailures": [],
+   "emptyCsLineup": {
+    "day": 6,
+    "shownToPlayer": "申請單不是物件"
+   },
+   "breaks": []
+  },
+  {
+   "name": "cs_later",
+   "startDay": 1,
+   "endDay": 209,
+   "seasons": {
+    "moba": {
+     "season": 3,
+     "total": 140,
+     "mine": 35,
+     "myFirst": 188,
+     "myLast": 266,
+     "lastAny": 266
+    },
+    "cs": {
+     "season": 3,
+     "total": 56,
+     "mine": 14,
+     "myFirst": 209,
+     "myLast": 287,
+     "lastAny": 287
+    }
+   },
+   "history": {
+    "moba": 2,
+    "cs": 2
+   },
+   "offSeasonOpened": [],
+   "yearsAtFinal": {},
+   "sameDayDouble": 13,
+   "finals": {
+    "moba:1": {
+     "day": 92,
+     "careerYear": 2,
+     "dayOfYear": 8
+    },
+    "cs:1": {
+     "day": 117,
+     "careerYear": 2,
+     "dayOfYear": 33
+    },
+    "moba:2": {
+     "day": 183,
+     "careerYear": 3,
+     "dayOfYear": 15
+    },
+    "cs:2": {
+     "day": 204,
+     "careerYear": 3,
+     "dayOfYear": 36
+    }
+   },
+   "rolled": {
+    "moba:1": {
+     "day": 92,
+     "ok": true,
+     "reason": null
+    },
+    "cs:1": {
+     "day": 117,
+     "ok": true,
+     "reason": null
+    },
+    "moba:2": {
+     "day": 183,
+     "ok": true,
+     "reason": null
+    },
+    "cs:2": {
+     "day": 204,
+     "ok": true,
+     "reason": null
+    }
+   },
+   "nextStopMismatch": 21,
+   "saves": 9,
+   "saveFailures": [],
+   "emptyCsLineup": {
+    "day": 35,
+    "shownToPlayer": "申請單不是物件"
+   },
+   "breaks": []
+  },
+  {
+   "name": "forfeit_all",
+   "startDay": 1,
+   "endDay": 258,
+   "seasons": {
+    "moba": {
+     "season": 3,
+     "total": 140,
+     "mine": 35,
+     "myFirst": 258,
+     "myLast": 336,
+     "lastAny": 336
+    },
+    "cs": {
+     "season": 3,
+     "total": 56,
+     "mine": 14,
+     "myFirst": 258,
+     "myLast": 336,
+     "lastAny": 336
+    }
+   },
+   "history": {
+    "moba": 2,
+    "cs": 2
+   },
+   "offSeasonOpened": [
+    {
+     "day": 253,
+     "careerYear": 4,
+     "dayOfYear": 1,
+     "pendingMoba": 35,
+     "pendingCs": 14,
+     "session": false
+    }
+   ],
+   "yearsAtFinal": {},
+   "sameDayDouble": 29,
+   "finals": {
+    "moba:1": {
+     "day": 141,
+     "careerYear": 2,
+     "dayOfYear": 57
+    },
+    "cs:1": {
+     "day": 141,
+     "careerYear": 2,
+     "dayOfYear": 57
+    },
+    "moba:2": {
+     "day": 253,
+     "careerYear": 4,
+     "dayOfYear": 1
+    },
+    "cs:2": {
+     "day": 253,
+     "careerYear": 4,
+     "dayOfYear": 1
+    }
+   },
+   "rolled": {
+    "moba:1": {
+     "day": 141,
+     "ok": true,
+     "reason": null
+    },
+    "cs:1": {
+     "day": 141,
+     "ok": true,
+     "reason": null
+    },
+    "moba:2": {
+     "day": 253,
+     "ok": true,
+     "reason": null
+    },
+    "cs:2": {
+     "day": 253,
+     "ok": true,
+     "reason": null
+    }
+   },
+   "nextStopMismatch": 1,
+   "saves": 10,
+   "saveFailures": [],
+   "breaks": []
+  }
+ ]
+}

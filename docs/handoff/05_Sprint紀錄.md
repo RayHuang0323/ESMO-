@@ -26878,3 +26878,17 @@ Owner人工驗收完成且明確授權正常main push／Pages／正式站Smoke�
 **風險**：main 帶來 81 段 verify 紅燈，47 段走不到行為斷言。CS 矩陣只證明對局跑完（`GAMEPLAY_ACCEPTANCE=NOT_ASSESSED`）。`owner-review.html` 公開發布（main 既有）。
 
 **教訓**：1）讀 Gate 的程式再放輸入，`cs_major_tactical_runtime` 的 fixture 是輸出，我預先放舊檔害它紅了一次。2）CS verify 段要環境變數與被忽略的輸入，只有 CS 工作區有，沒有紀錄就跑不起來；設定已寫進報告 §11。
+
+## 2026-11-04 Phase 3a-B 旗標關閉正式發布（main `bd063ac7`；Deploy Run 41809170806 success；v21 仍暫停，旗標全關）
+
+紀錄：`review/tactic-book-3a/3a-B_整合驗證報告.md` §12。Owner 最終 Review 核准合併與有條件部署。fast-forward，真 merge `29cdf9dc` 保留，沒有 Rebase、Squash、Force Push。
+
+**完成**：B1 用獨立 commit 登記（`66da3df2`），經獨立 Reviewer（APPROVE WITH CHANGES，無 Blocker，`57df97a9`）。另外固定 S9a、M1、M2（`583805c0`，Owner 只點名 B1，這是擴大的範圍，已揭露）。新 Gate `browser_check_prod_release_3aB`。Season E2E W0 盤點：`review/season-e2e/W0_現況盤點.md`。
+
+**驗證**：Push 前非綠的只有帳本上 5 支。正式驗收 61/61，v20 Golden 153/153，CS 正式流程 63/63 兩個寬度，彩排 89/89。正式站：`browser_check_prod_release_3aB` **90/90**（含舊站真存檔升級），CS **63/63、63/63**，Replay **25/25**，B1C **38/38**，page／console error 0。
+
+**未完成**：手機真機、真 Supabase、整季連續遊玩、比賽自然打完都沒有驗。W1–W4 等 Owner。
+
+**風險**：見 08。W0 發現正式站 BP-1：CS 先發全空時出賽只看到「申請單不是物件」。
+
+**教訓**：1）`git clone` 預設 autocrlf 會讓逐行比對的 Gate 假紅，模擬要用 `-c core.autocrlf=false`。2）比對 `origin/main` 的 Gate 在 Push 後會假紅或假綠，發布前要先模擬。3）新 Gate 一定要先彩排，這次抓到它自己少一步。

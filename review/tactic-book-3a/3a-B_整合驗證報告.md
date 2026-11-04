@@ -1,7 +1,7 @@
 # Phase 3a-B 旗標關閉：測試性整合驗證報告
 
-- 日期：2026-11-04。依 Owner Review（第三次 G-A8 STOP 之後）第 A–D 項；**最後一輪結果見 §11，§1、§3、§7–§10 已更新**。
-- **這是測試性整合，不是合併 main。** 沒有 Push、Deploy，沒有啟用 v21，沒有改 CS，沒有重錄 Golden，沒有用保留 Seeds。
+- 日期：2026-11-04。依 Owner Review（第三次 G-A8 STOP 之後）第 A–D 項；最後一輪結果見 §11；**正式合併與部署見 §12，下面 §1 的「還沒有合併」是當時的狀態**。
+- **§1–§11 是測試性整合的紀錄，當時沒有 Push、Deploy。** 全程沒有啟用 v21，沒有改 CS，沒有重錄 Golden，沒有用保留 Seeds。
 - 合併樹：`integration/moba-3aB-flags-off-test`，合併 commit `29cdf9dc`（父：`origin/main` `b4f8e0c3`、`feature/moba-phase3a-stage1` `e11f0e4f`），真 merge、`--no-ff`。
 - 對照樹：`.sprints/moba-3aB-main-baseline`，分離 HEAD 在 `b4f8e0c3`。
 - 原分支維持在 `e11f0e4f`，沒有動。**這輪的紀錄與新 Gate 只 commit 在整合分支。** 真正合併時這些 commit 要一起決定。
@@ -302,3 +302,71 @@ v21-A Golden 錄製時，binding 會走到引擎。Stage 1 分流之後，`caree
 ### 這輪之後仍然沒有驗證到
 
 手機真機、正式站 smoke、真 Supabase、整季連續遊玩、Training 瀏覽器流程。verify 有 47 段停在第一步看不到行為（TD-3aB-1）；這次 CS 的主要證據改靠模擬 worker 雜湊相同、`src/battle/fps` 零差異、正式流程與 55 場矩陣。
+
+## 12. 正式合併與部署（Owner 最終 Review）
+
+### 結論
+
+**已發布。** 旗標關閉的 Phase 3a-B 程式已進 main 並部署，正式站全部 Smoke 通過，沒有新回歸。v21 仍暫停，玩家看到的還是 v20。
+
+| 項目 | 值 |
+|---|---|
+| 發布前 `origin/main` | `b4f8e0c3`（這段期間沒有前進） |
+| 發布 commit | `bd063ac741ae8b5ac1f21773f8e101ed426c8b3c` |
+| 方式 | fast-forward，真 merge `29cdf9dc` 保留；沒有 Rebase、Squash、Force Push |
+| Deploy Run | `41809170806`，`completed success` |
+| 正式站入口 | `index-CODqm6Fg.js` → `index-DfJdspjA.js`，5,062,288 B |
+| `src` 與測試性整合 | 相同（`29cdf9dc` 之後沒有動 `src`） |
+
+### B1 登記
+
+- `66da3df2`：新增 `tools/fixtures/stage1_merge_registration_3aB.json`。B1 改從合併 commit 的兩個父節點重算分支點，並新增 B1a 防竄改檢查。**基準檔沒有改**，B2 仍成立。
+- `583805c0`：**Owner 只點名 B1，這是我擴大的範圍。** `S9a` 與旗標關閉的 `M1`、`M2` 也比對會移動的 `origin/main`，Push 後會假紅（整合前檢查第 58 行就預測過），所以固定到合併前的 main。比對內容相同，沒有拿掉斷言。
+- `57df97a9`：套用 Reviewer 的修改：四個欄位都有竄改測試，旗標關閉 Gate 拒絕不是合併前 main 的對照樹（新增 M0）。
+- **獨立 Reviewer：APPROVE WITH CHANGES，沒有 Blocker。** 結論是沒有放寬任何東西。它也指出 5 支舊 Gate 在合併後失去保護，已登記在 `3a-B_已知紅燈帳.md`（TD-3aB-9）。
+
+### Push 前驗證
+
+完整輸出：`3a-B_發布回歸紀錄.txt`。
+
+| 項目 | 結果 |
+|---|---|
+| Build、重建比對受測 dist | ✓，581 檔雜湊全同 |
+| Node Gate | 非綠的只有帳本上的 5 支：v21-A 97/137、Career 3/5、Challenge 5/6、Truth 36/37、Club Mastery 264/265 |
+| 正式驗收 | **61/61**（B1 已登記） |
+| v20 Golden、分流、回滾 | 153/153、75/75、15/15 |
+| verify | `tactic24` 29/29、`runtime29` 通過、`cs23` 28/28 |
+| Training、Hub、存檔、Challenge | 全綠；`slice3` 這次 100/100，**仍是登記中的 flaky** |
+| 瀏覽器 | 旗標關閉 25/25、stage1 47/47、exit flush 12/12、雲端 UI 29/29、挑戰 21/21、Hub 27/27、共用 UI 15/15、時間 21/21、休賽期 18/18 |
+| CS 正式流程（打包版） | 1366 63/63、390 63/63 |
+| 本機彩排（舊 Bundle 存檔 → 新 Bundle 讀回） | 89/89 |
+| 模擬 Push 後（`origin/main` 等於 HEAD） | 正式驗收 61/61、分流 75/75、旗標關閉 27/27 |
+| 推上去的內容 | 金鑰比對 9 類都是 0；最大的檔案是 05（2 MB） |
+
+**彩排第一次 79/81：** `T0 進入 Training` 兩條紅。是新 Gate 少了「先選選手」，`TrainingScreen.jsx` 與 main 沒有差異，不是產品問題。
+
+### 正式站 Smoke（獨立 profile，碰不到玩家存檔）
+
+| Gate | 結果 | 範圍 |
+|---|---|---|
+| `browser_check_prod_release_3aB`（新） | **90/90** | 1366＋390：首頁、MOBA v20、結算、Replay、存檔、Training、Hub、Console；舊站存檔升級 |
+| `browser_check_cs_major_formal_flow --url` | **63/63、63/63** | 1366、390：真比賽、快速完成、結算入帳入史 |
+| `browser_check_prod_moba_result_replay_release` | **25/25** | 390、1366 |
+| `browser_check_prod_b1c` | **38/38** | 存檔防護 |
+
+**舊存檔：** 部署前從舊正式站打一場存下真存檔，部署後讀回：`manager`、`team`、`lineup`、`players`、`finance`、`processedMatchTransactions`、`competitionByMode`、`csHistory` 逐值相同，沒有欄位被丟掉，沒有隔離檔。再打一場入帳恰好多一筆，沒有 v21 標記。page error 0、console error 0。
+
+**沒有用到回滾。**
+
+### 紅燈與歷史
+
+已知紅燈帳、G-A8 STOP、Challenge STOP、技術債與歷史證據都保留，沒有重錄、沒有改判。
+
+### 仍未驗證
+
+手機真機（只有 390 模擬）、真 Supabase、整季連續遊玩、MOBA 與 CS 比賽自然打完（Smoke 都用快速完成）、CS 只打 Mirage。
+
+### 下一階段
+
+Season End-to-End Audit v1 的 W0：`review/season-e2e/W0_現況盤點.md`。
+

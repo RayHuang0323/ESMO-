@@ -1,0 +1,12 @@
+
+── win 逐日推進：封存日 {"cs":88,"moba":92}，資金 3000000 → 2908130 []
+  moba fixtures 148 mine 39 lastAny 92
+  cs fixtures 60 mine 16 lastAny 88
+
+── forfeit 逐日推進：封存日 {"cs":88,"moba":92}，資金 3000000 → 2908000 []
+  moba fixtures 148 mine 35 lastAny 92
+  cs fixtures 60 mine 14 lastAny 88
+
+── 沒開賽季時連按前往下一站： 1→29 career_year、29→57 career_year、57→85 career_year、85→113 career_year、113→141 career_year、141→169 career_year 資金 2820000
+── 只開 MOBA、打完賽季的最後幾步： [{"from":85,"to":86,"stop":"player_fixture","label":"第 86 天有你的比賽","ok":true},{"from":86,"to":88,"stop":"player_fixture","label":"第 88 天有你的比賽","ok":true},{"from":88,"to":90,"stop":"player_fixture","label":"第 90 天有你的比賽","ok":true},{"from":90,"to":92,"stop":"player_fixture","label":"第 92 天有你的比賽","ok":true},{"from":92,"to":120,"stop":"career_year","label":"第 169 天進入第 3 生涯年度","ok":true}] 封存 true
+── 封存後沒有換季，繼續按前往下一站： 120→148（第 169 天進入第 3 生涯年度，資金 2876080→2844080）；148→169（第 169 天進入第 3 生涯年度，資金 2844080→2820080）；169→197（第 253 天進入第 4 生涯年度，資金 2820080→2784080）；197→225（第 253 天進入第 4 生涯年度，資金 2784080→2748080）
