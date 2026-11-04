@@ -1,0 +1,95 @@
+{
+ "day": 300,
+ "matches": 136,
+ "moba": 96,
+ "csMaps": 40,
+ "fixtures": 136,
+ "trainings": 44,
+ "offseasons": [
+  {
+   "day": 253,
+   "careerYear": 3,
+   "expiring": 2,
+   "intents": 0,
+   "fundsAtOpen": 18360025,
+   "pendingFixtures": {
+    "moba": 30,
+    "cs": 10
+   },
+   "renewed": [
+    {
+     "id": "b2",
+     "cost": 75.1
+    },
+    {
+     "id": "b5",
+     "cost": 84
+    }
+   ],
+   "renewFailed": [],
+   "rosterBefore": 5,
+   "completed": true,
+   "rosterAfter": 5,
+   "fundsAfter": 16769025
+  }
+ ],
+ "finals": {
+  "moba:1": {
+   "day": 141,
+   "funds": 7837000,
+   "awards": 7,
+   "honors": 2
+  },
+  "cs:1": {
+   "day": 141,
+   "funds": 7837000,
+   "awards": 7,
+   "honors": 2
+  },
+  "cs:2": {
+   "day": 228,
+   "funds": 16656000,
+   "awards": 12,
+   "honors": 3
+  },
+  "moba:2": {
+   "day": 239,
+   "funds": 17144025,
+   "awards": 14,
+   "honors": 4
+  }
+ },
+ "rolled": {
+  "moba:1": {
+   "day": 141,
+   "ok": true,
+   "reason": null,
+   "histBefore": 0,
+   "histAfter": 1
+  },
+  "cs:1": {
+   "day": 141,
+   "ok": true,
+   "reason": null,
+   "histBefore": 0,
+   "histAfter": 1
+  },
+  "cs:2": {
+   "day": 228,
+   "ok": true,
+   "reason": null,
+   "histBefore": 1,
+   "histAfter": 2
+  },
+  "moba:2": {
+   "day": 239,
+   "ok": true,
+   "reason": null,
+   "histBefore": 1,
+   "histAfter": 2
+  }
+ },
+ "startedFunds": 1200000,
+ "funds": 22601025,
+ "checkpoints": 27
+}

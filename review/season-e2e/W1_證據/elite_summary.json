@@ -1,0 +1,68 @@
+{
+ "day": 192,
+ "matches": 116,
+ "moba": 80,
+ "csMaps": 36,
+ "fixtures": 112,
+ "trainings": 29,
+ "offseasons": [],
+ "finals": {
+  "cs:1": {
+   "day": 88,
+   "funds": 15657033,
+   "awards": 6,
+   "honors": 1
+  },
+  "moba:1": {
+   "day": 92,
+   "funds": 15805033,
+   "awards": 7,
+   "honors": 2
+  },
+  "cs:2": {
+   "day": 175,
+   "funds": 25062033,
+   "awards": 12,
+   "honors": 3
+  },
+  "moba:2": {
+   "day": 183,
+   "funds": 26007045,
+   "awards": 14,
+   "honors": 4
+  }
+ },
+ "rolled": {
+  "cs:1": {
+   "day": 88,
+   "ok": true,
+   "reason": null,
+   "histBefore": 0,
+   "histAfter": 1
+  },
+  "moba:1": {
+   "day": 92,
+   "ok": true,
+   "reason": null,
+   "histBefore": 0,
+   "histAfter": 1
+  },
+  "cs:2": {
+   "day": 175,
+   "ok": true,
+   "reason": null,
+   "histBefore": 1,
+   "histAfter": 2
+  },
+  "moba:2": {
+   "day": 183,
+   "ok": true,
+   "reason": null,
+   "histBefore": 1,
+   "histAfter": 2
+  }
+ },
+ "startedFunds": 3000000,
+ "funds": 26229045,
+ "checkpoints": 23
+}
