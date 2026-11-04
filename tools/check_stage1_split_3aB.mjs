@@ -242,8 +242,8 @@ const liveInputs = ({ flags, tacticPlanBinding = null, tactic = null, opponentTe
   const mine = read("src/screens/moba/TacticScreenV20.jsx").split("\n");
   const ref = (rev) => { try { return execFileSync("git", ["show", `${rev}:src/screens/moba/TacticScreen.jsx`], { cwd: ROOT, encoding: "utf8", maxBuffer: 1 << 24 }).split("\n"); } catch { return null; } };
   const same = (o) => !!o && o.length === mine.length && o.every((l, i) => i === 1 || l === mine[i]);
-  const v20 = ref("1d0e219"), prod = ref("origin/main");
-  ck(`S9a TacticScreenV20.jsx＝1d0e219 的 TacticScreen.jsx（只差第 2 行檔名說明）${prod ? "，也＝origin/main" : "（origin/main 不在本機，未比）"}`, same(v20) && (prod === null || same(prod)) && mine[1].includes("TacticScreenV20.jsx"));
+  const v20 = ref("1d0e219"), prod = ref(JSON.parse(read("tools/fixtures/stage1_merge_registration_3aB.json")).mainParent);  //  合併前的正式 main：合併之後 origin/main 的 TacticScreen.jsx 就是戰術書版，不能再拿來比
+  ck(`S9a TacticScreenV20.jsx＝1d0e219 的 TacticScreen.jsx（只差第 2 行檔名說明）${prod ? "，也＝合併前的正式 main" : "（合併前的 main 不在本機，未比）"}`, same(v20) && (prod === null || same(prod)) && mine[1].includes("TacticScreenV20.jsx"));
   const shell = stripComments(read("src/AppShell.jsx"));
   ck("S9b AppShell 用開局時同一個解析函式切換：static ⇒ TacticScreenV20、core.v1 ⇒ 戰術書；binding 鍵只在有值或要清掉舊的一份時才寫",
     shell.includes(`tacticalDirectorModeOf(resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS })) === "core.v1"`) && shell.includes("LIVE_TACTIC_BOOK_ON ? TacticScreen : TacticScreenV20") && shell.includes(`<LiveTacticScreen `)

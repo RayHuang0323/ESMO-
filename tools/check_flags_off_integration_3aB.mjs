@@ -175,13 +175,15 @@ for (const [n, f] of [["新局", "int.fresh.json"], ["舊存檔往前讀", "int.
 }
 
 // M 語意
-const merge = git("merge-base", "origin/main", "feature/moba-phase3a-stage1").trim();
-const mainTouched = new Set(git("diff", "--name-only", merge, "origin/main").split("\n").filter(Boolean));
+//  固定在合併當時的兩個父節點（stage1_merge_registration_3aB.json）：合併進 main 之後 origin/main 就不再代表「合併前的 main」。
+const MR = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/fixtures/stage1_merge_registration_3aB.json"), "utf8"));
+const merge = MR.forkPoint;
+const mainTouched = new Set(git("diff", "--name-only", merge, MR.mainParent).split("\n").filter(Boolean));
 const semText = fs.readFileSync(path.join(ROOT, "src/platform/contracts/simulationVersion.js"), "utf8");
 const sem = [...new Set([...semText.matchAll(/"(src\/[^"]+\.(?:js|jsx|mjs))"/g)].map((m) => m[1]))];
 const hit = sem.filter((f) => mainTouched.has(f));
 ck("M1 main 從合併基準以來沒有碰任何語意檔（v20 黃金對 main 一樣成立）", sem.length >= 40 && !hit.length, J({ semantics: sem.length, hit }));
-ck("M2 v20 黃金 fixture 兩邊都沒有改動基準以來的內容（只由分支新增）", git("diff", "--name-only", merge, "origin/main", "--", "tools/fixtures/match_golden_v20.json").trim() === "" && git("diff", "--name-only", "feature/moba-phase3a-stage1", "HEAD", "--", "tools/fixtures/match_golden_v20.json").trim() === "");
+ck("M2 v20 黃金 fixture 兩邊都沒有改動基準以來的內容（只由分支新增）", git("diff", "--name-only", merge, MR.mainParent, "--", "tools/fixtures/match_golden_v20.json").trim() === "" && git("diff", "--name-only", MR.branchParent, "HEAD", "--", "tools/fixtures/match_golden_v20.json").trim() === "");
 
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(`\nFlags-Off Integration 3a-B：${pass}/${pass + fail} ${fail ? "FAIL" : "PASS"}`);
