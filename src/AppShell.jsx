@@ -167,6 +167,9 @@ export default function AppShell() {
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
+  //  BP-1：從賽事中心 CS 分頁去排先發時，回來要回到 CS 分頁，不是首頁。
+  const [csPrepFromHub, setCsPrepFromHub] = useState(false);
+  const [hubInitialMode, setHubInitialMode] = useState(undefined);
 
   //  Rift 載入修正：13 MB 的 Rift 330 地圖從 Ban/Pick 開始下載 ⇒ 玩家選角的時間就是下載時間，
   //  Loading 再等它就緒才進對戰（見 battle/moba/map/riftAsset.js）。
@@ -338,10 +341,12 @@ export default function AppShell() {
              沒有第二條 MatchSession／Battle pipeline。 */}
       {screen === "competition" && (
         <CompetitionHubScreen
-          onBack={home}
+          onBack={() => { setHubInitialMode(undefined); home(); }}
           onPlay={enterFixturePrep}
           onResume={() => resumeActiveMatch({ alreadyResumed: true })}
           onCsRecap={go("csRecap")}
+          onCsPrep={() => { setCsPrepFromHub(true); setScreen("csPrep"); }}
+          initialMode={hubInitialMode}
         />
       )}
       {screen === "season" && <SeasonScreen onBack={home} />}
@@ -396,7 +401,10 @@ export default function AppShell() {
             Dashboard → csPrep → csMap → csTactic → csLoading → cs(Match) → csResult → Dashboard */}
       {/*  UI-3：CS 賽前頁回歸單場賽前責任（陣容／戰力／歷史）。開季、今日賽程出戰、
            賽事中心導航都搬到賽事中心的 CS 分頁，這裡不再需要 `onRecap` / `onHub`。 */}
-      {screen === "csPrep" && <CsPrepScreen onNext={enterCsAfterPrep} onBack={home} />}
+      {screen === "csPrep" && (() => {
+        const backToHub = () => { setCsPrepFromHub(false); setHubInitialMode("cs"); setScreen("competition"); };
+        return <CsPrepScreen onNext={() => { setCsPrepFromHub(false); enterCsAfterPrep(); }} onBack={csPrepFromHub ? backToHub : home} onReturnToHub={csPrepFromHub ? backToHub : null} />;
+      })()}
       {/*  CS Season M4-B2：CS 賽季成績單。換季 CTA 在該頁最後。
            UI-3：唯一入口是賽事中心的 CS 分頁 ⇒ 返回就回到那裡。 */}
       {screen === "csRecap" && <CsSeasonRecapScreen onBack={go("competition")} />}

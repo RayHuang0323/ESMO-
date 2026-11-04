@@ -97,7 +97,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
 //  標成「暫用入口…完整的 CS 賽事頁上線之後應該被它取代，而不是兩個入口並存」，
 //  這裡執行的就是那句話。本檔回歸單場 CS 賽前責任：陣容、戰力、歷史。
 
-export default function CsPrepScreen({ onNext, onBack }) {
+export default function CsPrepScreen({ onNext, onBack, onReturnToHub = null }) {
   //  hotfix/cs-loading-rest-ux：一進 CS 賽前就開始下載 rigged 角色（9.2 MB），
   //  和選陣容／選圖／戰術並行；Loading 畫面再等它就緒才進 Battle。重複呼叫不會重複下載。
   useEffect(() => { preloadFpsCharacterAssets(); }, []);
@@ -202,6 +202,17 @@ export default function CsPrepScreen({ onNext, onBack }) {
         onAutoFill={() => autoFillLineup("cs")}
         aboveSeats={(
           <>
+            {/*  BP-1：從賽事中心來排先發的玩家，要看得到怎麼回去。這一頁的主按鈕是一般對戰，不是今天的賽程。 */}
+            {onReturnToHub && (
+              <div data-testid="cs-prep-from-hub" style={{ marginBottom: 12, padding: "9px 10px", borderRadius: 10, background: `${ACC}14`, border: `1px solid ${ACC}55` }}>
+                <div style={{ color: GC.gray, fontSize: 10.5, lineHeight: 1.6, marginBottom: 8 }}>
+                  排好五人先發後，回賽事中心出戰今日聯賽賽程。下面的配對按鈕是一般對戰，不是今天的賽程。
+                </div>
+                <button data-testid="cs-prep-return-hub" onClick={onReturnToHub} style={{ width: "100%", minHeight: 44, borderRadius: 9, border: `1px solid ${ACC}`, background: "transparent", color: ACC, fontSize: 12, fontWeight: 900, cursor: "pointer" }}>
+                  返回賽事中心
+                </button>
+              </div>
+            )}
             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {[{ k: "prep", l: "⚙️ 出戰" }, { k: "history", l: "📜 歷史" }].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: "8px", borderRadius: 9, border: "none", cursor: "pointer", background: tab === t.k ? ACC : GC.card, color: tab === t.k ? "#fff" : GC.gray, fontSize: 11, fontWeight: 700 }}>{t.l}</button>

@@ -68,14 +68,20 @@ const STEP_INDEX = {
 //  共用元件不該認得它。
 
 
-export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResume }) {
+export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResume, onOpenPrep }) {
   //  訂閱 canonical 切片，再取一份一致的唯讀快照（同 Recap 的做法）
   const byMode = useProfileStore((s) => s.competitionByMode);
   void byMode;
   //  UI-3：有沒有一場賽程對戰進行中。訂閱它 ⇒ 出戰之後這一頁立刻換成「返回」。
   const fixtureCtx = useProfileStore((s) => s.matchmaking?.fixtureAssignment ?? null);
+  //  BP-1：先發一變就要重畫（從 CS 賽前頁排好回來時，提示要消失）。
+  const csLineup = useProfileStore((s) => s.csLineup);
   const [err, setErr] = useState(null);
   const view = useProfileStore.getState().competitionView("cs");
+  //  BP-1：能不能出戰由**既有的**出賽申請單判定（`startFixtureMatch` 用的是同一張），畫面不另訂規則。
+  //  ⚠ 只讀，不存檔。⚠ 不得在這裡幫玩家填人：新局 csLineup 全空是 Milestone O1 的決定，由玩家自己按「自動填入」。
+  const csEntryReady = useProfileStore.getState().matchEntry("cs").ok;
+  const csSeatsFilled = Object.values(csLineup ?? {}).filter(Boolean).length;
 
   //  ⚠ 三個 action 全部只掛 onClick。本檔沒有任何 useEffect，也不得有——
   //    開季必須是玩家的明確動作，查看不得改變任何東西。
@@ -190,9 +196,21 @@ export default function CsCompetitionHubScreen({ onBack, onRecap, onPlay, onResu
               <div data-testid="cs-league-today" style={{ ...recapStyles.value, marginBottom: 8, fontWeight: 900 }}>
                 今日有你的聯賽賽程
               </div>
-              <button data-testid="cs-league-play" onClick={() => play(view.today.id)} style={recapStyles.cta}>
-                出戰今日聯賽賽程
-              </button>
+              {csEntryReady ? (
+                <button data-testid="cs-league-play" onClick={() => play(view.today.id)} style={recapStyles.cta}>
+                  出戰今日聯賽賽程
+                </button>
+              ) : (
+                <div data-testid="cs-hub-lineup-required" data-filled={csSeatsFilled}>
+                  <div style={{ ...recapStyles.quiet, marginBottom: 8 }}>
+                    CS 先發還沒排好（目前 {csSeatsFilled} / 5 人），所以還不能出戰。
+                    請到 CS 賽前頁排好五人，可以按「自動填入」，排好後回到這裡出戰。
+                  </div>
+                  <button data-testid="cs-hub-open-prep" onClick={() => onOpenPrep?.()} style={{ ...recapStyles.cta, minHeight: 44 }}>
+                    前往 CS 賽前頁
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div style={recapStyles.quiet}>

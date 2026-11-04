@@ -42,8 +42,8 @@ const TABS = [
 
 const DEFAULT_MODE = "moba";
 
-export default function CompetitionHubScreen({ onBack, onPlay, onResume, onCsRecap }) {
-  const [mode, setMode] = useState(DEFAULT_MODE);
+export default function CompetitionHubScreen({ onBack, onPlay, onResume, onCsRecap, onCsPrep, initialMode = DEFAULT_MODE }) {
+  const [mode, setMode] = useState(initialMode);
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0, background: GC.bg, fontFamily: FONT }}>
@@ -101,7 +101,7 @@ export default function CompetitionHubScreen({ onBack, onPlay, onResume, onCsRec
           //  UI-3：`onPlay` / `onResume` 與 MOBA 分頁**收到的是同一組 handler**
           //  ——出戰簽完指派單就交還既有的 CS 賽前流程（選圖／戰術在那裡），
           //    沒有第二條 MatchSession／Battle pipeline。
-          <CsCompetitionHubScreen onBack={onBack} onRecap={onCsRecap} onPlay={onPlay} onResume={onResume} />
+          <CsCompetitionHubScreen onBack={onBack} onRecap={onCsRecap} onPlay={onPlay} onResume={onResume} onOpenPrep={onCsPrep} />
         )}
       </div>
     </div>
