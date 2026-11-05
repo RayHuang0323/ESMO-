@@ -34,12 +34,14 @@ const arg = (k) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.le
 const CASE = arg("case");
 const CHECKPOINT = arg("checkpoint");
 const OUT = arg("out");
-if (!CASE || (!CHECKPOINT && CASE !== "probe") || !fs.existsSync("dist/index.html")) { console.error("需要 --case、--checkpoint，且要先 build"); process.exit(2); }
+//  --url=https://rayhuang0323.github.io/ESMO-/ 打正式站。Chrome 每次都是全新的 user-data-dir，碰不到真實玩家的存檔。
+const EXTERNAL = arg("url");
+if (!CASE || (!CHECKPOINT && CASE !== "probe") || (!EXTERNAL && !fs.existsSync("dist/index.html"))) { console.error("需要 --case、--checkpoint，且要先 build（或給 --url）"); process.exit(2); }
 const freePort = () => new Promise((res, rej) => { const s = createServer(); s.once("error", rej); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => res(port)); }); });
-const port = await freePort();
-const preview = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], { stdio: "ignore" });
-const url = `http://127.0.0.1:${port}/ESMO-/`;
-for (let i = 0; i < 120; i++) { try { if ((await fetch(url)).ok) break; } catch { /* not yet */ } await new Promise((r) => setTimeout(r, 500)); }
+const port = EXTERNAL ? null : await freePort();
+const preview = EXTERNAL ? null : spawn(process.execPath, ["node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], { stdio: "ignore" });
+const url = EXTERNAL ?? `http://127.0.0.1:${port}/ESMO-/`;
+for (let i = 0; i < (EXTERNAL ? 0 : 120); i++) { try { if ((await fetch(url)).ok) break; } catch { /* not yet */ } await new Promise((r) => setTimeout(r, 500)); }
 
 const J = (raw) => { const s = String(raw); for (const t of [s, s.replace(/^"|"$/g, "")]) { try { return JSON.parse(t); } catch { /* next */ } } return null; };
 const tid = (id) => "[data-testid=\"" + id + "\"]";
@@ -565,8 +567,8 @@ const result = await runGate({
     save();
   },
 });
-killProcessTree?.(preview.pid);
-try { preview.kill(); } catch { /* best effort */ }
+if (preview) killProcessTree?.(preview.pid);
+try { preview?.kill(); } catch { /* best effort */ }
 save();
 await finishGate(result);
 process.exit(0);
