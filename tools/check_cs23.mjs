@@ -68,6 +68,19 @@ ck("rewards 轉換當下未入帳（null）", r1.rewards.money === null && r1.re
 //   （recordCsMatch 降級為只入史，否則會與 applyMatchProgress 雙倍入帳）。
 //   本檔改為驅動**新入口**——但驗證的「保證」完全不變：
 //   獎金/粉絲仍是 Legacy updateEconomy 公式、仍冪等、連勝仍取自 csHistory、敗場公式不變。
+// ⚠ BP-9 P0-A：存不下去的比賽不算入帳，裸 Node 沒有 localStorage 就一場都算不進去。
+//   這裡補一個記憶體版，走的是真正的存檔路徑；上面那些保證一條都沒有動。
+if (typeof globalThis.localStorage === "undefined") {
+  const mem = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => { mem.set(k, String(v)); },
+    removeItem: (k) => { mem.delete(k); },
+    clear: () => { mem.clear(); },
+    key: (i) => [...mem.keys()][i] ?? null,
+    get length() { return mem.size; },
+  };
+}
 const { settleCsMatch } = await import("../src/platform/progress/settleCsMatch.js");
 const st = () => useProfileStore.getState();
 const funds0 = st().finance.funds, fans0 = st().meta.fans, inbox0 = st().inbox.length, tx0 = st().finance.transactions.length;
