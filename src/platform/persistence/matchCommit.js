@@ -40,6 +40,8 @@ const local = () => (typeof localStorage !== "undefined" ? localStorage : null);
 export const STORAGE_FULL_HINT = 4_900_000;
 export function storageLooksFull() {
   if (quotaHit()) return true;
+  //  重新整理後旗標歸零，但當時的提示有落盤：沿用它記下的判斷（Safari 等上限比 Chrome 小的瀏覽器靠這個）。
+  if (useCommitAlertStore.getState().alert?.full === true) return true;
   const s = local();
   if (!s) return false;
   let n = 0;
@@ -115,7 +117,8 @@ export function clearJournal() {
 export const useCommitAlertStore = create(() => ({ alert: null, retry: null, notCounted: false }));
 
 /** 同時寫 local 與 session：空間滿時至少留一份。回傳實際寫到哪裡。 */
-export function setCommitAlert(alert, { retry = null } = {}) {
+export function setCommitAlert(input, { retry = null } = {}) {
+  const alert = { ...input, full: input.full ?? quotaHit() };
   const raw = JSON.stringify(alert);
   let wrote = false;
   try { local()?.setItem(COMMIT_ALERT_KEY, raw); wrote = true; } catch { /* noop: 空間滿：下面還有 session */ }

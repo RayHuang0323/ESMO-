@@ -321,6 +321,8 @@ async function child(jobFile) {
       alertMem: alertStore.alert?.kind ?? null,
       alertStage: alertStore.alert?.stage ?? null,
       full: storageLooksFull(),
+      //  空間滿到連提示都寫不進 localStorage 時，靠的是 sessionStorage 那份（同一分頁重新整理還在）。
+      alertFull: [ctl.map.get(ALERT_KEY), ctl.sess.get(ALERT_KEY)].filter(Boolean).map((r) => JSON.parse(r).full ?? null)[0] ?? null,
       canRetry: !!alertStore.retry,
       saveStatus: s.saveState?.status ?? null,
       detail: !!useHeroProgressStore.getState().lastDetail,
@@ -551,6 +553,12 @@ const mobaOk = run(FX.moba, [{ do: "commit", which: "a" }, { do: "heroShape" }],
   const q = run(FX.moba, [{ do: "quota", extra: 0 }, { do: "commit", which: "a" }]);
   if (mobaOk) ck("正常入帳：不判成已滿", last(mobaOk).sum.full === false, JSON.stringify(last(mobaOk).sum.full));
   if (q) ck("配額不足（總量遠低於 Chrome 上限）：判成已滿", last(q).sum.full === true && q.used < 4900000, `full=${last(q).sum.full} used=${q.used}`);
+  //  重新整理後配額旗標歸零：靠落盤的提示記住，上限比 Chrome 小的瀏覽器才不會退回一般文案。
+  if (q) {
+    ck("配額不足時提示記下「已滿」", last(q).sum.alertFull === true, JSON.stringify(last(q).sum.alertFull));
+    const qb = run(FX.moba, [{ do: "boot" }], { from: freeze(q.final) });
+    if (qb) ck("重新整理後（總量仍低於 Chrome 門檻）：還是判成已滿", last(qb).sum.full === true && qb.used < 4900000, `full=${last(qb).sum.full} used=${qb.used}`);
+  }
   //  故障注入丟的都是配額錯誤，所以「不是配額錯誤」只能直接驗判斷函式。
   const Q = await import("../src/platform/persistence/storageQuota.js");
   ck("配額錯誤判斷：Chrome／Safari／舊 Firefox 都認得", Q.isQuotaError({ name: "QuotaExceededError" }) && Q.isQuotaError({ code: 22 }) && Q.isQuotaError({ name: "NS_ERROR_DOM_QUOTA_REACHED" }) && Q.isQuotaError({ code: 1014 }));

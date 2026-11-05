@@ -62,9 +62,11 @@ const ALERT_TEXT = {
 };
 
 //  ⚠ Owner（BP-9 F5）：頂到上限時說清楚這是暫時保護、等下一版修復；不得引導清除資料或開新局。
-const STORAGE_FULL_TEXT = { head: "存檔空間已滿，進度先暫停保護", body: "最後一次成功的存檔完好。為了避免紀錄重複或錯亂，之後的變更暫時不會保存，日曆也先停住；下一版更新會整理空間並恢復。請不要清除瀏覽器資料，也不要開新局。" };
+const STORAGE_FULL_TEXT = { head: "存檔空間已滿，進度先暫停保護", body: "最後一次成功的存檔完好。為了避免紀錄重複或錯亂，日曆先停住；之後的變更不會保存，重新整理會回到最後一次成功的存檔。下一版更新會整理空間並恢復。請不要清除瀏覽器資料，也不要開新局。" };
 //  比賽那一場要多講一句：它沒有算進去，但不是消失了。
-const STORAGE_FULL_MATCH_TEXT = { head: STORAGE_FULL_TEXT.head, body: "最後一次成功的存檔完好。剛打完的這場沒有算進去，下一版更新整理空間並恢復後可以重打；在那之前的變更暫時不會保存。請不要清除瀏覽器資料，也不要開新局。" };
+const STORAGE_FULL_MATCH_TEXT = { head: STORAGE_FULL_TEXT.head, body: "最後一次成功的存檔完好。剛打完的這場沒有算進去，賽程會保留到下一版更新整理空間並恢復後再打；之後的變更不會保存。請不要清除瀏覽器資料，也不要開新局。" };
+//  ⚠ CS 超限後重打能不能入帳還沒驗證（Owner 條件 3），不能承諾重打。
+const STORAGE_FULL_CS_MATCH_TEXT = { head: STORAGE_FULL_TEXT.head, body: "最後一次成功的存檔完好。剛打完的這場 CS 沒有算進去，會留到下一版更新整理空間並恢復後處理；之後的變更不會保存。請不要清除瀏覽器資料，也不要開新局。" };
 //  帳已經入了，只差熟練或賽季紀錄：不能說比賽沒算。
 const STORAGE_FULL_DERIVED_TEXT = { head: "比賽已入帳，部分紀錄還沒寫完", body: "賽果與獎金都在，不會重複。存檔空間已滿，剩下的紀錄要等下一版更新整理空間並恢復後補上。請不要清除瀏覽器資料，也不要開新局。" };
 
@@ -81,7 +83,7 @@ const NO_FIXTURE_MATCH_TEXT = { head: "比賽結果沒有存起來", body: "這�
  */
 function CommitAlertNotice({ alert, retry }) {
   const text = (alert.kind === ALERT_KINDS.derived && alert.stage === "unfinishable") ? UNFINISHABLE_TEXT
-    : storageLooksFull() ? (alert.kind === ALERT_KINDS.derived ? STORAGE_FULL_DERIVED_TEXT : alert.kind === ALERT_KINDS.match ? STORAGE_FULL_MATCH_TEXT : STORAGE_FULL_TEXT)
+    : storageLooksFull() ? (alert.kind === ALERT_KINDS.derived ? STORAGE_FULL_DERIVED_TEXT : alert.kind === ALERT_KINDS.match ? (alert.mode === "cs" ? STORAGE_FULL_CS_MATCH_TEXT : STORAGE_FULL_MATCH_TEXT) : STORAGE_FULL_TEXT)
     : (alert.kind === ALERT_KINDS.match && !alert.fixtureId) ? NO_FIXTURE_MATCH_TEXT
     : (alert.kind === ALERT_KINDS.match && alert.mode === "cs") ? CS_MATCH_TEXT
     : (ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save]);

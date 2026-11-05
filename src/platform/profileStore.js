@@ -173,7 +173,7 @@ import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, dropCommitForSessi
 import { SAVE_STATUS } from "./persistence/saveProvider.js";
 
 //  BP-9 P0-A：玩家看得懂的一句話。不講配額，玩家對配額無能為力。
-const SAVE_BLOCKED_TEXT = "進度存不進去，先不能繼續。請按畫面下方的重試；MOBA 賽程也可以在賽事中心棄權";
+const SAVE_BLOCKED_TEXT = "進度存不進去，先不能繼續。請按畫面下方的重試";
 //  ⚠ Owner（BP-9 F5）：頂到上限時要讓玩家知道這是暫時保護、等下一版修復；不得引導清除資料或開新局。
 const STORAGE_FULL_REASON = "存檔空間已滿，為了保護進度先暫停。最後一次成功的存檔完好，下一版更新後會恢復；請不要清除瀏覽器資料";
 const saveBlockedReason = () => (storageLooksFull() ? STORAGE_FULL_REASON : SAVE_BLOCKED_TEXT);

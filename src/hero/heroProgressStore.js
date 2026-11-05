@@ -20,6 +20,7 @@ import { applyMatchResult, buildLoadout, createInitialProgress } from "./heroPro
 import { HERO_ASSIGN, ALL_HERO_IDS } from "../data/roster.js";
 import { readHeroProgressPayload, heroProgressPayload, quarantine } from "../platform/persistence/localSaveProvider.js";
 import { isBattleResult } from "../platform/contracts/battleResultVersion.js";
+import { noteWriteError } from "../platform/persistence/storageQuota.js";
 
 const KEY = "esmo.heroProgress.v2";   // Sprint09：heroId 對接 CHAMPIONS_100，鍵空間更換
 const canLS = typeof localStorage !== "undefined";
@@ -43,7 +44,7 @@ const persist = {
     //  ⚠ 這裡的 catch **回報**而不是靜默吞掉（B1A 風險 R3）。
     //    呼叫端目前只在賽後用它，真正會顯示給玩家的錯誤走 `saveGateway`。
     try { localStorage.setItem(KEY, JSON.stringify(heroProgressPayload(p))); return { ok: true }; }
-    catch (e) { return { ok: false, error: String(e?.message ?? e) }; }
+    catch (e) { noteWriteError(e); return { ok: false, error: String(e?.message ?? e) }; }
   },
 };
 
