@@ -148,11 +148,15 @@ export function withJournalRoom(attempt) {
   if (raw === null) return attempt();
   try { s.setItem(COMMIT_JOURNAL_KEY, raw); } catch { return null; }
   s.removeItem(COMMIT_JOURNAL_KEY);
-  const r = attempt();
-  if (!r.persisted) {
-    try { s.setItem(COMMIT_JOURNAL_KEY, raw); } catch { /* noop: 剛讓出來的空間放得下；真的放不下也只差一筆 Season，警示會留著 */ }
+  let r = null;
+  try {
+    r = attempt();
+    return r;
+  } finally {
+    if (!r?.persisted) {
+      try { s.setItem(COMMIT_JOURNAL_KEY, raw); } catch { /* noop: 剛讓出來的空間放得下；真的放不下只差一筆 Season，下次重試或開機時提示會清掉 */ }
+    }
   }
-  return r;
 }
 
 /**

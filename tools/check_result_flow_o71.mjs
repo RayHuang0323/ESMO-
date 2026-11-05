@@ -94,8 +94,12 @@ console.log("══ Milestone O7.1：真實賽後流程接入 O7 ══\n");
 {
   const feed = fs.readFileSync("src/battle/useBattleFeed.js", "utf8");
   const cs = fs.readFileSync("src/platform/progress/settleCsMatch.js", "utf8");
+  //  BP-9 P0-A：MOBA 賽後的結算搬進比賽完成邊界 commitMatch.js，所以要兩段都查：
+  //  useBattleFeed 只能走完成邊界，完成邊界只能走結算邊界。
+  const commit = fs.readFileSync("src/platform/progress/commitMatch.js", "utf8");
   ck("1) MOBA 賽後改走唯一結算邊界",
-    /settleMatchThroughSession\(/.test(feed) && !/profile\.applyMatchProgress\(/.test(feed));
+    /commitMobaMatch\(/.test(feed) && !/settleMatchResult\(/.test(feed) && !/\.applyMatchProgress\(/.test(feed) &&
+    /settleMatchThroughSession\(/.test(commit) && !/\.applyMatchProgress\(/.test(commit));
   ck("1b) CS 賽後改走唯一結算邊界",
     /settleMatchThroughSession\(/.test(cs) && !/getState\(\)\.applyMatchProgress\(/.test(cs));
   //  全庫掃描：除了 store 自身、邊界、與 O7 結算層，不應有其他直接呼叫

@@ -115,7 +115,12 @@ const retryDerived = (j, full) => () => {
 function settleOutstanding() {
   const j = readJournal();
   if (!j || j.corrupt || !ledgerHas(j.txId)) return true;
-  return finishDerived(j, null).ok;
+  //  ⚠ 日誌內容不對（例如沒有 players）時不能讓開賽與推進的按鈕丟例外：算補不完，給玩家看得懂的拒絕。
+  try {
+    return finishDerived(j, null).ok;
+  } catch {
+    return false;
+  }
 }
 
 registerOutstandingSettler(settleOutstanding);

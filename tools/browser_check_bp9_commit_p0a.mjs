@@ -14,6 +14,7 @@
 //              按重試補完；中途重新整理也補完；都不重複
 //  limit-moba  第 254 天真實超限（W2 重現的那一份）：熟練不再 790 → 800 → 810
 //  limit-cs    第 228 天真實超限：不再「獎金入了、紀錄沒了」
+//  probe       配額全滿時，同樣內容原地覆寫要成功、多一個字要失敗（日誌讓位的探測靠這個）
 //
 //  ⚠⚠ limit 兩個 case 不注入任何資料，存檔失敗是真比賽自然累積出來的。
 //  ⚠⚠ fault 用頁面裡換掉 setItem 做故障注入，那是唯一能在真 hook 上打到第 ③ 步的辦法。
@@ -32,7 +33,7 @@ const arg = (k) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.le
 const CASE = arg("case");
 const CHECKPOINT = arg("checkpoint");
 const OUT = arg("out");
-if (!CASE || !CHECKPOINT || !fs.existsSync("dist/index.html")) { console.error("需要 --case、--checkpoint，且要先 build"); process.exit(2); }
+if (!CASE || (!CHECKPOINT && CASE !== "probe") || !fs.existsSync("dist/index.html")) { console.error("需要 --case、--checkpoint，且要先 build"); process.exit(2); }
 const freePort = () => new Promise((res, rej) => { const s = createServer(); s.once("error", rej); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => res(port)); }); });
 const port = await freePort();
 const preview = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], { stdio: "ignore" });
@@ -41,7 +42,7 @@ for (let i = 0; i < 120; i++) { try { if ((await fetch(url)).ok) break; } catch 
 
 const J = (raw) => { const s = String(raw); for (const t of [s, s.replace(/^"|"$/g, "")]) { try { return JSON.parse(t); } catch { /* next */ } } return null; };
 const tid = (id) => "[data-testid=\"" + id + "\"]";
-const report = { case: CASE, url, checkpoint: path.basename(CHECKPOINT), nonUi: [], steps: [], findings: [] };
+const report = { case: CASE, url, checkpoint: CHECKPOINT ? path.basename(CHECKPOINT) : null, nonUi: [], steps: [], findings: [] };
 const save = () => { if (OUT) fs.writeFileSync(OUT, JSON.stringify(report, null, 1)); };
 
 const result = await runGate({
@@ -195,6 +196,32 @@ const result = await runGate({
       await sleep(900);
       return finishMoba(beforeFinish);
     };
+
+    if (CASE === "probe") {
+      await chrome.navigate(url); await sleep(1200);
+      const r = await ev(`
+        localStorage.clear();
+        let chunk='x'.repeat(1<<20);let i=0;
+        while(chunk.length>0){try{localStorage.setItem('fill'+i,chunk);i++;}catch(e){chunk=chunk.slice(0,chunk.length>>1);}}
+        const J='esmo.commit.journal.v1';const k='fill0';const raw=localStorage.getItem(k);
+        const out={};
+        try{localStorage.setItem(k,raw);out.sameSize=true;}catch(e){out.sameSize=e.name;}
+        try{localStorage.setItem(k,raw+'yy');out.oneMore=true;}catch(e){out.oneMore=e.name;}
+        try{localStorage.setItem(J,'z');out.newKey=true;}catch(e){out.newKey=e.name;}
+        out.still=localStorage.getItem(k)===raw;
+        localStorage.removeItem(k);
+        try{localStorage.setItem(k,raw);out.restored=true;}catch(e){out.restored=e.name;}
+        let total=0;for(let n=0;n<localStorage.length;n++){const key=localStorage.key(n);total+=key.length+localStorage.getItem(key).length;}
+        out.total=total;localStorage.clear();
+        return JSON.stringify(out);`);
+      report.findings.push({ kind: "probe", ...r });
+      ck("全滿時同樣內容覆寫成功", r?.sameSize === true, JSON.stringify(r));
+      ck("全滿時多兩個字元會失敗（確實是滿的）", r?.oneMore === "QuotaExceededError", JSON.stringify(r));
+      ck("失敗不會動到原值", r?.still === true, JSON.stringify(r));
+      ck("拿掉之後放回去成功", r?.restored === true, JSON.stringify(r));
+      save();
+      return;
+    }
 
     if (CASE === "normal") {
       await loadCheckpoint();

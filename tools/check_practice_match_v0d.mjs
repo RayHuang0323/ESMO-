@@ -342,9 +342,22 @@ console.log("\n【§H 不計戰績】");
 
 ck("H1) MOBA：練習不寫 season history / hero progress",
   (() => {
-    const s = codeOnly(read(P_FEED));
-    return /practice/i.test(s) && /recordResult/.test(s) && /recordBattleResult/.test(s)
-      && /if\s*\(\s*!\s*\w*[Pp]ractice/.test(s);
+    //  BP-9 P0-A：兩個寫入搬進比賽完成邊界 commitMatch.js。useBattleFeed 不得再自己寫，
+    //  練習判斷要一路傳進去，而且寫入只有 finishDerived 一個出口，每條進去的路都被 derived 擋住。
+    const feed = codeOnly(read(P_FEED));
+    const c = codeOnly(read("src/platform/progress/commitMatch.js"));
+    const onlyExit = /function finishDerived[\s\S]*?applyCommitted\([\s\S]*?recordCommitted\(/.test(c)
+      && (c.match(/applyCommitted\(/g) || []).length === 1
+      && (c.match(/recordCommitted\(/g) || []).length === 2;
+    const gate = c.indexOf("if (!p.derived)");
+    const finish = c.indexOf("finishDerived({ ...p, result: journalResult(fullResult) }, fullResult)");
+    return /practice/i.test(feed) && /commitMobaMatch\(\{[^\n]*\bisPractice\b/.test(feed)
+      && !/recordResult|recordBattleResult|recordCommitted|applyCommitted/.test(feed)
+      && /derived:\s*!isPractice/.test(c)
+      && onlyExit
+      && gate > 0 && finish > gate
+      && /journaled = p\.derived && /.test(c)
+      && /if \(p\.derived && !p\.txId/.test(c);
   })(),
   "兩個 record 呼叫必須被練習判斷包住");
 
