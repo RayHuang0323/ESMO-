@@ -559,6 +559,16 @@ const mobaOk = run(FX.moba, [{ do: "commit", which: "a" }, { do: "heroShape" }],
     const qb = run(FX.moba, [{ do: "boot" }], { from: freeze(q.final) });
     if (qb) ck("重新整理後（總量仍低於 Chrome 門檻）：還是判成已滿", last(qb).sum.full === true && qb.used < 4900000, `full=${last(qb).sum.full} used=${qb.used}`);
   }
+  //  日誌寫得進去、profile 寫不進去（配額錯誤）：重新整理時開機會重新掛提示，不能把「已滿」洗掉。
+  {
+    const pj = run(FX.moba, [{ do: "armKey", key: PROFILE_KEY }, { do: "commit", which: "a" }, { do: "disarm" }]);
+    if (pj) {
+      const c = pj.steps[1].sum;
+      ck("日誌在、profile 配額錯誤的前提成立", c.journal !== null && !c.disk.hasA && c.alertMem === "match" && c.alertFull === true, JSON.stringify({ j: c.journal, a: c.alertMem, f: c.alertFull }));
+      const pb = run(FX.moba, [{ do: "boot" }], { from: freeze(pj.final) });
+      if (pb) ck("重新整理、提示被重新掛上之後：還是判成已滿", last(pb).sum.alertMem === "match" && last(pb).sum.alertFull === true && last(pb).sum.full === true && pb.used < 4900000, JSON.stringify({ a: last(pb).sum.alertMem, f: last(pb).sum.alertFull, full: last(pb).sum.full, used: pb.used }));
+    }
+  }
   //  故障注入丟的都是配額錯誤，所以「不是配額錯誤」只能直接驗判斷函式。
   const Q = await import("../src/platform/persistence/storageQuota.js");
   ck("配額錯誤判斷：Chrome／Safari／舊 Firefox 都認得", Q.isQuotaError({ name: "QuotaExceededError" }) && Q.isQuotaError({ code: 22 }) && Q.isQuotaError({ name: "NS_ERROR_DOM_QUOTA_REACHED" }) && Q.isQuotaError({ code: 1014 }));

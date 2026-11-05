@@ -67,7 +67,7 @@ function raiseMatchAlert(p, stage, retry) {
   //  練習賽沒有賽程要處理，也不該叫玩家去棄權：只要讓他知道沒存到。
   const kind = p.practice ? ALERT_KINDS.save : ALERT_KINDS.match;
   setCommitAlert(
-    { kind, commitKey: p.commitKey, mode: p.mode, fixtureId: p.fixtureId ?? null, sessionId: p.sessionId ?? null, stage, at: Date.now() },
+    { kind, commitKey: p.commitKey, mode: p.mode, fixtureId: p.fixtureId ?? null, sessionId: p.sessionId ?? null, stage, at: Date.now(), ...(p.full === true ? { full: true } : {}) },
     { retry: retryWhileSessionLive(p, retry) },
   );
 }
@@ -313,7 +313,8 @@ function runRecovery() {
       //  ⚠ 只接比賽類提示的階段：這一筆帳沒進，不能沿用「已入帳」那類提示的階段。
       const prior = useCommitAlertStore.getState().alert;
       const stage = (prior?.kind === ALERT_KINDS.match ? prior.stage : null) ?? "interrupted";
-      raiseMatchAlert(j, stage, () => attemptMoba(j, j.result));
+      //  ⚠ 剛開機配額旗標是空的：沿用落盤提示記下的「已滿」，不然上限較小的瀏覽器會退回一般文案。
+      raiseMatchAlert({ ...j, full: prior?.kind === ALERT_KINDS.match && prior.full === true }, stage, () => attemptMoba(j, j.result));
       out.kept = true;
     } else {
       clearJournal();
