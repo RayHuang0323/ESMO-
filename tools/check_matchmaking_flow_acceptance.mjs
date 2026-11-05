@@ -120,6 +120,19 @@ console.log("\n══ §1 主按鈕：唯一判定來源，九種狀態 ══")
 // ════════════════════════════════════════════════════════════════════════════
 console.log("\n══ §2 端到端：一張票 → 房間 → 雙方確認 → 場次 → 進場 ══");
 const st = () => useProfileStore.getState();
+// ⚠ BP-9 P0-A：存不下去時不得開賽，裸 Node 沒有 localStorage 就一場都開不了。
+//   這裡補一個記憶體版，走的是真正的存檔路徑；下面的斷言一條都沒有動。
+if (typeof globalThis.localStorage === "undefined") {
+  const mem = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => { mem.set(k, String(v)); },
+    removeItem: (k) => { mem.delete(k); },
+    clear: () => { mem.clear(); },
+    key: (i) => [...mem.keys()][i] ?? null,
+    get length() { return mem.size; },
+  };
+}
 {
   st().reset?.();
   st().autoFillLineup("moba");
