@@ -64,6 +64,34 @@ export const useHeroProgressStore = create((set, get) => ({
     return detail;
   },
 
+  /**
+   * BP-9 P0-A：帳本已經寫進 profile 之後才呼叫。同一個 commitKey 只算一次。
+   *
+   * ⚠ 已入帳的識別放在**這場出賽的英雄身上**（`lastCommitKey`），跟成長是同一次
+   *   setItem，兩者不可能分開，也會跟著熟練一起進雲端信封。
+   * ⚠ 不要改成 progress 頂層的清單：progress 的每個鍵都被當成英雄掃
+   *   （`mobaHeroSource`、熟練統計），多一個鍵就多一隻假英雄。
+   * ⚠ 只留最新一場就夠。會回到這裡的只有還在日誌裡的那一場，
+   *   更早的比賽已經被帳本與賽程收尾擋住，所以其他英雄的標記會清掉，不佔存檔。
+   * ⚠ 寫不進去時記憶體還是要更新（帳已經入了），由呼叫端留著日誌重試。
+   */
+  applyCommitted(commitKey, br) {
+    if (!isBattleResult(br)) return { applied: false, persisted: true, detail: null };
+    const cur = get().progress;
+    const assign = Object.fromEntries(br.players.map((p) => [p.id, p.heroId]));
+    const heroIds = Object.values(assign).filter(Boolean);
+    if (heroIds.some((id) => cur[id]?.lastCommitKey === commitKey)) {
+      const again = persist.save(cur);
+      return { applied: false, persisted: again.ok, detail: null };
+    }
+    const { progress, detail } = applyMatchResult(cur, br, assign);
+    for (const h of Object.values(progress)) if (h?.lastCommitKey) delete h.lastCommitKey;
+    for (const id of heroIds) if (progress[id]) progress[id].lastCommitKey = commitKey;
+    const w = persist.save(progress);
+    set({ progress, lastDetail: detail });
+    return { applied: true, persisted: w.ok, detail };
+  },
+
   /** 下場沿用：目前 progress → 引擎 loadout */
   getLoadout() { return buildLoadout(get().progress, HERO_ASSIGN); },
 

@@ -55,5 +55,23 @@ export const useSeasonStore = create((set, get) => ({
     set({ history });
   },
 
+  /**
+   * BP-9 P0-A：帳本已經寫進 profile 之後才呼叫。同一個 commitKey 只記一筆。
+   * ⚠ 不能只靠 resultKey：同一場重打結果不同，resultKey 就不同（W2 實測出現過一勝一負兩筆）。
+   */
+  recordCommitted(commitKey, result) {
+    if (!isBattleResult(result)) return { applied: false, persisted: true };
+    const cur = get().history;
+    const key = resultKey(result);
+    if (cur.some((r) => r.commitKey === commitKey || resultKey(r) === key)) {
+      const again = persist.save(cur);
+      return { applied: false, persisted: again.ok };
+    }
+    const history = [...cur, { ...result, commitKey }].slice(-HISTORY_CAP);
+    const w = persist.save(history);
+    set({ history });
+    return { applied: true, persisted: w.ok };
+  },
+
   resetSeason() { persist.save([]); set({ history: [] }); },
 }));

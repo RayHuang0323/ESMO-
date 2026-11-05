@@ -169,6 +169,11 @@ import {
 } from "./competition/honors.js";
 import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
+import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, resetCommitState, setCommitAlert, useCommitAlertStore } from "./persistence/matchCommit.js";
+import { SAVE_STATUS } from "./persistence/saveProvider.js";
+
+//  BP-9 P0-A：玩家看得懂的一句話。不講配額，玩家對配額無能為力。
+const SAVE_BLOCKED_REASON = "進度存不進去，先不能繼續。請按重試，或到賽事中心處理這場比賽";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
   isCompetitionAssignment, fixtureIdOfAssignment,
@@ -919,6 +924,8 @@ function normalizeMsg(m, i) {
 //  當下的 `writeSeq`。兩者不同 ⇒ 有東西還沒存下去。
 let writeSeq = 0;
 let savedSeq = 0;
+//  BP-9 P0-A：>0 代表正在 runAtomicCommit 裡，save() 先不寫，最後一次寫完。
+let atomicDepth = 0;
 
 /** 有沒有還沒存下去的變更。⚠ 離開頁面的保底 flush 用它決定要不要寫。 */
 export const isProfileDirty = () => writeSeq !== savedSeq;
@@ -973,6 +980,7 @@ export const useProfileStore = create((rawSet, get) => {
    *   遊戲流程不會因此中斷。
    */
   save() {
+    if (atomicDepth > 0) return true;
     const current = get();
     //  ⚠ 這一步保留原樣：`seasonStateV2` 要在寫出去之前先同步好
     //    （它不是純推導——封存狀態重算不回來，見 saveBundle.js 檔頭）。
@@ -989,7 +997,62 @@ export const useProfileStore = create((rawSet, get) => {
     if (prev.status !== r.state.status || prev.errorCode !== r.state.errorCode) {
       set({ saveState: r.state });
     }
+    //  BP-9 P0-A：失敗要留下警示，重新整理之後玩家才知道；下一次成功就清掉。
+    const alert = useCommitAlertStore.getState().alert;
+    if (!r.ok) {
+      if (!alert) setCommitAlert({ kind: ALERT_KINDS.save, at: Date.now() });
+    } else if (alert?.kind === ALERT_KINDS.save) {
+      clearCommitAlert();
+    }
     return r.ok;
+  },
+
+  /**
+   * BP-9 P0-A：把一串寫入變成「一次寫完，不然就像沒發生過」。
+   *
+   * ⚠ 這裡面的 `save()` 都不會真的寫，全部留到最後一次。單次 setItem 是原子的，
+   *   所以結算、賽程回寫、csHistory 不可能只寫進一半。
+   * ⚠ 失敗時連記憶體一起還原：畫面、賽程、資金都要跟磁碟一樣，否則下一次存檔
+   *   會把「其實沒存到」的東西當成事實。state 的更新全都是換新物件，所以留參考就夠。
+   * @returns {{ ok:boolean, value:any }}
+   */
+  runAtomicCommit(fn) {
+    if (atomicDepth > 0) return { ok: true, value: fn() };
+    const before = get();
+    //  ⚠ 進來之前就有沒存的變更時，還原後還是要算沒存，保底 flush 才會寫它。
+    const wasDirty = writeSeq !== savedSeq;
+    const rollback = () => { rawSet(before, true); if (!wasDirty) savedSeq = writeSeq; };
+    atomicDepth += 1;
+    let value;
+    try {
+      value = fn();
+    } catch (e) {
+      atomicDepth -= 1;
+      rollback();
+      throw e;
+    }
+    atomicDepth -= 1;
+    const ok = get().save();
+    if (ok) return { ok: true, value };
+    const failed = get().saveState;
+    rollback();
+    rawSet({ saveState: failed });
+    return { ok: false, value: null };
+  },
+
+  /** 不是 profile 自己寫失敗、但提交已經失敗時（例如日誌寫不進去），讓畫面也知道。 */
+  markSaveFailed(errorCode) {
+    rawSet({ saveState: { ...get().saveState, status: SAVE_STATUS.error, errorCode, at: Date.now() } });
+  },
+
+  /**
+   * BP-9 P0-A：存檔失敗時不要繼續往前走。記憶體已經跑在磁碟前面時，再開新的比賽或
+   * 推進日曆，重新整理後只會丟掉更多。先試著存一次，存得進去就沒事。
+   * @returns {string|null} 不能繼續時的原因
+   */
+  _saveBlockedReason() {
+    if (get().saveState?.status !== SAVE_STATUS.error) return null;
+    return get().save() ? null : SAVE_BLOCKED_REASON;
   },
 
   /**
@@ -1015,6 +1078,7 @@ export const useProfileStore = create((rawSet, get) => {
    */
   reset() {
     resetAllPersistence();
+    resetCommitState();
     set({ ...withDevelopmentPoints(withIdentity(DEFAULT)), saveState: idleSaveState() });
   },
 
@@ -1495,7 +1559,12 @@ export const useProfileStore = create((rawSet, get) => {
       };
     }
     const days = Math.max(1, Math.floor(Number(n) || 1));
-    const receipts = get().advanceDay(days);
+    //  BP-9 P0-A：存不進去就不前進。週結算、合約、年度封存要嘛一起存下，要嘛都不算。
+    const blocked = get()._saveBlockedReason();
+    if (blocked) return { ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [], reason: blocked };
+    const atomic = get().runAtomicCommit(() => get().advanceDay(days));
+    if (!atomic.ok) return { ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [], reason: SAVE_BLOCKED_REASON };
+    const receipts = atomic.value;
     return {
       ok: (receipts.daysAdvanced ?? 0) > 0,
       daysAdvanced: receipts.daysAdvanced ?? 0,
@@ -1787,6 +1856,8 @@ export const useProfileStore = create((rawSet, get) => {
    * **完全走既有那幾支 action**，這裡不複製任何一步。
    */
   startFixtureMatch(fixtureId, now = Date.now()) {
+    const saveBlocked = get()._saveBlockedReason();
+    if (saveBlocked) return { ok: false, errors: [{ code: "save_failed", message: saveBlocked }], reason: saveBlocked };
     //  ── CS Season M2：出戰哪一個項目由 **fixture 自己**決定 ────────────────
     //  與 `forfeitFixture` 同一條規則：呼叫端只知道「我要打這一場」。
     //  多一個 mode 參數就多一個傳錯的機會，而傳錯的後果是對另一個項目的賽季動手。
@@ -1911,6 +1982,13 @@ export const useProfileStore = create((rawSet, get) => {
    * MVP 的棄權只有敗場：不扣聲望、不罰款、不降級。
    */
   forfeitFixture(fixtureId, reason = "玩家棄權") {
+    //  BP-9 P0-A：棄權是玩家卡住時的出口，所以一定要一次存好；存不進去就當沒按過。
+    if (atomicDepth === 0) {
+      const atomic = get().runAtomicCommit(() => get().forfeitFixture(fixtureId, reason));
+      if (!atomic.ok) return { ok: false, reason: SAVE_BLOCKED_REASON, errors: [{ code: "save_failed", message: SAVE_BLOCKED_REASON }] };
+      if (atomic.value?.ok) dropCommitForFixture(fixtureId);
+      return atomic.value;
+    }
     //  CS Season M1：棄權哪一場由 **fixture 自己**決定屬於哪個項目，
     //  不由呼叫端多傳一個 mode。呼叫端只知道「我要棄權這一場」，
     //  多一個參數就多一個傳錯的機會（傳錯 ⇒ 對另一個項目的賽季動手）。
@@ -1919,8 +1997,13 @@ export const useProfileStore = create((rawSet, get) => {
     if (!state?.schema) return { ok: false, errors: [{ code: "no_season", message: "目前沒有賽季" }] };
     const res = applyForfeit(state, { fixtureId, reason });
     if (!res.ok) return { ok: false, errors: res.errors };
+    //  BP-9 P0-A：這場賽程的場次要一起結束。留著的話，玩家還能返回重打、打完還會入帳
+    //  （賽程已棄權卻有賽果），下一場也會被 `other_live_session` 擋住。
+    const mmNow = get().matchmaking ?? {};
+    const liveForFixture = !!mmNow.session && !isSessionTerminal(mmNow.session) && fixtureIdOfSession(mmNow.session) === fixtureId;
+    const ended = liveForFixture ? abandonSession(mmNow.session, reason, Date.now()) : null;
     get()._setCompetitionStateFor(mode, res.state, {
-      matchmaking: { ...(get().matchmaking ?? {}), fixtureAssignment: null },
+      matchmaking: { ...mmNow, fixtureAssignment: null, ...(ended?.ok ? { session: ended.session } : {}) },
     });
     //  CS Season M4-A.1：棄權也是收尾 ⇒ 一併清掉 series 進度
     get()._clearSeriesForFixture(fixtureId);
@@ -2922,6 +3005,8 @@ export const useProfileStore = create((rawSet, get) => {
    * @returns {{ok:boolean, ticket:object|null, errors:Array}}
    */
   enqueueMatch(mode = "moba", now = Date.now(), attempt = null) {
+    const saveBlocked = get()._saveBlockedReason();
+    if (saveBlocked) return { ok: false, ticket: null, errors: [{ code: "save_failed", message: saveBlocked }] };
     const cur = get().matchmaking?.ticket ?? null;
     if (isActiveTicket(cur)) {
       return { ok: false, ticket: cur, errors: [{ code: "already_queued", message: `已有一張進行中的票券（${stateLabel(cur.state)}），請先取消` }] };
@@ -3785,6 +3870,7 @@ export const useProfileStore = create((rawSet, get) => {
    * @returns {boolean} false = 未知情境 id（不做任何事）
    */
   startNewGame(scenarioId) {
+    resetCommitState();
     const sc = SCENARIOS[scenarioId];
     if (!sc) return false;
     //  ⚠ B1B（B1A 風險 R5）：新局必須**一起**清掉英雄熟練與對戰歷史。

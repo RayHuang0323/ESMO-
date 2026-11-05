@@ -21,6 +21,8 @@ import {
   cloudSyncState, cloudSyncView, onCloudSyncChange, CLOUD_STATUS,
 } from "../platform/persistence/cloudBackedSaveProvider.js";
 import { GC } from "./theme.js";
+import { ALERT_KINDS, useCommitAlertStore } from "../platform/persistence/matchCommit.js";
+import { retryPendingCommit } from "../platform/progress/commitMatch.js";
 
 /**
  * 雲端同步失敗（B1D）。
@@ -53,12 +55,61 @@ function CloudSyncNotice() {
   );
 }
 
+const ALERT_TEXT = {
+  [ALERT_KINDS.match]: { head: "比賽結果沒有存起來", body: "這場還沒算進賽程，也不會重複計算。可以重打，或在賽事中心棄權。" },
+  [ALERT_KINDS.derived]: { head: "比賽已入帳，部分紀錄還沒寫完", body: "賽果與獎金都在，重試或下次開啟時會補上，不會重複。" },
+  [ALERT_KINDS.save]: { head: "進度沒有存起來", body: "現在看到的是最後一次成功存檔的內容。" },
+};
+
+/**
+ * BP-9 P0-A：提交失敗的警示。與下面的存檔狀態分開，因為它**要撐過重新整理**：
+ * 記憶體的 saveState 重開就沒了，這一份有落盤。
+ */
+function CommitAlertNotice({ alert, retry }) {
+  const text = ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save];
+  return (
+    <div
+      data-testid="save-status-notice"
+      data-status="error"
+      data-alert-kind={alert.kind}
+      style={{
+        position: "fixed", left: 12, right: 12, bottom: 12, zIndex: 9999,
+        display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+        padding: "10px 12px", borderRadius: 10,
+        background: "rgba(24,10,10,0.96)", border: `1px solid ${GC.red}66`,
+        color: GC.redL, fontSize: 12, minWidth: 0,
+      }}
+    >
+      <span data-testid="save-status-message" style={{ fontWeight: 800 }}>{text.head}</span>
+      <span style={{ color: GC.gray }}>{text.body}</span>
+      {/* ⚠ 比賽結果沒有握在手上時（重新整理過），按存檔也救不回來，不要給一個假按鈕。 */}
+      {(retry || alert.kind !== ALERT_KINDS.match) && (
+        <button
+          type="button"
+          data-testid="save-status-retry"
+          onClick={() => (retry ? retryPendingCommit() : useProfileStore.getState().save())}
+          style={{
+            minHeight: 44, padding: "0 14px", borderRadius: 9, marginLeft: "auto",
+            background: "rgba(255,255,255,0.08)", border: `1px solid ${GC.line}`,
+            color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
+          }}
+        >
+          重試
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function SaveStatusNotice() {
+  const alert = useCommitAlertStore((s) => s.alert);
+  const retry = useCommitAlertStore((s) => s.retry);
   //  ⚠ 訂閱**狀態字串本身**，不是整個物件：`saveState` 每次存檔都會是新物件，
   //    訂閱它會讓每一次存檔都重繪整個 shell。
   const status = useProfileStore((s) => s.saveState?.status ?? SAVE_STATUS.idle);
   //  ⚠ 本機存檔失敗**優先**：那是真的沒存到，比同步失敗嚴重得多。
   //    兩個同時發生時只顯示前者，不要疊兩條橫幅。
+  if (alert) return <CommitAlertNotice alert={alert} retry={retry} />;
   if (status !== SAVE_STATUS.error) return <CloudSyncNotice />;
 
   const view = useProfileStore.getState().saveStatus();

@@ -29,6 +29,7 @@
 //    這是 B1A §3 的分類，本輪用實測把它釘死。
 // ============================================================================
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
+import { resetCommitState } from "./matchCommit.js";
 import { useSeasonStore } from "../seasonStore.js";
 import { localSaveProvider } from "./localSaveProvider.js";
 import { buildSaveBundle, applySaveBundle, cloudBundleSize, validateSaveBundle } from "./saveBundle.js";
@@ -185,6 +186,8 @@ export function applyBundle(bundle, { applyProfile = null } = {}) {
   //    會是「新生涯 ＋ 舊熟練」——正是我們要消滅的那個狀態。
   if (r.heroProgress) useHeroProgressStore.getState().installProgress(r.heroProgress);
   if (typeof applyProfile === "function") applyProfile(r.profile);
+  //  BP-9 P0-A：換了一份存檔，上一份還沒做完的提交不能帶到這一份。
+  resetCommitState();
   return { ok: true, errors: [], profile: r.profile };
 }
 

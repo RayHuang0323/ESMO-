@@ -74,6 +74,7 @@ import CsLoadingScreen from "./screens/fps/CsLoadingScreen.jsx";
 import CsResultScreen from "./screens/fps/CsResultScreen.jsx";
 // ── Sprint25：賽後結算（MOBA 在 useBattleFeed 終局；CS 在此處的比賽完成邊界）──
 import { settleCsMatch } from "./platform/progress/settleCsMatch.js";
+import { recoverPendingCommits } from "./platform/progress/commitMatch.js";
 // ── Milestone E：對戰名單（唯一一份，Loading / Battle / Result 共用）──
 import { useProfileStore } from "./platform/profileStore.js";
 import { buildBattleRoster } from "./battle/moba/mobaRosterAdapter.js";
@@ -311,6 +312,9 @@ export default function AppShell() {
     const h = ensureExitFlush(() => useProfileStore.getState().flushIfDirty());
     return () => h.dispose();
   }, []);
+
+  //  BP-9 P0-A：上一次的提交如果中斷，開起來先處理。可以重複呼叫，StrictMode 雙掛載也安全。
+  useState(() => { recoverPendingCommits(); return null; });
 
   //  ⚠ B1D：只掛一次。沒設定 Supabase 時 `startCloudSave` 直接回
   //    `enabled:false`，什麼都不做——缺設定不是錯誤。

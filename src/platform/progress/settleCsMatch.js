@@ -14,6 +14,7 @@ import { useProfileStore } from "../profileStore.js";
 import { validateCsMatchResult } from "../contracts/CsMatchResult.js";
 import { csResultToTransaction } from "./adapters/csProgressAdapter.js";
 import { settleMatchThroughSession, outcomeFromCsResult } from "./settleMatchBoundary.js";
+import { commitCsMatch } from "./commitMatch.js";
 
 /**
  * @param {object} csResult  CsMatchResult.v1
@@ -40,20 +41,28 @@ export function settleCsMatch(csResult) {
   // 3) Apply —— O7.1：改走**唯一結算邊界**（與 MOBA 同一條路）。
   //    有場次 ⇒ 經 MatchResult 綁定與衝突偵測；沒有場次 ⇒ 仍入帳但標記未驗證。
   //    ⚠ 實際入帳仍是 S25 的 applyMatchProgress，沒有第二套結算。
-  const { receipt } = settleMatchThroughSession({
-    mode: "cs",
-    outcome: outcomeFromCsResult(csResult),
-    transaction: tx,
+  //  ⚠ BP-9 P0-A：結算、賽程回寫、入史要一次寫完。W2 實測分兩次寫時，配額不足會留下
+  //    「獎金入了、這場的紀錄與戰報沒了」。寫不進去就全部還原，這場可以重打。
+  const committed = commitCsMatch({
+    matchId: csResult.matchId,
+    build: () => {
+      const { receipt } = settleMatchThroughSession({
+        mode: "cs",
+        outcome: outcomeFromCsResult(csResult),
+        transaction: tx,
+      });
+      // 4) 入史（只寫紀錄，不發獎；同 matchId 冪等）
+      //  ⚠ V0D：快速練習**不計戰績**。判斷讀 `MatchOrigin`（`matchPracticeContext`），
+      //    與 MOBA 那一側同一條規則、同一個判定來源——不看畫面、不看路由。
+      //  ⚠ BP-9 P0-A：結算拒絕的賽果（同一場送不同結果）不能入史，否則紀錄會出現矛盾賽果。
+      if (receipt?.ok !== false && !useProfileStore.getState().matchPracticeContext().inPractice) {
+        useProfileStore.getState().recordCsMatch(csResult, receipt);
+      }
+      return receipt;
+    },
   });
-
-  // 4) 入史（只寫紀錄，不發獎；同 matchId 冪等）
-  //  ⚠ V0D：快速練習**不計戰績**。判斷讀 `MatchOrigin`（`matchPracticeContext`），
-  //    與 MOBA 那一側同一條規則、同一個判定來源——不看畫面、不看路由。
-  if (!useProfileStore.getState().matchPracticeContext().inPractice) {
-    useProfileStore.getState().recordCsMatch(csResult, receipt);
-  }
-
-  return receipt;
+  if (!committed.ok) return { ok: false, applied: false, alreadyApplied: false, errors: [{ code: "save_failed", message: "比賽結果沒有存起來" }] };
+  return committed.receipt;
 }
 
 /** CS 連勝：csHistory 最新在前，往後數到第一場非勝為止。 */

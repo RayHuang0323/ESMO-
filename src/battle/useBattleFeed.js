@@ -8,7 +8,6 @@
 import { useEffect, useRef } from "react";
 import { useGameStore } from "../useGameStore.js";
 import { useBattleStore } from "./battleStore.js";
-import { useHeroProgressStore } from "../hero/heroProgressStore.js";
 import { useSeasonStore } from "../platform/seasonStore.js";
 import { useProfileStore } from "../platform/profileStore.js";
 import { selectTeamName, selectOpponentName } from "../platform/matchTeamNames.js";
@@ -16,7 +15,7 @@ import { TEAMS } from "../data/roster.js";
 import { snapshotToBattleResult } from "./battleResult.js";
 import { draftHeroAssign } from "./moba/draftRoster.js";
 import { mobaResultToTransaction, mobaMatchId } from "../platform/progress/adapters/mobaProgressAdapter.js";
-import { settleMatchThroughSession, outcomeFromBattleResult } from "../platform/progress/settleMatchBoundary.js";
+import { commitMobaMatch } from "../platform/progress/commitMatch.js";
 import { captureReplayFrame, finalizeReplay } from "./moba/replay/replayBuffer.js";
 
 /**
@@ -67,9 +66,6 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
         //  練習不寫任何永久紀錄：不進英雄熟練度、不進賽季戰績。
         //  Replay **刻意不跳過**——能回看剛剛試的陣容正是快速練習的用途。
         const isPractice = useProfileStore.getState().matchPracticeContext().inPractice;
-        if (!isPractice) {
-          useHeroProgressStore.getState().recordBattleResult(result);  // → Hero Progress
-        }
 
         // ── Sprint25：賽後結算（此處＝比賽完成邊界，不是 Result Screen 掛載）──
         //    刻意放在引擎終局而不是 BattleEndScreen：玩家就算直接離開 Result 畫面，
@@ -91,13 +87,9 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
         //  有場次 ⇒ reportMatchResult（場次綁定／防重送／防衝突／追蹤鏈）；
         //  沒有場次（debug harness）⇒ 仍入帳但標記未經權威驗證。
         //  ⚠ 實際入帳一律還是 S25 的 applyMatchProgress，沒有第二套結算。
-        if (tx) {
-          settleMatchThroughSession({
-            mode: "moba",
-            outcome: outcomeFromBattleResult(result, mobaMatchId(result)),
-            transaction: tx,
-          });
-        }
+        //  ── BP-9 P0-A：帳本先寫進 profile，熟練與 Season 才跟著寫（都防重）──
+        //  ⚠ 以前熟練先寫、帳本後寫，配額不足時會留下一半，重打還會再算一次。
+        commitMobaMatch({ result, transaction: tx, matchId: mobaMatchId(result), isPractice });
 
         // S26：重播定稿（matchId 與結算同源 → Result 可比對「這場」的重播；
         //      只組裝已擷取的 frames，不觸發任何發獎 / 入史）
@@ -116,10 +108,6 @@ export function useBattleFeed(draft = null, { roster = null, tacticId = null } =
           tacticMeta: result.tactic ?? null,
         });
 
-        //  V0D：練習不計戰績（同上，判斷來自 `matchPracticeContext`）。
-        if (!isPractice) {
-          useSeasonStore.getState().recordResult(result);            // → Season / History / Analytics
-        }
       }
     });
     return () => unsub();
