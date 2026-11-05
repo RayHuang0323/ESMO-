@@ -221,6 +221,17 @@ export function detectCommitAnomalies({ profile = null, heroProgress = null, sea
   return { checkedAt: now, findings: findings.slice(0, MAX_AUDIT_FINDINGS) };
 }
 
+/**
+ * 補一筆，不蓋掉這一格裡已經有的紀錄。同一件事只留一筆，最多留 20 筆。
+ * ⚠ 下次開機 recordAudit 會整份換成重新推導的結果：問題解決了，這裡也就清掉了。
+ */
+export function appendAudit(finding) {
+  let prev = [];
+  try { prev = JSON.parse(local()?.getItem(COMMIT_AUDIT_KEY) ?? "null")?.findings ?? []; } catch { /* noop: 讀不懂就當沒有 */ }
+  const same = (f) => f?.code === finding.code && f?.commitKey === finding.commitKey;
+  return recordAudit({ checkedAt: Date.now(), findings: [...prev.filter((f) => !same(f)), finding].slice(-20) });
+}
+
 export function recordAudit(audit) {
   if (!audit?.findings?.length) { try { local()?.removeItem(COMMIT_AUDIT_KEY); } catch { /* noop: 只是診斷資料 */ } return false; }
   try { local()?.setItem(COMMIT_AUDIT_KEY, JSON.stringify(audit)); return true; } catch { return false; }

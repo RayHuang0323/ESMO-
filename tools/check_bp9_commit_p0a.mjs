@@ -319,6 +319,7 @@ async function child(jobFile) {
       alertDisk: ctl.map.has(ALERT_KEY) ? JSON.parse(ctl.map.get(ALERT_KEY)).kind : null,
       alertSession: ctl.sess.has(ALERT_KEY) ? JSON.parse(ctl.sess.get(ALERT_KEY)).kind : null,
       alertMem: alertStore.alert?.kind ?? null,
+      alertStage: alertStore.alert?.stage ?? null,
       canRetry: !!alertStore.retry,
       saveStatus: s.saveState?.status ?? null,
       detail: !!useHeroProgressStore.getState().lastDetail,
@@ -373,6 +374,7 @@ async function child(jobFile) {
     dropJournal: () => { ctl.map.delete(JOURNAL_KEY); return { ok: true }; },
     roomThrow: () => withJournalRoom(() => { throw new Error("boom"); }),
     roomFail: () => withJournalRoom(() => ({ persisted: false })),
+    plantAlert: ({ alert }) => { ctl.map.set(ALERT_KEY, JSON.stringify(alert)); return { ok: true }; },
     breakRetry: () => { useCommitAlertStore.setState({ retry: () => { throw new Error("boom"); } }); return { ok: true }; },
     clearAlertOnly: () => { useCommitAlertStore.setState({ alert: null, retry: null }); return { ok: true }; },
     forceCreated: () => {
@@ -938,15 +940,30 @@ section("§15 失敗前後各一場");
   const stuck = bad && run(FX.moba, [{ do: "boot" }, { do: "advance" }, { do: "enqueue" }, { do: "retry" }, { do: "breakRetry" }, { do: "retry" }], { from: freeze(bad.final), patchDisk: [{ key: JOURNAL_KEY, kind: "journal_no_players" }] });
   if (stuck) {
     const [boot, adv, enq, retry, , broke] = stuck.steps;
-    ck("算不完的日誌：開機不丟例外，而且看得到提示和重試", !boot.ret?.threw && boot.sum.alertMem === "derived" && boot.sum.canRetry === true, JSON.stringify(boot.sum));
+    ck("算不完的日誌：開機不丟例外，而且看得到提示和重試", !boot.ret?.threw && boot.sum.alertMem === "derived" && boot.sum.alertStage === "unfinishable" && boot.sum.canRetry === true, JSON.stringify(boot.sum));
     ck("算不完的日誌：記進審查紀錄", boot.sum.audit.includes("journal_unfinishable"), JSON.stringify(boot.sum.audit));
-    ck("算不完的日誌：推進被拒、不丟例外、日子不動", !adv.ret?.threw && adv.ret?.ok === false && adv.sum.disk.days === boot.sum.disk.days && !!adv.ret?.reason, JSON.stringify(adv.ret));
-    ck("算不完的日誌：開賽被拒、不丟例外", !enq.ret?.threw && enq.ret?.ok === false, JSON.stringify(enq.ret));
+    //  ⚠ 只看被拒會假綠：同一份存檔當天有賽程，日誌好好的也會被拒。要看原因。
+    ck("算不完的日誌：推進被拒、原因說的是這件事、日子不動", !adv.ret?.threw && adv.ret?.ok === false && adv.sum.disk.days === boot.sum.disk.days && /紀錄還沒補完/.test(adv.ret?.reason ?? ""), JSON.stringify(adv.ret));
+    ck("算不完的日誌：開賽被拒、不丟例外", !enq.ret?.threw && enq.ret?.ok === false && enq.ret?.code === "save_failed", JSON.stringify(enq.ret));
     ck("算不完的日誌：按重試不丟例外，提示與按鈕還在", !retry.ret?.threw && retry.ret?.ok === false && retry.sum.alertMem === "derived" && retry.sum.canRetry === true, JSON.stringify(retry.ret));
     ck("算不完的日誌：帳、日誌都不動，也沒有重複", retry.sum.journal !== null && retry.sum.disk.hasA && retry.sum.disk.funds === boot.sum.disk.funds && retry.sum.heroDisk === boot.sum.heroDisk && retry.sum.seasonDisk === boot.sum.seasonDisk, JSON.stringify(retry.sum));
     ck("重試函式自己丟例外：按鈕不會把例外丟給畫面", !broke.ret?.threw && broke.ret?.ok === false && broke.sum.audit.includes("retry_failed"), JSON.stringify(broke.ret));
+    ck("審查紀錄不互相蓋掉", broke.sum.audit.includes("journal_unfinishable") && broke.sum.audit.includes("retry_failed"), JSON.stringify(broke.sum.audit));
+    ck("開機那次的原因也留著", boot.sum.audit.includes("recovery_failed") && boot.sum.audit.includes("journal_unfinishable"), JSON.stringify(boot.sum.audit));
     const again = run(FX.moba, [{ do: "boot" }], { from: freeze(stuck.final) });
     if (again) ck("算不完的日誌：重新整理後提示還在", last(again).sum.alertMem === "derived" && last(again).sum.canRetry === true && !last(again).ret?.threw, JSON.stringify(last(again).sum));
+  }
+  //  日誌被別處補完清掉：重試回成功，提示也要跟著收掉。
+  const gone = bad && run(FX.moba, [{ do: "boot" }, { do: "dropJournal" }, { do: "retry" }], { from: freeze(bad.final), patchDisk: [{ key: JOURNAL_KEY, kind: "journal_no_players" }] });
+  if (gone) {
+    const g = last(gone);
+    ck("日誌已不在時重試：回成功、提示收掉", g.ret?.ok === true && g.sum.alertMem === null && g.sum.alertDisk === null, JSON.stringify(g.sum));
+  }
+  //  帳沒進的日誌，不能接手「已入帳」那類提示的階段，否則畫面會說賽果與獎金都在。
+  const failedTx = run(FX.moba, [{ do: "armKey", key: PROFILE_KEY }, { do: "commit", which: "a" }, { do: "disarm" }, { do: "plantAlert", alert: { kind: "derived", stage: "unfinishable", commitKey: "old", mode: "moba", at: 1 } }, { do: "boot" }]);
+  if (failedTx) {
+    const f = last(failedTx);
+    ck("帳沒進的日誌：提示是比賽類，階段不沿用", !f.sum.disk.hasA && f.sum.alertMem === "match" && f.sum.alertStage !== "unfinishable", JSON.stringify(f.sum));
   }
   //  提示不見了（例如開機之後被別的事清掉）：按推進也要自己把提示掛回來，不能只靠開機那一次。
   const silent = bad && run(FX.moba, [{ do: "boot" }, { do: "clearAlertOnly" }, { do: "advance" }], { from: freeze(bad.final), patchDisk: [{ key: JOURNAL_KEY, kind: "journal_no_players" }] });
@@ -973,9 +990,10 @@ section("§15 失敗前後各一場");
       'st().reset?.(); st().autoFillLineup("moba");',
       'const days = st().meta.days, funds = st().finance.funds;',
       'const q = st().enqueueMatch("moba");',
+      'const blocked = st()._saveBlockedReason();',
       'const adv = st().advanceWorldDays(1, { reason: "rest" });',
       'const cs = settle.settleCsMatch(JSON.parse(fs.readFileSync(process.argv[3], "utf8")).a.result);',
-      'console.log("@@" + JSON.stringify({ hasLs: typeof localStorage, q: q.ok, qCode: q.code ?? q.errors?.[0]?.code ?? null, adv: adv.ok, daysSame: st().meta.days === days, csOk: cs?.ok, csCode: cs?.errors?.[0]?.code ?? null, fundsSame: st().finance.funds === funds, csHistory: st().csHistory.length }));',
+      'console.log("@@" + JSON.stringify({ hasLs: typeof localStorage, blocked, advReason: adv.reason ?? null, q: q.ok, qCode: q.code ?? q.errors?.[0]?.code ?? null, adv: adv.ok, daysSame: st().meta.days === days, csOk: cs?.ok, csCode: cs?.errors?.[0]?.code ?? null, fundsSame: st().finance.funds === funds, csHistory: st().csHistory.length }));',
       'process.exit(0);',
     ].join("\n");
     const url = (p) => pathToFileURL(path.join(ROOT, p)).href;
@@ -984,8 +1002,8 @@ section("§15 失敗前後各一場");
     const v = hit ? JSON.parse(hit.slice(2)) : null;
     ck("沒有 localStorage：前提成立且沒有丟例外", v?.hasLs === "undefined", `${r.status} ${(r.stderr ?? "").slice(0, 200)}`);
     if (v) {
-      ck("沒有 localStorage：開賽被拒", v.q === false, JSON.stringify(v));
-      ck("沒有 localStorage：推進被拒、日子不動", v.adv === false && v.daysSame === true, JSON.stringify(v));
+      ck("沒有 localStorage：開賽被拒，原因是存檔", v.q === false && v.qCode === "save_failed", JSON.stringify(v));
+      ck("沒有 localStorage：推進被拒、原因是存檔、日子不動", v.adv === false && /存不進去/.test(v.advReason ?? "") && v.daysSame === true, JSON.stringify(v));
       ck("沒有 localStorage：CS 賽果不算，資金與歷史不動", v.csOk === false && v.csCode === "save_failed" && v.fundsSame === true && v.csHistory === 0, JSON.stringify(v));
     }
   }

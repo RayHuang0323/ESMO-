@@ -15,6 +15,7 @@
 //  limit-moba  第 254 天真實超限（W2 重現的那一份）：熟練不再 790 → 800 → 810
 //  limit-cs    第 228 天真實超限：不再「獎金入了、紀錄沒了」
 //  probe       配額全滿時，同樣內容原地覆寫要成功、多一個字要失敗（日誌讓位的探測靠這個）
+//  unfinishable 已入帳但算不完的日誌：橫幅與重試真的畫得出來、390 不破版、修好後自己消失
 //
 //  ⚠⚠ limit 兩個 case 不注入任何資料，存檔失敗是真比賽自然累積出來的。
 //  ⚠⚠ fault 用頁面裡換掉 setItem 做故障注入，那是唯一能在真 hook 上打到第 ③ 步的辦法。
@@ -219,6 +220,61 @@ const result = await runGate({
       ck("全滿時多兩個字元會失敗（確實是滿的）", r?.oneMore === "QuotaExceededError", JSON.stringify(r));
       ck("失敗不會動到原值", r?.still === true, JSON.stringify(r));
       ck("拿掉之後放回去成功", r?.restored === true, JSON.stringify(r));
+      save();
+      return;
+    }
+
+    if (CASE === "unfinishable") {
+      await loadCheckpoint();
+      const s0 = await step("起點");
+      //  在已入帳的那一筆上放一份缺 players 的日誌。內容取自存檔裡真的賽果。
+      const planted = await ev(`
+        const p=JSON.parse(localStorage.getItem('esmo.profile.v1'));const txs=Object.keys(p.processedMatchTransactions||{});
+        const h=JSON.parse(localStorage.getItem('esmo.season.v1')).history;const full=h[h.length-1];const r={...full};delete r.players;
+        const j={schema:'MatchCommitJournal.v1',state:'prepared',mode:'moba',commitKey:'gate:unfinishable',matchId:'gate',txId:txs[txs.length-1],derived:true,practice:false,at:1,result:{...r,timeline:[]}};
+        localStorage.setItem('esmo.commit.journal.v1',JSON.stringify(j));
+        window.name=JSON.stringify(full.players||null);
+        return JSON.stringify({tx:txs.length,hasPlayers:!!full.players});`);
+      ck("前提：真的賽果有 players、帳本有資料", planted?.hasPlayers === true && planted?.tx > 0, JSON.stringify(planted));
+      await home();
+      const s1 = await step("開機之後");
+      const body = () => ev("const e=document.querySelector('" + tid("save-status-notice") + "');return JSON.stringify(e?e.innerText:null);");
+      ck("橫幅出現，類別是已入帳", s1.notice.on && s1.notice.kind === "derived", JSON.stringify(s1.notice));
+      ck("橫幅文字：說的是紀錄還沒補上", /部分紀錄還沒補上/.test(s1.notice.message ?? ""), s1.notice.message);
+      ck("橫幅文字：說明會擋住、不要開新局", /先停住/.test((await body()) ?? "") && /不要開新局/.test((await body()) ?? ""), await body());
+      ck("有重試按鈕", s1.notice.retry === true);
+      ck("資料沒動", s1.disk.funds === s0.disk.funds && s1.disk.tx === s0.disk.tx && s1.disk.heroGames === s0.disk.heroGames && s1.disk.seasonLen === s0.disk.seasonLen, JSON.stringify(s1.disk));
+      await setWidth(390, 844, true);
+      await sleep(800);
+      const box390 = await ev("const e=document.querySelector('" + tid("save-status-notice") + "');const b=document.querySelector('" + tid("save-status-retry") + "');const r=e?e.getBoundingClientRect():null;const q=b?b.getBoundingClientRect():null;return JSON.stringify({l:r&&r.left,r:r&&r.right,bot:r&&r.bottom,h:r&&r.height,bw:q&&q.width,bh:q&&q.height,iw:innerWidth,ih:innerHeight});");
+      report.findings.push({ kind: "banner_390", ...box390 });
+      ck("390：橫幅在畫面內、沒有橫向溢出", (await overflow()) <= 1 && box390?.l >= 0 && box390?.r <= box390?.iw && box390?.bot <= box390?.ih, JSON.stringify(box390));
+      ck("390：重試按鈕夠大", box390?.bw >= 44 && box390?.bh >= 44, JSON.stringify(box390));
+      await setWidth(1366, 900, false);
+      await sleep(500);
+      await click("save-status-retry");
+      await sleep(1500);
+      const s2 = await step("按重試");
+      ck("按重試：橫幅與按鈕還在、資料不動、沒有 JS 錯誤", s2.notice.on && s2.notice.retry && s2.disk.funds === s0.disk.funds && s2.disk.heroGames === s0.disk.heroGames && errors().page.length === 0, errors().page.join(" | "));
+      const dayBefore = s2.disk.day;
+      await click("home-advance-next");
+      await sleep(1500);
+      const s3 = await step("按推進");
+      const said = await ev("return JSON.stringify((document.body.innerText||'').includes('紀錄還沒補完'));");
+      report.findings.push({ kind: "advance_while_unfinishable", from: dayBefore, to: s3.disk.day, said });
+      ck("按推進：日子不動", s3.disk.day === dayBefore, `${dayBefore}→${s3.disk.day}`);
+      await home();
+      const s4 = await step("重新整理");
+      ck("重新整理：橫幅與重試還在", s4.notice.on && s4.notice.kind === "derived" && s4.notice.retry, JSON.stringify(s4.notice));
+      //  日誌修好（這裡把 players 放回去）：開機自己補完，橫幅消失。
+      await ev(`
+        const j=JSON.parse(localStorage.getItem('esmo.commit.journal.v1'));j.result.players=JSON.parse(window.name);
+        localStorage.setItem('esmo.commit.journal.v1',JSON.stringify(j));return JSON.stringify(true);`);
+      await home();
+      const s5 = await step("日誌修好後開機");
+      ck("修好後開機：橫幅消失、日誌清掉", !s5.notice.on && s5.disk.journal === null, JSON.stringify({ n: s5.notice, j: s5.disk.journal }));
+      ck("修好後開機：帳不動", s5.disk.funds === s0.disk.funds && s5.disk.tx === s0.disk.tx, JSON.stringify(s5.disk));
+      report.errors = errors();
       save();
       return;
     }
@@ -468,6 +524,20 @@ const result = await runGate({
         const s2 = await step("重新整理");
         ck("重新整理：提示還在", s2.notice.on && s2.notice.kind === "match", JSON.stringify(s2.notice));
         ck("重新整理：資料沒動", s2.disk.funds === s0.disk.funds && s2.disk.tx === s0.disk.tx && s2.disk.csHistory === s0.disk.csHistory, JSON.stringify(s2.disk));
+        ck("重新整理：文字沒有叫玩家去按不存在的棄權", (await ev("const e=document.querySelector('" + tid("save-status-notice") + "');return JSON.stringify(!!e&&!e.innerText.includes('棄權'));")) === true);
+        //  超限之後玩家還有什麼路：這幾筆是給 Owner 判斷的事實，只釘「不多算」，不把卡住當通過。
+        await toHub();
+        const replay = await startCsFromHub();
+        const s3 = await step("超限後重打 CS");
+        report.findings.push({ kind: "cs_replay_at_limit", ok: replay.ok, why: replay.why ?? null, err: replay.err ?? null, disk: s3.disk, notice: s3.notice });
+        ck("超限重打：資金、帳本、歷史都不多算", s3.disk.funds === s0.disk.funds && s3.disk.tx === s0.disk.tx && s3.disk.csHistory === s0.disk.csHistory, JSON.stringify(s3.disk));
+        await home();
+        const before = (await step("重打後重新整理")).disk.day;
+        await click("home-advance-next");
+        await sleep(1500);
+        const s4 = await step("超限後推進日曆");
+        report.findings.push({ kind: "cs_advance_at_limit", from: before, to: s4.disk.day, notice: s4.notice });
+        ck("超限後推進：資料不多算", s4.disk.funds === s0.disk.funds && s4.disk.tx === s0.disk.tx, JSON.stringify(s4.disk));
       }
       report.played = played;
       report.errors = errors();

@@ -29,7 +29,7 @@ import { FIXTURE_TERMINAL } from "../contracts/competition.js";
 import { settleMatchThroughSession, outcomeFromBattleResult } from "./settleMatchBoundary.js";
 import {
   ALERT_KINDS, JOURNAL_STATES, clearCommitAlert, clearJournal, commitKeyOf, detectCommitAnomalies,
-  hasUnfinishedCommit, journalResult, loadCommitAlert, readJournal, registerOutstandingSettler, withJournalRoom, recordAudit, setCommitAlert, useCommitAlertStore, writeJournal,
+  hasUnfinishedCommit, journalResult, loadCommitAlert, readJournal, registerOutstandingSettler, withJournalRoom, recordAudit, appendAudit, setCommitAlert, useCommitAlertStore, writeJournal,
 } from "../persistence/matchCommit.js";
 
 const profile = () => useProfileStore.getState();
@@ -116,10 +116,17 @@ const retryDerived = (j, full) => () => {
  * ⚠ 帳已入，所以不丟日誌、不猜、不補償：留給玩家看得到的提示與按鈕，並記下來供審查。
  */
 function raiseUnfinishable(j, e) {
-  recordAudit({ checkedAt: Date.now(), findings: [{ code: "journal_unfinishable", commitKey: j.commitKey, message: String(e?.message ?? e).slice(0, 160) }] });
+  appendAudit({ code: "journal_unfinishable", commitKey: j.commitKey, message: String(e?.message ?? e).slice(0, 160) });
   setCommitAlert(
     { kind: ALERT_KINDS.derived, stage: "unfinishable", commitKey: j.commitKey, mode: j.mode, fixtureId: j.fixtureId ?? null, at: Date.now() },
-    { retry: () => (settleOutstanding() ? { ok: true, stage: "done" } : { ok: false, stage: "derived" }) },
+    {
+      retry: () => {
+        if (!settleOutstanding()) return { ok: false, stage: "derived" };
+        //  日誌可能已經被別處補完清掉，這時沒有人會來收這個提示。
+        reconcileCommitAlert();
+        return { ok: true, stage: "done" };
+      },
+    },
   );
 }
 
@@ -247,7 +254,7 @@ export function retryPendingCommit() {
   try {
     return run();
   } catch (e) {
-    recordAudit({ checkedAt: Date.now(), findings: [{ code: "retry_failed", message: String(e?.message ?? e).slice(0, 160) }] });
+    appendAudit({ code: "retry_failed", message: String(e?.message ?? e).slice(0, 160) });
     return { ok: false, stage: "derived" };
   }
 }
@@ -277,7 +284,7 @@ export function recoverPendingCommits() {
   try {
     return runRecovery();
   } catch (e) {
-    recordAudit({ checkedAt: Date.now(), findings: [{ code: "recovery_failed", message: String(e?.message ?? e).slice(0, 160) }] });
+    appendAudit({ code: "recovery_failed", message: String(e?.message ?? e).slice(0, 160) });
     //  帳已入的那一筆補不完時，開賽與推進會擋住，所以開機就要讓玩家看到原因。
     try {
       const j = readJournal();
@@ -303,7 +310,9 @@ function runRecovery() {
     const s = liveSession();
     if (j.sessionId && s?.sessionId === j.sessionId && s.state === SESSION_STATES.launched) {
       //  帳沒進，場次還在：賽果還能重試。⚠ 這份賽果沒有 timeline，只有恢復這條路會這樣。
-      const stage = useCommitAlertStore.getState().alert?.stage ?? "interrupted";
+      //  ⚠ 只接比賽類提示的階段：這一筆帳沒進，不能沿用「已入帳」那類提示的階段。
+      const prior = useCommitAlertStore.getState().alert;
+      const stage = (prior?.kind === ALERT_KINDS.match ? prior.stage : null) ?? "interrupted";
       raiseMatchAlert(j, stage, () => attemptMoba(j, j.result));
       out.kept = true;
     } else {

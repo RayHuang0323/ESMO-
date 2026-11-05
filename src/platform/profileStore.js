@@ -174,6 +174,8 @@ import { SAVE_STATUS } from "./persistence/saveProvider.js";
 
 //  BP-9 P0-A：玩家看得懂的一句話。不講配額，玩家對配額無能為力。
 const SAVE_BLOCKED_REASON = "進度存不進去，先不能繼續。請按重試，或到賽事中心處理這場比賽";
+//  ⚠ 這條路存檔本身可能是好的，而且棄權解不開已入帳的那一筆，所以不能用上面那句。
+const UNFINISHED_COMMIT_REASON = "上一場比賽的紀錄還沒補完，先不能繼續。請按畫面下方的重試";
 import {
   issueFor as issueCompetitionMatch, openRoomForFixture, openSessionForFixture,
   isCompetitionAssignment, fixtureIdOfAssignment,
@@ -1053,7 +1055,7 @@ export const useProfileStore = create((rawSet, get) => {
   _saveBlockedReason() {
     //  ⚠ 帳已入但熟練或 Season 還沒寫完時 saveState 是正常的，所以要另外看。
     //    這裡只補當前這一筆；補不完就停，下一場進來會把它的紀錄擠掉。
-    if (hasUnfinishedCommit(get().processedMatchTransactions) && !settleOutstandingCommit()) return SAVE_BLOCKED_REASON;
+    if (hasUnfinishedCommit(get().processedMatchTransactions) && !settleOutstandingCommit()) return UNFINISHED_COMMIT_REASON;
     if (get().saveState?.status !== SAVE_STATUS.error) return null;
     return get().save() ? null : SAVE_BLOCKED_REASON;
   },
