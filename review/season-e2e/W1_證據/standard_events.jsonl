@@ -1,0 +1,177 @@
+{"kind":"advance","from":1,"to":6,"stop":"player_fixture","label":"第 6 天有你的比賽","funds":1200000}
+{"day":6,"kind":"lineup_autofill","mode":"cs","filled":0,"why":"出賽申請單不成立，走玩家按的自動填入"}
+{"kind":"advance","from":6,"to":7,"stop":"player_fixture","label":"第 7 天有你的比賽","funds":1580000}
+{"day":7,"kind":"training","player":"b1","course":"aim","ok":true,"energy":69}
+{"day":7,"kind":"training","player":"b2","course":"mechanics","ok":true,"energy":69}
+{"kind":"advance","from":7,"to":10,"stop":"player_fixture","label":"第 10 天有你的比賽","funds":1833000}
+{"kind":"advance","from":10,"to":12,"stop":"player_fixture","label":"第 12 天有你的比賽","funds":1913000}
+{"kind":"advance","from":12,"to":13,"stop":"player_fixture","label":"第 13 天有你的比賽","funds":2293000}
+{"kind":"advance","from":13,"to":16,"stop":"player_fixture","label":"第 16 天有你的比賽","funds":2296000}
+{"day":16,"kind":"training","player":"b1","course":"positioning","ok":true,"energy":47}
+{"day":16,"kind":"training","player":"b2","course":"tactics","ok":true,"energy":36}
+{"kind":"advance","from":16,"to":18,"stop":"player_fixture","label":"第 18 天有你的比賽","funds":2376000}
+{"kind":"advance","from":18,"to":19,"stop":"player_fixture","label":"第 19 天有你的比賽","funds":2536000}
+{"kind":"advance","from":19,"to":23,"stop":"player_fixture","label":"第 23 天有你的比賽","funds":2789000}
+{"day":23,"kind":"training","player":"b1","course":"vod","ok":true,"energy":24}
+{"day":23,"kind":"training","player":"b2","course":"mental","ok":true,"energy":20}
+{"kind":"advance","from":23,"to":24,"stop":"player_fixture","label":"第 24 天有你的比賽","funds":3119000}
+{"kind":"advance","from":24,"to":26,"stop":"player_fixture","label":"第 26 天有你的比賽","funds":3279000}
+{"kind":"advance","from":26,"to":30,"stop":"player_fixture","label":"第 30 天有你的比賽","funds":3532000}
+{"day":30,"kind":"training","player":"b1","course":"teamwork","ok":false,"energy":9}
+{"day":30,"kind":"training","player":"b2","course":"teamwork","ok":false,"energy":5}
+{"kind":"advance","from":30,"to":34,"stop":"player_fixture","label":"第 34 天有你的比賽","funds":3942000}
+{"kind":"advance","from":34,"to":36,"stop":"player_fixture","label":"第 36 天有你的比賽","funds":4195000}
+{"kind":"advance","from":36,"to":38,"stop":"player_fixture","label":"第 38 天有你的比賽","funds":4605000}
+{"day":38,"kind":"training","player":"b1","course":"teamwork","ok":true,"energy":22}
+{"day":38,"kind":"training","player":"b2","course":"meta","ok":true,"energy":18}
+{"kind":"advance","from":38,"to":41,"stop":"player_fixture","label":"第 41 天有你的比賽","funds":4685000}
+{"kind":"advance","from":41,"to":42,"stop":"player_fixture","label":"第 42 天有你的比賽","funds":5015000}
+{"kind":"advance","from":42,"to":44,"stop":"player_fixture","label":"第 44 天有你的比賽","funds":5347000}
+{"kind":"advance","from":44,"to":47,"stop":"player_fixture","label":"第 47 天有你的比賽","funds":5427000}
+{"day":47,"kind":"training","player":"b1","course":"mentality","ok":true,"energy":16}
+{"day":47,"kind":"training","player":"b2","course":"aim","ok":true,"energy":16}
+{"kind":"advance","from":47,"to":48,"stop":"player_fixture","label":"第 48 天有你的比賽","funds":5507000}
+{"kind":"advance","from":48,"to":51,"stop":"player_fixture","label":"第 51 天有你的比賽","funds":5589000}
+{"kind":"advance","from":51,"to":53,"stop":"player_fixture","label":"第 53 天有你的比賽","funds":5669000}
+{"kind":"advance","from":53,"to":54,"stop":"player_fixture","label":"第 54 天有你的比賽","funds":5749000}
+{"day":54,"kind":"training","player":"b1","course":"mechanics","ok":false,"energy":0}
+{"day":54,"kind":"training","player":"b2","course":"mechanics","ok":false,"energy":0}
+{"kind":"advance","from":54,"to":60,"stop":"player_fixture","label":"第 60 天有你的比賽","funds":6081000}
+{"kind":"advance","from":60,"to":62,"stop":"player_fixture","label":"第 62 天有你的比賽","funds":6461000}
+{"day":62,"kind":"training","player":"b1","course":"mechanics","ok":true,"energy":25}
+{"day":62,"kind":"training","player":"b2","course":"positioning","ok":true,"energy":25}
+{"kind":"advance","from":62,"to":66,"stop":"player_fixture","label":"第 66 天有你的比賽","funds":6713000}
+{"kind":"advance","from":66,"to":67,"stop":"player_fixture","label":"第 67 天有你的比賽","funds":6873000}
+{"kind":"advance","from":67,"to":69,"stop":"player_fixture","label":"第 69 天有你的比賽","funds":7203000}
+{"day":69,"kind":"training","player":"b1","course":"tactics","ok":false,"energy":4}
+{"day":69,"kind":"training","player":"b2","course":"tactics","ok":false,"energy":4}
+{"kind":"advance","from":69,"to":72,"stop":"player_fixture","label":"第 72 天有你的比賽","funds":7455000}
+{"kind":"advance","from":72,"to":73,"stop":"player_fixture","label":"第 73 天有你的比賽","funds":7615000}
+{"kind":"advance","from":73,"to":75,"stop":"player_fixture","label":"第 75 天有你的比賽","funds":7695000}
+{"kind":"advance","from":75,"to":78,"stop":"player_fixture","label":"第 78 天有你的比賽","funds":7697000}
+{"day":78,"kind":"training","player":"b1","course":"tactics","ok":false,"energy":1}
+{"day":78,"kind":"training","player":"b2","course":"tactics","ok":false,"energy":1}
+{"kind":"advance","from":78,"to":79,"stop":"player_fixture","label":"第 79 天有你的比賽","funds":7857000}
+{"kind":"advance","from":79,"to":82,"stop":"player_fixture","label":"第 82 天有你的比賽","funds":7937000}
+{"kind":"advance","from":82,"to":84,"stop":"player_fixture","label":"第 84 天有你的比賽","funds":8017000}
+{"kind":"advance","from":84,"to":85,"stop":"career_year","label":"第 85 天進入第 2 生涯年度","funds":8469000}
+{"day":85,"kind":"training","player":"b1","course":"tactics","ok":true,"energy":9}
+{"day":85,"kind":"training","player":"b2","course":"vod","ok":true,"energy":9}
+{"kind":"advance","from":85,"to":113,"stop":"career_year","label":"第 169 天進入第 3 生涯年度","funds":8153000}
+{"day":113,"kind":"training","player":"b1","course":"mental","ok":true,"energy":100}
+{"day":113,"kind":"training","player":"b2","course":"teamwork","ok":true,"energy":100}
+{"kind":"advance","from":113,"to":141,"stop":"career_year","label":"第 169 天進入第 3 生涯年度","funds":7837000}
+{"day":141,"kind":"training","player":"b1","course":"meta","ok":true,"energy":100}
+{"day":141,"kind":"training","player":"b2","course":"mentality","ok":true,"energy":100}
+{"kind":"advance","from":141,"to":146,"stop":"player_fixture","label":"第 146 天有你的比賽","funds":7837000}
+{"kind":"advance","from":146,"to":147,"stop":"player_fixture","label":"第 147 天有你的比賽","funds":8247000}
+{"kind":"advance","from":147,"to":150,"stop":"player_fixture","label":"第 150 天有你的比賽","funds":8497000}
+{"day":150,"kind":"training","player":"b1","course":"aim","ok":true,"energy":81}
+{"day":150,"kind":"training","player":"b2","course":"mechanics","ok":true,"energy":81}
+{"kind":"advance","from":150,"to":152,"stop":"player_fixture","label":"第 152 天有你的比賽","funds":8577000}
+{"kind":"advance","from":152,"to":153,"stop":"player_fixture","label":"第 153 天有你的比賽","funds":8737000}
+{"kind":"advance","from":153,"to":156,"stop":"player_fixture","label":"第 156 天有你的比賽","funds":8987000}
+{"kind":"advance","from":156,"to":158,"stop":"player_fixture","label":"第 158 天有你的比賽","funds":9067000}
+{"day":158,"kind":"training","player":"b1","course":"positioning","ok":true,"energy":36}
+{"day":158,"kind":"training","player":"b2","course":"tactics","ok":true,"energy":25}
+{"kind":"advance","from":158,"to":159,"stop":"player_fixture","label":"第 159 天有你的比賽","funds":9847000}
+{"kind":"advance","from":159,"to":163,"stop":"player_fixture","label":"第 163 天有你的比賽","funds":9846000}
+{"kind":"advance","from":163,"to":164,"stop":"player_fixture","label":"第 164 天有你的比賽","funds":9926000}
+{"kind":"advance","from":164,"to":166,"stop":"player_fixture","label":"第 166 天有你的比賽","funds":10706000}
+{"day":166,"kind":"training","player":"b1","course":"vod","ok":true,"energy":9}
+{"day":166,"kind":"training","player":"b2","course":"mental","ok":false,"energy":4}
+{"kind":"advance","from":166,"to":169,"stop":"career_year","label":"第 169 天進入第 3 生涯年度","funds":10703000}
+{"kind":"advance","from":169,"to":170,"stop":"player_fixture","label":"第 170 天有你的比賽","funds":10703000}
+{"kind":"advance","from":170,"to":174,"stop":"player_fixture","label":"第 174 天有你的比賽","funds":10863000}
+{"day":174,"kind":"training","player":"b1","course":"mental","ok":true,"energy":21}
+{"day":174,"kind":"training","player":"b2","course":"teamwork","ok":true,"energy":29}
+{"kind":"advance","from":174,"to":176,"stop":"player_fixture","label":"第 176 天有你的比賽","funds":10858000}
+{"kind":"advance","from":176,"to":178,"stop":"player_fixture","label":"第 178 天有你的比賽","funds":11268000}
+{"kind":"advance","from":178,"to":181,"stop":"player_fixture","label":"第 181 天有你的比賽","funds":11598000}
+{"day":181,"kind":"training","player":"b1","course":"meta","ok":true,"energy":16}
+{"day":181,"kind":"training","player":"b2","course":"mentality","ok":true,"energy":16}
+{"kind":"advance","from":181,"to":182,"stop":"player_fixture","label":"第 182 天有你的比賽","funds":11928000}
+{"kind":"advance","from":182,"to":184,"stop":"player_fixture","label":"第 184 天有你的比賽","funds":12472000}
+{"kind":"advance","from":184,"to":187,"stop":"player_fixture","label":"第 187 天有你的比賽","funds":12802000}
+{"kind":"advance","from":187,"to":188,"stop":"player_fixture","label":"第 188 天有你的比賽","funds":13132000}
+{"day":188,"kind":"training","player":"b1","course":"aim","ok":false,"energy":0}
+{"day":188,"kind":"training","player":"b2","course":"aim","ok":false,"energy":0}
+{"kind":"advance","from":188,"to":191,"stop":"player_fixture","label":"第 191 天有你的比賽","funds":13576000}
+{"kind":"advance","from":191,"to":193,"stop":"player_fixture","label":"第 193 天有你的比賽","funds":13906000}
+{"kind":"advance","from":193,"to":194,"stop":"player_fixture","label":"第 194 天有你的比賽","funds":13986000}
+{"kind":"advance","from":194,"to":200,"stop":"player_fixture","label":"第 200 天有你的比賽","funds":14060000}
+{"day":200,"kind":"training","player":"b1","course":"aim","ok":true,"energy":21}
+{"day":200,"kind":"training","player":"b2","course":"mechanics","ok":true,"energy":21}
+{"kind":"advance","from":200,"to":202,"stop":"player_fixture","label":"第 202 天有你的比賽","funds":14470000}
+{"kind":"advance","from":202,"to":206,"stop":"player_fixture","label":"第 206 天有你的比賽","funds":14714000}
+{"kind":"advance","from":206,"to":207,"stop":"player_fixture","label":"第 207 天有你的比賽","funds":14874000}
+{"day":207,"kind":"training","player":"b1","course":"positioning","ok":false,"energy":1}
+{"day":207,"kind":"training","player":"b2","course":"positioning","ok":false,"energy":0}
+{"kind":"advance","from":207,"to":209,"stop":"player_fixture","label":"第 209 天有你的比賽","funds":14954000}
+{"kind":"advance","from":209,"to":212,"stop":"player_fixture","label":"第 212 天有你的比賽","funds":15198000}
+{"kind":"advance","from":212,"to":213,"stop":"player_fixture","label":"第 213 天有你的比賽","funds":15608000}
+{"kind":"advance","from":213,"to":215,"stop":"player_fixture","label":"第 215 天有你的比賽","funds":15688000}
+{"day":215,"kind":"training","player":"b1","course":"positioning","ok":false,"energy":4}
+{"day":215,"kind":"training","player":"b2","course":"positioning","ok":false,"energy":4}
+{"kind":"advance","from":215,"to":218,"stop":"player_fixture","label":"第 218 天有你的比賽","funds":15682000}
+{"kind":"advance","from":218,"to":219,"stop":"player_fixture","label":"第 219 天有你的比賽","funds":16092000}
+{"kind":"advance","from":219,"to":222,"stop":"player_fixture","label":"第 222 天有你的比賽","funds":16172000}
+{"day":222,"kind":"training","player":"b1","course":"positioning","ok":true,"energy":12}
+{"day":222,"kind":"training","player":"b2","course":"tactics","ok":true,"energy":12}
+{"kind":"advance","from":222,"to":224,"stop":"player_fixture","label":"第 224 天有你的比賽","funds":16252000}
+{"kind":"advance","from":224,"to":226,"stop":"player_fixture","label":"第 226 天有你的比賽","funds":16576000}
+{"kind":"advance","from":226,"to":228,"stop":"player_fixture","label":"第 228 天有你的比賽","funds":16656000}
+{"kind":"advance","from":228,"to":233,"stop":"player_fixture","label":"第 233 天有你的比賽","funds":16900025}
+{"day":233,"kind":"training","player":"b1","course":"vod","ok":true,"energy":36}
+{"day":233,"kind":"training","player":"b2","course":"mental","ok":true,"energy":36}
+{"kind":"advance","from":233,"to":239,"stop":"player_fixture","label":"第 239 天有你的比賽","funds":17144025}
+{"kind":"advance","from":239,"to":244,"stop":"player_fixture","label":"第 244 天有你的比賽","funds":17224025}
+{"day":244,"kind":"training","player":"b1","course":"teamwork","ok":true,"energy":87}
+{"day":244,"kind":"training","player":"b2","course":"meta","ok":true,"energy":74}
+{"kind":"advance","from":244,"to":245,"stop":"player_fixture","label":"第 245 天有你的比賽","funds":17304025}
+{"kind":"advance","from":245,"to":248,"stop":"player_fixture","label":"第 248 天有你的比賽","funds":17377025}
+{"kind":"advance","from":248,"to":250,"stop":"player_fixture","label":"第 250 天有你的比賽","funds":17707025}
+{"kind":"advance","from":250,"to":251,"stop":"player_fixture","label":"第 251 天有你的比賽","funds":18037025}
+{"day":251,"kind":"training","player":"b1","course":"mentality","ok":true,"energy":37}
+{"day":251,"kind":"training","player":"b2","course":"aim","ok":true,"energy":28}
+{"kind":"advance","from":251,"to":253,"stop":"career_year","label":"第 253 天進入第 4 生涯年度","funds":18360025}
+{"kind":"offseason","day":253,"careerYear":3,"expiring":2,"intents":0,"fundsAtOpen":18360025,"pendingFixtures":{"moba":30,"cs":10},"renewed":[{"id":"b2","cost":75.1},{"id":"b5","cost":84}],"renewFailed":[],"rosterBefore":5,"completed":true,"rosterAfter":5,"fundsAfter":16769025}
+{"kind":"advance","from":253,"to":254,"stop":"player_fixture","label":"第 254 天有你的比賽","funds":16769025}
+{"kind":"advance","from":254,"to":256,"stop":"player_fixture","label":"第 256 天有你的比賽","funds":17099025}
+{"kind":"advance","from":256,"to":257,"stop":"player_fixture","label":"第 257 天有你的比賽","funds":17429025}
+{"kind":"advance","from":257,"to":261,"stop":"player_fixture","label":"第 261 天有你的比賽","funds":17751025}
+{"day":261,"kind":"training","player":"b1","course":"mechanics","ok":true,"energy":28}
+{"day":261,"kind":"training","player":"b2","course":"positioning","ok":true,"energy":20}
+{"kind":"advance","from":261,"to":262,"stop":"player_fixture","label":"第 262 天有你的比賽","funds":17831025}
+{"kind":"advance","from":262,"to":263,"stop":"player_fixture","label":"第 264 天有你的比賽","funds":17911025}
+{"kind":"advance","from":263,"to":264,"stop":"player_fixture","label":"第 264 天有你的比賽","funds":18211025}
+{"kind":"advance","from":264,"to":268,"stop":"player_fixture","label":"第 268 天有你的比賽","funds":18202025}
+{"day":268,"kind":"training","player":"b1","course":"tactics","ok":true,"energy":20}
+{"day":268,"kind":"training","player":"b2","course":"vod","ok":true,"energy":20}
+{"kind":"advance","from":268,"to":269,"stop":"player_fixture","label":"第 272 天有你的比賽","funds":18532025}
+{"kind":"advance","from":269,"to":272,"stop":"player_fixture","label":"第 272 天有你的比賽","funds":18612025}
+{"kind":"advance","from":272,"to":274,"stop":"player_fixture","label":"第 274 天有你的比賽","funds":18853025}
+{"kind":"advance","from":274,"to":275,"stop":"player_fixture","label":"第 276 天有你的比賽","funds":19183025}
+{"day":275,"kind":"training","player":"b1","course":"mental","ok":false,"energy":4}
+{"day":275,"kind":"training","player":"b2","course":"mental","ok":true,"energy":15}
+{"kind":"advance","from":275,"to":276,"stop":"player_fixture","label":"第 276 天有你的比賽","funds":19483025}
+{"kind":"advance","from":276,"to":279,"stop":"player_fixture","label":"第 279 天有你的比賽","funds":19813025}
+{"kind":"advance","from":279,"to":280,"stop":"player_fixture","label":"第 280 天有你的比賽","funds":20143025}
+{"kind":"advance","from":280,"to":281,"stop":"player_fixture","label":"第 282 天有你的比賽","funds":20383025}
+{"kind":"advance","from":281,"to":282,"stop":"player_fixture","label":"第 282 天有你的比賽","funds":20463025}
+{"day":282,"kind":"training","player":"b1","course":"teamwork","ok":false,"energy":0}
+{"day":282,"kind":"training","player":"b2","course":"teamwork","ok":false,"energy":0}
+{"kind":"advance","from":282,"to":285,"stop":"player_fixture","label":"第 285 天有你的比賽","funds":20793025}
+{"kind":"advance","from":285,"to":286,"stop":"player_fixture","label":"第 286 天有你的比賽","funds":21123025}
+{"kind":"advance","from":286,"to":287,"stop":"player_fixture","label":"第 289 天有你的比賽","funds":21203025}
+{"kind":"advance","from":287,"to":289,"stop":"player_fixture","label":"第 289 天有你的比賽","funds":21492025}
+{"day":289,"kind":"training","player":"b1","course":"teamwork","ok":false,"energy":8}
+{"day":289,"kind":"training","player":"b2","course":"teamwork","ok":false,"energy":8}
+{"kind":"advance","from":289,"to":291,"stop":"player_fixture","label":"第 291 天有你的比賽","funds":21822025}
+{"kind":"advance","from":291,"to":292,"stop":"player_fixture","label":"第 292 天有你的比賽","funds":21902025}
+{"kind":"advance","from":292,"to":293,"stop":"player_fixture","label":"第 298 天有你的比賽","funds":21982025}
+{"kind":"advance","from":293,"to":298,"stop":"player_fixture","label":"第 298 天有你的比賽","funds":21971025}
+{"day":298,"kind":"training","player":"b1","course":"teamwork","ok":true,"energy":32}
+{"day":298,"kind":"training","player":"b2","course":"meta","ok":true,"energy":32}
+{"kind":"advance","from":298,"to":299,"stop":"player_fixture","label":"第 300 天有你的比賽","funds":22301025}
+{"kind":"advance","from":299,"to":300,"stop":"player_fixture","label":"第 300 天有你的比賽","funds":22601025}

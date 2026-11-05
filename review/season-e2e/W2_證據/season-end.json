@@ -1,0 +1,1085 @@
+{
+ "case": "season-end",
+ "url": "http://127.0.0.1:58000/ESMO-/",
+ "nonUi": [
+  {
+   "file": "102-end.json",
+   "day": 85,
+   "why": "玩家第 84 天打完最後一場常規賽。前面都是 W1 Node 真模擬，不是 UI"
+  },
+  {
+   "file": "102-end.json",
+   "day": 85,
+   "why": "玩家第 84 天打完最後一場常規賽。前面都是 W1 Node 真模擬，不是 UI"
+  },
+  {
+   "file": "102-end.json",
+   "day": 85,
+   "why": "玩家第 84 天打完最後一場常規賽。前面都是 W1 Node 真模擬，不是 UI"
+  }
+ ],
+ "steps": [
+  {
+   "name": "1366 前往下一站 起點",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1873015,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3048547,
+    "day": 85,
+    "funds": 8469000,
+    "fans": 163342,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 4,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": false,
+     "total": 144,
+     "open": 4,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 140
+    },
+    "cs": {
+     "season": 1,
+     "final": false,
+     "total": 58,
+     "open": 2,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 56
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 84 天）"
+  },
+  {
+   "name": "1366 前往下一站 85→113",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1881424,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3056956,
+    "day": 113,
+    "funds": 8153000,
+    "fans": 163342,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 4,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": false,
+     "total": 148,
+     "open": 4,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 144
+    },
+    "cs": {
+     "season": 1,
+     "final": false,
+     "total": 60,
+     "open": 2,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 58
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 56 天）",
+   "overflow": -15
+  },
+  {
+   "name": "1366 前往下一站 113→141",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1898223,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3073755,
+    "day": 141,
+    "funds": 7837000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 28 天）",
+   "overflow": -15
+  },
+  {
+   "name": "1366 前往下一站 兩邊都封存",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1898223,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3073755,
+    "day": 141,
+    "funds": 7837000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 28 天）"
+  },
+  {
+   "name": "1366 前往下一站 沒換季繼續快轉 141→169",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1900995,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3076527,
+    "day": 169,
+    "funds": 7521000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 253 天進入第 4 生涯年度（還有 84 天）"
+  },
+  {
+   "name": "1366 前往下一站 沒換季繼續快轉 169→197",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1902899,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3078431,
+    "day": 197,
+    "funds": 7201000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 253 天進入第 4 生涯年度（還有 56 天）"
+  },
+  {
+   "name": "1366 前往下一站 沒換季繼續快轉 197→225",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1904785,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3080317,
+    "day": 225,
+    "funds": 6881000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 253 天進入第 4 生涯年度（還有 28 天）"
+  },
+  {
+   "name": "1366 逐日 起點",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1873015,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3048547,
+    "day": 85,
+    "funds": 8469000,
+    "fans": 163342,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 4,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": false,
+     "total": 144,
+     "open": 4,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 140
+    },
+    "cs": {
+     "season": 1,
+     "final": false,
+     "total": 58,
+     "open": 2,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 56
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 84 天）"
+  },
+  {
+   "name": "1366 逐日 87→88",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1885150,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3060682,
+    "day": 88,
+    "funds": 8469000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 6,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": false,
+     "total": 146,
+     "open": 2,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 144
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 81 天）",
+   "overflow": -15
+  },
+  {
+   "name": "1366 逐日 91→92",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1892455,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3067987,
+    "day": 92,
+    "funds": 8390000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 77 天）",
+   "overflow": -15
+  },
+  {
+   "name": "1366 逐日 兩邊都封存",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1892455,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3067987,
+    "day": 92,
+    "funds": 8390000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 77 天）"
+  },
+  {
+   "name": "390 前往下一站 起點",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1873015,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3048547,
+    "day": 85,
+    "funds": 8469000,
+    "fans": 163342,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 4,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": false,
+     "total": 144,
+     "open": 4,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 140
+    },
+    "cs": {
+     "season": 1,
+     "final": false,
+     "total": 58,
+     "open": 2,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 56
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 84 天）"
+  },
+  {
+   "name": "390 前往下一站 85→113",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1881424,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3056956,
+    "day": 113,
+    "funds": 8153000,
+    "fans": 163342,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 4,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": false,
+     "total": 148,
+     "open": 4,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 144
+    },
+    "cs": {
+     "season": 1,
+     "final": false,
+     "total": 60,
+     "open": 2,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 58
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 56 天）",
+   "overflow": 0
+  },
+  {
+   "name": "390 前往下一站 113→141",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1898223,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3073755,
+    "day": 141,
+    "funds": 7837000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 28 天）",
+   "overflow": 0
+  },
+  {
+   "name": "390 前往下一站 兩邊都封存",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1898223,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3073755,
+    "day": 141,
+    "funds": 7837000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 169 天進入第 3 生涯年度（還有 28 天）"
+  },
+  {
+   "name": "390 前往下一站 沒換季繼續快轉 141→169",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1900995,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3076527,
+    "day": 169,
+    "funds": 7521000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 253 天進入第 4 生涯年度（還有 84 天）"
+  },
+  {
+   "name": "390 前往下一站 沒換季繼續快轉 169→197",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1902899,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3078431,
+    "day": 197,
+    "funds": 7201000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 253 天進入第 4 生涯年度（還有 56 天）"
+  },
+  {
+   "name": "390 前往下一站 沒換季繼續快轉 197→225",
+   "disk": {
+    "sizes": {
+     "esmo.heroProgress.v2": 12336,
+     "esmo.profile.v1": 1904785,
+     "esmo.season.v1": 1163147
+    },
+    "total": 3080317,
+    "day": 225,
+    "funds": 6881000,
+    "fans": 163742,
+    "tx": 49,
+    "csHistory": 14,
+    "awards": 7,
+    "settlements": 49,
+    "moba": {
+     "season": 1,
+     "final": true,
+     "total": 148,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 148
+    },
+    "cs": {
+     "season": 1,
+     "final": true,
+     "total": 60,
+     "open": 0,
+     "mineOpen": 0,
+     "launched": [],
+     "outcomes": 60
+    },
+    "seasonHist": 35,
+    "heroSig": 12336,
+    "offSeasonOpen": false,
+    "players": 5,
+    "histMoba": 0,
+    "histCs": 0,
+    "corrupt": []
+   },
+   "notice": {
+    "on": false,
+    "message": null,
+    "retry": false
+   },
+   "nextStop": "下一站：第 253 天進入第 4 生涯年度（還有 28 天）"
+  }
+ ],
+ "findings": [
+  {
+   "kind": "start",
+   "label": "1366 前往下一站",
+   "moba": {
+    "season": 1,
+    "final": false,
+    "total": 144,
+    "open": 4,
+    "mineOpen": 0,
+    "launched": [],
+    "outcomes": 140
+   },
+   "cs": {
+    "season": 1,
+    "final": false,
+    "total": 58,
+    "open": 2,
+    "mineOpen": 0,
+    "launched": [],
+    "outcomes": 56
+   }
+  },
+  {
+   "kind": "sealed",
+   "label": "1366 前往下一站",
+   "day": 141,
+   "funds": 7837000,
+   "startFunds": 8469000,
+   "final": {
+    "moba": true,
+    "cs": true
+   }
+  },
+  {
+   "kind": "bp4_after_seal",
+   "label": "1366 前往下一站",
+   "homeWords": [
+    "第 1 生涯年度已封存 （當時 5 人．平均 22 歲）"
+   ],
+   "primary": "下一站：第 169 天進入第 3 生涯年度（還有 28 天）",
+   "worldCard": "世界時間 CLOCK 141 天 第 2 生涯年度 · 第 57/84 天 · 第 21 週 · 目前沒有排定的賽程 下一站：第 169 天進入第 3 生涯年度（還有 28 天） 第 1 生涯年度已封存 （當時 5 人．平均 22 歲） 推進 1 天 推進 7 天 前往下一站",
+   "mobaRollButton": [
+    "開始第 2 賽季"
+   ],
+   "csRecapButton": true,
+   "inboxLatest": [
+    "第 1 賽季 CS 年度冠軍",
+    "CS 第 1 賽季 年度 Major · Shadow Wolves 奪冠",
+    "第 1 賽季 結束 · — 奪冠",
+    "第 1 賽季 亞洲年度冠軍",
+    "第 1 賽季 結束 · 暗影狼群 奪冠",
+    "第 1 賽季 結束 · 烈焰鳳凰 奪冠",
+    "第 1 賽季 季後賽 對戰表公布",
+    "進入第 2 生涯年度"
+   ]
+  },
+  {
+   "kind": "start",
+   "label": "1366 逐日",
+   "moba": {
+    "season": 1,
+    "final": false,
+    "total": 144,
+    "open": 4,
+    "mineOpen": 0,
+    "launched": [],
+    "outcomes": 140
+   },
+   "cs": {
+    "season": 1,
+    "final": false,
+    "total": 58,
+    "open": 2,
+    "mineOpen": 0,
+    "launched": [],
+    "outcomes": 56
+   }
+  },
+  {
+   "kind": "sealed",
+   "label": "1366 逐日",
+   "day": 92,
+   "funds": 8390000,
+   "startFunds": 8469000,
+   "final": {
+    "moba": true,
+    "cs": true
+   }
+  },
+  {
+   "kind": "bp4_after_seal",
+   "label": "1366 逐日",
+   "homeWords": [
+    "第 1 生涯年度已封存 （當時 5 人．平均 22 歲）"
+   ],
+   "primary": "下一站：第 169 天進入第 3 生涯年度（還有 77 天）",
+   "worldCard": "世界時間 CLOCK 92 天 第 2 生涯年度 · 第 8/84 天 · 第 14 週 · 目前沒有排定的賽程 下一站：第 169 天進入第 3 生涯年度（還有 77 天） 第 1 生涯年度已封存 （當時 5 人．平均 22 歲） 推進 1 天 推進 7 天 前往下一站",
+   "mobaRollButton": [
+    "開始第 2 賽季"
+   ],
+   "csRecapButton": true,
+   "inboxLatest": [
+    "第 1 賽季 結束 · — 奪冠",
+    "第 1 賽季 亞洲年度冠軍",
+    "第 1 賽季 結束 · 暗影狼群 奪冠",
+    "第 1 賽季 CS 年度冠軍",
+    "CS 第 1 賽季 年度 Major · Flame Phoenix 奪冠",
+    "第 1 賽季 結束 · 烈焰鳳凰 奪冠",
+    "第 1 賽季 季後賽 對戰表公布",
+    "進入第 2 生涯年度"
+   ]
+  },
+  {
+   "kind": "start",
+   "label": "390 前往下一站",
+   "moba": {
+    "season": 1,
+    "final": false,
+    "total": 144,
+    "open": 4,
+    "mineOpen": 0,
+    "launched": [],
+    "outcomes": 140
+   },
+   "cs": {
+    "season": 1,
+    "final": false,
+    "total": 58,
+    "open": 2,
+    "mineOpen": 0,
+    "launched": [],
+    "outcomes": 56
+   }
+  },
+  {
+   "kind": "sealed",
+   "label": "390 前往下一站",
+   "day": 141,
+   "funds": 7837000,
+   "startFunds": 8469000,
+   "final": {
+    "moba": true,
+    "cs": true
+   }
+  },
+  {
+   "kind": "bp4_after_seal",
+   "label": "390 前往下一站",
+   "homeWords": [
+    "第 1 生涯年度已封存 （當時 5 人．平均 22 歲）"
+   ],
+   "primary": "下一站：第 169 天進入第 3 生涯年度（還有 28 天）",
+   "worldCard": "世界時間 CLOCK 141 天 第 2 生涯年度 · 第 57/84 天 · 第 21 週 · 目前沒有排定的賽程 下一站：第 169 天進入第 3 生涯年度（還有 28 天） 第 1 生涯年度已封存 （當時 5 人．平均 22 歲） 推進 1 天 推進 7 天 前往下一站",
+   "mobaRollButton": [
+    "開始第 2 賽季"
+   ],
+   "csRecapButton": true,
+   "inboxLatest": [
+    "第 1 賽季 CS 年度冠軍",
+    "CS 第 1 賽季 年度 Major · Shadow Wolves 奪冠",
+    "第 1 賽季 結束 · — 奪冠",
+    "第 1 賽季 亞洲年度冠軍",
+    "第 1 賽季 結束 · 暗影狼群 奪冠",
+    "第 1 賽季 結束 · 烈焰鳳凰 奪冠",
+    "第 1 賽季 季後賽 對戰表公布",
+    "進入第 2 生涯年度"
+   ]
+  }
+ ],
+ "errors": {
+  "page": [],
+  "console": []
+ }
+}

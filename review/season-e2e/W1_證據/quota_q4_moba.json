@@ -1,0 +1,82 @@
+{
+ "url": "http://127.0.0.1:57010/ESMO-/",
+ "checkpoints": [],
+ "q4": {
+  "file": "024-every10-f110.json",
+  "day": 254,
+  "faultInjection": true,
+  "quota": 5242767,
+  "afterLoad": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14367,
+     "esmo.season.v1": 1631187,
+     "w1.filler": 42238,
+     "esmo.profile.v1": 3554626
+    },
+    "total": 5242476
+   },
+   "summary": {
+    "day": 254,
+    "tx": 110,
+    "funds": 17099025,
+    "cs": 30
+   }
+  },
+  "reachedDraft": true,
+  "prepNotice": null,
+  "battle": true,
+  "ended": true,
+  "afterMatch": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14506,
+     "esmo.season.v1": 1614675,
+     "w1.filler": 42238,
+     "esmo.profile.v1": 3464292,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5135798
+   },
+   "summary": {
+    "day": 254,
+    "tx": 111,
+    "funds": 17179025,
+    "cs": 30
+   }
+  },
+  "resultText": [
+   "推塔進度"
+  ],
+  "before": {
+   "day": 254,
+   "tx": 110,
+   "funds": 17099025,
+   "cs": 30
+  },
+  "afterReload": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14506,
+     "esmo.season.v1": 1614675,
+     "w1.filler": 42238,
+     "esmo.profile.v1": 3464292,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5135798
+   },
+   "summary": {
+    "day": 254,
+    "tx": 111,
+    "funds": 17179025,
+    "cs": 30
+   }
+  },
+  "corrupt": [],
+  "homeText": [
+   "雲端存檔"
+  ],
+  "consoleErrors": [],
+  "pageErrors": []
+ }
+}

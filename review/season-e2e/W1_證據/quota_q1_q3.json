@@ -1,0 +1,251 @@
+{
+ "url": "http://127.0.0.1:56919/ESMO-/",
+ "checkpoints": [
+  {
+   "file": "001-new-game.json",
+   "day": 1,
+   "total": 93530,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "004-every10-f10.json",
+   "day": 18,
+   "total": 692269,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "005-every10-f20.json",
+   "day": 36,
+   "total": 1317694,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "006-every10-f30.json",
+   "day": 53,
+   "total": 1816341,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "007-every10-f40.json",
+   "day": 72,
+   "total": 2510015,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "008-final-moba-s1.json",
+   "day": 141,
+   "total": 3073719,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "010-final-cs-s1.json",
+   "day": 141,
+   "total": 2982713,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "012-every10-f50.json",
+   "day": 146,
+   "total": 2984336,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "013-every10-f60.json",
+   "day": 159,
+   "total": 3560710,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "014-every10-f70.json",
+   "day": 178,
+   "total": 4117513,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "015-every10-f80.json",
+   "day": 194,
+   "total": 4373007,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "016-every10-f90.json",
+   "day": 212,
+   "total": 4826314,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "017-final-cs-s2.json",
+   "day": 228,
+   "total": 5099425,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "019-every10-f100.json",
+   "day": 228,
+   "total": 5080195,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "020-final-moba-s2.json",
+   "day": 239,
+   "total": 5200558,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "022-offseason-open-d253.json",
+   "day": 253,
+   "total": 5190887,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "024-every10-f110.json",
+   "day": 254,
+   "total": 5200229,
+   "ok": true,
+   "failed": null,
+   "error": null
+  },
+  {
+   "file": "025-every10-f120.json",
+   "day": 272,
+   "total": 5291019,
+   "ok": false,
+   "failed": "esmo.profile.v1",
+   "error": "QuotaExceededError"
+  },
+  {
+   "file": "026-every10-f130.json",
+   "day": 287,
+   "total": 5298618,
+   "ok": false,
+   "failed": "esmo.profile.v1",
+   "error": "QuotaExceededError"
+  },
+  {
+   "file": "027-end.json",
+   "day": 300,
+   "total": 5272004,
+   "ok": false,
+   "failed": "esmo.profile.v1",
+   "error": "QuotaExceededError"
+  }
+ ],
+ "quota": {
+  "chars": 5241699
+ },
+ "firstFailure": {
+  "file": "025-every10-f120.json",
+  "day": 272,
+  "total": 5291019,
+  "ok": false,
+  "failed": "esmo.profile.v1",
+  "error": "QuotaExceededError"
+ },
+ "q3": {
+  "file": "020-final-moba-s2.json",
+  "day": 239,
+  "total": 5200558,
+  "afterLoad": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14320,
+     "esmo.profile.v1": 3533575,
+     "esmo.season.v1": 1652614
+    },
+    "total": 5200558
+   },
+   "summary": {
+    "day": 239,
+    "tx": 101,
+    "funds": 17144025,
+    "cs": 29
+   }
+  },
+  "homeSaveText": [
+   "雲端存檔"
+  ],
+  "reachedDraft": true,
+  "battle": true,
+  "ended": true,
+  "afterMatch": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14613,
+     "esmo.season.v1": 1642896,
+     "esmo.profile.v1": 3457304,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5114891
+   },
+   "summary": {
+    "day": 239,
+    "tx": 102,
+    "funds": 17224025,
+    "cs": 29
+   }
+  },
+  "resultSaveText": [],
+  "txMovedOnDisk": true,
+  "before": {
+   "day": 239,
+   "tx": 101,
+   "funds": 17144025,
+   "cs": 29
+  },
+  "afterReload": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14613,
+     "esmo.season.v1": 1642896,
+     "esmo.profile.v1": 3457304,
+     "esmo.ui.itemsChipHintSeen.v1": 1
+    },
+    "total": 5114891
+   },
+   "summary": {
+    "day": 239,
+    "tx": 102,
+    "funds": 17224025,
+    "cs": 29
+   }
+  },
+  "corrupt": [],
+  "homeTextAfterReload": [
+   "雲端存檔"
+  ]
+ },
+ "consoleErrors": [],
+ "pageErrors": []
+}

@@ -1,0 +1,190 @@
+START scenario=standard funds=1200000 day=1 flags v21=false/false
+COLD new-game 第 1 天 6/6
+MATCH #1 第 6 天 moba S1 敗 1:7  4446ms 資金 1280000
+COLD first-match 第 6 天 7/7
+LINEUP 第 6 天 cs 先發 0 人，自動填入
+MATCH #2 第 6 天 cs S1 勝 13:11 inferno 32962ms 資金 1580000
+COLD first-cs-match 第 6 天 7/7
+MATCH #3 第 7 天 moba S1 勝 0:3  3410ms 資金 1910000
+MATCH #4 第 10 天 moba S1 敗 9:11  2937ms 資金 1913000
+MATCH #5 第 12 天 moba S1 敗 6:4  3893ms 資金 1993000
+MATCH #6 第 12 天 cs S1 勝 13:11 inferno 25204ms 資金 2293000
+MATCH #7 第 13 天 moba S1 敗 21:18  4321ms 資金 2373000
+MATCH #8 第 16 天 moba S1 敗 33:18  4875ms 資金 2376000
+MATCH #9 第 18 天 moba S1 敗 24:23  5246ms 資金 2456000
+MATCH #10 第 18 天 cs S1 敗 2:13 inferno 21618ms 資金 2536000
+COLD every10-f10 第 18 天 7/7
+MATCH #11 第 19 天 moba S1 勝 7:7  3119ms 資金 2866000
+MATCH #12 第 23 天 moba S1 勝 6:5  3212ms 資金 3119000
+MATCH #13 第 24 天 moba S1 敗 7:14  4744ms 資金 3199000
+MATCH #14 第 24 天 cs S1 敗 8:13 inferno 19933ms 資金 3279000
+MATCH #15 第 26 天 moba S1 勝 8:9  3622ms 資金 3609000
+MATCH #16 第 30 天 moba S1 勝 19:7  3990ms 資金 3862000
+MATCH #17 第 30 天 cs S1 敗 9:13 dust2 12191ms 資金 3942000
+MATCH #18 第 34 天 moba S1 勝 38:24  5870ms 資金 4272000
+MATCH #19 第 36 天 moba S1 勝 14:5  3909ms 資金 4525000
+MATCH #20 第 36 天 cs S1 敗 14:16 inferno 29135ms 資金 4605000
+COLD every10-f20 第 36 天 7/7
+SEGMENT 第 36 天 累計 20 場
+SEGMENT_EXIT seg=1 code=10
+MATCH #21 第 38 天 moba S1 敗 11:14  4659ms 資金 4685000
+MATCH #22 第 41 天 moba S1 勝 14:6  4950ms 資金 5015000
+MATCH #23 第 42 天 moba S1 勝 8:3  3517ms 資金 5345000
+MATCH #24 第 42 天 cs S1 敗 6:13 dust2 12971ms 資金 5425000
+MATCH #25 第 44 天 moba S1 敗 6:5  4042ms 資金 5427000
+MATCH #26 第 47 天 moba S1 敗 18:11  4785ms 資金 5507000
+MATCH #27 第 48 天 moba S1 敗 11:5  4390ms 資金 5587000
+MATCH #28 第 48 天 cs S1 敗 7:13 inferno 23867ms 資金 5667000
+MATCH #29 第 51 天 moba S1 敗 15:19  5181ms 資金 5669000
+MATCH #30 第 53 天 moba S1 敗 3:14  4459ms 資金 5749000
+COLD every10-f30 第 53 天 7/7
+MATCH #31 第 54 天 moba S1 勝 30:18  4531ms 資金 6079000
+MATCH #32 第 54 天 cs S1 敗 9:13 dust2 13554ms 資金 6159000
+MATCH #33 第 60 天 moba S1 敗 5:6  3619ms 資金 6161000
+MATCH #34 第 60 天 cs S1 勝 22:20 inferno 45595ms 資金 6461000
+MATCH #35 第 62 天 moba S1 勝 16:14  4448ms 資金 6791000
+MATCH #36 第 66 天 moba S1 敗 14:24  4743ms 資金 6793000
+MATCH #37 第 66 天 cs S1 敗 11:13 dust2 14820ms 資金 6873000
+MATCH #38 第 67 天 moba S1 勝 13:9  4707ms 資金 7203000
+MATCH #39 第 69 天 moba S1 勝 8:0  3385ms 資金 7533000
+MATCH #40 第 72 天 moba S1 敗 21:24  5620ms 資金 7535000
+COLD every10-f40 第 72 天 7/7
+SEGMENT 第 72 天 累計 40 場
+SEGMENT_EXIT seg=2 code=10
+MATCH #41 第 72 天 cs S1 敗 3:13 dust2 12807ms 資金 7615000
+MATCH #42 第 73 天 moba S1 敗 18:26  5598ms 資金 7695000
+MATCH #43 第 75 天 moba S1 敗 7:25  5396ms 資金 7775000
+MATCH #44 第 78 天 moba S1 敗 11:7  3823ms 資金 7777000
+MATCH #45 第 78 天 cs S1 敗 5:13 dust2 11777ms 資金 7857000
+MATCH #46 第 79 天 moba S1 敗 19:31  5177ms 資金 7937000
+MATCH #47 第 82 天 moba S1 敗 7:10  4734ms 資金 8017000
+MATCH #48 第 84 天 moba S1 敗 7:18  5744ms 資金 8097000
+MATCH #49 第 84 天 cs S1 勝 13:5 inferno 18609ms 資金 8547000
+FINAL moba:1 第 141 天 名次帳本 7 資金 7837000
+COLD final-moba-s1 第 141 天 7/7
+ROLL moba:1 → S2 第 141 天，歷史 0 → 1
+COLD roll-moba-s1 第 141 天 7/7
+FINAL cs:1 第 141 天 名次帳本 7 資金 7837000
+COLD final-cs-s1 第 141 天 7/7
+ROLL cs:1 → S2 第 141 天，歷史 0 → 1
+COLD roll-cs-s1 第 141 天 7/7
+MATCH #50 第 146 天 moba S2 勝 6:7  3602ms 資金 8167000
+COLD every10-f50 第 146 天 7/7
+MATCH #51 第 146 天 cs S2 敗 10:13 dust2 13919ms 資金 8247000
+MATCH #52 第 147 天 moba S2 勝 7:9  4447ms 資金 8577000
+MATCH #53 第 150 天 moba S2 敗 10:8  3282ms 資金 8577000
+MATCH #54 第 152 天 moba S2 敗 5:11  3458ms 資金 8657000
+MATCH #55 第 152 天 cs S2 敗 7:13 dust2 12829ms 資金 8737000
+MATCH #56 第 153 天 moba S2 勝 19:16  4808ms 資金 9067000
+MATCH #57 第 156 天 moba S2 敗 21:27  4896ms 資金 9067000
+MATCH #58 第 158 天 moba S2 勝 19:12  4605ms 資金 9397000
+MATCH #59 第 158 天 cs S2 勝 13:4 dust2 12425ms 資金 9847000
+MATCH #60 第 159 天 moba S2 敗 4:12  3772ms 資金 9927000
+COLD every10-f60 第 159 天 7/7
+SEGMENT 第 159 天 累計 60 場
+SEGMENT_EXIT seg=3 code=10
+MATCH #61 第 163 天 moba S2 敗 3:8  4431ms 資金 9926000
+MATCH #62 第 164 天 moba S2 勝 6:8  3801ms 資金 10256000
+MATCH #63 第 164 天 cs S2 勝 13:3 dust2 12946ms 資金 10706000
+MATCH #64 第 166 天 moba S2 敗 12:8  4140ms 資金 10786000
+MATCH #65 第 170 天 moba S2 敗 5:9  3937ms 資金 10783000
+MATCH #66 第 170 天 cs S2 敗 9:13 dust2 12561ms 資金 10863000
+MATCH #67 第 174 天 moba S2 敗 12:5  3241ms 資金 10943000
+MATCH #68 第 176 天 moba S2 勝 3:6  3678ms 資金 11188000
+MATCH #69 第 176 天 cs S2 敗 11:13 inferno 29054ms 資金 11268000
+MATCH #70 第 178 天 moba S2 勝 21:18  4872ms 資金 11598000
+COLD every10-f70 第 178 天 7/7
+MATCH #71 第 181 天 moba S2 勝 8:6  3912ms 資金 11928000
+MATCH #72 第 182 天 moba S2 勝 1:5  3719ms 資金 12258000
+MATCH #73 第 182 天 cs S2 勝 13:11 dust2 13717ms 資金 12558000
+MATCH #74 第 184 天 moba S2 勝 8:10  4012ms 資金 12802000
+MATCH #75 第 187 天 moba S2 勝 3:5  3282ms 資金 13132000
+MATCH #76 第 188 天 moba S2 敗 3:12  3322ms 資金 13212000
+MATCH #77 第 188 天 cs S2 勝 13:3 dust2 12888ms 資金 13662000
+MATCH #78 第 191 天 moba S2 勝 22:17  4834ms 資金 13906000
+MATCH #79 第 193 天 moba S2 敗 15:17  5022ms 資金 13986000
+MATCH #80 第 194 天 moba S2 敗 23:16  5326ms 資金 14066000
+COLD every10-f80 第 194 天 7/7
+SEGMENT 第 194 天 累計 80 場
+SEGMENT_EXIT seg=4 code=10
+MATCH #81 第 194 天 cs S2 敗 12:16 dust2 13085ms 資金 14146000
+MATCH #82 第 200 天 moba S2 勝 18:25  5804ms 資金 14390000
+MATCH #83 第 200 天 cs S2 敗 4:13 inferno 18693ms 資金 14470000
+MATCH #84 第 202 天 moba S2 勝 24:13  5517ms 資金 14800000
+MATCH #85 第 206 天 moba S2 敗 32:16  5207ms 資金 14794000
+MATCH #86 第 206 天 cs S2 敗 2:13 inferno 20168ms 資金 14874000
+MATCH #87 第 207 天 moba S2 敗 8:4  4249ms 資金 14954000
+MATCH #88 第 209 天 moba S2 勝 2:8  3476ms 資金 15284000
+MATCH #89 第 212 天 moba S2 勝 3:10  3777ms 資金 15528000
+MATCH #90 第 212 天 cs S2 敗 10:13 dust2 13237ms 資金 15608000
+COLD every10-f90 第 212 天 7/7
+MATCH #91 第 213 天 moba S2 敗 8:15  3927ms 資金 15688000
+MATCH #92 第 215 天 moba S2 敗 1:14  4044ms 資金 15768000
+MATCH #93 第 218 天 moba S2 勝 14:4  4279ms 資金 16012000
+MATCH #94 第 218 天 cs S2 敗 11:13 inferno 29160ms 資金 16092000
+MATCH #95 第 219 天 moba S2 敗 0:6  3425ms 資金 16172000
+MATCH #96 第 222 天 moba S2 敗 6:7  4043ms 資金 16252000
+MATCH #97 第 224 天 moba S2 勝 9:6  3429ms 資金 16582000
+MATCH #98 第 224 天 cs S2 敗 8:13 inferno 37281ms 資金 16662000
+MATCH #99 第 226 天 moba S2 敗 17:20  4796ms 資金 16656000
+FINAL cs:2 第 228 天 名次帳本 12 資金 16656000
+COLD final-cs-s2 第 228 天 7/7
+ROLL cs:2 → S3 第 228 天，歷史 1 → 2
+COLD roll-cs-s2 第 228 天 7/7
+MATCH #100 第 228 天 moba S2 勝 14:6  4323ms 資金 16986025
+COLD every10-f100 第 228 天 7/7
+SEGMENT 第 228 天 累計 100 場
+SEGMENT_EXIT seg=5 code=10
+MATCH #101 第 233 天 cs S3 勝 13:10 inferno 24618ms 資金 17230025
+FINAL moba:2 第 239 天 名次帳本 14 資金 17144025
+COLD final-moba-s2 第 239 天 7/7
+ROLL moba:2 → S3 第 239 天，歷史 1 → 2
+COLD roll-moba-s2 第 239 天 7/7
+MATCH #102 第 239 天 cs S3 敗 10:13 inferno 24096ms 資金 17224025
+MATCH #103 第 244 天 moba S3 敗 4:9  4305ms 資金 17304025
+MATCH #104 第 245 天 moba S3 敗 9:15  4547ms 資金 17384025
+MATCH #105 第 245 天 cs S3 敗 11:13 inferno 29245ms 資金 17464025
+MATCH #106 第 248 天 moba S3 勝 5:11  4235ms 資金 17707025
+MATCH #107 第 250 天 moba S3 勝 9:11  4256ms 資金 18037025
+MATCH #108 第 251 天 moba S3 勝 7:4  3350ms 資金 18367025
+MATCH #109 第 251 天 cs S3 敗 0:13 inferno 12028ms 資金 18447025
+OFFSEASON 第 253 天 第 3 年度 到期 2 退役意向 0 未打賽程 {"moba":30,"cs":10}
+COLD offseason-open-d253 第 253 天 7/7
+OFFSEASON 完成 續約 2 失敗 0 名單 5→5 資金 16769025
+COLD offseason-done-d253 第 253 天 7/7
+MATCH #110 第 254 天 moba S3 勝 7:12  4047ms 資金 17099025
+COLD every10-f110 第 254 天 7/7
+MATCH #111 第 256 天 moba S3 勝 13:3  3986ms 資金 17429025
+MATCH #112 第 257 天 moba S3 勝 5:13  4493ms 資金 17759025
+MATCH #113 第 257 天 cs S3 敗 11:13 dust2 12596ms 資金 17839025
+MATCH #114 第 261 天 moba S3 敗 3:1  3169ms 資金 17831025
+MATCH #115 第 262 天 moba S3 敗 7:3  3027ms 資金 17911025
+MATCH #116 第 263 天 cs S3 勝 13:11 inferno 25795ms 資金 18211025
+MATCH #117 第 264 天 moba S3 敗 21:9  4883ms 資金 18291025
+MATCH #118 第 268 天 moba S3 勝 12:28  5291ms 資金 18532025
+MATCH #119 第 269 天 cs S3 敗 11:13 inferno 26013ms 資金 18612025
+MATCH #120 第 272 天 moba S3 勝 25:12  5177ms 資金 18942025
+COLD every10-f120 第 272 天 7/7
+SEGMENT 第 272 天 累計 120 場
+SEGMENT_EXIT seg=6 code=10
+MATCH #121 第 274 天 moba S3 勝 1:2  3896ms 資金 19183025
+MATCH #122 第 275 天 cs S3 勝 13:11 inferno 21553ms 資金 19483025
+MATCH #123 第 276 天 moba S3 勝 0:4  3709ms 資金 19813025
+MATCH #124 第 279 天 moba S3 勝 24:24  5455ms 資金 20143025
+MATCH #125 第 280 天 moba S3 勝 6:7  3001ms 資金 20473025
+MATCH #126 第 281 天 cs S3 敗 3:13 inferno 18426ms 資金 20463025
+MATCH #127 第 282 天 moba S3 勝 11:6  3923ms 資金 20793025
+MATCH #128 第 285 天 moba S3 勝 8:5  3813ms 資金 21123025
+MATCH #129 第 286 天 moba S3 敗 25:16  5289ms 資金 21203025
+MATCH #130 第 287 天 cs S3 勝 13:8 inferno 24360ms 資金 21583025
+COLD every10-f130 第 287 天 7/7
+MATCH #131 第 289 天 moba S3 勝 13:27  5553ms 資金 21822025
+MATCH #132 第 291 天 moba S3 敗 15:7  4701ms 資金 21902025
+MATCH #133 第 292 天 moba S3 敗 5:8  3814ms 資金 21982025
+MATCH #134 第 293 天 cs S3 敗 6:13 inferno 23971ms 資金 22062025
+MATCH #135 第 298 天 moba S3 勝 5:8  3057ms 資金 22301025
+MATCH #136 第 299 天 cs S3 勝 13:11 dust2 16195ms 資金 22601025
+COLD end 第 300 天 7/7
+DONE 第 300 天 真比賽 136 場（MOBA 96，CS 地圖 40），賽程 136，訓練 44，checkpoint 27
+SEGMENT_EXIT seg=7 code=0
+ALLDONE code=0

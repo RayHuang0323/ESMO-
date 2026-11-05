@@ -1,0 +1,139 @@
+{
+ "url": "http://127.0.0.1:57119/ESMO-/",
+ "checkpoints": [],
+ "q4": {
+  "file": "024-every10-f110.json",
+  "day": 254,
+  "faultInjection": true,
+  "quota": 5242767,
+  "afterLoad": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14367,
+     "esmo.season.v1": 1631187,
+     "w1.filler": 42238,
+     "esmo.profile.v1": 3554626
+    },
+    "total": 5242476
+   },
+   "summary": {
+    "day": 254,
+    "tx": 110,
+    "funds": 17099025,
+    "cs": 30
+   }
+  },
+  "mode": "cs",
+  "stages": [
+   {
+    "name": "prep",
+    "total": 5242476,
+    "notice": {
+     "on": false,
+     "text": null
+    },
+    "summary": {
+     "day": 254,
+     "tx": 110,
+     "funds": 17099025,
+     "cs": 30
+    }
+   },
+   {
+    "name": "map",
+    "total": 5000350,
+    "notice": {
+     "on": false,
+     "text": null
+    },
+    "summary": {
+     "day": 254,
+     "tx": 110,
+     "funds": 17099025,
+     "cs": 30
+    }
+   },
+   {
+    "name": "battle",
+    "total": 5000988,
+    "notice": {
+     "on": false,
+     "text": null
+    },
+    "summary": {
+     "day": 254,
+     "tx": 110,
+     "funds": 17099025,
+     "cs": 30
+    }
+   },
+   {
+    "name": "result",
+    "total": 5026433,
+    "notice": {
+     "on": false,
+     "text": null
+    },
+    "summary": {
+     "day": 254,
+     "tx": 111,
+     "funds": 17179025,
+     "cs": 30
+    }
+   }
+  ],
+  "pressed": [
+   "requeue",
+   "confirm"
+  ],
+  "reachedMap": true,
+  "battle": true,
+  "ended": true,
+  "afterMatch": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14367,
+     "esmo.season.v1": 1631187,
+     "w1.filler": 42238,
+     "esmo.profile.v1": 3338583
+    },
+    "total": 5026433
+   },
+   "summary": {
+    "day": 254,
+    "tx": 111,
+    "funds": 17179025,
+    "cs": 30
+   }
+  },
+  "resultText": [],
+  "retryOffered": false,
+  "memoryFunds": null,
+  "before": {
+   "day": 254,
+   "tx": 110,
+   "funds": 17099025,
+   "cs": 30
+  },
+  "afterReload": {
+   "sizes": {
+    "keys": {
+     "esmo.heroProgress.v2": 14367,
+     "esmo.season.v1": 1631187,
+     "w1.filler": 42238,
+     "esmo.profile.v1": 3338583
+    },
+    "total": 5026433
+   },
+   "summary": {
+    "day": 254,
+    "tx": 111,
+    "funds": 17179025,
+    "cs": 30
+   }
+  },
+  "corrupt": [],
+  "consoleErrors": [],
+  "pageErrors": []
+ }
+}
