@@ -552,7 +552,13 @@ const result = await runGate({
         }
         const s3 = await step("超限後重打 CS");
         report.findings.push({ kind: "cs_replay_at_limit", canResume, ok: replay.ok, why: replay.why ?? null, err: replay.err ?? null, disk: s3.disk, notice: s3.notice });
-        ck("超限重打：資金、帳本、歷史都不多算", s3.disk.funds === s0.disk.funds && s3.disk.tx === s0.disk.tx && s3.disk.csHistory === s0.disk.csHistory, JSON.stringify(s3.disk));
+        //  ⚠ Owner 條件 3：沒有真的重打到結算時，這條不能算通過。
+        if (replay.ok) {
+          ck("超限重打：資金、帳本、歷史都不多算", s3.disk.funds === s0.disk.funds && s3.disk.tx === s0.disk.tx && s3.disk.csHistory === s0.disk.csHistory, JSON.stringify(s3.disk));
+        } else {
+          report.unverified = [...(report.unverified ?? []), { what: "CS 超限後重打能否安全入帳", why: replay.why ?? null }];
+          console.log(`⚠ 未驗證（不計入通過）：CS 超限後重打沒有走到結算（${replay.why}）。資料沒動：${s3.disk.funds === s0.disk.funds && s3.disk.tx === s0.disk.tx && s3.disk.csHistory === s0.disk.csHistory}`);
+        }
         await home();
         const before = (await step("重打後重新整理")).disk.day;
         await click("home-advance-next");

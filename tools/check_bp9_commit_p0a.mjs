@@ -275,7 +275,7 @@ async function child(jobFile) {
   const { useSeasonStore } = await import("../src/platform/seasonStore.js");
   const C = await import("../src/platform/progress/commitMatch.js");
   const { settleCsMatch } = await import("../src/platform/progress/settleCsMatch.js");
-  const { useCommitAlertStore, commitKeyOf, withJournalRoom } = await import("../src/platform/persistence/matchCommit.js");
+  const { useCommitAlertStore, commitKeyOf, withJournalRoom, storageLooksFull } = await import("../src/platform/persistence/matchCommit.js");
   const { createMatchSeries } = await import("../src/platform/contracts/matchSeries.js");
   const { mobaResultToTransaction, mobaMatchId } = await import("../src/platform/progress/adapters/mobaProgressAdapter.js");
   const st = () => useProfileStore.getState();
@@ -320,6 +320,7 @@ async function child(jobFile) {
       alertSession: ctl.sess.has(ALERT_KEY) ? JSON.parse(ctl.sess.get(ALERT_KEY)).kind : null,
       alertMem: alertStore.alert?.kind ?? null,
       alertStage: alertStore.alert?.stage ?? null,
+      full: storageLooksFull(),
       canRetry: !!alertStore.retry,
       saveStatus: s.saveState?.status ?? null,
       detail: !!useHeroProgressStore.getState().lastDetail,
@@ -545,6 +546,20 @@ section("§0 原始碼");
 section("§1 MOBA 正常流程");
 const mobaBase = run(FX.moba, [{ do: "save" }]).steps[0].sum;
 const mobaOk = run(FX.moba, [{ do: "commit", which: "a" }, { do: "heroShape" }], { keepSnapshots: true });
+//  Owner F5 條件 1：任何瀏覽器只要寫入時遇到配額錯誤，提示就要用「存檔空間已滿、暫時保護」的說法。
+{
+  const q = run(FX.moba, [{ do: "quota", extra: 0 }, { do: "commit", which: "a" }]);
+  if (mobaOk) ck("正常入帳：不判成已滿", last(mobaOk).sum.full === false, JSON.stringify(last(mobaOk).sum.full));
+  if (q) ck("配額不足（總量遠低於 Chrome 上限）：判成已滿", last(q).sum.full === true && q.used < 4900000, `full=${last(q).sum.full} used=${q.used}`);
+  //  故障注入丟的都是配額錯誤，所以「不是配額錯誤」只能直接驗判斷函式。
+  const Q = await import("../src/platform/persistence/storageQuota.js");
+  ck("配額錯誤判斷：Chrome／Safari／舊 Firefox 都認得", Q.isQuotaError({ name: "QuotaExceededError" }) && Q.isQuotaError({ code: 22 }) && Q.isQuotaError({ name: "NS_ERROR_DOM_QUOTA_REACHED" }) && Q.isQuotaError({ code: 1014 }));
+  Q.resetQuotaHit(); Q.noteWriteError(new Error("disk io")); Q.noteWriteError(null);
+  ck("配額錯誤以外的失敗不會被當成已滿", Q.quotaHit() === false && !Q.isQuotaError(new Error("disk io")));
+  Q.noteWriteError({ name: "QuotaExceededError" });
+  ck("配額錯誤會被記下來", Q.quotaHit() === true);
+  Q.resetQuotaHit();
+}
 const mobaFull = mobaOk.steps[0].sum;
 const mobaWrites = mobaOk.trace.filter((t) => t.op === "set").length;
 ck("基準狀態：賽程 launched、帳本沒有這場", mobaBase.disk.fixture === "launched" && !mobaBase.disk.hasA, JSON.stringify(mobaBase.disk));

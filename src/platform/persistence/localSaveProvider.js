@@ -25,6 +25,7 @@
 //  由 `saveGateway` 轉成 `error` 狀態。**絕不 catch 之後假裝成功。**
 // ============================================================================
 import { createSaveProvider, SAVE_SOURCE } from "./saveProvider.js";
+import { noteWriteError } from "./storageQuota.js";
 import {
   SAVE_BUNDLE_VERSION, buildSaveBundle, splitChallenge, joinChallenge,
   CLOUD_PROFILE_KEYS, LOCAL_PROFILE_KEYS,
@@ -266,6 +267,7 @@ export const localSaveProvider = createSaveProvider({
       //  ⚠ **回報出去**，不是 `catch {}`。配額爆掉就是玩家的進度沒存到，
       //    那件事必須有人知道（B1A 風險 R3）。
       //  ⚠ profile 本身沒寫進去 ⇒ 磁碟仍是原樣，不需要回滾。
+      noteWriteError(e);
       return { ok: false, errors: [{ code: "profile_write_failed", message: String(e?.message ?? e) }] };
     }
 
@@ -274,6 +276,7 @@ export const localSaveProvider = createSaveProvider({
         localStorage.setItem(HERO_PROGRESS_KEY, JSON.stringify(heroProgressPayload(hero)));
       } catch (e) {
         //  ⚠ 熟練是 A 類：只寫進 profile 就是半套 ⇒ **把 profile 放回去**。
+        noteWriteError(e);
         const rolledBack = restore(PROFILE_KEY, prevProfile);
         return {
           ok: false,

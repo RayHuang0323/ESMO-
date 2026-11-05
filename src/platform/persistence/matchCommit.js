@@ -18,6 +18,7 @@
 //  ⚠ 本檔不 import 任何 store（profileStore 會 import 本檔）。
 // ============================================================================
 import { create } from "zustand";
+import { noteWriteError, quotaHit, resetQuotaHit } from "./storageQuota.js";
 
 export const COMMIT_JOURNAL_KEY = "esmo.commit.journal.v1";
 export const COMMIT_ALERT_KEY = "esmo.commit.alert.v1";
@@ -31,12 +32,14 @@ const MAX_AUDIT_FINDINGS = 12;
 const local = () => (typeof localStorage !== "undefined" ? localStorage : null);
 
 /**
- * 存檔是不是已經頂到瀏覽器上限（Chrome 約 5,242,880 字元，實測）。
+ * 存檔是不是已經頂到瀏覽器上限。
  * ⚠ 只用來決定提示怎麼說，不用來決定能不能存：能不能存只看真的寫入結果。
- *   門檻刻意比上限低一點，各瀏覽器的上限不完全一樣。
+ * ⚠ 先看「寫入時遇過配額錯誤」：各瀏覽器上限不同（Safari、Firefox 可能比 Chrome 緊）。
+ *   字元數只是重新整理後、還沒再寫一次之前的補充判斷（Chrome 實測上限 5,242,880）。
  */
 export const STORAGE_FULL_HINT = 4_900_000;
 export function storageLooksFull() {
+  if (quotaHit()) return true;
   const s = local();
   if (!s) return false;
   let n = 0;
@@ -94,6 +97,7 @@ export function writeJournal(entry) {
     s.setItem(COMMIT_JOURNAL_KEY, JSON.stringify({ ...entry, schema: COMMIT_JOURNAL_SCHEMA }));
     return { ok: true };
   } catch (e) {
+    noteWriteError(e);
     return { ok: false, error: String(e?.name ?? e?.message ?? e) };
   }
 }
@@ -164,7 +168,7 @@ export function withJournalRoom(attempt) {
   let raw = null;
   try { raw = s?.getItem(COMMIT_JOURNAL_KEY) ?? null; } catch { raw = null; }
   if (raw === null) return attempt();
-  try { s.setItem(COMMIT_JOURNAL_KEY, raw); } catch { return null; }
+  try { s.setItem(COMMIT_JOURNAL_KEY, raw); } catch (e) { noteWriteError(e); return null; }
   s.removeItem(COMMIT_JOURNAL_KEY);
   let r = null;
   try {
@@ -204,6 +208,7 @@ export function dropCommitForSession(sessionId, ledger) {
 
 /** 開新局或還原整份存檔時用：舊的日誌與警示不屬於新的那份存檔。 */
 export function resetCommitState() {
+  resetQuotaHit();
   clearJournal();
   clearCommitAlert();
   try { local()?.removeItem(COMMIT_AUDIT_KEY); } catch { /* noop: 只是診斷資料 */ }

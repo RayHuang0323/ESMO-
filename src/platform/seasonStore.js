@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { resultKey } from "./seasonData.js";
 import { readSeasonPayload, seasonPayload, quarantine } from "./persistence/localSaveProvider.js";
 import { isBattleResult } from "./contracts/battleResultVersion.js";
+import { noteWriteError } from "./persistence/storageQuota.js";
 
 //  ── B1B：版本化 ＋ 向下相容（B1A 風險 R6）────────────────────────────────
 //  舊格式是**裸陣列** `BattleResult[]`；新格式是 `{ schema, history }`。
@@ -38,7 +39,7 @@ const persist = {
     if (!canLS) return { ok: false, error: "no_storage" };
     //  ⚠ 回報而不是靜默吞掉（B1A 風險 R3）。
     try { localStorage.setItem(KEY, JSON.stringify(seasonPayload(h))); return { ok: true }; }
-    catch (e) { return { ok: false, error: String(e?.message ?? e) }; }
+    catch (e) { noteWriteError(e); return { ok: false, error: String(e?.message ?? e) }; }
   },
 };
 
