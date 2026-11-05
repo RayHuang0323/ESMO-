@@ -948,6 +948,13 @@ section("§15 失敗前後各一場");
     const again = run(FX.moba, [{ do: "boot" }], { from: freeze(stuck.final) });
     if (again) ck("算不完的日誌：重新整理後提示還在", last(again).sum.alertMem === "derived" && last(again).sum.canRetry === true && !last(again).ret?.threw, JSON.stringify(last(again).sum));
   }
+  //  提示不見了（例如開機之後被別的事清掉）：按推進也要自己把提示掛回來，不能只靠開機那一次。
+  const silent = bad && run(FX.moba, [{ do: "boot" }, { do: "clearAlertOnly" }, { do: "advance" }], { from: freeze(bad.final), patchDisk: [{ key: JOURNAL_KEY, kind: "journal_no_players" }] });
+  if (silent) {
+    const [, cleared, adv] = silent.steps;
+    ck("算不完的日誌，提示清掉的前提成立", cleared.sum.alertMem === null, cleared.sum.alertMem);
+    ck("算不完的日誌，提示清掉後按推進：提示和重試都回來", adv.ret?.ok === false && adv.sum.alertMem === "derived" && adv.sum.canRetry === true, JSON.stringify(adv.sum));
+  }
   //  日誌讓位時，attempt 丟例外或沒寫成：日誌都要放回去。
   const room = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "disarm" }, { do: "roomThrow" }, { do: "roomFail" }]);
   if (room) {
