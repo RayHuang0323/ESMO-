@@ -75,8 +75,8 @@ export const useSeasonStore = create((set, get) => ({
   recordCommitted(commitKey, result) {
     if (!isBattleResult(result)) return { applied: false, persisted: true };
     const cur = get().history;
-    const key = resultKey(result);
-    if (cur.some((r) => r.commitKey === commitKey || resultKey(r) === key)) {
+    //  ⚠ 不再比 resultKey：勝方、時長、比分都相同的兩場是兩場；防重靠 commitKey 就夠。
+    if (cur.some((r) => r.commitKey === commitKey)) {
       const again = saveCommitted(cur, commitKey);
       if (again.history !== cur) set({ history: again.history });
       return { applied: false, persisted: again.ok };

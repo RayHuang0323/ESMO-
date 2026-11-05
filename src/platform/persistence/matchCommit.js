@@ -132,6 +132,37 @@ export function hasUnfinishedCommit(ledger) {
   return !!j?.txId && !!ledger?.[j.txId];
 }
 
+/**
+ * 把日誌佔的空間讓出來，做一次寫入；沒成功就放回去。
+ *
+ * ⚠ 日誌大約 5 KB，正好可能就是 Season 精簡版缺的那一點。不讓出來的話，比賽明明入帳了，
+ *   日曆卻會被一個不影響生涯數值的鍵卡住，重試也永遠沒用（Review 第二輪重現）。
+ * ⚠ 先用同樣內容覆寫一次當探測：配額不足時原地覆寫不會多佔空間，還是成功；
+ *   寫失敗代表儲存整個壞了，放回去也會失敗，這時不能冒險拿掉日誌。
+ * ⚠ 只給 Season 用。中間當機最多少一筆歷史，帳本與熟練都不受影響。
+ */
+export function withJournalRoom(attempt) {
+  const s = local();
+  let raw = null;
+  try { raw = s?.getItem(COMMIT_JOURNAL_KEY) ?? null; } catch { raw = null; }
+  if (raw === null) return attempt();
+  try { s.setItem(COMMIT_JOURNAL_KEY, raw); } catch { return null; }
+  s.removeItem(COMMIT_JOURNAL_KEY);
+  const r = attempt();
+  if (!r.persisted) {
+    try { s.setItem(COMMIT_JOURNAL_KEY, raw); } catch { /* noop: 剛讓出來的空間放得下；真的放不下也只差一筆 Season，警示會留著 */ }
+  }
+  return r;
+}
+
+/**
+ * 開新比賽或推進日曆前，把待補的那一筆補完。由 commitMatch 註冊，因為 profileStore 不能 import 它。
+ * ⚠ 不能改呼叫提示上掛的重試：提示可能已經被別場換掉，那會跑到不相關的提交（Review 第二輪重現）。
+ */
+let outstandingSettler = null;
+export const registerOutstandingSettler = (fn) => { outstandingSettler = fn; };
+export const settleOutstandingCommit = () => (outstandingSettler ? outstandingSettler() : false);
+
 /** 這場賽程已經收尾（棄權），它留下的日誌與警示都不再有意義。⚠ 已入帳的日誌還有事要做，不動。 */
 export function dropCommitForFixture(fixtureId, ledger) {
   if (!fixtureId) return;

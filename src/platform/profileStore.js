@@ -169,7 +169,7 @@ import {
 } from "./competition/honors.js";
 import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
-import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, dropCommitForSession, hasUnfinishedCommit, resetCommitState, setCommitAlert, useCommitAlertStore } from "./persistence/matchCommit.js";
+import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, dropCommitForSession, hasUnfinishedCommit, resetCommitState, settleOutstandingCommit, setCommitAlert, useCommitAlertStore } from "./persistence/matchCommit.js";
 import { SAVE_STATUS } from "./persistence/saveProvider.js";
 
 //  BP-9 P0-A：玩家看得懂的一句話。不講配額，玩家對配額無能為力。
@@ -1053,16 +1053,10 @@ export const useProfileStore = create((rawSet, get) => {
   _saveBlockedReason() {
     //  ⚠ 帳已入但熟練或 Season 還沒寫完時 saveState 是正常的，所以要另外看。
     //    這裡只補當前這一筆；補不完就停，下一場進來會把它的紀錄擠掉。
-    if (hasUnfinishedCommit(get().processedMatchTransactions)) {
-      useCommitAlertStore.getState().retry?.();
-      if (hasUnfinishedCommit(get().processedMatchTransactions)) return SAVE_BLOCKED_REASON;
-    }
+    if (hasUnfinishedCommit(get().processedMatchTransactions) && !settleOutstandingCommit()) return SAVE_BLOCKED_REASON;
     if (get().saveState?.status !== SAVE_STATUS.error) return null;
     return get().save() ? null : SAVE_BLOCKED_REASON;
   },
-
-  /** 熟練與 Season 不走 `save()`，寫完之後讓下一次保底 flush 把它們帶進存檔信封。 */
-  markUnsaved() { writeSeq += 1; },
 
   /**
    * 只在有未存變更時才存（離開頁面的保底 flush 用）。
@@ -3154,6 +3148,8 @@ export const useProfileStore = create((rawSet, get) => {
    *   陣容，不是無視陣容規則。
    */
   startPracticeMatch(mode = DEFAULT_GAME_MODE, now = Date.now()) {
+    const saveBlocked = get()._saveBlockedReason();
+    if (saveBlocked) return { ok: false, errors: [{ code: "save_failed", message: saveBlocked }], reason: saveBlocked };
     //  ── 一次只能有一場進行中的對戰（與 startFixtureMatch 同一條規則）──────
     //  少了這一條，玩家可以在一場正式賽進行中開一場練習，
     //  而下面的 `set()` 會把 `session` 換掉 ⇒ 正式賽那一場**無聲消失**。
@@ -3477,8 +3473,8 @@ export const useProfileStore = create((rawSet, get) => {
     const r = abandonSession(mm.session ?? null, reason, now);
     if (!r.ok) return { ok: false, errors: r.errors };
     set({ matchmaking: { ...mm, session: r.session } });
-    get().save();
-    dropCommitForSession(r.session?.sessionId, get().processedMatchTransactions);
+    //  ⚠ 這次存檔失敗時不能清警示：磁碟上那一場還是 launched。
+    if (get().save()) dropCommitForSession(r.session?.sessionId, get().processedMatchTransactions);
     return { ok: true, errors: [] };
   },
   /** R63：目前進行中的場次唯一恢復視圖，供首頁／賽前頁使用。 */

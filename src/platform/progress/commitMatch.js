@@ -29,7 +29,7 @@ import { FIXTURE_TERMINAL } from "../contracts/competition.js";
 import { settleMatchThroughSession, outcomeFromBattleResult } from "./settleMatchBoundary.js";
 import {
   ALERT_KINDS, JOURNAL_STATES, clearCommitAlert, clearJournal, commitKeyOf, detectCommitAnomalies,
-  hasUnfinishedCommit, journalResult, loadCommitAlert, readJournal, recordAudit, setCommitAlert, useCommitAlertStore, writeJournal,
+  hasUnfinishedCommit, journalResult, loadCommitAlert, readJournal, registerOutstandingSettler, withJournalRoom, recordAudit, setCommitAlert, useCommitAlertStore, writeJournal,
 } from "../persistence/matchCommit.js";
 
 const profile = () => useProfileStore.getState();
@@ -84,7 +84,11 @@ function clearAlertFor(p) {
 function finishDerived(j, full) {
   const result = full ?? j.result;
   const hero = useHeroProgressStore.getState().applyCommitted(j.commitKey, result);
-  const season = useSeasonStore.getState().recordCommitted(j.commitKey, result);
+  let season = useSeasonStore.getState().recordCommitted(j.commitKey, result);
+  //  熟練已落盤、只差 Season：日誌讓出空間再試一次。
+  if (hero.persisted && !season.persisted) {
+    season = withJournalRoom(() => useSeasonStore.getState().recordCommitted(j.commitKey, result)) ?? season;
+  }
   if (!hero.persisted || !season.persisted) {
     setCommitAlert(
       { kind: ALERT_KINDS.derived, commitKey: j.commitKey, mode: j.mode, fixtureId: j.fixtureId ?? null, at: Date.now() },
@@ -94,8 +98,6 @@ function finishDerived(j, full) {
   }
   clearJournal();
   clearAlertFor(j);
-  //  這兩把鍵不走 `save()`，標記未存，讓雲端信封之後帶得到這一場的熟練。
-  profile().markUnsaved();
   return { ok: true, stage: "done" };
 }
 
@@ -115,6 +117,8 @@ function settleOutstanding() {
   if (!j || j.corrupt || !ledgerHas(j.txId)) return true;
   return finishDerived(j, null).ok;
 }
+
+registerOutstandingSettler(settleOutstanding);
 
 const notCounted = () => useCommitAlertStore.setState({ notCounted: true });
 
@@ -202,6 +206,8 @@ export function commitCsMatch({ matchId, build }) {
   };
   const attempt = () => {
     useCommitAlertStore.setState({ notCounted: false });
+    //  ⚠ 不寫日誌也要等：失敗的話提示會把待補那一筆的提示換掉，玩家就沒有按鈕可按了。
+    if (!settleOutstanding()) { notCounted(); return { ok: false, stage: "derived_pending", receipt: null }; }
     if (sessionGivenUp()) { clearAlertFor(p); notCounted(); return { ok: false, stage: "given_up", receipt: null }; }
     const atomic = profile().runAtomicCommit(build);
     if (!atomic.ok) {
@@ -242,6 +248,16 @@ export function reconcileCommitAlert() {
  * ⚠ 判斷只看 profile 帳本。不猜、不補償、不改已經存在的歷史。
  */
 export function recoverPendingCommits() {
+  //  ⚠ 這裡在畫面第一次渲染時跑。丟例外就是每次開遊戲都白畫面，而存檔還在：記下來，繼續開。
+  try {
+    return runRecovery();
+  } catch (e) {
+    recordAudit({ checkedAt: Date.now(), findings: [{ code: "recovery_failed", message: String(e?.message ?? e).slice(0, 160) }] });
+    return { recovered: false, aborted: false, kept: true, corrupt: false, failed: true };
+  }
+}
+
+function runRecovery() {
   loadCommitAlert();
   const out = { recovered: false, aborted: false, kept: false, corrupt: false };
   const j = readJournal();

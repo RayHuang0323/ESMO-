@@ -257,6 +257,7 @@ async function child(jobFile) {
     const o = JSON.parse(patched[p.key]);
     if (p.kind === "hero_games") { const heroes = o.progress ?? o; const id = Object.keys(heroes)[0]; heroes[id].mastery.games += p.add; }
     if (p.kind === "drop_session") { o.matchmaking = { ...o.matchmaking, session: null, launch: null }; }
+    if (p.kind === "bad_season") { o.history = [{}, ...(o.history ?? [])]; }
     if (p.kind === "dup_season") { o.history = [...(o.history ?? []), { schema: "x", commitKey: "dup" }, { schema: "x", commitKey: "dup" }]; }
     patched[p.key] = JSON.stringify(o);
   }
@@ -339,7 +340,10 @@ async function child(jobFile) {
     armKey: ({ key, times = 99 }) => { ctl.armedKey = { key, times }; return { ok: true }; },
     requeue: () => st().requeueMatch("moba", tick(120000)),
     cancelQueue: () => st().cancelMatchmaking(tick(1000)),
-    practice: () => st().startPracticeMatch("moba", tick(1000)),
+    practice: ({ mode = "moba" }) => st().startPracticeMatch(mode, tick(1000)),
+    commitCsResult: ({ file }) => settleCsMatch(JSON.parse(fs.readFileSync(file, "utf8")).a.result),
+    completeOffSeason: () => st().completeOffSeason(),
+    rollSeason: () => st().rollToNextCompetitionSeason(),
     //  走到真的開賽：與一般對戰的畫面流程同一串 store 動作。
     drive: () => {
       tick(120000);
@@ -362,6 +366,7 @@ async function child(jobFile) {
       return C.commitMobaMatch({ result: c, transaction: tx, matchId: mobaMatchId(c), isPractice });
     },
     dropJournal: () => { ctl.map.delete(JOURNAL_KEY); return { ok: true }; },
+    clearAlertOnly: () => { useCommitAlertStore.setState({ alert: null, retry: null }); return { ok: true }; },
     forceCreated: () => {
       const mm = st().matchmaking;
       useProfileStore.setState({ matchmaking: { ...mm, session: { ...mm.session, state: "created", launchedAt: null } } });
@@ -628,7 +633,8 @@ section("§5 配額不足");
   const plans = [
     ["連日誌都寫不進去", 50, "journal"],
     ["日誌進得去、profile 進不去", journalSize + Math.floor(profileGrowth / 2), "profile"],
-    ["帳本進得去、Season 連精簡版都進不去", journalSize + profileGrowth + heroGrowth + 200, "derived"],
+    ["帳本進得去、熟練進不去", journalSize + profileGrowth + Math.floor(heroGrowth / 2), "derived"],
+    ["帳本與熟練進得去、只剩日誌讓出來的空間", journalSize + profileGrowth + heroGrowth + 50, "done"],
     ["帳本進得去、Season 只進得去精簡版", journalSize + profileGrowth + heroGrowth + Math.floor(journalSize * 0.9), "done"],
   ];
   for (const [name, extra, expect] of plans) {
@@ -643,14 +649,63 @@ section("§5 配額不足");
     if (expect !== "derived") {
       ck(`配額：${name}：什麼都沒發生`, !c.sum.disk.hasA && c.sum.heroDisk === mobaBase.heroDisk && c.sum.seasonDisk === mobaBase.seasonDisk && c.sum.disk.funds === mobaBase.disk.funds, JSON.stringify(c.sum.disk));
     } else {
-      ck(`配額：${name}：帳與熟練都在，Season 待補`, c.sum.disk.hasA && c.sum.heroDisk === mobaBase.heroDisk + 10 && c.sum.seasonDisk === mobaBase.seasonDisk && c.sum.journal !== null && c.sum.alertMem === "derived", JSON.stringify(c.sum));
+      ck(`配額：${name}：帳已入，熟練與 Season 待補`, c.sum.disk.hasA && c.sum.heroDisk === mobaBase.heroDisk && c.sum.heroMem === mobaBase.heroMem + 10 && c.sum.journal !== null && c.sum.alertMem === "derived", JSON.stringify(c.sum));
       //  還是滿的情況下重新整理：不能再多算一次熟練，也要繼續提示。
       const stillFull = run(FX.moba, [{ do: "quota", extra: 0 }, { do: "boot" }, { do: "boot" }], { from: freeze(r.final) });
       const s = last(stillFull).sum;
-      ck(`配額：${name}：還是滿的時候重新整理不會多算熟練`, s.heroDisk === mobaBase.heroDisk + 10 && s.heroMem === mobaBase.heroMem + 10, `${s.heroDisk}/${s.heroMem}`);
+      ck(`配額：${name}：還是滿的時候重新整理不會多算熟練`, s.heroDisk === mobaBase.heroDisk && s.heroMem === mobaBase.heroMem + 10, `${s.heroDisk}/${s.heroMem}`);
       ck(`配額：${name}：還是滿的時候繼續提示`, s.alertMem === "derived" && s.canRetry === true && s.journal !== null, `${s.alertMem}/${s.canRetry}/${s.journal}`);
     }
     coldBootAndReplay(`配額：${name}`, FX.moba, r.final, "moba", mobaBase, mobaFull);
+  }
+}
+
+// ── §5b 掃過整段可用空間：入帳之後不能只因為 Season 就卡住 ─────────────
+section("§5b 可用空間掃描");
+{
+  const sizes = mobaOk.trace.filter((t) => t.op === "set");
+  const J = sizes.find((t) => t.key === JOURNAL_KEY).size + JOURNAL_KEY.length;
+  const seasonFull = sizes.find((t) => t.key === SEASON_KEY).size;
+  let stoppedOnHero = 0, counted = 0, refused = 0, checked = 0;
+  for (let extra = 0; extra <= J + seasonFull + 12000; extra += 1500) {
+    checked += 1;
+    const r = run(FX.moba, [{ do: "quota", extra }, { do: "commit", which: "a" }, { do: "retry" }, { do: "boot" }]);
+    if (!r) continue;
+    const c = r.steps[1], s = last(r).sum;
+    const label = `可用 ${extra}`;
+    if (!c.sum.disk.hasA) {
+      refused += 1;
+      ck(`${label}：沒入帳 ⇒ 什麼都沒多`, s.heroDisk === mobaBase.heroDisk && s.seasonDisk === mobaBase.seasonDisk && s.disk.funds === mobaBase.disk.funds, JSON.stringify(s.disk));
+      continue;
+    }
+    counted += 1;
+    if (c.sum.heroDisk === mobaBase.heroDisk) {
+      stoppedOnHero += 1;
+      ck(`${label}：熟練寫不進去 ⇒ 提示、不重複`, c.sum.alertMem === "derived" && s.heroMem === mobaBase.heroMem + 10, `${c.sum.alertMem} ${s.heroMem}`);
+    } else {
+      ck(`${label}：帳與熟練都進去 ⇒ 不會只因為 Season 卡住（Review C1）`, c.sum.seasonDisk === mobaBase.seasonDisk + 1 && c.sum.journal === null && c.sum.alertMem === null, JSON.stringify({ ret: c.ret, season: c.sum.seasonDisk, journal: c.sum.journal, alert: c.sum.alertMem }));
+    }
+    coldBootAndReplay(label, FX.moba, r.final, "moba", mobaBase, mobaFull);
+    //  ⚠ requeue 會清掉場次，所以另外跑：放在冷啟動重打之前，舊賽果會走結算邊界「沒有場次」那條路。
+    if (c.sum.heroDisk !== mobaBase.heroDisk) {
+      const next = run(FX.moba, [{ do: "quota", extra }, { do: "commit", which: "a" }, { do: "requeue" }]);
+      if (next) ck(`${label}：入帳之後可以開下一場（或明確被存檔保護擋下，且不動資料）`, last(next).ret.ok === true || (last(next).ret.code === "save_failed" && last(next).sum.disk.hasA), JSON.stringify(last(next).ret));
+    }
+  }
+  ck("掃描涵蓋三種結果的前提：有拒絕、有入帳", refused > 0 && counted > 0, `拒絕 ${refused} 入帳 ${counted}`);
+  console.log(`  掃描 ${checked} 個可用空間：拒絕 ${refused}、入帳 ${counted}、其中停在熟練 ${stoppedOnHero}`);
+  //  日誌讓位的那一刻重新整理：最多少一筆 Season，帳本與熟練不受影響。
+  const tightExtra = sizes.find((t) => t.key === JOURNAL_KEY).size + JOURNAL_KEY.length + (sizes.find((t) => t.key === PROFILE_KEY).size - run(FX.moba, []).final.storage[PROFILE_KEY].length) + 700;
+  const swap = run(FX.moba, [{ do: "quota", extra: tightExtra }, { do: "commit", which: "a" }], { keepSnapshots: true });
+  if (swap) {
+    const mid = swap.snapshots.filter((x) => !x.storage[JOURNAL_KEY] && JSON.parse(x.storage[PROFILE_KEY]).processedMatchTransactions?.[Object.keys(JSON.parse(x.storage[PROFILE_KEY]).processedMatchTransactions).find((k) => k.includes(JSON.parse(fs.readFileSync(FX.moba, "utf8")).a.matchId))]);
+    for (const [i, snap] of mid.entries()) {
+      const b = run(FX.moba, [{ do: "boot" }, { do: "boot" }], { from: freeze(snap) });
+      if (!b) continue;
+      const s = last(b).sum;
+      ck(`日誌讓位 ${i}：帳本與熟練不受影響`, s.disk.hasA && s.heroDisk === mobaBase.heroDisk + 10, `${s.disk.hasA} ${s.heroDisk}`);
+      ck(`日誌讓位 ${i}：Season 最多少一筆、不會多`, s.seasonDisk === mobaBase.seasonDisk || s.seasonDisk === mobaBase.seasonDisk + 1, s.seasonDisk);
+    }
   }
 }
 
@@ -841,6 +896,32 @@ section("§15 失敗前後各一場");
     ck("A 沒寫完時送另一份賽果：拒絕，不入帳", b.ret.stage === "derived_pending" && !b.sum.disk.hasB && b.sum.journal !== null, JSON.stringify(b.ret));
     ck("排除之後 A 補完", retried.ret.ok === true && end.sum.seasonDisk === mobaBase.seasonDisk + 1 && end.sum.heroDisk === mobaBase.heroDisk + 10, JSON.stringify(retried.ret));
     ck("排除之後還是只有 A 這筆帳", end.sum.disk.hasA && !end.sum.disk.hasB && end.sum.disk.tx === mobaBase.disk.tx + 1, JSON.stringify(end.sum.disk));
+  }
+  //  待補的 A 不能被別場的提交或提示擠掉（Review C2）。
+  const c2 = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "practice", mode: "cs" }, { do: "practice", mode: "moba" }, { do: "commitCsResult", file: FX.cs }, { do: "disarm" }, { do: "requeue" }]);
+  if (c2) {
+    const [, a, pc, pm, cs, , q] = c2.steps;
+    ck("A 待補時不能開 CS 練習", pc.ret.ok === false && pc.ret.code === "save_failed", JSON.stringify(pc.ret));
+    ck("A 待補時不能開 MOBA 練習", pm.ret.ok === false && pm.ret.code === "save_failed", JSON.stringify(pm.ret));
+    ck("A 待補時送 CS 賽果：不入帳、不動資金", cs.ret.ok === false && cs.sum.disk.tx === a.sum.disk.tx && cs.sum.disk.funds === a.sum.disk.funds && cs.sum.disk.cs === a.sum.disk.cs, JSON.stringify(cs.ret));
+    ck("A 待補的提示與重試還在", cs.sum.alertMem === "derived" && cs.sum.canRetry === true, `${cs.sum.alertMem}/${cs.sum.canRetry}`);
+    ck("排除之後開下一場：補的是 A，不會跑到別場", q.ret.ok === true && q.sum.seasonDisk === mobaBase.seasonDisk + 1 && q.sum.journal === null && q.sum.disk.tx === a.sum.disk.tx && q.sum.disk.funds === a.sum.disk.funds, JSON.stringify(q.ret));
+  }
+  //  提示已經被換掉、按鈕也沒了，只要空間回來就還有路：開賽前會直接讀日誌補完。
+  const lost = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "disarm" }, { do: "clearAlertOnly" }, { do: "advance", n: 1 }]);
+  if (lost) ck("提示不見了也不會卡死：推進前讀日誌補完", last(lost).sum.journal === null && last(lost).sum.seasonDisk === mobaBase.seasonDisk + 1, `${last(lost).sum.journal} ${JSON.stringify(last(lost).ret)}`);
+  //  休賽期與換季不是出口，但也不能把待補的資料弄壞。
+  const season = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "completeOffSeason" }, { do: "rollSeason" }, { do: "disarm" }, { do: "boot" }]);
+  if (season) {
+    const [, a, off, roll, , end] = season.steps;
+    ck("待補時呼叫休賽期收尾與換季：沒有例外", !off.ret?.threw && !roll.ret?.threw, `${JSON.stringify(off.ret)} ${JSON.stringify(roll.ret)}`);
+    ck("待補時呼叫休賽期收尾與換季：之後一樣補得完、不重複", end.sum.journal === null && end.sum.heroDisk === mobaBase.heroDisk + 10 && end.sum.seasonDisk === mobaBase.seasonDisk + 1 && end.sum.disk.tx === a.sum.disk.tx, JSON.stringify(end.sum.disk));
+  }
+  //  壞掉的 Season 紀錄不能讓開機白畫面。
+  const bad = run(FX.moba, [held, { do: "commit", which: "a" }], {});
+  if (bad) {
+    const b = run(FX.moba, [{ do: "boot" }], { from: freeze(bad.final), patchDisk: [{ key: SEASON_KEY, kind: "bad_season" }] });
+    if (b) ck("Season 有壞紀錄時開機：不丟例外，一樣補完", !last(b).ret?.threw && last(b).sum.journal === null && last(b).sum.heroDisk === mobaBase.heroDisk + 10, `${JSON.stringify(last(b).ret)} ${last(b).sum.journal}`);
   }
   //  同一份 sessionId 再開一次賽（取消排隊會把 attempt 歸零）：是另一場，要算。
   const reuse = run(FX.moba, [
