@@ -169,11 +169,14 @@ import {
 } from "./competition/honors.js";
 import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
-import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, dropCommitForSession, hasUnfinishedCommit, resetCommitState, settleOutstandingCommit, setCommitAlert, useCommitAlertStore } from "./persistence/matchCommit.js";
+import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, dropCommitForSession, hasUnfinishedCommit, resetCommitState, settleOutstandingCommit, setCommitAlert, storageLooksFull, useCommitAlertStore } from "./persistence/matchCommit.js";
 import { SAVE_STATUS } from "./persistence/saveProvider.js";
 
 //  BP-9 P0-A：玩家看得懂的一句話。不講配額，玩家對配額無能為力。
-const SAVE_BLOCKED_REASON = "進度存不進去，先不能繼續。請按重試，或到賽事中心處理這場比賽";
+const SAVE_BLOCKED_TEXT = "進度存不進去，先不能繼續。請按重試，或到賽事中心處理這場比賽";
+//  ⚠ Owner（BP-9 F5）：頂到上限時要讓玩家知道這是暫時保護、等下一版修復；不得引導清除資料或開新局。
+const STORAGE_FULL_REASON = "存檔空間已滿，為了保護進度先暫停。存檔完好，下一版更新後會恢復；請不要清除瀏覽器資料";
+const saveBlockedReason = () => (storageLooksFull() ? STORAGE_FULL_REASON : SAVE_BLOCKED_TEXT);
 //  ⚠ 這條路存檔本身可能是好的，而且棄權解不開已入帳的那一筆，所以不能用上面那句。
 const UNFINISHED_COMMIT_REASON = "上一場比賽的紀錄還沒補完，先不能繼續。請按畫面下方的重試";
 import {
@@ -1055,9 +1058,9 @@ export const useProfileStore = create((rawSet, get) => {
   _saveBlockedReason() {
     //  ⚠ 帳已入但熟練或 Season 還沒寫完時 saveState 是正常的，所以要另外看。
     //    這裡只補當前這一筆；補不完就停，下一場進來會把它的紀錄擠掉。
-    if (hasUnfinishedCommit(get().processedMatchTransactions) && !settleOutstandingCommit()) return UNFINISHED_COMMIT_REASON;
+    if (hasUnfinishedCommit(get().processedMatchTransactions) && !settleOutstandingCommit()) return storageLooksFull() ? STORAGE_FULL_REASON : UNFINISHED_COMMIT_REASON;
     if (get().saveState?.status !== SAVE_STATUS.error) return null;
-    return get().save() ? null : SAVE_BLOCKED_REASON;
+    return get().save() ? null : saveBlockedReason();
   },
 
   /**
@@ -1568,7 +1571,7 @@ export const useProfileStore = create((rawSet, get) => {
     const blocked = get()._saveBlockedReason();
     if (blocked) return { ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [], reason: blocked };
     const atomic = get().runAtomicCommit(() => get().advanceDay(days));
-    if (!atomic.ok) return { ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [], reason: SAVE_BLOCKED_REASON };
+    if (!atomic.ok) return { ok: false, daysAdvanced: 0, stoppedBy: null, receipts: [], reason: saveBlockedReason() };
     const receipts = atomic.value;
     return {
       ok: (receipts.daysAdvanced ?? 0) > 0,
@@ -1990,7 +1993,7 @@ export const useProfileStore = create((rawSet, get) => {
     //  BP-9 P0-A：棄權是玩家卡住時的出口，所以一定要一次存好；存不進去就當沒按過。
     if (atomicDepth === 0) {
       const atomic = get().runAtomicCommit(() => get().forfeitFixture(fixtureId, reason));
-      if (!atomic.ok) return { ok: false, reason: SAVE_BLOCKED_REASON, errors: [{ code: "save_failed", message: SAVE_BLOCKED_REASON }] };
+      if (!atomic.ok) return { ok: false, reason: saveBlockedReason(), errors: [{ code: "save_failed", message: saveBlockedReason() }] };
       if (atomic.value?.ok) dropCommitForFixture(fixtureId, get().processedMatchTransactions);
       return atomic.value;
     }

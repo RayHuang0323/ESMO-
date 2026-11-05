@@ -29,6 +29,24 @@ export const ALERT_KINDS = Object.freeze({ match: "match", derived: "derived", s
 const MAX_AUDIT_FINDINGS = 12;
 
 const local = () => (typeof localStorage !== "undefined" ? localStorage : null);
+
+/**
+ * 存檔是不是已經頂到瀏覽器上限（Chrome 約 5,242,880 字元，實測）。
+ * ⚠ 只用來決定提示怎麼說，不用來決定能不能存：能不能存只看真的寫入結果。
+ *   門檻刻意比上限低一點，各瀏覽器的上限不完全一樣。
+ */
+export const STORAGE_FULL_HINT = 4_900_000;
+export function storageLooksFull() {
+  const s = local();
+  if (!s) return false;
+  let n = 0;
+  try {
+    for (let i = 0; i < s.length; i++) { const k = s.key(i); n += k.length + (s.getItem(k)?.length ?? 0); }
+  } catch {
+    return false;
+  }
+  return n >= STORAGE_FULL_HINT;
+}
 const session = () => (typeof sessionStorage !== "undefined" ? sessionStorage : null);
 
 /**

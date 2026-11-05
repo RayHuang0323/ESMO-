@@ -72,6 +72,14 @@ const result = await runGate({
     const step = async (name, extra = {}) => { const row = { name, disk: await disk(), notice: await notice(), ...extra }; report.steps.push(row); save(); console.log(`STEP ${name} 第 ${row.disk?.day} 天 tx ${row.disk?.tx} 資金 ${row.disk?.funds} 熟練 ${row.disk?.heroGames} Season ${row.disk?.seasonLen} CS ${row.disk?.csHistory} 總量 ${row.disk?.total} 日誌 ${row.disk?.journal}${row.notice.on ? " ⚠ " + row.notice.message : ""}`); return row; };
     const errors = () => ({ page: chrome.pageErrors.slice(0, 6).map((l) => String(l).slice(0, 240)), console: chrome.consoleLines.filter((l) => l.startsWith("[error]")).slice(0, 10).map((l) => l.slice(0, 240)) });
     const setWidth = async (w, h, mob) => { await chrome.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: mob ? 2 : 1, mobile: mob }); await chrome.send("Emulation.setTouchEmulationEnabled", { enabled: mob, maxTouchPoints: mob ? 5 : 1 }); };
+    //  Owner（BP-9 F5）：頂到上限時要說是暫時保護、等下一版；不得叫玩家清資料、開新局或去按不存在的棄權。
+    const fullText = async (label) => {
+      const t = await ev("const e=document.querySelector('" + tid("save-status-notice") + "');return JSON.stringify(e?e.innerText:'');");
+      report.findings.push({ kind: "full_text", label, text: t });
+      ck(`${label}：提示說存檔空間已滿、存檔完好`, /存檔空間已滿/.test(t) && /存檔完好/.test(t), t);
+      ck(`${label}：提示說是暫時的、下一版會恢復`, /下一版/.test(t) && /恢復/.test(t), t);
+      ck(`${label}：提示不叫玩家清資料或開新局`, !/請(先)?清除|請開新局|重新開局吧/.test(t) && /不要清除/.test(t), t);
+    };
     const overflow = () => ev("return JSON.stringify(Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);");
     const home = async () => { await chrome.navigate(url); await waitId("home-mode-moba", 120000); await sleep(1000); };
     const loadCheckpoint = async () => {
@@ -446,6 +454,7 @@ const result = await runGate({
           await home();
           const s2 = await step("重新整理");
           ck("重新整理：提示還在（舊版消失）", s2.notice.on && s2.notice.kind === "match", JSON.stringify(s2.notice));
+          await fullText("MOBA 超限");
           ck("重新整理：熟練、Season、資金、帳本都沒動", s2.disk.heroGames === s0.disk.heroGames && s2.disk.seasonLen === s0.disk.seasonLen && s2.disk.funds === s0.disk.funds && s2.disk.tx === s0.disk.tx, JSON.stringify(s2.disk));
           ck("重新整理：沒有隔離檔", s2.disk.corrupt.length === 0, s2.disk.corrupt.join(","));
           //  W2：重打一次多算一次熟練（790 → 800 → 810）。
@@ -524,6 +533,7 @@ const result = await runGate({
         const s2 = await step("重新整理");
         ck("重新整理：提示還在", s2.notice.on && s2.notice.kind === "match", JSON.stringify(s2.notice));
         ck("重新整理：資料沒動", s2.disk.funds === s0.disk.funds && s2.disk.tx === s0.disk.tx && s2.disk.csHistory === s0.disk.csHistory, JSON.stringify(s2.disk));
+        await fullText("CS 超限");
         ck("重新整理：文字沒有叫玩家去按不存在的棄權", (await ev("const e=document.querySelector('" + tid("save-status-notice") + "');return JSON.stringify(!!e&&!e.innerText.includes('棄權'));")) === true);
         //  超限之後玩家還有什麼路：這幾筆是給 Owner 判斷的事實，只釘「不多算」，不把卡住當通過。
         await toHub();

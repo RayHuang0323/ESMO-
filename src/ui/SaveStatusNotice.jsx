@@ -21,7 +21,7 @@ import {
   cloudSyncState, cloudSyncView, onCloudSyncChange, CLOUD_STATUS,
 } from "../platform/persistence/cloudBackedSaveProvider.js";
 import { GC } from "./theme.js";
-import { ALERT_KINDS, useCommitAlertStore } from "../platform/persistence/matchCommit.js";
+import { ALERT_KINDS, useCommitAlertStore, storageLooksFull } from "../platform/persistence/matchCommit.js";
 import { retryPendingCommit } from "../platform/progress/commitMatch.js";
 
 /**
@@ -61,6 +61,9 @@ const ALERT_TEXT = {
   [ALERT_KINDS.save]: { head: "進度沒有存起來", body: "現在看到的是最後一次成功存檔的內容。" },
 };
 
+//  ⚠ Owner（BP-9 F5）：頂到上限時說清楚這是暫時保護、等下一版修復；不得引導清除資料或開新局。
+const STORAGE_FULL_TEXT = { head: "存檔空間已滿，進度先暫停保護", body: "存檔完好，沒有遺失。為了避免紀錄重複或錯亂，比賽結果與日曆先暫停計入，下一版更新會整理空間後恢復。請不要清除瀏覽器資料，也不要開新局。" };
+
 const UNFINISHABLE_TEXT = { head: "比賽已入帳，部分紀錄還沒補上", body: "賽果與獎金都在，不會重複。按重試再試一次；補上之前開賽與推進會先停住，請先不要開新局。" };
 
 //  ⚠ CS 分頁目前沒有棄權（BP-2），不能叫玩家去按一個不存在的按鈕。
@@ -74,6 +77,7 @@ const NO_FIXTURE_MATCH_TEXT = { head: "比賽結果沒有存起來", body: "這�
  */
 function CommitAlertNotice({ alert, retry }) {
   const text = (alert.kind === ALERT_KINDS.derived && alert.stage === "unfinishable") ? UNFINISHABLE_TEXT
+    : storageLooksFull() ? STORAGE_FULL_TEXT
     : (alert.kind === ALERT_KINDS.match && !alert.fixtureId) ? NO_FIXTURE_MATCH_TEXT
     : (alert.kind === ALERT_KINDS.match && alert.mode === "cs") ? CS_MATCH_TEXT
     : (ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save]);
@@ -123,6 +127,7 @@ export default function SaveStatusNotice() {
   if (status !== SAVE_STATUS.error) return <CloudSyncNotice />;
 
   const view = useProfileStore.getState().saveStatus();
+  const full = storageLooksFull();
   return (
     <div
       data-testid="save-status-notice"
@@ -135,9 +140,9 @@ export default function SaveStatusNotice() {
         color: GC.redL, fontSize: 12, minWidth: 0,
       }}
     >
-      <span data-testid="save-status-message" style={{ fontWeight: 800 }}>{view.message}</span>
+      <span data-testid="save-status-message" style={{ fontWeight: 800 }}>{full ? STORAGE_FULL_TEXT.head : view.message}</span>
       {/* ⚠ 一句玩家做得到的事。不解釋為什麼，因為玩家對「為什麼」無能為力。 */}
-      <span style={{ color: GC.gray }}>剛才的進度可能沒有保存。</span>
+      <span style={{ color: GC.gray }}>{full ? STORAGE_FULL_TEXT.body : "剛才的進度可能沒有保存。"}</span>
       <button
         type="button"
         data-testid="save-status-retry"
