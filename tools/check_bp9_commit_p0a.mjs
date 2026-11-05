@@ -24,6 +24,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
 const SELF = fileURLToPath(import.meta.url);
@@ -258,6 +259,8 @@ async function child(jobFile) {
     if (p.kind === "hero_games") { const heroes = o.progress ?? o; const id = Object.keys(heroes)[0]; heroes[id].mastery.games += p.add; }
     if (p.kind === "drop_session") { o.matchmaking = { ...o.matchmaking, session: null, launch: null }; }
     if (p.kind === "bad_season") { o.history = [{}, ...(o.history ?? [])]; }
+    if (p.kind === "null_season") { o.history = [null, ...(o.history ?? [])]; }
+    if (p.kind === "journal_no_players") { delete o.result.players; }
     if (p.kind === "dup_season") { o.history = [...(o.history ?? []), { schema: "x", commitKey: "dup" }, { schema: "x", commitKey: "dup" }]; }
     patched[p.key] = JSON.stringify(o);
   }
@@ -272,7 +275,7 @@ async function child(jobFile) {
   const { useSeasonStore } = await import("../src/platform/seasonStore.js");
   const C = await import("../src/platform/progress/commitMatch.js");
   const { settleCsMatch } = await import("../src/platform/progress/settleCsMatch.js");
-  const { useCommitAlertStore, commitKeyOf } = await import("../src/platform/persistence/matchCommit.js");
+  const { useCommitAlertStore, commitKeyOf, withJournalRoom } = await import("../src/platform/persistence/matchCommit.js");
   const { createMatchSeries } = await import("../src/platform/contracts/matchSeries.js");
   const { mobaResultToTransaction, mobaMatchId } = await import("../src/platform/progress/adapters/mobaProgressAdapter.js");
   const st = () => useProfileStore.getState();
@@ -328,6 +331,8 @@ async function child(jobFile) {
   const brief = (r) => (r && typeof r === "object" ? {
     ok: r.ok, stage: r.stage, reason: r.reason, code: r.errors?.[0]?.code, alreadySettled: r.alreadySettled,
     daysAdvanced: r.daysAdvanced, recovered: r.recovered, aborted: r.aborted, kept: r.kept,
+    //  ⚠ 少了 threw，所有「沒有丟例外」的斷言都會恆真。
+    threw: r.threw, failed: r.failed,
   } : r);
   const handlers = {
     boot: () => C.recoverPendingCommits(),
@@ -366,6 +371,9 @@ async function child(jobFile) {
       return C.commitMobaMatch({ result: c, transaction: tx, matchId: mobaMatchId(c), isPractice });
     },
     dropJournal: () => { ctl.map.delete(JOURNAL_KEY); return { ok: true }; },
+    roomThrow: () => withJournalRoom(() => { throw new Error("boom"); }),
+    roomFail: () => withJournalRoom(() => ({ persisted: false })),
+    breakRetry: () => { useCommitAlertStore.setState({ retry: () => { throw new Error("boom"); } }); return { ok: true }; },
     clearAlertOnly: () => { useCommitAlertStore.setState({ alert: null, retry: null }); return { ok: true }; },
     forceCreated: () => {
       const mm = st().matchmaking;
@@ -922,6 +930,57 @@ section("§15 失敗前後各一場");
   if (bad) {
     const b = run(FX.moba, [{ do: "boot" }], { from: freeze(bad.final), patchDisk: [{ key: SEASON_KEY, kind: "bad_season" }] });
     if (b) ck("Season 有壞紀錄時開機：不丟例外，一樣補完", !last(b).ret?.threw && last(b).sum.journal === null && last(b).sum.heroDisk === mobaBase.heroDisk + 10, `${JSON.stringify(last(b).ret)} ${last(b).sum.journal}`);
+  }
+  //  Season 紀錄裡有 null：比對不能丟例外，否則這一筆永遠補不完。
+  const nullRow = bad && run(FX.moba, [{ do: "boot" }], { from: freeze(bad.final), patchDisk: [{ key: SEASON_KEY, kind: "null_season" }] });
+  if (nullRow) ck("Season 有 null 紀錄時開機：不丟例外，一樣補完", !last(nullRow).ret?.threw && last(nullRow).ret?.failed !== true && last(nullRow).sum.journal === null && last(nullRow).sum.heroDisk === mobaBase.heroDisk + 10, JSON.stringify(last(nullRow).sum));
+  //  日誌算不完：玩家要看得到、有按鈕可按，帳與日誌都不動。
+  const stuck = bad && run(FX.moba, [{ do: "boot" }, { do: "advance" }, { do: "enqueue" }, { do: "retry" }, { do: "breakRetry" }, { do: "retry" }], { from: freeze(bad.final), patchDisk: [{ key: JOURNAL_KEY, kind: "journal_no_players" }] });
+  if (stuck) {
+    const [boot, adv, enq, retry, , broke] = stuck.steps;
+    ck("算不完的日誌：開機不丟例外，而且看得到提示和重試", !boot.ret?.threw && boot.sum.alertMem === "derived" && boot.sum.canRetry === true, JSON.stringify(boot.sum));
+    ck("算不完的日誌：記進審查紀錄", boot.sum.audit.includes("journal_unfinishable"), JSON.stringify(boot.sum.audit));
+    ck("算不完的日誌：推進被拒、不丟例外、日子不動", !adv.ret?.threw && adv.ret?.ok === false && adv.sum.disk.days === boot.sum.disk.days && !!adv.ret?.reason, JSON.stringify(adv.ret));
+    ck("算不完的日誌：開賽被拒、不丟例外", !enq.ret?.threw && enq.ret?.ok === false, JSON.stringify(enq.ret));
+    ck("算不完的日誌：按重試不丟例外，提示與按鈕還在", !retry.ret?.threw && retry.ret?.ok === false && retry.sum.alertMem === "derived" && retry.sum.canRetry === true, JSON.stringify(retry.ret));
+    ck("算不完的日誌：帳、日誌都不動，也沒有重複", retry.sum.journal !== null && retry.sum.disk.hasA && retry.sum.disk.funds === boot.sum.disk.funds && retry.sum.heroDisk === boot.sum.heroDisk && retry.sum.seasonDisk === boot.sum.seasonDisk, JSON.stringify(retry.sum));
+    ck("重試函式自己丟例外：按鈕不會把例外丟給畫面", !broke.ret?.threw && broke.ret?.ok === false && broke.sum.audit.includes("retry_failed"), JSON.stringify(broke.ret));
+    const again = run(FX.moba, [{ do: "boot" }], { from: freeze(stuck.final) });
+    if (again) ck("算不完的日誌：重新整理後提示還在", last(again).sum.alertMem === "derived" && last(again).sum.canRetry === true && !last(again).ret?.threw, JSON.stringify(last(again).sum));
+  }
+  //  日誌讓位時，attempt 丟例外或沒寫成：日誌都要放回去。
+  const room = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "disarm" }, { do: "roomThrow" }, { do: "roomFail" }]);
+  if (room) {
+    const [, c, , thrown, failedRoom] = room.steps;
+    ck("讓位測試前提：日誌在", c.sum.journal !== null, c.sum.journal);
+    ck("日誌讓位時丟例外：例外照樣往外，日誌放回去", thrown.ret?.threw === "boom" && thrown.sum.journal !== null, JSON.stringify(thrown.ret));
+    ck("日誌讓位後沒寫成：日誌放回去", failedRoom.sum.journal !== null, failedRoom.sum.journal);
+  }
+  //  完全沒有 localStorage：不能假裝入帳，也不能丟例外。這條是修復後才有的行為，main 會留在記憶體裡。
+  {
+    const script = [
+      'const store = await import(process.argv[1]);',
+      'const settle = await import(process.argv[2]);',
+      'const fs = await import("node:fs");',
+      'const st = () => store.useProfileStore.getState();',
+      'st().reset?.(); st().autoFillLineup("moba");',
+      'const days = st().meta.days, funds = st().finance.funds;',
+      'const q = st().enqueueMatch("moba");',
+      'const adv = st().advanceWorldDays(1, { reason: "rest" });',
+      'const cs = settle.settleCsMatch(JSON.parse(fs.readFileSync(process.argv[3], "utf8")).a.result);',
+      'console.log("@@" + JSON.stringify({ hasLs: typeof localStorage, q: q.ok, qCode: q.code ?? q.errors?.[0]?.code ?? null, adv: adv.ok, daysSame: st().meta.days === days, csOk: cs?.ok, csCode: cs?.errors?.[0]?.code ?? null, fundsSame: st().finance.funds === funds, csHistory: st().csHistory.length }));',
+      'process.exit(0);',
+    ].join("\n");
+    const url = (p) => pathToFileURL(path.join(ROOT, p)).href;
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", script, url("src/platform/profileStore.js"), url("src/platform/progress/settleCsMatch.js"), FX.cs], { cwd: ROOT, encoding: "utf8", timeout: 60000, maxBuffer: 1 << 26 });
+    const hit = (r.stdout ?? "").split("\n").find((l) => l.startsWith("@@"));
+    const v = hit ? JSON.parse(hit.slice(2)) : null;
+    ck("沒有 localStorage：前提成立且沒有丟例外", v?.hasLs === "undefined", `${r.status} ${(r.stderr ?? "").slice(0, 200)}`);
+    if (v) {
+      ck("沒有 localStorage：開賽被拒", v.q === false, JSON.stringify(v));
+      ck("沒有 localStorage：推進被拒、日子不動", v.adv === false && v.daysSame === true, JSON.stringify(v));
+      ck("沒有 localStorage：CS 賽果不算，資金與歷史不動", v.csOk === false && v.csCode === "save_failed" && v.fundsSame === true && v.csHistory === 0, JSON.stringify(v));
+    }
   }
   //  同一份 sessionId 再開一次賽（取消排隊會把 attempt 歸零）：是另一場，要算。
   const reuse = run(FX.moba, [

@@ -343,7 +343,8 @@ console.log("\n【§H 不計戰績】");
 ck("H1) MOBA：練習不寫 season history / hero progress",
   (() => {
     //  BP-9 P0-A：兩個寫入搬進比賽完成邊界 commitMatch.js。useBattleFeed 不得再自己寫，
-    //  練習判斷要一路傳進去，而且寫入只有 finishDerived 一個出口，每條進去的路都被 derived 擋住。
+    //  練習判斷要一路傳進去，而且寫入只有 finishDerived 一個出口。
+    //  這裡只掃結構；「練習賽真的不寫」由 check_bp9_commit_p0a 的行為驗證負責。
     const feed = codeOnly(read(P_FEED));
     const c = codeOnly(read("src/platform/progress/commitMatch.js"));
     const onlyExit = /function finishDerived[\s\S]*?applyCommitted\([\s\S]*?recordCommitted\(/.test(c)
@@ -351,7 +352,9 @@ ck("H1) MOBA：練習不寫 season history / hero progress",
       && (c.match(/recordCommitted\(/g) || []).length === 2;
     const gate = c.indexOf("if (!p.derived)");
     const finish = c.indexOf("finishDerived({ ...p, result: journalResult(fullResult) }, fullResult)");
-    return /practice/i.test(feed) && /commitMobaMatch\(\{[^\n]*\bisPractice\b/.test(feed)
+    return /practice/i.test(feed) && /commitMobaMatch\(\{[^\n}]*\bisPractice\s*\}/.test(feed)
+      && /const isPractice = [^\n]*matchPracticeContext\(\)\.inPractice/.test(feed)
+      && (c.match(/finishDerived\(/g) || []).length === 6
       && !/recordResult|recordBattleResult|recordCommitted|applyCommitted/.test(feed)
       && /derived:\s*!isPractice/.test(c)
       && onlyExit

@@ -98,7 +98,7 @@ console.log("══ Milestone O7.1：真實賽後流程接入 O7 ══\n");
   //  useBattleFeed 只能走完成邊界，完成邊界只能走結算邊界。
   const commit = fs.readFileSync("src/platform/progress/commitMatch.js", "utf8");
   ck("1) MOBA 賽後改走唯一結算邊界",
-    /commitMobaMatch\(/.test(feed) && !/settleMatchResult\(/.test(feed) && !/\.applyMatchProgress\(/.test(feed) &&
+    /commitMobaMatch\(/.test(feed) && !/settleMatchThroughSession\(/.test(feed) && !/settleMatchResult\(/.test(feed) && !/\.applyMatchProgress\(/.test(feed) &&
     /settleMatchThroughSession\(/.test(commit) && !/\.applyMatchProgress\(/.test(commit));
   ck("1b) CS 賽後改走唯一結算邊界",
     /settleMatchThroughSession\(/.test(cs) && !/getState\(\)\.applyMatchProgress\(/.test(cs));

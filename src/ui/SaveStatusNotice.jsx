@@ -61,6 +61,8 @@ const ALERT_TEXT = {
   [ALERT_KINDS.save]: { head: "進度沒有存起來", body: "現在看到的是最後一次成功存檔的內容。" },
 };
 
+const UNFINISHABLE_TEXT = { head: "比賽已入帳，部分紀錄讀不懂", body: "賽果與獎金都在，這場的熟練或賽季紀錄補不上。存檔沒有動，請回報這個問題，先不要開新局。" };
+
 const NO_FIXTURE_MATCH_TEXT = { head: "比賽結果沒有存起來", body: "這場還沒入帳，也不會重複計算。可以重打，或放棄這場。" };
 
 /**
@@ -68,7 +70,9 @@ const NO_FIXTURE_MATCH_TEXT = { head: "比賽結果沒有存起來", body: "這�
  * 記憶體的 saveState 重開就沒了，這一份有落盤。
  */
 function CommitAlertNotice({ alert, retry }) {
-  const text = (alert.kind === ALERT_KINDS.match && !alert.fixtureId) ? NO_FIXTURE_MATCH_TEXT : (ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save]);
+  const text = alert.stage === "unfinishable" ? UNFINISHABLE_TEXT
+    : (alert.kind === ALERT_KINDS.match && !alert.fixtureId) ? NO_FIXTURE_MATCH_TEXT
+    : (ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save]);
   return (
     <div
       data-testid="save-status-notice"

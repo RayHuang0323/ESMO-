@@ -50,7 +50,7 @@ const persist = {
 function saveCommitted(history, commitKey) {
   const w = persist.save(history);
   if (w.ok) return { ok: true, history };
-  const light = history.map((r) => (r.commitKey === commitKey && r.timeline?.length ? { ...r, timeline: [] } : r));
+  const light = history.map((r) => (r?.commitKey === commitKey && r.timeline?.length ? { ...r, timeline: [] } : r));
   const again = persist.save(light);
   return again.ok ? { ok: true, history: light } : { ok: false, history };
 }
@@ -76,7 +76,7 @@ export const useSeasonStore = create((set, get) => ({
     if (!isBattleResult(result)) return { applied: false, persisted: true };
     const cur = get().history;
     //  ⚠ 不再比 resultKey：勝方、時長、比分都相同的兩場是兩場；防重靠 commitKey 就夠。
-    if (cur.some((r) => r.commitKey === commitKey)) {
+    if (cur.some((r) => r?.commitKey === commitKey)) {
       const again = saveCommitted(cur, commitKey);
       if (again.history !== cur) set({ history: again.history });
       return { applied: false, persisted: again.ok };

@@ -111,14 +111,27 @@ const retryDerived = (j, full) => () => {
   return finishDerived(j, full);
 };
 
+/**
+ * 日誌內容不對（例如沒有 players），算不出熟練與 Season。
+ * ⚠ 帳已入，所以不丟日誌、不猜、不補償：留給玩家看得到的提示與按鈕，並記下來供審查。
+ */
+function raiseUnfinishable(j, e) {
+  recordAudit({ checkedAt: Date.now(), findings: [{ code: "journal_unfinishable", commitKey: j.commitKey, message: String(e?.message ?? e).slice(0, 160) }] });
+  setCommitAlert(
+    { kind: ALERT_KINDS.derived, stage: "unfinishable", commitKey: j.commitKey, mode: j.mode, fixtureId: j.fixtureId ?? null, at: Date.now() },
+    { retry: () => (settleOutstanding() ? { ok: true, stage: "done" } : { ok: false, stage: "derived" }) },
+  );
+}
+
 /** 上一場已入帳但還沒寫完的話，先補完。回傳 false 代表補不完，新的比賽不能進來。 */
 function settleOutstanding() {
   const j = readJournal();
   if (!j || j.corrupt || !ledgerHas(j.txId)) return true;
-  //  ⚠ 日誌內容不對（例如沒有 players）時不能讓開賽與推進的按鈕丟例外：算補不完，給玩家看得懂的拒絕。
+  //  ⚠ 不能讓開賽與推進的按鈕丟例外。
   try {
     return finishDerived(j, null).ok;
-  } catch {
+  } catch (e) {
+    raiseUnfinishable(j, e);
     return false;
   }
 }
@@ -229,7 +242,14 @@ export function commitCsMatch({ matchId, build }) {
 /** 玩家按重試。沒有可重試的內容時回 false，畫面只留「重打或棄權」。 */
 export function retryPendingCommit() {
   const run = useCommitAlertStore.getState().retry;
-  return run ? run() : { ok: false, stage: "nothing_pending" };
+  if (!run) return { ok: false, stage: "nothing_pending" };
+  //  ⚠ 這是畫面按鈕的 onClick：丟出去只會變成沒反應的按鈕，提示還留著就好。
+  try {
+    return run();
+  } catch (e) {
+    recordAudit({ checkedAt: Date.now(), findings: [{ code: "retry_failed", message: String(e?.message ?? e).slice(0, 160) }] });
+    return { ok: false, stage: "derived" };
+  }
 }
 
 /** 警示對應的場次或賽程已經不在了，就不該再留著。 */
@@ -258,6 +278,11 @@ export function recoverPendingCommits() {
     return runRecovery();
   } catch (e) {
     recordAudit({ checkedAt: Date.now(), findings: [{ code: "recovery_failed", message: String(e?.message ?? e).slice(0, 160) }] });
+    //  帳已入的那一筆補不完時，開賽與推進會擋住，所以開機就要讓玩家看到原因。
+    try {
+      const j = readJournal();
+      if (j && !j.corrupt && ledgerHas(j.txId)) raiseUnfinishable(j, e);
+    } catch { /* noop: 這裡再失敗也不能擋開機；推進時還會再試並提示 */ }
     return { recovered: false, aborted: false, kept: true, corrupt: false, failed: true };
   }
 }
