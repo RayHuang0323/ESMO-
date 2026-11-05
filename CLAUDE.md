@@ -195,6 +195,12 @@ B1D.2 的 `mock`）—— 那些檔案的說明文字**正好在講「我們不�
   改成白名單會在契約長新欄位時靜默丟掉整筆場次——已經踩過一次。
   ⚠ `esmo.season.v1` 實測 ~854,650 B（比 profile 大 7 倍）⇒ **不進雲端信封**。
 
+- **BP-9 存檔一致性（2026-11-06；動到結算邊界、`commitMatch.js`、`matchCommit.js`、熟練或 Season 的寫入就必跑）**：
+  **`check_bp9_commit_p0a`（1454，約 90 秒）** ＋瀏覽器 **`browser_check_bp9_commit_p0a`**
+  （`--case=probe|unfinishable|normal|fault|limit-moba|limit-cs`，除了 probe 都要 `--checkpoint`；`--url=` 打正式站，Chrome 是全新 Profile）
+  ⚠ profile 的單次 `setItem` 是提交點；熟練與 Season 是衍生資料，用 `commitKey` 防重。`useBattleFeed`／`settleCsMatch` **不得**自己寫熟練或 Season。
+  ⚠ 斷言「被拒」一定要連原因一起斷言（當天有賽程也會被拒）；Gate 的輔助函式不得丟掉 `threw`。
+  ⚠ 存不下去的比賽一律不算：裸 Node 沒有 localStorage 的舊 Gate 要自己補記憶體版，不能改斷言。
 - **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
   ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
   `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。

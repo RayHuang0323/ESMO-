@@ -2944,3 +2944,9 @@ NEXT_SPRINT = NOT_STARTED
 - **W2：** 第 1、2 項完成；第 3–5 項依停止條件沒跑，BP-9 修好後再跑。報告 `review/season-e2e/W2_瀏覽器驗收.md`。
 - **W3 順序（建議，等 Owner）：** P0 BP-9 防重與寫入順序（建議修好就上線）→ P0 BP-9 瘦身與舊存檔恢復 → P1 BP-4、BP-8 賽季尾端引導 → P2 BP-3、BP-2 → 補跑 W2 第 3–5 項 → W4。
 - **持續暫停：** MOBA v21、第七輪、方案 B。
+
+## 2026-11-06 BP-9 P0 緊急修復
+
+- **P0-A 資料一致性：** 完成，Owner F5 核准有條件單獨上線。只阻止新增的不一致，不解決容量。紀錄：`review/season-e2e/W3_BP9修復紀錄.md`。
+- **P0-B 存檔瘦身與舊存檔恢復（下一步，P0-A 部署後立即開始）：** CS 最近 5 場完整戰報、Season 最近 10 場完整 timeline；`processedMatchTransactions` 與 `matchmaking.settlements` 的識別永久保留；版本相容、可重複執行；轉換前可匯出備份；寫入並冷啟動讀回才算完成；真 Chrome 讓第 300 天超限存檔恢復並連打 30 場以上。完成後交 Owner Release Review，**不自行部署**。
+- **暫停：** W2 第 3–5 項，等 P0-B 安全發布後恢復。BP-2、BP-3、BP-4、BP-8 不動。
