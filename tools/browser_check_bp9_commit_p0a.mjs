@@ -527,9 +527,19 @@ const result = await runGate({
         ck("重新整理：文字沒有叫玩家去按不存在的棄權", (await ev("const e=document.querySelector('" + tid("save-status-notice") + "');return JSON.stringify(!!e&&!e.innerText.includes('棄權'));")) === true);
         //  超限之後玩家還有什麼路：這幾筆是給 Owner 判斷的事實，只釘「不多算」，不把卡住當通過。
         await toHub();
-        const replay = await startCsFromHub();
+        await toTab("cs");
+        //  ⚠ 賽程已經開打，回去的按鈕是「返回進行中的對戰」，不是出戰。
+        const canResume = await has("cs-league-resume");
+        ck("超限：CS 有返回進行中對戰的路", canResume);
+        let replay = { ok: false, why: "沒有返回按鈕" };
+        if (canResume) {
+          await click("cs-league-resume");
+          await sleep(1500);
+          const err = await text("cs-hub-error");
+          replay = err ? { ok: false, why: "返回被拒", err } : await playCsMapToResult();
+        }
         const s3 = await step("超限後重打 CS");
-        report.findings.push({ kind: "cs_replay_at_limit", ok: replay.ok, why: replay.why ?? null, err: replay.err ?? null, disk: s3.disk, notice: s3.notice });
+        report.findings.push({ kind: "cs_replay_at_limit", canResume, ok: replay.ok, why: replay.why ?? null, err: replay.err ?? null, disk: s3.disk, notice: s3.notice });
         ck("超限重打：資金、帳本、歷史都不多算", s3.disk.funds === s0.disk.funds && s3.disk.tx === s0.disk.tx && s3.disk.csHistory === s0.disk.csHistory, JSON.stringify(s3.disk));
         await home();
         const before = (await step("重打後重新整理")).disk.day;
