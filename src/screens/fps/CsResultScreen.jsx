@@ -30,7 +30,7 @@ export default function CsResultScreen({ result, onDone }) {
   const txId = result?.matchId ? makeTransactionId("cs", result.matchId) : null;
   const receipt = useProfileStore((s) => (txId ? (s.processedMatchTransactions ?? {})[txId] : null));
   const recorded = useProfileStore((s) => (s.csHistory ?? []).find((h) => h.matchId === result?.matchId));
-  const unsaved = useCommitAlertStore((s) => s.alert?.kind === ALERT_KINDS.match);
+  const unsaved = useCommitAlertStore((s) => s.alert?.kind === ALERT_KINDS.match || s.notCounted);
   const r = recorded ?? result;
 
   if (!r || r.mode !== "cs") {
@@ -82,7 +82,7 @@ export default function CsResultScreen({ result, onDone }) {
         {/* S25：賽後結算收據（= applyMatchProgress 實際入帳值，MOBA/CS 共用元件，UI 不重算） */}
         <RewardReceiptPanel receipt={receipt} accent={K.t} />
         <div style={{ textAlign: "center", color: "#5a606e", fontSize: 8 }}>
-          {recorded ? "✅ 已儲存 CS 對戰紀錄 · 已發收件匣通知" : unsaved ? "⚠ 比賽結果沒有存起來" : "⏳ 寫入中…"}
+          {recorded ? "✅ 已儲存 CS 對戰紀錄 · 已發收件匣通知" : unsaved ? "⚠ 這場沒有入帳" : "⏳ 寫入中…"}
         </div>
 
         {/* 本隊 MVP（Legacy） */}

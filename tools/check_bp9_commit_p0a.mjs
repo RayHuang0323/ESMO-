@@ -41,7 +41,7 @@ const AUDIT_KEY = "esmo.commit.audit.v1";
 function installStorage(initial = {}, initialSession = {}) {
   const map = new Map(Object.entries(initial));
   const sess = new Map(Object.entries(initialSession));
-  const ctl = { map, sess, trace: [], snapshots: [], keep: false, armed: null, sets: 0, quota: null };
+  const ctl = { map, sess, trace: [], snapshots: [], keep: false, armed: null, armedKey: null, sets: 0, quota: null };
   const used = () => { let n = 0; for (const [k, v] of map) n += k.length + v.length; return n; };
   ctl.used = used;
   const quotaError = () => Object.assign(new Error("QuotaExceededError (injected)"), { name: "QuotaExceededError" });
@@ -50,6 +50,11 @@ function installStorage(initial = {}, initialSession = {}) {
     getItem: (k) => (map.has(k) ? map.get(k) : null),
     setItem(k, v) {
       const s = String(v);
+      if (ctl.armedKey?.key === k && ctl.armedKey.times > 0) {
+        ctl.armedKey.times -= 1;
+        ctl.trace.push({ op: "fail", key: k, size: s.length });
+        throw quotaError();
+      }
       if (ctl.armed) {
         ctl.sets += 1;
         const hit = ctl.armed.mode === "sticky" ? ctl.sets >= ctl.armed.at : ctl.sets === ctl.armed.at;
@@ -252,12 +257,14 @@ async function child(jobFile) {
     const o = JSON.parse(patched[p.key]);
     if (p.kind === "hero_games") { const heroes = o.progress ?? o; const id = Object.keys(heroes)[0]; heroes[id].mastery.games += p.add; }
     if (p.kind === "drop_session") { o.matchmaking = { ...o.matchmaking, session: null, launch: null }; }
+    if (p.kind === "dup_season") { o.history = [...(o.history ?? []), { schema: "x", commitKey: "dup" }, { schema: "x", commitKey: "dup" }]; }
     patched[p.key] = JSON.stringify(o);
   }
   const ctl = installStorage(patched, from.session ?? {});
   ctl.keep = !!job.keepSnapshots;
   let clock = (from.clock ?? 1800000000000) + 60000;
   Date.now = () => { clock += 1; return clock; };
+  const tick = (ms = 1000) => { clock += ms; return clock; };
 
   const { useProfileStore } = await import("../src/platform/profileStore.js");
   const { useHeroProgressStore } = await import("../src/hero/heroProgressStore.js");
@@ -266,6 +273,7 @@ async function child(jobFile) {
   const { settleCsMatch } = await import("../src/platform/progress/settleCsMatch.js");
   const { useCommitAlertStore, commitKeyOf } = await import("../src/platform/persistence/matchCommit.js");
   const { createMatchSeries } = await import("../src/platform/contracts/matchSeries.js");
+  const { mobaResultToTransaction, mobaMatchId } = await import("../src/platform/progress/adapters/mobaProgressAdapter.js");
   const st = () => useProfileStore.getState();
 
   const games = (progress) => Object.values(progress ?? {}).reduce((n, h) => n + (h?.mastery?.games ?? 0), 0);
@@ -283,6 +291,7 @@ async function child(jobFile) {
       hasA: !!(fx.a && ledger[fx.a.tx.transactionId]),
       hasB: !!(fx.b && ledger[fx.b.tx.transactionId]),
       tx: Object.keys(ledger).length,
+      sessionId: p?.matchmaking?.session?.sessionId ?? null,
       funds: p?.finance?.funds ?? null,
       fixture: fixtureIn(p),
       cs: (p?.csHistory ?? []).length,
@@ -326,7 +335,38 @@ async function child(jobFile) {
       : settleCsMatch(fx[which].result)),
     retry: () => C.retryPendingCommit(),
     arm: ({ at = 1, mode = "once" }) => { ctl.armed = { at, mode }; ctl.sets = 0; return { ok: true }; },
-    disarm: () => { ctl.armed = null; ctl.quota = null; return { ok: true }; },
+    disarm: () => { ctl.armed = null; ctl.armedKey = null; ctl.quota = null; return { ok: true }; },
+    armKey: ({ key, times = 99 }) => { ctl.armedKey = { key, times }; return { ok: true }; },
+    requeue: () => st().requeueMatch("moba", tick(120000)),
+    cancelQueue: () => st().cancelMatchmaking(tick(1000)),
+    practice: () => st().startPracticeMatch("moba", tick(1000)),
+    //  走到真的開賽：與一般對戰的畫面流程同一串 store 動作。
+    drive: () => {
+      tick(120000);
+      st().pollMatchmaking(clock);
+      st().openMatchRoom(tick());
+      for (let i = 0; i < 12; i++) {
+        st().pollMatchRoom(tick());
+        if (st().matchmaking?.room?.state === "ready_check" && !st().matchmaking?.room?.confirmations?.us) st().confirmMatchReady(clock);
+      }
+      const made = st().createMatchSession(tick());
+      const launched = st().launchMatchSession(tick());
+      return { ok: !!launched?.ok, reason: made?.errors?.[0]?.message ?? launched?.errors?.[0]?.message };
+    },
+    //  另一場比賽的賽果：真模擬那份改數字，交易由當下的場次建立（與 useBattleFeed 同一條）。
+    commitOther: ({ n = 1, isPractice = false }) => {
+      const c = JSON.parse(JSON.stringify(fx.a.result));
+      c.duration = (c.duration ?? 600) + n * 7;
+      const p = st();
+      const tx = mobaResultToTransaction(c, { players: p.players ?? [], lineup: p.lineup ?? null, streak: 0, fansNow: p.meta?.fans ?? 0, origin: p.matchmaking?.session?.origin ?? null });
+      return C.commitMobaMatch({ result: c, transaction: tx, matchId: mobaMatchId(c), isPractice });
+    },
+    dropJournal: () => { ctl.map.delete(JOURNAL_KEY); return { ok: true }; },
+    forceCreated: () => {
+      const mm = st().matchmaking;
+      useProfileStore.setState({ matchmaking: { ...mm, session: { ...mm.session, state: "created", launchedAt: null } } });
+      return { ok: st().save() };
+    },
     quota: ({ extra }) => { ctl.quota = ctl.used() + extra; return { ok: true, quota: ctl.quota }; },
     forfeit: () => st().forfeitFixture(fx.fixtureId),
     advance: ({ n = 1 }) => st().advanceWorldDays(n, { reason: "rest" }),
@@ -522,8 +562,11 @@ for (const mode of ["once", "sticky"]) {
     const s = r.steps[1].sum;
     ck(`${label}：有告訴玩家`, r.steps[1].ret.ok === true || !!s.alertMem, JSON.stringify(r.steps[1].ret));
     ck(`${label}：Season 與熟練不會跑在帳本前面`, s.disk.hasA || (s.heroDisk === mobaBase.heroDisk && s.seasonDisk === mobaBase.seasonDisk && s.heroMem === mobaBase.heroMem), `hero ${s.heroDisk}/${s.heroMem} season ${s.seasonDisk}`);
-    ck(`${label}：沒入帳 ⇒ 記憶體還原成磁碟`, s.disk.hasA || (!s.mem.hasA && s.mem.funds === s.disk.funds && s.mem.fixture === "launched"), JSON.stringify(s.mem));
-    ck(`${label}：沒入帳 ⇒ 賽後畫面不會顯示別場的成長`, s.disk.hasA || !s.detail);
+    //  ⚠ 不看磁碟：profile 寫進去、熟練寫失敗、復原也失敗時，磁碟有帳而記憶體還原，那是合法的（冷啟動那邊會驗）。
+    const counted = r.steps[1].ret.ok === true || r.steps[1].ret.stage === "derived";
+    ck(`${label}：記憶體與提交結果一致`, s.mem.hasA === counted, `${s.mem.hasA} ${JSON.stringify(r.steps[1].ret)}`);
+    if (!counted) ck(`${label}：提交失敗 ⇒ 記憶體還原到提交之前`, s.mem.funds === mobaBase.disk.funds && s.mem.fixture === "launched" && s.heroMem === mobaBase.heroMem && s.seasonMem === mobaBase.seasonMem, JSON.stringify(s.mem));
+    if (!counted) ck(`${label}：提交失敗 ⇒ 賽後畫面不會顯示別場的成長`, !s.detail);
     coldBootAndReplay(label, FX.moba, r.final, "moba", mobaBase, mobaFull);
     //  同一個分頁按重試。
     const retried = run(FX.moba, [{ do: "arm", at, mode }, { do: "commit", which: "a" }, { do: "disarm" }, { do: "retry" }, { do: "retry" }]);
@@ -558,7 +601,7 @@ section("§4 同場重複送出");
   const r = run(FX.moba, [{ do: "commit", which: "a" }, { do: "commit", which: "a" }, { do: "commit", which: "b" }, { do: "commit", which: "a" }]);
   const s = last(r).sum;
   checkLedgerRules("同一份賽果連送、再送不同結果", "moba", s, mobaBase, mobaFull);
-  ck("第二次送同一份：判定重複", r.steps[1].ret.stage === "duplicate" || r.steps[1].ret.ok === true, JSON.stringify(r.steps[1].ret));
+  ck("第二次送同一份：判定重複", r.steps[1].ret.stage === "duplicate", JSON.stringify(r.steps[1].ret));
   ck("送不同結果：被拒絕，不會改賽果", r.steps[2].ret.ok === false && s.disk.hasA && !s.disk.hasB, JSON.stringify(r.steps[2].ret));
 }
 {
@@ -585,13 +628,18 @@ section("§5 配額不足");
   const plans = [
     ["連日誌都寫不進去", 50, "journal"],
     ["日誌進得去、profile 進不去", journalSize + Math.floor(profileGrowth / 2), "profile"],
-    ["帳本進得去、Season 進不去", journalSize + profileGrowth + heroGrowth + 200, "derived"],
+    ["帳本進得去、Season 連精簡版都進不去", journalSize + profileGrowth + heroGrowth + 200, "derived"],
+    ["帳本進得去、Season 只進得去精簡版", journalSize + profileGrowth + heroGrowth + Math.floor(journalSize * 0.9), "done"],
   ];
   for (const [name, extra, expect] of plans) {
     const r = run(FX.moba, [{ do: "quota", extra }, { do: "commit", which: "a" }]);
     if (!r) continue;
     const c = r.steps[1];
     ck(`配額：${name}：停在預期的那一步`, c.ret.stage === expect, JSON.stringify(c.ret));
+    if (expect === "done") {
+      ck(`配額：${name}：不用停下來，全部寫完`, c.sum.disk.hasA && c.sum.heroDisk === mobaBase.heroDisk + 10 && c.sum.seasonDisk === mobaBase.seasonDisk + 1 && c.sum.journal === null && c.sum.alertMem === null, JSON.stringify(c.sum));
+      continue;
+    }
     if (expect !== "derived") {
       ck(`配額：${name}：什麼都沒發生`, !c.sum.disk.hasA && c.sum.heroDisk === mobaBase.heroDisk && c.sum.seasonDisk === mobaBase.seasonDisk && c.sum.disk.funds === mobaBase.disk.funds, JSON.stringify(c.sum.disk));
     } else {
@@ -696,6 +744,8 @@ section("§9 存不進去時不推進");
   ck("存檔還在失敗時，不能開新比賽", q.ret.ok === false && q.ret.code === "save_failed", JSON.stringify(q.ret));
   ck("恢復之後可以推進，結果與沒出事時相同", ok.ret.ok === true && ok.sum.disk.days === clean.steps[0].sum.disk.days && ok.sum.disk.funds === clean.steps[0].sum.disk.funds, `${ok.sum.disk.days}/${clean.steps[0].sum.disk.days} ${ok.sum.disk.funds}/${clean.steps[0].sum.disk.funds}`);
   const blockedStart = run(FX.moba, [{ do: "arm", at: 1, mode: "sticky" }, { do: "save" }, { do: "relaunch" }, { do: "disarm" }, { do: "relaunch" }]);
+  const seasonHeld = run(FX.moba, [{ do: "commit", which: "a" }, { do: "armKey", key: SEASON_KEY }, { do: "commit", which: "a" }]);
+  ck("基準：同一份賽果在 Season 卡住前後都不重複", last(seasonHeld).sum.heroDisk === mobaBase.heroDisk + 10, last(seasonHeld).sum.heroDisk);
   ck("存檔還在失敗時，開賽程被存檔保護擋下", blockedStart.steps[2].ret.code === "save_failed", JSON.stringify(blockedStart.steps[2].ret));
   ck("恢復之後不再是存檔保護擋下（場次還活著，規則照舊）", last(blockedStart).ret.code === "live_session", JSON.stringify(last(blockedStart).ret));
 }
@@ -723,6 +773,8 @@ section("§11 歷史異常");
   const a = last(ahead).sum;
   ck("熟練多於帳本：偵測得到", a.audit.includes("hero_ahead_of_ledger"), a.audit.join(","));
   ck("熟練多於帳本：沒有自動修改", a.heroDisk === mobaBase.heroDisk + 100, `${a.heroDisk} vs ${mobaBase.heroDisk + 100}`);
+  const dup = run(FX.moba, [{ do: "boot" }], { patchDisk: [{ key: SEASON_KEY, kind: "dup_season" }] });
+  if (dup) ck("Season 同一場兩筆：偵測得到", last(dup).sum.audit.includes("season_duplicate_commit"), last(dup).sum.audit.join(","));
   const orphan = run(FX.moba, [{ do: "boot" }], { patchDisk: [{ key: PROFILE_KEY, kind: "drop_session" }] });
   const o = last(orphan).sum;
   ck("賽程 launched 卻沒有場次：偵測得到", o.audit.includes("launched_without_session"), o.audit.join(","));
@@ -756,6 +808,98 @@ section("§13 BO3 每張地圖");
   }
 }
 
+// ── §15 失敗前後各一場（第一輪 Review 重現的序列）───────────────────────
+section("§15 失敗前後各一場");
+{
+  const held = { do: "armKey", key: SEASON_KEY };
+  //  A 卡在 Season 時，玩家不能開下一場，也不能推進日曆。
+  const stop = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "requeue" }, { do: "advance", n: 1 }, { do: "disarm" }, { do: "requeue" }, { do: "drive" }, { do: "commitOther", n: 1 }, { do: "retry" }, { do: "boot" }]);
+  if (stop) {
+    const [, a, q1, adv, , q2, drv, b, again, end] = stop.steps;
+    ck("A 帳已入、Season 待補", a.ret.stage === "derived" && a.sum.disk.hasA && a.sum.seasonDisk === mobaBase.seasonDisk, JSON.stringify(a.ret));
+    ck("Season 還寫不進去：不能開下一場", q1.ret.ok === false && q1.ret.code === "save_failed", JSON.stringify(q1.ret));
+    ck("Season 還寫不進去：不能推進日曆", adv.ret.ok === false && adv.sum.disk.days === a.sum.disk.days, JSON.stringify(adv.ret));
+    ck("被擋的時候沒有清掉場次與日誌", q1.sum.journal !== null && q1.sum.sessionState === a.sum.sessionState, `${q1.sum.journal} ${q1.sum.sessionState}`);
+    ck("排除之後開下一場：A 先補完", q2.ret.ok === true && q2.sum.seasonDisk === mobaBase.seasonDisk + 1 && q2.sum.journal === null && q2.sum.alertMem === null, JSON.stringify(q2.ret));
+    ck("下一場真的開賽", drv.ret.ok === true && drv.sum.sessionState === "launched", JSON.stringify(drv.ret));
+    ck("B 入帳", b.ret.ok === true && b.sum.disk.tx === mobaBase.disk.tx + 2, JSON.stringify(b.ret));
+    ck("兩場：熟練恰好 +20（Review 重現時是 30）", end.sum.heroDisk === mobaBase.heroDisk + 20 && end.sum.heroMem === mobaBase.heroMem + 20, `${end.sum.heroDisk}/${end.sum.heroMem}`);
+    ck("兩場：Season 恰好 +2", end.sum.seasonDisk === mobaBase.seasonDisk + 2, end.sum.seasonDisk);
+    ck("打完還按重試：什麼都不做", again.ret.stage === "nothing_pending", JSON.stringify(again.ret));
+  }
+  //  重試按鈕握著 A，日誌已經不是 A 了：絕對不能再套用一次。
+  const stale = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "disarm" }, { do: "dropJournal" }, { do: "retry" }]);
+  if (stale) {
+    const s = last(stale);
+    ck("日誌不是這筆時重試：不動作", s.ret.stage === "stale" && s.sum.heroDisk === mobaBase.heroDisk + 10, `${JSON.stringify(s.ret)} ${s.sum.heroDisk}`);
+    ck("日誌不是這筆時重試：提示清掉", s.sum.alertMem === null, s.sum.alertMem);
+  }
+  //  已入帳的日誌不能被下一份賽果蓋掉。
+  const keep = run(FX.moba, [held, { do: "commit", which: "a" }, { do: "commit", which: "b" }, { do: "disarm" }, { do: "retry" }, { do: "boot" }]);
+  if (keep) {
+    const [, , b, , retried, end] = keep.steps;
+    ck("A 沒寫完時送另一份賽果：拒絕，不入帳", b.ret.stage === "derived_pending" && !b.sum.disk.hasB && b.sum.journal !== null, JSON.stringify(b.ret));
+    ck("排除之後 A 補完", retried.ret.ok === true && end.sum.seasonDisk === mobaBase.seasonDisk + 1 && end.sum.heroDisk === mobaBase.heroDisk + 10, JSON.stringify(retried.ret));
+    ck("排除之後還是只有 A 這筆帳", end.sum.disk.hasA && !end.sum.disk.hasB && end.sum.disk.tx === mobaBase.disk.tx + 1, JSON.stringify(end.sum.disk));
+  }
+  //  同一份 sessionId 再開一次賽（取消排隊會把 attempt 歸零）：是另一場，要算。
+  const reuse = run(FX.moba, [
+    { do: "commit", which: "a" },
+    { do: "requeue" }, { do: "drive" }, { do: "commitOther", n: 1 },
+    { do: "requeue" }, { do: "cancelQueue" }, { do: "requeue" }, { do: "drive" }, { do: "commitOther", n: 2 },
+  ]);
+  if (reuse) {
+    const first = reuse.steps[2].sum.mem.sessionId, second = reuse.steps[7].sum.mem.sessionId;
+    ck("這個序列真的讓 sessionId 重複（前提成立）", !!first && first === second, `${first} / ${second}`);
+    const end = last(reuse);
+    ck("sessionId 重複的另一場：入帳", end.ret.ok === true && end.sum.disk.tx === mobaBase.disk.tx + 3, JSON.stringify(end.ret));
+    ck("sessionId 重複的另一場：熟練照算（Review 重現時被略過）", end.sum.heroDisk === mobaBase.heroDisk + 30, end.sum.heroDisk);
+    ck("sessionId 重複的另一場：Season 照記", end.sum.seasonDisk === mobaBase.seasonDisk + 3, end.sum.seasonDisk);
+  }
+  //  一般對戰失敗 → 提示 → 放棄：提示要清掉，不能永遠掛著。
+  const general = run(FX.moba, [
+    { do: "commit", which: "a" }, { do: "requeue" }, { do: "drive" },
+    { do: "arm", at: 1, mode: "sticky" }, { do: "commitOther", n: 1 }, { do: "disarm" },
+    { do: "boot" }, { do: "abandon" }, { do: "boot" },
+  ]);
+  if (general) {
+    const failed = general.steps[4], reload = general.steps[6], gone = general.steps[7];
+    ck("一般對戰失敗：提示、不入帳", failed.sum.alertMem === "match" && failed.sum.disk.tx === mobaBase.disk.tx + 1, JSON.stringify(failed.ret));
+    ck("一般對戰失敗：熟練與 Season 不動", failed.sum.heroDisk === mobaBase.heroDisk + 10 && failed.sum.seasonDisk === mobaBase.seasonDisk + 1);
+    ck("一般對戰失敗：重新整理後提示還在", reload.sum.alertMem === "match", reload.sum.alertMem);
+    ck("放棄這場：提示與日誌都清掉", gone.sum.alertMem === null && gone.sum.journal === null, `${gone.sum.alertMem}/${gone.sum.journal}`);
+  }
+  //  快速練習：不寫熟練與 Season、沒有日誌；存檔失敗也不會要玩家去棄權。
+  const practice = run(FX.moba, [
+    { do: "commit", which: "a" }, { do: "practice" }, { do: "drive" },
+    { do: "commitOther", n: 1, isPractice: true },
+  ], { keepSnapshots: true });
+  if (practice) {
+    const p = last(practice).sum;
+    ck("練習賽真的開賽（前提成立）", practice.steps[2].sum.sessionState === "launched", `${practice.steps[2].sum.sessionState} ${JSON.stringify(practice.steps[1].ret)} ${JSON.stringify(practice.steps[2].ret)}`);
+    ck("練習賽：熟練與 Season 不動", p.heroDisk === mobaBase.heroDisk + 10 && p.seasonDisk === mobaBase.seasonDisk + 1, `${p.heroDisk}/${p.seasonDisk}`);
+    ck("練習賽：沒有留下日誌", p.journal === null, p.journal);
+  }
+  const pf = run(FX.moba, [
+    { do: "commit", which: "a" }, { do: "practice" }, { do: "drive" },
+    { do: "arm", at: 1, mode: "sticky" }, { do: "commitOther", n: 1, isPractice: true }, { do: "disarm" },
+  ]);
+  if (pf) {
+    const p = pf.steps[4].sum;
+    ck("練習賽存檔失敗：只提示沒存到，不要求棄權", p.alertMem === "save", p.alertMem);
+    ck("練習賽存檔失敗：熟練與 Season 不動", p.heroDisk === mobaBase.heroDisk + 10 && p.seasonDisk === mobaBase.seasonDisk + 1);
+  }
+  //  還沒開打的場次也要跟著棄權結束，否則賽果還是進得來。
+  const created = run(FX.moba, [{ do: "forceCreated" }, { do: "forfeit" }, { do: "commit", which: "a" }]);
+  if (created) {
+    const f = created.steps[1], c = created.steps[2];
+    ck("created 場次棄權：場次一起結束", f.ret.ok === true && f.sum.sessionState === "cancelled", `${JSON.stringify(f.ret)} ${f.sum.sessionState}`);
+    ck("created 場次棄權後送賽果：拒絕", c.ret.stage === "given_up" && !c.sum.disk.hasA && c.sum.disk.fixture === "forfeited", JSON.stringify(c.ret));
+  }
+  const corrupt = run(FX.moba, [{ do: "boot" }], { from: freeze({ storage: { ...JSON.parse(fs.readFileSync(FX.moba, "utf8")).storage, [JOURNAL_KEY]: "{broken" }, session: {}, clock: 1800000000000 }) });
+  if (corrupt) ck("日誌壞掉：丟掉並留下紀錄", last(corrupt).sum.journal === null && last(corrupt).sum.audit.includes("journal_corrupt"), last(corrupt).sum.audit.join(","));
+}
+
 // ── §14 識別 ─────────────────────────────────────────────────────────────
 section("§14 穩定識別");
 {
@@ -763,7 +907,8 @@ section("§14 穩定識別");
   const origin = { fixtureId: "fx:moba:abc", competitionId: "comp:moba:s3:official:regular" };
   ck("同一賽程、不同場次：識別相同", commitKeyOf({ sessionId: "s1", origin }, "m1") === commitKeyOf({ sessionId: "s2", origin }, "m2"));
   ck("同一賽程 id、不同賽季：識別不同", commitKeyOf({ origin }, "m") !== commitKeyOf({ origin: { ...origin, competitionId: "comp:moba:s4:official:regular" } }, "m"));
-  ck("沒有賽程：用場次", commitKeyOf({ sessionId: "s1", origin: {} }, "m1") === commitKeyOf({ sessionId: "s1", origin: {} }, "m2"));
+  ck("沒有賽程：同一次開賽，賽果不同也是同一場", commitKeyOf({ sessionId: "s1", launchedAt: 5, origin: {} }, "m1") === commitKeyOf({ sessionId: "s1", launchedAt: 5, origin: {} }, "m2"));
+  ck("沒有賽程：sessionId 重複但另一次開賽，不是同一場", commitKeyOf({ sessionId: "s1", launchedAt: 5, origin: {} }, "m") !== commitKeyOf({ sessionId: "s1", launchedAt: 6, origin: {} }, "m"));
   ck("沒有場次：用比賽 id", commitKeyOf(null, "m1") !== commitKeyOf(null, "m2"));
   ck("BO3：已打張數不同，識別不同", commitKeyOf({ origin, series: { maps: [] } }, "m") !== commitKeyOf({ origin, series: { maps: [{}] } }, "m"));
 }

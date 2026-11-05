@@ -37,13 +37,16 @@ const session = () => (typeof sessionStorage !== "undefined" ? sessionStorage : 
  * ⚠ 不能用 `matchId`：它由賽果內容推導，同一場賽程重打結果不同，id 就不同。
  * ⚠ 賽程優先用 fixtureId：房間逾時重開會換 sessionId，但還是同一場。
  * ⚠ 帶上賽季：賽程 id 是決定性的，不靠它永遠不重複。
+ * ⚠ 一般對戰要帶開賽時間：sessionId 由當天、陣容、attempt 推導，取消排隊會把 attempt
+ *   歸零，所以同一天的另一場可能拿到相同的 sessionId（Review 重現過：熟練被當成重複略過）。
+ *   失敗的那次根本沒走到熟練，重打換識別也不會重複計算。
  * ⚠ BO3 同一個賽程有多張地圖，用「已打完幾張」區分。結算失敗時 series 會還原，
  *   所以同一張地圖重打還是同一個值（不能用 matchId，理由同上）。
  */
 export function commitKeyOf(sess, matchId) {
   const fixtureId = sess?.origin?.fixtureId ?? null;
   const seasonTag = /:s(\d+):/.exec(sess?.origin?.competitionId ?? "")?.[1] ?? "";
-  const base = fixtureId ? `${fixtureId}:s${seasonTag}` : sess?.sessionId ? `s:${sess.sessionId}` : `m:${matchId}`;
+  const base = fixtureId ? `${fixtureId}:s${seasonTag}` : sess?.sessionId ? `s:${sess.sessionId}:${sess.launchedAt ?? sess.createdAt ?? 0}` : `m:${matchId}`;
   return sess?.series ? `${base}:m${sess.series.maps?.length ?? 0}` : base;
 }
 
@@ -87,7 +90,7 @@ export function clearJournal() {
  * 畫面讀這裡。不進 profile，所以不會被存進存檔、也不影響 dirty 判斷。
  * `retry` 只活在記憶體：它握著完整賽果，重新整理之後由日誌重建或讓玩家重打。
  */
-export const useCommitAlertStore = create(() => ({ alert: null, retry: null }));
+export const useCommitAlertStore = create(() => ({ alert: null, retry: null, notCounted: false }));
 
 /** 同時寫 local 與 session：空間滿時至少留一份。回傳實際寫到哪裡。 */
 export function setCommitAlert(alert, { retry = null } = {}) {
@@ -120,11 +123,30 @@ export function loadCommitAlert() {
   return null;
 }
 
-/** 這場賽程已經收尾（棄權），它留下的日誌與警示都不再有意義。 */
-export function dropCommitForFixture(fixtureId) {
+/**
+ * 帳已入、熟練或 Season 還沒寫完的那一場。
+ * ⚠ 日誌只有一格，這一筆沒做完之前不能開始下一場，否則它的 Season 紀錄會永遠消失。
+ */
+export function hasUnfinishedCommit(ledger) {
+  const j = readJournal();
+  return !!j?.txId && !!ledger?.[j.txId];
+}
+
+/** 這場賽程已經收尾（棄權），它留下的日誌與警示都不再有意義。⚠ 已入帳的日誌還有事要做，不動。 */
+export function dropCommitForFixture(fixtureId, ledger) {
   if (!fixtureId) return;
   if (useCommitAlertStore.getState().alert?.fixtureId === fixtureId) clearCommitAlert();
-  if (readJournal()?.fixtureId === fixtureId) clearJournal();
+  const j = readJournal();
+  if (j?.fixtureId === fixtureId && !ledger?.[j.txId]) clearJournal();
+}
+
+/** 一般對戰被放棄：同上。賽程場次不算，賽程還在 launched，警示要留著。 */
+export function dropCommitForSession(sessionId, ledger) {
+  if (!sessionId) return;
+  const a = useCommitAlertStore.getState().alert;
+  if (a?.sessionId === sessionId && !a.fixtureId) clearCommitAlert();
+  const j = readJournal();
+  if (j?.sessionId === sessionId && !j.fixtureId && !ledger?.[j.txId]) clearJournal();
 }
 
 /** 開新局或還原整份存檔時用：舊的日誌與警示不屬於新的那份存檔。 */

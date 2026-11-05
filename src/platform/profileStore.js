@@ -169,7 +169,7 @@ import {
 } from "./competition/honors.js";
 import { playoffBracket, playoffOrder } from "./competition/playoffs.js";
 import { asiaCircuitEnabled } from "../featureFlags.js";
-import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, resetCommitState, setCommitAlert, useCommitAlertStore } from "./persistence/matchCommit.js";
+import { ALERT_KINDS, clearCommitAlert, dropCommitForFixture, dropCommitForSession, hasUnfinishedCommit, resetCommitState, setCommitAlert, useCommitAlertStore } from "./persistence/matchCommit.js";
 import { SAVE_STATUS } from "./persistence/saveProvider.js";
 
 //  BP-9 P0-A：玩家看得懂的一句話。不講配額，玩家對配額無能為力。
@@ -1051,9 +1051,18 @@ export const useProfileStore = create((rawSet, get) => {
    * @returns {string|null} 不能繼續時的原因
    */
   _saveBlockedReason() {
+    //  ⚠ 帳已入但熟練或 Season 還沒寫完時 saveState 是正常的，所以要另外看。
+    //    這裡只補當前這一筆；補不完就停，下一場進來會把它的紀錄擠掉。
+    if (hasUnfinishedCommit(get().processedMatchTransactions)) {
+      useCommitAlertStore.getState().retry?.();
+      if (hasUnfinishedCommit(get().processedMatchTransactions)) return SAVE_BLOCKED_REASON;
+    }
     if (get().saveState?.status !== SAVE_STATUS.error) return null;
     return get().save() ? null : SAVE_BLOCKED_REASON;
   },
+
+  /** 熟練與 Season 不走 `save()`，寫完之後讓下一次保底 flush 把它們帶進存檔信封。 */
+  markUnsaved() { writeSeq += 1; },
 
   /**
    * 只在有未存變更時才存（離開頁面的保底 flush 用）。
@@ -1986,7 +1995,7 @@ export const useProfileStore = create((rawSet, get) => {
     if (atomicDepth === 0) {
       const atomic = get().runAtomicCommit(() => get().forfeitFixture(fixtureId, reason));
       if (!atomic.ok) return { ok: false, reason: SAVE_BLOCKED_REASON, errors: [{ code: "save_failed", message: SAVE_BLOCKED_REASON }] };
-      if (atomic.value?.ok) dropCommitForFixture(fixtureId);
+      if (atomic.value?.ok) dropCommitForFixture(fixtureId, get().processedMatchTransactions);
       return atomic.value;
     }
     //  CS Season M1：棄權哪一場由 **fixture 自己**決定屬於哪個項目，
@@ -2001,7 +2010,9 @@ export const useProfileStore = create((rawSet, get) => {
     //  （賽程已棄權卻有賽果），下一場也會被 `other_live_session` 擋住。
     const mmNow = get().matchmaking ?? {};
     const liveForFixture = !!mmNow.session && !isSessionTerminal(mmNow.session) && fixtureIdOfSession(mmNow.session) === fixtureId;
-    const ended = liveForFixture ? abandonSession(mmNow.session, reason, Date.now()) : null;
+    //  還沒開打的場次（created）不能「放棄」，要取消。
+    let ended = liveForFixture ? abandonSession(mmNow.session, reason, Date.now()) : null;
+    if (ended && !ended.ok) ended = cancelSession(mmNow.session, reason, Date.now());
     get()._setCompetitionStateFor(mode, res.state, {
       matchmaking: { ...mmNow, fixtureAssignment: null, ...(ended?.ok ? { session: ended.session } : {}) },
     });
@@ -3109,6 +3120,9 @@ export const useProfileStore = create((rawSet, get) => {
     if (cur && (cur.state === TICKET_STATES.queued || cur.state === TICKET_STATES.validating)) {
       return { ok: true, ticket: cur, reused: true, errors: [] };
     }
+    //  BP-9 P0-A：要在下面清場之前擋，否則被拒絕時場次已經沒了。
+    const saveBlocked = get()._saveBlockedReason();
+    if (saveBlocked) return { ok: false, ticket: null, reused: false, errors: [{ code: "save_failed", message: saveBlocked }] };
     //  作廢：票券、房間（含雙方確認）、場次、進場令牌一次清乾淨
     const nextAttempt = (get().matchmaking?.attempt ?? 0) + 1;
     set({ matchmaking: { ticket: null, room: null, session: null, launch: null, attempt: nextAttempt } });
@@ -3464,6 +3478,7 @@ export const useProfileStore = create((rawSet, get) => {
     if (!r.ok) return { ok: false, errors: r.errors };
     set({ matchmaking: { ...mm, session: r.session } });
     get().save();
+    dropCommitForSession(r.session?.sessionId, get().processedMatchTransactions);
     return { ok: true, errors: [] };
   },
   /** R63：目前進行中的場次唯一恢復視圖，供首頁／賽前頁使用。 */
@@ -3870,9 +3885,9 @@ export const useProfileStore = create((rawSet, get) => {
    * @returns {boolean} false = 未知情境 id（不做任何事）
    */
   startNewGame(scenarioId) {
-    resetCommitState();
     const sc = SCENARIOS[scenarioId];
     if (!sc) return false;
+    resetCommitState();
     //  ⚠ B1B（B1A 風險 R5）：新局必須**一起**清掉英雄熟練與對戰歷史。
     //    在此之前 `resetProgress()` / `resetSeason()` 在整個 src/ 沒有任何
     //    生產呼叫端 ⇒ 開新局會帶著上一局練好的熟練，而熟練是勝負的主要決定者。

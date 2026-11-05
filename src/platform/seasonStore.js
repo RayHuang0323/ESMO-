@@ -42,6 +42,19 @@ const persist = {
   },
 };
 
+/**
+ * BP-9 P0-A：寫不進去時，這一場退回沒有 timeline 的版本再試一次。
+ * timeline 佔單場七成以上，而且只有當場的賽後畫面會讀（畫面讀的是記憶體裡的賽果）。
+ * 不退回的話，Season 這個不影響生涯數值的鍵會讓整個日曆停住。
+ */
+function saveCommitted(history, commitKey) {
+  const w = persist.save(history);
+  if (w.ok) return { ok: true, history };
+  const light = history.map((r) => (r.commitKey === commitKey && r.timeline?.length ? { ...r, timeline: [] } : r));
+  const again = persist.save(light);
+  return again.ok ? { ok: true, history: light } : { ok: false, history };
+}
+
 export const useSeasonStore = create((set, get) => ({
   history: persist.load() ?? [],   // BattleResult[]（含 timeline；上限 50 場）
 
@@ -64,12 +77,12 @@ export const useSeasonStore = create((set, get) => ({
     const cur = get().history;
     const key = resultKey(result);
     if (cur.some((r) => r.commitKey === commitKey || resultKey(r) === key)) {
-      const again = persist.save(cur);
+      const again = saveCommitted(cur, commitKey);
+      if (again.history !== cur) set({ history: again.history });
       return { applied: false, persisted: again.ok };
     }
-    const history = [...cur, { ...result, commitKey }].slice(-HISTORY_CAP);
-    const w = persist.save(history);
-    set({ history });
+    const w = saveCommitted([...cur, { ...result, commitKey }].slice(-HISTORY_CAP), commitKey);
+    set({ history: w.history });
     return { applied: true, persisted: w.ok };
   },
 

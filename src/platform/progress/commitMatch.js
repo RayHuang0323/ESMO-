@@ -14,18 +14,22 @@
 //    ②③之間中斷         profile 有帳 ⇒ 開機補完 ③（有防重，補幾次都一樣）
 //    ③失敗              帳已入 ⇒ 留日誌，提示玩家，開機或重試時補完
 //
+//  ⚠ 日誌只有一格。**已入帳的日誌絕不覆蓋**：寫下一筆之前要先把它補完，補不完就拒絕，
+//    開新比賽與推進日曆也會被擋（profileStore._saveBlockedReason）。熟練的防重標記
+//    只留最新一場，所以「不會有第二場插隊」是防重成立的前提，不是最佳化。
+//
 //  ⚠ 這裡不算任何獎勵、不判勝負、不碰模擬。結算還是 settleMatchThroughSession。
 //  ⚠ 不自動補償舊存檔已經有的異常（Owner 決定），只由 detectCommitAnomalies 回報。
 // ============================================================================
 import { useProfileStore } from "../profileStore.js";
 import { useHeroProgressStore } from "../../hero/heroProgressStore.js";
 import { useSeasonStore } from "../seasonStore.js";
-import { SESSION_STATES } from "../contracts/matchSession.js";
+import { SESSION_STATES, isSessionTerminal } from "../contracts/matchSession.js";
 import { FIXTURE_TERMINAL } from "../contracts/competition.js";
 import { settleMatchThroughSession, outcomeFromBattleResult } from "./settleMatchBoundary.js";
 import {
   ALERT_KINDS, JOURNAL_STATES, clearCommitAlert, clearJournal, commitKeyOf, detectCommitAnomalies,
-  journalResult, loadCommitAlert, readJournal, recordAudit, setCommitAlert, useCommitAlertStore, writeJournal,
+  hasUnfinishedCommit, journalResult, loadCommitAlert, readJournal, recordAudit, setCommitAlert, useCommitAlertStore, writeJournal,
 } from "../persistence/matchCommit.js";
 
 const profile = () => useProfileStore.getState();
@@ -73,6 +77,7 @@ function clearAlertFor(p) {
   if (!a) return;
   const same = a.commitKey === p.commitKey || (!!p.fixtureId && a.fixtureId === p.fixtureId);
   if (same || a.kind === ALERT_KINDS.save) clearCommitAlert();
+  else reconcileCommitAlert();
 }
 
 /** 帳已入，補完熟練與 Season。兩邊都防重，呼叫幾次都一樣。 */
@@ -83,20 +88,41 @@ function finishDerived(j, full) {
   if (!hero.persisted || !season.persisted) {
     setCommitAlert(
       { kind: ALERT_KINDS.derived, commitKey: j.commitKey, mode: j.mode, fixtureId: j.fixtureId ?? null, at: Date.now() },
-      { retry: () => finishDerived(j, full) },
+      { retry: retryDerived(j, full) },
     );
     return { ok: false, stage: "derived" };
   }
   clearJournal();
   clearAlertFor(j);
+  //  這兩把鍵不走 `save()`，標記未存，讓雲端信封之後帶得到這一場的熟練。
+  profile().markUnsaved();
   return { ok: true, stage: "done" };
 }
 
+/** ⚠ 只有日誌還是這一筆才能補。否則防重標記可能已被後面的比賽蓋掉，再跑一次就是重複成長。 */
+const retryDerived = (j, full) => () => {
+  if (j.txId && readJournal()?.txId !== j.txId) {
+    useCommitAlertStore.setState({ retry: null });
+    reconcileCommitAlert();
+    return { ok: false, stage: "stale" };
+  }
+  return finishDerived(j, full);
+};
+
+/** 上一場已入帳但還沒寫完的話，先補完。回傳 false 代表補不完，新的比賽不能進來。 */
+function settleOutstanding() {
+  const j = readJournal();
+  if (!j || j.corrupt || !ledgerHas(j.txId)) return true;
+  return finishDerived(j, null).ok;
+}
+
+const notCounted = () => useCommitAlertStore.setState({ notCounted: true });
+
 function attemptMoba(p, fullResult) {
-  if (sessionGivenUp()) { clearJournal(); clearAlertFor(p); return { ok: false, stage: "given_up", receipt: null }; }
+  useCommitAlertStore.setState({ notCounted: false });
+  if (!settleOutstanding()) { notCounted(); return { ok: false, stage: "derived_pending", receipt: null }; }
+  if (sessionGivenUp()) { clearJournal(); clearAlertFor(p); notCounted(); return { ok: false, stage: "given_up", receipt: null }; }
   const journaled = p.derived && !!p.txId;
-  //  ⚠ 這場之前就留著日誌，代表它有一步還沒做完，不能當成重複送出直接略過。
-  const resuming = journaled && readJournal()?.commitKey === p.commitKey;
   if (journaled) {
     const w = writeJournal({ ...p, result: journalResult(fullResult), state: JOURNAL_STATES.prepared });
     if (!w.ok) {
@@ -116,10 +142,11 @@ function attemptMoba(p, fullResult) {
   if (p.transaction && !receipt?.ok) {
     if (journaled) clearJournal();
     clearAlertFor(p);
+    notCounted();
     return { ok: false, stage: "rejected", receipt, errors: atomic.value?.errors ?? [] };
   }
-  //  同一筆交易重送：帳早就入了、衍生資料也寫完了。再寫一次就是重複。
-  if ((receipt?.alreadySettled || receipt?.alreadyApplied) && !resuming) {
+  //  同一筆交易重送：帳早就入了；沒寫完的部分上面已經補過。再寫一次就是重複。
+  if (receipt?.alreadySettled || receipt?.alreadyApplied) {
     if (journaled) clearJournal();
     return { ok: true, stage: "duplicate", receipt };
   }
@@ -153,7 +180,7 @@ export function commitMobaMatch({ result, transaction, matchId, isPractice = fal
   //  賽後畫面讀的是「這一場」的成長。這場還沒確定入帳之前，不能留著上一場的明細。
   if (p.derived) useHeroProgressStore.setState({ lastDetail: null });
   //  沒有交易（debug harness）：沒有帳本可以當權威，只靠防重。
-  if (p.derived && !p.txId && !sessionGivenUp()) return { ...finishDerived({ ...p, result: journalResult(result) }, result), receipt: null };
+  if (p.derived && !p.txId && !sessionGivenUp() && settleOutstanding()) return { ...finishDerived({ ...p, result: journalResult(result) }, result), receipt: null };
   return attemptMoba(p, result);
 }
 
@@ -174,13 +201,15 @@ export function commitCsMatch({ matchId, build }) {
     practice: !!profile().matchPracticeContext().inPractice,
   };
   const attempt = () => {
-    if (sessionGivenUp()) { clearAlertFor(p); return { ok: false, stage: "given_up", receipt: null }; }
+    useCommitAlertStore.setState({ notCounted: false });
+    if (sessionGivenUp()) { clearAlertFor(p); notCounted(); return { ok: false, stage: "given_up", receipt: null }; }
     const atomic = profile().runAtomicCommit(build);
     if (!atomic.ok) {
       raiseMatchAlert(p, "profile", attempt);
       return { ok: false, stage: "profile", receipt: null };
     }
     clearAlertFor(p);
+    if (atomic.value?.ok === false) notCounted();
     return { ok: true, stage: "done", receipt: atomic.value };
   };
   return attempt();
@@ -196,14 +225,15 @@ export function retryPendingCommit() {
 export function reconcileCommitAlert() {
   const a = useCommitAlertStore.getState().alert;
   if (!a) return;
-  if (a.kind === ALERT_KINDS.derived) { if (!readJournal()) clearCommitAlert(); return; }
+  if (a.kind === ALERT_KINDS.derived) { if (!hasUnfinishedCommit(profile().processedMatchTransactions)) clearCommitAlert(); return; }
   if (a.kind !== ALERT_KINDS.match) return;
   if (a.fixtureId) {
     const status = fixtureStatusOf(a.fixtureId);
     if (status === null || FIXTURE_TERMINAL.includes(status)) clearCommitAlert();
     return;
   }
-  if (a.sessionId && liveSession()?.sessionId !== a.sessionId) clearCommitAlert();
+  const s = liveSession();
+  if (!a.sessionId || s?.sessionId !== a.sessionId || isSessionTerminal(s)) clearCommitAlert();
 }
 
 /**
@@ -213,11 +243,12 @@ export function reconcileCommitAlert() {
  */
 export function recoverPendingCommits() {
   loadCommitAlert();
-  const out = { recovered: false, aborted: false, kept: false };
+  const out = { recovered: false, aborted: false, kept: false, corrupt: false };
   const j = readJournal();
   if (j?.corrupt) {
     clearJournal();
     out.aborted = true;
+    out.corrupt = true;
   } else if (j && ledgerHas(j.txId)) {
     const done = finishDerived(j, null);
     out.recovered = done.ok;
@@ -241,6 +272,7 @@ export function recoverPendingCommits() {
     seasonHistory: useSeasonStore.getState().history,
     now: Date.now(),
   });
+  if (out.corrupt) audit.findings.push({ code: "journal_corrupt" });
   recordAudit(audit);
   out.audit = audit;
   return out;

@@ -17,11 +17,11 @@ const wan = (n) => `${Math.round(n / 10000)}萬`;
 
 export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
   //  BP-9 P0-A：存檔失敗時這場沒有入帳，不能一直顯示「結算中」。
-  const unsaved = useCommitAlertStore((s) => s.alert?.kind === ALERT_KINDS.match);
+  const unsaved = useCommitAlertStore((s) => s.alert?.kind === ALERT_KINDS.match || s.notCounted);
   if (!receipt && unsaved) {
     return (
       <div style={box()} data-testid="reward-receipt-unsaved">
-        <div style={{ color: GC.redL, fontSize: 10, textAlign: "center", padding: "8px 0" }}>比賽結果沒有存起來，這場尚未入帳</div>
+        <div style={{ color: GC.redL, fontSize: 10, textAlign: "center", padding: "8px 0" }}>這場沒有入帳</div>
       </div>
     );
   }

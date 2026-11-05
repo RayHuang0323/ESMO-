@@ -61,12 +61,14 @@ const ALERT_TEXT = {
   [ALERT_KINDS.save]: { head: "進度沒有存起來", body: "現在看到的是最後一次成功存檔的內容。" },
 };
 
+const NO_FIXTURE_MATCH_TEXT = { head: "比賽結果沒有存起來", body: "這場還沒入帳，也不會重複計算。可以重打，或放棄這場。" };
+
 /**
  * BP-9 P0-A：提交失敗的警示。與下面的存檔狀態分開，因為它**要撐過重新整理**：
  * 記憶體的 saveState 重開就沒了，這一份有落盤。
  */
 function CommitAlertNotice({ alert, retry }) {
-  const text = ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save];
+  const text = (alert.kind === ALERT_KINDS.match && !alert.fixtureId) ? NO_FIXTURE_MATCH_TEXT : (ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save]);
   return (
     <div
       data-testid="save-status-notice"
