@@ -104,7 +104,12 @@ export function restoreSaveBackup(storage, backup) {
   //  ⚠ 隔離區（*.corrupt）是 B1C 留給人工救援的副本：備份裡沒有的就不要動它（Review 第 1 輪 m4）。
   const isQuarantine = (k) => k.endsWith(QUARANTINE_SUFFIX);
   const prev = {};
-  for (const k of listSaveKeys(storage)) if (!isQuarantine(k) || k in backup.keys) prev[k] = storage.getItem(k);
+  //  ⚠ 讀取也可能丟例外：那時還沒寫任何東西，照「已放回原樣」回報，呼叫端才會解除凍結（Review 第 2 輪 n3）。
+  try {
+    for (const k of listSaveKeys(storage)) if (!isQuarantine(k) || k in backup.keys) prev[k] = storage.getItem(k);
+  } catch (e) {
+    return { ok: false, error: String(e?.name ?? e?.message ?? e), rolledBack: true };
+  }
   const order = Object.keys(backup.keys).sort((a, b) => (a === PROFILE_KEY) - (b === PROFILE_KEY));
   try {
     for (const k of Object.keys(prev)) storage.removeItem(k);

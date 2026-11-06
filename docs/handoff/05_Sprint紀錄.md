@@ -26945,7 +26945,7 @@ Owner人工驗收完成且明確授權正常main push／Pages／正式站Smoke�
 
 **未完成／沒驗到**：`slim-cs` 整理後到第 313 天都沒輪到 MOBA 賽程，日曆在第 313 天停住，原因沒查（不算通過；整理後的 MOBA 由 `slim-300` 與 W1 驗過）。手機真機、Safari／Firefox、兩個分頁、真 Supabase 沒有驗。真 Chrome 整理後打了 17 場，30 場連打是 Node 真模擬。
 
-**獨立 Review 第 1 輪**：APPROVE WITH CHANGES（M1 失敗後無聲凍結、M2 沒確認備份還是同一份），已修並重跑，Node gate 82/82，真 Chrome `slim-300` 44/44、`slim-cs` 62/63。詳見紀錄。
+**獨立 Review 第 1 輪**：APPROVE WITH CHANGES（M1 失敗後無聲凍結、M2 沒確認備份還是同一份），已修並重跑，Node gate 82/82，真 Chrome `slim-300` 44/44、`slim-cs` 62/63。**第 2 輪**：APPROVE WITH CHANGES，M1、M2 確認修好，只剩 Minor；n1–n4、n6 已修（Node gate 84/84），n5、n7、n8 列 TD-BP9-24～26。詳見紀錄。
 
 **風險**：帳本鍵永久保留，仍每場約 +400 字元（TD-BP9-17）。驗證失敗沒有遊戲內出口（TD-BP9-20）。技術債 TD-BP9-17 到 TD-BP9-23 見 08。
 

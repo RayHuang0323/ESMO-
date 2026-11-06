@@ -148,7 +148,8 @@ export function runSaveSlimMigration({ backupConfirmed = false, backupFingerprin
   if (FINGERPRINT_KEYS.some((k) => nowFp[k] !== backupFingerprint[k])) return { ok: false, stage: "backup_stale" };
   const disk = readDiskSave(storage);
   if (!disk) return { ok: false, stage: "unreadable" };
-  if (isSlimEnabled(disk.profile.meta)) return { ok: false, stage: "already_enabled" };
+  //  ⚠ 有任何標記（包括驗證失敗的）都不再整理：failed 時 isSlimEnabled 為否，只看它會把失敗標記蓋掉（Review 第 2 輪 n6）。
+  if (disk.profile.meta?.saveSlim) return { ok: false, stage: "already_marked" };
   const plan = planSaveSlim(disk);
   const expect = slimExpectation(disk);
   const profile = {

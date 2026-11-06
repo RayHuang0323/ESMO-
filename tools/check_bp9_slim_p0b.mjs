@@ -107,6 +107,22 @@ if (arg("child")) {
         out.steps.push({ op: "migrate", r: { ok: r.ok, stage: r.stage, error: r.error ?? null, saved: r.plan?.saved ?? null, frozen: r.frozen ?? null }, frozenNow: SLIM.saveWritesFrozen() });
         continue;
       }
+      if (s.op === "staleAfterBackup") {
+        //  真實順序：下載備份（取得指紋）→ 存檔又被寫入 → 開始整理（Review 第 2 輪 n2）。
+        const b = await BK.buildSaveBackup(globalThis.localStorage, { now: clock });
+        const fp = MIG.fingerprintOf((k) => b.backup.keys[k] ?? null);
+        clock += 60_000;
+        st().pushInbox({ type: "match", from: "測試", subject: "下載之後又存了一次", text: "x" });
+        const before = JSON.stringify(Object.fromEntries(ctl.map));
+        const r = MIG.runSaveSlimMigration({ backupConfirmed: true, backupFingerprint: fp });
+        out.steps.push({ op: "staleAfterBackup", stage: r.stage, ok: r.ok, unchanged: JSON.stringify(Object.fromEntries(ctl.map)) === before, frozenNow: SLIM.saveWritesFrozen() });
+        continue;
+      }
+      if (s.op === "remigrate") {
+        const r = MIG.runSaveSlimMigration({ backupConfirmed: true, backupFingerprint: MIG.diskFingerprint() });
+        out.steps.push({ op: "remigrate", stage: r.stage, ok: r.ok });
+        continue;
+      }
       if (s.op === "applyRestore") {
         //  畫面上的還原動作（含凍結與失敗時解除凍結），reload 換成空函式。
         const SBA = await imp("src/ui/saveBackupActions.js");
@@ -308,6 +324,8 @@ let migrated = null;
   ck("備份之後存檔變了：拒絕（backup_stale）且不寫、不凍結", step(stale, "migrate").r.stage === "backup_stale" && canon(stale.storage) === canon(orig) && step(stale, "migrate").frozenNow === false, JSON.stringify(step(stale, "migrate")));
   const nofp = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: true, fingerprint: "none" }], { quota: Q, clock: C24.clock });
   ck("勾選了但沒有備份指紋：拒絕且不寫", step(nofp, "migrate").r.stage === "no_backup" && canon(nofp.storage) === canon(orig));
+  const sab = run(orig, [{ op: "boot" }, { op: "staleAfterBackup" }], { quota: Q, clock: C24.clock });
+  ck("真實順序：下載備份後存檔又被寫入，開始整理被拒（backup_stale）、不再寫、不凍結", step(sab, "staleAfterBackup").stage === "backup_stale" && step(sab, "staleAfterBackup").unchanged && step(sab, "staleAfterBackup").frozenNow === false, JSON.stringify(step(sab, "staleAfterBackup")));
   const m = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: true }, { op: "saveAfter" }, { op: "facts" }], { quota: Q, clock: C24.clock });
   ck("確認後整理成功", step(m, "migrate").r.ok, JSON.stringify(step(m, "migrate").r));
   ck("寫入順序：先 Season 再 profile", m.writes.filter((w) => w.startsWith("set:")).join(",") === `set:${SEASON_KEY},set:${PROFILE_KEY}`, m.writes.join(","));
@@ -371,7 +389,17 @@ console.log("\n§4 中斷與寫入失敗");
     const before = step(t, "facts");
     const g = run(t.storage, [{ op: "boot" }, { op: "grow", matches: 6, tag: "f" }, { op: "facts" }, { op: "storeView" }], { quota: Q, clock: t.clock + 2000, templates: TT() });
     const after = step(g, "facts");
-    ck("比對失敗之後：不再套用規則（新比賽不摘要化、Season 不精簡）", step(g, "storeView").seasonActive === false && after.csArchived <= before.csArchived && JSON.parse(g.storage[PROFILE_KEY]).meta.saveSlim.failed === true, JSON.stringify({ b: before.csArchived, a: after.csArchived, season: step(g, "storeView").seasonActive }));
+    const gp = JSON.parse(g.storage[PROFILE_KEY]), tp = JSON.parse(t.storage[PROFILE_KEY]);
+    const archivedCount = (o) => Object.values(o ?? {}).filter((r) => r?.archived).length;
+    //  ⚠ 前 11 筆（新加的 6 場＋原本完整的 5 場）都必須是完整的；帳本與結算的摘要數不得增加（Review 第 2 輪 n1：只比 <= 會恆真）。
+    ck("比對失敗之後：不再套用規則（新比賽與原本完整的 CS 都不摘要化、帳本結算不再摘要化、Season 不精簡）",
+      step(g, "storeView").seasonActive === false && gp.meta.saveSlim.failed === true
+      && gp.csHistory.slice(0, 11).every((e) => e.archived !== "summary")
+      && archivedCount(gp.processedMatchTransactions) === archivedCount(tp.processedMatchTransactions)
+      && archivedCount(gp.matchmaking?.settlements) === archivedCount(tp.matchmaking?.settlements),
+      JSON.stringify({ head: gp.csHistory.slice(0, 11).map((e) => e.archived ?? "-"), tx: [archivedCount(tp.processedMatchTransactions), archivedCount(gp.processedMatchTransactions)], season: step(g, "storeView").seasonActive }));
+    const rm = run(t.storage, [{ op: "boot" }, { op: "remigrate" }], { quota: Q, clock: t.clock + 3000 });
+    ck("比對失敗的存檔不會被再次整理（already_marked）", step(rm, "remigrate").stage === "already_marked" && canon(rm.storage) === canon(t.storage), JSON.stringify(step(rm, "remigrate")));
   }
   //  驗證時存檔寫不進去（標記 verified 失敗）：下次開機會再驗一次。
   const v = run(m.storage, [{ op: "boot" }, { op: "facts" }], { quota: Q, faults: [{ key: PROFILE_KEY, times: 1 }], clock: m.clock + 1000 });
