@@ -25,4 +25,3 @@ export function fpsSolidObstacles(map){
   }
   return obstacles;
 }
-
