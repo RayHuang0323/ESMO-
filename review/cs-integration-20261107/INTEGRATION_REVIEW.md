@@ -2,6 +2,8 @@
 
 2026-11-07。**工程候選已完成選擇性移植與指定驗證，停Owner Review；Release Gate維持HOLD。沒有merge至main、push或deploy。**
 
+Owner追加授權的第三階段已接續完成限定桌機驗證：Foundry一場完整原生1×長局6/6、三圖各三次匯入／reset／seek／返回／卸載49/49；未發現足以支持新產品修改的持有根因，仍觀測2GiB級取樣。最新細節見[第三階段品質報告](PHASE3_QUALITY_REVIEW.md)、[Release Gate清單](RELEASE_GATE_ACCEPTANCE.md)；[第四階段](RELEASE_INTEGRATION_PLAN.md)只有計畫。以下保留第二階段原收據，不能把單例長局擴張成所有長局／低RAM通過。
+
 ## 基線、範圍與保存
 
 - 開工時原CS HEAD為a7398436，recovery-r50的34份WIP逐一SHA相符；先另存recovery-r51。原CS全部WIP、證據及預覽保持，沒有reset／clean、沒有在原CS工作區commit。
@@ -57,9 +59,11 @@
 
 受測pristine-r1、最終pristine-r2與完整preview-r1 JS bundle皆為`b27a69e972c487422268aab421ad6d82194959999828732126c7cc87b815e370`。最終700來源指紋`35b6eb1c046c2be602559942471b5dbd737d727de3ee48ca9855d502e848b579`；與舊候選不同是因main整合，不能沿用舊指紋宣稱同一Build。行尾整理前後bundle逐byte相同，所以沒有重跑全部既有大測試。
 
-**Android真機、低RAM峰值、CPU4×、完整長局仍未通過／未驗收。** 本輪功能gate中的30秒FPS僅診斷，而且部分功能gate平行執行，不是乾淨效能A/B，不取代既有CPU4×紅燈。前輪五份Heap Snapshot與2GiB峰值風險保持；沒有重新宣稱無洩漏／手機可用。
+**Android真機、低RAM峰值、CPU4×及全長局矩陣仍未通過／未驗收。** 第三階段另補一場Foundry完整長局，範圍見品質報告。第二階段功能gate中的30秒FPS僅診斷，而且部分功能gate平行執行，不是乾淨效能A/B，不取代既有CPU4×紅燈。前輪五份Heap Snapshot與2GiB峰值風險保持；沒有重新宣稱無洩漏／手機可用。
 
-可交Owner檢視這份隔離工程候選；不建議因此直接正式merge或發布。剩餘條件包括TD-INT-01指定CS滿檔路徑、progress25原紅燈處置、真Android／低RAM／長局／CPU4×及Owner美術／戰術接受。main若再更新，須重新比對共享語意與適用回歸；本輪沒有自動追著main合併。
+可交Owner檢視這份隔離工程候選；不建議因此直接正式merge或發布。剩餘條件包括TD-INT-01指定CS滿檔路徑、progress25原紅燈處置、真Android／低RAM／其餘長局覆蓋／CPU4×及Owner美術／戰術接受。main若再更新，須重新比對共享語意與適用回歸；本輪沒有自動追著main合併。
+
+第三階段後完整preview-r2的來源指紋為feeed6c82edbf1e41e7fc5549d8c6576e9c5ab513a6989497a032c066af83ab7，與受測diagnostic-r1同源；pristine JS仍為同一b27a69e9…e370。相較上述35b6來源只有8cd2584d的EOF整理，未改產品邏輯；指紋差異明列，未冒稱來源逐byte相同。
 
 ## 預覽與保存
 
