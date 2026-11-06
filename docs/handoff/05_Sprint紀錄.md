@@ -26980,3 +26980,17 @@ Owner人工驗收完成且明確授權正常main push／Pages／正式站Smoke�
 ## 2026-11-07 BP-9 P0-B 結案（RELEASED／CLOSED）
 
 Owner 核准結案。產品上線版本 main `7b70cda9`；發布紀錄與 B1B 測試工具修正（`37fd07b5`）一併推上 main，沒有產品程式變更。未測風險與 TD-BP9-17～31 全部保留（見 08）。下一步依 Roadmap：P0-B 上線後恢復 W2 第 3–5 項、BP-2／3／4／8，**要等 Owner 指示才開始**。
+
+## 2026-11-07 GitHub Pages 連續部署逾時（run 42286568680，commit `7d59dab5`）
+
+紀錄：`review/deploy-pages-incident-20261107/`（`部署交接紀錄.md`、`GITHUB_SUPPORT_REPORT_EN.md`）。證據快照：`C:\Users\ifikn\esmo-measure\bp9-p0b-release-20261107\pages-incident\`。
+
+**經過**：BP-9 P0-B 結案的文件 commit 推上 main 後，deploy 連續 3 次約 10 分鐘後 `Timeout reached, aborting!`（build 每次都成功；第 3 次是 Re-run all jobs，新 artifact 也一樣）。**正式站沒有受影響**，仍是 `7b70cda9` 那次部署。
+
+**調查結論**：設定、併發、artifact 都排除（`deploy.yml` 自 9/11 沒改且前 11 次全成功；三個 artifact 都是 102.53 MB 且建置輸入與前一版相同；沒有併發 run）。**GitHub Pages 整體也不是異常**：同一時段別的公開 repo 用 Actions 部署 Pages 都在 10～30 秒內成功。最可能是**只有我們這個站台的 Pages 後端卡住**（符合上游議題 `actions/deploy-pages#406`），無法從外部證實：這台機器沒有 `gh` 和權杖，讀不到日誌、Pages 設定，也不能取消 Pages 部署。
+
+**做了什麼**：整理英文 Support 報告與中文交接紀錄；備份並追加 05／08；只做了**一次**有理由的重試（三次相同 SHA 都失敗，所以第 4 次用新 SHA，推一個有實質內容的 docs-only commit，正常 fast-forward）。沒有改 workflow、沒有推空 commit、沒有調 timeout、沒有動 Pages environment。
+
+**未完成**：根因未證實；`gh` 未安裝／未登入，無法取消可能卡住的 Pages 部署；Support 報告還缺日誌那幾行（Owner 手上才有）。**結案條件**見交接紀錄。
+
+**教訓**：1）「重跑」要區分：Re-run failed jobs 會用同一個 artifact，Re-run all jobs 只換 artifact，兩者都保留同一個 commit SHA；三次都失敗時，下一個能改變的變數就是 SHA。2）判斷平台問題不能只看狀態頁，要拿同一時段別人的成功部署當對照；這次的對照把「平台異常」改判成「我們這個站台的問題」。3）手上沒有權杖時，不要去憑證管理員取用 push 的憑證來打 API。
