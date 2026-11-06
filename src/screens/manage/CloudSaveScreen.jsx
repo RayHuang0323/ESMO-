@@ -26,6 +26,10 @@ import {
   cloudSyncState, cloudSyncView, onCloudSyncChange, syncFromCloud, flushCloudNow, CLOUD_STATUS,
 } from "../../platform/persistence/cloudBackedSaveProvider.js";
 import { useProfileStore } from "../../platform/profileStore.js";
+import { useSaveSlimStore, SLIM_STATES, openSaveSlimDialog } from "../../platform/persistence/saveSlimMigration.js";
+import {
+  downloadSaveBackup, readBackupFile, applyBackupAndReload, formatMb, BACKUP_ERROR_TEXT,
+} from "../../ui/saveBackupActions.js";
 
 const card = (accent = null) => ({
   background: GC.card, border: `1px solid ${accent ? `${accent}44` : GC.line}`,
@@ -39,6 +43,87 @@ const btn = (primary = false, disabled = false) => ({
   color: disabled ? GC.gray : "#fff", fontSize: 13, fontWeight: 900,
   cursor: disabled ? "not-allowed" : "pointer", marginTop: 8,
 });
+
+/**
+ * BP-9 P0-B：常駐的存檔備份（Owner 2026-11-06 決策 6）。
+ * ⚠ 備份檔是這台裝置存檔的原樣副本；還原會整份取代目前的存檔，所以要先確認。
+ * ⚠ 還原失敗時目前的存檔不變（`restoreSaveBackup` 會放回原值）。
+ */
+function SaveBackupCard() {
+  const slimState = useSaveSlimStore((s) => s.state);
+  const [exported, setExported] = useState(null);
+  const [picked, setPicked] = useState(null);     // { ok, backup, error }
+  const [agree, setAgree] = useState(false);
+  const [busy, setBusy] = useState(null);
+  const [restoreError, setRestoreError] = useState(null);
+
+  const doExport = async () => { setBusy("export"); setExported(await downloadSaveBackup()); setBusy(null); };
+  const onPick = async (e) => {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    setAgree(false); setRestoreError(null);
+    if (!file) return;
+    setBusy("read"); setPicked(await readBackupFile(file)); setBusy(null);
+  };
+  const doRestore = () => {
+    setBusy("restore");
+    const r = applyBackupAndReload(picked.backup);
+    if (!r.ok) { setRestoreError(r); setBusy(null); }
+  };
+
+  return (
+    <div style={card(GC.blue)} data-testid="save-backup-card">
+      <div style={label}>存檔備份</div>
+      <div style={{ color: "#d4d4d8", fontSize: 11, marginTop: 6, lineHeight: 1.7 }}>
+        把這台裝置上的完整存檔下載成一個檔案。換瀏覽器、清除資料之前，或想保留一份安全副本時都可以用。
+      </div>
+      <button data-testid="save-export" type="button" style={btn(true, !!busy)} disabled={!!busy} onClick={doExport}>
+        {busy === "export" ? "準備中…" : "匯出存檔"}
+      </button>
+      {exported?.ok && <div data-testid="save-export-ok" style={{ color: GC.green, fontSize: 11, marginTop: 6, wordBreak: "break-all" }}>已下載 {exported.fileName}（{formatMb(exported.chars)}）</div>}
+      {exported && !exported.ok && <div data-testid="save-export-failed" style={{ color: GC.redL, fontSize: 11, marginTop: 6 }}>匯出沒有成功，存檔沒有任何變動。</div>}
+
+      {slimState === SLIM_STATES.needed && (
+        <button data-testid="save-slim-open-cloud" type="button" style={btn(false, !!busy)} disabled={!!busy} onClick={openSaveSlimDialog}>
+          整理存檔（釋放空間）
+        </button>
+      )}
+
+      <div style={{ ...label, marginTop: 14 }}>從備份還原</div>
+      <label style={{ ...btn(false, !!busy), display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box" }}>
+        {busy === "read" ? "檢查備份檔…" : "選擇備份檔"}
+        <input data-testid="save-restore-file" type="file" accept=".json,application/json" onChange={onPick} disabled={!!busy} style={{ display: "none" }} />
+      </label>
+      {picked && !picked.ok && (
+        <div data-testid="save-restore-invalid" style={{ color: GC.redL, fontSize: 11, marginTop: 6 }}>
+          {BACKUP_ERROR_TEXT[picked.error] ?? "這個檔案不能用來還原。"}目前的存檔沒有任何變動。
+        </div>
+      )}
+      {picked?.ok && (
+        <div data-testid="save-restore-ready" style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(250,204,21,0.06)", border: `1px solid ${GC.gold}44` }}>
+          <div style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>
+            備份時間 {new Date(picked.backup.createdAt).toLocaleString()} · {formatMb(picked.backup.chars)}
+          </div>
+          <div style={{ color: GC.gold, fontSize: 11, marginTop: 4, lineHeight: 1.6 }}>
+            還原會用這份備份<b>整份取代</b>這台裝置上目前的存檔。建議先按上面的「匯出存檔」保留目前這一份。
+          </div>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, color: "#e5e7eb", fontSize: 12, cursor: "pointer" }}>
+            <input data-testid="save-restore-agree" type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ width: 16, height: 16 }} />
+            我了解目前的存檔會被取代
+          </label>
+          <button data-testid="save-restore-apply" type="button" style={btn(true, !agree || !!busy)} disabled={!agree || !!busy} onClick={doRestore}>
+            {busy === "restore" ? "還原中…" : "還原這份備份"}
+          </button>
+        </div>
+      )}
+      {restoreError && (
+        <div data-testid="save-restore-failed" style={{ color: GC.redL, fontSize: 11, marginTop: 6 }}>
+          還原沒有成功{restoreError.rolledBack ? "，目前的存檔已放回原樣" : ""}。請重新整理頁面。
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CloudSaveScreen({ onBack }) {
   const [auth, setAuth] = useState(() => authView(authState()));
@@ -149,6 +234,8 @@ export default function CloudSaveScreen({ onBack }) {
           </p>
         </div>
       </div>
+
+      <SaveBackupCard />
 
       {/* ⚠ 本機那一份永遠存在，而且它是主要的安全副本。 */}
       <div style={{ color: GC.gray, fontSize: 11, padding: "0 2px 8px" }} data-testid="cloud-local-note">

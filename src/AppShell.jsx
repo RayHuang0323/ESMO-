@@ -75,6 +75,15 @@ import CsResultScreen from "./screens/fps/CsResultScreen.jsx";
 // ── Sprint25：賽後結算（MOBA 在 useBattleFeed 終局；CS 在此處的比賽完成邊界）──
 import { settleCsMatch } from "./platform/progress/settleCsMatch.js";
 import { recoverPendingCommits } from "./platform/progress/commitMatch.js";
+import { bootSaveSlim } from "./platform/persistence/saveSlimMigration.js";
+import { appendAudit } from "./platform/persistence/matchCommit.js";
+import { SaveSlimDialog, SaveSlimResultNotice } from "./ui/SaveSlimDialog.jsx";
+
+/** ⚠ 開機時跑：丟例外就是每次開遊戲都白畫面。記下來，照常開（存檔維持原樣，P0-A 保護還在）。 */
+function bootSaveSlimSafely() {
+  try { bootSaveSlim(); }
+  catch (e) { appendAudit({ code: "save_slim_boot_failed", message: String(e?.message ?? e).slice(0, 160) }); }
+}
 // ── Milestone E：對戰名單（唯一一份，Loading / Battle / Result 共用）──
 import { useProfileStore } from "./platform/profileStore.js";
 import { buildBattleRoster } from "./battle/moba/mobaRosterAdapter.js";
@@ -314,7 +323,8 @@ export default function AppShell() {
   }, []);
 
   //  BP-9 P0-A：上一次的提交如果中斷，開起來先處理。可以重複呼叫，StrictMode 雙掛載也安全。
-  useState(() => { recoverPendingCommits(); return null; });
+  //  BP-9 P0-B：存檔整理的冷啟動驗證要比 P0-A 的恢復先跑，比對的才是剛寫進磁碟、還沒被動過的那份。
+  useState(() => { bootSaveSlimSafely(); recoverPendingCommits(); return null; });
 
   //  ⚠ B1D：只掛一次。沒設定 Supabase 時 `startCloudSave` 直接回
   //    `enabled:false`，什麼都不做——缺設定不是錯誤。
@@ -326,7 +336,9 @@ export default function AppShell() {
   return (
     <div data-viewport-locked={viewportLocked ? "1" : "0"} style={shellStyle}>
       {/* ⚠ 掛在 shell 最外層：存檔失敗可能發生在任何一頁（84 個呼叫點）。 */}
-      <SaveStatusNotice />
+      <SaveStatusNotice allowSuggest={screen === "dashboard"} />
+      <SaveSlimResultNotice />
+      <SaveSlimDialog />
       {/* Q3.5：主畫面「🏆 賽事」改指向聯賽（不另建第二個入口）。
           ⚠ 2026-09-09：原註解提到的 `MenuScreen` 已刪除（死碼，沒有任何 import、
             沒有路由、也沒有進 bundle）。賽季戰績的入口現在只有 `season` 這一條。 */}

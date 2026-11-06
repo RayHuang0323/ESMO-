@@ -74,12 +74,13 @@ const result = await runGate({
     const step = async (name, extra = {}) => { const row = { name, disk: await disk(), notice: await notice(), ...extra }; report.steps.push(row); save(); console.log(`STEP ${name} 第 ${row.disk?.day} 天 tx ${row.disk?.tx} 資金 ${row.disk?.funds} 熟練 ${row.disk?.heroGames} Season ${row.disk?.seasonLen} CS ${row.disk?.csHistory} 總量 ${row.disk?.total} 日誌 ${row.disk?.journal}${row.notice.on ? " ⚠ " + row.notice.message : ""}`); return row; };
     const errors = () => ({ page: chrome.pageErrors.slice(0, 6).map((l) => String(l).slice(0, 240)), console: chrome.consoleLines.filter((l) => l.startsWith("[error]")).slice(0, 10).map((l) => l.slice(0, 240)) });
     const setWidth = async (w, h, mob) => { await chrome.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: mob ? 2 : 1, mobile: mob }); await chrome.send("Emulation.setTouchEmulationEnabled", { enabled: mob, maxTouchPoints: mob ? 5 : 1 }); };
-    //  Owner（BP-9 F5）：頂到上限時要說是暫時保護、等下一版；不得叫玩家清資料、開新局或去按不存在的棄權。
+    //  Owner（BP-9 F5）：頂到上限時要說是暫時保護；P0-B 起指向「整理存檔」；不得叫玩家清資料、開新局或去按不存在的棄權。
     const fullText = async (label) => {
       const t = await ev("const e=document.querySelector('" + tid("save-status-notice") + "');return JSON.stringify(e?e.innerText:'');");
       report.findings.push({ kind: "full_text", label, text: t });
       ck(`${label}：提示說存檔空間已滿、存檔完好`, /存檔空間已滿/.test(t) && /存檔完好/.test(t), t);
-      ck(`${label}：提示說是暫時的、下一版會恢復`, /下一版/.test(t) && /恢復/.test(t), t);
+      //  BP-9 P0-B：恢復的方法從「等下一版」改成遊戲內的「整理存檔」（先備份）。還沒整理的存檔一定要指向它。
+      ck(`${label}：提示說是暫時的、整理存檔就能恢復`, /整理存檔/.test(t) && /恢復/.test(t) && /備份/.test(t), t);
       ck(`${label}：提示不叫玩家清資料或開新局`, !/請(先)?清除|請開新局|重新開局吧/.test(t) && /不要清除/.test(t), t);
     };
     const overflow = () => ev("return JSON.stringify(Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);");

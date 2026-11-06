@@ -23,6 +23,7 @@ import {
 import { GC } from "./theme.js";
 import { ALERT_KINDS, useCommitAlertStore, storageLooksFull } from "../platform/persistence/matchCommit.js";
 import { retryPendingCommit } from "../platform/progress/commitMatch.js";
+import { useSaveSlimStore, SLIM_STATES, SLIM_SUGGEST_CHARS, openSaveSlimDialog } from "../platform/persistence/saveSlimMigration.js";
 
 /**
  * 雲端同步失敗（B1D）。
@@ -61,16 +62,57 @@ const ALERT_TEXT = {
   [ALERT_KINDS.save]: { head: "進度沒有存起來", body: "現在看到的是最後一次成功存檔的內容。" },
 };
 
-//  ⚠ Owner（BP-9 F5）：頂到上限時說清楚這是暫時保護、等下一版修復；不得引導清除資料或開新局。
-const STORAGE_FULL_TEXT = { head: "存檔空間已滿，進度先暫停保護", body: "最後一次成功的存檔完好。為了避免紀錄重複或錯亂，日曆先停住；之後的變更不會保存，重新整理會回到最後一次成功的存檔。下一版更新會整理空間並恢復。請不要清除瀏覽器資料，也不要開新局。" };
-//  比賽那一場要多講一句：它沒有算進去，但不是消失了。
-const STORAGE_FULL_MATCH_TEXT = { head: STORAGE_FULL_TEXT.head, body: "最後一次成功的存檔完好。剛打完的這場沒有算進去，賽程會保留到下一版更新整理空間並恢復後再打；之後的變更不會保存。請不要清除瀏覽器資料，也不要開新局。" };
-//  ⚠ CS 超限後重打能不能入帳還沒驗證（Owner 條件 3），不能承諾重打。
-const STORAGE_FULL_CS_MATCH_TEXT = { head: STORAGE_FULL_TEXT.head, body: "最後一次成功的存檔完好。剛打完的這場 CS 沒有算進去，會留到下一版更新整理空間並恢復後處理；之後的變更不會保存。請不要清除瀏覽器資料，也不要開新局。" };
-//  ⚠ 一般對戰沒有賽程可以保留，場次能不能撐到更新後也沒有證據：不承諾重打。
-const STORAGE_FULL_NO_FIXTURE_TEXT = { head: STORAGE_FULL_TEXT.head, body: "最後一次成功的存檔完好。剛打完的這場沒有算進去；之後的變更不會保存，重新整理會回到最後一次成功的存檔。下一版更新會整理空間並恢復。請不要清除瀏覽器資料，也不要開新局。" };
-//  帳已經入了，只差熟練或賽季紀錄：不能說比賽沒算。
-const STORAGE_FULL_DERIVED_TEXT = { head: "比賽已入帳，部分紀錄還沒寫完", body: "賽果與獎金都在，不會重複。存檔空間已滿，剩下的紀錄要等下一版更新整理空間並恢復後補上。請不要清除瀏覽器資料，也不要開新局。" };
+//  ⚠ Owner（BP-9 F5）：頂到上限時說清楚這是暫時保護；不得引導清除資料或開新局。
+//  BP-9 P0-B：恢復的方法就是「整理存檔」（先下載備份）。已經整理過還是滿的（目前量測不會發生）
+//  就只請玩家先匯出備份，不承諾任何恢復方式。
+const RECOVER = "按「整理存檔」先下載備份、再整理空間，就能恢復。";
+const NO_RECOVER = "請先到主選單的「雲端存檔」頁匯出存檔備份。";
+const KEEP = "請不要清除瀏覽器資料，也不要開新局。";
+const storageFullTexts = (slim) => {
+  const tail = slim ? RECOVER : NO_RECOVER;
+  const head = "存檔空間已滿，進度先暫停保護";
+  return {
+    plain: { head, body: `最後一次成功的存檔完好。為了避免紀錄重複或錯亂，日曆先停住；之後的變更不會保存，重新整理會回到最後一次成功的存檔。${tail}${KEEP}` },
+    //  比賽那一場要多講一句：它沒有算進去，但不是消失了。
+    match: { head, body: `最後一次成功的存檔完好。剛打完的這場沒有算進去，賽程會保留，整理之後再打；之後的變更不會保存。${tail}${KEEP}` },
+    //  CS 那場停在進行中，整理之後從「返回進行中的對戰」重打（P0-B 真 Chrome 驗證只入帳一次）。
+    cs: { head, body: `最後一次成功的存檔完好。剛打完的這場 CS 沒有算進去，會留在進行中，整理之後再打；之後的變更不會保存。${tail}${KEEP}` },
+    //  ⚠ 一般對戰沒有賽程可以保留：不承諾重打。
+    noFixture: { head, body: `最後一次成功的存檔完好。剛打完的這場沒有算進去；之後的變更不會保存，重新整理會回到最後一次成功的存檔。${tail}${KEEP}` },
+    //  帳已經入了，只差熟練或賽季紀錄：不能說比賽沒算。
+    derived: { head: "比賽已入帳，部分紀錄還沒寫完", body: `賽果與獎金都在，不會重複。存檔空間已滿，剩下的紀錄整理之後會補上。${tail}${KEEP}` },
+  };
+};
+
+function SlimButton() {
+  return (
+    <button type="button" data-testid="save-slim-open" onClick={openSaveSlimDialog} style={{
+      minHeight: 44, padding: "0 14px", borderRadius: 9, marginLeft: "auto",
+      background: `linear-gradient(135deg,${GC.blue},#1d4ed8)`, border: `1px solid ${GC.blueL}`,
+      color: "#fff", fontSize: 12, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap",
+    }}>整理存檔</button>
+  );
+}
+
+/** 還沒滿、但已經很大時主動建議（可以先不理；這一輪開啟期間不再出現）。 */
+function SaveSlimSuggestNotice({ onDismiss }) {
+  return (
+    <div data-testid="save-slim-suggest" style={{
+      position: "fixed", left: 12, right: 12, bottom: 12, zIndex: 9998,
+      display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+      padding: "10px 12px", borderRadius: 10, background: "rgba(8,14,26,0.97)", border: `1px solid ${GC.blue}66`,
+      color: "#cbd5e1", fontSize: 12, minWidth: 0,
+    }}>
+      <span style={{ fontWeight: 800, color: "#fff" }}>🗂️ 存檔快滿了</span>
+      <span style={{ color: GC.gray }}>先整理一次，之後就會自動保持精簡。整理前會先請你下載備份。</span>
+      <SlimButton />
+      <button type="button" data-testid="save-slim-suggest-later" onClick={onDismiss} style={{
+        minHeight: 44, padding: "0 12px", borderRadius: 9, background: "transparent", border: `1px solid ${GC.line}`,
+        color: GC.gray, fontSize: 12, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
+      }}>稍後</button>
+    </div>
+  );
+}
 
 const UNFINISHABLE_TEXT = { head: "比賽已入帳，部分紀錄還沒補上", body: "賽果與獎金都在，不會重複。按重試再試一次；補上之前開賽與推進會先停住，請先不要開新局。" };
 
@@ -83,9 +125,11 @@ const NO_FIXTURE_MATCH_TEXT = { head: "比賽結果沒有存起來", body: "這�
  * BP-9 P0-A：提交失敗的警示。與下面的存檔狀態分開，因為它**要撐過重新整理**：
  * 記憶體的 saveState 重開就沒了，這一份有落盤。
  */
-function CommitAlertNotice({ alert, retry }) {
+function CommitAlertNotice({ alert, retry, slim }) {
+  const FULL = storageFullTexts(slim);
+  const full = storageLooksFull();
   const text = (alert.kind === ALERT_KINDS.derived && alert.stage === "unfinishable") ? UNFINISHABLE_TEXT
-    : storageLooksFull() ? (alert.kind === ALERT_KINDS.derived ? STORAGE_FULL_DERIVED_TEXT : alert.kind === ALERT_KINDS.match ? (alert.mode === "cs" ? STORAGE_FULL_CS_MATCH_TEXT : !alert.fixtureId ? STORAGE_FULL_NO_FIXTURE_TEXT : STORAGE_FULL_MATCH_TEXT) : STORAGE_FULL_TEXT)
+    : full ? (alert.kind === ALERT_KINDS.derived ? FULL.derived : alert.kind === ALERT_KINDS.match ? (alert.mode === "cs" ? FULL.cs : !alert.fixtureId ? FULL.noFixture : FULL.match) : FULL.plain)
     : (alert.kind === ALERT_KINDS.match && !alert.fixtureId) ? NO_FIXTURE_MATCH_TEXT
     : (alert.kind === ALERT_KINDS.match && alert.mode === "cs") ? CS_MATCH_TEXT
     : (ALERT_TEXT[alert.kind] ?? ALERT_TEXT[ALERT_KINDS.save]);
@@ -104,6 +148,7 @@ function CommitAlertNotice({ alert, retry }) {
     >
       <span data-testid="save-status-message" style={{ fontWeight: 800 }}>{text.head}</span>
       <span style={{ color: GC.gray }}>{text.body}</span>
+      {full && slim && <SlimButton />}
       {/* ⚠ 比賽結果沒有握在手上時（重新整理過），按存檔也救不回來，不要給一個假按鈕。 */}
       {(retry || alert.kind !== ALERT_KINDS.match) && (
         <button
@@ -123,19 +168,31 @@ function CommitAlertNotice({ alert, retry }) {
   );
 }
 
-export default function SaveStatusNotice() {
+/**
+ * @param {boolean} allowSuggest  只在首頁為 true。⚠ 建議橫幅固定在畫面底部，比賽流程中會蓋住按鈕
+ *   （P0-B 真 Chrome 抓到它擋住 CS 戰術頁的確認鍵），所以只在首頁建議；已滿的警示照舊到處都顯示。
+ */
+export default function SaveStatusNotice({ allowSuggest = false } = {}) {
   const alert = useCommitAlertStore((s) => s.alert);
   const retry = useCommitAlertStore((s) => s.retry);
   //  ⚠ 訂閱**狀態字串本身**，不是整個物件：`saveState` 每次存檔都會是新物件，
   //    訂閱它會讓每一次存檔都重繪整個 shell。
   const status = useProfileStore((s) => s.saveState?.status ?? SAVE_STATUS.idle);
+  const slimState = useSaveSlimStore((s) => s.state);
+  const slimChars = useSaveSlimStore((s) => s.chars);
+  const [suggestHidden, setSuggestHidden] = useState(false);
+  const slim = slimState === SLIM_STATES.needed;
   //  ⚠ 本機存檔失敗**優先**：那是真的沒存到，比同步失敗嚴重得多。
   //    兩個同時發生時只顯示前者，不要疊兩條橫幅。
-  if (alert) return <CommitAlertNotice alert={alert} retry={retry} />;
-  if (status !== SAVE_STATUS.error) return <CloudSyncNotice />;
+  if (alert) return <CommitAlertNotice alert={alert} retry={retry} slim={slim} />;
+  if (status !== SAVE_STATUS.error) {
+    if (allowSuggest && slim && !suggestHidden && (slimChars >= SLIM_SUGGEST_CHARS || storageLooksFull())) return <SaveSlimSuggestNotice onDismiss={() => setSuggestHidden(true)} />;
+    return <CloudSyncNotice />;
+  }
 
   const view = useProfileStore.getState().saveStatus();
   const full = storageLooksFull();
+  const STORAGE_FULL_TEXT = storageFullTexts(slim).plain;
   return (
     <div
       data-testid="save-status-notice"
@@ -151,6 +208,7 @@ export default function SaveStatusNotice() {
       <span data-testid="save-status-message" style={{ fontWeight: 800 }}>{full ? STORAGE_FULL_TEXT.head : view.message}</span>
       {/* ⚠ 一句玩家做得到的事。不解釋為什麼，因為玩家對「為什麼」無能為力。 */}
       <span style={{ color: GC.gray }}>{full ? STORAGE_FULL_TEXT.body : "剛才的進度可能沒有保存。"}</span>
+      {full && slim && <SlimButton />}
       <button
         type="button"
         data-testid="save-status-retry"

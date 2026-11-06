@@ -201,6 +201,13 @@ B1D.2 的 `mock`）—— 那些檔案的說明文字**正好在講「我們不�
   ⚠ profile 的單次 `setItem` 是提交點；熟練與 Season 是衍生資料，用 `commitKey` 防重。`useBattleFeed`／`settleCsMatch` **不得**自己寫熟練或 Season。
   ⚠ 斷言「被拒」一定要連原因一起斷言（當天有賽程也會被拒）；Gate 的輔助函式不得丟掉 `threw`。
   ⚠ 存不下去的比賽一律不算：裸 Node 沒有 localStorage 的舊 Gate 要自己補記憶體版，不能改斷言。
+- **BP-9 P0-B 存檔瘦身（2026-11-06；動到 `saveSlim.js`、`saveSlimMigration.js`、`saveBackup.js`、csHistory／Season／帳本／結算的寫入就必跑）**：
+  **`check_bp9_slim_p0b`（73，約 10 分鐘，含 20 季壓力；`--seasons=` 可調）** ＋瀏覽器 **`browser_check_bp9_slim_p0b`**
+  （`--case=slim-cs|slim-300 --checkpoint=<W1 checkpoint>`）。連打用 `season_e2e_w1.mjs --quota=5242880`。
+  ⚠ 帳本與結算的**鍵永遠不刪**，只縮小值；防重只看鍵。縮小後的值要小到可以一直累積（第一版留太多欄位，第 19 季就頂到上限）。
+  ⚠ 規則只在 `meta.saveSlim` 存在時套用；第一次不可逆的整理一定要先下載備份並由玩家確認（Owner 決策 4）。
+  ⚠ 整理以**磁碟上那份**為準，寫完凍結所有寫入（`freezeSaveWrites`）直到重新整理；冷啟動比對 `meta.saveSlim.expect` 全部相同才算完成，失敗不自動重試。
+  ⚠ 開機時 `bootSaveSlim` 要比 P0-A 的 `recoverPendingCommits` 先跑；新玩家第一次開機不得寫 localStorage。
 - **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
   ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
   `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。

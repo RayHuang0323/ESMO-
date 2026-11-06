@@ -2950,3 +2950,6 @@ NEXT_SPRINT = NOT_STARTED
 - **P0-A 資料一致性：** 完成，Owner F5 核准有條件單獨上線。只阻止新增的不一致，不解決容量。紀錄：`review/season-e2e/W3_BP9修復紀錄.md`。
 - **P0-B 存檔瘦身與舊存檔恢復（下一步，P0-A 部署後立即開始）：** CS 最近 5 場完整戰報、Season 最近 10 場完整 timeline；`processedMatchTransactions` 與 `matchmaking.settlements` 的識別永久保留；版本相容、可重複執行；轉換前可匯出備份；寫入並冷啟動讀回才算完成；真 Chrome 讓第 300 天超限存檔恢復並連打 30 場以上。完成後交 Owner Release Review，**不自行部署**。
 - **暫停：** W2 第 3–5 項，等 P0-B 安全發布後恢復。BP-2、BP-3、BP-4、BP-8 不動。
+- **P0-A：** 2026-11-06 正式上線（main `e53a0806`），Owner 接受。
+- **P0-B：** 2026-11-06 完成，分支 `fix/bp9-p0b-save-slim` 本機 commit，**等 Owner Release Review，不自行部署**。部署後要跑正式站 Smoke（`browser_check_bp9_slim_p0b --url=` 可打正式站，Chrome 是全新 Profile）。
+- **之後：** P0-B 上線後恢復 W2 第 3–5 項；BP-2、BP-3、BP-4、BP-8 照原排序。

@@ -3,6 +3,7 @@ import {GC,FONT,MONO} from '../../ui/theme.js';
 import {csMapByKey} from '../../battle/fps/csPrepData.js';
 import {FPS_ROLE_JOBS} from '../../battle/fps/fpsRoleDuty.js';
 import RewardReceiptPanel from '../../ui/RewardReceiptPanel.jsx';
+import { ARCHIVED_SUMMARY, ARCHIVED_SUMMARY_TEXT } from "../../platform/persistence/saveSlim.js";
 import './csProfessionalReport.css';
 
 const fmt=(x,d=0)=>Number.isFinite(x)?x.toFixed(d):'—';
@@ -27,7 +28,7 @@ export default function CsProfessionalReport({result:r,receipt,recorded,onDone})
  const us=data?.teams.find(t=>t.id==='us'),enemy=data?.teams.find(t=>t.id==='enemy'),rows=data?.rounds||[],roundData=r.roundDetails?.find(rd=>rd.round===round),roundMeta=rows.find(rd=>rd.round===round);
  const names=[r.teamName||'我方',r.oppName||'對手'],win=r.winner==='us',mvp=r.mvp;
  const role=p=>FPS_ROLE_JOBS[p?.role]?.label||p?.role||'未記錄';
- const strip=r.summaryEvents||[],sourceNote=!data?'這份歷史戰報未記錄進階資料，仍可查看原始成績。':null;
+ const strip=r.summaryEvents||[],sourceNote=r.archived===ARCHIVED_SUMMARY?ARCHIVED_SUMMARY_TEXT+'：保留比分、地圖、結果與主要選手數據。':!data?'這份歷史戰報未記錄進階資料，仍可查看原始成績。':null;
  return <div className="fps-major-result cs-pro-report" data-testid="cs-professional-report" style={{'--us':GC.gold,'--enemy':GC.blueL,'--bg':GC.bg,'--card':GC.card,'--card2':GC.card2,'--line':GC.line,'--text':GC.blueL,'--muted':GC.gray,'--positive':GC.green,'--negative':GC.red,'--mono':MONO,fontFamily:FONT}}>
   <div className="cs-report-wrap">
    <header className="cs-report-header"><div><small>CS MATCH REPORT · {csMapByKey(r.mapId)?.name||r.mapName||r.mapId}</small><h1>{win?'拿下勝利':'賽後復盤'}</h1><p>{r.tacticName||'本場部署'} · {r.roundCount} 回合</p></div><button onClick={onDone}>返回 Dashboard</button></header>

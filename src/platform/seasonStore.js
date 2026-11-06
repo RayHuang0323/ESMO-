@@ -8,6 +8,13 @@ import { resultKey } from "./seasonData.js";
 import { readSeasonPayload, seasonPayload, quarantine } from "./persistence/localSaveProvider.js";
 import { isBattleResult } from "./contracts/battleResultVersion.js";
 import { noteWriteError } from "./persistence/storageQuota.js";
+import { seasonSlimActive_, slimSeasonHistory, saveWritesFrozen } from "./persistence/saveSlim.js";
+
+/** BP-9 P0-B：啟用瘦身後，最近 10 場以外拿掉 timeline（未確認遷移前維持原樣）。 */
+const capped = (h) => {
+  const out = h.slice(-HISTORY_CAP);
+  return seasonSlimActive_() ? slimSeasonHistory(out) : out;
+};
 
 //  ── B1B：版本化 ＋ 向下相容（B1A 風險 R6）────────────────────────────────
 //  舊格式是**裸陣列** `BattleResult[]`；新格式是 `{ schema, history }`。
@@ -37,6 +44,8 @@ const persist = {
   },
   save(h) {
     if (!canLS) return { ok: false, error: "no_storage" };
+    //  BP-9 P0-B：遷移已寫進磁碟、還沒重新整理時，記憶體裡是舊的那份。
+    if (saveWritesFrozen()) return { ok: false, error: "frozen_for_reload" };
     //  ⚠ 回報而不是靜默吞掉（B1A 風險 R3）。
     try { localStorage.setItem(KEY, JSON.stringify(seasonPayload(h))); return { ok: true }; }
     catch (e) { noteWriteError(e); return { ok: false, error: String(e?.message ?? e) }; }
@@ -64,7 +73,7 @@ export const useSeasonStore = create((set, get) => ({
     if (!isBattleResult(result)) return;
     const key = resultKey(result);
     if (get().history.some((r) => resultKey(r) === key)) return;
-    const history = [...get().history, result].slice(-HISTORY_CAP);
+    const history = capped([...get().history, result]);
     persist.save(history);
     set({ history });
   },
@@ -82,7 +91,7 @@ export const useSeasonStore = create((set, get) => ({
       if (again.history !== cur) set({ history: again.history });
       return { applied: false, persisted: again.ok };
     }
-    const w = saveCommitted([...cur, { ...result, commitKey }].slice(-HISTORY_CAP), commitKey);
+    const w = saveCommitted(capped([...cur, { ...result, commitKey }]), commitKey);
     set({ history: w.history });
     return { applied: true, persisted: w.ok };
   },

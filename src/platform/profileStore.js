@@ -105,6 +105,7 @@ import { displayIdentityOf, publishedAtOf, opponentEntry } from "./challenge/opp
 import { saveBundleNow, resetAllPersistence, idleSaveState, saveStatusView } from "./persistence/saveGateway.js";
 //  B1C：讀不懂的存檔要**先隔離再開新局**，不准被下一次 save() 靜默覆寫。
 import { readProfileRecord, quarantine, PROFILE_KEY as LS_PROFILE_KEY } from "./persistence/localSaveProvider.js";
+import { isSlimEnabled, slimCsHistory, saveWritesFrozen, setSeasonSlimActive, SAVE_SLIM_VERSION } from "./persistence/saveSlim.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
   emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
@@ -986,6 +987,8 @@ export const useProfileStore = create((rawSet, get) => {
    */
   save() {
     if (atomicDepth > 0) return true;
+    //  BP-9 P0-B：遷移已寫進磁碟、還沒重新整理時，記憶體是舊的那份，寫回去會蓋掉遷移結果。
+    if (saveWritesFrozen()) return false;
     const current = get();
     //  ⚠ 這一步保留原樣：`seasonStateV2` 要在寫出去之前先同步好
     //    （它不是純推導——封存狀態重算不回來，見 saveBundle.js 檔頭）。
@@ -1043,6 +1046,24 @@ export const useProfileStore = create((rawSet, get) => {
     rollback();
     rawSet({ saveState: failed });
     return { ok: false, value: null };
+  },
+
+  /**
+   * BP-9 P0-B：更新遷移標記 `meta.saveSlim` 並存檔。只給 `saveSlimMigration.js` 用。
+   * @returns {boolean} 存檔是否成功
+   */
+  _setSaveSlim(mark) {
+    set({ meta: { ...get().meta, saveSlim: mark } });
+    return get().save();
+  },
+
+  /**
+   * BP-9 P0-B：沒有任何東西會被摘要化時直接啟用，不存檔、不算未存變更。
+   * ⚠ 第一次開遊戲時 localStorage 必須維持全空（正式站 Smoke 的前提），所以不能在開機時寫入；
+   *   標記會跟著下一次正常存檔寫出去。
+   */
+  _enableSaveSlimQuiet(mark) {
+    rawSet({ meta: { ...get().meta, saveSlim: mark } });
   },
 
   /** 不是 profile 自己寫失敗、但提交已經失敗時（例如日誌寫不進去），讓畫面也知道。 */
@@ -3909,7 +3930,8 @@ export const useProfileStore = create((rawSet, get) => {
       lineup: { ...DEFAULT_LINEUP },
       csLineup: normalizeCsLineup(null, null),
       team: { ...DEFAULT.team },
-      meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season },
+      //  BP-9 P0-B：新局沒有舊資料，直接啟用瘦身規則。
+      meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season, saveSlim: { v: SAVE_SLIM_VERSION, at: Date.now(), mode: "new", verified: true } },
       finance: { ...DEFAULT.finance, funds: ng.funds, transactions: [] },
       activeSponsor: ng.activeSponsor,
       csHistory: [],
@@ -3926,6 +3948,7 @@ export const useProfileStore = create((rawSet, get) => {
       matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
     })));
+    setSeasonSlimActive(true);
     get().pushInbox({
       type: "match", from: "戰隊管理處",
       subject: `新賽季開始 · ${sc.name}`,
@@ -4975,7 +4998,9 @@ export const useProfileStore = create((rawSet, get) => {
       transactionId: receipt?.transactionId ?? null,
       recordedAt: Date.now(),
     };
-    set({ csHistory: [entry, ...hist].slice(0, 30) });
+    //  BP-9 P0-B：啟用瘦身後，最近 5 場以外只留摘要（未確認遷移前維持原樣）。
+    const nextCs = [entry, ...hist].slice(0, 30);
+    set({ csHistory: isSlimEnabled(get().meta) ? slimCsHistory(nextCs) : nextCs });
     get().pushInbox({
       type: "match", from: "賽事中心",
       subject: `CS 訓練賽${win ? "勝利" : "失利"} ${result.ourScore}:${result.enemyScore}`,

@@ -58,7 +58,16 @@ if (!COLD && !DIR) { console.error("需要 --dir"); process.exit(2); }
 const storage = new Map();
 globalThis.localStorage = {
   getItem: (k) => (storage.has(k) ? storage.get(k) : null),
-  setItem: (k, v) => storage.set(k, String(v)),
+  //  BP-9 P0-B：--quota=<字元數> 照瀏覽器上限丟配額錯誤（Chrome 實測 5,242,880）；沒給就不限。
+  setItem: (k, v) => {
+    const q = Number(arg("quota") ?? 0);
+    if (q > 0) {
+      let used = 0; for (const [kk, vv] of storage) used += kk.length + vv.length;
+      const prev = storage.has(k) ? k.length + storage.get(k).length : 0;
+      if (used - prev + k.length + String(v).length > q) throw Object.assign(new Error("QuotaExceededError (w1 --quota)"), { name: "QuotaExceededError" });
+    }
+    storage.set(k, String(v));
+  },
   removeItem: (k) => storage.delete(k),
   key: (i) => [...storage.keys()][i] ?? null,
   get length() { return storage.size; },
@@ -113,6 +122,14 @@ if (COLD) {
   ck("世界時間沒有被讀檔推進", st().meta?.days === saved.day, `${st().meta?.days} vs ${saved.day}`);
   console.log(JSON.stringify(out));
   process.exit(0);
+}
+
+// ── BP-9 P0-B：與 AppShell 開機相同，先跑存檔整理的開機判定（已整理的存檔才會持續套用規則）──
+//  ⚠ 只判定、不整理：沒有玩家確認時不會動舊資料。冷啟動驗證（--cold）不跑，讀回比對才不受影響。
+{
+  const { bootSaveSlim } = await import("../src/platform/persistence/saveSlimMigration.js");
+  const b = bootSaveSlim();
+  console.log(`SAVE_SLIM boot ${b.state}`);
 }
 
 // ── 真比賽用到的模組 ──────────────────────────────────────────────────────

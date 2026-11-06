@@ -25,6 +25,7 @@ import { calcPower, bestPositions, personalityById } from "../../data/playerMode
 import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
+import { ARCHIVED_SUMMARY, ARCHIVED_SUMMARY_TEXT } from "../../platform/persistence/saveSlim.js";
 import { CS_MAPS } from "../../battle/fps/csPrepData.js";
 import { preloadFpsCharacterAssets } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
 
@@ -181,6 +182,8 @@ export default function CsPrepScreen({ onNext, onBack, onReturnToHub = null }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ color: "white", fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.mapName ?? h.mapId} <span style={{ color: GC.gray, fontWeight: 600, fontFamily: "monospace" }}>{h.ourScore}:{h.enemyScore}</span></div>
                       <div style={{ color: GC.gray, fontSize: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.tacticName ?? "—"}{h.mvp ? ` · MVP ${h.mvp.playerName}` : ""}</div>
+                      {/* BP-9 P0-B：最近 5 場以外只留摘要（比分、地圖、結果、主要選手數據）。 */}
+                      {h.archived === ARCHIVED_SUMMARY && <div data-testid="cs-history-archived" style={{ color: "#93a4c3", fontSize: 8 }}>{ARCHIVED_SUMMARY_TEXT}</div>}
                     </div>
                     <span style={{ color: GC.gold, fontSize: 10, whiteSpace: "nowrap" }}>+${Math.round((h.rewards?.money ?? 0) / 10000)}萬</span>
                   </div>

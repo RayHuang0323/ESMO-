@@ -130,6 +130,20 @@ function raiseUnfinishable(j, e) {
   );
 }
 
+/**
+ * BP-9 P0-B（TD-BP9-15）：比賽結束時補熟練與 Season 丟例外，不能讓賽後畫面的收尾被跳過。
+ * 帳已入：留下「補不完」的提示（日誌還在，重試或下次開機再補）。沒有帳本的 debug 路徑：只記錄。
+ */
+function finishDerivedGuarded(j, full) {
+  try {
+    return finishDerived(j, full);
+  } catch (e) {
+    if (j.txId && ledgerHas(j.txId)) raiseUnfinishable(j, e);
+    else appendAudit({ code: "derived_failed", commitKey: j.commitKey, message: String(e?.message ?? e).slice(0, 160) });
+    return { ok: false, stage: "derived" };
+  }
+}
+
 /** 上一場已入帳但還沒寫完的話，先補完。回傳 false 代表補不完，新的比賽不能進來。 */
 function settleOutstanding() {
   const j = readJournal();
@@ -180,7 +194,7 @@ function attemptMoba(p, fullResult) {
     return { ok: true, stage: "duplicate", receipt };
   }
   if (!p.derived) { clearAlertFor(p); return { ok: true, stage: "done", receipt }; }
-  return { ...finishDerived({ ...p, result: journalResult(fullResult) }, fullResult), receipt };
+  return { ...finishDerivedGuarded({ ...p, result: journalResult(fullResult) }, fullResult), receipt };
 }
 
 /**
@@ -209,7 +223,7 @@ export function commitMobaMatch({ result, transaction, matchId, isPractice = fal
   //  賽後畫面讀的是「這一場」的成長。這場還沒確定入帳之前，不能留著上一場的明細。
   if (p.derived) useHeroProgressStore.setState({ lastDetail: null });
   //  沒有交易（debug harness）：沒有帳本可以當權威，只靠防重。
-  if (p.derived && !p.txId && !sessionGivenUp() && settleOutstanding()) return { ...finishDerived({ ...p, result: journalResult(result) }, result), receipt: null };
+  if (p.derived && !p.txId && !sessionGivenUp() && settleOutstanding()) return { ...finishDerivedGuarded({ ...p, result: journalResult(result) }, result), receipt: null };
   return attemptMoba(p, result);
 }
 

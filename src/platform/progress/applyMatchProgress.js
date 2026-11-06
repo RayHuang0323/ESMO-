@@ -37,6 +37,7 @@ import { makeGrowthEntry, appendGrowth } from "./growthLog.js";
 //  （例如各自的 Result Screen）一定會漏掉某一種來源，而且會失去冪等保護。
 import { addClubXp, clubXpForMatch, normalizeClubProgression } from "../progression/clubProgression.js";
 import { reconcileDevelopmentPoints } from "../development/developmentPoints.js";
+import { isSlimEnabled, slimLedger } from "../persistence/saveSlim.js";
 
 /**
  * 純 reducer：state + transaction → { nextState, receipt }
@@ -336,7 +337,8 @@ export function applyProgressToState(state, tx) {
     }).state,
     //  `reputation` 由 spread 原樣帶過（F0 deprecated：不再由結算寫入）。
     meta: { ...meta, fans: fansAfter, competitiveBlock: nextBlock },
-    processedMatchTransactions: { ...processed, [tx.transactionId]: receipt },
+    //  BP-9 P0-B：啟用瘦身後，最近 20 筆以外的收據摘要化；鍵（交易識別）永遠保留。
+    processedMatchTransactions: isSlimEnabled(meta) ? slimLedger({ ...processed, [tx.transactionId]: receipt }) : { ...processed, [tx.transactionId]: receipt },
     //  Milestone N3：把這一場的勝負追加到**統一賽績紀錄**（MOBA 與 CS 一視同仁），
     //  供經濟層的贊助績效獎金使用。勝負直接取自契約既有的 metadata.winner，
     //  **不重新統計任何戰績**——戰績來源仍是 BattleResult / seasonStore。

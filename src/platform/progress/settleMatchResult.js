@@ -22,6 +22,7 @@ import { applyProgressToState } from "./applyMatchProgress.js";
 import { validateMatchResult, isSameResult } from "../contracts/matchResult.js";
 import { completeSession, patchActiveMatch } from "../contracts/matchSession.js";
 import { recordSeriesMap, isSeriesDecided } from "../contracts/matchSeries.js";
+import { isSlimEnabled, slimLedger } from "../persistence/saveSlim.js";
 
 function hash8(input) {
   const s = typeof input === "string" ? input : JSON.stringify(input);
@@ -231,7 +232,8 @@ export function settleMatchResultInState(state, { result, session, transaction, 
       ...mm,
       session: done.ok ? done.session : (mm.session ?? null),
       lastResult: result,
-      settlements: { ...ledger, [settlementId]: receipt },
+      //  BP-9 P0-B：同收據帳本，最近 20 筆以外摘要化，settlementId 永遠保留。
+      settlements: isSlimEnabled(state.meta) ? slimLedger({ ...ledger, [settlementId]: receipt }) : { ...ledger, [settlementId]: receipt },
       seriesByFixture: seriesLedger,
       lastSettlementError: null,
     },
