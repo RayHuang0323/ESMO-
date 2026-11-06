@@ -79,10 +79,10 @@ import { bootSaveSlim } from "./platform/persistence/saveSlimMigration.js";
 import { appendAudit } from "./platform/persistence/matchCommit.js";
 import { SaveSlimDialog, SaveSlimResultNotice } from "./ui/SaveSlimDialog.jsx";
 
-/** ⚠ 開機時跑：丟例外就是每次開遊戲都白畫面。記下來，照常開（存檔維持原樣，P0-A 保護還在）。 */
 /** BP-9 P0-B：比賽流程中的畫面。整理完會重新載入，在這些畫面按下等於中途重新整理（Review 第 2 輪 n4）。 */
 const MATCH_FLOW_SCREENS = ["lineup", "matchmaking", "banpick", "talentPick", "tactic", "loading", "battle", "challengeDraft", "csPrep", "csMap", "csTactic", "csLoading", "cs"];
 
+/** ⚠ 開機時跑：丟例外就是每次開遊戲都白畫面。記下來，照常開（存檔維持原樣，P0-A 保護還在）。 */
 function bootSaveSlimSafely() {
   try { bootSaveSlim(); }
   catch (e) { appendAudit({ code: "save_slim_boot_failed", message: String(e?.message ?? e).slice(0, 160) }); }
