@@ -25,6 +25,15 @@ const OUT = new URL("../review/prod-b1b/", import.meta.url);
 const PROFILE_KEY = "esmo.profile.v1";
 const HERO_KEY = "esmo.heroProgress.v2";
 const SEASON_KEY = "esmo.season.v1";
+//  BP-9 P0-A（main e53a0806 起）：開機時偵測到提交異常會寫這個**診斷**鍵（commitMatch.js recoverPendingCommits → recordAudit）。
+//  灌舊格式存檔（有熟練、沒有帳本）就會被記成 hero_ahead_of_ledger。它不是存檔內容，也不是新的存檔格式。
+//  ⚠ 只放行這一個已知鍵；其他任何 esmo* 鍵仍然算紅（Owner 2026-11-07）。
+//  ⚠ 這裡只能有一個鍵：下面的內容檢查只看第一個。要加新的診斷鍵，必須同時替它加內容檢查（Review 2026-11-07）。
+const KNOWN_DIAGNOSTIC_KEYS = ["esmo.commit.audit.v1"];
+//  產品程式會寫進稽核的代碼（matchCommit.js、commitMatch.js、saveSlimMigration.js、AppShell.jsx 逐一列出）。
+//  出現清單外的代碼就算紅：可能是有人把別的東西塞進診斷鍵。
+const KNOWN_AUDIT_CODES = ["hero_ahead_of_ledger", "launched_without_session", "season_duplicate_commit", "journal_corrupt",
+  "journal_unfinishable", "derived_failed", "retry_failed", "recovery_failed", "save_slim_boot_failed", "save_slim_verify_failed"];
 
 const waitFor = async (chrome, sleep, expr, timeoutMs) => {
   const t0 = Date.now();
@@ -47,8 +56,12 @@ const storage = () => `
   const ch = p && p.challenge ? p.challenge : null;
   //  ⚠ 只認 esmo.* 的鍵；瀏覽器擴充或 devtools 可能塞別的東西進來。
   const keys = Object.keys(localStorage).filter((k) => k.indexOf("esmo") === 0).sort();
+  //  診斷鍵的形狀：只能是 { checkedAt, findings[] }，每筆有 code。
+  const auditRaw = read(${JSON.stringify(KNOWN_DIAGNOSTIC_KEYS[0])});
+  const audit = auditRaw == null ? null : (() => { const a = pj(auditRaw); const ok = !!a && typeof a.checkedAt === "number" && Array.isArray(a.findings) && a.findings.every((f) => f && typeof f.code === "string") && Object.keys(a).every((k) => k === "checkedAt" || k === "findings"); return { bytes: auditRaw.length, ok, codes: ok ? a.findings.map((f) => f.code) : [] }; })();
   return JSON.stringify({
     keys,
+    audit,
     profile: {
       bytes: pRaw.length,
       schemaVersion: p ? p.schemaVersion : null,
@@ -349,10 +362,19 @@ const result = await runGate({
     `);
     await sleep(1800);
     const afterUpgrade = J(await chrome.evaluate(storage()));
-    ck("⭐ ① 舊格式會在下一次存檔時升級成信封，且**鍵名不變**",
+    //  ⚠ 2026-11-07 修正過時斷言：原本要求鍵清單「剛好」是三個存檔鍵，寫在 BP-9 P0-A 之前。
+    //    P0-A 起舊存檔載入會多一個診斷鍵（P0-A 基準 e53a0806 用同一支 gate 實跑重現 41/42）。
+    //    現在：三個存檔鍵**都在、鍵名不變**；除此之外只放行已知診斷鍵，其他任何 esmo* 鍵仍然紅。
+    const saveKeys = [PROFILE_KEY, HERO_KEY, SEASON_KEY];
+    const unexpected = afterUpgrade.keys.filter((k) => !saveKeys.includes(k) && !KNOWN_DIAGNOSTIC_KEYS.includes(k));
+    ck("⭐ ① 舊格式會在下一次存檔時升級成信封，且**鍵名不變**（三個存檔鍵都在、沒有非預期的鍵）",
       afterUpgrade.hero.schema === "HeroProgress.v3"
-      && JSON.stringify(afterUpgrade.keys) === JSON.stringify([PROFILE_KEY, HERO_KEY, SEASON_KEY].sort()),
-      `${afterUpgrade.hero.schema} / ${afterUpgrade.keys.join(",")}`);
+      && saveKeys.every((k) => afterUpgrade.keys.includes(k))
+      && unexpected.length === 0,
+      `${afterUpgrade.hero.schema} / ${afterUpgrade.keys.join(",")}${unexpected.length ? " / 非預期：" + unexpected.join(",") : ""}`);
+    ck("① 若有診斷鍵：內容只是稽核紀錄（{checkedAt, findings[]}、每筆的 code 都是已知代碼、小於 8 KB），沒有存檔資料",
+      afterUpgrade.audit === null || (afterUpgrade.audit.ok && afterUpgrade.audit.bytes < 8192 && afterUpgrade.audit.codes.every((c) => KNOWN_AUDIT_CODES.includes(c))),
+      JSON.stringify(afterUpgrade.audit));
     ck("① 升級之後熟練值沒有跑掉", afterUpgrade.hero.maxLevel === 7, `maxLevel=${afterUpgrade.hero.maxLevel}`);
 
     // ══ ⑤ Season / Competition ═════════════════════════════════════════

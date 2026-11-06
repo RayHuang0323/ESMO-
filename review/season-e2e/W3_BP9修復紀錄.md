@@ -368,3 +368,43 @@ W2 的原始證據沒有改動，在 `review/season-e2e/W2_瀏覽器驗收.md` �
 | 診斷 `slim-cs --diag-no-moba-roll`（不算 gate） | 63/64；第 313 天 BO3 接續打完，唯一的紅是旗標刻意造成的 |
 
 **沒有驗到：** 真手機的備份下載（只有 390 寬的 Chrome 模擬；手機沒有 Wi-Fi，連不到本機預覽，要等部署後才能測）、Safari／Firefox、真 Chrome 開兩個分頁（③ 是 Node 模擬）、真 Supabase、正式站（沒有部署）。
+
+---
+
+## P0-B 發布結果（2026-11-07，Owner 核准正式 Release）
+
+- **Push：** 正常 fast-forward `e53a0806..7b70cda9`（不 force），`git ls-remote origin main` = `7b70cda9`。Push 前再 fetch 確認 origin/main 仍是 `e53a0806`。
+- **Deploy：** Actions run `42276375532`，success。正式站入口 `index-lIVk9rC9.js` → **`index-ArXXucOR.js`**，裡面有 P0-B 獨有的字串（`save-slim-ongoing-rule`、授權說明、「此場比賽已保留歷史摘要」）。
+- **Supabase：** 部署後正式站 bundle 的 `VITE_SUPABASE_URL`／`ANON_KEY`／`REDIRECT_URL` 都是空字串，所有 chunk 都沒有 `supabase.co` ⇒ 沒有啟用雲端存檔（TD-BP9-29 這次沒有觸發）。驗收結束時又確認一次，結果相同。
+
+### 正式站 Smoke（Chrome 全新 Profile，碰不到真實玩家存檔）
+
+| Gate | 結果 |
+|---|---|
+| `browser_check_bp9_slim_p0b --case=slim-cs --url=`（第 228 天舊存檔、自然超限、備份＋確認才整理、整理後存檔與賽程正常、還原逐位元相同） | **54/54** |
+| `browser_check_bp9_slim_p0b --case=slim-300 --url=` | **44/44** |
+| `browser_check_prod_b1b` | 第一次 **41/42 → 依 Owner 規則中止**，修正過時斷言後 **43/43**（見下） |
+| `browser_check_prod_b1c` | 38/38 |
+| `browser_check_prod_b1d`（沒有雲端設定時一切照舊） | 27/27 |
+| `browser_check_bp9_commit_p0a --case=normal --url=` | 11/11 |
+| 新玩家存檔安全探測（一次性腳本，不進 repo） | 10/10：第一次開機 localStorage 全空；推進一天後存檔寫出來、**沒有瘦身標記**；重新載入存檔還在；沒有存檔提示 |
+| Console | `slim-cs`、`slim-300`、新玩家探測：頁面例外 0、console error 0（P0-A normal 這支 gate 不收集 console，記為未收集） |
+
+### B1B 過時斷言（2026-11-07）
+
+- **紅的那條：** ①「舊格式會在下一次存檔時升級成信封，且鍵名不變」要求 `esmo*` 鍵**剛好**是三個存檔鍵。實際多了 `esmo.commit.audit.v1`（P0-A 的開機稽核：灌進去的舊存檔有熟練、沒有帳本 ⇒ `hero_ahead_of_ledger`，114 bytes）。升級本身正確：`HeroProgress.v3`、熟練等級 7、三個鍵名不變。
+- **確認是既有行為：** 在 scratchpad 開一個隔離的 detached worktree 建置 P0-A 基準 `e53a0806`，對本機 preview 跑**同一支沒改過的 B1B**：同樣 41/42，同樣 4 個鍵。（11/6 P0-A 正式站的 `prod_b1c` 紀錄也有同一個鍵。）P0-A 上線時的正式站 smoke 沒跑 B1B，所以一直沒被發現。
+- **只修測試工具：** ① 改成「三個存檔鍵都在、鍵名不變，除此之外只放行 `esmo.commit.audit.v1`，其他任何 `esmo*` 鍵仍然紅」。另加一條：診斷鍵如果存在，只能是 `{checkedAt, findings[]}`，每筆的 `code` 都必須在產品程式會寫的已知代碼清單裡，而且小於 8 KB。⑪（打完一場後）與 ⑥（開新局後）兩條「只能有三個鍵」的斷言**沒有動**，仍然不放行診斷鍵。總數 42 → 43。
+- **沒有變弱的證據：** 修正後對 `e53a0806` 43/43。3 個突變（只在 scratchpad 副本）全部變紅：M1 多一個 `esmo.mutant.v1` → 41/43（① 與 ⑥ 都抓到）；M2 拿掉 `esmo.season.v1` → 42/43；M3 稽核鍵混進 `profile` 欄位 → 42/43。獨立 Reviewer（opus）**APPROVE**：沒有刪除或放寬既有斷言，唯一新放行的就是那一個診斷鍵。Reviewer 的 Minor（code 限定已知清單、註明加鍵要一起加內容檢查）已採用，正式站重跑 43/43。
+- **產品程式沒有改。**
+
+### slim-cs 63 → 54 的覆蓋比對（Owner 第 8 項）
+
+逐條比對修正前（62/63）與修正後（54/54）的輸出：**49 條完全相同**（整理、備份、取消、390 對話框、冷啟動、CS 返回對戰只入帳一次、匯出、改過的備份被拒、還原逐位元相同等，「MOBA 與 CS 都完成賽程」從紅變綠）。只在舊版的 14 條 = 同一個「路上的 CS 打到結算」因為路線長重複了 13 次，加上 1 條「休賽期完成」。只在新版的 5 條＝「MOBA 開始下一賽季」與 MOBA／CS 各自的「打到結算」「只入帳一次」（比舊版的路上檢查更嚴）。**唯一少掉的是「整理後跨休賽期」**：新路徑到第 245 天就結束，改由當天的 `--diag-no-moba-roll` 診斷跑（新 gate，跨過第 253 天休賽期，不算 gate）與 W1 Node 真模擬（跨第 3 年休賽期）覆蓋。
+
+### 剩餘風險（如實保留）
+
+- **真手機的備份下載沒有實測：** 只有 390 寬的 Chrome 模擬。手機沒有 Wi-Fi，這輪也沒有實際用手機打開正式站下載備份。**不宣稱手機真機驗收通過。**
+- Safari／Firefox 的下載與配額、真 Chrome 兩個分頁（雙分頁只做了 Node 模擬）、真 Supabase：沒有驗。
+- **程式回滾（git revert）不是玩家歷史資料的還原方式：** 已摘要化的舊戰報明細、Season timeline、舊收據明細只能靠玩家整理前下載的備份檔找回；回滾後遊戲內的「從備份還原」也會一起消失。
+- 新玩家要到存檔長大才會被邀請整理（TD-BP9-27）；MOBA 賽季結束要手動開始下一季（TD-BP9-28）；之後如果有人填了 Supabase Variables，下一次部署會讓雲端上線，跨裝置瘦身沒有驗證（TD-BP9-29）。
