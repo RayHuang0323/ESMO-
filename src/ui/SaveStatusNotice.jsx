@@ -125,7 +125,7 @@ const NO_FIXTURE_MATCH_TEXT = { head: "比賽結果沒有存起來", body: "這�
  * BP-9 P0-A：提交失敗的警示。與下面的存檔狀態分開，因為它**要撐過重新整理**：
  * 記憶體的 saveState 重開就沒了，這一份有落盤。
  */
-function CommitAlertNotice({ alert, retry, slim }) {
+function CommitAlertNotice({ alert, retry, slim, inMatch }) {
   const FULL = storageFullTexts(slim);
   const full = storageLooksFull();
   const text = (alert.kind === ALERT_KINDS.derived && alert.stage === "unfinishable") ? UNFINISHABLE_TEXT
@@ -148,7 +148,8 @@ function CommitAlertNotice({ alert, retry, slim }) {
     >
       <span data-testid="save-status-message" style={{ fontWeight: 800 }}>{text.head}</span>
       <span style={{ color: GC.gray }}>{text.body}</span>
-      {full && slim && <SlimButton />}
+      {/* ⚠ 比賽中不給整理按鈕：整理完會重新載入，等於中途重新整理（Review 第 1 輪 m7）。 */}
+      {full && slim && !inMatch && <SlimButton />}
       {/* ⚠ 比賽結果沒有握在手上時（重新整理過），按存檔也救不回來，不要給一個假按鈕。 */}
       {(retry || alert.kind !== ALERT_KINDS.match) && (
         <button
@@ -172,7 +173,7 @@ function CommitAlertNotice({ alert, retry, slim }) {
  * @param {boolean} allowSuggest  只在首頁為 true。⚠ 建議橫幅固定在畫面底部，比賽流程中會蓋住按鈕
  *   （P0-B 真 Chrome 抓到它擋住 CS 戰術頁的確認鍵），所以只在首頁建議；已滿的警示照舊到處都顯示。
  */
-export default function SaveStatusNotice({ allowSuggest = false } = {}) {
+export default function SaveStatusNotice({ allowSuggest = false, inMatch = false } = {}) {
   const alert = useCommitAlertStore((s) => s.alert);
   const retry = useCommitAlertStore((s) => s.retry);
   //  ⚠ 訂閱**狀態字串本身**，不是整個物件：`saveState` 每次存檔都會是新物件，
@@ -184,7 +185,7 @@ export default function SaveStatusNotice({ allowSuggest = false } = {}) {
   const slim = slimState === SLIM_STATES.needed;
   //  ⚠ 本機存檔失敗**優先**：那是真的沒存到，比同步失敗嚴重得多。
   //    兩個同時發生時只顯示前者，不要疊兩條橫幅。
-  if (alert) return <CommitAlertNotice alert={alert} retry={retry} slim={slim} />;
+  if (alert) return <CommitAlertNotice alert={alert} retry={retry} slim={slim} inMatch={inMatch} />;
   if (status !== SAVE_STATUS.error) {
     if (allowSuggest && slim && !suggestHidden && (slimChars >= SLIM_SUGGEST_CHARS || storageLooksFull())) return <SaveSlimSuggestNotice onDismiss={() => setSuggestHidden(true)} />;
     return <CloudSyncNotice />;
@@ -208,7 +209,7 @@ export default function SaveStatusNotice({ allowSuggest = false } = {}) {
       <span data-testid="save-status-message" style={{ fontWeight: 800 }}>{full ? STORAGE_FULL_TEXT.head : view.message}</span>
       {/* ⚠ 一句玩家做得到的事。不解釋為什麼，因為玩家對「為什麼」無能為力。 */}
       <span style={{ color: GC.gray }}>{full ? STORAGE_FULL_TEXT.body : "剛才的進度可能沒有保存。"}</span>
-      {full && slim && <SlimButton />}
+      {full && slim && !inMatch && <SlimButton />}
       <button
         type="button"
         data-testid="save-status-retry"

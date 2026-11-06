@@ -4,7 +4,8 @@
 // ============================================================================
 import { buildSaveBackup, backupFileName, parseSaveBackup, restoreSaveBackup } from "../platform/persistence/saveBackup.js";
 import { COMMIT_ALERT_KEY } from "../platform/persistence/matchCommit.js";
-import { freezeSaveWrites } from "../platform/persistence/saveSlim.js";
+import { freezeSaveWrites, unfreezeSaveWrites } from "../platform/persistence/saveSlim.js";
+import { fingerprintOf } from "../platform/persistence/saveSlimMigration.js";
 
 export const formatMb = (chars) => `${(Math.max(0, chars ?? 0) / 1_000_000).toFixed(2)} MB`;
 
@@ -28,7 +29,8 @@ export async function downloadSaveBackup() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    return { ok: true, fileName, chars: r.backup.chars };
+    //  指紋讓「開始整理」能確認磁碟還是這一份（Review 第 1 輪 M2）。
+    return { ok: true, fileName, chars: r.backup.chars, fingerprint: fingerprintOf((k) => r.backup.keys[k] ?? null) };
   } catch (e) {
     return { ok: false, error: String(e?.message ?? e) };
   }
@@ -49,7 +51,8 @@ export async function readBackupFile(file) {
 export function applyBackupAndReload(backup, { reload = () => location.reload() } = {}) {
   freezeSaveWrites();
   const r = restoreSaveBackup(localStorage, backup);
-  if (!r.ok) return r;
+  //  ⚠ 失敗但已經放回原值：磁碟就是記憶體那一份，可以解除凍結繼續玩。放不回去就保持凍結，畫面要求重新整理（Review 第 1 輪 M1）。
+  if (!r.ok) { if (r.rolledBack) unfreezeSaveWrites(); return r; }
   //  這個分頁的警示副本屬於還原前那份存檔。
   try { sessionStorage.removeItem(COMMIT_ALERT_KEY); } catch { /* noop: 只是提示副本 */ }
   reload();

@@ -5,7 +5,7 @@
 //    取消或備份失敗，原本的存檔一個位元都不能動。所以「開始整理」只在兩步都完成後才能按。
 //  ⚠ 瀏覽器不會回報檔案到底存好了沒，所以下載成功之後還要玩家自己勾選。
 // ============================================================================
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { GC } from "./theme.js";
 import {
   useSaveSlimStore, closeSaveSlimDialog, runSaveSlimMigration, SLIM_STATES,
@@ -65,12 +65,16 @@ export function SaveSlimDialog({ reload = () => location.reload() }) {
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(null);         // "backup" | "run"
   const [failure, setFailure] = useState(null);
+  //  ⚠ 關掉再打開要重新下載：玩家可能在中間又打了幾場，舊的備份已經不是現在這一份（Review 第 1 輪 M2）。
+  useEffect(() => { if (!open) { setBackup(null); setConfirmed(false); setFailure(null); setBusy(null); } }, [open]);
+  if (failure?.frozen) return <ReloadRequiredOverlay reload={reload} text="整理沒有完成，存檔沒有被改壞。為了避免舊資料被寫回去，請重新整理頁面；剛才下載的備份檔請妥善保存。" />;
   if (!open) return null;
   const full = storageLooksFull();
-  const ready = backup?.ok && confirmed && !busy && !failure;
+  const ready = backup?.ok && confirmed && !busy && (!failure || failure.stage === "backup_stale");
 
   const doBackup = async () => {
     setBusy("backup");
+    setFailure(null);
     const r = await downloadSaveBackup();
     setBackup(r);
     if (!r.ok) setConfirmed(false);
@@ -78,8 +82,10 @@ export function SaveSlimDialog({ reload = () => location.reload() }) {
   };
   const doRun = () => {
     setBusy("run");
-    const r = runSaveSlimMigration({ backupConfirmed: !!(backup?.ok && confirmed) });
+    const r = runSaveSlimMigration({ backupConfirmed: !!(backup?.ok && confirmed), backupFingerprint: backup?.fingerprint ?? null });
     if (r.ok) { reload(); return; }
+    //  備份之後存檔又變了：要重新下載，舊的那份不能當成這次整理的備份。
+    if (r.stage === "backup_stale") { setBackup(null); setConfirmed(false); }
     setFailure(r);
     setBusy(null);
   };
@@ -119,9 +125,9 @@ export function SaveSlimDialog({ reload = () => location.reload() }) {
 
         {failure && (
           <div data-testid="save-slim-run-failed" style={{ marginTop: 10, color: GC.redL, fontSize: 11 }}>
-            {failure.stage === "profile"
-              ? "整理沒有完成。請重新整理頁面，並妥善保存剛才的備份檔。"
-              : "整理沒有完成，原本的存檔沒有被改動。請重新整理頁面後再試。"}
+            {failure.stage === "backup_stale"
+              ? "下載備份之後存檔又有變動，備份已經不是現在這一份。請重新下載備份再整理。"
+              : "整理沒有完成，原本的存檔沒有被改動。可以繼續玩，稍後再試一次。"}
           </div>
         )}
 
@@ -170,3 +176,19 @@ const closeBtn = {
   minHeight: 40, padding: "0 14px", borderRadius: 9, marginLeft: "auto", background: "rgba(255,255,255,0.08)",
   border: `1px solid ${GC.line}`, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer",
 };
+
+/**
+ * 寫入已經凍結、必須重新整理才能繼續時的遮罩（不能關閉）。
+ * ⚠ 凍結期間所有存檔都不會寫入；讓玩家在這時繼續玩，重新整理後那段進度會無聲消失（Review 第 1 輪 M1）。
+ */
+export function ReloadRequiredOverlay({ text, reload = () => location.reload() }) {
+  return (
+    <div style={overlay} data-testid="save-reload-required" role="alertdialog" aria-modal="true">
+      <div style={panel}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: "#fff" }}>請重新整理頁面</div>
+        <div style={{ marginTop: 8, color: "#cbd5e1" }}>{text}</div>
+        <button data-testid="save-reload-now" type="button" style={btn(true, false)} onClick={() => reload()}>重新整理</button>
+      </div>
+    </div>
+  );
+}

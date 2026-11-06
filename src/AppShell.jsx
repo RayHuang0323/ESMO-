@@ -336,7 +336,7 @@ export default function AppShell() {
   return (
     <div data-viewport-locked={viewportLocked ? "1" : "0"} style={shellStyle}>
       {/* ⚠ 掛在 shell 最外層：存檔失敗可能發生在任何一頁（84 個呼叫點）。 */}
-      <SaveStatusNotice allowSuggest={screen === "dashboard"} />
+      <SaveStatusNotice allowSuggest={screen === "dashboard"} inMatch={["battle", "loading", "cs", "csLoading"].includes(screen)} />
       <SaveSlimResultNotice />
       <SaveSlimDialog />
       {/* Q3.5：主畫面「🏆 賽事」改指向聯賽（不另建第二個入口）。

@@ -27,6 +27,7 @@ import {
 } from "../../platform/persistence/cloudBackedSaveProvider.js";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { useSaveSlimStore, SLIM_STATES, openSaveSlimDialog } from "../../platform/persistence/saveSlimMigration.js";
+import { ReloadRequiredOverlay } from "../../ui/SaveSlimDialog.jsx";
 import {
   downloadSaveBackup, readBackupFile, applyBackupAndReload, formatMb, BACKUP_ERROR_TEXT,
 } from "../../ui/saveBackupActions.js";
@@ -116,10 +117,14 @@ function SaveBackupCard() {
           </button>
         </div>
       )}
-      {restoreError && (
+      {restoreError && restoreError.rolledBack && (
         <div data-testid="save-restore-failed" style={{ color: GC.redL, fontSize: 11, marginTop: 6 }}>
-          還原沒有成功{restoreError.rolledBack ? "，目前的存檔已放回原樣" : ""}。請重新整理頁面。
+          還原沒有成功，目前的存檔已放回原樣，可以繼續玩。
         </div>
+      )}
+      {/* ⚠ 放不回原樣時寫入保持凍結，一定要重新整理（Review 第 1 輪 M1）。 */}
+      {restoreError && !restoreError.rolledBack && (
+        <ReloadRequiredOverlay text="還原沒有成功，而且沒能完整放回原本的存檔。請重新整理頁面，並保留手上的備份檔。" />
       )}
     </div>
   );

@@ -34,7 +34,8 @@ const CS_DETAIL_FIELDS = ["analytics", "roundDetails"];
 // ══════════════════════════════════════════════════════════════════════════
 
 /** 這份存檔是否已啟用瘦身規則。 */
-export const isSlimEnabled = (meta) => Number(meta?.saveSlim?.v) >= SAVE_SLIM_VERSION;
+//  ⚠ 整理後的驗證失敗（failed）就停用：畫面說「之後不會再自動改動存檔」，規則本身也可能就是出錯的原因（Review 第 1 輪 m2）。
+export const isSlimEnabled = (meta) => Number(meta?.saveSlim?.v) >= SAVE_SLIM_VERSION && !meta?.saveSlim?.failed;
 
 //  Season 存在另一個 store，讀不到 profile 的 meta：由 profileStore 在載入與遷移時設定。
 let seasonSlimActive = false;
@@ -46,8 +47,12 @@ export const seasonSlimActive_ = () => seasonSlimActive;
 let writesFrozen = false;
 export const freezeSaveWrites = () => { writesFrozen = true; };
 export const saveWritesFrozen = () => writesFrozen;
-/** 只給 verifier 用：同一個行程裡模擬「重新整理」。 */
-export const _unfreezeSaveWritesForTest = () => { writesFrozen = false; };
+/**
+ * 解除凍結。⚠ 只有在「磁碟確定還是記憶體那一份」時才可以：整理在寫任何東西之前就失敗、
+ * 或還原失敗但已經放回原值。其他情況一律重新整理（Review 第 1 輪 M1）。
+ */
+export const unfreezeSaveWrites = () => { writesFrozen = false; };
+export const _unfreezeSaveWritesForTest = unfreezeSaveWrites;
 
 // ══════════════════════════════════════════════════════════════════════════
 //  單筆摘要化（都可以重複套用：已經是摘要的原樣回傳）
@@ -85,7 +90,9 @@ export function compactLedgerEntry(r) {
   const winner = r.winner ?? r.metadata?.winner;
   if (winner !== undefined) out.winner = winner;
   if (r.team?.money !== undefined) out.money = r.team.money;
-  if (r.trace?.transactionId) out.transactionId = r.trace.transactionId;
+  //  ⚠ 結算的 trace 要留場次與比賽識別：settleMatchResult 的 settledInThisSession 用它判斷「已在本場次結算」，
+  //    拿掉會讓舊結果重送從「已結算」變成 foreign_result（Review 第 1 輪 m1）。
+  if (r.trace) out.trace = { sessionId: r.trace.sessionId ?? null, matchId: r.trace.matchId ?? null, transactionId: r.trace.transactionId ?? null };
   out.archived = ARCHIVED_SUMMARY;
   return out;
 }

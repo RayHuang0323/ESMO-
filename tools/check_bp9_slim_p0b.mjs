@@ -100,8 +100,19 @@ if (arg("child")) {
     for (const s of job.steps) {
       if (s.op === "boot") { out.steps.push({ op: "boot", r: MIG.bootSaveSlim(), state: MIG.useSaveSlimStore.getState().state }); continue; }
       if (s.op === "migrate") {
-        const r = MIG.runSaveSlimMigration({ backupConfirmed: s.confirmed });
-        out.steps.push({ op: "migrate", r: { ok: r.ok, stage: r.stage, error: r.error ?? null, saved: r.plan?.saved ?? null } });
+        //  預設：指紋取自目前磁碟（＝剛下載的備份）。stale：模擬下載之後存檔又變了。
+        let fp = s.fingerprint === "none" ? null : MIG.diskFingerprint();
+        if (s.fingerprint === "stale" && fp) fp = { ...fp, "esmo.profile.v1": "00000000:1" };
+        const r = MIG.runSaveSlimMigration({ backupConfirmed: s.confirmed, backupFingerprint: fp });
+        out.steps.push({ op: "migrate", r: { ok: r.ok, stage: r.stage, error: r.error ?? null, saved: r.plan?.saved ?? null, frozen: r.frozen ?? null }, frozenNow: SLIM.saveWritesFrozen() });
+        continue;
+      }
+      if (s.op === "applyRestore") {
+        //  畫面上的還原動作（含凍結與失敗時解除凍結），reload 換成空函式。
+        const SBA = await imp("src/ui/saveBackupActions.js");
+        const parsed = await BK.parseSaveBackup(fs.readFileSync(s.file, "utf8"));
+        const r = SBA.applyBackupAndReload(parsed.backup, { reload: () => {} });
+        out.steps.push({ op: "applyRestore", ok: r.ok, rolledBack: r.rolledBack ?? null, frozenNow: SLIM.saveWritesFrozen() });
         continue;
       }
       if (s.op === "saveAfter") {
@@ -262,7 +273,7 @@ console.log("\n§1 規則");
   const set = SLIM.slimLedger(p.matchmaking.settlements);
   ck("結算鍵一個都沒少", JSON.stringify(Object.keys(set)) === JSON.stringify(Object.keys(p.matchmaking.settlements)));
   const SK = Object.keys(p.matchmaking.settlements), SP = p.matchmaking.settlements;
-  ck("結算較舊的只留最小摘要，並記著對應的交易識別", SK.slice(0, -20).every((k) => set[k].archived === "summary" && set[k].ok === SP[k].ok && set[k].settled === SP[k].settled && set[k].winner === SP[k].winner && set[k].transactionId === SP[k].trace?.transactionId && k.length + JSON.stringify(set[k]).length <= 220));
+  ck("結算較舊的只留最小摘要，並記著對應的交易識別", SK.slice(0, -20).every((k) => set[k].archived === "summary" && set[k].ok === SP[k].ok && set[k].settled === SP[k].settled && set[k].winner === SP[k].winner && set[k].trace?.transactionId === SP[k].trace?.transactionId && set[k].trace?.sessionId === SP[k].trace?.sessionId && set[k].trace?.matchId === SP[k].trace?.matchId && k.length + JSON.stringify(set[k]).length <= 300));
   ck("重複套用結果相同（同一個參考）", SLIM.slimCsHistory(cs) === cs && SLIM.slimSeasonHistory(ss) === ss && SLIM.slimLedger(led) === led && SLIM.slimLedger(set) === set);
   ck("少於門檻時完全不動", SLIM.slimCsHistory(p.csHistory.slice(0, 5)) !== null && SLIM.slimLedger({ a: 1 }) !== null && SLIM.slimCsHistory(p.csHistory.slice(0, 5)).every((e, i) => e === p.csHistory[i]));
 }
@@ -293,6 +304,10 @@ let migrated = null;
   const refused = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: false }], { quota: Q, clock: C24.clock });
   ck("沒確認備份就拒絕", step(refused, "migrate").r.ok === false && step(refused, "migrate").r.stage === "no_backup");
   ck("拒絕時存檔逐位元不變", canon(refused.storage) === canon(orig));
+  const stale = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: true, fingerprint: "stale" }], { quota: Q, clock: C24.clock });
+  ck("備份之後存檔變了：拒絕（backup_stale）且不寫、不凍結", step(stale, "migrate").r.stage === "backup_stale" && canon(stale.storage) === canon(orig) && step(stale, "migrate").frozenNow === false, JSON.stringify(step(stale, "migrate")));
+  const nofp = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: true, fingerprint: "none" }], { quota: Q, clock: C24.clock });
+  ck("勾選了但沒有備份指紋：拒絕且不寫", step(nofp, "migrate").r.stage === "no_backup" && canon(nofp.storage) === canon(orig));
   const m = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: true }, { op: "saveAfter" }, { op: "facts" }], { quota: Q, clock: C24.clock });
   ck("確認後整理成功", step(m, "migrate").r.ok, JSON.stringify(step(m, "migrate").r));
   ck("寫入順序：先 Season 再 profile", m.writes.filter((w) => w.startsWith("set:")).join(",") === `set:${SEASON_KEY},set:${PROFILE_KEY}`, m.writes.join(","));
@@ -317,6 +332,14 @@ let migrated = null;
   migrated = cold;
 }
 
+const TT = () => {
+  const c = loadCk("027-end.json");
+  const p = JSON.parse(c.storage[PROFILE_KEY]);
+  const season = JSON.parse(c.storage[SEASON_KEY]).history;
+  const cs = [...p.csHistory].sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length)[0];
+  const sr = [...season].sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length)[0];
+  return { tx: c.lastTx, cs: { ...cs, transactionId: undefined, recordedAt: undefined }, season: { ...sr, commitKey: undefined }, settle: Object.values(p.matchmaking.settlements).slice(-1)[0] };
+};
 // ── §4 中斷與失敗 ─────────────────────────────────────────────────────────
 console.log("\n§4 中斷與寫入失敗");
 {
@@ -324,9 +347,11 @@ console.log("\n§4 中斷與寫入失敗");
   const s1 = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: true }], { quota: Q, faults: [{ key: SEASON_KEY, times: 1 }], clock: C24.clock });
   ck("Season 寫入失敗：回報失敗", step(s1, "migrate").r.ok === false && step(s1, "migrate").r.stage === "season");
   ck("Season 寫入失敗：存檔逐位元不變", canon(s1.storage) === canon(orig));
+  ck("Season 寫入失敗：不凍結（可以照常存檔）", step(s1, "migrate").frozenNow === false && step(s1, "migrate").r.frozen === false);
   const s2 = run(orig, [{ op: "boot" }, { op: "migrate", confirmed: true }], { quota: Q, faults: [{ key: PROFILE_KEY, times: 1 }], clock: C24.clock });
   ck("profile 寫入失敗：回報失敗", step(s2, "migrate").r.ok === false && step(s2, "migrate").r.stage === "profile");
   ck("profile 寫入失敗：profile 與熟練逐位元不變", s2.storage[PROFILE_KEY] === orig[PROFILE_KEY] && s2.storage[HERO_KEY] === orig[HERO_KEY]);
+  ck("profile 寫入失敗：保持凍結並回報要重新整理", step(s2, "migrate").frozenNow === true && step(s2, "migrate").r.frozen === true);
   //  ＝寫完 Season 就中斷：下次開機還是要整理，再整理一次要成功、冷啟動要通過。
   const r2 = run(s2.storage, [{ op: "boot" }, { op: "migrate", confirmed: true }], { quota: Q, clock: s2.clock + 1000 });
   ck("中斷後重開：仍判定要整理，並能整理成功", step(r2, "boot").state === "needed" && step(r2, "migrate").r.ok, JSON.stringify(step(r2, "migrate").r));
@@ -342,6 +367,12 @@ console.log("\n§4 中斷與寫入失敗");
   const t = run(m.storage, [{ op: "tamperDisk" }, { op: "boot" }, { op: "facts" }], { quota: Q, clock: m.clock + 1000 });
   ck("磁碟被動過：冷啟動比對抓到", step(t, "boot").state === "failed" && step(t, "boot").r.verify?.mismatches?.includes("ledgerKeys"), JSON.stringify(step(t, "boot").r.verify));
   ck("比對失敗：標記 failed，之後開機不再寫", (() => { const t2 = run(t.storage, [{ op: "boot" }], { quota: Q, clock: t.clock + 1000 }); return step(t2, "boot").state === "failed" && t2.writes.length === 0; })());
+  {
+    const before = step(t, "facts");
+    const g = run(t.storage, [{ op: "boot" }, { op: "grow", matches: 6, tag: "f" }, { op: "facts" }, { op: "storeView" }], { quota: Q, clock: t.clock + 2000, templates: TT() });
+    const after = step(g, "facts");
+    ck("比對失敗之後：不再套用規則（新比賽不摘要化、Season 不精簡）", step(g, "storeView").seasonActive === false && after.csArchived <= before.csArchived && JSON.parse(g.storage[PROFILE_KEY]).meta.saveSlim.failed === true, JSON.stringify({ b: before.csArchived, a: after.csArchived, season: step(g, "storeView").seasonActive }));
+  }
   //  驗證時存檔寫不進去（標記 verified 失敗）：下次開機會再驗一次。
   const v = run(m.storage, [{ op: "boot" }, { op: "facts" }], { quota: Q, faults: [{ key: PROFILE_KEY, times: 1 }], clock: m.clock + 1000 });
   const v2 = run(v.storage, [{ op: "boot" }, { op: "facts" }], { quota: Q, clock: v.clock + 1000 });
@@ -391,6 +422,11 @@ console.log("\n§6 備份與還原");
   const crowded = { ...cold.storage, "other.app.data": "y".repeat(Q - charsOf(orig) + 2000) };
   const rq = run(crowded, [{ op: "restore", file }], { quota: Q, clock: cold.clock });
   ck("空間不夠還原：失敗並放回原樣", step(rq, "restore").ok === false && step(rq, "restore").rolledBack === true && step(rq, "restore").unchanged === true, JSON.stringify(step(rq, "restore")));
+  const rq2 = run(crowded, [{ op: "boot" }, { op: "applyRestore", file }], { quota: Q, clock: cold.clock });
+  ck("畫面的還原失敗但已放回原樣：解除凍結，可以繼續玩", step(rq2, "applyRestore").ok === false && step(rq2, "applyRestore").rolledBack === true && step(rq2, "applyRestore").frozenNow === false, JSON.stringify(step(rq2, "applyRestore")));
+  const withQ = { ...cold.storage, "esmo.profile.v1.corrupt": "{broken" };
+  const rk = run(withQ, [{ op: "restore", file }], { quota: Q, clock: cold.clock });
+  ck("還原不刪備份裡沒有的隔離副本（*.corrupt）", step(rk, "restore").ok === true && rk.storage["esmo.profile.v1.corrupt"] === "{broken" && step(rk, "restore").matches === true, JSON.stringify(step(rk, "restore")));
 }
 
 // ── §7 寫入時持續套用 ────────────────────────────────────────────────────
@@ -416,9 +452,15 @@ const T = (() => {
   //  未啟用：P0-A 行為（不摘要化）
   const small = loadCk("012-every10-f50.json");
   const n = run(small.storage, [{ op: "boot" }, { op: "grow", matches: 6, tag: "b" }, { op: "facts" }], { clock: small.clock + 1000, templates: T });
-  ck("未啟用的存檔：新比賽不做摘要化", step(n, "boot").state === "needed" ? step(n, "facts").csArchived === 0 : true, `${step(n, "boot").state} ${step(n, "facts").csArchived}`);
+  ck("未啟用的存檔：開機判定要整理（前提成立）", step(n, "boot").state === "needed", step(n, "boot").state);
+  const np = JSON.parse(n.storage[PROFILE_KEY]);
+  const ns = JSON.parse(n.storage[SEASON_KEY]).history;
+  ck("未啟用的存檔：新比賽不做任何摘要化（CS、帳本、結算、Season）", step(n, "facts").csArchived === 0
+    && Object.values(np.processedMatchTransactions).every((r) => !r.archived) && Object.values(np.matchmaking?.settlements ?? {}).every((r) => !r.archived)
+    && ns.filter((r) => (r.timeline ?? []).length > 0).length === ns.length, `${step(n, "facts").csArchived}`);
   //  新玩家：沒有存檔
-  const fresh = run({}, [{ op: "boot" }, { op: "facts" }], { clock: 1800000000000 });
+  const fresh = run({}, [{ op: "boot" }, { op: "facts" }, { op: "storeView" }], { clock: 1800000000000 });
+  ck("新玩家：直接啟用規則（只在記憶體）", step(fresh, "storeView").slim?.mode === "new" && step(fresh, "storeView").seasonActive === true, JSON.stringify(step(fresh, "storeView")));
   ck("新玩家第一次開機：localStorage 維持全空", Object.keys(fresh.storage).length === 0, Object.keys(fresh.storage).join(","));
 }
 

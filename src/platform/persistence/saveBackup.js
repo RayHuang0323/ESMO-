@@ -101,8 +101,10 @@ export async function parseSaveBackup(text) {
  */
 export function restoreSaveBackup(storage, backup) {
   if (!storage) return { ok: false, error: "no_storage" };
+  //  ⚠ 隔離區（*.corrupt）是 B1C 留給人工救援的副本：備份裡沒有的就不要動它（Review 第 1 輪 m4）。
+  const isQuarantine = (k) => k.endsWith(QUARANTINE_SUFFIX);
   const prev = {};
-  for (const k of listSaveKeys(storage)) prev[k] = storage.getItem(k);
+  for (const k of listSaveKeys(storage)) if (!isQuarantine(k) || k in backup.keys) prev[k] = storage.getItem(k);
   const order = Object.keys(backup.keys).sort((a, b) => (a === PROFILE_KEY) - (b === PROFILE_KEY));
   try {
     for (const k of Object.keys(prev)) storage.removeItem(k);
@@ -120,7 +122,8 @@ export function restoreSaveBackup(storage, backup) {
 
 /** 比對目前存檔與備份是否逐位元相同（verifier 與還原後的自我檢查用）。 */
 export function storageMatchesBackup(storage, backup) {
-  const now = listSaveKeys(storage);
+  //  備份裡沒有的隔離鍵會被保留（見 restoreSaveBackup），不算不一致。
+  const now = listSaveKeys(storage).filter((k) => !k.endsWith(QUARANTINE_SUFFIX) || k in backup.keys);
   const want = Object.keys(backup.keys).sort();
   if (JSON.stringify(now) !== JSON.stringify(want)) return false;
   return want.every((k) => storage.getItem(k) === backup.keys[k]);

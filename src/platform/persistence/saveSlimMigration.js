@@ -22,7 +22,7 @@ import {
 } from "./localSaveProvider.js";
 import {
   SAVE_SLIM_VERSION, isSlimEnabled, setSeasonSlimActive, slimProfileRecord, slimSeasonHistory,
-  planSaveSlim, slimExpectation, verifySlim, freezeSaveWrites, storageChars,
+  planSaveSlim, slimExpectation, verifySlim, freezeSaveWrites, storageChars, fnv,
 } from "./saveSlim.js";
 import { useCommitAlertStore, setCommitAlert, appendAudit, loadCommitAlert } from "./matchCommit.js";
 import { resetQuotaHit } from "./storageQuota.js";
@@ -71,23 +71,44 @@ export function readDiskSave(storage = local()) {
 export function bootSaveSlim() {
   const meta = useProfileStore.getState().meta ?? {};
   const mark = meta.saveSlim ?? null;
+  //  ⚠ 驗證失敗的存檔不再套用規則，也不再要求整理（否則每次開機都會再問一次）。
+  if (mark?.failed) { setSeasonSlimActive(false); return publish(SLIM_STATES.failed); }
   if (isSlimEnabled(meta)) {
     setSeasonSlimActive(true);
-    if (mark.failed) return publish(SLIM_STATES.failed);
     if (mark.verified === false) return finishVerification(mark);
     return publish(SLIM_STATES.none);
   }
+  //  新玩家（磁碟上沒有 profile）：沒有任何舊資料，直接啟用。只改記憶體，第一次開機仍然不寫 localStorage（Review 第 1 輪 m3）。
+  let hasProfile = true;
+  try { hasProfile = local()?.getItem(PROFILE_KEY) != null; } catch { hasProfile = true; }
+  if (!hasProfile) return enableQuietly("new");
   const disk = readDiskSave();
-  if (!disk) return publish(SLIM_STATES.none);   // 沒有存檔（新玩家）或讀不懂（由載入流程隔離）
+  if (!disk) return publish(SLIM_STATES.none);   // 讀不懂：由載入流程隔離，不在這裡啟用
   const plan = planSaveSlim(disk);
-  if (plan.total === 0) {
-    //  沒有任何東西會被摘要化：不需要備份與確認，直接啟用。不寫磁碟（見 _enableSaveSlimQuiet）。
-    useProfileStore.getState()._enableSaveSlimQuiet({ v: SAVE_SLIM_VERSION, at: Date.now(), mode: "auto", verified: true });
-    setSeasonSlimActive(true);
-    return publish(SLIM_STATES.none);
-  }
+  //  沒有任何東西會被摘要化：不需要備份與確認，直接啟用。不寫磁碟（見 _enableSaveSlimQuiet）。
+  if (plan.total === 0) return enableQuietly("auto");
   return publish(SLIM_STATES.needed, { plan });
 }
+
+function enableQuietly(mode) {
+  useProfileStore.getState()._enableSaveSlimQuiet({ v: SAVE_SLIM_VERSION, at: Date.now(), mode, verified: true });
+  setSeasonSlimActive(true);
+  return publish(SLIM_STATES.none);
+}
+
+/**
+ * 存檔本體的指紋（profile、Season、熟練的原始字串）。
+ * ⚠ 整理前比對「下載的備份」與「現在的磁碟」：玩家下載後關掉對話框繼續玩，或下載時切換分頁觸發保底存檔，
+ *   磁碟就比備份新；那時整理會把備份裡沒有的完整戰報摘要化（Review 第 1 輪 M2）。
+ * ⚠ 不含警示與審查紀錄：它們會在開機與推進時重新推導，不屬於玩家的資料。
+ */
+export const FINGERPRINT_KEYS = Object.freeze([PROFILE_KEY, SEASON_KEY, HERO_PROGRESS_KEY]);
+export function fingerprintOf(getRaw) {
+  const out = {};
+  for (const k of FINGERPRINT_KEYS) { const v = getRaw(k); out[k] = v == null ? null : `${fnv(v)}:${v.length}`; }
+  return out;
+}
+export const diskFingerprint = (storage = local()) => fingerprintOf((k) => { try { return storage?.getItem(k) ?? null; } catch { return null; } });
 
 function publish(state, extra = {}) {
   useSaveSlimStore.setState({ state, chars: storageChars(local()), ...extra });
@@ -102,6 +123,7 @@ function finishVerification(mark) {
     appendAudit({ code: "save_slim_verify_failed", message: verify.mismatches.join(",").slice(0, 160) });
     //  ⚠ 不重試、不還原：玩家手上有備份檔，交給人工判斷比自動再寫一次安全。
     store._setSaveSlim({ ...mark, failed: true, mismatches: verify.mismatches.slice(0, 12) });
+    setSeasonSlimActive(false);
     return publish(SLIM_STATES.failed, { verify });
   }
   const { expect: _drop, ...rest } = mark;
@@ -120,8 +142,10 @@ function finishVerification(mark) {
  * 成功後由呼叫端重新整理頁面（`reload`），冷啟動時才完成驗證。
  * @returns {{ ok:boolean, stage:string, plan?:object }}
  */
-export function runSaveSlimMigration({ backupConfirmed = false, storage = local(), now = Date.now() } = {}) {
-  if (!backupConfirmed) return { ok: false, stage: "no_backup" };
+export function runSaveSlimMigration({ backupConfirmed = false, backupFingerprint = null, storage = local(), now = Date.now() } = {}) {
+  if (!backupConfirmed || !backupFingerprint) return { ok: false, stage: "no_backup" };
+  const nowFp = diskFingerprint(storage);
+  if (FINGERPRINT_KEYS.some((k) => nowFp[k] !== backupFingerprint[k])) return { ok: false, stage: "backup_stale" };
   const disk = readDiskSave(storage);
   if (!disk) return { ok: false, stage: "unreadable" };
   if (isSlimEnabled(disk.profile.meta)) return { ok: false, stage: "already_enabled" };
@@ -135,14 +159,15 @@ export function runSaveSlimMigration({ backupConfirmed = false, storage = local(
     },
   };
   const seasonHistory = slimSeasonHistory(disk.seasonHistory);
-  //  ⚠ 從這裡開始，記憶體裡的 store 都比磁碟舊：任何寫入都會蓋掉整理結果。
-  freezeSaveWrites();
+  //  ⚠ Season 寫失敗時磁碟完全沒動，不凍結，玩家可以照常繼續（Review 第 1 輪 M1）。
   if (disk.seasonRaw !== null && seasonHistory !== disk.seasonHistory) {
     try { storage.setItem(SEASON_KEY, JSON.stringify(seasonPayload(seasonHistory))); }
-    catch (e) { return { ok: false, stage: "season", error: String(e?.name ?? e), plan }; }
+    catch (e) { return { ok: false, stage: "season", error: String(e?.name ?? e), plan, frozen: false }; }
   }
+  //  ⚠ 從這裡開始，記憶體裡的 store 都比磁碟舊：任何寫入都會蓋掉整理結果。之後不論成敗都要重新整理。
+  freezeSaveWrites();
   try { storage.setItem(PROFILE_KEY, JSON.stringify(profile)); }
-  catch (e) { return { ok: false, stage: "profile", error: String(e?.name ?? e), plan }; }
+  catch (e) { return { ok: false, stage: "profile", error: String(e?.name ?? e), plan, frozen: true }; }
   useSaveSlimStore.setState({ state: SLIM_STATES.verifyPending, plan });
   return { ok: true, stage: "written", plan };
 }
