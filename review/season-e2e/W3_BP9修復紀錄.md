@@ -408,3 +408,7 @@ W2 的原始證據沒有改動，在 `review/season-e2e/W2_瀏覽器驗收.md` �
 - Safari／Firefox 的下載與配額、真 Chrome 兩個分頁（雙分頁只做了 Node 模擬）、真 Supabase：沒有驗。
 - **程式回滾（git revert）不是玩家歷史資料的還原方式：** 已摘要化的舊戰報明細、Season timeline、舊收據明細只能靠玩家整理前下載的備份檔找回；回滾後遊戲內的「從備份還原」也會一起消失。
 - 新玩家要到存檔長大才會被邀請整理（TD-BP9-27）；MOBA 賽季結束要手動開始下一季（TD-BP9-28）；之後如果有人填了 Supabase Variables，下一次部署會讓雲端上線，跨裝置瘦身沒有驗證（TD-BP9-29）。
+
+## 結案（2026-11-07）
+
+**BP-9 P0-B：RELEASED／CLOSED（Owner 2026-11-07 核准結案）。** 產品上線版本是 main `7b70cda9`（Actions `42276375532`、入口 `index-ArXXucOR.js`）。之後推上 main 的只有發布紀錄、交接文件與 B1B 測試工具（`src/` 沒有變更）。上面「剩餘風險」與 TD-BP9-17～31 全部保留，沒有因為結案而消除：真手機的備份下載、Safari／Firefox、真 Chrome 兩個分頁、真 Supabase 都**仍未驗證**；程式回滾不能還原已摘要化的歷史資料。
