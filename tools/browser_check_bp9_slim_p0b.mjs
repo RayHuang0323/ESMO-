@@ -29,6 +29,7 @@ const CHECKPOINT = arg("checkpoint");
 const OUT = arg("out");
 //  --url=https://rayhuang0323.github.io/ESMO-/ 打正式站。Chrome 每次都是全新的 user-data-dir，碰不到真實玩家的存檔。
 const EXTERNAL = arg("url");
+const DIAG_NO_MOBA_ROLL = process.argv.includes("--diag-no-moba-roll");
 if (!CASE || !CHECKPOINT || (!EXTERNAL && !fs.existsSync("dist/index.html"))) { console.error("需要 --case、--checkpoint，且要先 build（或給 --url）"); process.exit(2); }
 const freePort = () => new Promise((res, rej) => { const s = createServer(); s.once("error", rej); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => res(port)); }); });
 const port = EXTERNAL ? null : await freePort();
@@ -38,11 +39,12 @@ for (let i = 0; i < (EXTERNAL ? 0 : 120); i++) { try { if ((await fetch(url)).ok
 
 const J = (raw) => { const s = String(raw); for (const t of [s, s.replace(/^"|"$/g, "")]) { try { return JSON.parse(t); } catch { /* next */ } } return null; };
 const tid = (id) => "[data-testid=\"" + id + "\"]";
-const report = { case: CASE, url, checkpoint: CHECKPOINT ? path.basename(CHECKPOINT) : null, nonUi: [], steps: [], findings: [] };
+//  ⚠ Review m4：診斷旗標的結果要看得出來不是正式 gate（報告欄位＋結果名稱都標出來）。
+const report = { case: CASE, url, checkpoint: CHECKPOINT ? path.basename(CHECKPOINT) : null, diagNoMobaRoll: DIAG_NO_MOBA_ROLL, nonUi: [], steps: [], findings: [] };
 const save = () => { if (OUT) fs.writeFileSync(OUT, JSON.stringify(report, null, 1)); };
 
 const result = await runGate({
-  name: `BP-9 P0-B ${CASE}`,
+  name: `BP-9 P0-B ${CASE}${DIAG_NO_MOBA_ROLL ? "（DIAG-ONLY：--diag-no-moba-roll，不算 gate）" : ""}`,
   externalUrl: url,
   timeoutMs: 3300000,
   async run({ chrome, ck, sleep }) {
@@ -151,6 +153,15 @@ const result = await runGate({
     };
     const startCsFromHub = async () => {
       await toTab("cs");
+      //  TD-BP9-23：BO3／BO5 打完一張圖之後，系列賽還在進行，賽事中心只有「返回進行中的對戰」。
+      //  玩家會按它打下一張圖；舊 gate 只認 cs-league-play，日曆就停在比賽日。
+      if (await has("cs-league-resume")) {
+        await click("cs-league-resume"); await sleep(1500);
+        const rerr = await text("cs-hub-error");
+        if (rerr) return { ok: false, why: "返回被拒", err: rerr };
+        report.findings.push({ kind: "cs_series_resume", disk: await disk() });
+        return playCsResumed();
+      }
       if (await has("cs-hub-lineup-required")) {
         await click("cs-hub-open-prep");
         await waitId("prep-primary-action");
@@ -166,13 +177,45 @@ const result = await runGate({
       if (err) return { ok: false, why: "出戰被拒", err };
       return playCsMapToResult();
     };
+    //  TD-BP9-23：日曆停住時，把當天的賽程與畫面上能做的事都記下來。
+    const visibleButtons = () => ev("const vis=(e)=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0;};return JSON.stringify([...document.querySelectorAll('button,[role=button],a[data-testid]')].filter(vis).map((b)=>({t:(b.innerText||'').replace(/\\s+/g,' ').trim().slice(0,40),id:b.dataset.testid||null,dis:!!b.disabled})).slice(0,80));");
+    const fixtureState = () => ev(`
+      const p=JSON.parse(localStorage.getItem('esmo.profile.v1')||'{}');const me=p.team&&p.team.id;const out={day:p.meta&&p.meta.days,me,offSeason:!!(p.meta&&p.meta.offSeason&&p.meta.offSeason.open),session:p.matchmaking&&p.matchmaking.session?{state:p.matchmaking.session.state,mode:p.matchmaking.session.mode,fixtureId:p.matchmaking.session.fixtureId||null}:null,modes:{}};
+      for(const m of ['moba','cs']){const s=p.competitionByMode&&p.competitionByMode[m];if(!s){out.modes[m]=null;continue;}
+        const mine=(s.fixtures||[]).filter((f)=>f.sideA===me||f.sideB===me);
+        const pick=(f)=>{const o={};for(const k of ['id','status','day','round','stage','phase','week','matchFormat','winner','sideA','sideB'])if(f[k]!==undefined)o[k]=f[k];return o;};
+        out.modes[m]={schema:s.schema||null,phase:s.phase||s.stage||null,seasonIndex:s.seasonIndex??s.season??null,startDay:s.startDay??null,keys:Object.keys(s).slice(0,30),mineOpen:mine.filter((f)=>f.status!=='done'&&f.status!=='settled').slice(0,8).map(pick),mineLast:mine.slice(-3).map(pick),mineCount:mine.length};}
+      return JSON.stringify(out);`);
+    const diagnoseStuck = async () => {
+      const d = { state: await fixtureState(), errors: errors() };
+      await home();
+      d.home = { worldTime: await text("home-world-time"), nextStop: await text("home-next-stop"), buttons: await visibleButtons() };
+      await toHub();
+      d.hub = {};
+      for (const m of ["moba", "cs"]) {
+        await toTab(m);
+        d.hub[m] = { panel: await text("competition-hub-panel"), error: await text("competition-hub-error"), csError: await text("cs-hub-error"), buttons: await visibleButtons(),
+          csPlay: await has("cs-league-play"), csLineupRequired: await has("cs-hub-lineup-required"), mobaPlay: await hasMobaFixture() };
+      }
+      return d;
+    };
     //  把日曆推到下一場玩家賽程，回傳是哪個項目。
     const reachFixture = async (want = null) => {
       for (let i = 0; i < 30; i++) {
         await home(); await toHub(); await toTab("cs");
-        const cs = (await has("cs-league-play")) || (await has("cs-hub-lineup-required"));
+        const cs = (await has("cs-league-play")) || (await has("cs-hub-lineup-required")) || (await has("cs-league-resume"));
         await toTab("moba");
-        const moba = await hasMobaFixture();
+        let moba = await hasMobaFixture();
+        //  TD-BP9-23：MOBA 賽季結束後停在賽季回顧，要按「開始下一賽季」才會排新賽程（玩家的操作，不是自動）。
+        //  --diag-no-moba-roll：只用來重現 TD-BP9-23 的舊路徑（不按開始下一賽季，走到第 313 天的 CS BO3），結果不算 gate。
+        if (!moba && !DIAG_NO_MOBA_ROLL && (await has("recap-next-season-cta"))) {
+          await click("recap-next-season-cta"); await sleep(1800);
+          const s = await step("MOBA 開始下一賽季");
+          report.findings.push({ kind: "moba_next_season", day: s.disk.day, notice: s.notice });
+          ck(`MOBA 開始下一賽季、沒有存檔提示（第 ${s.disk.day} 天）`, !s.notice.on, JSON.stringify(s.notice));
+          await home(); await toHub(); await toTab("moba");
+          moba = await hasMobaFixture();
+        }
         if (want === "moba" && moba) return "moba";
         if (want === "cs" && cs) return "cs";
         if (!want && (moba || cs)) return cs ? "cs" : "moba";
@@ -202,7 +245,15 @@ const result = await runGate({
           ck(`休賽期完成、沒有存檔提示（第 ${after.disk.day} 天）`, !after.notice.on, JSON.stringify(after.notice));
           continue;
         }
-        if ((await disk())?.day === before) { console.log(`找賽程中止：推進日曆沒有前進（第 ${before} 天）${(await notice()).on ? "，有提示 " + (await notice()).message : ""}`); report.findings.push({ kind: "advance_stuck", day: before, hub: await text("competition-hub-error") }); return null; }
+        if ((await disk())?.day === before) {
+          console.log(`找賽程中止：推進日曆沒有前進（第 ${before} 天）${(await notice()).on ? "，有提示 " + (await notice()).message : ""}`);
+          //  TD-BP9-23 診斷（Owner 2026-11-07）：停住當天的賽程狀態、模式、畫面上能按的東西。只記錄，不改判定。
+          const diag = await diagnoseStuck();
+          report.findings.push({ kind: "advance_stuck", day: before, hub: await text("competition-hub-error"), diag });
+          save();
+          console.log(`DIAG ${JSON.stringify(diag).slice(0, 3000)}`);
+          return null;
+        }
       }
       return null;
     };

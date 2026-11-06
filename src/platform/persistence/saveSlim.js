@@ -11,9 +11,9 @@
 //    · **所有交易識別（鍵）永久保留**：防重只看鍵在不在，所以縮小值不會讓同一場再算一次
 //
 //  ── 什麼時候套用 ──────────────────────────────────────────────────────
-//  只有 `meta.saveSlim` 存在（玩家確認過遷移、或開局時就沒有東西可丟）才套用。
+//  只有玩家下載備份並確認、整理寫進磁碟之後（`meta.saveSlim.mode === "migrated"`）才套用。
 //  在那之前寫入行為與 P0-A 完全相同：Owner 要求第一次不可逆的整理之前要先給備份、
-//  取得玩家確認。
+//  取得玩家確認（2026-11-07 起新局與小存檔也一樣，不再靜默啟用）。
 //
 //  ⚠ 本檔不 import 任何 store（profileStore、seasonStore 都會 import 它）。
 // ============================================================================
@@ -33,9 +33,19 @@ const CS_DETAIL_FIELDS = ["analytics", "roundDetails"];
 //  開關
 // ══════════════════════════════════════════════════════════════════════════
 
+/**
+ * 玩家下載備份並勾選確認之後寫下的標記模式。**只有這一種**會讓規則生效。
+ *
+ * ⚠ Owner 2026-11-07：第一次真的摘要化之前一定要先備份並取得確認，首次授權之後才可以自動維持精簡。
+ *   舊版（`d9b918cc`..`fc51e1ea`，從未上 main）會在「現在沒有東西要摘要」時直接寫下 `new`／`auto` 標記，
+ *   等於還沒授權就先啟用了。那兩種標記一律當成「沒有授權」：不套用規則、可以重新走整理流程。
+ */
+export const SLIM_CONSENTED_MODE = "migrated";
+export const isConsentedSlimMark = (mark) => !!mark && Number(mark.v) >= SAVE_SLIM_VERSION && mark.mode === SLIM_CONSENTED_MODE;
+
 /** 這份存檔是否已啟用瘦身規則。 */
 //  ⚠ 整理後的驗證失敗（failed）就停用：畫面說「之後不會再自動改動存檔」，規則本身也可能就是出錯的原因（Review 第 1 輪 m2）。
-export const isSlimEnabled = (meta) => Number(meta?.saveSlim?.v) >= SAVE_SLIM_VERSION && !meta?.saveSlim?.failed;
+export const isSlimEnabled = (meta) => isConsentedSlimMark(meta?.saveSlim) && !meta?.saveSlim?.failed;
 
 //  Season 存在另一個 store，讀不到 profile 的 meta：由 profileStore 在載入與遷移時設定。
 let seasonSlimActive = false;

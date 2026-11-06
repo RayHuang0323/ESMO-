@@ -2,7 +2,8 @@
 //  persistence/saveSlimMigration.js — BP-9 P0-B：舊存檔的一次性整理
 //
 //  ── 流程（Owner 2026-11-06）──────────────────────────────────────────────
-//  ① 開機：判斷這份存檔要不要整理。沒有東西會被摘要化 ⇒ 直接啟用，不問、不寫。
+//  ① 開機：判斷這份存檔要不要整理。只檢查、不寫。沒有東西會被摘要化 ⇒ 什麼都不做，
+//     **不啟用**（Owner 2026-11-07：首次授權之前不得自動摘要化，新局也一樣）。
 //  ② 要整理 ⇒ 玩家先下載完整備份並確認，才可以開始。取消或備份失敗，什麼都不動。
 //  ③ 以**磁碟上最後一次成功的存檔**為準整理（P0-A 承諾過它完好），不是記憶體那份。
 //     先寫 Season，再寫 profile（profile 是提交點，帶著遷移標記與比對用的雜湊）。
@@ -21,7 +22,7 @@ import {
   PROFILE_KEY, HERO_PROGRESS_KEY, SEASON_KEY, readSeasonPayload, seasonPayload,
 } from "./localSaveProvider.js";
 import {
-  SAVE_SLIM_VERSION, isSlimEnabled, setSeasonSlimActive, slimProfileRecord, slimSeasonHistory,
+  SAVE_SLIM_VERSION, SLIM_CONSENTED_MODE, isSlimEnabled, isConsentedSlimMark, setSeasonSlimActive, slimProfileRecord, slimSeasonHistory,
   planSaveSlim, slimExpectation, verifySlim, freezeSaveWrites, storageChars, fnv,
 } from "./saveSlim.js";
 import { useCommitAlertStore, setCommitAlert, appendAudit, loadCommitAlert } from "./matchCommit.js";
@@ -78,22 +79,18 @@ export function bootSaveSlim() {
     if (mark.verified === false) return finishVerification(mark);
     return publish(SLIM_STATES.none);
   }
-  //  新玩家（磁碟上沒有 profile）：沒有任何舊資料，直接啟用。只改記憶體，第一次開機仍然不寫 localStorage（Review 第 1 輪 m3）。
+  //  ⚠ Owner 2026-11-07：沒有授權就不啟用。新玩家、或現在沒有東西要摘要的存檔，都只做檢查、不寫標記；
+  //    寫入行為與 P0-A 相同，等存檔長到有東西要摘要時，再走「下載備份 → 勾選確認 → 整理」。
+  //    舊版留下的 `new`／`auto` 標記（未授權）也走這裡，不套用規則。
+  setSeasonSlimActive(false);
   let hasProfile = true;
   try { hasProfile = local()?.getItem(PROFILE_KEY) != null; } catch { hasProfile = true; }
-  if (!hasProfile) return enableQuietly("new");
+  if (!hasProfile) return publish(SLIM_STATES.none);   // 新玩家：第一次開機不寫 localStorage（Review 第 1 輪 m3）
   const disk = readDiskSave();
-  if (!disk) return publish(SLIM_STATES.none);   // 讀不懂：由載入流程隔離，不在這裡啟用
+  if (!disk) return publish(SLIM_STATES.none);   // 讀不懂：由載入流程隔離，不在這裡處理
   const plan = planSaveSlim(disk);
-  //  沒有任何東西會被摘要化：不需要備份與確認，直接啟用。不寫磁碟（見 _enableSaveSlimQuiet）。
-  if (plan.total === 0) return enableQuietly("auto");
+  if (plan.total === 0) return publish(SLIM_STATES.none);
   return publish(SLIM_STATES.needed, { plan });
-}
-
-function enableQuietly(mode) {
-  useProfileStore.getState()._enableSaveSlimQuiet({ v: SAVE_SLIM_VERSION, at: Date.now(), mode, verified: true });
-  setSeasonSlimActive(true);
-  return publish(SLIM_STATES.none);
 }
 
 /**
@@ -148,15 +145,17 @@ export function runSaveSlimMigration({ backupConfirmed = false, backupFingerprin
   if (FINGERPRINT_KEYS.some((k) => nowFp[k] !== backupFingerprint[k])) return { ok: false, stage: "backup_stale" };
   const disk = readDiskSave(storage);
   if (!disk) return { ok: false, stage: "unreadable" };
-  //  ⚠ 有任何標記（包括驗證失敗的）都不再整理：failed 時 isSlimEnabled 為否，只看它會把失敗標記蓋掉（Review 第 2 輪 n6）。
-  if (disk.profile.meta?.saveSlim) return { ok: false, stage: "already_marked" };
+  //  ⚠ 已授權或驗證失敗的標記都不再整理：failed 時 isSlimEnabled 為否，只看它會把失敗標記蓋掉（Review 第 2 輪 n6）。
+  //    舊版未授權的 `new`／`auto` 標記不算，玩家這次備份並確認之後可以整理（標記會被換成 migrated）。
+  const prior = disk.profile.meta?.saveSlim;
+  if (prior && (prior.failed || isConsentedSlimMark(prior))) return { ok: false, stage: "already_marked" };
   const plan = planSaveSlim(disk);
   const expect = slimExpectation(disk);
   const profile = {
     ...slimProfileRecord(disk.profile),
     meta: {
       ...(disk.profile.meta ?? {}),
-      saveSlim: { v: SAVE_SLIM_VERSION, at: now, mode: "migrated", verified: false, before: plan.before, after: plan.after, expect },
+      saveSlim: { v: SAVE_SLIM_VERSION, at: now, mode: SLIM_CONSENTED_MODE, verified: false, before: plan.before, after: plan.after, expect },
     },
   };
   const seasonHistory = slimSeasonHistory(disk.seasonHistory);

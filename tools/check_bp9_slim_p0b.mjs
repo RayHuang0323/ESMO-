@@ -16,6 +16,9 @@
 //  §7 寫入時持續套用：啟用後新增的比賽照規則摘要化；未啟用時行為與 P0-A 相同
 //  §8 輕量容量壓力：真實資料樣板經真的 Store Action 灌 N 季，總量不超過上限
 //  §9 P0-A 保護：已滿提示在整理後清掉；凍結期間 save() 不寫
+//  §7b 首次授權（Owner 2026-11-07）：新局與小存檔不靜默啟用；超過門檻也不摘要化，直到備份並確認；
+//      舊版未授權的 new／auto 標記不算授權；授權過的玩家開新局要重新授權
+//  §10 兩個分頁：舊備份接著整理被拒、已整理的不會再整理、同時整理結果一致、舊分頁蓋回不會讓資料變少
 //
 //  ⚠ store 在 import 時讀磁碟，所以每一次「重新整理」都是新的子行程。
 //  ⚠ 真比賽連打交給 tools/season_e2e_w1.mjs（從整理後的存檔接著跑），真畫面交給
@@ -206,6 +209,45 @@ if (arg("child")) {
         }
         const okSave = st().save();
         out.steps.push({ op: "grow", applied: n, okSave, chars: ctl.used(), series, writesFailed: ctl.writes.filter((w) => w.op !== "set" && w.op !== "remove").length });
+        continue;
+      }
+      if (s.op === "rememberFp") {
+        //  分頁 B 下載備份當下的指紋（之後磁碟可能被分頁 A 改掉）。
+        out.savedFp = MIG.diskFingerprint();
+        out.steps.push({ op: "rememberFp" });
+        continue;
+      }
+      if (s.op === "replaceDisk") {
+        //  另一個分頁寫了磁碟：本分頁的 store 仍是開機時讀進來的那份（store 只在載入時讀磁碟）。
+        ctl.map.clear();
+        for (const [k, v] of Object.entries(s.storage)) ctl.map.set(k, v);
+        out.steps.push({ op: "replaceDisk" });
+        continue;
+      }
+      if (s.op === "migrateSavedFp") {
+        const r = MIG.runSaveSlimMigration({ backupConfirmed: true, backupFingerprint: out.savedFp ?? null });
+        out.steps.push({ op: "migrateSavedFp", r: { ok: r.ok, stage: r.stage }, frozenNow: SLIM.saveWritesFrozen() });
+        continue;
+      }
+      if (s.op === "saveNow") {
+        const ok = st().save();
+        out.steps.push({ op: "saveNow", ok, frozenNow: SLIM.saveWritesFrozen() });
+        continue;
+      }
+      if (s.op === "newGame") {
+        //  玩家在遊戲裡開新局（Owner 2026-11-07：新局也要重新授權）。
+        //  ⚠ 情境 id 不對時 startNewGame 回 false、什麼都不做：一定要把回傳值記下來，否則測的是舊局。
+        const { DEFAULT_SCENARIO } = await imp("src/platform/economy/economyConfig.js");
+        const started = st().startNewGame(s.scenario ?? DEFAULT_SCENARIO);
+        out.steps.push({ op: "newGame", started, day: st().meta?.days ?? null, slim: st().meta?.saveSlim ?? null, seasonActive: SLIM.seasonSlimActive_() });
+        continue;
+      }
+      if (s.op === "setMark") {
+        //  模擬舊版（d9b918cc..fc51e1ea）在沒授權時寫下的 new／auto 標記。
+        const p = JSON.parse(ctl.map.get(PROFILE_KEY));
+        p.meta = { ...(p.meta ?? {}), saveSlim: s.mark };
+        ctl.map.set(PROFILE_KEY, JSON.stringify(p));
+        out.steps.push({ op: "setMark" });
         continue;
       }
       if (s.op === "facts") { out.steps.push({ op: "facts", ...facts() }); continue; }
@@ -486,10 +528,119 @@ const T = (() => {
   ck("未啟用的存檔：新比賽不做任何摘要化（CS、帳本、結算、Season）", step(n, "facts").csArchived === 0
     && Object.values(np.processedMatchTransactions).every((r) => !r.archived) && Object.values(np.matchmaking?.settlements ?? {}).every((r) => !r.archived)
     && ns.filter((r) => (r.timeline ?? []).length > 0).length === ns.length, `${step(n, "facts").csArchived}`);
-  //  新玩家：沒有存檔
+  //  新玩家：沒有存檔。⚠ Owner 2026-11-07：沒有授權就不啟用（只檢查、不寫）。
   const fresh = run({}, [{ op: "boot" }, { op: "facts" }, { op: "storeView" }], { clock: 1800000000000 });
-  ck("新玩家：直接啟用規則（只在記憶體）", step(fresh, "storeView").slim?.mode === "new" && step(fresh, "storeView").seasonActive === true, JSON.stringify(step(fresh, "storeView")));
+  ck("新玩家：不啟用規則、記憶體裡沒有標記", step(fresh, "boot").state === "none" && step(fresh, "storeView").slim === null && step(fresh, "storeView").seasonActive === false, JSON.stringify(step(fresh, "storeView")));
   ck("新玩家第一次開機：localStorage 維持全空", Object.keys(fresh.storage).length === 0, Object.keys(fresh.storage).join(","));
+}
+
+// ── §7b 首次授權（Owner 2026-11-07）─────────────────────────────────────
+console.log("\n§7b 第一次真的摘要化之前一定要備份並確認；授權後才自動維持精簡");
+{
+  const archivedCount = (o) => Object.values(o ?? {}).filter((r) => r?.archived).length;
+  const noSummaries = (storage) => {
+    const p = JSON.parse(storage[PROFILE_KEY]);
+    const season = storage[SEASON_KEY] ? JSON.parse(storage[SEASON_KEY]).history : [];
+    return { cs: (p.csHistory ?? []).filter((e) => e.archived).length, tx: archivedCount(p.processedMatchTransactions), settle: archivedCount(p.matchmaking?.settlements),
+      seasonStripped: season.filter((r) => r.timelineArchived).length, mark: p.meta?.saveSlim ?? null };
+  };
+  //  ① 小存檔（第 1 場之後）：現在沒有東西要摘要。
+  const small = loadCk("002-first-match.json");
+  const b = run(small.storage, [{ op: "boot" }, { op: "storeView" }, { op: "plan" }], { clock: small.clock + 1000 });
+  ck("小存檔：前提成立（計畫 0 筆）", step(b, "plan").plan?.total === 0, JSON.stringify(step(b, "plan").plan?.changes));
+  ck("小存檔開機：不啟用、不寫任何東西", step(b, "boot").state === "none" && step(b, "storeView").slim === null && step(b, "storeView").seasonActive === false && b.writes.length === 0, `${b.writes.join(",")} ${JSON.stringify(step(b, "storeView").slim)}`);
+  //  ② 不授權就一直長：超過 5／10／20 筆門檻也不得摘要化（行為與 P0-A 相同）。
+  const g = run(small.storage, [{ op: "boot" }, { op: "grow", matches: 32, tag: "u" }, { op: "storeView" }], { clock: small.clock + 2000, templates: T });
+  const gs = noSummaries(g.storage);
+  ck("未授權加 32 場：全部入帳", step(g, "grow").applied === 32, JSON.stringify(step(g, "grow")));
+  ck("未授權加 32 場：CS、帳本、結算、Season 都沒有任何摘要化，也沒有標記", gs.cs === 0 && gs.tx === 0 && gs.settle === 0 && gs.seasonStripped === 0 && gs.mark === null, JSON.stringify(gs));
+  const gp = JSON.parse(g.storage[PROFILE_KEY]);
+  ck("未授權加 32 場：前提成立（已超過門檻：CS > 5、帳本 > 20）", (gp.csHistory ?? []).length > 5 && Object.keys(gp.processedMatchTransactions ?? {}).length > 20, `${(gp.csHistory ?? []).length}/${Object.keys(gp.processedMatchTransactions ?? {}).length}`);
+  //  ③ 再開機：這時才判定要整理（走備份＋確認）。沒確認就拒絕。
+  const n = run(g.storage, [{ op: "boot" }, { op: "migrate", confirmed: false }], { clock: g.clock + 1000 });
+  ck("長大之後開機：判定要整理（needed），不自動做", step(n, "boot").state === "needed" && canon(n.storage) === canon(g.storage), step(n, "boot").state);
+  ck("長大之後：沒確認備份就拒絕", step(n, "migrate").r.stage === "no_backup");
+  //  ④ 備份並確認 → 整理 → 冷啟動 → 之後自動維持精簡。
+  const m = run(g.storage, [{ op: "boot" }, { op: "migrate", confirmed: true }], { clock: g.clock + 1000 });
+  const c = run(m.storage, [{ op: "boot" }, { op: "grow", matches: 8, tag: "v" }, { op: "storeView" }], { clock: m.clock + 1000, templates: T });
+  const cp = JSON.parse(c.storage[PROFILE_KEY]);
+  ck("授權後：冷啟動驗證通過、標記 migrated", step(c, "boot").r.verify?.ok === true && cp.meta.saveSlim?.mode === "migrated" && cp.meta.saveSlim?.verified === true, JSON.stringify(step(c, "boot").r.verify));
+  ck("授權後：新比賽自動照規則（CS 前 5 場完整、其餘摘要；帳本最後 20 筆完整）",
+    cp.csHistory.slice(0, 5).every((e) => !e.archived) && cp.csHistory.slice(5).every((e) => e.archived === "summary")
+    && Object.values(cp.processedMatchTransactions).slice(-20).every((r) => !r.archived) && Object.values(cp.processedMatchTransactions).slice(0, -20).every((r) => r.archived === "summary")
+    && step(c, "storeView").seasonActive === true,
+    `${cp.csHistory.map((e) => e.archived ? "s" : "F").join("")}`);
+  //  ⑤ 舊版留下的未授權標記（new／auto）：不得當成授權。
+  for (const mode of ["auto", "new"]) {
+    const legacy = run(g.storage, [{ op: "setMark", mark: { v: 1, at: 1, mode, verified: true } }, { op: "boot" }, { op: "storeView" }, { op: "grow", matches: 3, tag: `l${mode}` }], { clock: g.clock + 3000, templates: T });
+    const ls = noSummaries(legacy.storage);
+    ck(`舊版 ${mode} 標記：不套用規則、判定要整理、新比賽不摘要化`, step(legacy, "boot").state === "needed" && step(legacy, "storeView").seasonActive === false && ls.cs === 0 && ls.tx === 0 && ls.settle === 0 && ls.seasonStripped === 0, JSON.stringify({ boot: step(legacy, "boot").state, ls }));
+    const lm = run(legacy.storage, [{ op: "boot" }, { op: "migrate", confirmed: true }], { clock: legacy.clock + 1000 });
+    const lc = run(lm.storage, [{ op: "boot" }], { clock: lm.clock + 1000 });
+    ck(`舊版 ${mode} 標記：備份並確認後可以整理，冷啟動通過並換成 migrated`, step(lm, "migrate").r.ok && step(lc, "boot").r.verify?.ok === true && JSON.parse(lc.storage[PROFILE_KEY]).meta.saveSlim.mode === "migrated", JSON.stringify(step(lm, "migrate").r));
+  }
+  //  ⑥ 授權過的玩家開新局：新局沒有授權，規則要關掉。
+  const ng = run(c.storage, [{ op: "boot" }, { op: "newGame" }, { op: "grow", matches: 30, tag: "w" }, { op: "storeView" }], { clock: c.clock + 1000, templates: T });
+  const ns = noSummaries(ng.storage);
+  ck("授權後開新局：前提成立（新局真的開了、回到第 1 天附近）", step(ng, "newGame").started !== false && step(ng, "newGame").day < 30, JSON.stringify(step(ng, "newGame")));
+  ck("授權後開新局：記憶體沒有標記、Season 規則關閉", step(ng, "newGame").slim === null && step(ng, "newGame").seasonActive === false, JSON.stringify(step(ng, "newGame")));
+  ck("授權後開新局再打 30 場：沒有任何摘要化（要重新授權）", ns.cs === 0 && ns.tx === 0 && ns.settle === 0 && ns.seasonStripped === 0 && ns.mark === null, JSON.stringify(ns));
+}
+
+// ── §10 兩個分頁（Owner 2026-11-07 第 3 項）────────────────────────────────
+//  同一份存檔開在兩個分頁。不能發生：兩次不可逆整理互相覆寫成不一致的存檔、
+//  或舊分頁把整理後的存檔蓋成「資料比整理前少」的樣子。
+console.log("\n§10 兩個分頁同時開著同一份存檔");
+{
+  const S0 = C24.storage;
+  const base = JSON.parse(S0[PROFILE_KEY]);
+  const sameCore = (storage) => {
+    const p = JSON.parse(storage[PROFILE_KEY]);
+    return p.finance?.funds === base.finance?.funds && p.meta?.days === base.meta?.days
+      && JSON.stringify(Object.keys(p.processedMatchTransactions ?? {})) === JSON.stringify(Object.keys(base.processedMatchTransactions ?? {}))
+      && JSON.stringify(Object.keys(p.matchmaking?.settlements ?? {})) === JSON.stringify(Object.keys(base.matchmaking?.settlements ?? {}))
+      && (p.csHistory ?? []).length === (base.csHistory ?? []).length && storage[HERO_KEY] === S0[HERO_KEY];
+  };
+  //  分頁 A 整理完成（寫進磁碟，還沒重新整理）。
+  const A = run(S0, [{ op: "boot" }, { op: "migrate", confirmed: true }], { quota: Q, clock: C24.clock });
+  const S1 = A.storage;
+  ck("前提：分頁 A 整理成功", step(A, "migrate").r.ok);
+  //  ① 分頁 B 在 A 之前就下載了備份，A 整理後 B 也按「開始整理」：指紋對不上，拒絕、不寫、不凍結。
+  const B1 = run(S0, [{ op: "boot" }, { op: "rememberFp" }, { op: "replaceDisk", storage: S1 }, { op: "migrateSavedFp" }], { quota: Q, clock: C24.clock + 500 });
+  ck("B 拿舊備份接著整理：拒絕（backup_stale），磁碟仍是 A 的結果、B 沒凍結", step(B1, "migrateSavedFp").r.stage === "backup_stale" && canon(B1.storage) === canon(S1) && step(B1, "migrateSavedFp").frozenNow === false, JSON.stringify(step(B1, "migrateSavedFp")));
+  //  ② 已整理且有標記的存檔，B 重新下載備份後再整理：already_marked，不會第二次摘要化。
+  const B2 = run(S0, [{ op: "boot" }, { op: "replaceDisk", storage: S1 }, { op: "rememberFp" }, { op: "migrateSavedFp" }], { quota: Q, clock: C24.clock + 600 });
+  ck("B 對 A 已整理的存檔重新備份再整理：拒絕（already_marked），磁碟不變", step(B2, "migrateSavedFp").r.stage === "already_marked" && canon(B2.storage) === canon(S1), JSON.stringify(step(B2, "migrateSavedFp")));
+  //  ③ 真的同時：兩個分頁都在對方寫入前通過指紋檢查（瀏覽器跨分頁同步有延遲）。
+  //     兩次整理都來自同一份磁碟，結果除了時間戳記之外必須逐位元相同，後寫的蓋掉先寫的也一致。
+  const A2 = run(S0, [{ op: "boot" }, { op: "migrate", confirmed: true }], { quota: Q, clock: C24.clock + 99_000 });
+  const stripAt = (raw) => { const p = JSON.parse(raw); return JSON.stringify({ ...p, meta: { ...p.meta, saveSlim: { ...p.meta.saveSlim, at: 0 } } }); };
+  ck("兩個分頁同時整理：profile 除了時間戳記逐位元相同、Season 逐位元相同", stripAt(A2.storage[PROFILE_KEY]) === stripAt(S1[PROFILE_KEY]) && A2.storage[SEASON_KEY] === S1[SEASON_KEY]);
+  const mixed = { ...S1, [PROFILE_KEY]: A2.storage[PROFILE_KEY] };   // A 的 Season ＋ B 的 profile
+  const mixedBoot = run(mixed, [{ op: "boot" }], { quota: Q, clock: C24.clock + 100_000 });
+  ck("兩個分頁同時整理、交錯落盤：冷啟動驗證通過", step(mixedBoot, "boot").r.verify?.ok === true, JSON.stringify(step(mixedBoot, "boot").r.verify));
+  //  ④ A 整理後、重新整理前，B（記憶體還是整理前的完整資料）照常存檔：B 的完整 profile 蓋回去。
+  const B4 = run(S0, [{ op: "boot" }, { op: "replaceDisk", storage: S1 }, { op: "saveNow" }], { quota: Q, clock: C24.clock + 700 });
+  const after = run(B4.storage, [{ op: "boot" }, { op: "facts" }], { quota: Q, clock: C24.clock + 800 });
+  const ap = JSON.parse(after.storage[PROFILE_KEY]);
+  ck("舊分頁蓋回完整存檔後 A 冷啟動：不是 failed，回到「要整理」，沒有標記", step(after, "boot").state === "needed" && !ap.meta?.saveSlim, `${step(after, "boot").state} ${JSON.stringify(ap.meta?.saveSlim ?? null)}`);
+  ck("舊分頁蓋回後：profile 的資金、天數、帳本鍵、結算鍵、CS 場數（全部完整）與熟練都與整理前相同", sameCore(after.storage) && (ap.csHistory ?? []).filter((e) => e.archived).length === 0);
+  //  Review m1：舊分頁只寫 profile，Season 停在 A 已授權、已備份的摘要狀態（不是遺失，是玩家同意過的整理）。
+  ck("舊分頁蓋回後：Season 停在 A 已授權的整理結果", after.storage[SEASON_KEY] === S1[SEASON_KEY]);
+  //  Review m2：反過來，舊分頁只寫了 Season（profile 還是 A 的、帶未驗證標記）。
+  //  ⚠ Review 預測會變 failed；實測不會：驗證比的是 Season「拿掉 timeline 之後的內容」與「最後 10 場完整內容」，
+  //    完整版在這兩項與整理版相同，只是多了 timeline（＝資料比整理版多）。所以驗證通過，下次寫 Season 時依已授權規則再精簡。
+  //    這條斷言釘住實際行為：通過、Season 原樣是完整的、帳本鍵與熟練不變。
+  const B5 = { ...S1, [SEASON_KEY]: S0[SEASON_KEY] };
+  const b5 = run(B5, [{ op: "boot" }, { op: "facts" }, { op: "storeView" }], { quota: Q, clock: C24.clock + 1100 });
+  ck("舊分頁只寫回 Season：冷啟動驗證通過、標記 verified（完整 Season 是整理版的超集）", step(b5, "boot").r?.verify?.ok === true && step(b5, "facts").slim?.verified === true && !step(b5, "facts").slim?.failed, JSON.stringify(step(b5, "boot").r?.verify ?? step(b5, "boot")));
+  ck("舊分頁只寫回 Season：開機不改 Season（仍是完整版）、帳本鍵與熟練不變（沒有資料比整理前少）", b5.storage[SEASON_KEY] === S0[SEASON_KEY] && JSON.stringify(step(b5, "facts").ledgerKeys) === JSON.stringify(Object.keys(base.processedMatchTransactions ?? {})) && b5.storage[HERO_KEY] === S0[HERO_KEY]);
+  ck("舊分頁只寫回 Season：規則已啟用，之後寫 Season 會依授權精簡", step(b5, "storeView").seasonActive === true);
+  ck("舊分頁蓋回後：重新備份並確認可以再整理，冷啟動通過", (() => {
+    const m = run(after.storage, [{ op: "boot" }, { op: "migrate", confirmed: true }], { quota: Q, clock: C24.clock + 900 });
+    const c = run(m.storage, [{ op: "boot" }], { quota: Q, clock: C24.clock + 1000 });
+    return step(m, "migrate").r.ok && step(c, "boot").r.verify?.ok === true && sameCore(c.storage);
+  })());
 }
 
 // ── §8 輕量容量壓力：N 季 ─────────────────────────────────────────────────

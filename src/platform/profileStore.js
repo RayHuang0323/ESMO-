@@ -105,7 +105,7 @@ import { displayIdentityOf, publishedAtOf, opponentEntry } from "./challenge/opp
 import { saveBundleNow, resetAllPersistence, idleSaveState, saveStatusView } from "./persistence/saveGateway.js";
 //  B1C：讀不懂的存檔要**先隔離再開新局**，不准被下一次 save() 靜默覆寫。
 import { readProfileRecord, quarantine, PROFILE_KEY as LS_PROFILE_KEY } from "./persistence/localSaveProvider.js";
-import { isSlimEnabled, slimCsHistory, saveWritesFrozen, setSeasonSlimActive, SAVE_SLIM_VERSION } from "./persistence/saveSlim.js";
+import { isSlimEnabled, slimCsHistory, saveWritesFrozen, setSeasonSlimActive } from "./persistence/saveSlim.js";
 //  Club Progression v1：Club XP／Club Level 的唯一權威（純函式，等級一律推導）。
 import {
   emptyClubProgression, normalizeClubProgression, clubProgressionViewOf,
@@ -1055,15 +1055,6 @@ export const useProfileStore = create((rawSet, get) => {
   _setSaveSlim(mark) {
     set({ meta: { ...get().meta, saveSlim: mark } });
     return get().save();
-  },
-
-  /**
-   * BP-9 P0-B：沒有任何東西會被摘要化時直接啟用，不存檔、不算未存變更。
-   * ⚠ 第一次開遊戲時 localStorage 必須維持全空（正式站 Smoke 的前提），所以不能在開機時寫入；
-   *   標記會跟著下一次正常存檔寫出去。
-   */
-  _enableSaveSlimQuiet(mark) {
-    rawSet({ meta: { ...get().meta, saveSlim: mark } });
   },
 
   /** 不是 profile 自己寫失敗、但提交已經失敗時（例如日誌寫不進去），讓畫面也知道。 */
@@ -3930,8 +3921,8 @@ export const useProfileStore = create((rawSet, get) => {
       lineup: { ...DEFAULT_LINEUP },
       csLineup: normalizeCsLineup(null, null),
       team: { ...DEFAULT.team },
-      //  BP-9 P0-B：新局沒有舊資料，直接啟用瘦身規則。
-      meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season, saveSlim: { v: SAVE_SLIM_VERSION, at: Date.now(), mode: "new", verified: true } },
+      //  BP-9 P0-B（Owner 2026-11-07）：新局不帶瘦身標記。第一次真的要摘要化之前，一樣要先備份並取得確認。
+      meta: { ...DEFAULT.meta, days: t.day, week: t.week, season: t.season },
       finance: { ...DEFAULT.finance, funds: ng.funds, transactions: [] },
       activeSponsor: ng.activeSponsor,
       csHistory: [],
@@ -3948,7 +3939,8 @@ export const useProfileStore = create((rawSet, get) => {
       matchmaking: { ticket: null, room: null, session: null, launch: null, lastResult: null, settlements: {}, lastSettlementError: null },
       schemaVersion: PROFILE_SCHEMA_VERSION,
     })));
-    setSeasonSlimActive(true);
+    //  ⚠ 上一局如果授權過，Season 的規則還開著；新局沒有授權，要關掉。
+    setSeasonSlimActive(false);
     get().pushInbox({
       type: "match", from: "戰隊管理處",
       subject: `新賽季開始 · ${sc.name}`,

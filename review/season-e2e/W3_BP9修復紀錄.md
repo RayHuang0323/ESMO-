@@ -288,3 +288,83 @@ W2 的原始證據沒有改動，在 `review/season-e2e/W2_瀏覽器驗收.md` �
 - 30 場連打是 W1 Node 真模擬；真 Chrome 整理後一共打了 17 場（`slim-cs` 14、`slim-300` 3）。
 - 20 季壓力是樣板資料經真 Store Action，不是真比賽；賽季帳本以外會隨季成長的欄位（`competitionHistoryByMode`、`honors` 等）沒有模擬到。
 - 正式站：P0-B 沒有部署。
+
+---
+
+## P0-B 發布前收尾（2026-11-07，Owner Release Review：有條件 GO，暫不 Push／Deploy）
+
+**Owner 裁定的 6 項：** ① 首次靜默瘦身改成先備份並確認 ② TD-BP9-23 第 313 天診斷 ③ 最小雙分頁驗證 ④ 確認正式站有沒有啟用 Supabase ⑤ 重跑 gate＋獨立 Reviewer ⑥ 更新紀錄並本機 commit。
+
+### ① 首次授權（產品程式）
+
+- **問題：** 原本開機時「現在沒有東西要摘要」的存檔、以及新局，會被靜默寫上 `new`／`auto` 標記並啟用規則；之後長大時較舊的紀錄會自動摘要，**從來沒有要求備份**。
+- **修正：** 只有 `mode: "migrated"`（玩家下載備份、勾選確認、整理寫入之後）才算授權（`isConsentedSlimMark`）。新局與小存檔只做檢查、不寫標記，寫入行為和 P0-A 相同；長到有東西要摘要時，開機判定 `needed`，走原本的「下載備份 → 勾選 → 整理」。舊版留下的 `new`／`auto` 標記一律當成未授權：不套用規則，而且可以重新整理（換成 `migrated`）。已授權的玩家開新局時，標記與 Season 規則都關掉，新局要重新授權。
+- 對話框在授權之前就說明：「按下開始整理也代表同意：之後的新比賽會照同樣的規則自動保持精簡，不會再逐次詢問。」
+- 備份指紋（`backup_stale`）、寫入凍結＋重新整理遮罩、冷啟動驗證、`bootSaveSlim` 比 P0-A 恢復先跑、新玩家第一次開機不寫 localStorage、防重只看鍵：**都沒有改動。**
+- **影響：** 新玩家要到存檔長大（首頁建議門檻 4.2 M，或頂到上限時的紅色提示）才會被邀請整理。在那之前沒有瘦身，只有 P0-A 的已滿保護（Owner 規格本來就是這樣）。「需要整理」只在開機時判定（Review m3，列入 TD-BP9-27）。
+
+### ② TD-BP9-23 第 313 天：**Gate 漏認，遊戲沒有卡住**
+
+在 gate 停住的分支加上診斷傾印，重跑 `slim-cs` 重現了同一天停住。當天的實際狀況：
+
+| 項目 | 狀況 |
+|---|---|
+| CS | 第 3 賽季年度 Major 的 **BO3**（`fx:cs:f7d62817`，`launched`），場次 `matchmaking.session` 為 CS `launched`。gate 打完第 1 張圖就當作這場結束；賽事中心只有「返回進行中的對戰」（`cs-league-resume`），gate 只認 `cs-league-play` |
+| MOBA | 第 2 賽季在第 239 天就結束了，畫面停在賽季回顧，要按「▶ 開始第 3 賽季」（`recap-next-season-cta`）才會排新賽程。gate 從來不按，所以 74 天都「等不到 MOBA」 |
+| 首頁 | 「下一站：今天有你的比賽（就是今天）」，並有「返回進行中的比賽」（`resume-active-match`）可以按 |
+| 錯誤 | 頁面錯誤 0、console 錯誤 0；兩個模式都沒有卡住的賽程；和存檔瘦身無關（賽程推導只讀 `competitionByMode`，瘦身只動 4 個欄位） |
+
+- **修正（只改 gate）：** CS 認得「返回進行中的對戰」並接著打；MOBA 沒有賽程但有「開始下一賽季」時，就按下去（玩家本來就會按的按鈕，不是自動）。沒有改任何斷言。
+- **證據：** 修正後 `slim-cs` 第 239 天開始第 3 賽季，第 244 天就有 MOBA 賽程。另外用只供診斷的 `--diag-no-moba-roll`（不按開始下一賽季，重現舊路徑）走到第 313 天：按「返回進行中的對戰」後，BO3 第 2 張圖打到結算（帳本 115 → 116、場次 `completed`、沒有提示），之後沒有再停住。那次唯一的紅（MOBA 沒完成賽程）是旗標刻意造成的，**不算 gate**；報告與結果名稱都會標成 DIAG-ONLY（Review m4）。
+- **產品觀察（不是本次範圍，未修）：** MOBA 賽季結束後要玩家手動開始下一季；不按的話日曆照走，MOBA 一直沒有賽程。這是原本的設計，列入 TD-BP9-28 交給 Owner 判斷。
+
+### ③ 兩個分頁（Node gate §10）
+
+| 情境 | 結果 |
+|---|---|
+| B 在 A 整理前下載備份，A 整理後 B 按開始整理 | 拒絕 `backup_stale`，磁碟仍是 A 的結果，B 沒有凍結 |
+| B 對 A 已整理的存檔重新備份再整理 | 拒絕 `already_marked`，不會第二次摘要化 |
+| 兩個分頁真的同時整理（都在對方寫入前通過檢查） | 兩次結果除了時間戳記之外逐位元相同；交錯落盤後冷啟動驗證通過 |
+| A 整理後、重新整理前，舊分頁 B 照常存檔（只寫 profile） | A 冷啟動回到 `needed`（不是 failed）、沒有標記；資金、天數、帳本鍵、結算鍵、CS 場數（全部完整）、熟練都與整理前相同；Season 停在 A 已授權的整理結果；重新備份後可以再整理 |
+| 舊分頁只寫回 Season（Review m2） | Reviewer 預測會變 failed，**實測不會**：驗證比的是拿掉 timeline 的內容與最後 10 場，完整版只是多了 timeline ⇒ 驗證通過、Season 原樣完整，之後依已授權規則精簡 |
+
+不能發生「兩次不可逆整理互相覆寫成不一致的存檔」，也不會出現「資料比整理前少」。**限制：** 這是 Node 模擬（子行程開機讀檔＋換掉磁碟），沒有在真 Chrome 開兩個分頁。一般性的多分頁「後寫的蓋掉先寫的」仍是 TD-BP9-6，不是 P0-B 帶來的。
+
+### ④ 正式站沒有啟用 Supabase
+
+2026-11-07 下載正式站入口 `index-lIVk9rC9.js`（5,081,992 bytes）：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`VITE_SUPABASE_REDIRECT_URL` 都是空字串，入口與 lazy chunk 都沒有 `supabase.co`。⇒ 線上是本機存檔，跨裝置瘦身相容性目前不會遇到。**⚠ `deploy.yml` 會把 repo Variables 傳給 build：** 部署 P0-B 那次如果 Variables 已經被填上，雲端就會在同一次上線。所以部署後要再檢查一次 bundle；如果有值，就是 NO-GO，跨裝置相容性驗證前要回滾（TD-BP9-29）。
+
+### 獨立 Review（第 4 輪，opus）
+
+**APPROVE**，沒有 Blocker 或 Major。Minor：m1 §10 斷言名稱說得比實際多 → 補 Season 斷言、改名；m2 舊分頁只寫 Season → 補測試（實測結果與預測不同，見 ③）；m3「需要整理」只在開機判定 → TD-BP9-27；m4 診斷旗標要標記 → 報告欄位與結果名稱都標 DIAG-ONLY；可選項：對話框開頭文案改用與首頁相同的量法（localStorage 全部字元數）→ 已改。
+
+### Git Revert 方案（準備好，沒有執行）
+
+- 只還原程式，不還原紀錄：`git revert` P0-B 的程式 commit（`d9b918cc`、`bc3cf25c`、`a29a3a7a`、`fc51e1ea` 與本次 commit），或從 `e53a0806` 取回 `src/` 下被改的檔、刪掉新增的 `src/platform/persistence/saveSlim*.js`、`saveBackup.js`、`src/ui/SaveSlimDialog.jsx`、`src/ui/saveBackupActions.js`，用一般 commit＋一般 push（不 force），由 CI 重新建置。不部署預先建好的舊 bundle。
+- **⚠⚠ 程式回滾無法恢復已經摘要化的歷史資料。** 已整理的存檔裡，CS 舊戰報的 `analytics`／`roundDetails`、Season 舊場次的 timeline、舊收據的明細已經不在 localStorage 裡了；回滾只會停止之後的整理。要找回，只能靠玩家整理前下載的備份檔。**而回滾後遊戲內的「從備份還原」也會一起消失**，要在下一版重新提供還原入口，或由人工協助。
+- 回滾後的相容性（程式碼分析）：舊版 meta 用展開讀取，會保留 `saveSlim` 標記；舊版讀帳本只看鍵、當場收據和結算 `trace`，摘要裡都有；CS 戰報能處理缺少進階資料。⇒ 已整理的存檔照樣能讀、不會壞，代價是存檔會重新長大。
+- 優先順序：先往前修（hotfix）；只有在整理流程本身造成傷害時才 revert。
+
+### 新的技術債
+
+- **TD-BP9-27「需要整理」只在開機判定：** 同一次開啟中從 0 玩到快滿，要重新載入才會看到整理建議（期間只有 P0-A 的已滿保護）。
+- **TD-BP9-28 MOBA 賽季結束後要手動開始下一季：** 不按的話日曆照走、MOBA 沒有賽程（原本的設計，交 Owner 判斷）。
+- **TD-BP9-29 部署當下的 Supabase 變數：** P0-B 部署後要再確認 bundle 沒有雲端設定；跨裝置瘦身沒有驗證過。
+- **TD-BP9-23 結案：** gate 漏認（見 ②）。
+
+### 驗證（2026-11-07，全部在本次改動之後實跑）
+
+| 項目 | 結果 |
+|---|---|
+| `npm run build` | 通過（built in 19.71s） |
+| `check_bp9_slim_p0b`（原 84 條＋§7b 首次授權＋§10 兩個分頁） | **112/112** |
+| `check_bp9_commit_p0a` | 1464/1464 |
+| 存檔 B1B／B1C／B1D | 86/86、76/76、136/136（`REMOTE_E2E_NOT_RUN`） |
+| regress／regress2 | 15/15、節奏門檻 8/8 |
+| 真 Chrome `slim-cs`（第 228 天） | **54/54**（gate 補上兩個按鈕後路徑變短，分母從 63 變成 54；CS 返回對戰打到結算只入帳一次、MOBA 與 CS 賽程都完成、390 對話框、還原逐位元相同） |
+| 真 Chrome `slim-300`（第 300 天） | 44/44 |
+| 真 Chrome P0-A normal／fault／limit-moba／limit-cs | 11/11、28/28、30/30、18/18（limit-cs 的 CS 重打照舊印「未驗證」＝TD-BP9-22，已由 `slim-cs` 覆蓋） |
+| 真 Chrome 離開頁面存檔、雲端存檔畫面（桌機＋手機寬度） | 12/12、29/29 |
+| 診斷 `slim-cs --diag-no-moba-roll`（不算 gate） | 63/64；第 313 天 BO3 接續打完，唯一的紅是旗標刻意造成的 |
+
+**沒有驗到：** 真手機的備份下載（只有 390 寬的 Chrome 模擬；手機沒有 Wi-Fi，連不到本機預覽，要等部署後才能測）、Safari／Firefox、真 Chrome 開兩個分頁（③ 是 Node 模擬）、真 Supabase、正式站（沒有部署）。

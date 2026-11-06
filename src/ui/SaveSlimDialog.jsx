@@ -8,7 +8,7 @@
 import React, { useEffect, useState } from "react";
 import { GC } from "./theme.js";
 import {
-  useSaveSlimStore, closeSaveSlimDialog, runSaveSlimMigration, SLIM_STATES,
+  useSaveSlimStore, closeSaveSlimDialog, runSaveSlimMigration, SLIM_STATES, SLIM_SUGGEST_CHARS,
 } from "../platform/persistence/saveSlimMigration.js";
 import { downloadSaveBackup, formatMb } from "./saveBackupActions.js";
 import { storageLooksFull } from "../platform/persistence/matchCommit.js";
@@ -61,6 +61,8 @@ function SizeBar({ before, after }) {
 export function SaveSlimDialog({ reload = () => location.reload() }) {
   const open = useSaveSlimStore((s) => s.dialogOpen);
   const plan = useSaveSlimStore((s) => s.plan);
+  //  與首頁建議同一個量法（localStorage 全部字元數），不用 plan.before（Review m 可選項）。
+  const chars = useSaveSlimStore((s) => s.chars);
   const [backup, setBackup] = useState(null);     // { ok, fileName, chars, error }
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(null);         // "backup" | "run"
@@ -95,12 +97,14 @@ export function SaveSlimDialog({ reload = () => location.reload() }) {
       <div style={panel}>
         <div id="save-slim-title" style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>🗂️ 整理存檔</div>
         <div style={{ marginTop: 6, color: "#cbd5e1" }}>
-          {full ? "存檔空間已滿，新的進度存不進去。" : "存檔已經很大，快要碰到瀏覽器的上限。"}
+          {full ? "存檔空間已滿，新的進度存不進去。" : (chars ?? 0) >= SLIM_SUGGEST_CHARS ? "存檔已經很大，快要碰到瀏覽器的上限。" : "可以先整理存檔，替之後的比賽預留空間。"}
           整理之後，賽程、財務、選手與所有獎金帳目都不變；CS 最近 5 場、賽季最近 10 場保留完整紀錄，
           較舊的比賽改存<b>歷史摘要</b>（比分、地圖、結果、主要選手數據）。
         </div>
         {plan && <SizeBar before={plan.before} after={plan.after} />}
-        <div style={{ marginTop: 8, color: GC.gold, fontSize: 11 }}>整理是一次性的，做了就不能復原，所以請先下載完整備份。</div>
+        <div data-testid="save-slim-ongoing-rule" style={{ marginTop: 8, color: GC.gold, fontSize: 11 }}>
+          整理做了就不能復原，所以請先下載完整備份。按下「開始整理」也代表同意：之後的新比賽會照同樣的規則自動保持精簡，不會再逐次詢問。
+        </div>
 
         <div style={step(backup?.ok)}>
           <span style={badge(backup?.ok)}>{backup?.ok ? "✓" : "1"}</span>
