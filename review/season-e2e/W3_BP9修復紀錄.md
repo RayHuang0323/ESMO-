@@ -155,4 +155,20 @@ W2 的原始證據沒有改動，在 `review/season-e2e/W2_瀏覽器驗收.md` �
 
 ## 發布結果
 
-（Push、Deploy 與正式站 Smoke 之後補上。）
+- **Push：** main `e53a0806`（`git ls-remote origin main` 確認）。
+- **Deploy：** Actions run `42151290171` success（2026-11-06 02:35–02:36 UTC）。正式站入口 `index-D__R6aI1.js` → `index-lIVk9rC9.js`。
+- **正式站 Smoke（Chrome 全新 Profile，碰不到真實玩家存檔）：**
+
+| Gate | 結果 |
+|---|---|
+| `browser_check_prod_release_3aB`（舊存檔帶入） | 90/90 |
+| `browser_check_bp9_commit_p0a --case=normal` | 11/11 |
+| `browser_check_bp9_commit_p0a --case=limit-moba`（第 254 天） | 30/30 |
+| `browser_check_bp9_commit_p0a --case=limit-cs`（第 228 天） | 18/18；CS 重打沒走到結算，**未驗證**，不計入（資料沒動） |
+| `browser_check_prod_b1c` | 38/38 |
+| `browser_check_prod_moba_result_replay_release` | 25/25 |
+| BP-1 CS 先發不足 | 78/78（第一次 CDP 斷線 HARNESS_FAIL，重跑） |
+| CS 正式流程 1366／390 | 63/63、63/63（第一次 1366 跨休眠逾時、390 喚醒後 `network error`，重跑） |
+| `check_online_foundation_v2a`（Push 後） | 92/92，X5–X7 已轉綠 |
+
+- **P0-A 結論：** 正式站上線完成。只宣稱阻止新增的資料不一致；容量與卡住玩家的恢復留給 P0-B。Owner 條件 3（CS 超限後重打）仍未驗證。
