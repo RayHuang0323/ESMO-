@@ -4,7 +4,7 @@ import {FPS_PLAYER_COLLISION_RADIUS} from './fpsInteractionGeometry.js';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const finite=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y);
 export function fpsNeedsObjectiveRouteRecovery(player,intent){
- return ['post-plant-hold','defuse-cover'].includes(intent?.kind)&&finite(intent.routeTarget)&&dist(player.pos,intent.routeTarget)>.55&&player.routeIdx>=player.route.length-1;
+ return ['post-plant-hold','defuse-cover','take-cover'].includes(intent?.kind)&&finite(intent.routeTarget)&&dist(player.pos,intent.routeTarget)>.55&&player.routeIdx>=player.route.length-1;
 }
 export function chooseFpsBombRecoverer({players,droppedBomb,currentId,findRoute,intel=[],roundSec=0}){
  if(!finite(droppedBomb?.pos))return null;
@@ -33,7 +33,7 @@ export function findFpsThreatCover({player,threat,walls,players=[],blocked,navLi
  const candidates=[];
  for(const w of walls){
   const near={x:Math.max(w.x,Math.min(w.x+w.w,player.pos.x)),y:Math.max(w.y,Math.min(w.y+w.h,player.pos.y))};if(dist(player.pos,near)>12)continue;
-  const pad=radius+.22,xs=[w.x-pad,w.x+w.w+pad],ys=[w.y-pad,w.y+w.h+pad];
+  const pad=radius+.70,xs=[w.x-pad,w.x+w.w+pad],ys=[w.y-pad,w.y+w.h+pad];
   for(const point of [...xs.flatMap(x=>[...ys.map(y=>({x,y})),{x,y:Math.max(w.y,Math.min(w.y+w.h,player.pos.y))}]),...ys.map(y=>({x:Math.max(w.x,Math.min(w.x+w.w,player.pos.x)),y}))]){
    if(point.x<2||point.x>98||point.y<2||point.y>98||blocked(point,walls,radius)||dist(player.pos,point)>12||navLineBlocked(player.pos,point,walls)||!hasFpsDirectionalCover({player:{...player,pos:point},threat,walls:[w],lineBlocked})||players.some(p=>p.id!==player.id&&!p.dead&&p.side===player.side&&(dist(p.pos,point)<radius*2||['take-cover','post-plant-cover'].includes(p._routePlan?.kind)&&p.route?.length&&dist(p.route.at(-1),point)<radius*2)))continue;
    candidates.push({point,score:dist(player.pos,point),wall:{x:w.x,y:w.y,w:w.w,h:w.h},threat:{...threat},source:'actual-occlusion-against-known-threat'});

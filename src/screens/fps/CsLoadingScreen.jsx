@@ -28,6 +28,7 @@ import { fpsRolePresentation } from "../../battle/fps/fpsRoster.js";
 import PlayerFace from "../../ui/PlayerFace.jsx";
 import { csLoadMark } from "../../battle/fps/csLoadTiming.js";
 import { preloadFpsCharacterAssets, fpsCharacterAssetState } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
+import { preloadFpsMajorMapImages, fpsMajorMapAssetState } from "../../battle/fps/presentation/fpsMajorMapAssets.js";
 import { GC, FONT, MONO } from "../../ui/theme.js";
 
 const ACC = "#fb923c";
@@ -54,6 +55,7 @@ export default function CsLoadingScreen({ config, onDone }) {
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [rigState, setRigState] = useState(() => fpsCharacterAssetState());
   const [waitingRig, setWaitingRig] = useState(false);
+  const [waitingMap, setWaitingMap] = useState(false);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -61,6 +63,7 @@ export default function CsLoadingScreen({ config, onDone }) {
     const t0 = Date.now();
     csLoadMark("ui:cs-loading-mount", { rig: fpsCharacterAssetState() });
     preloadFpsCharacterAssets();
+    preloadFpsMajorMapImages();
     let completed = false;
     let finishTimer = null;
     const finish = (reason) => {
@@ -75,8 +78,11 @@ export default function CsLoadingScreen({ config, onDone }) {
       const p = Math.min(100, Math.round((elapsed / MIN_PRESENT_MS) * 100));
       setPhaseIndex(Math.min(LINES.length - 1, Math.floor(p / (100 / LINES.length))));
       const rig = fpsCharacterAssetState();
+      const mapAssets = fpsMajorMapAssetState();
       setRigState(rig);
       if (p < 100) return;
+      if (mapAssets !== "ready" && mapAssets !== "failed") { setWaitingMap(true); return; }
+      setWaitingMap(false);
       if (rig === "ready") finish("ready");
       else if (rig === "failed") finish("failed");
       else if (elapsed >= RIG_WAIT_CAP_MS) finish("timeout");
@@ -88,7 +94,7 @@ export default function CsLoadingScreen({ config, onDone }) {
     };
   }, []);
 
-  const line = waitingRig ? RIG_WAIT_LINE : LINES[phaseIndex];
+  const line = waitingMap ? "正在載入地圖材質…" : waitingRig ? RIG_WAIT_LINE : LINES[phaseIndex];
 
   return (
     <div style={{ height: "100%", overflow: "auto", background: "#070a10", fontFamily: FONT, padding: "14px 12px 24px" }}>

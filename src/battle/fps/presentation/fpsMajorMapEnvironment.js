@@ -10,8 +10,8 @@ export { FPS_MAJOR_MAP_ART } from "../fpsMapIdentity.js";
 // 原創美術套件；legacy map key 僅作存檔相容。所有實體外框來自同一份
 // authoritative obstacles；局部裝飾外突20mm作表面分層，導航／掩體不變。
 
-const ATLAS = `${import.meta.env?.BASE_URL || "/"}assets/fps/major-v1/environment-albedo-atlas.png`;
-const TERRAIN_ATLAS = `${import.meta.env?.BASE_URL || "/"}assets/fps/major-v1/terrain-albedo-atlas-v1.png`;
+import {FPS_MAJOR_MAP_ATLAS_URLS,fpsMajorMapImage} from './fpsMajorMapAssets.js';
+const ATLAS=FPS_MAJOR_MAP_ATLAS_URLS.environment,TERRAIN_ATLAS=FPS_MAJOR_MAP_ATLAS_URLS.terrain;
 
 export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mobile = false, atlasTexture = null, streets=[], terrain=true }) {
   const art = FPS_MAJOR_MAP_ART[mapKey];
@@ -32,17 +32,26 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
     const rise=mapKey==='inferno'?10+Math.abs(Math.sin(xx*.039+zz*.018))*17:3+Math.abs(Math.sin(xx*.029+zz*.017))*5;
     return THREE.MathUtils.smoothstep(distance,55,100)*clearance*rise;
   };
-  const elevation=(x,z)=>terrain?((x<0||x>100||z<0||z>100)?districtHeight(x,z):fpsMajorElevation(mapKey,{x,y:z})):0;
-  let disposed = false, atlasLoaded = false,terrainAtlasLoaded=Boolean(atlasTexture);
-  const atlas = atlasTexture || new THREE.TextureLoader().load(ATLAS, () => { if (disposed) atlas.dispose(); else atlasLoaded = true; }, undefined, () => { atlasLoaded = false; });
+  const sceneVersion=map.layoutId?.startsWith('esmo-confluence.v3')?'major.v3':undefined;
+  const elevation=(x,z)=>terrain?((x<0||x>100||z<0||z>100)?districtHeight(x,z):fpsMajorElevation(mapKey,{x,y:z},sceneVersion)):0;
+  let disposed=false,atlasLoaded=Boolean(atlasTexture),terrainAtlasLoaded=Boolean(atlasTexture),settled=false,resolveReady;
+  const ready=new Promise(resolve=>{resolveReady=resolve;});
+  const finishReady=error=>{if(settled)return;if(error||disposed||atlasLoaded&&terrainAtlasLoaded){settled=true;resolveReady({ok:!error&&!disposed&&atlasLoaded&&terrainAtlasLoaded,cancelled:disposed,error:error?String(error.message||error):null});}};
+  const atlasImage=fpsMajorMapImage('environment'),terrainImage=fpsMajorMapImage('terrain');
+  const atlas=atlasTexture||(atlasImage?new THREE.Texture(atlasImage):new THREE.TextureLoader().load(ATLAS,texture=>{if(disposed)texture.dispose();else atlasLoaded=true;finishReady();},undefined,error=>finishReady(error||new Error('環境材質載入失敗'))));
+  if(atlasImage&&!atlasTexture){atlas.needsUpdate=true;atlasLoaded=true;}
   atlas.colorSpace = THREE.SRGBColorSpace;
   atlas.anisotropy = mobile ? 2 : 4;
   // 測試注入共用Texture；瀏覽器地形圖以桌機1024／手機512上傳，控制額外記憶體。
-  const terrainAtlas=atlasTexture||new THREE.TextureLoader().load(TERRAIN_ATLAS,texture=>{
-    if(disposed){texture.dispose();return;}
-    const size=mobile?512:1024,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;
-    const context=canvas.getContext('2d');context.drawImage(texture.image,0,0,size,size);texture.image=canvas;texture.needsUpdate=true;terrainAtlasLoaded=true;
-  },undefined,()=>{terrainAtlasLoaded=false;});
+  const prepareTerrain=texture=>{
+    if(disposed){texture.dispose();finishReady();return;}
+    try{const size=mobile?512:1024,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;
+      const context=canvas.getContext('2d');if(!context)throw new Error('地形材質準備失敗');context.drawImage(texture.image,0,0,size,size);texture.image=canvas;texture.needsUpdate=true;terrainAtlasLoaded=true;finishReady();
+    }catch(error){finishReady(error);}
+  };
+  const terrainAtlas=atlasTexture||(terrainImage?new THREE.Texture(terrainImage):new THREE.TextureLoader().load(TERRAIN_ATLAS,prepareTerrain,undefined,error=>finishReady(error||new Error('地形材質載入失敗'))));
+  if(terrainImage&&!atlasTexture)prepareTerrain(terrainAtlas);
+  finishReady();
   terrainAtlas.colorSpace=THREE.SRGBColorSpace;terrainAtlas.anisotropy=mobile?2:4;
   const unit = new THREE.BoxGeometry(1, 1, 1);
   ownedGeometries.add(unit);
@@ -608,7 +617,7 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
     const halfWidth=terrain?3.6:2.25,nx=-dz/len*halfWidth,nz=dx/len*halfWidth;
     const points=[[a.x+nx,a.y+nz],[a.x-nx,a.y-nz],[b.x+nx,b.y+nz],[b.x-nx,b.y-nz]];
     const platform=terrain?FPS_MAJOR_PLATFORMS[mapKey]:null;
-    const crossesPlatform=platform&&Math.max(...points.map(p=>p[0]))>platform.x&&Math.min(...points.map(p=>p[0]))<platform.x+platform.w&&Math.max(...points.map(p=>p[1]))>platform.y&&Math.min(...points.map(p=>p[1]))<platform.y+platform.h;
+    const crossesPlatform=sceneVersion==='major.v3'||platform&&Math.max(...points.map(p=>p[0]))>platform.x&&Math.min(...points.map(p=>p[0]))<platform.x+platform.w&&Math.max(...points.map(p=>p[1]))>platform.y&&Math.min(...points.map(p=>p[1]))<platform.y+platform.h;
     // 只對跨平台的路段取細格；四角接高度會把數十公尺平地抬成斜橋。
     // 桌機／低階保留相同貼地形狀，平地仍只有兩個三角形且同一draw。
     const alongSegments=crossesPlatform?Math.ceil(len/2):1,acrossSegments=crossesPlatform?4:1,positions=[],uv=[],indices=[];
@@ -1297,6 +1306,9 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
   for(let i=0;i<treeCount;i++){const edge=i%3,n=Math.floor(i/3),x=edge===0?-35-(i%2)*3:10+n*15+(i%2)*4,z=edge===0?13+n*19+(i%2)*4:edge===1?-30-(i%2)*4:140+(i%2)*3,s=.85+(i%3)*.14;foliage.setMatrixAt(i,transform(x,.03,z,s,s,s,i*.9));}
   foliage.computeBoundingSphere();environment.add(foliage);
 
+  // 地圖沒有 transform 動畫；屋頂淡出只改材質／visible。保留 world
+  // matrix 的正常父子傳播，但不在每個角色／render pass 重組固定 local matrix。
+  if(terrain)environment.traverse(object=>{object.updateMatrix();object.matrixAutoUpdate=false;});
   const surfaceOwnership=resolveFpsCoplanarSurfaces(environment);
   for(const {old,geometry}of surfaceOwnership.replaced){ownedGeometries.delete(old);old.dispose();ownedGeometries.add(geometry);}
   const summary = {
@@ -1312,9 +1324,10 @@ export function createMajorMapEnvironment({ group, mapKey, map, obstacles, W, mo
     get estimatedTriangles() { let n = 0; environment.traverse(o => { if (o.geometry) n += (o.geometry.index?.count || o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); }); return n; },
   };
   return {
-    group: environment, fadeWalls, fadeDetails, fadeRoofs, summary,
+    group: environment, fadeWalls, fadeDetails, fadeRoofs, summary, ready, textures:[atlas,terrainAtlas],
     dispose() {
       if (disposed) return; disposed = true;
+      finishReady();
       environment.parent?.remove(environment);
       ownedGeometries.forEach(g => g.dispose()); ownedMaterials.forEach(m => m.dispose());
       atlas.dispose();if(terrainAtlas!==atlas)terrainAtlas.dispose();environment.clear();

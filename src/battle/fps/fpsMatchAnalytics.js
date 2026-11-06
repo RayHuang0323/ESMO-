@@ -1,7 +1,7 @@
 // One post-match pass over authoritative events/roundStats. No result, rating,
 // reward or simulation mutation. Compact enough for the existing result history.
 export function buildFpsMatchAnalytics(sim){
- if(sim.sceneVersion!=='major.v1')return null;
+ if(!['major.v1','major.v2','major.v3','major.v4','major.v5'].includes(sim.sceneVersion))return null;
  const n=sim.roundHist.length,byId=new Map(sim.players.map(p=>[p.id,{id:p.id,name:p.name,teamId:p.teamId,role:p.roleKey||p.role,kills:p.k,deaths:p.d,assists:p.a,adr:p.adr,kast:p.kast,rating:p.rating,hsPct:p.hsPct,utilityDamage:p.utilDmg,shots:0,hits:0,damage:0,openingKills:0,openingDeaths:0,plants:0,defuses:0,flashEnemies:0,flashSecondsAdded:0,friendlyFlashSeconds:0,tradedDeaths:0,survived:0,clutches:0,multiKills:[0,0,0,0,0,0],rounds:[],roleSamples:{},dutySamples:{}}]));
  for(const shot of sim.shotCadenceTelemetry||[]){const p=byId.get(shot.attackerId);if(p){p.shots++;p.hits+=shot.hit?1:0;p.damage+=shot.damage||0;}}
  const rounds=sim.roundHist.map((r,i)=>{

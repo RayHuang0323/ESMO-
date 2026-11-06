@@ -92,3 +92,6 @@
 
 - `handoff/10_CS_P0_視覺穩定性與防回歸契約.md`：CS FPS P0 四項事故的 root cause、production contract、eliminated hypotheses 與 required gates。
 - `handoff/09_技術債務清單.md`：CS P0 closure 與 residual debt boundary。
+
+- [CS Map v2 integration review](../review/cs-integration-20261107/INTEGRATION_REVIEW.md)
+- [CS Map v2 integration checkpoint](../review/cs-integration-20261107/CHECKPOINT.md)

@@ -42,7 +42,7 @@ export function fpsAttackStage({player,players,mode,roundSec,planted,sites,targe
   return{stage:'entry',canAdvance:true,reason:pressure?'round-time-pressure':screen?'utility-released':holders.length?'bounded-utility-window':'no-live-utility-holder'};
 }
 
-export function planFpsBombRoute({ player, players, tactic, library, target, phase, selectionId, nodes }) {
+export function planFpsBombRoute({ player, players, tactic, library, target, phase, selectionId, nodes, defenseAnchors=null }) {
   const team = players.filter(p => p.side === player.side).sort((a,b) => String(a.id).localeCompare(String(b.id)));
   const index = team.findIndex(p => p.id === player.id);
   const clean = keys => keys.filter(k => nodes[k]);
@@ -55,7 +55,10 @@ export function planFpsBombRoute({ player, players, tactic, library, target, pha
     const anchors=site&&nodes[`${site}Site`]?Object.entries(nodes).filter(([key,p])=>!key.endsWith('Spawn')&&distance(p,nodes[`${site}Site`])<=24&&distance(p,nodes[`${site}Site`])>4)
       .sort((a,b)=>distance(a[1],nodes.ctSpawn)-distance(b[1],nodes.ctSpawn)||a[0].localeCompare(b[0])):[];
     const peers=team.filter(p=>(p.tacticalDuty||fpsAssignTacticalDuties({players})[p.id])?.deploymentSite===site),slot=Math.max(0,peers.findIndex(p=>p.id===player.id));
-    const anchor=anchors[slot%Math.max(1,anchors.length)]?.[0]||`${site}Site`;
+    // A new authored map can declare actual defensible entrances. Existing
+    // scenes keep the original distance-based anchor order exactly.
+    const authoredAnchors=Array.isArray(defenseAnchors?.[site])?defenseAnchors[site].filter(key=>nodes[key]):[];
+    const anchor=authoredAnchors.length?authoredAnchors[slot%authoredAnchors.length]:anchors[slot%Math.max(1,anchors.length)]?.[0]||`${site}Site`;
     const keys=forward?authored:information?['ctSpawn',...(authored.filter(k=>!k.endsWith('Spawn')).slice(0,1))]:['ctSpawn',anchor];
     player.deploymentSite=site;player.informationRotator=['rotator','information'].includes(duty?.defenseDuty);
     return { kind: forward?'information-peek':site?`hold-${site}`:'information', keys: clean(keys), objective: forward?'limited-information':'hold-information' };

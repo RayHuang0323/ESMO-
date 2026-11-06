@@ -14,21 +14,26 @@ export function createFpsMajorRoofShaderWarmup({ renderer, scene, camera, enviro
     material.transparent=true;material.opacity=.5;material.depthWrite=false;
     const probe=object.clone(false);probe.material=material;probe.visible=true;probes.add(probe);materials.push(material);
   };
-  environment?.group?.traverse(object=>{
+  const collectProbes=()=>{environment?.group?.traverse(object=>{
     if(!object.isMesh||Array.isArray(object.material)||!roofMaterials.has(object.material))return;
     addProbe(object);
   });
-  const roofMaterialCount=materials.length;
+  result.roofMaterialCount=materials.length;
   // 只預熱真實透明Standard特效；Basic／Sprite不新增無證據的variant。
   for(const group of effectGroups)group?.traverse(object=>{
     if(!object.isMesh||Array.isArray(object.material)||!object.material?.isMeshStandardMaterial||!object.material.transparent)return;
     addProbe(object);
   });
+  result.materialCount=materials.length;result.effectMaterialCount=materials.length-result.roofMaterialCount;
+  };
   let pending=false,disposed=false,released=false;
-  const result={status:'pending',materialCount:materials.length,roofMaterialCount,effectMaterialCount:materials.length-roofMaterialCount};
+  const result={status:'pending',materialCount:0,roofMaterialCount:0,effectMaterialCount:0};
   const release=()=>{if(released)return;released=true;materials.forEach(m=>m.dispose());probes.clear();};
   const ready=Promise.resolve().then(async()=>{
+    // atlas/bumpMap 在 environment.ready 才接到原材質；提早 clone 會預熱錯誤的 program。
+    if(environment?.ready){const assets=await environment.ready;if(assets?.ok===false)throw new Error('環境材質尚未就緒');}
     if(disposed){result.status='cancelled';return result;}
+    collectProbes();
     if(!materials.length){result.status='not-needed';return result;}
     pending=true;
     if(typeof renderer?.compileAsync==='function')await renderer.compileAsync(probes,camera,scene);

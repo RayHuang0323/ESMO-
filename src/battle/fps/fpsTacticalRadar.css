@@ -1,0 +1,7 @@
+.fps-tactical-radar{position:absolute;left:max(8px,env(safe-area-inset-left));top:8px;z-index:22;color:var(--radar-text);max-width:calc(100% - 16px);font-variant-numeric:tabular-nums}
+.fps-radar-toggle{display:flex;align-items:center;gap:5px;min-height:44px;padding:5px 9px;background:var(--radar-bg);border:1px solid var(--radar-line);border-radius:9px;color:inherit;font-size:11px;font-weight:800;cursor:pointer;touch-action:manipulation}
+.fps-radar-toggle:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.fps-radar-panel{width:clamp(112px,25vw,166px);max-width:100%;margin-top:4px;padding:4px;border:1px solid var(--radar-line);border-radius:9px;background:var(--radar-bg);box-sizing:border-box;pointer-events:none}
+.fps-radar-panel svg{display:block;width:100%;aspect-ratio:1}
+.fps-tactical-radar[data-layout^="esmo-confluence.v3"] .fps-radar-panel{width:clamp(144px,33vw,190px)}
+.fps-radar-legend{display:flex;justify-content:space-around;gap:4px;font-size:9px;font-weight:800;white-space:nowrap}

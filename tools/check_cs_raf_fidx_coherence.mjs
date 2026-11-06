@@ -41,8 +41,10 @@ check("playback advance uses the coherence publisher", () => {
 });
 
 check("seek and reset transitions also update the live ref", () => {
-  expect(source.includes('publishFpsFrame(clamp(Number(resumeFrameIndex)'), "reset path does not publish live fIdx");
-  expect(source.includes('publishFpsFrame(clamp(v,0,total-1),"seek")'), "seek path does not publish live fIdx");
+  const reset = between(source, 'useEffect(()=>{const startFrame=', '},[sim]);');
+  expect(reset.includes('clamp(replayMode?0:normalCursorRef.current') && reset.includes('publishFpsFrame(startFrame,"reset")'), "reset must publish the bounded replay/original cursor");
+  const seek = between(source, 'const beginFpsSeek=', '  liveRef.current={');
+  expect(seek.includes('publishFpsFrame(next,reason)') && source.includes('beginFpsSeek(clamp(Math.floor(Number(v)||0),0,total-1),"seek")'), "native seek must reach the shared publisher through beginFpsSeek");
   return "reset and seek cannot leave RAF on a stale frame";
 });
 
@@ -84,3 +86,4 @@ for (const result of checks) console.log(`${result.ok ? "PASS" : "FAIL"} ${resul
 const failed = checks.filter((result) => !result.ok);
 console.log(`RAF_FIDX_COHERENCE: ${checks.length - failed.length}/${checks.length} checks passed`);
 if (failed.length) process.exitCode = 1;
+console.log(`RESULT=${failed.length ? "PRODUCT_FAIL" : "PASS"}`);

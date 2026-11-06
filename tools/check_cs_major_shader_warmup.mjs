@@ -55,4 +55,15 @@ await check('特效pending編譯的離場同樣等待完成，不提前釋放pro
   const f=fixture(),effects=new THREE.Group();effects.add(new THREE.Mesh(f.geometry,new THREE.MeshStandardMaterial({transparent:true})));let done,clones=0;
   const h=createFpsMajorRoofShaderWarmup({...f,effectGroups:[effects],renderer:{compileAsync(g){g.children.forEach(p=>p.material.addEventListener('dispose',()=>clones++));return new Promise(r=>{done=r;});}}});await Promise.resolve();h.dispose();assert.equal(clones,0);done();await h.ready;assert.equal(clones,2);
 });
+await check('非同步atlas／bumpMap完成後才clone與編譯，避免首次淡出再編譯',async()=>{
+ const f=fixture();let resolve,called=0;const texture=new THREE.Texture(),bump=new THREE.Texture();
+ f.environment.ready=new Promise(r=>{resolve=r;});
+ const h=createFpsMajorRoofShaderWarmup({...f,renderer:{async compileAsync(g){called++;assert.equal(g.children[0].material.map,texture);assert.equal(g.children[0].material.bumpMap,bump);}}});
+ await Promise.resolve();assert.equal(called,0);f.material.map=texture;f.material.bumpMap=bump;resolve({ok:true});await h.ready;assert.equal(called,1);h.dispose();texture.dispose();bump.dispose();
+});
+await check('等待材質時離場不建立clone也不編譯',async()=>{
+ const f=fixture();let resolve,called=0;f.environment.ready=new Promise(r=>{resolve=r;});
+ const h=createFpsMajorRoofShaderWarmup({...f,renderer:{async compileAsync(){called++;}}});await Promise.resolve();h.dispose();resolve({ok:true});assert.equal((await h.ready).status,'cancelled');assert.equal(called,0);assert.equal(h.result.materialCount,0);
+});
 console.log(`CS Major Shader Warmup: ${passed}/${passed+failed} PASS`);if(failed)process.exitCode=1;
+console.log(`RESULT=${failed?'PRODUCT_FAIL':'PASS'}`);

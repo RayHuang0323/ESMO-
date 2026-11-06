@@ -8,6 +8,7 @@ import { C2C_HERO_ART_MANIFEST, createC2cHeroPresentation, isC2cHeroRequested } 
 import { csLoadSpan, csLoadTime } from "../csLoadTiming.js";
 import { createFpsBoundsSampler } from "./fpsBoundsSampler.js";
 import { createFpsWeaponPoseLayers } from "./fpsWeaponPoseLayers.js";
+import { createFpsLocomotionPose } from "./fpsLocomotionPose.js";
 import { createFpsSupportGripPose } from "./fpsSupportGripPose.js";
 import { loadFpsMajorWeaponAssets } from "./fpsMajorWeaponAssets.js";
 import { deriveFpsActionPose, createFpsActionArmPose } from "./fpsActionPose.js";
@@ -195,13 +196,10 @@ function measurePresentationBounds(root, sampler = null) {
   };
 }
 
-function publishDiagnostic(controller, remove = false) {
-  if (typeof window === "undefined") return;
-  const current = window.__ESMO_FPS_C2A__ || { rigged: 0, fallback: 0, failed: 0, players: {} };
-  const muzzlePosition = !remove && controller.getMuzzleWorldPosition(controller.muzzleDiagnosticPosition);
-  const muzzleDirection = !remove && controller.getMuzzleWorldDirection(controller.muzzleDiagnosticDirection);
-  if (remove) delete current.players[controller.id];
-  else current.players[controller.id] = {
+function readCharacterDiagnostic(controller) {
+  const muzzlePosition = controller.getMuzzleWorldPosition(controller.muzzleDiagnosticPosition);
+  const muzzleDirection = controller.getMuzzleWorldDirection(controller.muzzleDiagnosticDirection);
+  return {
     mode: controller.mode,
     loadError: controller.loadError || null,
     identityMiss: controller.identityMiss,
@@ -251,9 +249,31 @@ function publishDiagnostic(controller, remove = false) {
     deathGroundContactY: controller.deathGroundContactY,
     deathGroundCorrection: Number(controller.deathGroundCorrection.toFixed(6)),
   };
-  current.rigged = Object.values(current.players).filter((player) => player.mode === "rigged").length;
-  current.fallback = Object.values(current.players).filter((player) => player.mode === "fallback").length;
-  current.failed = Object.values(current.players).filter((player) => player.mode === "failed").length;
+}
+
+const diagnosticOwners = new WeakMap();
+function publishDiagnostic(controller, remove = false) {
+  if (typeof window === "undefined") return;
+  const current = window.__ESMO_FPS_C2A__ || { rigged: 0, fallback: 0, failed: 0, players: {} };
+  let owners = diagnosticOwners.get(current);
+  if (!owners) { owners = new Map(); diagnosticOwners.set(current, owners); }
+  const previous = owners.get(controller.id);
+  if (remove) {
+    // 舊場景 dispose 不可刪除同 id 的新場景角色；刪掉 getter 一併釋放引用。
+    if (previous?.controller !== controller) return;
+    owners.delete(controller.id);delete current.players[controller.id];
+  } else {
+    if (previous?.controller === controller && previous.mode === controller.mode) return;
+    owners.set(controller.id, { controller, mode: controller.mode });
+    // 每幀只登錄狀態；實際讀取才量槍口、骨架與姿勢，避免診斷佔用渲染預算。
+    Object.defineProperty(current.players, controller.id, {
+      configurable: true, enumerable: true, get: () => readCharacterDiagnostic(controller),
+    });
+  }
+  const modes = [...owners.values()];
+  current.rigged = modes.filter((player) => player.mode === "rigged").length;
+  current.fallback = modes.filter((player) => player.mode === "fallback").length;
+  current.failed = modes.filter((player) => player.mode === "failed").length;
   window.__ESMO_FPS_C2A__ = current;
 }
 
@@ -275,6 +295,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
     actions: new Map(),
     currentAction: null,
     poseLayers: null,
+    locomotionPose: null,
     animationState: FPS_PRESENTATION_STATES.IDLE,
     identityMiss: false,
     mode: enabled ? "loading" : "fallback",
@@ -340,6 +361,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       action.fadeIn(fade).play();
     },
     resetForRound(round) {
+      controller.pausedInput = null;
       controller.lastPresentedAlive=null;
       controller.actionPose?.restore();
       controller.gripPose?.restore();
@@ -347,6 +369,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       controller.groundSignature=null;
       controller.poseLayers?.stop();
       controller.actions.forEach((action) => action.stop());
+      controller.locomotionPose?.reset();
       controller.mixer?.stopAllAction();
       controller.currentAction = null;
       controller.animationState = FPS_PRESENTATION_STATES.IDLE;
@@ -369,14 +392,34 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
     update({ player: current, previousPlayer, nextPlayer, frameRound, previousFrameRound, frameIndex = null, dt = 0, playbackActive = true, seekNonce = null, roundTimeMs, events = [], nextEvents = [], defuse = null, presentationVelocity, playbackSpeed = 1, playbackDeltaSec = dt, sampleGroundHeight = null } = {}) {
       if (controller.disposed || !current) return;
       controller.lastPlayer = current;
+      // Saved frames are immutable. A paused, unchanged pose needs no mixer,
+      // grip solver, clothing anchors or terrain resampling. Camera changes
+      // still billboard/render normally; a moved/scaled rig or seek invalidates
+      // this cache before any pose work is skipped.
+      let pausedInput = null;
+      if (optimized && !playbackActive && controller.mixer) {
+        riggedRoot.updateWorldMatrix(true, false);
+        pausedInput = [current, previousPlayer, nextPlayer, frameRound, previousFrameRound,
+          frameIndex, seekNonce, roundTimeMs, playbackSpeed, sampleGroundHeight,
+          events.length ? events : null, nextEvents.length ? nextEvents : null, defuse,
+          presentationVelocity?.x, presentationVelocity?.y, riggedRoot.visible,
+          riggedRoot.parent?.visible, ...riggedRoot.matrixWorld.elements];
+        if (controller.pausedInput?.length === pausedInput.length &&
+            pausedInput.every((value, i) => Object.is(value, controller.pausedInput[i]))) return;
+      }
+      controller.pausedInput = null;
       controller.c2c?.update({ player: current });
       if (!controller.mixer) return;
-      controller.visibleGrounding?.restore();
+      // The pose solvers below refresh matrices after the mixer. Avoid walking
+      // the old pose's whole subtree immediately before overwriting it.
+      controller.visibleGrounding?.restore({deferMatrices:true});
+      controller.locomotionPose?.restore();
       controller.actionPose?.restore();
       controller.gripPose?.restore();
       if (optimized && !controller.actionPose) controller.actionPose = createFpsActionArmPose({model:controller.model});
       if (optimized && !controller.gripPose) controller.gripPose = createFpsSupportGripPose({model:controller.model,presentation:controller.c2c});
       if (optimized && !controller.poseLayers) controller.poseLayers = createFpsWeaponPoseLayers(controller);
+      if (optimized && !controller.locomotionPose) controller.locomotionPose = createFpsLocomotionPose(controller);
       if (Number.isFinite(frameRound)) {
         if (controller.lastRound == null) controller.lastRound = frameRound;
         else if (frameRound !== controller.lastRound) controller.resetForRound(frameRound);
@@ -389,6 +432,9 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       // 暫停只停時間，不把權威移動中的角色切回 idle／另一個持槍姿勢。
       const animationDt = optimized ? (!playbackActive ? 0 : Math.min(.25, Math.max(0, playbackDeltaSec))) : dt;
       const animation = deriveFpsAnimationState({ player: current, previousPlayer, nextPlayer, playbackActive: optimized ? true : playbackActive, roundTimeMs, presentationVelocity: optimized ? presentationVelocity : undefined });
+      const facing=(Number.isFinite(controller.facingDegrees)?controller.facingDegrees:Number(current.va)||0)*Math.PI/180;
+      const motion=optimized&&presentationVelocity?{forward:presentationVelocity.x*Math.cos(facing)+presentationVelocity.y*Math.sin(facing),lateral:-presentationVelocity.x*Math.sin(facing)+presentationVelocity.y*Math.cos(facing)}:animation;
+      const locomotionDirection=controller.locomotionPose?.direction(animation.moving?motion:{forward:0,lateral:0})||{reverse:false};
       const continuousDeathEdge=optimized&&current.dead&&controller.lastPresentedAlive===true&&playbackActive&&!explicitSeek&&!rewind;
       const gesture = optimized ? deriveFpsActionPose({player:current,roundSec:roundTimeMs/1000,frameRound,events,nextEvents,defuse}) : {active:false};
       controller.actionGesture = gesture;
@@ -447,6 +493,8 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
               ? controller.resolveClip(animation.moving?FPS_CHARACTER_ASSET_MANIFEST.optionalClips.crouch:FPS_CHARACTER_ASSET_MANIFEST.optionalClips.crouchIdle)
               : animation.locomotion === FPS_PRESENTATION_STATES.RUN
               ? FPS_CHARACTER_ASSET_MANIFEST.clips.run
+              : animation.moving && animation.speed>=2.4
+              ? controller.resolveClip(FPS_CHARACTER_ASSET_MANIFEST.clips.jog)
               : animation.locomotion === FPS_PRESENTATION_STATES.IDLE
                 ? FPS_CHARACTER_ASSET_MANIFEST.clips.idle
                 : FPS_CHARACTER_ASSET_MANIFEST.clips.walk;
@@ -457,7 +505,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
               : controller.fireTimer > 0
               ? FPS_CHARACTER_ASSET_MANIFEST.clips.fire
               : animation.aiming ? FPS_CHARACTER_ASSET_MANIFEST.clips.aim : "Pistol_Idle_Loop";
-            controller.poseLayers.update({ lower, upper, firing: !animation.reloading&&controller.fireTimer > 0, fireEvent: !animation.reloading&&fireEvent, upperOnce:!animation.reloading&&(controller.hitTimer>0||controller.fireTimer>0),upperRestart:hitEvent||(!animation.reloading&&fireEvent), paused: !playbackActive, upperProgress:animation.reloading?animation.reloadProgress:null, lowerTimeScale: fpsLocomotionTimeScale(lower, animation.speed, playbackSpeed) });
+            controller.poseLayers.update({ lower, upper, firing: !animation.reloading&&controller.fireTimer > 0, fireEvent: !animation.reloading&&fireEvent, upperOnce:!animation.reloading&&(controller.hitTimer>0||controller.fireTimer>0),upperRestart:hitEvent||(!animation.reloading&&fireEvent), paused: !playbackActive, upperProgress:animation.reloading?animation.reloadProgress:null, lowerTimeScale: fpsLocomotionTimeScale(lower, animation.speed, playbackSpeed,{worldScale:riggedRoot.scale.x,reverse:locomotionDirection.reverse}) });
             controller.currentAction = controller.poseLayers.upperName;
           }
         } else if (!hitEvent && fireEvent) {
@@ -475,6 +523,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
         }
       }
       controller.mixer.update(Math.min(optimized ? .25 : .05, Math.max(0, animationDt)));
+      controller.locomotionPose?.apply({enabled:!current.dead&&!gesture.active,dt:animationDt,immediate:!playbackActive});
       controller.poseLayers?.cleanup();
       // 真Hit/Death已停止poseLayers；單獨timer不應在暫停時換掉現有握姿。
       controller.gripPose?.apply({enabled:!gesture.active && !controller.deathTriggered && !animation.reloading && controller.poseLayers?.active});
@@ -493,7 +542,6 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
         // Sample the same current clothing/glove anchors the renderer draws,
         // then resync after the single model-height correction.
         controller.c2c?.syncAnchors?.();
-        riggedRoot.updateWorldMatrix(true,true);
         controller.sampleGroundHeight = sampleGroundHeight || (()=>riggedRoot.getWorldPosition(controller._groundPosition||(controller._groundPosition=new THREE.Vector3())).y);
         if(!controller.visibleGrounding)controller.visibleGrounding=createVisibleGroundingSampler({root:riggedRoot,fastAlive:true,sampleGroundHeight:(x,z)=>controller.sampleGroundHeight(x,z)});
         const action=controller.actions.get(controller.currentAction);
@@ -511,7 +559,9 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
           controller.groundContactY=measured.contactY;
         }
         if(controller.deathTriggered){controller.deathGroundCorrection=controller.groundOffset;controller.deathGroundContactY=controller.groundContactY??null;}
-        controller.c2c?.syncAnchors?.();
+        // Grounding is a uniform model translation. Clothing/weapon anchors
+        // are model-relative, so their local transforms remain exact; apply /
+        // reapply has already refreshed the translated subtree's matrices.
       } else {
       if (controller.deathTriggered && controller.model) {
         const action=controller.actions.get(controller.currentAction);
@@ -548,6 +598,7 @@ export function createFpsCharacterRenderer({ parent, player, enabled = true, opt
       if (controller.boundsSampleFrame % 30 === 0) controller.currentBounds = measurePresentationBounds(riggedRoot,controller.boundsSampler);
       controller.lastPresentedAlive=!current.dead;
       publishDiagnostic(controller);
+      controller.pausedInput = pausedInput;
     },
     setIdentityMiss() {
       if (controller.disposed) return;

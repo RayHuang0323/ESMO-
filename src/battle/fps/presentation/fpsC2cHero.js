@@ -1119,6 +1119,14 @@ function buildKit(root, player, { optimized = true, mobile = false, handWeaponMo
   if (removedClothingUpdaters) {
     for (let i=updaters.length-1;i>=0;i--) if(updaters[i].mesh?.userData.esmoTailoredReplaced)updaters.splice(i,1);
   }
+  if (optimized) {
+    // 固定裝備／蒙皮 mesh 的 local transform 不隨動畫變；骨架、動態
+    // 衣物及武器 mount 照常更新世界矩陣，省掉每次走樹時重組同一矩陣。
+    const movingMeshes = new Set(updaters.map(update => update.mesh).filter(Boolean));
+    root.traverse(object => {
+      if (object.isMesh && !movingMeshes.has(object)) { object.updateMatrix();object.matrixAutoUpdate = false; }
+    });
+  }
   if (optimized && mobile) root.traverse(object => { if (object.isMesh && object.userData?.[OWNED]) object.castShadow = false; });
   const initialWeaponFamily = resolveWeaponFamily(player?.gun);
   const setVisibleWeapon = (family) => Object.entries(weaponGroups).forEach(([key, group]) => { group.visible = key === family; });

@@ -27,7 +27,7 @@ export async function loadFpsMajorTestApi(source, root=process.cwd(), {snapshotR
         const visionExport=source.includes('function canObserveFps(')?', canObserveFps':'';
         // 驗證 watchdog 只報錯，絕不替正式比賽指定勝負或修改規則。
         const code=source.replace("while(!ruleState.completed){", "while(!ruleState.completed){ if(ruleState.roundsPlayed>=96)throw new Error('對戰驗證超過 96 回合：'+JSON.stringify({mapKey,score:ruleState.score,recent:roundHist.slice(-6).map(r=>({round:r.round,how:r.how,winnerSide:r.winnerSide})),blockedPositions:movementAudit.blockedPositions,wallSegmentCrossings:movementAudit.wallSegmentCrossings}));")
-          .replace(marker,"return { EsportsFPS3D, buildMatchResult, simulateFps, MAPS, ROSTER, TACTICS_DB, GUNS, posSkill, c5bFullBuyWeapon, c5a2SolidObstacles, blocked, lineBlocked, buildNavigableRoute, PLAYER_R, persStat, canEngage, csTargetInFov, weaponAuthority, weaponInRange, smokeBlocks, mapAwareCanReadVisibleCandidate, C5A2_SIM_STEP_SEC"+visionExport+" };")
+          .replace(marker,"return { EsportsFPS3D, buildMatchResult, simulateFps, MAPS, ROSTER, TACTICS_DB, GUNS, posSkill, c5bFullBuyWeapon, c5a2SolidObstacles, blocked, snapOut, lineBlocked, buildNavigableRoute, PLAYER_R, MOLLY_R, persStat, canEngage, csTargetInFov, weaponAuthority, weaponInRange, smokeBlocks, mapAwareCanReadVisibleCandidate, C5A2_SIM_STEP_SEC"+visionExport+" };")
           .replace(exportMarker,"const __CS_MAJOR_TEST_API__=__FPS3D_MODULE;export { EsportsFPS3D, buildMatchResult, __CS_MAJOR_TEST_API__ };");
         return{code,map:null};
       },

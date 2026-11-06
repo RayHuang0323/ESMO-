@@ -115,7 +115,8 @@ const getC5CDirectConfig = () => {
   return {
     c5cReview: true,
     mapKey,
-    mapName: C5C_DIRECT_MAPS[mapKey],
+    sceneVersion:query.get('scene')==='major.v5'&&mapKey==='inferno'?'major.v5':query.get('scene')==='major.v4'&&mapKey==='dust2'?'major.v4':['major.v2','major.v3'].includes(query.get('scene'))&&mapKey==='mirage'?query.get('scene'):'major.v1',
+    mapName:query.get('scene')==='major.v5'&&mapKey==='inferno'?'Foundry Circuit':query.get('scene')==='major.v4'&&mapKey==='dust2'?'Dune Terminal':query.get('scene')==='major.v3'&&mapKey==='mirage'?'Confluence Station':query.get('scene')==='major.v2'&&mapKey==='mirage'?'匯流站 · 戰術原型':C5C_DIRECT_MAPS[mapKey],
     tacticType: "default",
     tacticName: "標準控圖",
     seed: Number.isFinite(seed) && seed > 0 ? seed : 505001,
@@ -178,6 +179,7 @@ export default function AppShell() {
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
   const [csConfig, setCsConfig] = useState(() => getC5CDirectConfig()); // S23/C5B：CS 賽前選擇含四階段 tacticalLayout
   const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
+  const [csSettlementReceipt, setCsSettlementReceipt] = useState(null); // presentation only; also carries rejected settlement errors
   const go = (s) => () => setScreen(s);
   const home = go("dashboard");
   //  BP-1：從賽事中心 CS 分頁去排先發時，回來要回到 CS 分頁，不是首頁。
@@ -429,19 +431,20 @@ export default function AppShell() {
       {screen === "csRecap" && <CsSeasonRecapScreen onBack={go("competition")} />}
       {/*  UI-3：獨立的 `csHub` 路由已移除——賽事中心的 CS 分頁掛的就是同一個元件，
            而且是唯一入口。留一個到不了的第二路由只會讓後續開發誤判擁有者。 */}
-      {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { const next = { mapKey: m.key, mapName: m.name, mapSelectionId: m.selectionId ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { csConfig: next } }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
+      {screen === "csMap" && <CsMapSelectScreen onNext={(m) => { const next = { mapKey: m.key, mapName: m.name, sceneVersion:m.sceneVersion??'major.v1', mapSelectionId: m.selectionId ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "tactic", config: { csConfig: next } }); setScreen("csTactic"); }} onBack={go("csPrep")} />}
       {screen === "csTactic" && <CsTacticScreen mapName={csConfig?.mapName} onNext={(t) => { const next = { ...csConfig, tacticId: t.id, tacticName: t.name, tacticType: t.type, tacticEmoji: t.emoji, tacticalLayout: t.tacticalLayout, seed: useProfileStore.getState().matchmaking?.launch?.seed ?? null }; setCsConfig(next); useProfileStore.getState().setActiveMatchContext({ phase: "loading", config: { csConfig: next } }); setScreen("csLoading"); }} onBack={go("csMap")} />}
       {screen === "csLoading" && <CsLoadingScreen config={csConfig} onDone={() => { useProfileStore.getState().setActiveMatchContext({ phase: "battle" }); setScreen("cs"); }} />}
       {/* S25：CS 結算在「比賽完成邊界」做掉（不是 Result 掛載時）→ 跳過 Result 也不會漏發獎 */}
-      {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { if (!csConfig?.c5cReview) settleCsMatch(r); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
+      {screen === "cs" && <CsMatchScreen config={csConfig} onFinish={(r) => { const receipt = csConfig?.c5cReview ? null : settleCsMatch(r); setCsSettlementReceipt(receipt); setCsResult(r); setScreen("csResult"); }} onBack={home} />}
       {/*  CS Season M4-A：BO3 的中間地圖打完之後不回首頁，接著打下一張。
             ⚠ 判斷來源是 **store 的 series 狀態**，不是畫面自己數打了幾張——
               畫面狀態重整就沒了，而 series 跟著場次一起存檔。
             ⚠ 走 `resumeActiveMatch()` 而不是另開一場：場次根本沒有結束，
               令牌也早就用掉了。恢復回來的 `phase` 是 `map` ⇒ 直接落在選圖畫面。 */}
-      {screen === "csResult" && <CsResultScreen result={csResult} onDone={() => {
+      {screen === "csResult" && <CsResultScreen result={csResult} settlementReceipt={csSettlementReceipt} onDone={() => {
         const series = useProfileStore.getState().activeSeriesView();
         setCsResult(null);
+        setCsSettlementReceipt(null);
         setCsConfig(null);
         if (series && !series.decided) { resumeActiveMatch(); return; }
         setScreen("dashboard");

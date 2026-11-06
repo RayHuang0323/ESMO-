@@ -58,7 +58,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   // seed / 地圖：賽前流程有給就用（決定性重播鍵）；否則沿 Sprint22 掛載時決定一次
   const [seed] = useState(() => launch?.seed ?? config?.seed ?? ((Date.now() & 0xffff) | 1));
   const mapKey = config?.mapKey ?? CS_MAP_KEYS[seed % CS_MAP_KEYS.length];
-  const mapName = csMapByKey(mapKey)?.name ?? config?.mapName ?? mapKey;
+  const mapName = sceneVersion==='major.v5'?'Foundry Circuit':sceneVersion==='major.v4'?'Dune Terminal':sceneVersion==='major.v3'?'Confluence Station':csMapByKey(mapKey)?.name ?? config?.mapName ?? mapKey;
   const matchLabel = session?.origin?.kind === "fixture"
     ? "CS 正式賽事"
     : session?.origin?.kind === "practice" ? "CS 快速練習" : "CS 一般對戰";
@@ -136,7 +136,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
       <div className="fps-cs-match-header" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", flexWrap: "wrap", background: GC.bg }}>
         <button onClick={handleBack} data-testid="leave-active-match" style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 8, padding: "5px 12px", color: GC.blueL, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{replayMode ? "← 離開重播" : "← 暫停並離開"}</button>
         <span style={{ color: GC.blueL, fontSize: 13, fontWeight: 800, minWidth: 0, overflowWrap: "anywhere" }}>{replayMetadata?.teamName ?? team?.name ?? "德國海豹"} <span style={{ color: GC.gray, fontWeight: 600 }}>vs</span> {replayMetadata?.opponentName ?? session?.opponent?.name ?? "對手"}</span>
-        <span style={{ background: GC.card, border: `1px solid ${GC.line}`, color: GC.gold, fontSize: 10, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>🗺 {replayMetadata ? csMapByKey(replayMetadata.mapKey)?.name ?? replayMetadata.mapKey : mapName}</span>
+        <span style={{ background: GC.card, border: `1px solid ${GC.line}`, color: GC.gold, fontSize: 10, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>🗺 {replayMetadata ? replayMetadata.sceneVersion === 'major.v5' ? 'Foundry Circuit' : replayMetadata.sceneVersion === 'major.v4' ? 'Dune Terminal' : replayMetadata.sceneVersion === 'major.v3' ? 'Confluence Station' : csMapByKey(replayMetadata.mapKey)?.name ?? replayMetadata.mapKey : mapName}</span>
         {!replayMode && config?.tacticName && <span style={{ background: GC.card, border: `1px solid ${GC.line}`, color: GC.blueL, fontSize: 10, fontWeight: 700, borderRadius: 5, padding: "1px 7px" }}>戰術「{config.tacticName}」</span>}
         <span style={{ marginLeft: "auto", color: GC.gray, fontSize: 10 }}>{replayMode ? "保存重播" : matchLabel}</span>
       </div>
@@ -165,9 +165,9 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
               <span style={{ marginLeft: "auto", color: "#5a606e", fontSize: 9 }}>{mapName}{config?.tacticName ? ` · ${config.tacticName}` : ""}</span>
             </div>
             {onFinish ? (
-              <button onClick={() => onFinish(csResult)} style={{ width: "100%", minHeight: sceneVersion === "major.v1" ? 44 : undefined, background: "linear-gradient(135deg,#fb923c,#f97316)", border: "1px solid #fdba74", borderRadius: 10, padding: "9px", color: "#1a1205", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>📊 查看賽後戰報 · 領取獎勵</button>
+              <button onClick={() => onFinish(csResult)} style={{ width: "100%", minHeight: ["major.v1", "major.v2", "major.v3", "major.v4", "major.v5"].includes(sceneVersion) ? 44 : undefined, background: "linear-gradient(135deg,#fb923c,#f97316)", border: "1px solid #fdba74", borderRadius: 10, padding: "9px", color: "#1a1205", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>📊 查看賽後戰報 · 領取獎勵</button>
             ) : (
-              <button onClick={onBack} style={{ width: "100%", minHeight: sceneVersion === "major.v1" ? 44 : undefined, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>回到 Dashboard</button>
+              <button onClick={onBack} style={{ width: "100%", minHeight: ["major.v1", "major.v2", "major.v3", "major.v4", "major.v5"].includes(sceneVersion) ? 44 : undefined, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", border: "1px solid #93c5fd", borderRadius: 10, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>回到 Dashboard</button>
             )}
           </div>
         </div>
