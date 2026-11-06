@@ -556,6 +556,9 @@ const mobaOk = run(FX.moba, [{ do: "commit", which: "a" }, { do: "heroShape" }],
   //  重新整理後配額旗標歸零：靠落盤的提示記住，上限比 Chrome 小的瀏覽器才不會退回一般文案。
   if (q) {
     ck("配額不足時提示記下「已滿」", last(q).sum.alertFull === true, JSON.stringify(last(q).sum.alertFull));
+    //  提示被清掉之後（例如另一件事收掉了它），同一次開機裡只剩配額旗標：還是要判成已滿。
+    const qc = run(FX.moba, [{ do: "quota", extra: 0 }, { do: "commit", which: "a" }, { do: "clearAlertOnly" }]);
+    if (qc) ck("提示收掉後只靠配額旗標：還是判成已滿", last(qc).sum.alertMem === null && last(qc).sum.full === true && qc.used < 4900000, JSON.stringify({ a: last(qc).sum.alertMem, full: last(qc).sum.full, used: qc.used }));
     const qb = run(FX.moba, [{ do: "boot" }], { from: freeze(q.final) });
     if (qb) ck("重新整理後（總量仍低於 Chrome 門檻）：還是判成已滿", last(qb).sum.full === true && qb.used < 4900000, `full=${last(qb).sum.full} used=${qb.used}`);
   }
