@@ -26994,3 +26994,10 @@ Owner 核准結案。產品上線版本 main `7b70cda9`；發布紀錄與 B1B �
 **未完成**：根因未證實；`gh` 未安裝／未登入，無法取消可能卡住的 Pages 部署；Support 報告還缺日誌那幾行（Owner 手上才有）。**結案條件**見交接紀錄。
 
 **教訓**：1）「重跑」要區分：Re-run failed jobs 會用同一個 artifact，Re-run all jobs 只換 artifact，兩者都保留同一個 commit SHA；三次都失敗時，下一個能改變的變數就是 SHA。2）判斷平台問題不能只看狀態頁，要拿同一時段別人的成功部署當對照；這次的對照把「平台異常」改判成「我們這個站台的問題」。3）手上沒有權杖時，不要去憑證管理員取用 push 的憑證來打 API。
+
+**2026-11-07 補：GitHub Pages 部署通道已恢復（run 42296608521，commit `28023019`）**
+- 第 4 次嘗試改用新 commit SHA（docs-only，正常 fast-forward，不是空 commit）：run #301 成功，全程 1 分 18 秒；線上站 `Last-Modified` 由 19:05:30 更新為 **21:26:41 GMT**；入口 bundle 仍是 `index-ArXXucOR.js`；Supabase 仍未啟用。
+- 部署後 smoke：新玩家探測 10/10、B1B 43/43、B1C 38/38、B1D 27/27；console 頁面例外與 error 都是 0。
+- **根因仍未證實：** 「相同 SHA 的三次嘗試接到同一個卡住的部署」與「這個站台的 Pages 後端卡了約 70 分鐘後自己恢復」兩種解釋都符合證據，無法區分。沒有送 Support（報告留著備用，同樣的情況再發生時再送）。
+- **實務結論：** 部署逾時時不要重複 Re-run（相同 SHA 三次都失敗，包含換新 artifact），改推一個本來就需要的、有實質內容的新 commit。
+- 沒有收集到：job 日誌（本機沒有 `gh`／權杖）、新部署的 Deployments API 狀態序列與前一個部署是否變 `inactive`（匿名 API 額度用完）。

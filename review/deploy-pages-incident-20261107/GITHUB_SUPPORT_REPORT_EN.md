@@ -55,9 +55,15 @@ All three attempts used the same commit SHA. The repo owner reports from the job
 2. If so, cancel or clear it, and confirm whether a deployment can be keyed or blocked by the repeated commit SHA.
 3. Tell us the root cause, and whether anything on the repository's Pages site (Settings → Pages source, environment `github-pages`) needs to be reset on our side.
 
-## Current impact and our mitigation
+## Update 2026-11-06 21:27 UTC: deployments work again for a new commit SHA
 
-The site is healthy and serves the previous successful deployment (`7608490334`, commit `7b70cda9`; `Last-Modified: Fri, 06 Nov 2026 19:05:30 GMT`). We are not changing the workflow, the environment, or the deployment method while this is investigated. We will try one deployment with a new commit SHA; this report will be updated with the outcome.
+We did not change the workflow, the environment or the deployment method. We pushed one documentation-only commit with a new SHA (`28023019b46342b943c34977e8df0d855db8928c`). Run `42296608521` (#301) succeeded in 1 min 18 s and the site's `Last-Modified` moved from `Fri, 06 Nov 2026 19:05:30 GMT` to `Fri, 06 Nov 2026 21:26:41 GMT`. Smoke checks on the live site pass.
+
+This does **not** tell us the root cause: either the three attempts for `7d59dab5` were tied to one stuck deployment/version, or the site's Pages backend stalled for roughly 70 minutes and then recovered. **We are not asking Support to act unless this recurs**; this report is kept so it can be sent, with the job-log lines described below, if it does.
+
+## Current impact and our mitigation (at the time of writing, before the update above)
+
+The site was healthy and served the previous successful deployment (`7608490334`, commit `7b70cda9`; `Last-Modified: Fri, 06 Nov 2026 19:05:30 GMT`). We did not change the workflow, the environment, or the deployment method while this was investigated.
 
 ## Evidence files (public API snapshots, kept outside the repository)
 
