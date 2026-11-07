@@ -27013,3 +27013,12 @@ Owner 核准結案。產品上線版本 main `7b70cda9`；發布紀錄與 B1B �
 **TD-DEPLOY-1～4（GitHub Pages 部署通道）：OPEN。** 這是另一件事，和 BP-9 產品無關。通道已恢復（run `42296608521` 1 分 18 秒；run `42297646693` 8 分 2 秒，偏慢）。之後 2～3 次正常發版要記錄部署耗時與正式站版本，記在 `review/deploy-pages-incident-20261107/部署耗時追蹤.md`。前幾節出現的「還不能結案」「開著」都只指部署通道。
 
 **Owner 守則**：不調整 `timeout`、不改 `deploy.yml`、不建立測試用空 commit；本機 `a0ec13a1` 和本次文件 commit 不單獨 push，等下一次正式發版一起整合；Support 報告保留，再次逾時時再評估提交。
+
+
+## 2026-11-08 CS Map v2 公開桌機測試版發布準備／等待 Claude Gate
+
+Owner 限定條件式發布，隨後明示 Claude 仍在修復 Release Gate。只完成獨立 RC 備份 Push、最新 main 與三份未 Push 文件提交保護、既有發布工作區候選 db97d102。124 路徑選擇性 patch 無內容衝突；產品與 RC 相同，577 個未選取 main來源 blob 相同。Build native0、Shader14/14、RAF7/7；本機 Supabase UNCONFIGURED。沒有 Push main／Merge main／Deploy。
+
+臨時 wrapper 的中文 regexp 經 PowerShell stdin 轉碼後語法失敗，未開始測試；保存 HARNESS_FAIL，改 ASCII wrapper 才真執行。沒有放寬產品斷言。澄清前新建的唯讀 baseline3e615157 開始 Competition Gate，澄清後停止自有 PID58916，前三 Node 區段完成但整體 ABORTED_BY_OWNER_STEERING；stdout／stderr／native／child logs 全保留，不當 PASS／PRODUCT_FAIL。該工作樹不刪、不續跑，也不冒充 Claude 修復成果。
+
+最新停點與完整證據位置：review/cs-integration-20261107/BETA_CHECKPOINT.md、BETA_RELEASE_PREPARATION.md。最後 Gate、整合核心回歸與正式站 smoke NOT_RUN，等正式 SHA／指令／收據；停止擴大工作，保護所有現役工作區與原始證據。

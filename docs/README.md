@@ -92,3 +92,8 @@
 
 - `handoff/10_CS_P0_視覺穩定性與防回歸契約.md`：CS FPS P0 四項事故的 root cause、production contract、eliminated hypotheses 與 required gates。
 - `handoff/09_技術債務清單.md`：CS P0 closure 與 residual debt boundary。
+
+
+## 2026-11-08 CS Map v2 公開測試版發布準備
+
+最新停點：`review/cs-integration-20261107/BETA_CHECKPOINT.md`；完整報告：`BETA_RELEASE_PREPARATION.md`。產品候選 db97d102，等待 Claude Release Gate 正式交接；尚未 Push main／Merge main／Deploy。原 RC 報告與收據保留為歷史，不作最後整合 Gate PASS。

@@ -2953,3 +2953,12 @@ NEXT_SPRINT = NOT_STARTED
 - **P0-A：** 2026-11-06 正式上線（main `e53a0806`），Owner 接受。
 - **P0-B：** 2026-11-06 完成，分支 `fix/bp9-p0b-save-slim` 本機 commit，**等 Owner Release Review，不自行部署**。部署後要跑正式站 Smoke（`browser_check_bp9_slim_p0b --url=` 可打正式站，Chrome 是全新 Profile）。
 - **之後：** P0-B 上線後恢復 W2 第 3–5 項；BP-2、BP-3、BP-4、BP-8 照原排序。
+
+
+## 2026-11-08 CS Map v2 有限桌機公開測試版
+
+- 已完成：RC67f46145 遠端獨立分支／tag 備份；原34WIP與三份 Claude 文件祖先保護；本機隔離候選 db97d102；Build、Shader14/14、RAF7/7。
+- 目前：WAITING_RELEASE_GATE_HANDOFF；Claude 正式 SHA／命令／結果尚未交付，不重做 CS、不新增工作樹、不再自行重跑基線。
+- 下一步：於既有發布工作區核對 Claude 修復與最新 main，再於最終 SHA 跑完整所需 Gate；通過後才可正常 Push main／Pages 與正式站實測。失敗／衝突即停。
+- 公開範圍：桌機、快速練習 opt-in；手機／低RAM未認證，CPU4×與2118MiB具名保留，不改寫全面 PASS；正式競賽地圖池不擴大。
+- 部署後才做磁碟只讀盤點與清理提案，本輪不刪除現役資料。細節：review/cs-integration-20261107/BETA_RELEASE_PREPARATION.md。

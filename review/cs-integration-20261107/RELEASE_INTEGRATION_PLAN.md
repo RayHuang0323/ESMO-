@@ -1,5 +1,9 @@
 # 第四階段：正式整合／部署計畫（僅規劃）
 
+## 2026-11-08 授權與等待條件更新
+
+Owner 最新授權：RC67f46145 可在正確 Gate 通過後發布為桌機公開測試版，限既有快速練習 opt-in，允許獨立備份 Push 與有條件正常 Push main／Pages。隨後明確補充：Claude Code 仍在修復 Release Gate，正式交接 SHA／指令／結果交付前，不 Push main、不 Merge main、不 Deploy。已完成 RC 遠端備份及本機候選 db97d102；最新執行清單見 BETA_RELEASE_PREPARATION.md／BETA_CHECKPOINT.md。下列「尚未授權」文字是前輪歷史，已由本節限縮授權取代；工程 Gate 與真實收據條件沒有豁免。
+
 Owner只授權準備此計畫，尚未授權merge至main、push或deploy。本文件不是執行核准，也不是Release Gate PASS。實際候選SHA、第三階段結果以最新CHECKPOINT.md與品質報告為準。
 
 ## Owner決策前的條件

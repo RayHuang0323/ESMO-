@@ -1,5 +1,7 @@
 # CS Map v2 隔離整合續作停點
 
+> 2026-11-08 最新停點：**WAITING_RELEASE_GATE_HANDOFF**。公開桌機測試版候選 `db97d102` 已保存，等待 Claude 正式 SHA／指令／收據；沒有 Push main／Merge main／Deploy。請先讀 [BETA_CHECKPOINT.md](BETA_CHECKPOINT.md)。下列 RC 內容保留為歷史。
+
 ## 本機RC最新停點
 
 本機分支rc/cs-map-v2-20261108，起點3b8f75ff；main仍3e615157、無新產品差異，不需要再次整合。原34份WIP逐SHA／Git狀態相符，另存evidence/rc-recovery-r1；rehearsal／原CS工作區與其他worktree不動。產品來源維持原受測版本，不採入清chunks實驗。
@@ -39,3 +41,6 @@ RC_REPORT.md、RC_RECOVERY.md與RC_AI_HANDOFF.md為交付入口，Gate HOLD；�
 第三階段工具／文件的最終本機提交SHA以git log -1及evidence/final-checkpoint-r1/manifest.json為準；不將Git SHA寫死成自我參照提交。最終manifest另列原34份WIP SHA比對、收據／log SHA及預覽PID；原始大檔不入Git。文件入口：INTEGRATION_REVIEW.md、PHASE3_QUALITY_REVIEW.md、RELEASE_GATE_ACCEPTANCE.md、RELEASE_INTEGRATION_PLAN.md。
 
 下一步只能由Owner決定：補TD-INT-01指定CS結算滿檔路徑、處置progress25文字斷言紅燈、真機／低RAM／CPU4×及其他長局矩陣，或審核具名接受範圍。Android、低RAM裝置、OS回收及實際熱降頻均NOT_RUN；CPU4×舊FAIL仍保持。再次正式整合前須重新fetch／pin main並比對六共享檔。不得自行重跑全部長測試、merge、push、deploy或影響其他worktree。
+# 2026-11-08 公開測試版最新停點
+
+Owner 已授權條件式桌機公開測試版，但最新補充指定等待 Claude Release Gate 正式交接。產品候選 `db97d102` 已在獨立發布工作區保存；RC `67f46145` 已備份至獨立 GitHub 分支與標籤。沒有 Push main／Merge main／Deploy。最新入口：[BETA_CHECKPOINT.md](BETA_CHECKPOINT.md)、[BETA_RELEASE_PREPARATION.md](BETA_RELEASE_PREPARATION.md)。以下為保留的 RC／前輪歷史，不代表新整合 SHA 已通過最後 Gate。

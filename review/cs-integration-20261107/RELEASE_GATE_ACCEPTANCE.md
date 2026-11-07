@@ -1,5 +1,9 @@
 # 整合候選Release Gate驗收清單
 
+## 2026-11-08 公開桌機測試版最新狀態
+
+**HOLD／WAITING_RELEASE_GATE_HANDOFF。** Owner 已接受桌機、快速練習 opt-in 的有限測試範圍，但 Claude 修復後正式 SHA／指令／收據尚未交付。候選 `db97d102` 的本機 Build、Shader14/14、RAF7/7 通過；最後整合 Release Gate／CS三圖核心回歸／正式站 smoke 都是 NOT_RUN。沒有 Push main／Merge main／Deploy。Android、低RAM、熱降頻維持 NOT_RUN，CPU4× FAIL 與 2118MiB 風險不關閉。詳見 BETA_RELEASE_PREPARATION.md；下表「RC現況」只屬歷史 RC，不能用來宣稱本輪完整 PASS。
+
 ## 本機RC唯一現行總表
 
 本輪以RC_REPORT.md、最終RC證據索引與rc-manifest.json為準；下方歷史表格保留，不再當最新狀態。
