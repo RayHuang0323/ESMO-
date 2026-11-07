@@ -27017,3 +27017,14 @@ RG-CS-02仍部分完成／阻擋：Foundry第三次返回取樣2118MiB，卸載1
 ## RG-CS-02：同時存活記憶體歸因與隔離實驗
 
 最新RG-CS-02續作：REPLAY_LIVE_HEAP_REVIEW.md。沿用七份Allocation Profiles，新增主執行緒／Worker／GC階段觀測與三次匯入返回。r3基線、r4僅診斷Build清chunks實驗、r5基線校準均9/9；3865幀逐幀SHA256一致、同一原比賽物件返回。GC前高水位約1538／1243／1550MiB，輪詢used高水位1245／1236／1263MiB，匯入時間混合；未證明2118MiB歷史峰值可靠改善，停止擴修，不採入產品。Worker末段約5.5MiB，窗口後單獨GC幾乎不變；原生解壓／backing／renderer RAM與最高reachable heap仍有歸因缺口。r1／r2的11/11因輪間hash污染，不作自然峰值基線。全部raw trace／收據保留。
+
+
+## ESMO CS Map v2 RC・AI交接摘要
+
+工程RC已收斂，正式發布**HOLD，停止於Owner Review**。本機分支rc/cs-map-v2-20261108，起點3b8f75ff；最終SHA／tag與完整證據SHA在evidence/rc-final-r1/manifest.json，本機tag預定rc/cs-map-v2-20261108-hold-r1。這不是正式main或已發布版本，不自動開始下一Sprint／整合／效能實驗。
+
+新增Confluence3497幀約29.5分鐘與Dune3256幀約27.5分鐘完整原生1×長局，各6/6／native0；Foundry3865幀約32.5分鐘6/6沿用。三場都自然播完、十名Rigged、零保存位置偏差、無contextLost／新模擬，離場Canvas／環境／probe釋放。新兩場並行只驗功能，不把FPS／Heap當效能／真機證明。18份native收據加runtime29索引已驗；三圖全seed／GPU bytes精確回收仍未驗。
+
+剩餘阻擋：真Android／低RAM／OS回收／熱降頻NOT_RUN；CPU4×既有FAIL與Replay2118MiB風險不豁免；Owner美術／動畫／戰術與practice opt-in範圍待接受。cloth18/19與utility6/9只是可提議延期，沒有Owner具名核准；自然滿檔3/4仍NOT_TRIGGERED，不用受控PASS洗掉。下一步應是選定實際支援裝置補驗與Owner決策，不繼續無限制工程研究。
+
+[RC_REPORT.md](../../review/cs-integration-20261107/RC_REPORT.md) | [RC_AI_HANDOFF.md](../../review/cs-integration-20261107/RC_AI_HANDOFF.md)

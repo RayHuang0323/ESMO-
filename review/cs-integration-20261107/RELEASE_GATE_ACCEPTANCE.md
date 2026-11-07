@@ -1,5 +1,22 @@
 # 整合候選Release Gate驗收清單
 
+## 本機RC唯一現行總表
+
+本輪以RC_REPORT.md、最終RC證據索引與rc-manifest.json為準；下方歷史表格保留，不再當最新狀態。
+
+| Gate | RC現況 | 最小剩餘條件 |
+|---|---|---|
+| RG-CS-01 | NOT_RUN／發布阻擋 | 真Android三圖FPS、觸控、安全區、背景恢復、發熱／熱降頻 |
+| RG-CS-02 | 桌機限定長局已補／發布仍阻擋 | 三圖固定完整長局各6/6；2118MiB、低RAM／OS回收仍未關，不再無限實驗 |
+| RG-CS-03 | 既有FAIL保持 | CPU4×原門檻未達；Owner決定實際支援範圍，不自行豁免 |
+| RG-CS-04 | 隔離工程與主要回歸已完成 | main產品無新差異；Progress25已33/33、受控CS容量38/38，原自然3/4保持覆蓋缺口；未正式merge |
+| RG-CS-05 | 待Owner | 美術／動畫／戰術及practice opt-in範圍；cloth／utility具名延期決策 |
+| RG-CS-06 | 已補限定缺口 | RAF7/7、原生reset／seek／卸載49/49保留；不抹去舊6/7 |
+
+正式發布判定：**HOLD**。Confluence／Dune長局各6/6已補；18份native有效收據加runtime29索引通過。Release Gate不因工程RC封存而自動PASS。
+
+## 歷史收據與前輪描述（不是現行Gate總表）
+
 RG-CS-02最新：REPLAY_LIVE_HEAP_REVIEW.md。主執行緒高水位有暫存重疊／GC延後證據，Worker非主要來源；基線／最小隔離實驗／基線校準均9/9完整性通過，收益未足以確認正式2118MiB峰值改善，不採產品修正。native解壓／renderer RAM／最高reachable heap、真低RAM／Android仍未關；CPU4×既有FAIL保持。TD-INT-01不重跑，整體HOLD。
 
 2026-11-08追加：TD-INT-01受控CS結算超限→整理→返回原場冪等38/38已補；原自然3/4仍NOT_TRIGGERED、原斷言不動。RG-CS-02新增七份Allocation profiles與6/6 runtime，但2118MiB峰值／native解壓／Worker及低RAM仍未關，沒有產品修正。最新範圍以CONTROLLED_QUOTA_ALLOCATION_REVIEW.md為準，其餘歷史保留，整體HOLD。

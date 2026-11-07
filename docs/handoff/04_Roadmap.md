@@ -1,5 +1,16 @@
 # 04 Roadmap
 
+## ESMO CS Map v2 RC・AI交接摘要
+
+工程RC已收斂，正式發布**HOLD，停止於Owner Review**。本機分支rc/cs-map-v2-20261108，起點3b8f75ff；最終SHA／tag與完整證據SHA在evidence/rc-final-r1/manifest.json，本機tag預定rc/cs-map-v2-20261108-hold-r1。這不是正式main或已發布版本，不自動開始下一Sprint／整合／效能實驗。
+
+新增Confluence3497幀約29.5分鐘與Dune3256幀約27.5分鐘完整原生1×長局，各6/6／native0；Foundry3865幀約32.5分鐘6/6沿用。三場都自然播完、十名Rigged、零保存位置偏差、無contextLost／新模擬，離場Canvas／環境／probe釋放。新兩場並行只驗功能，不把FPS／Heap當效能／真機證明。18份native收據加runtime29索引已驗；三圖全seed／GPU bytes精確回收仍未驗。
+
+剩餘阻擋：真Android／低RAM／OS回收／熱降頻NOT_RUN；CPU4×既有FAIL與Replay2118MiB風險不豁免；Owner美術／動畫／戰術與practice opt-in範圍待接受。cloth18/19與utility6/9只是可提議延期，沒有Owner具名核准；自然滿檔3/4仍NOT_TRIGGERED，不用受控PASS洗掉。下一步應是選定實際支援裝置補驗與Owner決策，不繼續無限制工程研究。
+
+[RC_REPORT.md](../../review/cs-integration-20261107/RC_REPORT.md) | [RC_AI_HANDOFF.md](../../review/cs-integration-20261107/RC_AI_HANDOFF.md)
+
+
 ## 2026-09-20 Hero Skills / VFX Phase 1（獨立候選）
 
 共用 Contract / compile / presentation runtime、七英雄十七演出及正式英雄 VFX replacement；目前只有 10/400 項 QWER 權威 Gameplay 切片，絕非 100 英雄完成。持續線形區域由炎拳 E、穿透遞減由曙光 Q、範圍嘲諷與減傷由鋼鐵 W 建立；後續仍須 audit heal/status、刺客方向性與其他 persistent zone，按 mechanic 分批，截斷描述不能自行補全。細節及限制見 [Phase 1](../design/MOBA_HeroSkills_Phase1.md)與[Gameplay 追蹤](../design/MOBA_HeroSkills_Gameplay_Implementation.md)。候選未發布。

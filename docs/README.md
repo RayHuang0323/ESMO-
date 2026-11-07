@@ -88,6 +88,16 @@
 - 詳細設計只留在 `docs/design/`。
 - `handoff/00` 與 `handoff/08` 必須維持**精簡且最新**。
 - 過時文件應標記為歷史或移至 `_archive`，但**不要一次大量搬動**既有文件。
+
+## CS Map v2 最終RC入口
+
+- [RC總報告與發布判定](../review/cs-integration-20261107/RC_REPORT.md)
+- [現行Release Gate總表](../review/cs-integration-20261107/RELEASE_GATE_ACCEPTANCE.md)
+- [本機RC／預覽恢復方式](../review/cs-integration-20261107/RC_RECOVERY.md)
+- [最新RC Checkpoint](../review/cs-integration-20261107/CHECKPOINT.md)
+- [RC AI交接摘要](../review/cs-integration-20261107/RC_AI_HANDOFF.md)
+
+以下為歷史工程報告索引，最新狀態以RC入口為準。
 ## CS P0 Visual Stability
 
 - `handoff/10_CS_P0_視覺穩定性與防回歸契約.md`：CS FPS P0 四項事故的 root cause、production contract、eliminated hypotheses 與 required gates。

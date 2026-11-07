@@ -1,5 +1,15 @@
 # CS Map v2 隔離整合續作停點
 
+## 本機RC最新停點
+
+本機分支rc/cs-map-v2-20261108，起點3b8f75ff；main仍3e615157、無新產品差異，不需要再次整合。原34份WIP逐SHA／Git狀態相符，另存evidence/rc-recovery-r1；rehearsal／原CS工作區與其他worktree不動。產品來源維持原受測版本，不採入清chunks實驗。
+
+Confluence／Dune固定保存Replay完整原生1×長局已各6/6、native0，約29.5／27.5分鐘；時間軸／十人／保存位置／無重模擬／自然末幀／卸載通過。Foundry長局6/6及其餘有效三圖／BP-9／MOBA／Progress25／容量／Shader／RAF收據沿用。18份有效native收據加runtime29索引通過；兩場並行只判功能，不作效能／低RAM／真機驗收。preview-r3 production native0，JS／CSS／700來源與受測包相同。最終tag／SHA與服務結果見evidence/rc-final-r1/manifest.json。
+
+RC_REPORT.md、RC_RECOVERY.md與RC_AI_HANDOFF.md為交付入口，Gate HOLD；預覽helper校驗包與PID後只處理本RC5207／61048。真機／低RAM／熱降頻NOT_RUN，CPU4×失敗與2118MiB風險保持。完成所有收尾後停Owner Review，不自動進正式整合／發布。
+
+## 前輪已完成停點歷史
+
 最新RG-CS-02續作：REPLAY_LIVE_HEAP_REVIEW.md。沿用七份Allocation Profiles，新增主執行緒／Worker／GC階段觀測與三次匯入返回。r3基線、r4僅診斷Build清chunks實驗、r5基線校準均9/9；3865幀逐幀SHA256一致、同一原比賽物件返回。GC前高水位約1538／1243／1550MiB，輪詢used高水位1245／1236／1263MiB，匯入時間混合；未證明2118MiB歷史峰值可靠改善，停止擴修，不採入產品。Worker末段約5.5MiB，窗口後單獨GC幾乎不變；原生解壓／backing／renderer RAM與最高reachable heap仍有歸因缺口。r1／r2的11/11因輪間hash污染，不作自然峰值基線。全部raw trace／收據保留。
 
 產品src／public／Vite對4e155007不變，不重跑TD-INT-01或大型矩陣；main仍3e615157、未重新整合。安全本機SHA與證據SHA見evidence/live-heap-checkpoint-r1/manifest.json。Gate HOLD，低RAM／Android NOT_RUN、CPU4×既有FAIL不豁免；無認證最低手機RAM，8GB以上只是候選驗收起點。預覽5207／controller61048保持；停Owner Review，不merge／push／deploy。下方保留前輪歷史。
