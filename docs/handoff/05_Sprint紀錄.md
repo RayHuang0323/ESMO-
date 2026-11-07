@@ -27059,3 +27059,15 @@ TD-GATE-CS-01的details前置已以原生UI補齊，本機三圖25/25證實，�
 完整報告：review/cs-integration-20261107/BETA_RELEASE_R3_REVIEW.md；R3驗收清單與Checkpoint同目錄；原始收據：C:\Users\ifikn\esmo-measure\cs-beta-release-20261108\release-r3。只讀盤點已完成，未刪資料；後續文件Checkpoint只存本機，不能充作新的產品PASS。
 
 本輪僅修Git外Smoke前置，沒有修改產品或放寬驗證器；來源SHA仍7cf1cebc。19組原收據由守門確認同SHA／同環境／24小時內有效，再新增Node20 Build與本機原生Replay Gate。正常atomic FF Push main、備份分支與Beta tag後，CI成功；正式站最後補充Gate才發生新FAIL，立即停止，沒有重跑洗綠或自動回退。部署耗時3分02秒，TD-DEPLOY-1～4不關閉。
+
+## 2026-11-08 CS Beta R4：Replay阻擋關閉，桌機Beta正式站驗收通過
+
+正式站／origin/main維持 **7cf1cebc10915f096a256885388ecd8a7052e5f3**。TD-GATE-CS-02已釐清為補充Smoke漏等地圖首幀就緒：原生播放已開始，但Canvas仍hidden／畫面顯示準備中，播放時鐘依法等待presentationReady；同一正式站分頁資源就緒後由12推進14。未確認產品BUG，未改產品。原R3 PRODUCT_FAIL及本輪重現FAIL保留，不改收據。
+
+只修Git外Smoke的真實UI就緒前置，保留原1.2秒推進及原生匯入／seek／返回／卸載要求；本機三圖合計 **38/38 PASS**、正式站三圖合計 **38/38 PASS**，三圖播放、暫停、返回原場、不重啟模擬、WebGL釋放／場景清空與Console／Network完成。正確SHA的最後 **29組assert PASS／exit0**；其他有效回歸收據由SHA Guard確認同版本、同環境、24小時內，未重跑大型矩陣或跨SHA沿用。
+
+結論 **CONDITIONAL GO：僅Owner核准的桌機快速練習opt-in公開測試版**。不需Hotfix／回退，沒有新Push或部署；既有Actions42413502348 SUCCESS與正式首頁／11JS相符。Android／低RAM／實際熱降頻NOT_RUN，CPU4×FAIL、2118MiB峰值與自然容量3/4缺口仍保留，不宣稱全面Release Gate PASS。
+
+最新報告：review/cs-integration-20261107/BETA_RELEASE_R4_REVIEW.md；R4驗收清單／Checkpoint及只讀清理提案同目錄。原34WIP與備份逐檔一致，RC／Claude工作區及三個文件祖先保留；沒有新增Worktree。證據與4個新測試Profile均保留，檔案在C:\Users\ifikn\esmo-measure\cs-beta-release-20261108\release-r4。本輪文件Checkpoint只存本機，與已部署／已驗證7cf1cebc分開。
+
+驗證器修改原因：原只驗canvas存在，未驗地圖首幀就緒；本輪加入產品真UI準備訊息消失、Canvas可見與WebGL有效前置，未改原1.2秒推進斷言。額外補原生play／pause、同場返回、不重啟模擬及真context釋放檢查，從25項擴為38項，無刪舊要求。外部harness只保留Profile並補紀錄，分類不改；原FAIL收據hash確認不變。

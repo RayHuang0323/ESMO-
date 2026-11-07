@@ -50,3 +50,7 @@ Owner 已授權條件式桌機公開測試版，但最新補充指定等待 Clau
 ## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
 
 正式站7cf1cebc已部署，Actions42413502348 SUCCESS；部署後補充Replay PRODUCT_FAIL，最後assert FAIL，狀態HOLD。以[BETA_RELEASE_R3_REVIEW.md](BETA_RELEASE_R3_REVIEW.md)、[BETA_RELEASE_R3_ACCEPTANCE.md](BETA_RELEASE_R3_ACCEPTANCE.md)與[BETA_RELEASE_R3_CHECKPOINT.md](BETA_RELEASE_R3_CHECKPOINT.md)為最新結果；既有R2／WAITING紀錄只作歷史。沒有在失敗後再次Push、部署或回退。
+
+## 2026-11-08 CS Beta R4：Replay阻擋關閉，桌機Beta正式站驗收通過
+
+最新結果見[BETA_RELEASE_R4_REVIEW.md](BETA_RELEASE_R4_REVIEW.md)／[R4清單](BETA_RELEASE_R4_ACCEPTANCE.md)／[R4停點](BETA_RELEASE_R4_CHECKPOINT.md)：同7cf1cebc正式站三圖Replay38/38，29組assert PASS。R3新阻擋已關閉；僅外部Smoke前置修正，沒有產品Hotfix／新Push／新部署。Android／低RAM未認證及CPU4×／記憶體風險維持，不改寫全面PASS。

@@ -1,3 +1,7 @@
+## 2026-11-08 CS Beta R4：Replay阻擋關閉，桌機Beta正式站驗收通過
+
+最新：[R4正式站報告](../review/cs-integration-20261107/BETA_RELEASE_R4_REVIEW.md)、[Checkpoint](../review/cs-integration-20261107/BETA_RELEASE_R4_CHECKPOINT.md)、[驗收清單](../review/cs-integration-20261107/BETA_RELEASE_R4_ACCEPTANCE.md)。R3 Replay阻擋已由同7cf1cebc版本補證關閉，本機與正式站各自三圖合計38/38、最後29組assert PASS。只修外部Smoke，沒有新Push／部署；舊R3 HOLD為歷史，手機／低RAM與既有風險仍保留。
+
 ## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
 
 最新入口：[R3完整報告](../review/cs-integration-20261107/BETA_RELEASE_R3_REVIEW.md)、[R3停點](../review/cs-integration-20261107/BETA_RELEASE_R3_CHECKPOINT.md)、[驗收清單](../review/cs-integration-20261107/BETA_RELEASE_R3_ACCEPTANCE.md)。正式站7cf1cebc／Actions成功，但正式站補充Replay FAIL，停止後續發布操作。以下R2／等待交接段落為歷史，不是目前main狀態。
