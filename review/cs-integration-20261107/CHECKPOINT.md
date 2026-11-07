@@ -1,5 +1,9 @@
 # CS Map v2 隔離整合續作停點
 
+最新續作完成：REMAINING_GAPS_REVIEW.md為本輪報告。只有兩支tools與文件修改，無產品改動。progress25修正v2舊假設為正式v3 runtime＋v2相容／非法版本拒絕，gaps-progress-r2 33/33；首次錯沿用v2之r1失敗保留。gaps-cs-runtime-r1仍3/4，確認第244天日曆先滿；新增calendar-cs-diagnostic 32/32證明備份／同意／整理／冷啟動後CS續玩入帳102→103，不代替指定CS結算超限／原場返回。Replay2118MiB風險仍開，沒有推測性產品修正。fetch main=3e615157，僅四份docs差異，未再次整合。
+
+本輪安全保存見evidence/gaps-checkpoint-r1/manifest.json（最終SHA與收據索引），Git本機提交；原34份WIP SHA相符。原預覽5207／controller61048保持，HTTPS仍只存對話與記憶體。Owner Review／HOLD；不merge、push、deploy。下方為前輪完整停點歷史，最新結果優先。
+
 第二階段工程候選與第三階段限定桌機驗收已完成；第四階段僅準備計畫。**Release Gate HOLD，停止於Owner Review，等Owner隔日確認。** 無merge至main／push／deploy；不得自動開始下一階段。
 
 原CS a7398436及34份WIP保持，原r50核對後另存r51。必要Shader／RAF三檔在獨立checkpoint工作樹提交5fc2463b，沒有大型證據。整合worktree：C:/Users/ifikn/.codex/worktrees/ESMO/cs-map-v2-integration-20261107，分支rehearsal/cs-map-v2-main-20261107，基線7d59dab5；沒有git merge或cherry-pick。

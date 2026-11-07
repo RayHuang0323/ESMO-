@@ -223,7 +223,12 @@ ck("   比賽拖長不放大獎勵（duration 不進公式）", (() => {
 import fs from "fs";
 const brSrc = fs.readFileSync("src/battle/battleResult.js", "utf8");
 const csSrc = fs.readFileSync("src/platform/contracts/CsMatchResult.js", "utf8");
-ck("13) 不修改 BattleResult.v2（schema 字串與 players 欄位仍在）", brSrc.includes('schema: "BattleResult.v2"') && !brSrc.includes("MatchProgressTransaction"));
+// schema已由正式版本常數提供；驗實際轉換結果，避免原碼排版／常數抽取造成假紅燈。
+const { snapshotToBattleResult } = await import(u("src/battle/battleResult.js"));
+const { serializeBattleResult, deserializeBattleResult } = await import(u("src/platform/contracts/battleResultVersion.js"));
+const contractPlayers = mkMoba().players;
+const contractResult = snapshotToBattleResult({over:true,winner:"blue",ts:120,bK:10,rK:5,bGold:10000,rGold:9000,towers:{},players:contractPlayers},[]);
+ck("13) BattleResult.v3輸出／v2相容／非法版本拒絕與結算邊界", contractResult.schema === "BattleResult.v3" && deserializeBattleResult(serializeBattleResult(contractResult)).schema === "BattleResult.v3" && deserializeBattleResult(serializeBattleResult(mkMoba())).schema === "BattleResult.v2" && deserializeBattleResult({schema:"BattleResult.invalid"}) === null && contractResult.mode === "moba" && contractResult.players.length === contractPlayers.length && contractResult.players.every((p,i) => p.id === contractPlayers[i].id && ["side","role","heroId","rating","participation","won","mvp"].every(k=>Object.hasOwn(p,k))) && !brSrc.includes("MatchProgressTransaction"));
 ck("14) 不修改 CsMatchResult.v1", csSrc.includes('CS_RESULT_SCHEMA = "CsMatchResult.v1"') && !csSrc.includes("MatchProgressTransaction"));
 ck("15) 不修改 FPS 3D Presentation", !fs.readFileSync("src/battle/fps/EsportsFPS3D.jsx", "utf8").includes("MatchProgressTransaction"));
 const psSrc = fs.readFileSync("src/platform/profileStore.js", "utf8");

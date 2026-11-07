@@ -1,5 +1,7 @@
 # ESMO CS Map v2 獨立工程整合演練
 
+最新追加：見[剩餘缺口補證](REMAINING_GAPS_REVIEW.md)。progress25已33/33，日曆滿檔整理後CS續玩32/32；指定CS結算滿檔仍3/4／前提未觸發，Replay峰值未修，Gate HOLD。以下原始收據與失敗歷史保留。
+
 2026-11-07。**工程候選已完成選擇性移植與指定驗證，停Owner Review；Release Gate維持HOLD。沒有merge至main、push或deploy。**
 
 Owner追加授權的第三階段已接續完成限定桌機驗證：Foundry一場完整原生1×長局6/6、三圖各三次匯入／reset／seek／返回／卸載49/49；未發現足以支持新產品修改的持有根因，仍觀測2GiB級取樣。最新細節見[第三階段品質報告](PHASE3_QUALITY_REVIEW.md)、[Release Gate清單](RELEASE_GATE_ACCEPTANCE.md)；[第四階段](RELEASE_INTEGRATION_PLAN.md)只有計畫。以下保留第二階段原收據，不能把單例長局擴張成所有長局／低RAM通過。

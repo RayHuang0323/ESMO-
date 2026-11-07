@@ -459,6 +459,19 @@ const result = await runGate({
       ck(`${label}：MOBA 與 CS 都正常完成賽程`, need.every((m) => done.has(m)), [...done].join(","));
     };
 
+    // 獨立診斷：不替代slim-cs的「CS結算超限」前提或原斷言。
+    if (CASE === "calendar-cs-diagnostic") {
+      report.nonUi.push("日曆先滿後整理／CS續玩補證；不算slim-cs通過");
+      await loadCheckpoint();
+      const attempt = await playUntilLimit("cs");
+      const stopped = await step("日曆先滿補證");
+      ck("指定CS超限未觸發、畫面已顯示滿檔保護", !attempt.failedAt && stopped.notice.on && !!stopped.notice.message);
+      await home();
+      await fullText("日曆超限補證");
+      if (await slimViaUi("日曆先滿整理")) await playOnAfterSlim("日曆整理後CS續玩", ["cs"]);
+      report.errors = errors();
+    }
+
     if (CASE === "slim-cs") {
       await loadCheckpoint();
       await step("起點");
