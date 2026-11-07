@@ -1,5 +1,7 @@
 # ESMO CS Map v2 獨立工程整合演練
 
+最新RG-CS-02：[同時存活記憶體歸因與隔離實驗](REPLAY_LIVE_HEAP_REVIEW.md)。已補GC階段／Worker／backing觀測，隔離清chunks實驗未採入；歷史2118MiB仍未完整歸因，Gate HOLD。產品來源不變，原有效收據保留。
+
 2026-11-08最新：[受控CS容量與配置採樣](CONTROLLED_QUOTA_ALLOCATION_REVIEW.md)。受控CS結算超限／整理／原場返回38/38，Allocation runtime6/6，七份raw profiles保留；Gate仍HOLD，無產品修正。以下前輪歷史不覆寫。
 
 最新追加：見[剩餘缺口補證](REMAINING_GAPS_REVIEW.md)。progress25已33/33，日曆滿檔整理後CS續玩32/32；指定CS結算滿檔仍3/4／前提未觸發，Replay峰值未修，Gate HOLD。以下原始收據與失敗歷史保留。

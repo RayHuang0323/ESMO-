@@ -1,5 +1,7 @@
 # 整合候選Release Gate驗收清單
 
+RG-CS-02最新：REPLAY_LIVE_HEAP_REVIEW.md。主執行緒高水位有暫存重疊／GC延後證據，Worker非主要來源；基線／最小隔離實驗／基線校準均9/9完整性通過，收益未足以確認正式2118MiB峰值改善，不採產品修正。native解壓／renderer RAM／最高reachable heap、真低RAM／Android仍未關；CPU4×既有FAIL保持。TD-INT-01不重跑，整體HOLD。
+
 2026-11-08追加：TD-INT-01受控CS結算超限→整理→返回原場冪等38/38已補；原自然3/4仍NOT_TRIGGERED、原斷言不動。RG-CS-02新增七份Allocation profiles與6/6 runtime，但2118MiB峰值／native解壓／Worker及低RAM仍未關，沒有產品修正。最新範圍以CONTROLLED_QUOTA_ALLOCATION_REVIEW.md為準，其餘歷史保留，整體HOLD。
 
 2026-11-07，僅本機隔離候選；**HOLD，停Owner Review**。原CS Release Gate／失敗收據保留，本文件補記此次整合及第三階段結果，不修改原工作區。

@@ -1,5 +1,9 @@
 # CS Map v2 隔離整合續作停點
 
+最新RG-CS-02續作：REPLAY_LIVE_HEAP_REVIEW.md。沿用七份Allocation Profiles，新增主執行緒／Worker／GC階段觀測與三次匯入返回。r3基線、r4僅診斷Build清chunks實驗、r5基線校準均9/9；3865幀逐幀SHA256一致、同一原比賽物件返回。GC前高水位約1538／1243／1550MiB，輪詢used高水位1245／1236／1263MiB，匯入時間混合；未證明2118MiB歷史峰值可靠改善，停止擴修，不採入產品。Worker末段約5.5MiB，窗口後單獨GC幾乎不變；原生解壓／backing／renderer RAM與最高reachable heap仍有歸因缺口。r1／r2的11/11因輪間hash污染，不作自然峰值基線。全部raw trace／收據保留。
+
+產品src／public／Vite對4e155007不變，不重跑TD-INT-01或大型矩陣；main仍3e615157、未重新整合。安全本機SHA與證據SHA見evidence/live-heap-checkpoint-r1/manifest.json。Gate HOLD，低RAM／Android NOT_RUN、CPU4×既有FAIL不豁免；無認證最低手機RAM，8GB以上只是候選驗收起點。預覽5207／controller61048保持；停Owner Review，不merge／push／deploy。下方保留前輪歷史。
+
 2026-11-08最新：CONTROLLED_QUOTA_ALLOCATION_REVIEW.md。受控storage fixture在真CS戰鬥後填非產品key、觸發實際Chrome quota；38/38證明CS結算match保護、整理後返回原場只入帳一次，原自然3/4仍NOT_TRIGGERED。兩輪37/38為工具預期舊Receipt文字，原body／截圖／失敗保留。Foundry Allocation Sampling七份raw profile、6/6 runtime；join約210MiB、parse103MiB、Pool11MiB，場景共面處理527MiB與服裝474MiB是更大累積配置來源。native解壓／Worker／正常快取精確retained bytes與2118MiB峰值完整因果仍未量化，不採產品修正。分析工具繼承欄位錯分已以Object.hasOwn修正，獨立比對通過。產品來源未改、既有有效大型收據沿用；main仍3e615157、不再次整合。
 
 本輪最終SHA及原34份WIP／raw profile／stdout／stderr／exit SHA在evidence/quota-allocation-checkpoint-r1/manifest.json。預覽5207／controller61048不變。Gate HOLD，Android／低RAM NOT_RUN、CPU4×既有FAIL保留；停Owner Review，不merge／push／deploy。下方保留前輪歷史。
