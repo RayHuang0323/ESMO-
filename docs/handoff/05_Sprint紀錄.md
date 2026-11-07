@@ -27028,3 +27028,6 @@ RG-CS-02仍部分完成／阻擋：Foundry第三次返回取樣2118MiB，卸載1
 剩餘阻擋：真Android／低RAM／OS回收／熱降頻NOT_RUN；CPU4×既有FAIL與Replay2118MiB風險不豁免；Owner美術／動畫／戰術與practice opt-in範圍待接受。cloth18/19與utility6/9只是可提議延期，沒有Owner具名核准；自然滿檔3/4仍NOT_TRIGGERED，不用受控PASS洗掉。下一步應是選定實際支援裝置補驗與Owner決策，不繼續無限制工程研究。
 
 [RC_REPORT.md](../../review/cs-integration-20261107/RC_REPORT.md) | [RC_AI_HANDOFF.md](../../review/cs-integration-20261107/RC_AI_HANDOFF.md)
+
+
+封存前公開入口檢查r1曾HARNESS_FAIL／0/0：新工具的內嵌選擇器字串跳脫錯誤，產品斷言尚未執行。只修工具並加Node vm.Script預編譯頁面表達式，保持三圖入口／HOLD／SHA／四窄版／首頁／無錯誤共9項要求；原收據及語法診斷保留。最終manifest只接受新收據native0與9/9，不把r1環境錯誤改成產品PASS。

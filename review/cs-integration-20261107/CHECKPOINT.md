@@ -8,6 +8,8 @@ Confluence／Dune固定保存Replay完整原生1×長局已各6/6、native0，�
 
 RC_REPORT.md、RC_RECOVERY.md與RC_AI_HANDOFF.md為交付入口，Gate HOLD；預覽helper校驗包與PID後只處理本RC5207／61048。真機／低RAM／熱降頻NOT_RUN，CPU4×失敗與2118MiB風險保持。完成所有收尾後停Owner Review，不自動進正式整合／發布。
 
+公開RC入口r1是HARNESS_FAIL／0/0（新工具內嵌selector字串跳脫），非產品回歸；原stdout／stderr／harness與語法診斷保留。只修selector並加頁面表達式語法預檢，9項要求不變，最終封存以manifest引用的native0／9/9收據為準。
+
 ## 前輪已完成停點歷史
 
 最新RG-CS-02續作：REPLAY_LIVE_HEAP_REVIEW.md。沿用七份Allocation Profiles，新增主執行緒／Worker／GC階段觀測與三次匯入返回。r3基線、r4僅診斷Build清chunks實驗、r5基線校準均9/9；3865幀逐幀SHA256一致、同一原比賽物件返回。GC前高水位約1538／1243／1550MiB，輪詢used高水位1245／1236／1263MiB，匯入時間混合；未證明2118MiB歷史峰值可靠改善，停止擴修，不採入產品。Worker末段約5.5MiB，窗口後單獨GC幾乎不變；原生解壓／backing／renderer RAM與最高reachable heap仍有歸因缺口。r1／r2的11/11因輪間hash污染，不作自然峰值基線。全部raw trace／收據保留。
