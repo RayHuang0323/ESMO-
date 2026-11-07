@@ -46,3 +46,7 @@ RC_REPORT.md、RC_RECOVERY.md與RC_AI_HANDOFF.md為交付入口，Gate HOLD；�
 # 2026-11-08 公開測試版最新停點
 
 Owner 已授權條件式桌機公開測試版，但最新補充指定等待 Claude Release Gate 正式交接。產品候選 `db97d102` 已在獨立發布工作區保存；RC `67f46145` 已備份至獨立 GitHub 分支與標籤。沒有 Push main／Merge main／Deploy。最新入口：[BETA_CHECKPOINT.md](BETA_CHECKPOINT.md)、[BETA_RELEASE_PREPARATION.md](BETA_RELEASE_PREPARATION.md)。以下為保留的 RC／前輪歷史，不代表新整合 SHA 已通過最後 Gate。
+
+## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
+
+正式站7cf1cebc已部署，Actions42413502348 SUCCESS；部署後補充Replay PRODUCT_FAIL，最後assert FAIL，狀態HOLD。以[BETA_RELEASE_R3_REVIEW.md](BETA_RELEASE_R3_REVIEW.md)、[BETA_RELEASE_R3_ACCEPTANCE.md](BETA_RELEASE_R3_ACCEPTANCE.md)與[BETA_RELEASE_R3_CHECKPOINT.md](BETA_RELEASE_R3_CHECKPOINT.md)為最新結果；既有R2／WAITING紀錄只作歷史。沒有在失敗後再次Push、部署或回退。

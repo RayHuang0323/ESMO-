@@ -27047,3 +27047,15 @@ Owner 限定條件式發布，隨後明示 Claude 仍在修復 Release Gate。�
 工具問題均具名留證：CLAUDE新九行CRLF只正規化為LF，文字與標準不變；補充Smoke的初版selector跳脫在執行前語法檢查被抓到，保存原錯誤後改JSON.stringify並重驗；真Browser補充Smoke又因未先展開保存重播details，返回原比賽hit-test命中「陣亡位置：隱藏」，HARNESS_FAIL／6項已過／0產品斷言fail。只讀核對與截圖確認前置缺漏，既有Replay工具有正確展開步驟。這次實際Gate的BLOCKED沒有修補重跑、沒有繞過hit-test，沒有去改產品。
 
 最後assert要求20個gate，最新一份BLOCKED，native exit2。依Owner條件停止正式部署；main仍3e615157，沒有Push main／Merge main／Deploy，沒有新增專案worktree或清理既有資料。文件Checkpoint與受測來源SHA分開記錄，接續先讀BETA_RELEASE_R2_CHECKPOINT.md。Android／低RAM與既有CPU4×／2118MiB風險保留，部署後盤點NOT_RUN。
+
+## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
+
+正式站／遠端main為 **7cf1cebc10915f096a256885388ecd8a7052e5f3**，Pages run42413502348 SUCCESS；桌機快速練習opt-in範圍不變，聯賽／BO1／BO3池不擴大。部署前正確SHA的21組assert PASS，本機正式包Replay返回／卸載25/25；正式站三圖各48/48、MOBA90/90、B1B43/43、B1C38/38、B1D27/27。
+
+**新阻擋TD-GATE-CS-02：正式站補充原生Replay播放PRODUCT_FAIL（Confluence5/6、index12未推進、黑canvas），29組最後assert FAIL exit1。** 冷載入前置與產品根因未區分，不能豁免；該正式站腳本的返回／卸載及後續NOT_RUN。本機PASS不能冒充正式站。依Owner條件已停止修改、重測、Push、部署及回退；目前公開站仍為7cf1cebc，狀態DEPLOYED_SMOKE_FAIL_HOLD，等待Owner Review。
+
+TD-GATE-CS-01的details前置已以原生UI補齊，本機三圖25/25證實，舊R2 HARNESS_FAIL完整保留。Android／低RAM／熱降頻NOT_RUN、CPU4×FAIL、2118MiB風險保持。舊main3e615157已備份至遠端backup/main-before-cs-map-v2-beta-20261108；Beta tag指向7cf1cebc，原34WIP、RC67f46145、Claude9afe58b2與三份文件祖先均保留。
+
+完整報告：review/cs-integration-20261107/BETA_RELEASE_R3_REVIEW.md；R3驗收清單與Checkpoint同目錄；原始收據：C:\Users\ifikn\esmo-measure\cs-beta-release-20261108\release-r3。只讀盤點已完成，未刪資料；後續文件Checkpoint只存本機，不能充作新的產品PASS。
+
+本輪僅修Git外Smoke前置，沒有修改產品或放寬驗證器；來源SHA仍7cf1cebc。19組原收據由守門確認同SHA／同環境／24小時內有效，再新增Node20 Build與本機原生Replay Gate。正常atomic FF Push main、備份分支與Beta tag後，CI成功；正式站最後補充Gate才發生新FAIL，立即停止，沒有重跑洗綠或自動回退。部署耗時3分02秒，TD-DEPLOY-1～4不關閉。

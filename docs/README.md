@@ -1,3 +1,7 @@
+## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
+
+最新入口：[R3完整報告](../review/cs-integration-20261107/BETA_RELEASE_R3_REVIEW.md)、[R3停點](../review/cs-integration-20261107/BETA_RELEASE_R3_CHECKPOINT.md)、[驗收清單](../review/cs-integration-20261107/BETA_RELEASE_R3_ACCEPTANCE.md)。正式站7cf1cebc／Actions成功，但正式站補充Replay FAIL，停止後續發布操作。以下R2／等待交接段落為歷史，不是目前main狀態。
+
 # ESMO 文件索引
 
 > 所有 AI agent（Claude Code、Codex CLI、GPT、其他）接手前的**文件導航**。

@@ -64,3 +64,7 @@ RG-CS-02最新：REPLAY_LIVE_HEAP_REVIEW.md。主執行緒高水位有暫存重�
 完整範圍、原始失敗與原因見INTEGRATION_REVIEW.md；長局、Heap表及量測限制見PHASE3_QUALITY_REVIEW.md；停點與後續見CHECKPOINT.md。
 
 本輪最新覆蓋以REMAINING_GAPS_REVIEW.md為準；RG-CS-04的progress25缺口已關，指定CS結算滿檔仍未關。其餘原表描述保留作前輪紀錄，整體HOLD。
+
+## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
+
+正式站7cf1cebc已部署，Actions42413502348 SUCCESS；部署後補充Replay PRODUCT_FAIL，最後assert FAIL，狀態HOLD。以[BETA_RELEASE_R3_REVIEW.md](BETA_RELEASE_R3_REVIEW.md)、[BETA_RELEASE_R3_ACCEPTANCE.md](BETA_RELEASE_R3_ACCEPTANCE.md)與[BETA_RELEASE_R3_CHECKPOINT.md](BETA_RELEASE_R3_CHECKPOINT.md)為最新結果；既有R2／WAITING紀錄只作歷史。沒有在失敗後再次Push、部署或回退。

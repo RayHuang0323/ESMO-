@@ -66,3 +66,8 @@ review/cs-integration-20261107/shared.patch
 
 review/cs-integration-20261107/preview-r1/
 review/cs-integration-20261107/preview-r*/
+
+# R3 production browser evidence retained locally; never commit raw receipts.
+/review/prod-b1b/
+/review/prod-b1c/
+/review/prod-b1d/

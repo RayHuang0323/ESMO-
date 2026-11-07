@@ -39,3 +39,7 @@ Owner只授權準備此計畫，尚未授權merge至main、push或deploy。本�
 回退須以新提交與重新建置處理；不強制改寫歷史。BP-9已摘要化的歷史無法靠程式回退還原，只能使用玩家整理前的備份，因此必須保留現有備份確認與還原契約。原始證據與各候選Build不刪。
 
 本輪停止點是Owner Review，等Owner隔日確認；無自動正式整合、push或deploy流程。
+
+## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
+
+正式站7cf1cebc已部署，Actions42413502348 SUCCESS；部署後補充Replay PRODUCT_FAIL，最後assert FAIL，狀態HOLD。以[BETA_RELEASE_R3_REVIEW.md](BETA_RELEASE_R3_REVIEW.md)、[BETA_RELEASE_R3_ACCEPTANCE.md](BETA_RELEASE_R3_ACCEPTANCE.md)與[BETA_RELEASE_R3_CHECKPOINT.md](BETA_RELEASE_R3_CHECKPOINT.md)為最新結果；既有R2／WAITING紀錄只作歷史。沒有在失敗後再次Push、部署或回退。

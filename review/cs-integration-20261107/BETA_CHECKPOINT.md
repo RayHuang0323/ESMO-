@@ -16,3 +16,7 @@
 - 沒有 Push main、Merge main、Deploy；沒有新版部署 SHA，沒有部署後驗收／磁碟清理。
 
 恢復時先讀 Owner 最新指示與 Claude 正式交接 SHA、驗證指令、結果，再重新 fetch／比對差異，於既有發布工作區處理。最後 Gate 前不要宣稱新版本 CS／MOBA／BP-9 全綠。若 Claude 尚未交付，維持本停點，不背景續跑、不重做產品。
+
+## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
+
+正式站7cf1cebc已部署，Actions42413502348 SUCCESS；部署後補充Replay PRODUCT_FAIL，最後assert FAIL，狀態HOLD。以[BETA_RELEASE_R3_REVIEW.md](BETA_RELEASE_R3_REVIEW.md)、[BETA_RELEASE_R3_ACCEPTANCE.md](BETA_RELEASE_R3_ACCEPTANCE.md)與[BETA_RELEASE_R3_CHECKPOINT.md](BETA_RELEASE_R3_CHECKPOINT.md)為最新結果；既有R2／WAITING紀錄只作歷史。沒有在失敗後再次Push、部署或回退。

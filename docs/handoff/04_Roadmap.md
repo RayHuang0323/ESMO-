@@ -2971,3 +2971,15 @@ NEXT_SPRINT = NOT_STARTED
 - 最小接續：保持產品不改，修Smoke前置並保留原生hit-test、另開證據目錄重驗；再核對main與正確來源SHA、收據有效性及完整assert。依Owner停止條件，本輪保存後停下。
 - 未執行：正式Push／Pages／部署後Smoke、只讀磁碟盤點。仍限桌機快速練習opt-in，未認證Android／低RAM，不擴大正式競賽池、不關閉CPU4×／2118MiB等風險。
 - 詳細：review/cs-integration-20261107/BETA_RELEASE_R2_REVIEW.md。
+
+## 2026-11-08 CS Beta R3：已部署，正式站驗收 HOLD
+
+正式站／遠端main為 **7cf1cebc10915f096a256885388ecd8a7052e5f3**，Pages run42413502348 SUCCESS；桌機快速練習opt-in範圍不變，聯賽／BO1／BO3池不擴大。部署前正確SHA的21組assert PASS，本機正式包Replay返回／卸載25/25；正式站三圖各48/48、MOBA90/90、B1B43/43、B1C38/38、B1D27/27。
+
+**新阻擋TD-GATE-CS-02：正式站補充原生Replay播放PRODUCT_FAIL（Confluence5/6、index12未推進、黑canvas），29組最後assert FAIL exit1。** 冷載入前置與產品根因未區分，不能豁免；該正式站腳本的返回／卸載及後續NOT_RUN。本機PASS不能冒充正式站。依Owner條件已停止修改、重測、Push、部署及回退；目前公開站仍為7cf1cebc，狀態DEPLOYED_SMOKE_FAIL_HOLD，等待Owner Review。
+
+TD-GATE-CS-01的details前置已以原生UI補齊，本機三圖25/25證實，舊R2 HARNESS_FAIL完整保留。Android／低RAM／熱降頻NOT_RUN、CPU4×FAIL、2118MiB風險保持。舊main3e615157已備份至遠端backup/main-before-cs-map-v2-beta-20261108；Beta tag指向7cf1cebc，原34WIP、RC67f46145、Claude9afe58b2與三份文件祖先均保留。
+
+完整報告：review/cs-integration-20261107/BETA_RELEASE_R3_REVIEW.md；R3驗收清單與Checkpoint同目錄；原始收據：C:\Users\ifikn\esmo-measure\cs-beta-release-20261108\release-r3。只讀盤點已完成，未刪資料；後續文件Checkpoint只存本機，不能充作新的產品PASS。
+
+最小待辦：Owner決定後，先查正式UI是否載入就緒，再釐清播放未推進；保留原FAIL與同一斷言，補正式站三圖返回／卸載及最後assert。不得在本輪自行展開新功能或再次發布。
