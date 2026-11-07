@@ -1,7 +1,10 @@
 import { createHeVfx } from "./fpsHeVfx.js";
 import * as THREE from "three";
 import { createOriginalUtilityModelFactory } from "./fpsUtilityModels.js";
-import { FPS_SMOKE_RADIUS } from '../fpsSmokeGeometry.js';
+import { fpsSmokeRadius, fpsSmokeAtSubframe } from '../fpsSmokeGeometry.js';
+import {getSmokeField} from '../fpsSmokeDomain.js';
+import {smokeFlightPoint} from '../fpsSmokeProjectile.js';
+import {createSmokeSurface,createSmokeDepthMask} from './fpsSmokeSurface.js';
 
 const SMOKE_LIFETIME_UNITS = 18;
 const SMOKE_GROW_UNITS = 0.45;
@@ -117,7 +120,7 @@ function setWorldPosition(object, W, x, y, z) {
 function smokeStage(smoke) {
   const age = Math.max(0, Number(smoke?.age) || 0);
   const remaining = Math.max(0, Number(smoke?.tl) || 0);
-  if (age < SMOKE_GROW_UNITS) return "grow";
+  if (age < (smoke?.model==='continuous.v2'?1.5:SMOKE_GROW_UNITS)) return "grow";
   if (remaining > SMOKE_DISSIPATE_UNITS) return "hold";
   return "dissipate";
 }
@@ -131,6 +134,7 @@ function smokeStrength(smoke) {
 }
 
 function trajectoryPoint(throwable, t, W, out) {
+  const saved=smokeFlightPoint(throwable,t);if(saved){out.set(W.vx(saved[0]),saved[1],W.vz(saved[2]));return out;}
   const from = throwable.from;
   const to = throwable.to;
   const progress = clamp(t, 0, 1);
@@ -173,6 +177,19 @@ function smokeDensityTexture(){
   const texture=new THREE.DataTexture(data,size,size,THREE.RGBAFormat);texture.magFilter=THREE.LinearFilter;texture.minFilter=THREE.LinearFilter;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(3,2);texture.needsUpdate=true;return texture;
 }
 
+// One shared bounded cloud mesh, with the same triangle budget as the old
+// smooth sphere. Keep the eye-height R6 belt intact; sculpt only the caps
+// inward so the physical shooting envelope is never made transparent.
+function smokeVolumeGeometry(){
+  const geometry=new THREE.SphereGeometry(1,24,12),p=geometry.attributes.position,colors=new Float32Array(p.count*3);
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i),noise=.5+.5*Math.sin(x*11+y*7+z*13)*Math.cos(x*6-y*13+z*9),cap=clamp((Math.abs(y)-.25)/.75,0,1),shape=1-cap*(.06+.16*noise);
+    p.setXYZ(i,x*shape,y*(1-cap*.12*noise),z*shape);
+    const density=.62+.38*noise;colors.set([density,density,density],i*3);
+  }
+  geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));geometry.computeVertexNormals();geometry.computeBoundingSphere();return geometry;
+}
+
 /**
  * Bounded utility presentation for the formal Battle runtime.
  * No gameplay state, camera state, RAF, shader or post-processing is owned here.
@@ -181,7 +198,7 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
   const reducedMotion = typeof window !== "undefined"
     && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
   const geometries = {
-    smokeCore: new THREE.SphereGeometry(1,24,12),
+    smokeCore: smokeVolumeGeometry(),
     marker: new THREE.RingGeometry(0.9, 1.08, 28),
     blastRing: new THREE.RingGeometry(0.42, 0.62, 20),
     debris: new THREE.BoxGeometry(0.18, 0.12, 0.42),
@@ -192,7 +209,7 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
   const pools = {
     // The old alpha billboards are edge wisps. An opaque bounded world volume
     // owns the same R6 active envelope as simulation, including the last tick.
-    smokeCore: createPool(group,MAX_SMOKE_CORES,()=>{const m=new THREE.Mesh(geometries.smokeCore,new THREE.MeshBasicMaterial({color:0x929b9f,map:densityTexture,depthTest:true,depthWrite:true,side:THREE.FrontSide,fog:true}));m.name='fps-smoke-core';m.renderOrder=12;return m;}),
+    smokeCore: createPool(group,MAX_SMOKE_CORES,()=>{const m=new THREE.Mesh(geometries.smokeCore,new THREE.MeshBasicMaterial({color:0x929b9f,map:densityTexture,vertexColors:true,depthTest:true,depthWrite:true,side:THREE.FrontSide,fog:true}));m.name='fps-smoke-core';m.renderOrder=12;return m;}),
     smokeCloud: makeSmokeClouds(group, textures),
     smokeMarker: createPool(group, MAX_SMOKE_EVENTS, () => mesh(group, geometries.marker, UTILITY_COLORS.smoke, { depthTest: true })),
     throwableTrail: createPool(group, MAX_THROWABLE_EVENTS * 3, () => new THREE.Mesh(sphereGeometry, new THREE.MeshBasicMaterial({ color: UTILITY_COLORS.smokeDeep, transparent: true, opacity: 0, depthTest: true, depthWrite: false }))),
@@ -203,6 +220,15 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
     mollyMarker: createPool(group, MAX_MOLLY_EVENTS, () => mesh(group, geometries.marker, UTILITY_COLORS.molly, { blending: THREE.AdditiveBlending })),
   };
   const heVfx = createHeVfx({group,smokeTexture:textures.smoke,reducedMotion});
+  const legacyCoreMaterials=pools.smokeCore.map(m=>m.material),surfaces=new Map(),depthMasks=new Map();
+  const surfaceFor=(field,W)=>{
+    const key=field.world.space+':'+field.origin.x+':'+field.origin.y+':'+field.baseHeight;
+    let item=surfaces.get(key);if(item){surfaces.delete(key);surfaces.set(key,item);return item;}
+    const material=legacyCoreMaterials[0].clone();
+    material.stencilWrite=true;material.stencilRef=1;material.stencilFunc=THREE.AlwaysStencilFunc;material.stencilWriteMask=1;material.stencilZPass=THREE.ReplaceStencilOp;
+    item={...createSmokeSurface(field,W,material),material};surfaces.set(key,item);
+    while(surfaces.size>16){const key=surfaces.keys().next().value,old=surfaces.get(key);old.dispose();old.material.dispose();surfaces.delete(key);}return item;
+  };
   const point = new THREE.Vector3();
   const previousPoint = new THREE.Vector3();
   const evidence = {
@@ -240,6 +266,8 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
     evidence.flashRecoverySamples = 0;
     evidence.mollyZones = 0;
     evidence.visibleMarkers = 0;
+    evidence.domainCells=0;evidence.domainTriangles=0;evidence.domainBuildMs=0;
+    for(const mask of depthMasks.values())mask.mesh.visible=false;
 
     const sameRound = nextFrame && nextFrame.rnd === frame?.rnd;
     const mix = sameRound ? clamp(sub, 0, 1) : 0;
@@ -248,25 +276,38 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
     const smokeClouds = pools.smokeCloud;
     let smokeCloudIndex = 0;
     let smokeMarkerIndex = 0;
-    if(major)for(const smoke of frame?.smokes||[]){
+    if(major)for(const savedSmoke of frame?.smokes||[]){
+      const smoke=fpsSmokeAtSubframe(savedSmoke,nextSmokes.get(savedSmoke.id),sub);
       if(!(smoke.tl>0)||!finitePoint(smoke.pos))continue;
       const core=pools.smokeCore[evidence.activeSmokeCores];
       if(!core){evidence.smokeCoreOverflow++;continue;}
-      core.position.set(W.vx(smoke.pos.x),sampleGroundHeight(W.vx(smoke.pos.x),W.vz(smoke.pos.y))+1.56,W.vz(smoke.pos.y));
-      core.scale.set(FPS_SMOKE_RADIUS,3.3,FPS_SMOKE_RADIUS);core.visible=true;
+      const radius=fpsSmokeRadius(smoke);
+      const field=getSmokeField(smoke);
+      if(field){
+        const surface=surfaceFor(field,W);core.geometry=surface.geometry;core.material=surface.material;core.position.set(0,0,0);core.scale.setScalar(1);
+        evidence.domainTriangles+=surface.update(radius);evidence.domainCells+=field.cellCount;evidence.domainBuildMs+=field.buildMs;
+        let mask=depthMasks.get(field.world.space);if(!mask){mask=createSmokeDepthMask(field.world,W);depthMasks.set(field.world.space,mask);group.add(mask.mesh);}mask.mesh.visible=radius>0;
+      }else{
+        core.geometry=geometries.smokeCore;core.material=legacyCoreMaterials[evidence.activeSmokeCores];
+        core.position.set(W.vx(smoke.pos.x),sampleGroundHeight(W.vx(smoke.pos.x),W.vz(smoke.pos.y))+(smoke.model==='continuous.v2'?Math.min(1.56,.2+radius*.23):1.56),W.vz(smoke.pos.y));
+        core.scale.set(radius,Math.min(3.3,.55+radius*.46),radius);
+      }
+      core.visible=radius>0;
+      core.userData.smokeId=smoke.id;core.userData.authoritativeRadius=radius;
       evidence.activeSmokeCores++;
     }
     (frame?.smokes || []).slice(0, MAX_SMOKE_EVENTS).forEach((savedSmoke) => {
       const next = nextSmokes.get(savedSmoke.id);
-      const smoke = { ...savedSmoke,
+      const smoke = savedSmoke.model==='continuous.v2'?fpsSmokeAtSubframe(savedSmoke,next,sub):{ ...savedSmoke,
         age: lerp(Number(savedSmoke.age) || 0, Number(next?.age ?? savedSmoke.age) || 0, mix),
         tl: lerp(Number(savedSmoke.tl) || 0, Number(next?.tl ?? (sameRound ? 0 : savedSmoke.tl)) || 0, mix) };
       if (!finitePoint(smoke.pos)) return;
       const stage = smokeStage(smoke);
-      const { grow, fade, strength } = smokeStrength(smoke);
+      const { grow, fade, strength } = smokeStrength(smoke.model==='continuous.v2'?{...smoke,age:smoke.age*.3}:smoke);
       evidence.activeSmoke += 1;
       evidence.smokeStages[stage] += 1;
-      const radius = 1.25 + 4.35 * grow;
+      const radius = Number.isFinite(smoke.radius)?fpsSmokeRadius(smoke):1.25 + 4.35 * grow;
+      const field=getSmokeField(smoke);
       const cx = Number(smoke.pos.x);
       const cz = Number(smoke.pos.y);
       const seed = hash(smoke.id || `${cx}:${cz}`);
@@ -283,12 +324,15 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
         const radial = radius * (0.18 + ((cloud * 37 + seed) % 67) / 100);
         const x = cx + Math.cos(angle) * radial;
         const z = cz + Math.sin(angle) * radial;
-        const y = 0.72 + level * (0.73 + 0.16 * grow);
-        const scale = radius * (0.82 + ((cloud * 13 + seed) % 21) / 100);
-        setWorldPosition(item, W, x, y, z);
+        const continuous=smoke.model==='continuous.v2';
+        const emergence=continuous?Math.max(0,Math.min(1,(smoke.age-cloud*.06)/.7)):1;
+        const y = continuous?.25+level*.65*grow:0.72 + level * (0.73 + 0.16 * grow);
+        const scale = radius * (continuous?.42+.12*emergence:0.82 + ((cloud * 13 + seed) % 21) / 100);
+        setWorldPosition(item, W, x, field?field.baseHeight+y:y, z);
+        item.material.stencilWrite=Boolean(field);item.material.stencilRef=1;item.material.stencilFunc=THREE.EqualStencilFunc;item.material.stencilFuncMask=1;item.material.stencilWriteMask=0;item.renderOrder=field?13:0;
         item.scale.set(scale, scale * (1.02 + level * 0.08), 1);
         item.material.color.setHex(level % 3 === 0 ? UTILITY_COLORS.smokeDeep : UTILITY_COLORS.smoke);
-        item.material.opacity = (0.52 + (level === 1 ? 0.20 : 0.10)) * strength;
+        item.material.opacity = (continuous?.3*emergence:0.52 + (level === 1 ? 0.20 : 0.10)) * strength;
         item.visible = item.material.opacity > 0.005;
       }
     });
@@ -328,7 +372,7 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
       }
 
       const boom = clamp(lerp(Number(throwable.boom) || 0, Number(next?.boom ?? (sameRound ? 0 : throwable.boom)) || 0, mix) / 3, 0, 1);
-      if(body&&finitePoint(throwable.to))setWorldPosition(body,W,throwable.to.x,.8,throwable.to.y);
+      if(body&&finitePoint(throwable.to))setWorldPosition(body,W,throwable.to.x,throwable.flight?.landing?.[1]??.8,throwable.to.y);
       const visualSec=(frame.roundSec||0)+(sameRound?mix*Math.max(0,nextFrame.roundSec-frame.roundSec):0);
       const flashAge=Number.isFinite(throwable.detonatedAtRoundSec)?visualSec-throwable.detonatedAtRoundSec:Infinity;
       const flashWorldStrength=major?clamp(1-flashAge/.12,0,1):boom;
@@ -404,10 +448,13 @@ export function createUtilityPresentation({ group, textures, sphereGeometry, sam
     disposed = true;
     Object.values(pools).forEach((pool) => pool.forEach((item) => {
       item.parent?.remove(item);
-      item.material?.dispose?.();
+      if(!pools.smokeCore.includes(item))item.material?.dispose?.();
     }));
     heVfx.dispose();
     utilityModels.dispose();
+    for(const item of surfaces.values()){item.dispose();item.material.dispose();}surfaces.clear();
+    for(const mask of depthMasks.values())mask.dispose();depthMasks.clear();
+    legacyCoreMaterials.forEach(m=>m.dispose());
     densityTexture.dispose();
     Object.values(geometries).forEach((geometry) => geometry.dispose?.());
   };

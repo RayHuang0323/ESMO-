@@ -1,7 +1,7 @@
 // 每場 major 模擬使用自己的快取，walls 與角色半徑在該場期間保持不變。
 // 不量化座標、不共用反向射線結果、不把快取寫入 replay／result。
 export function createFpsMajorSegmentCache(walls,radius,{maxEntries=2048,maxPoints=16384}={}){
-  const entries=new Map();let points=0,hits=0,misses=0;
+  const entries=new Map();let points=0,hits=0,misses=0,planningGeometry=null;
   if(!Number.isInteger(maxEntries)||maxEntries<1||!Number.isInteger(maxPoints)||maxPoints<1)throw new Error('導航快取上限必須是正整數');
   const key=(a,b)=>{
     const values=[a.x,a.y,b.x,b.y];
@@ -10,6 +10,8 @@ export function createFpsMajorSegmentCache(walls,radius,{maxEntries=2048,maxPoin
   const compatible=(currentWalls,currentRadius)=>currentWalls===walls&&Object.is(currentRadius,radius);
   const remove=k=>{points-=entries.get(k).length;entries.delete(k);};
   return{
+    // 僅此場的固定walls／radius；不保存端點、角色或搜尋狀態，不進Replay。
+    getPlanningGeometry(create,currentWalls,currentRadius){if(!compatible(currentWalls,currentRadius))return undefined;return planningGeometry||(planningGeometry=create());},
     getSegment(a,b,currentWalls,currentRadius){
       if(!compatible(currentWalls,currentRadius))return undefined;
       const k=key(a,b),route=k===null?undefined:entries.get(k);

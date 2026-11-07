@@ -21,14 +21,15 @@ const RUN_SPEED = 2.4;
 // 合計 / clip duration；只標定呈現步頻，不改 frame 速度或 gameplay。
 export const FPS_LOCOMOTION_CLIP_SPEED = Object.freeze({
   Walk_Loop: 0.9552537268698795,
+  Jog_Fwd_Loop: 2.504119851852846,
   Sprint_Loop: 3.295520056901078,
   Crouch_Fwd_Loop: 0.7785020884346814,
 });
 
-export function fpsLocomotionTimeScale(clip, speed, playbackSpeed = 1) {
+export function fpsLocomotionTimeScale(clip, speed, playbackSpeed = 1, {worldScale=1,reverse=false} = {}) {
   const reference = FPS_LOCOMOTION_CLIP_SPEED[clip];
   return reference && Number.isFinite(speed) && speed > IDLE_SPEED
-    ? speed / reference * Math.max(.1, Number(playbackSpeed) || 1)
+    ? (reverse?-1:1) * speed / (reference*Math.max(.01,Math.abs(Number(worldScale)||1))) * Math.max(.1, Number(playbackSpeed) || 1)
     : 1;
 }
 

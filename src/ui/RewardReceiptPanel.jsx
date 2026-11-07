@@ -12,10 +12,11 @@ import React from "react";
 import { ALERT_KINDS, useCommitAlertStore } from "../platform/persistence/matchCommit.js";
 import { GC, MONO } from "./theme.js";
 import { StatGainList, LevelUpBadge } from "./GrowthUI.jsx";
+import { normalizeMatchSource, isPracticeSource, MATCH_TIER_LABELS } from "../platform/progress/matchSource.js";
 
-const wan = (n) => `${Math.round(n / 10000)}萬`;
+const wan = (n) => `${(n / 10000).toFixed(1)}萬`;
 
-export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
+export default function RewardReceiptPanel({ receipt, accent = GC.gold, summaryOnly = false }) {
   //  BP-9 P0-A：存檔失敗時這場沒有入帳，不能一直顯示「結算中」。
   const unsaved = useCommitAlertStore((s) => s.alert?.kind === ALERT_KINDS.match || s.notCounted);
   if (!receipt && unsaved) {
@@ -37,7 +38,7 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
       <div style={box(GC.red)}>
         <div style={{ color: GC.red, fontSize: 10, fontWeight: 800, marginBottom: 4 }}>⚠ 結算未完成（未發獎）</div>
         {(receipt.errors ?? []).slice(0, 3).map((e, i) => (
-          <div key={i} style={{ color: GC.gray, fontSize: 9 }}>· {e}</div>
+          <div key={i} style={{ color: GC.gray, fontSize: 9 }}>· {typeof e === "string" ? e : e?.message || "本場結算尚未完成"}</div>
         ))}
       </div>
     );
@@ -50,29 +51,33 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
   const players = receipt.players ?? [];
   const totals = receipt.totals ?? {};
   const settled = receipt.alreadyApplied;
+  const source = normalizeMatchSource(receipt.metadata?.matchSource);
+  const practice = isPracticeSource(source);
+  const sourceLabel = MATCH_TIER_LABELS[source]?.name ?? "對戰";
   //  P1：全隊能力成長總點數。只是把 receipt 裡已有的差值加總，不重算成長。
   const statTotal = Math.round(
     players.reduce((s, p) => s + (Number(p.growth?.total) || 0), 0) * 10) / 10;
 
   return (
-    <div style={box(accent)}>
+    <div style={box(accent)} data-testid={summaryOnly ? "reward-receipt-summary" : "reward-receipt"} data-match-source={source}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <span style={{ fontSize: 9, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }}>賽後結算</span>
+        <span style={{ fontSize: 9, letterSpacing: "0.2em", color: GC.gray, fontWeight: 900 }}>{sourceLabel} · 賽後結算</span>
         <span style={{ fontSize: 8.5, fontWeight: 800, color: settled ? GC.gray : GC.green }}>
-          {settled ? "✅ 本場已結算（不重複發放）" : "✅ 已入帳"}
+          {practice ? "練習完成 · 無獎勵" : settled ? "✅ 本場已結算（不重複發放）" : "✅ 已入帳"}
         </span>
       </div>
+      {practice && <div data-testid="practice-reward-reason" style={{ color: GC.gray, fontSize: 11, lineHeight: 1.6, marginBottom: 8 }}>快速練習不發放獎金、粉絲與經驗，也不影響戰績及選手成長。</div>}
 
       {/* 團隊獎勵 */}
       {/*  Fan System F0：移除「聲望」格。它從來沒有公式，收據裡永遠是 0 ⇒ 永遠顯示
            「聲望 —」。一個永遠不會動的欄位，比沒有這個欄位更誤導玩家。
            `reputation` 欄位本身保留在 save schema 裡（deprecated，見 TD-22）。 */}
-      <div style={{ display: "grid", gridTemplateColumns: club ? "1fr 1fr 1fr" : "1fr 1fr", gap: 6, marginBottom: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,100px),1fr))", gap: 6, marginBottom: 8 }}>
         {[
-          ["獎金", t.money > 0 ? `+$${wan(t.money)}` : "—", GC.green, null],
-          ["粉絲", t.fans > 0 ? `+${t.fans}` : "—", accent, null],
-          //  練習賽的 Club XP 是 0 ⇒ 顯示「—」而不是 +0，跟上面兩格一致。
-          ...(club ? [["俱樂部 XP", club.xpGained > 0 ? `+${club.xpGained}` : "—", GC.purp, "receipt-club-xp"]] : []),
+          ["獎金", Number.isFinite(t.money) ? `${t.money > 0 ? "+" : t.money < 0 ? "-" : ""}$${wan(Math.abs(t.money))}` : "—", GC.green, "receipt-money"],
+          ["粉絲", Number.isFinite(t.fans) ? `${t.fans > 0 ? "+" : ""}${t.fans}` : "—", accent, "receipt-fans"],
+          ...(summaryOnly ? [["選手 XP", Number.isFinite(totals.xpGained) ? `${totals.xpGained > 0 ? "+" : ""}${totals.xpGained}` : "—", GC.blueL, "receipt-player-xp"]] : []),
+          ...(club ? [["俱樂部 XP", Number.isFinite(club.xpGained) ? `${club.xpGained > 0 ? "+" : ""}${club.xpGained}` : "—", GC.purp, "receipt-club-xp"]] : []),
         ].map(([k, v, c, tid]) => (
           <div key={k} data-testid={tid ?? undefined} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
             <div style={{ color: GC.gray, fontSize: 8, fontWeight: 700 }}>{k}</div>
@@ -93,7 +98,7 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
       )}
 
       {/* 選手 XP / 升級 / 天賦點 */}
-      {players.length > 0 ? (
+      {!summaryOnly && (players.length > 0 ? (
         <>
           {players.map((p) => (
             <div key={p.playerId} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 10.5, padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", minWidth: 0 }}>
@@ -131,9 +136,9 @@ export default function RewardReceiptPanel({ receipt, accent = GC.gold }) {
         </>
       ) : (
         <div style={{ color: GC.gray, fontSize: 9.5, textAlign: "center", padding: "6px 0" }}>
-          本場無經營名單選手上場（引擎預設陣容）→ 不發選手 XP
+          {practice ? "快速練習不發放選手 XP 或能力成長" : "本場無經營名單選手上場（引擎預設陣容）→ 不發選手 XP"}
         </div>
-      )}
+      ))}
     </div>
   );
 }

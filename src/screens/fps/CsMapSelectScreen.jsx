@@ -29,6 +29,7 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
   const starters = players.filter((p) => p.status === "主力").slice(0, 5);
   const [legacySelection, setLegacySelection] = useState(null);
   const [error, setError] = useState(null);
+  const [prototype, setPrototype] = useState(null);
 
   const playedMaps = useMemo(
     () => new Set((series?.maps ?? []).map((map) => map.mapKey).filter(Boolean)),
@@ -63,7 +64,9 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
 
   const finish = () => {
     if (!currentMap || !canContinue) return;
-    onNext({ ...currentMap, selectionId: selection?.selectionId ?? null });
+    const usePrototype=prototype===currentMap.key&&['mirage','dust2','inferno'].includes(currentMap.key)&&(!selection||selection.kind==='practice');
+    const original=currentMap.key==='inferno'?{name:'Foundry Circuit',sceneVersion:'major.v5'}:currentMap.key==='dust2'?{name:'Dune Terminal',sceneVersion:'major.v4'}:{name:'Confluence Station',sceneVersion:'major.v3'};
+    onNext({ ...currentMap, ...(usePrototype?original:{sceneVersion:'major.v1'}), selectionId: selection?.selectionId ?? null });
   };
 
   return (
@@ -84,6 +87,7 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
                 : "選擇對戰地圖後部署戰術"}
         </div>
 
+        {['mirage','dust2','inferno'].includes(currentMapKey)&&(!selection||selection.kind==='practice')&&<label style={{display:'flex',alignItems:'center',gap:10,minHeight:44,marginBottom:12,color:GC.blueL,fontSize:12}}><input data-testid="cs-original-map-prototype" type="checkbox" checked={prototype===currentMapKey} onChange={e=>setPrototype(e.target.checked?currentMapKey:null)} style={{width:22,height:22,accentColor:GC.gold}}/>體驗原創 {currentMapKey==='inferno'?'Foundry Circuit':currentMapKey==='dust2'?'Dune Terminal':'Confluence Station'}</label>}
         {series && (
           <div data-testid="cs-series-banner" style={{ marginBottom: 10, padding: "8px 12px", borderRadius: 10, background: `${ACC}14`, border: `1px solid ${ACC}44`, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{ color: ACC, fontSize: 11, fontWeight: 900 }}>{String(series.format).toUpperCase()}</span>

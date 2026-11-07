@@ -29,7 +29,7 @@
 .cs-report-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:16px; }
 .cs-report-metric { border-left:2px solid var(--us); background:var(--card2); padding:12px; min-width:0; }
 .cs-report-metric small { color:var(--muted); display:block; font-size:10px; }
-.cs-report-metric strong { font:800 22px var(--mono); display:block; margin:8px 0; overflow-wrap:anywhere; }
+.cs-report-metric strong { font:800 22px var(--mono); display:block; margin:8px 0; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .cs-report-metric span { font-size:10px; color:var(--muted); }
 .cs-report-filters { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:12px; margin-bottom:12px; }
 .cs-report-filters label { display:flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:100%; }
@@ -66,3 +66,35 @@
 .cs-report-events time { color:var(--muted); font-family:var(--mono); }
 @media(max-width:650px) { .cs-report-wrap { padding:14px 10px 32px; } .cs-report-grid { grid-template-columns:1fr; gap:0; } .cs-report-score>b { font-size:32px; padding:0 8px; } .cs-report-score strong { font-size:13px; } .cs-report-score em { padding:0 4px; } .cs-report-panel { padding:12px; } .cs-report-header h1 { font-size:22px; } .cs-report-tabs { gap:3px; } .cs-report-tabs button { font-size:11px; padding:6px 3px; } .cs-report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(prefers-reduced-motion:reduce) { .cs-pro-report * { animation:none!important; transition:none!important; } }
+
+/* Numeric tokens stay intact; names may wrap. Grid tracks must be allowed to
+   shrink before their min-content sizes push the entire mobile report wider. */
+.cs-pro-report { min-width:0; }
+.cs-report-metric[data-metric-kind=name] strong { white-space:normal; overflow-wrap:anywhere; }
+.cs-report-header { flex-wrap:wrap; }
+.cs-report-header>*,.cs-report-score>*,.cs-report-filters>*,.cs-report-filters select { min-width:0; }
+.cs-report-header h1,.cs-report-panel h2,.cs-report-panel h3,.cs-report-panel p,
+.cs-report-bar>span,.cs-report-legend span,.cs-report-events li>* { overflow-wrap:anywhere; }
+.cs-report-score { grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
+.cs-report-legend { flex-wrap:wrap; }
+.cs-report-legend span { min-width:0; max-width:100%; }
+.cs-report-compare>div:first-child>* { min-width:0; overflow-wrap:anywhere; }
+.cs-report-compare b,.cs-report-bar b { white-space:nowrap; overflow-wrap:normal; flex-shrink:0; }
+.cs-report-filters select { flex:1 1 130px; }
+.cs-report-filters button { overflow-wrap:anywhere; }
+.cs-report-table-scroll { overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
+.cs-pro-report table { table-layout:fixed; min-width:620px; }
+.cs-pro-report th,.cs-pro-report td { box-sizing:border-box; }
+.cs-pro-report th:first-child,.cs-pro-report td:first-child { width:150px; }
+.cs-pro-report th:nth-child(2),.cs-pro-report td:nth-child(2) { width:104px; }
+.cs-pro-report td:first-child { white-space:normal; min-width:150px; max-width:150px; overflow-wrap:anywhere; }
+.cs-pro-report td:first-child button { white-space:normal; overflow-wrap:anywhere; max-width:130px; }
+.cs-pro-report td:first-child small { overflow-wrap:anywhere; }
+@media(max-width:650px) {
+  .cs-report-kpis { grid-template-columns:repeat(auto-fit,minmax(min(100%,148px),1fr)); }
+  .cs-report-metric { padding:10px; }
+  .cs-report-metric[data-metric-kind=kda] { grid-column:1/-1; }
+  .cs-report-bar { grid-template-columns:minmax(0,1fr) minmax(0,2fr) max-content; }
+  .cs-report-table-scroll { border:1px solid var(--line); border-radius:6px; }
+  .cs-pro-report th:first-child,.cs-pro-report td:first-child { position:sticky; left:0; z-index:1; background:var(--card); }
+}

@@ -77,3 +77,27 @@
 .fps-scope-lens b { top:0; left:50%; width:1px; height:100%; }
 .fps-scope-lens span { position:absolute; bottom:12%; left:53%; color:#111; font:700 11px ui-monospace,monospace; }
 .fps-major-battle [data-esmo-fps-stable-canvas-region] { container-type:size; }
+
+@media(max-width:650px) {
+  .fps-major-battle [data-esmo-fps-team-roster] { flex-direction:row; gap:4px!important; }
+  .fps-major-battle [data-esmo-fps-team-roster]>div { padding:4px!important; }
+  .fps-major-battle .fps-player-compact {
+    display:grid!important; grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:'name kda' 'duty duty' 'loadout loadout' 'health health';
+    grid-template-rows:32px 12px 30px 12px;
+    column-gap:3px!important; row-gap:3px!important; padding:5px!important; align-content:start; min-height:108px;
+  }
+  .fps-player-compact>div:nth-child(2) { display:none!important; }
+  .fps-player-compact .fps-player-identity { display:contents; }
+  .fps-player-compact .fps-player-name { grid-area:name; min-width:0; flex-wrap:wrap; gap:2px!important; align-content:start; line-height:1.2; }
+  .fps-player-compact .fps-player-name>span:first-child { min-width:0; max-width:100%; }
+  .fps-player-compact .fps-player-duty { grid-area:duty; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fps-player-compact .fps-player-kda { grid-area:kda; min-width:0!important; white-space:nowrap; }
+  .fps-player-compact .fps-player-kda>div:first-child { font-size:9px!important; }
+  .fps-player-compact .fps-player-kda>div:last-child { font-size:6px!important; letter-spacing:0!important; }
+  .fps-player-compact .fps-player-loadout { grid-area:loadout; display:grid!important; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+  .fps-player-compact .fps-player-loadout>span:first-child { grid-column:1/-1; }
+  .fps-player-compact .fps-player-loadout>span:nth-child(2) { flex-wrap:nowrap!important; gap:2px!important; }
+  .fps-player-compact .fps-player-loadout>span:last-child { font-size:7px!important; }
+  .fps-player-compact .fps-player-health { grid-area:health; min-width:0; }
+}

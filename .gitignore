@@ -59,3 +59,10 @@ review/cs-major-upgrade/**/*.log
 review/cs-major-upgrade/assets-source/
 review/cs-major-upgrade/tmp/
 tools/.cs-major-verifier-recovery/
+
+# Isolated CS integration evidence stays local.
+review/cs-integration-20261107/evidence/
+review/cs-integration-20261107/shared.patch
+
+review/cs-integration-20261107/preview-r1/
+review/cs-integration-20261107/preview-r*/

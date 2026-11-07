@@ -1,0 +1,13 @@
+import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';import {execFileSync} from 'node:child_process';import {build} from 'vite';import projectConfig from '../vite.config.js';
+const [kind,revision]=process.argv.slice(2);if(!['diagnostic','pristine'].includes(kind)||!/^r\d+$/.test(revision||''))throw Error('明確 Foundry 封存版本');
+const root=process.cwd(),name=`foundry-${kind}-${revision}-20261024`,out=path.resolve('review/cs-major-upgrade/profile-builds',name);if(fs.existsSync(out))throw Error('禁止覆寫封存');
+const files=execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z','--','src','public/assets/fps','public/audio/cs'],{encoding:'utf8',windowsHide:true,maxBuffer:4e6}).split('\0').filter(Boolean).sort();files.push('vite.config.js');
+const fingerprint=createHash('sha256');for(const f of files){fingerprint.update(f+'\0');fingerprint.update(fs.readFileSync(f));fingerprint.update('\0');}
+const plugin=()=>({name:'foundry-readonly-scene-diagnostic',enforce:'pre',transform(code,id){if(kind!=='diagnostic'||path.relative(root,id.split('?')[0]).replaceAll('\\','/')!=='src/battle/fps/EsportsFPS3D.jsx')return null;const marker='const own=(label,fn)=>{stateRef.current.disposables.push({label,fn});};';if(code.split(marker).length!==2)throw Error('場景唯讀 probe 標記改變');return{code:code.replace(marker,'window.__ESMO_FPS_SCENE__=stateRef.current;stateRef.current.ownerReviewRay=new THREE.Raycaster();'+marker),map:null};}});
+for(const k of ['VITE_SUPABASE_URL','VITE_SUPABASE_ANON_KEY','VITE_SUPABASE_REDIRECT_URL'])process.env[k]='';
+await build({cacheDir:path.resolve('tmp',name+'-cache'),publicDir:false,plugins:[plugin()],worker:{plugins:()=>[...(projectConfig.worker?.plugins?.()||[]),plugin()]},build:{outDir:out,emptyOutDir:false}});
+// CS 專用驗收包，保留正式 CS 素材；不複製其他工作區或 MOBA 大型資產。
+for(const relative of ['assets/fps','audio/cs']){const source=path.resolve('public',relative);if(fs.existsSync(source))fs.cpSync(source,path.join(out,relative),{recursive:true,errorOnExist:true,force:false});}
+const h=createHash('sha256');for(const f of fs.readdirSync(out+'/assets').filter(f=>f.endsWith('.js')).sort()){h.update(f+'\0');h.update(fs.readFileSync(out+'/assets/'+f));}
+const manifest={version:1,kind,name,probeVersion:kind==='diagnostic'?'foundry-readonly-scene-ray.v1':null,sourceFingerprint:{kind:'all-src-plus-CS-assets-and-vite',sha256:fingerprint.digest('hex'),files:files.length},bundleSha256:h.digest('hex'),builtAt:new Date().toISOString(),files,publicScope:'CS_ASSETS_AND_AUDIO_ONLY; MOBA_NOT_PREVIEWED'};
+fs.writeFileSync(out+'/build-manifest.json',JSON.stringify(manifest,null,2),{flag:'wx'});console.log('FOUNDRY_BUILD_PASS '+JSON.stringify({...manifest,files:files.length}));

@@ -53,6 +53,10 @@ export async function clickFpsDNative({chrome,sleep,selector}) {
   for(let attempt=0;attempt<30;attempt++){
     target=await chrome.evaluate(`const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)return null;const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return {x,y,width:r.width,height:r.height,hit:Boolean(hit&&(hit===e||e.contains(hit))),hitLabel:hit?.textContent?.slice(0,80)||null};`);
     if(target?.hit)break;
+    // A sticky header can cover a target that CDP considers already visible.
+    // Scroll the real ancestor scrollers to the center; the click below still
+    // requires an unobstructed elementFromPoint and native input.
+    if(attempt===0)await chrome.evaluate(`document.querySelector(${JSON.stringify(selector)})?.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});return true;`);
     await sleep(100);
   }
   if(!target||target.width<=0||target.height<=0)throw new HarnessError('原生UI互動目標未可見：'+selector);

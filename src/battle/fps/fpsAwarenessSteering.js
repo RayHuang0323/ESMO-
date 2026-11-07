@@ -1,3 +1,4 @@
+import {fpsSniperAngleLook} from './fpsSniperAngleDiscipline.js';
 // Major-only public awareness. Public map + canonical LOS; no enemy collection,
 // outcome, movement, Store or RNG. Deliberate intel/corner preaim stays intact.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),angle=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
@@ -5,15 +6,26 @@ const delta=(a,b)=>(((b-a)%360+540)%360)-180;
 const normalize=a=>((a%360)+360)%360;
 const finite=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y);
 const idOffset=id=>[...String(id)].reduce((n,c)=>n+c.charCodeAt(0),0)%7;
-export function fpsAwarenessLook({player,nodes,intel=[],roundSec,dtSec=.5,walls=[],lineBlocked}){
+export function fpsAwarenessLook({player,nodes,intel=[],roundSec,dtSec=.5,walls=[],lineBlocked,sniperDiscipline=false,visibleContact=null}){
+  if(sniperDiscipline&&['awp','scout'].includes(player.gun))return fpsSniperAngleLook({player,nodes,intel,roundSec,dtSec,walls,lineBlocked,visibleContact});
   const own=intel.filter(i=>i.side===player.side&&roundSec>=i.observedAtSec&&roundSec-i.observedAtSec<=3)
     .sort((a,b)=>(a.observerId===player.id?0:1)-(b.observerId===player.id?0:1)||distance(player.pos,a.pos)-distance(player.pos,b.pos));
   const next=player.route?.[player.routeIdx+1],following=player.route?.[player.routeIdx+2];
   let target=player.tacticalIntent?.aim||own[0]?.pos||player.perceptionCue?.pos,source=player.tacticalIntent?.aim?player.tacticalIntent.source:own.length?'team-intel':player.perceptionCue?.source||'route',scan=0,corner=false,targetKey=null,publicFallback=false,reason=null;
-  if((player.postPlantPlan||player.retakeCoverPlan)&&!own.length){target=(player.postPlantPlan||player.retakeCoverPlan).threat;source='post-plant-reserved-angle';}
+  const reserved=player.postPlantPlan||player.retakeCoverPlan;
+  if(reserved&&!own.length&&(!reserved.informationSource||!player.tacticalIntent?.aim&&!player.perceptionCue)){target=reserved.threat;source='post-plant-reserved-angle';}
   if(!target&&next){target=next;if(following&&distance(player.pos,next)<5&&Math.abs(delta(angle(player.pos,next),angle(next,following)))>30){target=following;corner=true;source='corner-preaim';}}
   const probeDistance=4,probeAt=bearing=>({x:player.pos.x+Math.cos(bearing*Math.PI/180)*probeDistance,y:player.pos.y+Math.sin(bearing*Math.PI/180)*probeDistance});
   const rayClear=bearing=>{const probe=probeAt(bearing);return typeof lineBlocked==='function'&&probe.x>=2&&probe.x<=98&&probe.y>=2&&probe.y<=98&&!lineBlocked(player.pos,probe,walls);};
+  // A teammate report is a last known position, not a licence to stare through
+  // the cover we stopped behind. Hold the closest visible edge/approach instead.
+  // Moving corner preaim and personally visible contacts keep their authority.
+  if(target&&finite(target)&&!corner&&source!=='visible'&&typeof lineBlocked==='function'&&
+      (player.tacticalIntent?.stopMovement||(player.velocityUnitsPerSec??Infinity)<=.22)&&!rayClear(angle(player.pos,target))){
+    const bearing=angle(player.pos,target),offsets=[0];for(let a=5;a<=180;a+=5)offsets.push(-a,a);
+    const edge=offsets.find(offset=>rayClear(bearing+offset));
+    if(edge!==undefined){target=probeAt(bearing+edge);source='intel-clear-approach';reason='reported-position-behind-near-cover;hold-visible-edge';publicFallback=true;}
+  }
   if(!target){
     publicFallback=true;
     if(typeof lineBlocked!=='function')return{va:normalize(Number(player.va)||0),desiredVa:Number(player.va)||0,source:'geometry-unavailable-hold',reason:'canonical-LOS-not-provided',corner:false,scanDegrees:0,turnDegrees:0,pace:1,targetKey:null};
@@ -41,6 +53,9 @@ export function planFpsCoverPeek({player,nodes,walls,roundSec,blocked,navLineBlo
   if(player.dead||player.blindSec>0||player.tacticalIntent?.aim||['save','retreat','trade'].includes(player.tacticalIntent?.kind)||player.hasBomb||roundSec<14||player.routeIdx<player.route.length-1)return null;
   if(player.side==='t'&&!['control','pick'].includes(player.tacticalStage))return null;
   if(roundSec-(player.lastPeekAtSec??-Infinity)<7+idOffset(player.id))return null;
+  // Site anchors and snipers keep their angle. Information gathering is a
+  // bounded task; the same empty corridor is not a perpetual patrol script.
+  if(player.holdCoverPlan||player.role==='awp'||player.side==='ct'&&!['information','rotator'].includes(player.tacticalDuty?.defenseDuty))return null;
   const cover={...player.pos};
   const nearby=walls.some(w=>distance(cover,{x:Math.max(w.x,Math.min(w.x+w.w,cover.x)),y:Math.max(w.y,Math.min(w.y+w.h,cover.y))})<2.5);
   if(!nearby)return null;
@@ -51,6 +66,8 @@ export function planFpsCoverPeek({player,nodes,walls,roundSec,blocked,navLineBlo
     const out={x:cover.x+dx,y:cover.y+dy};if(out.x<2||out.x>98||out.y<2||out.y>98||blocked(out,walls,radius)||navLineBlocked(cover,out,walls)||lineBlocked(out,approach,walls))continue;
     candidates.push({out,approach,key,distance:distance(cover,out)});
   }
-  candidates.sort((a,b)=>a.distance-b.distance||a.key.localeCompare(b.key));const best=candidates[0];
-  return best?{points:[cover,best.out,cover],lookAt:best.approach,source:'own-cover-and-public-map-approach',maxDistance:best.distance,approachKey:best.key}:null;
+  const informationEpoch=player.perceptionCue?`${player.perceptionCue.source}:${player.perceptionCue.observedAtSec}`:'unobserved';
+  const informationKey=key=>`${key}:${Math.round(cover.x/4)}:${Math.round(cover.y/4)}:${informationEpoch}`;
+  candidates.sort((a,b)=>a.distance-b.distance||a.key.localeCompare(b.key));const best=candidates.find(c=>!player._peekInformationKeys?.includes(informationKey(c.key)));
+  return best?{points:[cover,best.out,cover],lookAt:best.approach,source:'own-cover-and-public-map-approach',maxDistance:best.distance,approachKey:best.key,informationKey:informationKey(best.key)}:null;
 }

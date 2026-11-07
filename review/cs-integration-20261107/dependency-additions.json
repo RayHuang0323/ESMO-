@@ -1,0 +1,8 @@
+[
+  "tools/lib/fullJsonHash.mjs",
+  "tools/browser/owner2PracticeReportProbe.mjs",
+  "tools/browser/mobile101ReportProbe.mjs",
+  "tools/browser/cpuAttribution.mjs",
+  "tools/browser/mobile101HudProbe.mjs",
+  "tools/lib/jsonValueHash.mjs"
+]

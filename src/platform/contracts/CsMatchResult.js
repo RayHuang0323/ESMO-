@@ -45,7 +45,7 @@ function toContractPlayer(p, nameToId, major = false) {
  */
 export function toCsMatchResult(raw, ctx = {}) {
   if (!raw || raw.mode !== "CS") return null;
-  const major = raw.sceneVersion === "major.v1";
+  const major = ["major.v1","major.v2","major.v3","major.v4","major.v5"].includes(raw.sceneVersion);
   const nameToId = {};
   (ctx.roster ?? []).forEach((r) => { if (r && r.name) nameToId[r.name] = r._gid ?? null; });
   const ours = (raw.ourPlayers ?? []).map((p) => toContractPlayer(p, nameToId, major));
@@ -57,7 +57,7 @@ export function toCsMatchResult(raw, ctx = {}) {
     matchId: raw.id,
     seed: ctx.seed ?? null,
     mapId: raw.map ?? ctx.mapKey ?? null,
-    mapName: ctx.mapName ?? raw.map ?? null,
+    mapName: raw.sceneVersion==='major.v5'?'Foundry Circuit':raw.sceneVersion==='major.v4'?'Dune Terminal':raw.sceneVersion==='major.v3'?'Confluence Station':ctx.mapName ?? raw.map ?? null,
     // 賽前部署（Legacy TACTICS_LIB.fps 的團隊戰術）與引擎實際執行的地圖戰術分開記錄
     tacticId: ctx.tacticId ?? null,
     tacticName: ctx.tacticName ?? null,

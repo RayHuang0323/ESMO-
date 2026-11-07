@@ -1,8 +1,12 @@
 // Saved authoritative frames only. This module never runs a match.
 import {CS_PLAYER_POOL_ENCODING,packCsReplayPlayers,unpackCsReplayPlayers} from './fpsReplayPlayerPool.js';
+import {CS_FOUNDRY_POOL_ENCODING,packFoundryReplayExtras,unpackFoundryReplayExtras} from './fpsFoundryReplayPool.js';
+import {DUNE_TERMINAL_LAYOUT} from './fpsDuneTerminal.js';
+import {FOUNDRY_CIRCUIT_LAYOUT} from './fpsFoundryCircuit.js';
+import {validSmokeFlight} from './fpsSmokeProjectile.js';
 export const CS_REPLAY_SCHEMA = "CsReplay.v1";
 const MAPS = new Set(["mirage", "dust2", "inferno"]);
-const SCENES = new Set(["legacy", "major.v1"]);
+const SCENES = new Set(["legacy", "major.v1", "major.v2", "major.v3", "major.v4", "major.v5"]);
 const finitePosition = p => Number.isFinite(p?.x) && Number.isFinite(p?.y);
 const fail = errors => { throw new Error(`無法讀取重播：${errors.slice(0, 3).join("；")}`); };
 
@@ -25,9 +29,14 @@ export function validateCsReplay(replay) {
   const reject = message => { if (errors.length < 8) errors.push(message); };
   if (!replay || typeof replay !== "object") return { ok: false, errors: ["重播檔內容不完整"] };
   if (replay.schema !== CS_REPLAY_SCHEMA) reject("重播檔版本不支援");
-  if (replay.encoding != null && !["round-prefix.v1",CS_PLAYER_POOL_ENCODING].includes(replay.encoding)) reject("重播檔編碼不支援");
+  if (replay.encoding != null && !["round-prefix.v1",CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING].includes(replay.encoding)) reject("重播檔編碼不支援");
   const metadata = replay.metadata, sim = replay.simulation, result = replay.rawResult;
+  if(replay.encoding===CS_FOUNDRY_POOL_ENCODING&&metadata?.sceneVersion!=='major.v5')reject('重播場景與共用資料版本不一致');
   if (!metadata || !MAPS.has(metadata.mapKey) || !SCENES.has(metadata.sceneVersion) || !Number.isSafeInteger(metadata.seed) || [metadata.teamName, metadata.opponentName].some(name => typeof name !== "string" || !name.length || name.length > 120)) reject("地圖、場景或比賽識別資料不完整");
+  if(['major.v2','major.v3'].includes(metadata?.sceneVersion)&&metadata.mapKey!=='mirage')reject('原型地圖版本不一致');
+  if(metadata?.sceneVersion==='major.v3'&&sim?.mapLayoutId!=null&&!['esmo-confluence.v3.2','esmo-confluence.v3.3'].includes(sim.mapLayoutId))reject('重播場景版本不支援');
+  if(metadata?.sceneVersion==='major.v4'&&(metadata.mapKey!=='dust2'||!['esmo-dune-terminal.v4.1',DUNE_TERMINAL_LAYOUT].includes(sim?.mapLayoutId)))reject('原型地圖版本不一致');
+  if(metadata?.sceneVersion==='major.v5'&&(metadata.mapKey!=='inferno'||!['esmo-foundry-circuit.v5.1',FOUNDRY_CIRCUIT_LAYOUT].includes(sim?.mapLayoutId)))reject('原型地圖版本不一致');
   if (!sim || sim.mapKey !== metadata?.mapKey || sim.sceneVersion !== metadata?.sceneVersion) reject("重播場景資料不一致");
   if (!result || result.mode !== "CS" || !result.id || result.completed !== true || sim?.completed !== true || !["us", "enemy"].includes(sim?.winner) || result.winner !== sim?.winner || result.scoreT !== sim?.tScore || result.scoreCT !== sim?.ctScore || !Number.isFinite(sim?.tScore) || !Number.isFinite(sim?.ctScore)) reject("賽後結果與保存比分不一致");
   if (result && result.win !== (sim?.winner === "us")) reject("賽後勝負資料不一致");
@@ -42,6 +51,9 @@ export function validateCsReplay(replay) {
     previousTime = frame.ts; previousRound = frame.rnd;
     if (!Array.isArray(frame.players) || frame.players.length !== 10 || new Set(frame.players.map(p => p?.id)).size !== 10 || frame.players.some(p => typeof p?.id !== "string" || !p.id || typeof p.name !== "string" || !finitePosition(p.pos) || p.nades != null && !Array.isArray(p.nades))) reject("保存選手或位置資料不完整");
     if (["events", "casts", "comms", "smokes", "mollys", "tracers", "muzzles", "throwables", "droppedGuns", "reactionEvents"].some(key => frame[key] != null && !Array.isArray(frame[key]))) reject("保存事件或訊息資料不完整");
+    const smokeSpace=metadata.sceneVersion==='major.v5'?'foundry':metadata.sceneVersion==='major.v4'?'dune':metadata.sceneVersion==='major.v3'?'confluence':null;
+    if(Array.isArray(frame.smokes)&&frame.smokes.some(s=>s?.occlusion!=null&&(s.occlusion!=='solid.v1'||!smokeSpace||s.space!==smokeSpace||!finitePosition(s.pos)||s.baseHeight!=null&&!Number.isFinite(s.baseHeight))))reject('煙霧空間資料不完整');
+    if(Array.isArray(frame.throwables)&&frame.throwables.some(t=>t?.flight!=null&&(!validSmokeFlight(t.flight)||t.type!=='smoke'||t.flight.space!==smokeSpace||!Number.isFinite(t.flightDurationSec)||t.flightDurationSec<=0)))reject('投擲路徑資料不完整');
     if (Array.isArray(frame.events) && frame.events.some(event => !event || typeof event !== "object" || typeof event.type !== "string") || Array.isArray(frame.casts) && frame.casts.some(text => typeof text !== "string") || Array.isArray(frame.comms) && frame.comms.some(message => !message || typeof message.name !== "string" || typeof message.text !== "string")) reject("保存事件或訊息內容不完整");
     const count = frame.roundHistCount ?? frame.roundHist?.length;
     const ended = frame.roundEnd?.type === "round-end" && frame.roundEnd.round === frame.rnd + 1 || frame.completed === true && frame === sim.frames.at(-1);
@@ -57,11 +69,16 @@ export function readCsReplay(input) {
   let replay;
   try { replay = typeof input === "string" ? JSON.parse(input) : structuredClone(input); }
   catch { fail(["檔案不是有效的重播資料"]); }
-  if(replay?.encoding===CS_PLAYER_POOL_ENCODING){
+  if(replay?.encoding===CS_FOUNDRY_POOL_ENCODING){
+    if(replay.metadata?.sceneVersion!=='major.v5')fail(['重播場景與共用資料版本不一致']);
+    try{unpackFoundryReplayExtras(replay.simulation,replay.foundryValuePool);}catch(error){fail([error.message]);}
+    delete replay.foundryValuePool;
+  }
+  if([CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING].includes(replay?.encoding)){
     try{unpackCsReplayPlayers(replay.simulation,replay.playerValuePool);}catch(error){fail([error.message]);}
     delete replay.playerValuePool;
   }
-  if (["round-prefix.v1",CS_PLAYER_POOL_ENCODING].includes(replay?.encoding) && Array.isArray(replay.simulation?.frames) && Array.isArray(replay.simulation.roundHist)) {
+  if (["round-prefix.v1",CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING].includes(replay?.encoding) && Array.isArray(replay.simulation?.frames) && Array.isArray(replay.simulation.roundHist)) {
     const history = replay.simulation.roundHist;
     for (const frame of replay.simulation.frames) {
       if (!frame || typeof frame !== "object" || Array.isArray(frame)) fail(["保存畫面資料不完整"]);
@@ -79,5 +96,9 @@ export function serializeCsReplay(replay) {
   const validation = validateCsReplay(replay);
   if (!validation.ok) fail(validation.errors);
   const compact=packCsReplayPlayers(replay.simulation.frames);
+  if(replay.metadata.sceneVersion==='major.v5'){
+    const extra=packFoundryReplayExtras(compact.frames);
+    return JSON.stringify({...replay,encoding:CS_FOUNDRY_POOL_ENCODING,playerValuePool:compact.pool,foundryValuePool:extra.pool,simulation:{...replay.simulation,frames:extra.frames.map(({roundHist,...frame})=>({...frame,roundHistCount:frame.roundHistCount??roundHist.length}))}});
+  }
   return JSON.stringify({ ...replay, encoding: CS_PLAYER_POOL_ENCODING, playerValuePool:compact.pool, simulation: { ...replay.simulation, frames: compact.frames.map(({ roundHist, ...frame }) => ({ ...frame, roundHistCount: frame.roundHistCount ?? roundHist.length })) } });
 }

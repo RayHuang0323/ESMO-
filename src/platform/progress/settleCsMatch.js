@@ -46,11 +46,12 @@ export function settleCsMatch(csResult) {
   const committed = commitCsMatch({
     matchId: csResult.matchId,
     build: () => {
-      const { receipt } = settleMatchThroughSession({
+      const { receipt, errors } = settleMatchThroughSession({
         mode: "cs",
         outcome: outcomeFromCsResult(csResult),
         transaction: tx,
       });
+      if (receipt?.ok !== true) return receipt ?? { ok: false, applied: false, alreadyApplied: false, errors: errors?.length ? errors : ["本場結算尚未完成，獎勵未入帳"] };
       // 4) 入史（只寫紀錄，不發獎；同 matchId 冪等）
       //  ⚠ V0D：快速練習**不計戰績**。判斷讀 `MatchOrigin`（`matchPracticeContext`），
       //    與 MOBA 那一側同一條規則、同一個判定來源——不看畫面、不看路由。

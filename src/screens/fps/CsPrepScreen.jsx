@@ -27,6 +27,7 @@ import PlayerFace from "../../ui/PlayerFace.jsx";
 import { GC } from "../../ui/theme.js";
 import { ARCHIVED_SUMMARY, ARCHIVED_SUMMARY_TEXT } from "../../platform/persistence/saveSlim.js";
 import { CS_MAPS } from "../../battle/fps/csPrepData.js";
+import { preloadFpsMajorMapImages } from "../../battle/fps/presentation/fpsMajorMapAssets.js";
 import { preloadFpsCharacterAssets } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
 
 const ACC = "#fb923c"; // Legacy CS 主色
@@ -101,7 +102,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
 export default function CsPrepScreen({ onNext, onBack, onReturnToHub = null }) {
   //  hotfix/cs-loading-rest-ux：一進 CS 賽前就開始下載 rigged 角色（9.2 MB），
   //  和選陣容／選圖／戰術並行；Loading 畫面再等它就緒才進 Battle。重複呼叫不會重複下載。
-  useEffect(() => { preloadFpsCharacterAssets(); }, []);
+  useEffect(() => { preloadFpsCharacterAssets(); preloadFpsMajorMapImages(); }, []);
   const players = useProfileStore((s) => s.players) ?? [];
   const csHistory = useProfileStore((s) => s.csHistory) ?? [];
   const csLineup = useProfileStore((s) => s.csLineup);

@@ -18,6 +18,23 @@ export function projectNonDeathPelvisWorldVertical(original,model){
 function isBorrowed(mesh){return mesh.userData?.esmoPovBorrowed||mesh.userData?.esmoMajorImportedWeapon||mesh.name?.startsWith('ESMO_')&&/Weapon|Muzzle|GripSocket/.test(mesh.name);}
 export function createVisibleGroundingSampler({root,sampleGroundHeight,fastAlive=true}){
  const rows=[];
+ // A pose is immutable throughout one evaluate call. Reuse each bone's
+ // world * inverse-bind product across its many clothing/sole vertices.
+ // This is the same skinning operation as SkinnedMesh.applyBoneTransform.
+ const palettes=new Map(),basePoint=new THREE.Vector3(),bonePoint=new THREE.Vector3(),skinIndices=new THREE.Vector4(),skinWeights=new THREE.Vector4();let poseEpoch=0;
+ const skinPoint=(mesh,index,target)=>{
+  const skeleton=mesh.skeleton,geometry=mesh.geometry,indices=geometry.attributes.skinIndex,weights=geometry.attributes.skinWeight;
+  let palette=palettes.get(skeleton);if(!palette){palette={matrices:[],epochs:[]};palettes.set(skeleton,palette);}
+  skinIndices.fromBufferAttribute(indices,index);skinWeights.fromBufferAttribute(weights,index);
+  basePoint.copy(target).applyMatrix4(mesh.bindMatrix);target.set(0,0,0);
+  for(let component=0;component<4;component++){
+   const weight=skinWeights.getComponent(component);if(weight===0)continue;
+   const bone=skinIndices.getComponent(component);let matrix=palette.matrices[bone];
+   if(palette.epochs[bone]!==poseEpoch){if(!matrix)matrix=palette.matrices[bone]=new THREE.Matrix4();matrix.multiplyMatrices(skeleton.bones[bone].matrixWorld,skeleton.boneInverses[bone]);palette.epochs[bone]=poseEpoch;}
+   target.addScaledVector(bonePoint.copy(basePoint).applyMatrix4(matrix),weight);
+  }
+  return target.applyMatrix4(mesh.bindMatrixInverse);
+ };
  root.updateWorldMatrix(true,true);
  root.traverse(mesh=>{
   if(!mesh.isMesh||!mesh.geometry?.attributes.position||isBorrowed(mesh))return;
@@ -35,15 +52,20 @@ export function createVisibleGroundingSampler({root,sampleGroundHeight,fastAlive
  });
  const visible=mesh=>{for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;};
  const evaluate=(death,full=false)=>{
+  poseEpoch++;
   // SkinnedMesh.updateMatrixWorld refreshes bindMatrixInverse; plain
   // updateWorldMatrix does not. A moved platform actor needs both here.
   root.updateWorldMatrix(true,false);root.updateMatrixWorld(true);let gap=Infinity,samples=0,contactY=null;
-  for(const row of rows){const mesh=row.mesh;if(!visible(mesh))continue;if(mesh.isSkinnedMesh)mesh.skeleton.update();const attr=mesh.geometry.attributes.position;
+  // applyBoneTransform reads bone.matrixWorld directly (Three r160), not
+  // skeleton.boneMatrices. Updating the shared skeleton per clothing mesh
+  // only rebuilt/uploaded the same palette repeatedly. The tree above already
+  // owns this pose's world matrices, including SkinnedMesh.bindMatrixInverse.
+  for(const row of rows){const mesh=row.mesh;if(!visible(mesh))continue;const attr=mesh.geometry.attributes.position;
    const ids=full?Array.from({length:attr.count},(_,i)=>i):death?row.body:fastAlive?row.fastFeet:row.feet;
-   for(const i of ids){point.fromBufferAttribute(attr,i);if(mesh.isSkinnedMesh)mesh.applyBoneTransform(i,point);mesh.localToWorld(point);const floor=sampleGroundHeight(point.x,point.z),candidate=point.y-floor;if(candidate<gap){gap=candidate;contactY=floor;}samples++;}
+   for(const i of ids){point.fromBufferAttribute(attr,i);if(mesh.isSkinnedMesh)skinPoint(mesh,i,point);point.applyMatrix4(mesh.matrixWorld);const floor=sampleGroundHeight(point.x,point.z),candidate=point.y-floor;if(candidate<gap){gap=candidate;contactY=floor;}samples++;}
   }
   return{gap,samples,contactY};
  };
  let offset=0,owner=null,savedY=null;
- return{evaluate,reapply({model,offset:cached}){if(owner)throw Error('Grounding requires restore');offset=cached;owner=model;savedY=model.position.y;model.position.y+=offset;model.updateMatrixWorld(true);},restore(){if(owner&&savedY!==null){owner.position.y=savedY;owner.updateMatrixWorld(true);}offset=0;owner=null;savedY=null;},apply({model,dead=false,full=false}){if(owner)throw Error('Grounding lifecycle requires restore before mixer/next apply');const result=evaluate(dead,full);if(!Number.isFinite(result.gap))return{...result,applied:false};offset=-result.gap;owner=model;savedY=model.position.y;model.position.y+=offset;model.updateMatrixWorld(true);return{...result,offset,applied:true};},catalogue:rows.map(r=>({mesh:r.mesh.name,feet:r.feet.length,fastFeet:r.fastFeet.length,body:r.body.length,vertices:r.mesh.geometry.attributes.position.count})),get offset(){return offset;}};
+ return{evaluate,reapply({model,offset:cached}){if(owner)throw Error('Grounding requires restore');offset=cached;owner=model;savedY=model.position.y;model.position.y+=offset;model.updateMatrixWorld(true);},restore({deferMatrices=false}={}){if(owner&&savedY!==null){owner.position.y=savedY;if(!deferMatrices)owner.updateMatrixWorld(true);}offset=0;owner=null;savedY=null;},apply({model,dead=false,full=false}){if(owner)throw Error('Grounding lifecycle requires restore before mixer/next apply');const result=evaluate(dead,full);if(!Number.isFinite(result.gap))return{...result,applied:false};offset=-result.gap;owner=model;savedY=model.position.y;model.position.y+=offset;model.updateMatrixWorld(true);return{...result,offset,applied:true};},catalogue:rows.map(r=>({mesh:r.mesh.name,feet:r.feet.length,fastFeet:r.fastFeet.length,body:r.body.length,vertices:r.mesh.geometry.attributes.position.count})),get offset(){return offset;}};
 }

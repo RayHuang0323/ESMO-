@@ -144,6 +144,10 @@ const result = await runGate({
       await clickFpsDNative({ chrome, sleep, selector: tid("cs-tactic-confirm") });
       if (!(await waitFor("document.querySelector('canvas')&&document.querySelector('[data-testid=\"cs-playback-controls\"] input[type=\"range\"]')", 300000))) return { ok: false, why: "沒有進對戰" };
       await sleep(1500);
+      if (CASE === "controlled-cs-quota" && !report.quotaFixture) {
+        // 僅全新測試Chrome的非產品key；實際Chrome quota，未攔截setItem或改產品。
+        report.quotaFixture = await ev("let total=0;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);total+=k.length+localStorage.getItem(k).length;}const key='review.cs.quota.fixture';const target=5242880-total-key.length-4096;localStorage.setItem(key,'x'.repeat(Math.max(0,target)));return JSON.stringify({totalBefore:total,fillerChars:Math.max(0,target),reservedChars:4096,phase:'CS battle before quick finish'});");
+      }
       await clickFpsDNative({ chrome, sleep, selector: tid("quick-finish-match") });
       if (!(await waitFor("[...document.querySelectorAll('button')].some((b)=>b.textContent.includes('查看賽後戰報'))", 90000))) return { ok: false, why: "沒有到終局" };
       await clickText("查看賽後戰報");
@@ -458,6 +462,38 @@ const result = await runGate({
       }
       ck(`${label}：MOBA 與 CS 都正常完成賽程`, need.every((m) => done.has(m)), [...done].join(","));
     };
+
+    // 獨立診斷：不替代slim-cs的「CS結算超限」前提或原斷言。
+    if (CASE === "controlled-cs-quota") {
+      report.nonUi.push("受控非產品storage filler；不同於自然累積slim-cs，原3/4不覆寫");
+      await loadCheckpoint();
+      ck("真UI已到CS賽程", await reachFixture("cs") === "cs");
+      const s0 = await step("受控CS開始前");
+      const r = await startCsFromHub();
+      const s1 = await step("受控CS結算後");
+      const quotaUi = await ev("return JSON.stringify({body:document.body.innerText,buttons:[...document.querySelectorAll('button')].map(b=>b.textContent),canvas:!!document.querySelector('canvas')});");
+      report.findings.push({kind:"controlled_quota_terminal_ui",result:r,ui:quotaUi});
+      console.log("CONTROLLED_QUOTA_UI "+JSON.stringify({result:r,ui:quotaUi}));
+      const shot = await chrome.send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false});
+      if(OUT)fs.writeFileSync(OUT+'.png',Buffer.from(shot.data,'base64'));
+      ck("真CS終局且正式戰報明示未發獎／沒有存起來", r.ok && quotaUi.body.includes('CS MATCH REPORT') && quotaUi.body.includes('結算未完成（未發獎）') && quotaUi.body.includes('比賽結果沒有存起來') && !quotaUi.canvas && s1.disk.tx === s0.disk.tx);
+      ck("結算容量保護為match而非日曆save", s1.notice.kind === "match");
+      await home(); await fullText("受控CS結算滿檔");
+      if (await slimViaUi("受控CS結算滿檔")) await replayStuck("受控CS整理後原場返回", "cs", s0);
+      report.errors = errors();
+    }
+
+    if (CASE === "calendar-cs-diagnostic") {
+      report.nonUi.push("日曆先滿後整理／CS續玩補證；不算slim-cs通過");
+      await loadCheckpoint();
+      const attempt = await playUntilLimit("cs");
+      const stopped = await step("日曆先滿補證");
+      ck("指定CS超限未觸發、畫面已顯示滿檔保護", !attempt.failedAt && stopped.notice.on && !!stopped.notice.message);
+      await home();
+      await fullText("日曆超限補證");
+      if (await slimViaUi("日曆先滿整理")) await playOnAfterSlim("日曆整理後CS續玩", ["cs"]);
+      report.errors = errors();
+    }
 
     if (CASE === "slim-cs") {
       await loadCheckpoint();
