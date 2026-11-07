@@ -1,5 +1,9 @@
 # 整合候選Release Gate驗收清單
 
+## 2026-11-08 R2最新判定
+
+**HOLD／BLOCKED，非等待Claude。** 交接9afe58b2已整合，實際受測候選7cf1cebc；19個run Gate PASS，三圖正式快速練習各48/48、MOBA89/89、BP-9與Replay49/49等已實測。補充正式包Replay原生操作因工具漏展開details面板，返回操作HARNESS_FAIL→BLOCKED；最後assert實際exit2。沒有Push main／Deploy，部署後Smoke／磁碟盤點NOT_RUN。完整計數、原始收據與未測項：BETA_RELEASE_R2_REVIEW.md。舊RC／前輪表不當成本輪全部PASS，手機／低RAM與既有性能風險不關閉。
+
 ## 2026-11-08 公開桌機測試版最新狀態
 
 **HOLD／WAITING_RELEASE_GATE_HANDOFF。** Owner 已接受桌機、快速練習 opt-in 的有限測試範圍，但 Claude 修復後正式 SHA／指令／收據尚未交付。候選 `db97d102` 的本機 Build、Shader14/14、RAF7/7 通過；最後整合 Release Gate／CS三圖核心回歸／正式站 smoke 都是 NOT_RUN。沒有 Push main／Merge main／Deploy。Android、低RAM、熱降頻維持 NOT_RUN，CPU4× FAIL 與 2118MiB 風險不關閉。詳見 BETA_RELEASE_PREPARATION.md；下表「RC現況」只屬歷史 RC，不能用來宣稱本輪完整 PASS。

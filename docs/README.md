@@ -97,3 +97,8 @@
 ## 2026-11-08 CS Map v2 公開測試版發布準備
 
 最新停點：`review/cs-integration-20261107/BETA_CHECKPOINT.md`；完整報告：`BETA_RELEASE_PREPARATION.md`。產品候選 db97d102，等待 Claude Release Gate 正式交接；尚未 Push main／Merge main／Deploy。原 RC 報告與收據保留為歷史，不作最後整合 Gate PASS。
+
+
+## 2026-11-08 CS Beta R2 最新停點
+
+Claude SHA守門9afe58b2已交付整合，受測來源7cf1cebc；最新報告review/cs-integration-20261107/BETA_RELEASE_R2_REVIEW.md，停點BETA_RELEASE_R2_CHECKPOINT.md。19個run Gate通過，但補充正式包Replay Smoke工具漏展開面板，最後assert BLOCKED／exit2，沒有Push main／Deploy。不再等待Claude基線，前輪WAITING僅是歷史。

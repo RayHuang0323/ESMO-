@@ -1,5 +1,7 @@
 # CS Map v2 隔離整合續作停點
 
+> R2最新：Claude9afe58b2已交付並整合；受測候選7cf1cebc完成核心回歸，但補充正式包Replay Smoke為HARNESS_FAIL／BLOCKED，最後assert exit2，未Push main／Deploy。最新入口：[BETA_RELEASE_R2_CHECKPOINT.md](BETA_RELEASE_R2_CHECKPOINT.md)。下列均為前輪保留紀錄。
+
 > 2026-11-08 最新停點：**WAITING_RELEASE_GATE_HANDOFF**。公開桌機測試版候選 `db97d102` 已保存，等待 Claude 正式 SHA／指令／收據；沒有 Push main／Merge main／Deploy。請先讀 [BETA_CHECKPOINT.md](BETA_CHECKPOINT.md)。下列 RC 內容保留為歷史。
 
 ## 本機RC最新停點

@@ -1,5 +1,7 @@
 # 公開測試版準備 Checkpoint
 
+> 2026-11-08 R2最新停點：**HOLD／BLOCKED**。Claude9afe58b2已交付整合，候選7cf1cebc已實測；補充Replay Smoke工具漏開面板，最後assert exit2。沒有Push main／部署。先讀 [BETA_RELEASE_R2_CHECKPOINT.md](BETA_RELEASE_R2_CHECKPOINT.md) 與 [R2完整報告](BETA_RELEASE_R2_REVIEW.md)。以下WAITING是前輪歷史。
+
 2026-11-08，**WAITING_RELEASE_GATE_HANDOFF**。
 
 - 產品 Checkpoint：`db97d1026e4ec172df3c267eb8e9520272f2ddd4`；分支 `release/cs-map-v2-beta-20261108`。

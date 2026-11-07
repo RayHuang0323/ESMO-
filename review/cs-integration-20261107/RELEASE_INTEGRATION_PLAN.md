@@ -1,5 +1,9 @@
 # 第四階段：正式整合／部署計畫（僅規劃）
 
+## R2實際停止點：2026-11-08
+
+Claude9afe58b2已核對並安全整合，本機候選7cf1cebc有19份run PASS；補充正式包Replay Smoke漏展開面板，返回原生hit-test無法完成，HARNESS_FAIL→BLOCKED，最後assert exit2。依Owner條件已停止發布，遠端main仍3e615157，沒有Push／Deploy。完整接續與版本界線見BETA_RELEASE_R2_REVIEW.md／BETA_RELEASE_R2_CHECKPOINT.md。不得以其他PASS跳過此BLOCKED；本輪不再修補重跑、不做部署後盤點或清理。
+
 ## 2026-11-08 授權與等待條件更新
 
 Owner 最新授權：RC67f46145 可在正確 Gate 通過後發布為桌機公開測試版，限既有快速練習 opt-in，允許獨立備份 Push 與有條件正常 Push main／Pages。隨後明確補充：Claude Code 仍在修復 Release Gate，正式交接 SHA／指令／結果交付前，不 Push main、不 Merge main、不 Deploy。已完成 RC 遠端備份及本機候選 db97d102；最新執行清單見 BETA_RELEASE_PREPARATION.md／BETA_CHECKPOINT.md。下列「尚未授權」文字是前輪歷史，已由本節限縮授權取代；工程 Gate 與真實收據條件沒有豁免。

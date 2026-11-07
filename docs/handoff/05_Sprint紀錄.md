@@ -27038,3 +27038,12 @@ Owner 限定條件式發布，隨後明示 Claude 仍在修復 Release Gate。�
 **未完成／沒驗到**：沒有接進正式 CI（`deploy.yml`，Owner 2026-11-08 裁定 TD-DEPLOY 期間不改）；Codex 尚未實際使用；只在 Windows＋Node 24 測過，Linux／CI 環境沒測；收據無簽章；只驗頂層依賴。
 
 **教訓**：1）負向測試抓到一個真實的判斷瑕疵：被包的指令 exit 2（環境類阻擋）時，`assert` 原本因「指令不是 exit 0」改判 `FAIL`，把 BLOCKED 誤報成 FAIL；非 PASS 的收據類別只能由 `receipt_status` 決定。2）測試腳本用「案例標籤」當 Windows 資料夾名，標籤含 `>=` 就崩；fixture 目錄名不要用人類可讀標籤。3）在程式碼同一行尾加 `//` 注解，會把後面同一行的語句吞掉。4）改含 `\n` 的 JS 一律用 Edit，不用 heredoc。5）測試的清理要掛在 `exit` 事件上，崩潰也要清。
+
+
+## 2026-11-08 CS Beta R2：整合Claude SHA守門，最後assert BLOCKED停發布
+
+接續31f7bbbd，核對Claude交接9afe58b2、四份原始JSON收據與其assert，選取工具／必要規範並追加handoff段落，三文件祖先與既有產品保留；先commit成7cf1cebc後才跑正式preflight／run。19個run Gate通過，完整計數／命令／原始stdout及stderr／受測環境見review/cs-integration-20261107/BETA_RELEASE_R2_REVIEW.md，核心三圖各48/48、MOBA89/89、BP-9與Replay49/49。
+
+工具問題均具名留證：CLAUDE新九行CRLF只正規化為LF，文字與標準不變；補充Smoke的初版selector跳脫在執行前語法檢查被抓到，保存原錯誤後改JSON.stringify並重驗；真Browser補充Smoke又因未先展開保存重播details，返回原比賽hit-test命中「陣亡位置：隱藏」，HARNESS_FAIL／6項已過／0產品斷言fail。只讀核對與截圖確認前置缺漏，既有Replay工具有正確展開步驟。這次實際Gate的BLOCKED沒有修補重跑、沒有繞過hit-test，沒有去改產品。
+
+最後assert要求20個gate，最新一份BLOCKED，native exit2。依Owner條件停止正式部署；main仍3e615157，沒有Push main／Merge main／Deploy，沒有新增專案worktree或清理既有資料。文件Checkpoint與受測來源SHA分開記錄，接續先讀BETA_RELEASE_R2_CHECKPOINT.md。Android／低RAM與既有CPU4×／2118MiB風險保留，部署後盤點NOT_RUN。

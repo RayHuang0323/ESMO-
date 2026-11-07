@@ -2962,3 +2962,12 @@ NEXT_SPRINT = NOT_STARTED
 - 下一步：於既有發布工作區核對 Claude 修復與最新 main，再於最終 SHA 跑完整所需 Gate；通過後才可正常 Push main／Pages 與正式站實測。失敗／衝突即停。
 - 公開範圍：桌機、快速練習 opt-in；手機／低RAM未認證，CPU4×與2118MiB具名保留，不改寫全面 PASS；正式競賽地圖池不擴大。
 - 部署後才做磁碟只讀盤點與清理提案，本輪不刪除現役資料。細節：review/cs-integration-20261107/BETA_RELEASE_PREPARATION.md。
+
+
+## 2026-11-08 CS Beta R2 發布工程停點
+
+- 已完成：Claude9afe58b2的SHA工具／必要規範安全整合；候選7cf1cebc的19個run Gate，包括三圖正式快速練習、BP-9、MOBA與Replay必要回歸。
+- 目前：HOLD／BLOCKED；補充正式包Replay Smoke缺少原生展開面板前置，返回未完成，最後assert exit2。沒有Push main／Deploy，不再等待Claude。
+- 最小接續：保持產品不改，修Smoke前置並保留原生hit-test、另開證據目錄重驗；再核對main與正確來源SHA、收據有效性及完整assert。依Owner停止條件，本輪保存後停下。
+- 未執行：正式Push／Pages／部署後Smoke、只讀磁碟盤點。仍限桌機快速練習opt-in，未認證Android／低RAM，不擴大正式競賽池、不關閉CPU4×／2118MiB等風險。
+- 詳細：review/cs-integration-20261107/BETA_RELEASE_R2_REVIEW.md。
