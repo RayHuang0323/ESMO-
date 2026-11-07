@@ -27022,3 +27022,19 @@ Owner 限定條件式發布，隨後明示 Claude 仍在修復 Release Gate。�
 臨時 wrapper 的中文 regexp 經 PowerShell stdin 轉碼後語法失敗，未開始測試；保存 HARNESS_FAIL，改 ASCII wrapper 才真執行。沒有放寬產品斷言。澄清前新建的唯讀 baseline3e615157 開始 Competition Gate，澄清後停止自有 PID58916，前三 Node 區段完成但整體 ABORTED_BY_OWNER_STEERING；stdout／stderr／native／child logs 全保留，不當 PASS／PRODUCT_FAIL。該工作樹不刪、不續跑，也不冒充 Claude 修復成果。
 
 最新停點與完整證據位置：review/cs-integration-20261107/BETA_CHECKPOINT.md、BETA_RELEASE_PREPARATION.md。最後 Gate、整合核心回歸與正式站 smoke NOT_RUN，等正式 SHA／指令／收據；停止擴大工作，保護所有現役工作區與原始證據。
+
+## 2026-11-08 Release Gate SHA 守門（分支 `tooling/release-gate-sha-guard`；本機 commit，未 Push）
+
+**起因**：worktree 盤點量到記憶指定的「乾淨基線」`ESMO-acceptance` 落後 `origin/main` 689 個 commit、沒有 `node_modules`（見 08 同日待辦）。拿它跑 Release Gate 會驗到錯的程式碼或一開始就壞，紅綠燈本身看不出來。
+
+**完成**：
+- `tools/lib/releaseGate.mjs`（共用庫）、`tools/release_gate.mjs`（CLI：`preflight`／`run`／`assert`／`resolve-main`）、`tools/check_release_gate_guard.mjs`（自我測試）、`docs/ai/Release_Gate_SHA驗證.md`（用法、Target SHA 取得／指定／確認、前置條件、PASS／FAIL／BLOCKED 判讀、Codex 整合流程與交接單）。
+- 規則：驗證前**明確指定 Target SHA**，工具實際讀工作目錄 `HEAD` 比對；SHA 不符＝`FAIL`（exit 1），缺依賴／環境不符／無法完成＝`BLOCKED`（exit 2），`FAIL`＞`BLOCKED`＞`PASS`，任何 FAIL／BLOCKED 都不產生 PASS 收據。收據綁 SHA、Gate 版本、環境、時間，放 git common dir（所有 worktree 共用、不進版控）；`assert` 只採用該 SHA＋gate 的最新一張，舊 SHA／舊環境／過期／被改過的不能冒充。
+- 不寫死任何 worktree 名稱或 commit；不改任何既有 gate 的通過標準；只依賴 Node 內建模組（沒有 `node_modules` 也能判 BLOCKED）。
+- 制度文件各加一小段指向：`AGENTS.md` §7、`CLAUDE.md` 驗證命令、`docs/ai/CODEX使用規範.md` §10（改前已備份）。
+
+**驗證**：`check_release_gate_guard` **118/118**（SHA 不符、分支名當目標、髒工作目錄、缺 `node_modules`／失效 junction／依賴版本與 lock 不符、Node 版本不符、指令失敗／逾時／在執行中改 HEAD、收據被改／過期／舊 Gate 版本／舊環境／舊 SHA／新的 FAIL 蓋掉舊 PASS、多個 worktree、遠端 main 移動、用法錯誤）。真實環境實測：對新 worktree 預檢 PASS；對真實的 `ESMO-acceptance`（只讀）——目標＝它自己的 HEAD 得 `BLOCKED`（無 `node_modules`）、目標＝目前遠端 main 得 `FAIL`（驗到的不是指定的 commit）、目標＝`main` 得 `FAIL`（不收分支名）。
+
+**未完成／沒驗到**：沒有接進正式 CI（`deploy.yml`，Owner 2026-11-08 裁定 TD-DEPLOY 期間不改）；Codex 尚未實際使用；只在 Windows＋Node 24 測過，Linux／CI 環境沒測；收據無簽章；只驗頂層依賴。
+
+**教訓**：1）負向測試抓到一個真實的判斷瑕疵：被包的指令 exit 2（環境類阻擋）時，`assert` 原本因「指令不是 exit 0」改判 `FAIL`，把 BLOCKED 誤報成 FAIL；非 PASS 的收據類別只能由 `receipt_status` 決定。2）測試腳本用「案例標籤」當 Windows 資料夾名，標籤含 `>=` 就崩；fixture 目錄名不要用人類可讀標籤。3）在程式碼同一行尾加 `//` 注解，會把後面同一行的語句吞掉。4）改含 `\n` 的 JS 一律用 Edit，不用 heredoc。5）測試的清理要掛在 `exit` 事件上，崩潰也要清。

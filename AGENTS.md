@@ -99,6 +99,22 @@ ESMO 是 **Web MOBA / 電競經營模擬遊戲**。目標不是程式實驗，�
    它是獨立 process，計時器不受子行程內部卡死影響（in-process 的 `setTimeout`
    在同步呼叫卡死時根本不會觸發——這是實測踩出來的）。
 
+### ⚠⚠ Release Gate：驗證前必須釘住 Target SHA（2026-11-08 起）
+
+任何「可整合／可發版」的結論之前，先用 `tools/release_gate.mjs` 確認**實際驗的就是指定的 commit**
+（完整用法、判讀、Codex 整合範例：`docs/ai/Release_Gate_SHA驗證.md`）：
+
+1. **明確指定 Target SHA**（`--target-sha`，7–40 位十六進位；分支名、`HEAD`、tag、worktree 名稱一律不收），
+   工具從 `--repo` 的工作目錄實際讀 `HEAD` 比對。**SHA 不符 ＝ `FAIL`（exit 1）**；
+   缺 `node_modules`／依賴與 lock 不符／Node 版本不對／無法完成驗證 ＝ **`BLOCKED`（exit 2）**。
+   任何 `FAIL`／`BLOCKED` 都**不得**回報成通過，也不得為了變綠放寬 gate 或調整 Target SHA。
+2. **收據綁 SHA、Gate 版本、驗證環境、時間。** 舊 SHA、不同環境、過期（預設 24 小時）或被改過的收據不能冒充；
+   整合前用 `assert` 查驗，並貼出 `RELEASE_GATE RESULT=…` 那一行。
+3. **main 會移動**：整合前後都要重新 `resolve-main`，不得沿用記憶或文件裡寫的 SHA。
+4. **不得把任何 worktree（含 `ESMO-acceptance`）當成「已知乾淨基線」而省略檢查**——它是否在對的 commit、依賴是否可用，由工具每次驗證。
+5. 這個機制不取代 `verify.mjs`／regress／browser gate，只負責「驗的是對的 commit、環境可驗、留下收據」；
+   改動它之後必跑 `node tools/check_release_gate_guard.mjs`。
+
 ### ⚠⚠ 長 verifier 一律走 `tools/verify.mjs`（2026-08-09 更正）
 
 **本節原本寫「`runtime29` 跑它=跑完全部，約 10–15 分」——那是錯的。**

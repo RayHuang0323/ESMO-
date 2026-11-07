@@ -103,3 +103,15 @@ Codex **預設不得 commit / push**，除非使用者或 Sprint 指令**明確�
   這仍只是正式 `GameView` 元件的截圖入口，不能取代完整賽前流程或 Android 真機驗收。
 - 英雄頭頂只保留 WebGL 名稱／等級與完整血條；Buff 層數／秒數放隊伍面板，
   地圖角色僅用低干擾環繞光效。禁止再用 DOM 文字覆蓋 WebGL 血條。
+
+## 10. 正式整合前的 Release Gate：必須對「正確的候選 SHA」驗證（2026-11-08 增補）
+
+Codex 正式整合 CS（或任何候選）進 main 時，**整合前後都要**用 `tools/release_gate.mjs` 對**實際的 commit SHA**驗證；
+完整指令、Target SHA 的取得／指定／確認方式、PASS／FAIL／BLOCKED 判讀與交接單範本都在
+**`docs/ai/Release_Gate_SHA驗證.md`**（§7 是專為 Codex 整合寫的流程）。重點：
+
+- 每次都重新取得 Target SHA：候選用 `git -C <候選 worktree> rev-parse HEAD`；main 用 `release_gate.mjs resolve-main`（遠端真值）。
+  **不得**假設 main 的 SHA 不變，也不得沿用舊的驗證結果或記憶裡的 SHA。
+- 候選必須包含當下的 main（`--require-ancestor`）；推送前遠端 main 必須仍是剛查到的值（`--expect-remote-main`）。
+- `FAIL`（exit 1）與 `BLOCKED`（exit 2）都不是通過。不得用「換 worktree」「改 Target SHA 配合工作目錄」「放寬 gate」讓它變綠。
+- 回報要附：交接單（候選 worktree、Target SHA 與取得時間、當下 main、要求的 gate、`RELEASE_GATE RESULT=` 行、未驗證項目）。

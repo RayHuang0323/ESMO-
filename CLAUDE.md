@@ -208,6 +208,15 @@ B1D.2 的 `mock`）—— 那些檔案的說明文字**正好在講「我們不�
   ⚠ 規則只在 `meta.saveSlim` 存在時套用；第一次不可逆的整理一定要先下載備份並由玩家確認（Owner 決策 4）。
   ⚠ 整理以**磁碟上那份**為準，開始前比對備份指紋（磁碟變了就 `backup_stale`）；profile 寫入前才凍結（`freezeSaveWrites`），凍結後一定要給不能關閉的「請重新整理」，不得讓玩家在凍結中繼續玩；冷啟動比對 `meta.saveSlim.expect` 全部相同才算完成，失敗就停用規則、不自動重試。
   ⚠ 開機時 `bootSaveSlim` 要比 P0-A 的 `recoverPendingCommits` 先跑；新玩家第一次開機不得寫 localStorage。
+- **Release Gate SHA 守門（2026-11-08；任何「可整合／可發版」結論之前必跑；改這個工具之後必跑自我測試）**：
+  `node tools/release_gate.mjs run --repo <worktree 根目錄> --target-sha <sha> --gate <名稱> --cmd "<既有 gate 指令>"`；
+  整合前 `node tools/release_gate.mjs assert --repo … --target-sha … --require-gate <名稱>`；
+  自我測試 **`node tools/check_release_gate_guard.mjs`（118，約 2 分鐘）**。完整說明與 Codex 整合範例：`docs/ai/Release_Gate_SHA驗證.md`。
+  ⚠ **Target SHA 必須明確指定**（分支名、`HEAD`、tag、worktree 名稱一律不收），工具實際讀工作目錄的 `HEAD` 比對：
+  **SHA 不符＝`FAIL`（exit 1）；缺 `node_modules`、依賴與 lock 不符、Node 版本不對、無法完成＝`BLOCKED`（exit 2）。**
+  任何 FAIL／BLOCKED 都不得回報成通過，也不得為了變綠放寬 gate。
+  ⚠ 收據綁 SHA、Gate 版本、環境、時間（預設 24 小時）；舊 SHA／舊環境／過期／被改過的收據不能冒充。main 會移動，整合前後都重新 `resolve-main`。
+  ⚠ 不得把 `ESMO-acceptance` 或任何 worktree 當成「已知乾淨基線」而省略檢查（2026-11-08 量到它落後 main 689 個 commit 且沒有 `node_modules`）。
 - **正式站 smoke（部署後才跑）**：**`browser_check_prod_season_vnext`**（30）
   ⚠ 打的是**線上網址**，不是 dev server。因此**只能走 UI ＋ localStorage**（TD-31）：
   `RESOLVE_APP_MODULES` 匯入 `/src/...`，打包後的 bundle 沒有那些路徑。
