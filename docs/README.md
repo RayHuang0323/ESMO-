@@ -95,6 +95,7 @@
 
 - [CS Map v2隔離整合報告](../review/cs-integration-20261107/INTEGRATION_REVIEW.md)
 - [CS Map v2剩餘缺口補證](../review/cs-integration-20261107/REMAINING_GAPS_REVIEW.md)
+- [CS受控結算容量與Allocation Sampling](../review/cs-integration-20261107/CONTROLLED_QUOTA_ALLOCATION_REVIEW.md)
 - [CS Map v2桌機品質驗收](../review/cs-integration-20261107/PHASE3_QUALITY_REVIEW.md)
 - [CS Map v2 Release Gate清單](../review/cs-integration-20261107/RELEASE_GATE_ACCEPTANCE.md)
 - [CS Map v2正式整合計畫（未執行）](../review/cs-integration-20261107/RELEASE_INTEGRATION_PLAN.md)

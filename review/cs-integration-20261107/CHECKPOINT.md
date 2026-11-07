@@ -1,5 +1,9 @@
 # CS Map v2 隔離整合續作停點
 
+2026-11-08最新：CONTROLLED_QUOTA_ALLOCATION_REVIEW.md。受控storage fixture在真CS戰鬥後填非產品key、觸發實際Chrome quota；38/38證明CS結算match保護、整理後返回原場只入帳一次，原自然3/4仍NOT_TRIGGERED。兩輪37/38為工具預期舊Receipt文字，原body／截圖／失敗保留。Foundry Allocation Sampling七份raw profile、6/6 runtime；join約210MiB、parse103MiB、Pool11MiB，場景共面處理527MiB與服裝474MiB是更大累積配置來源。native解壓／Worker／正常快取精確retained bytes與2118MiB峰值完整因果仍未量化，不採產品修正。分析工具繼承欄位錯分已以Object.hasOwn修正，獨立比對通過。產品來源未改、既有有效大型收據沿用；main仍3e615157、不再次整合。
+
+本輪最終SHA及原34份WIP／raw profile／stdout／stderr／exit SHA在evidence/quota-allocation-checkpoint-r1/manifest.json。預覽5207／controller61048不變。Gate HOLD，Android／低RAM NOT_RUN、CPU4×既有FAIL保留；停Owner Review，不merge／push／deploy。下方保留前輪歷史。
+
 最新續作完成：REMAINING_GAPS_REVIEW.md為本輪報告。只有兩支tools與文件修改，無產品改動。progress25修正v2舊假設為正式v3 runtime＋v2相容／非法版本拒絕，gaps-progress-r2 33/33；首次錯沿用v2之r1失敗保留。gaps-cs-runtime-r1仍3/4，確認第244天日曆先滿；新增calendar-cs-diagnostic 32/32證明備份／同意／整理／冷啟動後CS續玩入帳102→103，不代替指定CS結算超限／原場返回。Replay2118MiB風險仍開，沒有推測性產品修正。fetch main=3e615157，僅四份docs差異，未再次整合。
 
 本輪安全保存見evidence/gaps-checkpoint-r1/manifest.json（最終SHA與收據索引），Git本機提交；原34份WIP SHA相符。原預覽5207／controller61048保持，HTTPS仍只存對話與記憶體。Owner Review／HOLD；不merge、push、deploy。下方為前輪完整停點歷史，最新結果優先。

@@ -6,7 +6,7 @@ import {seekFpsNativeTimeline} from './fpsNativeTimeline.mjs';
 export {networkArchive,networkFixture,networkStartVideo,networkStopVideo} from './fpsNetworkReview.mjs';
 export class FoundryReplayImportError extends Error {}
 // Separate adapter: legacy readiness gates are preserved byte-for-byte.
-export async function foundryReviewImport({chrome,sleep,archive,fixture,width=1366}){
+export async function foundryReviewImport({chrome,sleep,archive,fixture,width=1366,beforeImport}){
  const restoreView=()=>chrome.evaluate('window.__ESMO_FPS_SCENE__?.renderer.domElement.scrollIntoView({block:"center"});return true;');
  const native=async selector=>{await clickFpsDNative({chrome,sleep,selector});await restoreView();};
  await chrome.send('Emulation.setDeviceMetricsOverride',{width,height:width<600?844:900,deviceScaleFactor:1,mobile:width<600});
@@ -16,6 +16,7 @@ export async function foundryReviewImport({chrome,sleep,archive,fixture,width=13
  await wait(ready,'Native battle mount/real assets readiness');
  if(await chrome.evaluate('return window.__ESMO_FPS_SCENE__.liveRef.current.playing;'))await native('[aria-label="暫停比賽播放"]');
  if(!await chrome.evaluate('return document.querySelector(".fps-major-replay").open;'))await native('.fps-major-replay > summary');
+ if(beforeImport)await beforeImport();
  await uploadFpsDNativeFile({chrome,selector:'.fps-major-replay input[type="file"]',filePath:fixture.nativeFile});
  await wait('return Boolean(document.querySelector("[data-testid=cs-replay-mode]"));','Native saved Replay import');await wait(ready,'Imported assets readiness');
  if(await chrome.evaluate('return window.__ESMO_FPS_SCENE__.liveRef.current.playing;'))await native('[aria-label="暫停比賽播放"]');

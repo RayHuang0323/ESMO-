@@ -1,5 +1,7 @@
 # 整合候選Release Gate驗收清單
 
+2026-11-08追加：TD-INT-01受控CS結算超限→整理→返回原場冪等38/38已補；原自然3/4仍NOT_TRIGGERED、原斷言不動。RG-CS-02新增七份Allocation profiles與6/6 runtime，但2118MiB峰值／native解壓／Worker及低RAM仍未關，沒有產品修正。最新範圍以CONTROLLED_QUOTA_ALLOCATION_REVIEW.md為準，其餘歷史保留，整體HOLD。
+
 2026-11-07，僅本機隔離候選；**HOLD，停Owner Review**。原CS Release Gate／失敗收據保留，本文件補記此次整合及第三階段結果，不修改原工作區。
 
 | Gate | 最新狀態 | 收據與剩餘條件 |
@@ -24,6 +26,7 @@
 
 - [x] progress25舊32/33已由本輪33/33取代：原要求v2，但正式輸出為v3；改驗v3實際輸出、v2讀取相容與非法版本拒絕，產品不改，舊失敗保留。
 - [ ] TD-INT-01：第244天日曆先滿，未觸發指定CS結算滿檔；slim-300不能代替該前提。
+- [x] TD-INT-01受控條件：真CS已進戰鬥後，以非產品storage fixture觸發實際結算容量超限，38/38；不以受控PASS回寫上一項自然觸發收據。
 - [x] 同存檔「日曆先滿→備份／同意／整理→冷啟動→下一場CS續玩」獨立Runtime32/32；不代替上一項。
 - [ ] 低RAM峰值、系統回收恢復、實際GPU bytes回收、Android及熱降頻：NOT_RUN／未充分驗證。
 - [ ] Confluence／Dune完整即時全局與三圖全seed矩陣：NOT_RUN；不以Foundry單例代替。
