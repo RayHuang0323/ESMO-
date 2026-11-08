@@ -27083,3 +27083,13 @@ R4文件eb209b96已安全備份至獨立GitHub分支archive/cs-map-v2-beta-r4-20
 Android／低RAM／熱降頻仍NOT_RUN／未認證，CPU4×FAIL與2118MiB歷史峰值等風險不關閉；本次封存不代表全面Release Gate PASS。清理報告：review/cs-integration-20261107/ARCHIVE_CLEANUP_REVIEW_20261108.md，精確停點／遠端回讀見同目錄ARCHIVE_CLEANUP_CHECKPOINT.md及C:\Users\ifikn\esmo-measure\cs-beta-archive-cleanup-20261108\final-checkpoint.json。剩餘資料只提案，停Owner Review。
 
 維護驗證：刪除前後1009個必要證據hash一致、WIP與備份逐檔一致、Node20健康；正式首頁與main版本不動。首次預檢FileInfo.Parent差異與WindowsPS5.1/Big5吞UTF8無BOM註解的no-op execute均保留；採BOM、AST確認只有1個原定Remove-Item，正常刪單檔後才計入成果，不用失敗收據宣稱釋放量。
+
+## 2026-11-08 CS 受控清理 R2：基線移除，四個 Profile 保留
+
+桌機 Beta 已結案 CONDITIONAL GO，正式 7cf1cebc 不變，本輪無產品修改／main Push／部署。只正常移除已完整核驗、遠端封存的 cs-beta-baseline-20261108（無 --force）：C 配置釋放 436.78 MiB；D 僅 Git 私有管理檔 0.43 MiB，兩個大型 D 工作區未刪／未搬。四個 Temp Profile 因存檔或未核驗 session 資料全部 SKIP，不能再沿用舊報告直接當作安全快取。剩餘 109 Worktree（CS 51），原 34 WIP／recovery、1009 份證據、三圖 Replay、R4 Profile 及共用依賴保護核驗完整。
+
+D 兩根去重配置 42.773 GiB；共用 host 3.584 GiB 必留。備份、SHA 與恢復核驗及另行核准後，非共用退役理論上限 39.188 GiB（含尚未證明可重建的 21.576 GiB Build 候選），現在可直接安全回收 0。ai 有 6 個相對 origin tracking 獨有 Commit；fps 有 35 個未追蹤工具及現役共用依賴，不能整根移除。只提獨立外接／私人可靠雲端封存方案，未搬大型資料。
+
+Android／低 RAM／熱降頻 NOT_RUN、CPU4× FAIL、Replay 2118 MiB 風險及自然容量 3/4 缺口維持，不宣稱全面 Gate PASS。最新 [清理報告](../../review/cs-integration-20261107/CONTROLLED_CLEANUP_R2_20261108.md)、[D 封存提案](../../review/cs-integration-20261107/D_WORKSPACE_ARCHIVE_PLAN_20261108.md)、[Checkpoint](../../review/cs-integration-20261107/CONTROLLED_CLEANUP_R2_CHECKPOINT.md)。精確最終 SHA／遠端回讀與容量：C:\Users\ifikn\esmo-measure\cs-beta-controlled-cleanup-r2-20261108\final-checkpoint.json。完成停 Owner Review，不再開發 CS 功能。
+
+維護性核驗，不新增 Sprint 或產品 Gate。既有 R4 收據未被文件版本取代，原始失敗、未完成與風險保持原樣。

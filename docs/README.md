@@ -1,3 +1,7 @@
+## 2026-11-08 CS 受控清理 R2（最新）
+
+[清理報告](../review/cs-integration-20261107/CONTROLLED_CLEANUP_R2_20261108.md)、[D 分層封存方案](../review/cs-integration-20261107/D_WORKSPACE_ARCHIVE_PLAN_20261108.md)、[Checkpoint](../review/cs-integration-20261107/CONTROLLED_CLEANUP_R2_CHECKPOINT.md)。只移除核准基線，四個舊 Temp Profile 全部保留；剩餘 109 Worktree／CS 51。正式 7cf1cebc 與桌機 Beta 結案狀態不變，D 大型資料僅提案，停 Owner Review。
+
 ## 2026-11-08 CS桌機Beta結案：獨立封存與安全清理
 
 最新：[封存與安全清理報告](../review/cs-integration-20261107/ARCHIVE_CLEANUP_REVIEW_20261108.md)、[Checkpoint](../review/cs-integration-20261107/ARCHIVE_CLEANUP_CHECKPOINT.md)。R4文件已備份獨立GitHub分支，main仍7cf1cebc；本輪只清理C槽28.88MiB下載快取，原證據／34WIP／110工作樹／共用依賴保留。桌機Beta結案，不再開發CS功能；手機／低RAM與既有風險仍保留。
