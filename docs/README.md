@@ -1,3 +1,7 @@
+## 2026-11-08 CS桌機Beta結案：獨立封存與安全清理
+
+最新：[封存與安全清理報告](../review/cs-integration-20261107/ARCHIVE_CLEANUP_REVIEW_20261108.md)、[Checkpoint](../review/cs-integration-20261107/ARCHIVE_CLEANUP_CHECKPOINT.md)。R4文件已備份獨立GitHub分支，main仍7cf1cebc；本輪只清理C槽28.88MiB下載快取，原證據／34WIP／110工作樹／共用依賴保留。桌機Beta結案，不再開發CS功能；手機／低RAM與既有風險仍保留。
+
 ## 2026-11-08 CS Beta R4：Replay阻擋關閉，桌機Beta正式站驗收通過
 
 最新：[R4正式站報告](../review/cs-integration-20261107/BETA_RELEASE_R4_REVIEW.md)、[Checkpoint](../review/cs-integration-20261107/BETA_RELEASE_R4_CHECKPOINT.md)、[驗收清單](../review/cs-integration-20261107/BETA_RELEASE_R4_ACCEPTANCE.md)。R3 Replay阻擋已由同7cf1cebc版本補證關閉，本機與正式站各自三圖合計38/38、最後29組assert PASS。只修外部Smoke，沒有新Push／部署；舊R3 HOLD為歷史，手機／低RAM與既有風險仍保留。

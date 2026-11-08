@@ -47,3 +47,7 @@ Owner只授權準備此計畫，尚未授權merge至main、push或deploy。本�
 ## 2026-11-08 CS Beta R4：Replay阻擋關閉，桌機Beta正式站驗收通過
 
 最新結果見[BETA_RELEASE_R4_REVIEW.md](BETA_RELEASE_R4_REVIEW.md)／[R4清單](BETA_RELEASE_R4_ACCEPTANCE.md)／[R4停點](BETA_RELEASE_R4_CHECKPOINT.md)：同7cf1cebc正式站三圖Replay38/38，29組assert PASS。R3新阻擋已關閉；僅外部Smoke前置修正，沒有產品Hotfix／新Push／新部署。Android／低RAM未認證及CPU4×／記憶體風險維持，不改寫全面PASS。
+
+## 2026-11-08 CS桌機Beta結案：獨立封存與安全清理
+
+桌機Beta結案，正式7cf1cebc不變。R4文件已獨立分支／tag備份；本輪單檔快取清理與剩餘候選見[封存報告](ARCHIVE_CLEANUP_REVIEW_20261108.md)／[Checkpoint](ARCHIVE_CLEANUP_CHECKPOINT.md)。不Push main／Deploy，不再開發CS功能，不刪證據或歷史Worktree。
