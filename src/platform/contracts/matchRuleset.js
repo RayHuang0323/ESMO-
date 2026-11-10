@@ -39,9 +39,19 @@ export const TEMPLATE_BALANCES = Object.freeze(["v21.b1", "v21.b2"]);
 /** 讀取 ruleset 的 templateBalance 層；缺少 ≡ null（出貨版模板）。 */
 export const templateBalanceOf = (r) => r?.layers?.templateBalance ?? null;
 /** 正式規則集 releaseRequirements 只能列這些正式旗標（DEV 網址開關、未登錄的名字一律拒絕）。 */
-export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG)])]);
+//  jungleCamp 層（moba-sim.v22 候選；Owner 2026-11-11：Buff 營脫戰回滿 Bug 的修正，只在新的 v22 候選規則集）：
+//   · "legacy"＝現狀（缺少這個鍵 ≡ legacy）：打野站在營地成員座標上，被營地的 leash 重置反覆打斷。
+//   · "v2"＝修正：打野站在成員朝營地中心的內側（LogicEngine._campStandTarget）。
+//  v20／v21 規則集永不加這個鍵（整份進 setup 雜湊 ⇒ 它們的 setup 與比賽結果逐位元不變）。
+export const JUNGLE_CAMPS = Object.freeze(["legacy", "v2"]);
+export const DEFAULT_JUNGLE_CAMP = "legacy";
+/** 讀取 ruleset 的 jungleCamp 層；缺少 ≡ "legacy"。 */
+export const jungleCampOf = (r) => r?.layers?.jungleCamp ?? DEFAULT_JUNGLE_CAMP;
+//  RS-1 擴充：正式規則集的 jungleCamp 只要不是 legacy，releaseRequirements 必須列對應的正式旗標（預設 OFF）。
+export const JUNGLE_CAMP_RELEASE_FLAG = Object.freeze({ v2: "mobaJungleV22" });
+export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
-export const MATCH_RULESETS = Object.freeze({
+const BASE_RULESETS = Object.freeze({
   "career.v20": R({ rulesetId: "career.v20", kind: "production", simVersion: "moba-sim.v20",
     layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: true, items: true, tacticIdentity: true, playerStatSides: "blue", objectiveLayout: "bySeed", redTactic: "styleTemplate", assemblyOrder: "live" },
     releaseRequirements: ["heroSkillsV1", "heroBattleTalentsV1", "itemsV1"] }),
@@ -72,6 +82,18 @@ export const MATCH_RULESETS = Object.freeze({
     layers: { heroSkills: true, heroPassives: true, heroPowerCurve: true, battleTalents: false, items: false, tacticIdentity: true, playerStatSides: "both", objectiveLayout: "bySeed", redTactic: "snapshot", assemblyOrder: "live", tacticalDirector: "core.v1", laneFrame: "teamRelative" },
     releaseRequirements: ["heroSkillsV1", "mobaTacticalDirectorV21"] }),
 });
+//  moba-sim.v22 候選（Owner 2026-11-11）：v21 規則集原樣＋jungleCamp "v2"。從 v21 的物件衍生，確保除了 id／simVersion／jungleCamp 之外逐欄相同；
+//  v20／v21 的物件本身一個欄位都沒動。career.v22 只在旗標 mobaJungleV22（＋mobaTacticalDirectorV21）開啟時由 resolveRulesetForMode 解析出來。
+const v22Of = (base, extraRequirements = []) => R({
+  ...base, rulesetId: base.rulesetId.replace(".v21", ".v22"), simVersion: "moba-sim.v22",
+  layers: { ...base.layers, jungleCamp: "v2" },
+  releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
+});
+export const MATCH_RULESETS = Object.freeze({
+  ...BASE_RULESETS,
+  "career.v22": v22Of(BASE_RULESETS["career.v21"], [JUNGLE_CAMP_RELEASE_FLAG.v2]),
+  "balanceTool.v22": v22Of(BASE_RULESETS["balanceTool.v21"]),
+});
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
 //  戰術輸入的種類（Phase 3a T9）：每個 ruleset 接受哪幾種 `setup.tactic.<side>.kind`。
 //   · challenge.v20 重現歷史挑戰：只收 v20 就有的種類（legacy／std）；規格 §4.4 的「Challenge 歷史 → binding」遷移屬 challenge.v21。
@@ -84,6 +106,8 @@ export const TACTIC_KINDS_BY_RULESET = Object.freeze({
   "balanceTool.v20": Object.freeze(["legacy", "std", "binding"]),
   "career.v21": Object.freeze(["legacy", "std", "binding"]),
   "balanceTool.v21": Object.freeze(["legacy", "std", "binding"]),
+  "career.v22": Object.freeze(["legacy", "std", "binding"]),
+  "balanceTool.v22": Object.freeze(["legacy", "std", "binding"]),
   //  T16：Challenge 雙方仍是快照裡選定的靜態模板（legacy）；不收 binding（自訂每時期戰術屬 3c）。
   "challenge.v21": Object.freeze(["legacy", "std"]),
 });
@@ -99,7 +123,9 @@ export function resolveRulesetForMode({ mode, flags }) {
   const on = (f) => flags?.[f] === true;
   if (mode === "challenge") return MATCH_RULESETS[on("mobaTacticalDirectorV21") && on("heroSkillsV1") && on("mobaChallengeV21") ? "challenge.v21" : "challenge.v20"];
   const director = on("mobaTacticalDirectorV21");
-  const base = MATCH_RULESETS[director ? "career.v21" : "career.v20"];
+  //  moba-sim.v22 候選：mobaJungleV22 只在 mobaTacticalDirectorV21 也開時才有意義（career.v22 是 career.v21＋jungleCamp）；
+  //  兩個旗標預設都關 ⇒ 與之前逐字相同。Challenge 不受影響（challenge.v22 不存在）。
+  const base = MATCH_RULESETS[director ? (on("mobaJungleV22") ? "career.v22" : "career.v21") : "career.v20"];
   const skills = on("heroSkillsV1");
   const newLayers = { ...base.layers, heroSkills: skills, heroPassives: skills, heroPowerCurve: skills,
     battleTalents: skills && on("heroBattleTalentsV1"), items: on("itemsV1") };
@@ -110,6 +136,7 @@ export function resolveRulesetForMode({ mode, flags }) {
   if (newLayers.battleTalents) newReqs.push("heroBattleTalentsV1");
   if (newLayers.items) newReqs.push("itemsV1");
   if (director) newReqs.push(TACTICAL_DIRECTOR_RELEASE_FLAG[newLayers.tacticalDirector]);
+  if (director && newLayers.jungleCamp) newReqs.push(JUNGLE_CAMP_RELEASE_FLAG[newLayers.jungleCamp]);
 
   return R({ ...base, layers: newLayers, releaseRequirements: newReqs });
 }
@@ -133,6 +160,8 @@ export function validateRuleset(r) {
   if (r?.layers && "tacticalDirector" in r.layers && !TACTICAL_DIRECTOR_MODES.includes(r.layers.tacticalDirector)) errors.push("tacticalDirector");
   //  C3-1 laneFrame：可選層——有這個鍵就必須是 LANE_FRAMES 之一（缺少 ≡ "legacyMirror"）。
   if (r?.layers && "laneFrame" in r.layers && !LANE_FRAMES.includes(r.layers.laneFrame)) errors.push("laneFrame");
+  //  jungleCamp：可選層——有這個鍵就必須是 JUNGLE_CAMPS 之一（缺少 ≡ "legacy"）。
+  if (r?.layers && "jungleCamp" in r.layers && !JUNGLE_CAMPS.includes(r.layers.jungleCamp)) errors.push("jungleCamp");
   //  Phase 3a-B 第一階段：可選層 templateBalance——有這個鍵就必須是已登錄的修正表 id（缺少 ≡ 出貨版模板）。
   if (r?.layers && "templateBalance" in r.layers && !TEMPLATE_BALANCES.includes(r.layers.templateBalance)) errors.push("templateBalance");
 
@@ -149,6 +178,11 @@ export function validateRuleset(r) {
     if (mode !== DEFAULT_TACTICAL_DIRECTOR_MODE && TACTICAL_DIRECTOR_MODES.includes(mode)) {
       const flag = TACTICAL_DIRECTOR_RELEASE_FLAG[mode];
       if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`tacticalDirector ${mode} requires ${flag ?? "a release flag"}`);
+    }
+    const jc = jungleCampOf(r);
+    if (jc !== DEFAULT_JUNGLE_CAMP && JUNGLE_CAMPS.includes(jc)) {
+      const flag = JUNGLE_CAMP_RELEASE_FLAG[jc];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`jungleCamp ${jc} requires ${flag ?? "a release flag"}`);
     }
     for (const f of Array.isArray(r.releaseRequirements) ? r.releaseRequirements : []) {
       if (!RELEASE_FLAGS.includes(f)) errors.push(`releaseRequirements: ${String(f)} is not a release flag`);

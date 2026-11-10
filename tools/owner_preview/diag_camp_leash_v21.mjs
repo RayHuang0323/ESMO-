@@ -19,6 +19,9 @@ const OUT = arg("out", null);
 const ARMS = [
   { id: "v20.std", rulesetId: "career.v20", templateId: "std" },
   { id: "v21.std", rulesetId: "career.v21", templateId: "std" },
+  //  修法驗證：手動打開引擎的 _jungleCampV2（尚未接線時的驗證手段；接線後改用規則集層）。
+  { id: "v21.std+campV2", rulesetId: "career.v21", templateId: "std", campV2: true },
+  { id: "v20.std+campV2", rulesetId: "career.v20", templateId: "std", campV2: true },
 ];
 const C = await careerContext();
 const { prepareLiveMatch } = await import("../../src/useLocalServer.js");
@@ -32,6 +35,7 @@ async function runOne(arm, seed) {
   const out = prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players: C.G.inputs.players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
   if (!out.ok) throw new Error(`rejected ${arm.id} ${seed}`);
   const e = out.engine;
+  if (arm.campV2) e._jungleCampV2 = true;
   const camps = e.neutrals.camps;
   const S = Object.fromEntries(camps.map((c) => [c.id, { firstClearAt: null, leashResets: 0, resetHpGain: 0, prevHp: c.hp, prevAlive: c.members.map((m) => m.alive), wasAlive: c.alive }]));
   while (e.t < HORIZON && !e.over) {

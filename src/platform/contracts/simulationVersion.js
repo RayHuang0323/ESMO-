@@ -41,11 +41,14 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
 //   v21 只因語意檔案清單多收了 matchRuleset.js／matchAssembler.js 而換指紋：
 //   Live／Challenge／平衡工具經 assembleMatch 的結果與 v20 golden（tools/fixtures/match_golden_v20.json，
 //   39 案）逐位元相同（check_match_assembler_3a）。發布前須由 Owner 決定是否以此版號上線。
-export const MOBA_SIMULATION_VERSION = "moba-sim.v21";
+//   moba-sim.v22（候選，2026-11-11，Owner 要求；未發布）：v21 的所有行為＋可選層 jungleCamp "v2"（只在 career.v22／balanceTool.v22）——
+//   打野站在營地成員的內側，修掉 Buff 營脫戰反覆回滿血（LogicEngine._campStandTarget；review/tactic-book-3a/v21_OwnerPreview_UI與對戰品質檢查.md §3）。
+//   v20／v21 的規則集沒有這個層 ⇒ 它們的 setup 與比賽結果逐位元不變（golden 逐案驗證）。v21 的指紋與證據原樣保留，不覆寫。
+export const MOBA_SIMULATION_VERSION = "moba-sim.v22";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", "moba-sim.v21", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -639,6 +642,8 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v21.b2 文案與排除列。v20 規則集與 Challenge v20 不變（v20 黃金 39 案逐位元相同）；旗標全關。v21 未發布 ⇒ 同版號重新登記（舊值 0cc52b48cfb9348a 未曾發布，舊凍結 7a6e9736 與結果保留）。
   //  登記 tools/fixtures/stage1r2_formal_acceptance_registration_3aB.json。
   "moba-sim.v21": "620196ccea5a8249",
+  //  v22 候選（2026-11-11）：jungleCamp 層＋LogicEngine._campStandTarget。v21 那一行原樣保留（凍結證據的憑據，不得改）。
+  "moba-sim.v22": "7c2b2e65452d1664",
 });
 
 export const isKnownSimulationVersion = (v) =>

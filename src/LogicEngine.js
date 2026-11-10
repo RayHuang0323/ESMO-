@@ -87,7 +87,12 @@ const OBJ_SKILL_ULT = new Set([
   "split-projectile", "silence-target", "execute-strike", "multi-strike",
 ]);
 
+//  jungleCamp "v2" 的站位內縮距離：要小於打野對營地成員的傷害距離（3.5，campHits 的 dist 條件）。
+const CAMP_STAND_INSET = 2.0;
+
 export class LogicEngine {
+  //  jungleCamp 層（moba-sim.v22 候選）：這個引擎的 configureMatch 認得 `jungleCamp`；組裝器以此做能力檢查。
+  static SUPPORTS_JUNGLE_CAMP = true;
   //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
   //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
   static SUPPORTS_LANE_FRAME = true;
@@ -367,9 +372,12 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
+    //  jungleCamp 層（moba-sim.v22 候選）：組裝器只在 ruleset 帶 jungleCamp 層時傳這個鍵；缺少 ⇒ 舊行為逐位元不變。
+    //  "v2" ⇒ 打野打營地時站在成員朝營地中心的內側（_campStandTarget），不再被營地的 leash 重置打斷（Buff 營反覆回滿血）。
+    this._jungleCampV2 = jungleCamp === "v2";
     this.tacticMeta = meta;
     const kBlue = blue ?? this._neutralKnobs(), kRed = red ?? this._neutralKnobs();
     //  Tactical Identity v1（moba-sim.v17）：同一份戰術契約的決策投影（toEngineTacticIdentity）。
@@ -1299,7 +1307,16 @@ export class LogicEngine {
       const d = dist(p.pos, m.pos);
       if (d < bestD || (d === bestD && String(m.id) < String(best?.id))) { best = m; bestD = d; }
     }
-    return best ? { x: best.pos.x, y: best.pos.y } : null;
+    if (!best) return null;
+    //  jungleCamp "v2"：站在**成員朝營地出生點的內側**，離成員 CAMP_STAND_INSET（< 傷害距離 3.5）。
+    //  舊式站在成員座標上，英雄會被推到成員的外側：Buff 營跟班離中心約 4.9，英雄從外側打 ⇒ 離出生點 > campLeashRange（7.5）
+    //  ⇒ 營地判定目標離開、回營、**回滿血並清掉傷害歸屬**（最後一隻 8→84 無限循環）。內側站位的離出生點距離恆 < 成員離中心的距離。
+    if (this._jungleCampV2 === true) {
+      const hx = camp.homePos.x - best.pos.x, hy = camp.homePos.y - best.pos.y, hd = Math.hypot(hx, hy);
+      const k = hd > 1e-6 ? Math.min(CAMP_STAND_INSET, hd) / hd : 0;
+      return { x: best.pos.x + hx * k, y: best.pos.y + hy * k };
+    }
+    return { x: best.pos.x, y: best.pos.y };
   }
 
   _applyHeroSkillControl(target, kind, duration) {

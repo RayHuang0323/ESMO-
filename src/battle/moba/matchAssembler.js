@@ -51,7 +51,7 @@
 // ============================================================================
 import { BUILD_STRATEGIES } from "./items/buildPolicy.js";
 import { MATCH_SETUP_VERSION, fnv1a64Hex } from "../../platform/contracts/matchSetup.js";
-import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME, templateBalanceOf } from "../../platform/contracts/matchRuleset.js";
+import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME, templateBalanceOf, JUNGLE_CAMPS, DEFAULT_JUNGLE_CAMP } from "../../platform/contracts/matchRuleset.js";
 import { stableStringify } from "../../platform/contracts/squadSnapshot.js";
 
 export const MATCH_ASSEMBLER_VERSION = "MatchAssembler.v1";
@@ -145,10 +145,13 @@ export function assembleMatch(setup, deps = {}) {
   //  C3-1 laneFrame（TD-3A-23 §2.4-6）：只有 ruleset 帶 laneFrame 層時才把它放進 configureMatch 的引數；層不存在 ⇒ **整個鍵不出現**
   //  （stableStringify 會把值為 undefined 的鍵寫成 null ⇒ v20 每一案的 configureMatch 引數雜湊都會變）。
   const hasLaneFrame = Object.prototype.hasOwnProperty.call(L, "laneFrame");
+  //  jungleCamp 層（moba-sim.v22 候選）：同 laneFrame——只有 ruleset 帶這個層才把鍵放進 configureMatch 的引數；層不存在 ⇒ **整個鍵不出現**（v20／v21 的引數雜湊逐位元不變）。
+  const hasJungleCamp = Object.prototype.hasOwnProperty.call(L, "jungleCamp");
 
   // ── 驗證（全部在建構引擎之前；有任何錯誤就不建引擎、零 configure 呼叫）──────────
   if (!TACTICAL_DIRECTOR_MODES.includes(directorMode)) err("tactical_director_unknown", "ruleset.layers.tacticalDirector", `unknown tactical director mode "${directorMode}" (known: ${TACTICAL_DIRECTOR_MODES.join("|")})`);
   if (hasLaneFrame && !LANE_FRAMES.includes(L.laneFrame)) err("lane_frame_unknown", "ruleset.layers.laneFrame", `unknown lane frame "${L.laneFrame}" (known: ${LANE_FRAMES.join("|")})`);
+  if (hasJungleCamp && !JUNGLE_CAMPS.includes(L.jungleCamp)) err("jungle_camp_unknown", "ruleset.layers.jungleCamp", `unknown jungle camp mode "${L.jungleCamp}" (known: ${JUNGLE_CAMPS.join("|")})`);
   if (!ASSEMBLY_ORDERS.includes(order)) err("assembly_order_unknown", "ruleset.layers.assemblyOrder", `unknown assembly order "${order}" (known: ${ASSEMBLY_ORDERS.join("|")})`);
   if (order === "challengeV20") {
     const unsupported = [E.layoutConfigured && "layout", E.heroSkills && "heroSkills", E.heroPassives && "heroPassives",
@@ -186,6 +189,9 @@ export function assembleMatch(setup, deps = {}) {
     //  而 deps 給的引擎（ESMO_BALANCE_ROOT 跨樹時是被量測那棵樹的）沒有宣告支援 ⇒ 開局前報錯，不得照對調行為默默開打。
     if (hasLaneFrame && L.laneFrame !== DEFAULT_LANE_FRAME && typeof LogicEngine === "function")
       need(LogicEngine.SUPPORTS_LANE_FRAME === true, "deps.LogicEngine.SUPPORTS_LANE_FRAME", `laneFrame ${L.laneFrame}: the engine/Director in use does not declare laneFrame support`);
+    //  jungleCamp 能力檢查：規則集要求非預設的 jungleCamp（v2），而 deps 給的引擎沒有宣告支援 ⇒ 開局前報錯，不得照舊站位默默開打。
+    if (hasJungleCamp && L.jungleCamp !== DEFAULT_JUNGLE_CAMP && typeof LogicEngine === "function")
+      need(LogicEngine.SUPPORTS_JUNGLE_CAMP === true, "deps.LogicEngine.SUPPORTS_JUNGLE_CAMP", `jungleCamp ${L.jungleCamp}: the engine in use does not declare jungleCamp support`);
   }
   if (E.items) needFn(isTool ? "toEngineItems" : "matchItemsConfig", "items layer");
   if (E.archetypes) {
@@ -391,7 +397,7 @@ export function assembleMatch(setup, deps = {}) {
           identity: L.tacticIdentity ? { blue: resolved.blue.identity, red: resolved.red.identity } : null,
           phases: { blue: resolved.blue.phases, red: resolved.red.phases },
         });
-        call("configureMatch", { blue: m.blue, red: m.red, identity: m.identity, meta: tacticMeta, phases: m.phases, ...(hasLaneFrame ? { laneFrame: L.laneFrame } : {}) });
+        call("configureMatch", { blue: m.blue, red: m.red, identity: m.identity, meta: tacticMeta, phases: m.phases, ...(hasLaneFrame ? { laneFrame: L.laneFrame } : {}), ...(hasJungleCamp ? { jungleCamp: L.jungleCamp } : {}) });
         return;
       }
       call("configureMatch", {
@@ -403,6 +409,7 @@ export function assembleMatch(setup, deps = {}) {
         meta: tacticMeta,
         //  C3-1 laneFrame：層不存在 ⇒ 鍵不出現（見上方 hasLaneFrame）。
         ...(hasLaneFrame ? { laneFrame: L.laneFrame } : {}),
+        ...(hasJungleCamp ? { jungleCamp: L.jungleCamp } : {}),
       });
     },
     //  production：useLocalServer:290-295（matchItemsConfig）；tool：runner:146-156（每側策略＋incomeK）。

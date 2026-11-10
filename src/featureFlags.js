@@ -108,6 +108,13 @@ export const FEATURE_FLAGS = Object.freeze({
    * 正式站既有的挑戰照常可重播。只有 Owner 能決定打開（第二階段）。
    */
   mobaChallengeV21: false,
+
+  /**
+   * moba-sim.v22 候選（Owner 2026-11-11）：打野營地站位修正（Buff 營脫戰反覆回滿 Bug）。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21 也開時生效**（career.v22＝career.v21＋jungleCamp "v2"）；Challenge 不受影響。
+   * 只有 Owner 能決定打開。
+   */
+  mobaJungleV22: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */
