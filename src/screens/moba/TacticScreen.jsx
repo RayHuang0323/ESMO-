@@ -62,6 +62,7 @@ import { aiTeamById } from "../../platform/competition/aiTeams.js";
 import { opponentIntelOf, tacticBookSaveState } from "./tacticBook/tacticBookOptions.js";
 import OpponentIntelPanel from "./tacticBook/OpponentIntelPanel.jsx";
 import ConfirmPanel from "./tacticBook/ConfirmPanel.jsx";
+import "./tacticBook/tacticBook.css";
 
 const DEFAULT_TEMPLATE_ID = `classic.${MOBA_TACTICS[0].tacticId}`;
 
@@ -246,15 +247,24 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
 
   return (
     <Frame title="戰術" sub="TEAM STRATEGY · 戰術書 · 實際影響對戰" onBack={onBack} onNext={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections, binding)} nextLabel="開始載入 →">
-      <div style={{ width: "100%", maxWidth: 940, padding: "0 14px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div className="tbx-root" data-testid="tb-root">
         {/* T13：步驟條（情報／戰術書／確認）。三步都可直接切換；不改 Router，不另建畫面。 */}
-        <nav data-testid="tb-steps" aria-label="戰術準備步驟" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {[["intel", "① 情報"], ["book", "② 戰術書"], ["confirm", "③ 確認"]].map(([id, label]) => (
-            <button key={id} type="button" data-testid={`tb-step-${id}`} aria-current={step === id ? "step" : undefined} onClick={() => setStep(id)}
-              style={{ flex: "1 1 90px", minWidth: 0, minHeight: 38, background: step === id ? `${GC.blueL}22` : GC.card2, border: `1px solid ${step === id ? GC.blueL : GC.line}`,
-                borderRadius: 8, color: "#fff", fontSize: 12.5, fontWeight: 900, cursor: "pointer" }}>{label}</button>
+        <nav data-testid="tb-steps" aria-label="戰術準備步驟" className="tbx-steps">
+          {[["intel", "1", "對手情報"], ["book", "2", "戰術部署"], ["confirm", "3", "確認上場"]].map(([id, no, label]) => (
+            <button key={id} type="button" className="tbx-step" data-testid={`tb-step-${id}`} aria-current={step === id ? "step" : undefined} onClick={() => setStep(id)}>
+              <span className="tbx-step-no" aria-hidden="true">{no}</span>{label}
+            </button>
           ))}
         </nav>
+        {/* Owner Preview UI：目前部署摘要（每一步都看得到現在選的是什麼）。純呈現。 */}
+        <div className="tbx-summary" data-testid="tb-summary" role="status">
+          <span className="tbx-summary-title">目前部署</span>
+          <span className="tbx-summary-name">{cur.emoji ? `${cur.emoji} ` : ""}{cur.name}</span>
+          {activeVariant && <span className="tbx-pill">打法：{activeVariant.name}</span>}
+          <span className={`tbx-pill ${cur.risk === "高" ? "is-red" : cur.risk === "中" ? "is-gold" : "is-green"}`}>{cur.risk}風險</span>
+          {bookView?.winCondition && <span className="tbx-pill is-gold">勝利條件：{bookView.winCondition.label}</span>}
+          <span className={`tbx-pill${changedCount ? " is-accent" : ""}`} data-testid="tb-summary-changed">{changedCount ? `已覆寫 ${changedCount} 項` : "全部照模板"}</span>
+        </div>
         {step === "intel" && <OpponentIntelPanel intel={intel} onNext={() => setStep("book")} />}
         {step === "confirm" && !bookView && (
           <div data-testid="tb-confirm-empty" role="status" style={{ background: GC.card, border: `1px solid ${GC.line}`, borderRadius: 12, padding: "12px 14px", fontSize: 12, color: GC.gray }}>
@@ -263,13 +273,22 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
         )}
         {step === "confirm" && bookView && (
           <ConfirmPanel templateName={copyOver?.name ?? template.name} variantName={activeVariant?.name ?? null} dimensions={bookView.dimensions} dropped={book.dropped}
+            deployment={bookView.deployment} dimensionMeta={bookView.dimensionMeta}
             profile={bookView.profile} intel={intel} onEdit={() => setStep("book")} onGo={() => onNext && onNext(applied, prep ? buildStrategy : null, talentSelections, binding)} />
         )}
         {step === "book" && (<>
-        {/* 模板列：auto-fill 響應式（手機 1 欄 / 平板 2-3 欄 / 桌機 4 欄），高度隨內容；上方是「我的戰術書」 */}
-        <TemplateStrip groups={templateGroupsView} selectedId={template.templateId} onSelect={chooseTemplate} fitOf={fitOf}
-          columns="repeat(auto-fill,minmax(min(190px,100%),1fr))"
-          book={savedBook} activeBookId={activeBookId} onLoadBook={loadFromBook} onDeleteBook={deleteFromBook} />
+        {/* 模板列：單選。分組＝打法分類；上方是「我的戰術書」。 */}
+        <section className="tbx-sec" data-testid="tb-sec-template" aria-label="選擇基礎模板">
+          <div className="tbx-sec-head">
+            <span className="tbx-sec-no">A</span>
+            <div className="tbx-sec-titles">
+              <div className="tbx-sec-title">選一套基礎模板（單選）</div>
+              <div className="tbx-sec-sub">模板決定整場的起點。選好之後，下面的時期部署與整場設定都還可以再逐項調整。</div>
+            </div>
+          </div>
+          <TemplateStrip groups={templateGroupsView} selectedId={template.templateId} onSelect={chooseTemplate} fitOf={fitOf}
+            book={savedBook} activeBookId={activeBookId} onLoadBook={loadFromBook} onDeleteBook={deleteFromBook} />
+        </section>
 
         {developmentEffects.unlocks.mobaTacticInsight && (
           <TacticInsightPanel rows={tacticInsightRows} testId="moba-tactic-insight" />
@@ -284,7 +303,14 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
         )}
 
         {/* 詳解：全寬、自然換行、無固定高度 */}
-        <div style={{ background: GC.card, border: `1px solid ${GC.blueL}44`, borderRadius: 12, padding: "12px 16px", minWidth: 0 }}>
+        <div className="tbx-sec" data-testid="tb-sec-detail">
+          <div className="tbx-sec-head" style={{ marginBottom: 8 }}>
+            <span className="tbx-sec-no">B</span>
+            <div className="tbx-sec-titles">
+              <div className="tbx-sec-title">這套模板會怎麼打</div>
+              <div className="tbx-sec-sub">模板自己的打法、優缺點與引擎效果{variantInfo.variants.length > 0 ? "；可另外疊一種打法變體" : ""}。</div>
+            </div>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{ fontSize: 24 }}>{cur.emoji}</span>
             <span style={{ fontSize: 16, fontWeight: 900, color: GC.blueL }}>{cur.name}</span>
@@ -295,7 +321,7 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
           {/* 打法：基礎 ＋ 已解鎖的變體。基礎永遠在第一個且永遠可選。 */}
           {variantInfo.variants.length > 0 && (
             <div data-testid="moba-variant-row" style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${GC.line}` }}>
-              <div style={{ fontSize: 9, letterSpacing: "0.15em", color: GC.gray, fontWeight: 900, marginBottom: 5 }}>打法</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.15em", color: GC.gray, fontWeight: 900, marginBottom: 5 }}>打法變體（單選，可不選）</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 <button
                   data-testid="moba-variant-basic"
@@ -380,7 +406,8 @@ export default function TacticScreen({ onNext, onBack, roster = null, draft = nu
                 這份計畫裡有 {book.dropped.length} 個選項目前不提供，已改回模板的設定：{book.dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}
               </div>
             )}
-            <ChoicePanel groups={bookView.groups} onChoose={choose} onReset={() => { setChoices({}); setBookNote(null); }} changedCount={changedCount} />
+            <ChoicePanel groups={bookView.groups} onChoose={choose} onReset={() => { setChoices({}); setBookNote(null); }} changedCount={changedCount}
+              deployment={bookView.deployment} dimensionMeta={bookView.dimensionMeta} fixed={bookView.fixed} />
             <IndicatorPanel profile={bookView.profile} seats={bookView.seats} load={bookView.load} contradictions={bookView.contradictions} />
             <section data-testid="tb-save-row" aria-label="存成我的戰術書" style={{ background: GC.card, border: `1px solid ${GC.gold}33`, borderRadius: 12, padding: "10px 14px", minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 900, color: GC.gold }}>📘 我的戰術書</span>
