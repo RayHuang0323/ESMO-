@@ -1,0 +1,41 @@
+## A. STOP rule of the original G-A8 (n=400: win >= 240 i.e. >= 60%, and 95% lower bound > 55%)
+  true 55%  P(STOP) ~= 2.5%
+  true 56%  P(STOP) ~= 5.9%
+  true 57%  P(STOP) ~= 12.3%
+  true 58%  P(STOP) ~= 22.4%
+  true 59%  P(STOP) ~= 36.1%
+  true 60%  P(STOP) ~= 52.0%
+
+## B. Pairs per template, one-sided alpha 0.05 per template (intersection-union: release needs ALL 9 to pass)
+   per-template power 0.975 => joint power ~0.80 when all 9 have true D = 0 (0.975^9 = 0.796)
+  rho 0  delta 3pp  -> 7148 pairs/template, 9 templates x 2 arms = 128,664 matches ~ 45.7 h at 1.28 s/match
+  rho 0  delta 4pp  -> 4021 pairs/template, 9 templates x 2 arms = 72,378 matches ~ 25.7 h at 1.28 s/match
+  rho 0  delta 5pp  -> 2573 pairs/template, 9 templates x 2 arms = 46,314 matches ~ 16.5 h at 1.28 s/match
+  rho 0.2  delta 3pp  -> 5718 pairs/template, 9 templates x 2 arms = 102,924 matches ~ 36.6 h at 1.28 s/match
+  rho 0.2  delta 4pp  -> 3217 pairs/template, 9 templates x 2 arms = 57,906 matches ~ 20.6 h at 1.28 s/match
+  rho 0.2  delta 5pp  -> 2059 pairs/template, 9 templates x 2 arms = 37,062 matches ~ 13.2 h at 1.28 s/match
+  rho 0.5  delta 3pp  -> 3574 pairs/template, 9 templates x 2 arms = 64,332 matches ~ 22.9 h at 1.28 s/match
+  rho 0.5  delta 4pp  -> 2011 pairs/template, 9 templates x 2 arms = 36,198 matches ~ 12.9 h at 1.28 s/match
+  rho 0.5  delta 5pp  -> 1287 pairs/template, 9 templates x 2 arms = 23,166 matches ~ 8.2 h at 1.28 s/match
+
+## C. If Holm/Bonferroni were (wrongly) applied instead of IUT: alpha 0.05/9
+  rho 0 delta 3pp -> 11134 pairs/template
+  rho 0.2 delta 3pp -> 8907 pairs/template
+
+## D. m5: probability to PASS non-inferiority if its true harm D equals the earlier v20-vs-v21 point estimate (+2.8pp, CI -1.9..7.4) or other values
+  rho 0 delta 3pp n=7148: D=0.0:98%  D=1.0:78%  D=2.0:33%  D=2.8:8%  D=4.0:0%
+  rho 0 delta 4pp n=4021: D=0.0:98%  D=1.0:86%  D=2.0:56%  D=2.8:29%  D=4.0:5%
+  rho 0 delta 5pp n=2573: D=0.0:98%  D=1.0:89%  D=2.0:70%  D=2.8:48%  D=4.0:18%
+  rho 0.2 delta 3pp n=5718: D=0.0:98%  D=1.0:78%  D=2.0:33%  D=2.8:8%  D=4.0:0%
+  rho 0.2 delta 4pp n=3217: D=0.0:98%  D=1.0:86%  D=2.0:56%  D=2.8:29%  D=4.0:5%
+  rho 0.2 delta 5pp n=2059: D=0.0:98%  D=1.0:89%  D=2.0:70%  D=2.8:48%  D=4.0:18%
+
+## E. Probability that ALL 9 pass when 8 have D=0 and one (m5) has D=+2.8pp
+  rho 0 delta 3pp: 7%
+  rho 0 delta 4pp: 23%
+  rho 0 delta 5pp: 39%
+  rho 0.2 delta 3pp: 7%
+  rho 0.2 delta 4pp: 23%
+  rho 0.2 delta 5pp: 39%
+
+## F. Precision of a single 400-match reading (for context): 95% half-width at p=0.55 = 4.9pp; paired difference of two independent 400 readings: 6.9pp
