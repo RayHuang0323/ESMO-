@@ -89,9 +89,10 @@ ck("S2 Director 只建立一次（configureMatch 內）；this.director 只在�
   && ENGINE_CODE.includes("if (phases) { directorArgs.phases = phases; directorArgs.clock = () => this.t; }")
   && /configureMatch\(\{[^)]*\} = \{\}\) \{[\s\S]*?this\.director = createTacticalDirector\(/.test(ENGINE_CODE.slice(ENGINE_CODE.indexOf("configureMatch({"), ENGINE_CODE.indexOf("_joinChance(K, hot"))));
 ck("S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在收到時原樣轉交 Director（轉換只在 Director 做）",
-  ENGINE_CODE.includes("phases = null, laneFrame = null, jungleCamp = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
-  //  moba-sim.v22 候選：jungleCamp 只被轉成引擎自己的一個旗標，不經過 Director（Director 與每時期方針無關）。
-  && ENGINE_CODE.includes('this._jungleCampV2 = jungleCamp === "v2";') && !/directorArgs\.jungleCamp/.test(ENGINE_CODE)
+  ENGINE_CODE.includes("phases = null, laneFrame = null, jungleCamp = null, invasion = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
+  //  moba-sim.v22 候選：jungleCamp、invasion 各自只被轉成引擎自己的一個旗標，不經過 Director（Director 與每時期方針無關）。
+  && ENGINE_CODE.includes('this._jungleCampV2 = jungleCamp === "v2";') && ENGINE_CODE.includes('this._invasionV2 = invasion === "v2";')
+  && !/directorArgs\.(jungleCamp|invasion)/.test(ENGINE_CODE)
   && (ENGINE_CODE.match(/\blaneFrame\b/g) ?? []).length === 4);
 ck("S2b _tidOf／_tidPhase 是一行委派給 Director",
   ENGINE_CODE.includes("_tidOf(side) { return this.director ? this.director.identity(side) : null; }")

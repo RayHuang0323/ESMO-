@@ -642,8 +642,8 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v21.b2 文案與排除列。v20 規則集與 Challenge v20 不變（v20 黃金 39 案逐位元相同）；旗標全關。v21 未發布 ⇒ 同版號重新登記（舊值 0cc52b48cfb9348a 未曾發布，舊凍結 7a6e9736 與結果保留）。
   //  登記 tools/fixtures/stage1r2_formal_acceptance_registration_3aB.json。
   "moba-sim.v21": "620196ccea5a8249",
-  //  v22 候選（2026-11-11）：jungleCamp 層＋LogicEngine._campStandTarget。v21 那一行原樣保留（凍結證據的憑據，不得改）。
-  "moba-sim.v22": "7c2b2e65452d1664",
+  //  v22 候選（2026-11-11）：jungleCamp 層（Buff 營站位）＋invasion 層（野區入侵 v2）。v22 未凍結：每次語意檔再改就同版號重新登記（上一個值 7c2b2e65452d1664＝只有 jungleCamp 的版本，c5623ddd）。v21 那一行原樣保留（凍結證據的憑據，不得改）。
+  "moba-sim.v22": "c2b507e0cc723382",
 });
 
 export const isKnownSimulationVersion = (v) =>

@@ -89,10 +89,19 @@ const OBJ_SKILL_ULT = new Set([
 
 //  jungleCamp "v2" 的站位內縮距離：要小於打野對營地成員的傷害距離（3.5，campHits 的 dist 條件）。
 const CAMP_STAND_INSET = 2.0;
+//  invasion "v2" 的參數（moba-sim.v22 候選）。只在規則集帶 invasion 層時使用；全部是常數、沒有擲骰。
+//   windowSec     入侵窗：從開局算起（舊式 35 秒只夠走到入口）。野怪第 30 秒才出生，所以要留時間走過去、打、搶。
+//   abortHp       入侵者血量低於這個比例就放棄（高於一般撤退門檻：入侵是賭一把，不是拚命）
+//   abortFoes     身邊 nearRadius 內的敵方英雄 ≥ 這個數 ⇒ 被圍，放棄
+//   waitSpawnSec  沒有可打的敵方營地時，只要有一座在這麼多秒內會出生 ⇒ 往入口走、站著等；否則放棄。
+//                 40 秒＝涵蓋開局的走位：野怪第 30 秒才出生，而入侵者第 0 秒就出發（第一版只設 12 秒，開局第一刻就判「沒目標」，15/15 次入侵都立刻結束）。
+const INVASION_V2 = Object.freeze({ windowSec: 90, abortHp: 0.55, abortFoes: 2, nearRadius: 14, waitSpawnSec: 40 });
 
 export class LogicEngine {
   //  jungleCamp 層（moba-sim.v22 候選）：這個引擎的 configureMatch 認得 `jungleCamp`；組裝器以此做能力檢查。
   static SUPPORTS_JUNGLE_CAMP = true;
+  //  invasion 層（moba-sim.v22 候選）：configureMatch 認得 `invasion`；組裝器以此做能力檢查。
+  static SUPPORTS_INVASION = true;
   //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
   //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
   static SUPPORTS_LANE_FRAME = true;
@@ -372,9 +381,11 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
+    //  invasion 層（moba-sim.v22 候選）：同 jungleCamp——缺少 ⇒ 舊行為逐位元不變。"v2" ⇒ 擲中入侵的打野真的去打敵方野怪（_invadeStepV2），有失敗條件。
+    this._invasionV2 = invasion === "v2";
     //  jungleCamp 層（moba-sim.v22 候選）：組裝器只在 ruleset 帶 jungleCamp 層時傳這個鍵；缺少 ⇒ 舊行為逐位元不變。
     //  "v2" ⇒ 打野打營地時站在成員朝營地中心的內側（_campStandTarget），不再被營地的 leash 重置打斷（Buff 營反覆回滿血）。
     this._jungleCampV2 = jungleCamp === "v2";
@@ -401,6 +412,10 @@ export class LogicEngine {
     const E = () => ({ invadeAttempts: 0, invadeKills: 0, topGanks: 0, midGanks: 0, botGanks: 0, gankKills: 0,
       dragonContests: 0, baronContests: 0, groupedFights: 0, splitPushActions: 0, towerPushes: 0, supportRoams: 0 });
     this.exec = { blue: E(), red: E() };
+    //  invasion "v2" 的觀測（只在這個層存在；不放進 exec：那個物件的形狀被 replay 契約與既有驗證器讀取）。
+    //   starts 開始入侵的人次；reached 走到敵方野怪旁（≤ 3.5，打得到）；campDmg 對敵方野怪造成的傷害；steals 搶到（目標營被我方清掉）；
+    //   contactSecs 入侵期間身邊 nearRadius 內有敵方英雄的秒數；ends 每種結束原因的次數：hp／outnumbered／retreat／no_target／lost_race／stolen／killed／window。
+    if (this._invasionV2) { const O = () => ({ starts: 0, reached: 0, campDmg: 0, steals: 0, contactSecs: 0, afterArrivalSecs: 0, ends: {} }); this.invObs = { blue: O(), red: O() }; }
     //  Combat Decision C：遊走決策的**純觀測**計數。
     //  ⚠ 刻意不放進 `exec`：那個物件的形狀被 replay 契約與既有驗證器讀取，
     //    加欄位會擴散到不相干的斷言。這裡是獨立命名空間，只在 playerStatsOn 時遞增。
@@ -430,7 +445,7 @@ export class LogicEngine {
       //   無能力層 ⇒ 原值。無論如何 rng2 都抽一次 ⇒ 序列不變。
       const jg = this._modById(side[0] + "2");
       const invadeChance = jg ? clamp(K.invadeChance + jg.invadeAdj, 0, 1) : K.invadeChance;
-      if (this.rng2() < invadeChance) { st.invadeUntil = this.rules.invasionWindow ?? 50; this.exec[side].invadeAttempts++; }
+      if (this.rng2() < invadeChance) { st.invadeUntil = this._invasionV2 ? INVASION_V2.windowSec : (this.rules.invasionWindow ?? 50); this.exec[side].invadeAttempts++; }
       this._tac[side] = st;
     }
   }
@@ -1300,7 +1315,7 @@ export class LogicEngine {
    * ⇒ 站在中心永遠打不到，只能靠懲戒（射程 6.5）收掉；懲戒一收斂，清野就崩（實測 5 分鐘擊殺 10.2 → 4.0 隻）。
    * 決定性：最近的存活成員，同距離以 id 排序。
    */
-  _campStandTarget(p, camp) {
+  _campStandTarget(p, camp, forceInset = false) {
     let best = null, bestD = Infinity;
     for (const m of camp.members ?? []) {
       if (!m.alive || m.hp <= 0) continue;
@@ -1311,12 +1326,58 @@ export class LogicEngine {
     //  jungleCamp "v2"：站在**成員朝營地出生點的內側**，離成員 CAMP_STAND_INSET（< 傷害距離 3.5）。
     //  舊式站在成員座標上，英雄會被推到成員的外側：Buff 營跟班離中心約 4.9，英雄從外側打 ⇒ 離出生點 > campLeashRange（7.5）
     //  ⇒ 營地判定目標離開、回營、**回滿血並清掉傷害歸屬**（最後一隻 8→84 無限循環）。內側站位的離出生點距離恆 < 成員離中心的距離。
-    if (this._jungleCampV2 === true) {
+    if (this._jungleCampV2 === true || forceInset === true) {
       const hx = camp.homePos.x - best.pos.x, hy = camp.homePos.y - best.pos.y, hd = Math.hypot(hx, hy);
       const k = hd > 1e-6 ? Math.min(CAMP_STAND_INSET, hd) / hd : 0;
       return { x: best.pos.x + hx * k, y: best.pos.y + hy * k };
     }
     return { x: best.pos.x, y: best.pos.y };
+  }
+
+  /**
+   * 野區入侵 v2 的每 tick 決策（moba-sim.v22 候選）。回傳 { tgt, st }＝這個英雄這一刻的移動目標；回傳 null ⇒ 入侵結束（呼叫端回到一般行為）。
+   * 不擲骰、不讀 rng；失敗條件見 INVASION_V2 的說明。打野以外（中路，invadeWithMid）只到入口支援，並共用同一組失敗條件。
+   */
+  _invadeStepV2(p, S, alive) {
+    const side = p.side, O = this.invObs[side];
+    let I = p._invV2;
+    if (!I) { I = p._invV2 = { done: false, camp: null, dmg0: 0, dmgMax: 0, arrivedAt: null, contact: 0, lastT: this.t }; O.starts++; }
+    if (I.done) return null;
+    const dtv = this.t - I.lastT; I.lastT = this.t;
+    const foes = alive.filter((q) => q.side !== side && !q.dead && dist(q.pos, p.pos) < INVASION_V2.nearRadius);
+    if (foes.length) I.contact += dtv;
+    if (p.hp < p.maxHp * INVASION_V2.abortHp) return this._invadeEndV2(p, "hp");
+    if (foes.length >= INVASION_V2.abortFoes) return this._invadeEndV2(p, "outnumbered");
+    if (p.role !== "jungle") return { tgt: INVASION_POINT[side], st: "入侵" };
+    const foeSide = side === "blue" ? "red" : "blue";
+    const camps = (this.neutrals?.camps ?? []).filter((c) => c.side === foeSide);
+    let camp = I.camp ? camps.find((c) => c.id === I.camp) ?? null : null;
+    if (camp && !camp.alive) return this._invadeEndV2(p, camp.killerTeam === side ? "stolen" : "lost_race");
+    if (!camp) {
+      const up = camps.filter((c) => c.alive);
+      camp = up.find((c) => c.type === "buff") ?? up.slice().sort((a, b) => dist(p.pos, a.pos) - dist(p.pos, b.pos) || String(a.id).localeCompare(String(b.id)))[0] ?? null;
+      if (!camp) {
+        const soon = camps.some((c) => Number.isFinite(c.respawnAt) && c.respawnAt - this.t <= INVASION_V2.waitSpawnSec);
+        return soon ? { tgt: INVASION_POINT[side], st: "入侵" } : this._invadeEndV2(p, "no_target");
+      }
+      I.camp = camp.id; I.dmg0 = camp.dmgBy[side]; I.dmgMax = I.dmg0;
+    }
+    I.dmgMax = Math.max(I.dmgMax, camp.dmgBy[side]);
+    const near = (camp.members ?? []).filter((m) => m.alive && m.hp > 0).reduce((b, m) => Math.min(b, dist(p.pos, m.pos)), Infinity);
+    if (I.arrivedAt === null && near <= 3.5) { I.arrivedAt = this.t; O.reached++; }
+    const stand = this._campStandTarget(p, camp, true);
+    return stand ? { tgt: stand, st: "入侵" } : { tgt: INVASION_POINT[side], st: "入侵" };
+  }
+  _invadeEndV2(p, reason) {
+    const O = this.invObs?.[p.side], I = p._invV2;
+    if (!O || !I || I.done) return null;
+    I.done = true; I.reason = reason;
+    O.ends[reason] = (O.ends[reason] ?? 0) + 1;
+    if (reason === "stolen") O.steals++;
+    O.campDmg += Math.max(0, I.dmgMax - I.dmg0);
+    O.contactSecs += I.contact;
+    if (I.arrivedAt !== null) O.afterArrivalSecs += this.t - I.arrivedAt;
+    return null;
   }
 
   _applyHeroSkillControl(target, kind, duration) {
@@ -5042,6 +5103,7 @@ export class LogicEngine {
       const S2 = this._tac[p.side];
       if (p.role === "jungle" && this.t < S2.gankUntil) this.exec[p.side].gankKills++;
       if (this.t < (S2.invadeUntil || 0) && (p.role === "jungle" || p.role === "mid")) this.exec[p.side].invadeKills++;
+      if (this._invasionV2 && foe._invV2 && !foe._invV2.done) this._invadeEndV2(foe, "killed");   // 入侵者陣亡 ⇒ 失敗原因：killed
     }
   }
 
@@ -6665,7 +6727,16 @@ export class LogicEngine {
       // S24：開局野區入侵（configureMatch 時擲骰；打野＋跟進中路在前 50 秒壓入敵方野區）
       let tacTgt = null;
       if (K && !p.retreating && this.t < (S.invadeUntil || 0) && (p.role === "jungle" || (K.invadeWithMid && p.role === "mid"))) {
-        tacTgt = INVASION_POINT[p.side]; stOv = "入侵";
+        if (this._invasionV2) {
+          //  v2：打野去打敵方野怪、中路到入口支援；有失敗條件。回傳 null ⇒ 這個英雄的入侵結束，回到一般行為（農自家野區、Gank）。
+          const inv = this._invadeStepV2(p, S, alive);
+          if (inv) { tacTgt = inv.tgt; stOv = inv.st; }
+        } else {
+          tacTgt = INVASION_POINT[p.side]; stOv = "入侵";
+        }
+      } else if (this._invasionV2 && K && p._invV2 && !p._invV2.done && (p.role === "jungle" || p.role === "mid")) {
+        //  第一個條件不成立而入侵還沒結束：不是一般撤退接手了（retreat），就是入侵窗到了（window）。
+        this._invadeEndV2(p, p.retreating ? "retreat" : "window");
       }
       // S24：打野 Gank 節奏機（依 tempo 週期、依權重挑路；到點後 9 秒壓該路前線）
       if (K && !tacTgt && p.role === "jungle" && !p.retreating) {

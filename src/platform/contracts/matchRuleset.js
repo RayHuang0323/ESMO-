@@ -49,6 +49,15 @@ export const DEFAULT_JUNGLE_CAMP = "legacy";
 export const jungleCampOf = (r) => r?.layers?.jungleCamp ?? DEFAULT_JUNGLE_CAMP;
 //  RS-1 擴充：正式規則集的 jungleCamp 只要不是 legacy，releaseRequirements 必須列對應的正式旗標（預設 OFF）。
 export const JUNGLE_CAMP_RELEASE_FLAG = Object.freeze({ v2: "mobaJungleV22" });
+//  invasion 層（moba-sim.v22 候選；Owner 2026-11-11：野區入侵要真的去搶野／交戰，並有失敗條件）：
+//   · "legacy"＝現狀（缺少這個鍵 ≡ legacy）：擲中入侵的打野走到敵方 Buff 房間入口、35 秒窗結束就回家，沒有任何針對野怪或英雄的行為。
+//   · "v2"＝打野走到敵方野怪營的站位去打、可以搶到；每刻檢查失敗條件（LogicEngine._invadeStepV2）。
+//  與 jungleCamp 同一個正式旗標 mobaJungleV22（v22 候選＝兩個層一起；v20／v21 規則集永不加這兩個鍵）。
+export const INVASIONS = Object.freeze(["legacy", "v2"]);
+export const DEFAULT_INVASION = "legacy";
+/** 讀取 ruleset 的 invasion 層；缺少 ≡ "legacy"。 */
+export const invasionOf = (r) => r?.layers?.invasion ?? DEFAULT_INVASION;
+export const INVASION_RELEASE_FLAG = Object.freeze({ v2: "mobaJungleV22" });
 export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 const BASE_RULESETS = Object.freeze({
@@ -86,7 +95,7 @@ const BASE_RULESETS = Object.freeze({
 //  v20／v21 的物件本身一個欄位都沒動。career.v22 只在旗標 mobaJungleV22（＋mobaTacticalDirectorV21）開啟時由 resolveRulesetForMode 解析出來。
 const v22Of = (base, extraRequirements = []) => R({
   ...base, rulesetId: base.rulesetId.replace(".v21", ".v22"), simVersion: "moba-sim.v22",
-  layers: { ...base.layers, jungleCamp: "v2" },
+  layers: { ...base.layers, jungleCamp: "v2", invasion: "v2" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
 export const MATCH_RULESETS = Object.freeze({
@@ -137,6 +146,7 @@ export function resolveRulesetForMode({ mode, flags }) {
   if (newLayers.items) newReqs.push("itemsV1");
   if (director) newReqs.push(TACTICAL_DIRECTOR_RELEASE_FLAG[newLayers.tacticalDirector]);
   if (director && newLayers.jungleCamp) newReqs.push(JUNGLE_CAMP_RELEASE_FLAG[newLayers.jungleCamp]);
+  if (director && newLayers.invasion && !newReqs.includes(INVASION_RELEASE_FLAG[newLayers.invasion])) newReqs.push(INVASION_RELEASE_FLAG[newLayers.invasion]);
 
   return R({ ...base, layers: newLayers, releaseRequirements: newReqs });
 }
@@ -162,6 +172,7 @@ export function validateRuleset(r) {
   if (r?.layers && "laneFrame" in r.layers && !LANE_FRAMES.includes(r.layers.laneFrame)) errors.push("laneFrame");
   //  jungleCamp：可選層——有這個鍵就必須是 JUNGLE_CAMPS 之一（缺少 ≡ "legacy"）。
   if (r?.layers && "jungleCamp" in r.layers && !JUNGLE_CAMPS.includes(r.layers.jungleCamp)) errors.push("jungleCamp");
+  if (r?.layers && "invasion" in r.layers && !INVASIONS.includes(r.layers.invasion)) errors.push("invasion");
   //  Phase 3a-B 第一階段：可選層 templateBalance——有這個鍵就必須是已登錄的修正表 id（缺少 ≡ 出貨版模板）。
   if (r?.layers && "templateBalance" in r.layers && !TEMPLATE_BALANCES.includes(r.layers.templateBalance)) errors.push("templateBalance");
 
@@ -183,6 +194,11 @@ export function validateRuleset(r) {
     if (jc !== DEFAULT_JUNGLE_CAMP && JUNGLE_CAMPS.includes(jc)) {
       const flag = JUNGLE_CAMP_RELEASE_FLAG[jc];
       if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`jungleCamp ${jc} requires ${flag ?? "a release flag"}`);
+    }
+    const iv = invasionOf(r);
+    if (iv !== DEFAULT_INVASION && INVASIONS.includes(iv)) {
+      const flag = INVASION_RELEASE_FLAG[iv];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`invasion ${iv} requires ${flag ?? "a release flag"}`);
     }
     for (const f of Array.isArray(r.releaseRequirements) ? r.releaseRequirements : []) {
       if (!RELEASE_FLAGS.includes(f)) errors.push(`releaseRequirements: ${String(f)} is not a release flag`);

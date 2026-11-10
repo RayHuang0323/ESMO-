@@ -26,12 +26,14 @@ import base from "../../vite.config.js";
 const FLAG_FILE = /\/src\/featureFlags\.js(\?.*)?$/;
 const FLAG_OFF = "mobaTacticalDirectorV21: false,";
 const FLAG_ON = "mobaTacticalDirectorV21: true,";
+const JUNGLE_OFF = "mobaJungleV22: false,";
+const JUNGLE_ON = "mobaJungleV22: true,";
 const PORT = 5621;
 const OUTSIDE = join(tmpdir(), "esmo-v21-owner-preview");
 const EMPTY_ENV_DIR = join(OUTSIDE, "empty-env");
 mkdirSync(EMPTY_ENV_DIR, { recursive: true });
 
-const BANNER = `<div data-owner-preview="v21" style="position:fixed;left:6px;bottom:6px;z-index:2147483647;pointer-events:none;font:700 10px/1.3 system-ui,sans-serif;color:#111;background:#ffd54a;border-radius:4px;padding:2px 6px;opacity:.85">OWNER PREVIEW · v21 未核准發布 · 本機隔離</div>`;
+const BANNER = `<div data-owner-preview="v21" style="position:fixed;left:6px;bottom:6px;z-index:2147483647;pointer-events:none;font:700 10px/1.3 system-ui,sans-serif;color:#111;background:#ffd54a;border-radius:4px;padding:2px 6px;opacity:.85">OWNER PREVIEW · v21＋v22 候選 未核准發布 · 本機隔離</div>`;
 
 const v21FlagPreview = {
   name: "esmo-owner-preview-v21-flag",
@@ -40,7 +42,14 @@ const v21FlagPreview = {
     if (!FLAG_FILE.test(id.replace(/\\/g, "/"))) return null;
     const hits = code.split(FLAG_OFF).length - 1;
     if (hits !== 1) throw new Error(`[owner-preview] expected exactly one "${FLAG_OFF}" in featureFlags.js, found ${hits}; preview refuses to start`);
-    return { code: code.replace(FLAG_OFF, FLAG_ON), map: null };
+    //  moba-sim.v22 候選（Buff 營站位＋野區入侵 v2）：預覽也打開 mobaJungleV22（同樣必須恰好一處）。ESMO_PREVIEW_V22=0 ⇒ 只開 v21（對照用）。
+    let out = code.replace(FLAG_OFF, FLAG_ON);
+    if (process.env.ESMO_PREVIEW_V22 !== "0") {
+      const h2 = out.split(JUNGLE_OFF).length - 1;
+      if (h2 !== 1) throw new Error(`[owner-preview] expected exactly one "${JUNGLE_OFF}" in featureFlags.js, found ${h2}; preview refuses to start`);
+      out = out.replace(JUNGLE_OFF, JUNGLE_ON);
+    }
+    return { code: out, map: null };
   },
   transformIndexHtml(html) {
     return html.replace("</body>", `${BANNER}</body>`);
