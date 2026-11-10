@@ -24,7 +24,7 @@ const VIS = "const vis=(e)=>{const r=e.getBoundingClientRect();return r.width>0&
 //  注入腳本：只計數，不改任何呼叫的結果；包裝失敗就原樣放行。
 const INJECT = `(() => {
   if (window.__glprobe) return;
-  const P = window.__glprobe = { frame: { draw: 0, tris: 0, bufB: 0, texN: 0, texPx: 0, links: 0, linkMs: 0, useProg: 0, readPx: 0, uniform: 0 }, frames: [], armed: false, last: 0, linkStart: new WeakMap(), totals: { links: 0, linkMs: 0 } };
+  const P = window.__glprobe = { frame: { draw: 0, tris: 0, bufB: 0, texN: 0, texPx: 0, links: 0, linkMs: 0, useProg: 0, readPx: 0, uniform: 0 }, frames: [], armed: false, last: 0, linkStart: new WeakMap(), totals: { links: 0, linkMs: 0 }, texKinds: {} };
   const wrap = (proto, name, fn) => { const o = proto[name]; if (typeof o !== 'function') return; proto[name] = function (...a) { try { fn.call(this, a); } catch (e) {} return o.apply(this, a); }; };
   for (const C of [window.WebGL2RenderingContext, window.WebGLRenderingContext]) {
     if (!C) continue; const p = C.prototype;
@@ -34,8 +34,12 @@ const INJECT = `(() => {
     wrap(p, 'drawArraysInstanced', (a) => { P.frame.draw++; P.frame.tris += ((a[2] | 0) / 3) * (a[3] | 0); });
     wrap(p, 'bufferData', (a) => { const d = a[1]; P.frame.bufB += d && d.byteLength != null ? d.byteLength : (typeof d === 'number' ? d : 0); });
     wrap(p, 'bufferSubData', (a) => { const d = a[2]; P.frame.bufB += d && d.byteLength != null ? d.byteLength : 0; });
-    wrap(p, 'texImage2D', (a) => { P.frame.texN++; const w = typeof a[3] === 'number' ? a[3] : 0, h = typeof a[4] === 'number' ? a[4] : 0; P.frame.texPx += w * h; });
-    wrap(p, 'texSubImage2D', (a) => { P.frame.texN++; const w = typeof a[4] === 'number' ? a[4] : 0, h = typeof a[5] === 'number' ? a[5] : 0; P.frame.texPx += w * h; });
+    //  兩種多載：有寬高數字（texImage2D 9+ 參數、texSubImage2D 9+ 參數）與來源物件（canvas／image／video／ImageBitmap，寬高要從來源讀）。
+    //  第一版把來源多載的『格式／型別』列舉值當寬高相乘，高估了上傳量 ⇒ 這裡分開處理，並記錄種類。
+    const dimsOf = (a, sized, src, wi) => { if (a.length >= sized) { const px = a[sized === 9 ? sized - 1 : sized - 1]; return [a[wi] | 0, a[wi + 1] | 0, 'buf' + (px && px.byteLength != null ? '' : ':offset')]; } const s = a[src]; return s && (s.width != null || s.videoWidth != null) ? [(s.videoWidth ?? s.width) | 0, (s.videoHeight ?? s.height) | 0, (s.constructor && s.constructor.name) || 'src'] : [0, 0, 'unknown']; };
+    const noteTex = (name, d) => { P.frame.texN++; P.frame.texPx += d[0] * d[1]; const k = name + ':' + d[0] + 'x' + d[1] + ':' + d[2]; P.texKinds[k] = (P.texKinds[k] || 0) + 1; };
+    wrap(p, 'texImage2D', (a) => noteTex('texImage2D', dimsOf(a, 9, 5, 3)));
+    wrap(p, 'texSubImage2D', (a) => noteTex('texSubImage2D', dimsOf(a, 9, 6, 4)));
     wrap(p, 'useProgram', () => { P.frame.useProg++; });
     wrap(p, 'readPixels', () => { P.frame.readPx++; });
     wrap(p, 'linkProgram', function (a) { P.linkStart.set(a[0], performance.now()); P.frame.links++; P.totals.links++; });
@@ -130,10 +134,14 @@ const result = await runGate({
     await sleep(2500);
     const fc = await segment(20000);
     const totals = await ev("return JSON.stringify(window.__glprobe.totals);");
-    const res = { label: LABEL, url, mode: buildMode, "1x-auto": summarize(f1), "4x-auto": summarize(f4), "4x-close": summarize(fc), pageTotals: totals };
+    const texKinds = await ev("return JSON.stringify(window.__glprobe.texKinds);");
+    //  這一場實際用的規則集（開局時落盤在存檔的 activeMatch.config.ruleset；只讀 localStorage，不改任何東西）。
+    const rulesetInBattle = await ev("try{const p=JSON.parse(localStorage.getItem('esmo.profile.v1')||'{}');const r=p?.matchmaking?.session?.activeMatch?.config?.ruleset;return JSON.stringify(r?{rulesetId:r.rulesetId,simVersion:r.simVersion,jungleCamp:r.layers&&r.layers.jungleCamp,invasion:r.layers&&r.layers.invasion,tacticalDirector:r.layers&&r.layers.tacticalDirector}:null);}catch(e){return JSON.stringify('err '+e.message);}");
+    console.log('rulesetInBattle', JSON.stringify(rulesetInBattle));
+    const res = { label: LABEL, url, mode: buildMode, rulesetInBattle, "1x-auto": summarize(f1), "4x-auto": summarize(f4), "4x-close": summarize(fc), pageTotals: totals, texKindsWholeRun: Object.fromEntries(Object.entries(texKinds).sort((a, b) => b[1] - a[1]).slice(0, 15)) };
     writeFileSync(`${OUT}/${LABEL}-glframes.json`, JSON.stringify(res, null, 1));
     writeFileSync(`${OUT}/${LABEL}-glframes-raw4x.json`, JSON.stringify(f4));
-    console.log(JSON.stringify({ mode: buildMode, "1x": { fps: res["1x-auto"]?.fps, over50: res["1x-auto"]?.over50, draw: res["1x-auto"]?.avgDraw }, "4x": { fps: res["4x-auto"]?.fps, over50: res["4x-auto"]?.over50, max: res["4x-auto"]?.max, draw: res["4x-auto"]?.avgDraw, texKPx: res["4x-auto"]?.avgTexKPx, bufKB: res["4x-auto"]?.avgBufKB, links: res["4x-auto"]?.totalProgramLinks, linkMs: res["4x-auto"]?.totalLinkMs, long: res["4x-auto"]?.longFrames }, totals }));
+    console.log(JSON.stringify({ mode: buildMode, "1x": { fps: res["1x-auto"]?.fps, over50: res["1x-auto"]?.over50, draw: res["1x-auto"]?.avgDraw }, "4x": { fps: res["4x-auto"]?.fps, over50: res["4x-auto"]?.over50, max: res["4x-auto"]?.max, draw: res["4x-auto"]?.avgDraw, texKPx: res["4x-auto"]?.avgTexKPx, bufKB: res["4x-auto"]?.avgBufKB, links: res["4x-auto"]?.totalProgramLinks, linkMs: res["4x-auto"]?.totalLinkMs, long: res["4x-auto"]?.longFrames }, totals, texKinds: res.texKindsWholeRun }));
     ck("量得到逐幀資料", (f1?.length ?? 0) > 100 && (f4?.length ?? 0) > 100);
     ck("page error = 0", chrome.pageErrors.length === 0, JSON.stringify(chrome.pageErrors).slice(0, 300));
   },

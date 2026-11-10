@@ -1,0 +1,32 @@
+✅ M0 正式 TacticScreen 掛載成功　{"ok":true}
+✅ F0 攔截恰好換掉 featureFlags.js 的那一行（不是整檔改寫）　hits 1 replaced 1
+✅ F1 頁面裡 FEATURE_FLAGS.mobaTacticalDirectorV21＝true；resolveRulesetForMode(career) ＝ career.v21、Director 模式 core.v1　{"flag":true,"rulesetId":"career.v21","mode":"core.v1"}
+✅ O1 classic.m1：畫面上的選項按鈕＝view-model（core.v1，46 顆）　got 46 want 46
+✅ O1 std：畫面上的選項按鈕＝view-model（core.v1，51 顆）　got 51 want 51
+✅ O1 classic.m2：畫面上的選項按鈕＝view-model（core.v1，46 顆）　got 46 want 46
+✅ O1 v2.mid_solo_split：畫面上的選項按鈕＝view-model（core.v1，57 顆）　got 57 want 57
+✅ O1 classic.m8：畫面上的選項按鈕＝view-model（core.v1，54 顆）　got 54 want 54
+✅ O2 std 的 DOM 維度＝view-model；含前／中期強邊、快速強邊、勝利條件；後期強邊不在（Owner 暫緩）　["jungle.focus","lanes.mid.stance","objectives.tower","phases.early.focusLane","phases.early.grouping","phases.early.objectiveOrder","phases.early.stance","phases.late.grouping","phases.late.objectiveOrder","phases.late.stance","phases.mid.focusLane","phases.mid.grouping","phases.mid.objectiveOrder","phases.mid.stance","quick.strongSide","seats.b5.mission","teamfight.posture","winCondition"]
+✅ O3 勝利條件只提供「前期滾雪球」（控圖運營、中路分推維持不提供；後期團戰不在列舉）
+✅ O4 複驗撤下的每時期選擇不在 DOM（後期巴龍優先、後期推塔優先）
+✅ W0 std、沒有調整：送出的 binding＝Node（core.v1）算的　bac3fe4ee4d52a72 vs bac3fe4ee4d52a72
+✅ W1 點「前期滾雪球」⇒ 被填的格（前期姿態積極、中期姿態積極、前期物件優先巨龍）都標「勝利條件」且顯示被選中　["phases.early.objectiveOrder","phases.early.stance","phases.mid.stance"] ["tb-choice-phases.early.focusLane-none","tb-choice-phases.early.grouping-standard","tb-choice-phases.early.objectiveOrder-dragon","tb-choice-phases.early.stance-aggressive","tb-choice-phases.late.grouping-standard","tb-choice-phases.late.objectiveOrder-none","tb-choice-phases.late.stance-standard","tb-choice-phases.mid.focusLane-none","tb-choice-phases.mid.grouping-standard","tb-choice-phases.mid.objectiveOrder-none","tb-choice-phases.mid.stance-aggressive","tb-choice-winCondition-earlySnowball"]
+✅ W2 送出的 binding＝Node 以同一份選擇算的（逐字元），且以每時期方針解析得出　0d09d0882cfae0da vs 0d09d0882cfae0da
+✅ W3 玩家優先（R-8）：自己點了前期姿態＝防守 ⇒ 那格選中防守、不再標勝利條件；另外兩格仍標勝利條件　["phases.early.objectiveOrder","phases.mid.stance"]
+✅ W4 送出的 binding＝Node（勝利條件＋玩家自己的前期姿態）　cf4c0a258d1e1b8a vs cf4c0a258d1e1b8a
+✅ Q1 點快速強邊「下路」⇒ 前期、中期強邊都選下路　["tb-choice-phases.early.focusLane-bot","tb-choice-phases.mid.focusLane-bot","tb-choice-quick.strongSide-bot"]
+✅ Q2 強邊（下路）＋前期／中期積極同時選用 ⇒ 計畫合法（沒有被拒或拿掉）、送出的 binding＝Node 算的、以每時期方針解析得出　19d1bfe105165971 vs 19d1bfe105165971
+✅ L1[d] 1366 沒有橫向溢出　0
+✅ T1 三步驟列存在，預設停在「戰術書」　tb-step-book
+✅ T2 ① 情報：顯示對手概要（測試分頁沒有場次 ⇒ 標準對手）；不含數字權重　standard
+✅ T3 ③ 確認頁：「確認上場」送出的 binding＝「開始載入」送出的（同一份）　19d1bfe105165971 vs 19d1bfe105165971
+✅ S1 載入含後期強邊（已不提供）的已存計畫 ⇒ 過濾提示＋「將另存一份不含上述選項的計畫，原計畫保留」；按鈕＝另存一份、可按　將另存一份不含上述選項的計畫，原計畫保留。 {"t":"另存一份","d":false}
+✅ S2 過濾後等於另一份已存計畫 ⇒ 重複提示（點名那一份）、不能另存、不改名　{"note":"不含上述選項的這份計畫已經在戰術書裡（「標準」），不需另存；原計畫保留。","disabled":true}
+✅ S3 戰術書已滿 5 份 ⇒ 已滿提示（請先刪除一份）、不能存　{"note":"戰術書已滿 5 份：請先在上方「我的戰術書」刪除一份，才能另存這一份。","disabled":true}
+✅ S4 測完清空戰術書（不留測試資料）　0
+✅ L2[m] 390 沒有橫向溢出（含每時期、強邊、勝利條件列）　0
+✅ L3[m] 選項按鈕的觸控大小足夠（高 ≥ 32、寬 ≥ 40）　0
+✅ E1 page error 0
+✅ E2 console error 0
+
+Tactic Book v21（戰術書畫面，v21 旗標開啟）：30/30　RESULT=PASS　耗時 50791ms

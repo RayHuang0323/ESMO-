@@ -1,0 +1,5651 @@
+{
+ "tool": "diag_invade_v22",
+ "seeds": [
+  11,
+  13,
+  15,
+  17,
+  19,
+  21,
+  23,
+  25,
+  27,
+  29,
+  31,
+  33,
+  35,
+  37,
+  39,
+  41,
+  43,
+  45,
+  47,
+  49,
+  51,
+  53,
+  55,
+  57,
+  59,
+  61,
+  63,
+  65,
+  67,
+  69
+ ],
+ "horizonSec": 150,
+ "summary": {
+  "A.legacy(career.v21)": {
+   "blue": {
+    "matches": 30,
+    "triggered": 15,
+    "started": 0,
+    "reachedEnemyCamp": 0,
+    "damagedEnemyCamp": 0,
+    "stoleCamp": 0,
+    "enemyCampKilledByUs": 0,
+    "avgContactSecs": 0,
+    "heroKillsInWindow": 0,
+    "ends": {}
+   }
+  },
+  "A.v22(both layers)": {
+   "blue": {
+    "matches": 30,
+    "triggered": 15,
+    "started": 15,
+    "reachedEnemyCamp": 15,
+    "damagedEnemyCamp": 15,
+    "stoleCamp": 10,
+    "enemyCampKilledByUs": 1,
+    "avgContactSecs": 13.9,
+    "heroKillsInWindow": 0,
+    "ends": {
+     "hp": 5,
+     "window": 15,
+     "stolen": 10
+    }
+   }
+  },
+  "A.v22(invasion only)": {
+   "blue": {
+    "matches": 30,
+    "triggered": 15,
+    "started": 15,
+    "reachedEnemyCamp": 15,
+    "damagedEnemyCamp": 15,
+    "stoleCamp": 8,
+    "enemyCampKilledByUs": 2,
+    "avgContactSecs": 14.1,
+    "heroKillsInWindow": 0,
+    "ends": {
+     "lost_race": 1,
+     "window": 14,
+     "hp": 7,
+     "stolen": 8
+    }
+   }
+  },
+  "A.legacy m7": {
+   "blue": {
+    "matches": 30,
+    "triggered": 19,
+    "started": 0,
+    "reachedEnemyCamp": 0,
+    "damagedEnemyCamp": 0,
+    "stoleCamp": 0,
+    "enemyCampKilledByUs": 0,
+    "avgContactSecs": 0,
+    "heroKillsInWindow": 0,
+    "ends": {}
+   }
+  },
+  "A.v22 m7": {
+   "blue": {
+    "matches": 30,
+    "triggered": 19,
+    "started": 19,
+    "reachedEnemyCamp": 19,
+    "damagedEnemyCamp": 19,
+    "stoleCamp": 9,
+    "enemyCampKilledByUs": 5,
+    "avgContactSecs": 5,
+    "heroKillsInWindow": 0,
+    "ends": {
+     "hp": 10,
+     "stolen": 9
+    }
+   }
+  },
+  "B.legacy(tool v21, both sides)": {
+   "blue": {
+    "matches": 30,
+    "triggered": 17,
+    "started": 0,
+    "reachedEnemyCamp": 2,
+    "damagedEnemyCamp": 0,
+    "stoleCamp": 0,
+    "enemyCampKilledByUs": 0,
+    "avgContactSecs": 0,
+    "heroKillsInWindow": 0,
+    "ends": {}
+   },
+   "red": {
+    "matches": 30,
+    "triggered": 22,
+    "started": 0,
+    "reachedEnemyCamp": 4,
+    "damagedEnemyCamp": 0,
+    "stoleCamp": 0,
+    "enemyCampKilledByUs": 1,
+    "avgContactSecs": 0,
+    "heroKillsInWindow": 0,
+    "ends": {}
+   }
+  },
+  "B.v22(tool, both sides)": {
+   "blue": {
+    "matches": 30,
+    "triggered": 17,
+    "started": 17,
+    "reachedEnemyCamp": 17,
+    "damagedEnemyCamp": 17,
+    "stoleCamp": 14,
+    "enemyCampKilledByUs": 8,
+    "avgContactSecs": 2.4,
+    "heroKillsInWindow": 0,
+    "ends": {
+     "stolen": 14,
+     "window": 17,
+     "lost_race": 3
+    }
+   },
+   "red": {
+    "matches": 30,
+    "triggered": 22,
+    "started": 22,
+    "reachedEnemyCamp": 22,
+    "damagedEnemyCamp": 22,
+    "stoleCamp": 19,
+    "enemyCampKilledByUs": 13,
+    "avgContactSecs": 11.3,
+    "heroKillsInWindow": 0,
+    "ends": {
+     "stolen": 19,
+     "window": 19,
+     "hp": 4,
+     "retreat": 1,
+     "outnumbered": 1
+    }
+   }
+  },
+  "B.v22(tool, invasion only)": {
+   "blue": {
+    "matches": 30,
+    "triggered": 17,
+    "started": 17,
+    "reachedEnemyCamp": 17,
+    "damagedEnemyCamp": 17,
+    "stoleCamp": 14,
+    "enemyCampKilledByUs": 8,
+    "avgContactSecs": 2.4,
+    "heroKillsInWindow": 0,
+    "ends": {
+     "stolen": 14,
+     "window": 17,
+     "lost_race": 3
+    }
+   },
+   "red": {
+    "matches": 30,
+    "triggered": 22,
+    "started": 22,
+    "reachedEnemyCamp": 22,
+    "damagedEnemyCamp": 22,
+    "stoleCamp": 19,
+    "enemyCampKilledByUs": 13,
+    "avgContactSecs": 11.3,
+    "heroKillsInWindow": 0,
+    "ends": {
+     "stolen": 19,
+     "window": 19,
+     "hp": 4,
+     "retreat": 1,
+     "outnumbered": 1
+    }
+   }
+  }
+ },
+ "rows": [
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 15,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 21,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 25,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 27,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 33,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 35,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 39,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 45,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 49,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 51,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 55,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 57,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 63,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 65,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy(career.v21)",
+   "seed": 69,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 412,
+    "steals": 0,
+    "contactSecs": 32.5,
+    "afterArrivalSecs": 32.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 348,
+    "steals": 0,
+    "contactSecs": 13.5,
+    "afterArrivalSecs": 15.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 15,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 373,
+    "steals": 1,
+    "contactSecs": 16.5,
+    "afterArrivalSecs": 7,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 21,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 386,
+    "steals": 1,
+    "contactSecs": 14,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 25,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 27,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 382,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 33,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 35,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 9.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 336,
+    "steals": 0,
+    "contactSecs": 20,
+    "afterArrivalSecs": 22.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 39,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 382,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 395,
+    "steals": 1,
+    "contactSecs": 14,
+    "afterArrivalSecs": 8.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 45,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 355,
+    "steals": 0,
+    "contactSecs": 14,
+    "afterArrivalSecs": 20.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 49,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 51,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 204,
+    "steals": 0,
+    "contactSecs": 10,
+    "afterArrivalSecs": 16,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 360,
+    "steals": 1,
+    "contactSecs": 19.5,
+    "afterArrivalSecs": 24.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 55,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 57,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 312,
+    "steals": 1,
+    "contactSecs": 21.5,
+    "afterArrivalSecs": 23.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 371,
+    "steals": 1,
+    "contactSecs": 20,
+    "afterArrivalSecs": 27,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 63,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 65,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 386,
+    "steals": 1,
+    "contactSecs": 13,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(both layers)",
+   "seed": 69,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 354,
+    "steals": 0,
+    "contactSecs": 22.5,
+    "afterArrivalSecs": 12,
+    "ends": {
+     "lost_race": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 348,
+    "steals": 0,
+    "contactSecs": 13.5,
+    "afterArrivalSecs": 15.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 15,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 373,
+    "steals": 1,
+    "contactSecs": 16.5,
+    "afterArrivalSecs": 7,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 21,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 386,
+    "steals": 1,
+    "contactSecs": 14,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 25,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 27,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 382,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 33,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 35,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 9.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 336,
+    "steals": 0,
+    "contactSecs": 20,
+    "afterArrivalSecs": 22.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 39,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 382,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 395,
+    "steals": 1,
+    "contactSecs": 13,
+    "afterArrivalSecs": 8.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 45,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 210,
+    "steals": 0,
+    "contactSecs": 22.5,
+    "afterArrivalSecs": 18.5,
+    "ends": {
+     "hp": 2
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 49,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 51,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 204,
+    "steals": 0,
+    "contactSecs": 14,
+    "afterArrivalSecs": 16,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 408,
+    "steals": 0,
+    "contactSecs": 23.5,
+    "afterArrivalSecs": 29,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 55,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 57,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 168,
+    "steals": 0,
+    "contactSecs": 20.5,
+    "afterArrivalSecs": 13,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 371,
+    "steals": 1,
+    "contactSecs": 20,
+    "afterArrivalSecs": 27,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 63,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 65,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 386,
+    "steals": 1,
+    "contactSecs": 11.5,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22(invasion only)",
+   "seed": 69,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 15,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 21,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 25,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 27,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 33,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 35,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 39,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 45,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 49,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 51,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 55,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 57,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 63,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 65,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.legacy m7",
+   "seed": 69,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 328,
+    "steals": 0,
+    "contactSecs": 12,
+    "afterArrivalSecs": 19.5,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 348,
+    "steals": 0,
+    "contactSecs": 6.5,
+    "afterArrivalSecs": 15.5,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 15,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 412,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 11.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 384,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 373,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 21,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 386,
+    "steals": 1,
+    "contactSecs": 2.5,
+    "afterArrivalSecs": 9.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 25,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 178,
+    "steals": 0,
+    "contactSecs": 7,
+    "afterArrivalSecs": 14,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 27,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 382,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 33,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 35,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 9.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 336,
+    "steals": 0,
+    "contactSecs": 13.5,
+    "afterArrivalSecs": 22.5,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 39,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 382,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 395,
+    "steals": 1,
+    "contactSecs": 0.5,
+    "afterArrivalSecs": 8.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 45,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 279,
+    "steals": 0,
+    "contactSecs": 5.5,
+    "afterArrivalSecs": 13,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 49,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 51,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 204,
+    "steals": 0,
+    "contactSecs": 7.5,
+    "afterArrivalSecs": 16,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 276,
+    "steals": 0,
+    "contactSecs": 11.5,
+    "afterArrivalSecs": 19,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 55,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 57,
+   "opponent": "烈焰鳳凰",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 228,
+    "steals": 0,
+    "contactSecs": 11,
+    "afterArrivalSecs": 17.5,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 371,
+    "steals": 0,
+    "contactSecs": 6.5,
+    "afterArrivalSecs": 13,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 63,
+   "opponent": "暗影狼群",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 65,
+   "opponent": "寒冰守衛",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 348,
+    "steals": 0,
+    "contactSecs": 11,
+    "afterArrivalSecs": 20,
+    "ends": {
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 1,
+    "reached": true,
+    "campDmg": 386,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7.5,
+    "ends": {
+     "stolen": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "A.v22 m7",
+   "seed": 69,
+   "opponent": "白銀之鷹",
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 11,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 13,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 15,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": true,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 17,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 19,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 21,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 23,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": true,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 25,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 27,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 29,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 31,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 33,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 35,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 37,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 39,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 41,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": true,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 43,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 45,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 47,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": true,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 49,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 51,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 53,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 55,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": true,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 57,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 59,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 61,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 63,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 65,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 67,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": true,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.legacy(tool v21, both sides)",
+   "seed": 69,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": null,
+    "reached": false,
+    "campDmg": null,
+    "steals": null,
+    "contactSecs": null,
+    "afterArrivalSecs": null,
+    "ends": null,
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 11,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 13,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 15,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 20,
+    "afterArrivalSecs": 20.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 17,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 301,
+    "steals": 0,
+    "contactSecs": 37.5,
+    "afterArrivalSecs": 18.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 19,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 21,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 23,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 313,
+    "steals": 0,
+    "contactSecs": 32.5,
+    "afterArrivalSecs": 16,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 25,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 336,
+    "steals": 0,
+    "contactSecs": 11,
+    "afterArrivalSecs": 4.5,
+    "ends": {
+     "lost_race": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 27,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 29,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 31,
+    "afterArrivalSecs": 23,
+    "ends": {
+     "stolen": 1,
+     "retreat": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 31,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 33,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 35,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 37,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 39,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 276,
+    "steals": 0,
+    "contactSecs": 44.5,
+    "afterArrivalSecs": 19.5,
+    "ends": {
+     "hp": 1,
+     "outnumbered": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 41,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 348,
+    "steals": 0,
+    "contactSecs": 15,
+    "afterArrivalSecs": 5,
+    "ends": {
+     "lost_race": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 43,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 45,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 47,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 23.5,
+    "afterArrivalSecs": 22,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 49,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 51,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 53,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 55,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 40,
+    "afterArrivalSecs": 22.5,
+    "ends": {
+     "stolen": 1,
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 57,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 20.5,
+    "afterArrivalSecs": 21,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 59,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 61,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 63,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 65,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 67,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 360,
+    "steals": 0,
+    "contactSecs": 14,
+    "afterArrivalSecs": 5.5,
+    "ends": {
+     "lost_race": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, both sides)",
+   "seed": 69,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 11,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 13,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 15,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 20,
+    "afterArrivalSecs": 20.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 17,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 301,
+    "steals": 0,
+    "contactSecs": 37.5,
+    "afterArrivalSecs": 18.5,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 19,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 21,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 23,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 313,
+    "steals": 0,
+    "contactSecs": 32.5,
+    "afterArrivalSecs": 16,
+    "ends": {
+     "hp": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 25,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 336,
+    "steals": 0,
+    "contactSecs": 11,
+    "afterArrivalSecs": 4.5,
+    "ends": {
+     "lost_race": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 27,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 29,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 31,
+    "afterArrivalSecs": 23,
+    "ends": {
+     "stolen": 1,
+     "retreat": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 31,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 33,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 35,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 37,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 7,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 39,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 276,
+    "steals": 0,
+    "contactSecs": 44.5,
+    "afterArrivalSecs": 19.5,
+    "ends": {
+     "hp": 1,
+     "outnumbered": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 41,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 348,
+    "steals": 0,
+    "contactSecs": 15,
+    "afterArrivalSecs": 5,
+    "ends": {
+     "lost_race": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 43,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 45,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 47,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 23.5,
+    "afterArrivalSecs": 22,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 49,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 51,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 53,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 55,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 40,
+    "afterArrivalSecs": 22.5,
+    "ends": {
+     "stolen": 1,
+     "hp": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 57,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 20.5,
+    "afterArrivalSecs": 21,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 59,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 61,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 1
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 63,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 65,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 409,
+    "steals": 1,
+    "contactSecs": 0,
+    "afterArrivalSecs": 6.5,
+    "ends": {
+     "stolen": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 67,
+   "blue": {
+    "attempts": 1,
+    "invadeKills": 0,
+    "starts": 2,
+    "reached": true,
+    "campDmg": 360,
+    "steals": 0,
+    "contactSecs": 14,
+    "afterArrivalSecs": 5.5,
+    "ends": {
+     "lost_race": 1,
+     "window": 1
+    },
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  },
+  {
+   "arm": "B.v22(tool, invasion only)",
+   "seed": 69,
+   "blue": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   },
+   "red": {
+    "attempts": 0,
+    "invadeKills": 0,
+    "starts": 0,
+    "reached": false,
+    "campDmg": 0,
+    "steals": 0,
+    "contactSecs": 0,
+    "afterArrivalSecs": 0,
+    "ends": {},
+    "enemyCampKilledByUs": 0
+   }
+  }
+ ]
+}

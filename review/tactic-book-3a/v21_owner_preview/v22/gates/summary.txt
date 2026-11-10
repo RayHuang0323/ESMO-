@@ -1,0 +1,11 @@
+check_match_ruleset_3a exit=0 0s :: Match Ruleset 3a：54/54 PASS
+check_tactical_director_3c exit=0 3s :: Tactical Director 3c：97/97 PASS
+check_tactical_directive_3c exit=0 1s :: Tactical Directive 3c：61/61 PASS
+check_match_setup_contract_3a exit=0 0s :: Match Setup 契約 3a：85/85 PASS
+check_jungle_camp_v22 exit=0 39s :: jungleCamp v22 Gate：41/41 PASS
+check_match_setup_3a exit=0 212s :: Match Setup 3a：153/153 PASS
+check_match_assembler_3a exit=0 151s :: Match Assembler 3a：227/227 PASS
+check_live_setup_3a exit=0 90s :: Live Setup 3a：119/119 PASS
+check_stage1_split_3aB exit=0 174s :: Stage-1 Split 3a-B：75/75 PASS
+check_match_golden_v21a exit=1 295s :: Match Golden v21-A：97/137 FAIL
+ALLDONE
