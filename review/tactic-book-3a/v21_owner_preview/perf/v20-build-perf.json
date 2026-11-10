@@ -1,0 +1,243 @@
+{
+  "label": "v20-build",
+  "url": "http://127.0.0.1:5633/ESMO-/",
+  "mode": "build",
+  "v21Banner": false,
+  "gpu": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "rows": [
+    {
+      "vp": "Desktop",
+      "fog": "on",
+      "1x-auto": {
+        "frames": 1201,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17,
+        "max": 17.2,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 67.2,
+        "heapDeltaMB": 14.2,
+        "nodes": 3651,
+        "layoutsPerS": null,
+        "scriptS": 9.73,
+        "taskS": 11.47,
+        "layouts": 1202,
+        "recalcStyles": 1202
+      },
+      "4x-auto": {
+        "frames": 1196,
+        "fps": 59.7,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.5,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 75.4,
+        "heapDeltaMB": 25.4,
+        "nodes": 3787,
+        "layoutsPerS": null,
+        "scriptS": 14.88,
+        "taskS": 17.37,
+        "layouts": 1201,
+        "recalcStyles": 1201
+      },
+      "4x-close": {
+        "frames": 899,
+        "fps": 59.9,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 78.4,
+        "heapDeltaMB": 32.7,
+        "nodes": 4644,
+        "layoutsPerS": null,
+        "scriptS": 10.75,
+        "taskS": 12.48,
+        "layouts": 901,
+        "recalcStyles": 901
+      },
+      "cpuProfile4x": {
+        "totalMs": 20428,
+        "busyMs": 17329,
+        "busyPct": 84.8,
+        "bucketsMs": {
+          "bundle": 13423,
+          "idle": 3099,
+          "program": 2346,
+          "other": 1323,
+          "gc": 237
+        },
+        "topFiles": [
+          [
+            "assets/index-Byck8QV_.js",
+            13423
+          ],
+          [
+            "(program)",
+            2346
+          ],
+          [
+            "texSubImage2D",
+            250
+          ],
+          [
+            "bindVertexArray",
+            250
+          ],
+          [
+            "(garbage collector)",
+            237
+          ],
+          [
+            "bufferSubData",
+            135
+          ],
+          [
+            "uniformMatrix4fv",
+            102
+          ],
+          [
+            "drawElements",
+            99
+          ],
+          [
+            "useProgram",
+            48
+          ],
+          [
+            "bindTexture",
+            46
+          ],
+          [
+            "bindBuffer",
+            38
+          ],
+          [
+            "uniformMatrix3fv",
+            37
+          ]
+        ]
+      }
+    },
+    {
+      "vp": "390",
+      "fog": "on",
+      "1x-auto": {
+        "frames": 1200,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17,
+        "max": 17.7,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 52.8,
+        "heapDeltaMB": 3.4,
+        "nodes": 2328,
+        "layoutsPerS": null,
+        "scriptS": 8.29,
+        "taskS": 9.92,
+        "layouts": 1202,
+        "recalcStyles": 1202
+      },
+      "4x-auto": {
+        "frames": 1189,
+        "fps": 59.4,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 116.9,
+        "jank50": 3,
+        "jank100": 1,
+        "heapMB": 60.7,
+        "heapDeltaMB": -5.5,
+        "nodes": 2441,
+        "layoutsPerS": null,
+        "scriptS": 12.33,
+        "taskS": 14.17,
+        "layouts": 1193,
+        "recalcStyles": 1193
+      },
+      "4x-close": {
+        "frames": 900,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 16.9,
+        "max": 17.2,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 71.1,
+        "heapDeltaMB": -5,
+        "nodes": 3032,
+        "layoutsPerS": null,
+        "scriptS": 8.58,
+        "taskS": 9.99,
+        "layouts": 902,
+        "recalcStyles": 902
+      },
+      "cpuProfile4x": {
+        "totalMs": 20180,
+        "busyMs": 14094,
+        "busyPct": 69.8,
+        "bucketsMs": {
+          "bundle": 11185,
+          "idle": 6086,
+          "program": 1742,
+          "other": 987,
+          "gc": 180
+        },
+        "topFiles": [
+          [
+            "assets/index-Byck8QV_.js",
+            11185
+          ],
+          [
+            "(program)",
+            1742
+          ],
+          [
+            "(garbage collector)",
+            180
+          ],
+          [
+            "texSubImage2D",
+            168
+          ],
+          [
+            "bindVertexArray",
+            157
+          ],
+          [
+            "bufferSubData",
+            97
+          ],
+          [
+            "uniformMatrix4fv",
+            81
+          ],
+          [
+            "drawElements",
+            80
+          ],
+          [
+            "useProgram",
+            49
+          ],
+          [
+            "bindBuffer",
+            40
+          ],
+          [
+            "uniform3f",
+            29
+          ],
+          [
+            "uniformMatrix3fv",
+            25
+          ]
+        ]
+      }
+    }
+  ]
+}

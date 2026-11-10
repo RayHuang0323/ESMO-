@@ -1,0 +1,251 @@
+{
+  "label": "v21-dev",
+  "url": "http://127.0.0.1:5631/ESMO-/",
+  "mode": "build",
+  "v21Banner": false,
+  "gpu": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "rows": [
+    {
+      "vp": "Desktop",
+      "fog": "on",
+      "1x-auto": {
+        "frames": 1201,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 148,
+        "heapDeltaMB": 60.5,
+        "nodes": 12911,
+        "layoutsPerS": null,
+        "scriptS": 11.88,
+        "taskS": 13.92,
+        "layouts": 1203,
+        "recalcStyles": 1203
+      },
+      "4x-auto": {
+        "frames": 1159,
+        "fps": 57.9,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 200,
+        "jank50": 2,
+        "jank100": 1,
+        "heapMB": 204.7,
+        "heapDeltaMB": 41.7,
+        "nodes": 9753,
+        "layoutsPerS": null,
+        "scriptS": 16.04,
+        "taskS": 19.08,
+        "layouts": 1163,
+        "recalcStyles": 1163
+      },
+      "4x-close": {
+        "frames": 890,
+        "fps": 59.3,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 178.7,
+        "heapDeltaMB": -45.1,
+        "nodes": 7298,
+        "layoutsPerS": null,
+        "scriptS": 11.47,
+        "taskS": 13.23,
+        "layouts": 892,
+        "recalcStyles": 892
+      },
+      "cpuProfile4x": {
+        "totalMs": 20917,
+        "busyMs": 18993,
+        "busyPct": 90.8,
+        "bucketsMs": {
+          "other": 13269,
+          "program": 2911,
+          "idle": 1923,
+          "battle": 1376,
+          "react": 594,
+          "engine": 327,
+          "gc": 317,
+          "app": 138,
+          "r3f": 61
+        },
+        "topFiles": [
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/chunk-CTAKFJQL.js",
+            9063
+          ],
+          [
+            "(program)",
+            2911
+          ],
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/chunk-ZKFVBSIG.js",
+            1862
+          ],
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/chunk-47BGB6KQ.js",
+            650
+          ],
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/react_jsx-dev-runtime.js",
+            594
+          ],
+          [
+            "src/LogicEngine.js",
+            327
+          ],
+          [
+            "(garbage collector)",
+            317
+          ],
+          [
+            "bindVertexArray",
+            245
+          ],
+          [
+            "src/battle/moba/map/mobaRuntimeMapAdapter.js",
+            231
+          ],
+          [
+            "texSubImage2D",
+            190
+          ],
+          [
+            "src/battle/moba/render/RiggedMobaRuntimeNeutrals.jsx",
+            186
+          ],
+          [
+            "getProgramInfoLog",
+            184
+          ]
+        ]
+      }
+    },
+    {
+      "vp": "390",
+      "fog": "on",
+      "1x-auto": {
+        "frames": 1197,
+        "fps": 59.9,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 125.5,
+        "heapDeltaMB": 20.1,
+        "nodes": 7380,
+        "layoutsPerS": null,
+        "scriptS": 10.76,
+        "taskS": 12.75,
+        "layouts": 1199,
+        "recalcStyles": 1199
+      },
+      "4x-auto": {
+        "frames": 1186,
+        "fps": 59.3,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 116.8,
+        "jank50": 1,
+        "jank100": 1,
+        "heapMB": 185.2,
+        "heapDeltaMB": 75.5,
+        "nodes": 8000,
+        "layoutsPerS": null,
+        "scriptS": 13.57,
+        "taskS": 15.89,
+        "layouts": 1191,
+        "recalcStyles": 1191
+      },
+      "4x-close": {
+        "frames": 883,
+        "fps": 58.8,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 83.3,
+        "jank50": 1,
+        "jank100": 0,
+        "heapMB": 148.5,
+        "heapDeltaMB": -69.3,
+        "nodes": 4709,
+        "layoutsPerS": null,
+        "scriptS": 10.55,
+        "taskS": 12.17,
+        "layouts": 885,
+        "recalcStyles": 885
+      },
+      "cpuProfile4x": {
+        "totalMs": 20301,
+        "busyMs": 15741,
+        "busyPct": 77.5,
+        "bucketsMs": {
+          "other": 11000,
+          "idle": 4560,
+          "program": 2232,
+          "battle": 1259,
+          "react": 526,
+          "gc": 243,
+          "engine": 211,
+          "app": 164,
+          "r3f": 106
+        },
+        "topFiles": [
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/chunk-CTAKFJQL.js",
+            7418
+          ],
+          [
+            "(program)",
+            2232
+          ],
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/chunk-ZKFVBSIG.js",
+            2009
+          ],
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/react_jsx-dev-runtime.js",
+            526
+          ],
+          [
+            "@fs/C:/Users/ifikn/AppData/Local/Temp/esmo-v21-owner-preview/vite-cache/deps/chunk-47BGB6KQ.js",
+            395
+          ],
+          [
+            "(garbage collector)",
+            243
+          ],
+          [
+            "src/battle/moba/map/mobaRuntimeMapAdapter.js",
+            211
+          ],
+          [
+            "src/battle/moba/render/RiggedMobaRuntimeNeutrals.jsx",
+            211
+          ],
+          [
+            "src/LogicEngine.js",
+            211
+          ],
+          [
+            "bindVertexArray",
+            157
+          ],
+          [
+            "now",
+            132
+          ],
+          [
+            "src/battle/moba/nav/mobaNavigation.js",
+            104
+          ]
+        ]
+      }
+    }
+  ]
+}

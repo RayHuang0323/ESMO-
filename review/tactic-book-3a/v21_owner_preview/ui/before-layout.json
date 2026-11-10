@@ -1,0 +1,81 @@
+{
+ "label": "before",
+ "rows": {
+  "desktop1366": {
+   "bookDefault": {
+    "overflow": 0,
+    "height": 2415,
+    "buttons": 76,
+    "smallChoice": 0,
+    "shortButtons": 2,
+    "templates": 22,
+    "dims": 19
+   },
+   "bookSet": {
+    "overflow": 0,
+    "height": 2501,
+    "buttons": 80,
+    "smallChoice": 0,
+    "shortButtons": 0,
+    "templates": 22,
+    "dims": 18
+   },
+   "intel": {
+    "overflow": 0,
+    "height": 900,
+    "buttons": 6,
+    "smallChoice": 0,
+    "shortButtons": 0,
+    "templates": 0,
+    "dims": 0
+   },
+   "confirm": {
+    "overflow": 0,
+    "height": 900,
+    "buttons": 7,
+    "smallChoice": 0,
+    "shortButtons": 0,
+    "templates": 0,
+    "dims": 0
+   }
+  },
+  "mobile390": {
+   "bookDefault": {
+    "overflow": 0,
+    "height": 4058,
+    "buttons": 76,
+    "smallChoice": 0,
+    "shortButtons": 2,
+    "templates": 22,
+    "dims": 19
+   },
+   "bookSet": {
+    "overflow": 0,
+    "height": 4014,
+    "buttons": 80,
+    "smallChoice": 0,
+    "shortButtons": 0,
+    "templates": 22,
+    "dims": 18
+   },
+   "intel": {
+    "overflow": 0,
+    "height": 844,
+    "buttons": 6,
+    "smallChoice": 0,
+    "shortButtons": 0,
+    "templates": 0,
+    "dims": 0
+   },
+   "confirm": {
+    "overflow": 0,
+    "height": 844,
+    "buttons": 7,
+    "smallChoice": 0,
+    "shortButtons": 0,
+    "templates": 0,
+    "dims": 0
+   }
+  }
+ }
+}

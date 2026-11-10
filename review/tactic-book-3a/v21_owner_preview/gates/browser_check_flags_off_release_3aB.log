@@ -1,0 +1,27 @@
+✅ N0 跑的是打包結果（assets/ 底下的 bundle，沒有 /src/）　["http://127.0.0.1:55340/ESMO-/assets/index-ehQc5EsM.js"]
+✅ N 首頁有 MOBA 入口
+✅ N 首頁沒有「戰術書」字樣
+✅ N 進入賽前頁
+✅ N 進入 Ban/Pick
+✅ N 進入戰術頁
+✅ N 戰術頁是 v20 畫面（沒有戰術書步驟與模板列；副標「8 套戰術」；沒有「戰術書」字樣）　{"steps":false,"strip":false}
+✅ N 進入對戰
+✅ N 快速完成後到賽後畫面
+✅ N9 打完一場：存檔沒有任何 v21 標記　[]
+✅ N10 打完一場：戰術書是空的（玩家做不出計畫）　{"plans":[]}
+✅ V0 看得到存檔裡的 tacticBook 欄位（否則下面的測試不成立）　schemaVersion,manager,team,meta,lineup,csLineup,seasonStateV2,players
+✅ V1 帶 3 份 v21 計畫的存檔讀得回來，沒有被隔離　[]
+✅ V 首頁有 MOBA 入口
+✅ V 首頁沒有「戰術書」字樣
+✅ V 進入賽前頁
+✅ V 進入 Ban/Pick
+✅ V 進入戰術頁
+✅ V2 走到戰術頁：tacticBook 逐位元相同　{"plans":[{"id":"1c14855718df7a39","name":"前期壓制","plan":{"schema":"TacticPlan.v2","templateId":"classic.m7","overlayIds":[],"choices":{"phases":{"early":{"focusLane":"bot"}}},"contingencies":[]}},{"id
+✅ V 戰術頁是 v20 畫面（沒有戰術書步驟與模板列；副標「8 套戰術」；沒有「戰術書」字樣）　{"steps":false,"strip":false}
+✅ V 進入對戰
+✅ V 快速完成後到賽後畫面
+✅ V8 打完一場：tacticBook 逐位元相同（流程不會改寫玩家的計畫）　{"plans":[{"id":"1c14855718df7a39","name":"前期壓制","plan":{"schema":"TacticPlan.v2","templateId":"classic.m7","overlayIds":[],"choices":{"phases":{"early":{"focusLane":"bot"}}},"contingencies":[]}},{"id
+✅ V9 打完一場：隊伍與選手名單還在（舊存檔沒有被覆寫成新局）
+✅ E1 page error 0
+
+Flags-off release 3a-B（打包結果的玩家流程）：25/25　RESULT=PASS　耗時 108209ms

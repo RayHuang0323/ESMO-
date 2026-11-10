@@ -1,0 +1,243 @@
+{
+  "label": "v21-build",
+  "url": "http://127.0.0.1:5632/ESMO-/",
+  "mode": "build",
+  "v21Banner": true,
+  "gpu": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "rows": [
+    {
+      "vp": "Desktop",
+      "fog": "on",
+      "1x-auto": {
+        "frames": 1200,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.3,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 54.6,
+        "heapDeltaMB": 13.1,
+        "nodes": 6398,
+        "layoutsPerS": null,
+        "scriptS": 10.97,
+        "taskS": 12.93,
+        "layouts": 1202,
+        "recalcStyles": 1202
+      },
+      "4x-auto": {
+        "frames": 1176,
+        "fps": 58.7,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 216.6,
+        "jank50": 2,
+        "jank100": 1,
+        "heapMB": 87.3,
+        "heapDeltaMB": 41.6,
+        "nodes": 5900,
+        "layoutsPerS": null,
+        "scriptS": 14.6,
+        "taskS": 17.02,
+        "layouts": 1180,
+        "recalcStyles": 1180
+      },
+      "4x-close": {
+        "frames": 894,
+        "fps": 59.5,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.5,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 74.1,
+        "heapDeltaMB": 13,
+        "nodes": 4096,
+        "layoutsPerS": null,
+        "scriptS": 11.43,
+        "taskS": 13.32,
+        "layouts": 896,
+        "recalcStyles": 896
+      },
+      "cpuProfile4x": {
+        "totalMs": 20397,
+        "busyMs": 16936,
+        "busyPct": 83,
+        "bucketsMs": {
+          "bundle": 12916,
+          "idle": 3461,
+          "program": 2295,
+          "other": 1513,
+          "gc": 212
+        },
+        "topFiles": [
+          [
+            "assets/index-D_RCOVzj.js",
+            12916
+          ],
+          [
+            "(program)",
+            2295
+          ],
+          [
+            "texSubImage2D",
+            261
+          ],
+          [
+            "getProgramInfoLog",
+            214
+          ],
+          [
+            "(garbage collector)",
+            212
+          ],
+          [
+            "bindVertexArray",
+            188
+          ],
+          [
+            "bufferSubData",
+            186
+          ],
+          [
+            "uniformMatrix4fv",
+            126
+          ],
+          [
+            "drawElements",
+            95
+          ],
+          [
+            "useProgram",
+            50
+          ],
+          [
+            "bindBuffer",
+            43
+          ],
+          [
+            "bindTexture",
+            42
+          ]
+        ]
+      }
+    },
+    {
+      "vp": "390",
+      "fog": "on",
+      "1x-auto": {
+        "frames": 1200,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17,
+        "max": 17.2,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 50,
+        "heapDeltaMB": -6.5,
+        "nodes": 3427,
+        "layoutsPerS": null,
+        "scriptS": 8.89,
+        "taskS": 10.57,
+        "layouts": 1202,
+        "recalcStyles": 1202
+      },
+      "4x-auto": {
+        "frames": 1190,
+        "fps": 59.4,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 66.7,
+        "jank50": 3,
+        "jank100": 0,
+        "heapMB": 68.6,
+        "heapDeltaMB": 19.9,
+        "nodes": 3272,
+        "layoutsPerS": null,
+        "scriptS": 12.36,
+        "taskS": 14.26,
+        "layouts": 1194,
+        "recalcStyles": 1194
+      },
+      "4x-close": {
+        "frames": 900,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 17.1,
+        "jank50": 0,
+        "jank100": 0,
+        "heapMB": 73.3,
+        "heapDeltaMB": 1.2,
+        "nodes": 4366,
+        "layoutsPerS": null,
+        "scriptS": 9.34,
+        "taskS": 10.76,
+        "layouts": 902,
+        "recalcStyles": 902
+      },
+      "cpuProfile4x": {
+        "totalMs": 20181,
+        "busyMs": 14098,
+        "busyPct": 69.9,
+        "bucketsMs": {
+          "bundle": 11143,
+          "idle": 6083,
+          "program": 1723,
+          "other": 1049,
+          "gc": 183
+        },
+        "topFiles": [
+          [
+            "assets/index-D_RCOVzj.js",
+            11143
+          ],
+          [
+            "(program)",
+            1723
+          ],
+          [
+            "(garbage collector)",
+            183
+          ],
+          [
+            "bindVertexArray",
+            166
+          ],
+          [
+            "texSubImage2D",
+            132
+          ],
+          [
+            "uniformMatrix4fv",
+            124
+          ],
+          [
+            "bufferSubData",
+            103
+          ],
+          [
+            "drawElements",
+            89
+          ],
+          [
+            "useProgram",
+            70
+          ],
+          [
+            "bindBuffer",
+            42
+          ],
+          [
+            "uniform3f",
+            32
+          ],
+          [
+            "bindTexture",
+            29
+          ]
+        ]
+      }
+    }
+  ]
+}
