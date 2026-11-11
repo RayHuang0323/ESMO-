@@ -151,3 +151,16 @@
 - 沒有改 Owner 的 Chrome 設定。
 - 沒有在 Owner 的 Chrome 裡開對戰或清任何資料。
 - 沒有量 dev（5621）在軟體繪製下的數字。dev 只會更慢，結論不變。
+
+## 補充：單一變數驗證（2026-11-12）
+
+前面「AMD 59.3 fps」與「軟體繪製 4.8 fps」是用兩種不同的啟動器量的。這裡改用同一個啟動器、同一個版本（5642）、同一段（高畫質 2× 30 秒），只換 WebGL 後端：
+
+| 後端 | WebGL renderer | fps | P95／P99 | 主執行緒忙碌 | 30 秒內的模擬 tick | tick 晚到中位數 | 遊戲時間倍率 |
+|---|---|---|---|---|---|---|---|
+| `d3d11` | AMD Radeon(TM) Graphics | 56.7 | 17.1／33.5 ms | 65.4% | 120 | −0.1 ms | 2.0 |
+| `d3d11-warp-webgl`（＝Owner 的 Chrome） | Microsoft Basic Render Driver | 5.5 | 216.7／249.9 ms | 100% | 69 | 157.5 ms | 1.18 |
+
+- 軟體繪製那次的視窗沒有完全全螢幕（繪圖緩衝 1899×939，比 1920×1080 少約 14% 像素）；像素較少仍然只有 5.5 fps，結論不變。
+- 驗證當下 Owner 的 Chrome 仍是 `hardware_acceleration_mode.enabled = false`，GPU 行程仍是 `d3d11-warp-webgl`。
+- 原始資料：`v22_lag_video/ab-d3d11-realdisplay.json`、`ab-d3d11-warp-webgl-realdisplay.json`。
