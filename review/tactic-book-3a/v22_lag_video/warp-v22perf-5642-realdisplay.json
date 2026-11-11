@@ -1,0 +1,150 @@
+{
+ "label": "warp-v22perf-5642",
+ "url": "http://127.0.0.1:5642/ESMO-/",
+ "env": {
+  "dpr": 1.5,
+  "inner": [
+   1280,
+   720
+  ],
+  "canvas": [
+   1920,
+   1080
+  ],
+  "screen": [
+   1280,
+   720
+  ],
+  "cores": 12,
+  "mem": 16,
+  "gl": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+ },
+ "segments": [
+  {
+   "quality": "high",
+   "qualityClicked": "true",
+   "rate": 2,
+   "realSec": 30.5,
+   "canvas": [
+    1920,
+    1080
+   ],
+   "frame": {
+    "frames": 143,
+    "fps": 4.8,
+    "p50": 200.1,
+    "p95": 250,
+    "p99": 283.7,
+    "max": 400.1,
+    "over50": 143,
+    "over100": 143,
+    "over200": 75
+   },
+   "mainBusyPct": 100,
+   "scriptPct": 13,
+   "longTasks": {
+    "n": 143,
+    "totalMs": 28651,
+    "max": 387
+   },
+   "simIntervals": {
+    "250": {
+     "n": 67,
+     "durMean": 4.5,
+     "durP95": 8.9,
+     "durMax": 12.3,
+     "lateP50": 185,
+     "lateP95": 384.2,
+     "lateMax": 447.6
+    }
+   },
+   "gameSec": 33,
+   "gamePerReal": 1.08,
+   "heapMB": 64
+  },
+  {
+   "quality": "low",
+   "qualityClicked": "true",
+   "rate": 2,
+   "realSec": 30.1,
+   "canvas": [
+    1266,
+    626
+   ],
+   "frame": {
+    "frames": 141,
+    "fps": 11.3,
+    "p50": 83.4,
+    "p95": 104.2,
+    "p99": 150.1,
+    "max": 165,
+    "over50": 141,
+    "over100": 13,
+    "over200": 0
+   },
+   "mainBusyPct": 44,
+   "scriptPct": 10.9,
+   "longTasks": {
+    "n": 143,
+    "totalMs": 11589,
+    "max": 105
+   },
+   "simIntervals": {
+    "250": {
+     "n": 120,
+     "durMean": 3.2,
+     "durP95": 7,
+     "durMax": 9.6,
+     "lateP50": 2.8,
+     "lateP95": 37.6,
+     "lateMax": 170.5
+    }
+   },
+   "gameSec": 61,
+   "gamePerReal": 2.03,
+   "heapMB": 73
+  },
+  {
+   "quality": "low",
+   "qualityClicked": "true",
+   "rate": 1,
+   "realSec": 20,
+   "canvas": [
+    1266,
+    626
+   ],
+   "frame": {
+    "frames": 0,
+    "fps": 0,
+    "p50": null,
+    "p95": null,
+    "p99": null,
+    "max": null,
+    "over50": 0,
+    "over100": 0,
+    "over200": 0
+   },
+   "mainBusyPct": 2.3,
+   "scriptPct": 1.9,
+   "longTasks": {
+    "n": 0,
+    "totalMs": 0,
+    "max": 0
+   },
+   "simIntervals": {
+    "500": {
+     "n": 40,
+     "durMean": 3.7,
+     "durP95": 5.8,
+     "durMax": 8.1,
+     "lateP50": 1.6,
+     "lateP95": 9.8,
+     "lateMax": 9.9
+    }
+   },
+   "gameSec": 20,
+   "gamePerReal": 1,
+   "heapMB": 45
+  }
+ ]
+}
