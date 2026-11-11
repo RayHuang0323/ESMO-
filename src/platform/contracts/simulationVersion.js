@@ -44,11 +44,14 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
 //   moba-sim.v22（候選，2026-11-11，Owner 要求；未發布）：v21 的所有行為＋可選層 jungleCamp "v2"（只在 career.v22／balanceTool.v22）——
 //   打野站在營地成員的內側，修掉 Buff 營脫戰反覆回滿血（LogicEngine._campStandTarget；review/tactic-book-3a/v21_OwnerPreview_UI與對戰品質檢查.md §3）。
 //   v20／v21 的規則集沒有這個層 ⇒ 它們的 setup 與比賽結果逐位元不變（golden 逐案驗證）。v21 的指紋與證據原樣保留，不覆寫。
-export const MOBA_SIMULATION_VERSION = "moba-sim.v22";
+//   moba-sim.v23（候選，2026-11-12，Owner 要求；未發布）：v22 的所有行為＋可選層 safeRoute "v1"（只在 career.v23／balanceTool.v23）——
+//   移動目標的直線穿過敵塔射程時先繞行或徑向退出（LogicEngine._safeWaypointV23；review/tactic-book-3a/v23_戰術AI路徑與撤退合理性.md）。
+//   v20／v21／v22 的規則集沒有這個層 ⇒ 它們的 setup 與比賽結果逐位元不變。v21、v22 的指紋原樣保留，不覆寫。
+export const MOBA_SIMULATION_VERSION = "moba-sim.v23";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", "moba-sim.v21", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", "moba-sim.v21", "moba-sim.v22", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -644,6 +647,8 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   "moba-sim.v21": "620196ccea5a8249",
   //  v22 候選（2026-11-11）：jungleCamp 層（Buff 營站位）＋invasion 層（野區入侵 v2）。v22 未凍結：每次語意檔再改就同版號重新登記（上一個值 7c2b2e65452d1664＝只有 jungleCamp 的版本，c5623ddd）。v21 那一行原樣保留（凍結證據的憑據，不得改）。
   "moba-sim.v22": "c2b507e0cc723382",
+  //  v23 候選（2026-11-12）：safeRoute 層（路線安全）。v21、v22 那兩行原樣保留（歷史憑據，不得改）。v23 未凍結：語意檔再改就同版號重新登記。
+  "moba-sim.v23": "a97621e3b51cf125",
 });
 
 export const isKnownSimulationVersion = (v) =>

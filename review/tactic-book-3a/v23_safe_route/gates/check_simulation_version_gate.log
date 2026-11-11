@@ -1,0 +1,89 @@
+
+── simulationVersion Gate ──
+✅ 版本字串存在且格式正確　moba-sim.v23
+✅ 目前版本在已知清單裡
+✅ 每個已知版本都登記了指紋（舊版本的憑據不得被刪）　moba-sim.v1,moba-sim.v2,moba-sim.v3,moba-sim.v4,moba-sim.v5,moba-sim.v6,moba-sim.v7,moba-sim.v8,moba-sim.v9,moba-sim.v10,moba-sim.v11,moba-sim.v12,moba-sim.v13,moba-sim.v14,moba-sim.v15,moba-sim.v16,moba-sim.v17,moba-sim.v18,moba-sim.v19,moba-sim.v20,moba-sim.v21,moba-sim.v22,moba-sim.v23
+✅ 語意檔案清單非空　50 支
+✅ 語意檔案存在：src/battle/moba/skills/heroSkillGameplay.js
+✅ 語意檔案存在：src/battle/moba/skills/heroPassiveGameplay.js
+✅ 語意檔案存在：src/battle/moba/heroPowerCurve.js
+✅ 語意檔案存在：src/battle/moba/heroPowerCurveTable.js
+✅ 語意檔案存在：src/battle/moba/skills/heroSkillLevels.js
+✅ 語意檔案存在：src/battle/moba/skills/heroSkillTargetCapabilities.js
+✅ 語意檔案存在：src/battle/moba/talents/heroBattleTalents.js
+✅ 語意檔案存在：src/LogicEngine.js
+✅ 語意檔案存在：src/battle/moba/mobaPlayerStats.js
+✅ 語意檔案存在：src/platform/contracts/MobaTacticConfig.js
+✅ 語意檔案存在：src/hero/heroProgress.js
+✅ 語意檔案存在：src/platform/challenge/challengeRunner.js
+✅ 語意檔案存在：src/gameData.js
+✅ 語意檔案存在：src/battle/moba/map/riftMapMetrics.js
+✅ 語意檔案存在：src/battle/moba/matchProgression.js
+✅ 語意檔案存在：src/battle/moba/nav/mobaNavigation.js
+✅ 語意檔案存在：src/battle/moba/map/mobaTowerPlacement.js
+✅ 語意檔案存在：src/battle/moba/map/mapTerrainShapes.js
+✅ 語意檔案存在：src/battle/moba/map/mobaMapLayout.js
+✅ 語意檔案存在：src/platform/contracts/objectiveLayout.js
+✅ 語意檔案存在：src/battle/moba/map/mapJungleTopology.js
+✅ 語意檔案存在：src/battle/moba/map/mapPassability.js
+✅ 語意檔案存在：src/platform/challenge/draftPolicy.js
+✅ 語意檔案存在：src/platform/challenge/draftResult.js
+✅ 語意檔案存在：src/battle/moba/mobaDraftAssignment.js
+✅ 語意檔案存在：src/battle/moba/mobaHeroProfile.js
+✅ 語意檔案存在：src/battle/moba/mobaHeroLoadout.js
+✅ 語意檔案存在：src/data/heroCombatArchetypes.js
+✅ 語意檔案存在：src/data/heroClassification.js
+✅ 語意檔案存在：src/platform/contracts/matchLineup.js
+✅ 語意檔案存在：src/platform/contracts/matchRuleset.js
+✅ 語意檔案存在：src/battle/moba/matchAssembler.js
+✅ 語意檔案存在：src/platform/challenge/challengeMatchSetup.js
+✅ 語意檔案存在：src/battle/moba/matchAssemblerDepsCore.js
+✅ 語意檔案存在：src/battle/moba/items/itemsEngineAdapter.js
+✅ 語意檔案存在：src/battle/moba/items/buildStrategyPrep.js
+✅ 語意檔案存在：src/battle/moba/items/buildPolicy.js
+✅ 語意檔案存在：src/battle/moba/mobaRosterAdapter.js
+✅ 語意檔案存在：src/battle/moba/liveMatchSetup.js
+✅ 語意檔案存在：src/battle/moba/matchAssemblerDeps.js
+✅ 語意檔案存在：src/platform/contracts/matchSetup.js
+✅ 語意檔案存在：src/platform/tactics/tacticOverlays.js
+✅ 語意檔案存在：src/platform/mastery/tacticVariant.js
+✅ 語意檔案存在：src/battle/moba/tactics/tacticResolver.js
+✅ 語意檔案存在：src/platform/tactics/tacticChoiceMapping.js
+✅ 語意檔案存在：src/platform/tactics/tacticTemplates.js
+✅ 語意檔案存在：src/platform/tactics/tacticPlan.js
+✅ 語意檔案存在：src/platform/tactics/capabilityRegistry.js
+✅ 語意檔案存在：src/battle/moba/tactics/tacticalDirector.js
+✅ 語意檔案存在：src/platform/tactics/aiCoach.js
+✅ 清單涵蓋 LogicEngine.js
+✅ 清單涵蓋 mobaPlayerStats.js
+✅ 清單涵蓋 MobaTacticConfig.js
+✅ 清單涵蓋 heroProgress.js
+✅ 清單涵蓋 challengeRunner.js
+✅ 語意指紋與目前版本登記的一致　a97621e3b51cf125
+
+── 閘門檢定力自我測試（記憶體內，不動檔案）──
+✅ §A 只加註解 ⇒ 指紋不變（不要求 bump）　無變化
+✅ §A2 註解含 // 與 /* 的字串 ⇒ 仍然不變（沒有自己剝註解）
+✅ §B 只改空白／縮排／換行 ⇒ 指紋不變　無變化
+✅ §C 探針錨點仍存在（自我測試沒有失效）　export const CHALLENGE_DT = 0.5;
+✅ §C 改動模擬步長（真語意變化）⇒ 指紋改變（要求 bump）　a97621e3b51cf125 → 6ab36cf6fbc8712f
+✅ §C2 識別名改動也會被偵測（沒有開 minifyIdentifiers）
+✅ §G0 gameData.js 已納入語意清單
+✅ §G1 gameData 只加註解 ⇒ 指紋不變（不要求 bump）
+✅ §G2 gameData 只改空白／縮排 ⇒ 指紋不變
+✅ §G3 探針錨點仍存在（自我測試沒有失效）　maxX: 220 * RIFT_EXTENT_RATIO
+✅ §G4 gameData 真語意改動（地圖範圍）⇒ 指紋改變（要求 bump）　a97621e3b51cf125 → 835eecbe3276201e
+✅ §G5 riftMapMetrics 也在清單裡（否則改比例值會繞過閘門）
+✅ §G6 改 RIFT_EXTENT_RATIO ⇒ 指紋改變　a97621e3b51cf125 → 67766c6634ee371e
+✅ §D0 推導得出下一個版號　moba-sim.v23 → moba-sim.v24
+✅ §D 開新版號並替新版號登記指紋 ⇒ 恢復通過　舊版本指紋仍保留
+✅ §D2 只 bump 版號但不登記指紋 ⇒ 仍然不通過
+✅ §H 舊版本仍留在已知清單裡（歷史憑據不刪）
+✅ §H 以 moba-sim.v1 記錄的挑戰**不可重播**　這場使用 moba-sim.v1 的模擬語意，目前是 moba-sim.v23，不可重播
+✅ §H 拒絕理由明講是版本不符（不是靜默重算）　這場使用 moba-sim.v1 的模擬語意，目前是 moba-sim.v23，不可重播
+✅ §H 目前版本自己可重播
+✅ ChallengeInstance 會記錄 simulationVersion
+✅ 雙方快照版本不一致時拒絕建立 challenge
+✅ 跨版本一律拒絕重播（不做相容性推測）
+
+simulationVersion Gate：83/83 PASS

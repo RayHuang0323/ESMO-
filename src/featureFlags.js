@@ -115,6 +115,12 @@ export const FEATURE_FLAGS = Object.freeze({
    * 只有 Owner 能決定打開。
    */
   mobaJungleV22: false,
+  /**
+   * moba-sim.v23 候選（Owner 2026-11-12）：路線安全（入侵後撤退繞向敵塔送死）。移動目標的直線穿過敵塔射程時先繞行。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21 與 mobaJungleV22 都開時生效**（career.v23＝career.v22＋safeRoute "v1"）。
+   * 只有 Owner 能決定打開。
+   */
+  mobaSafeRouteV23: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */

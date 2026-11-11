@@ -1,0 +1,59 @@
+✅ R1 career.v20 通過驗證
+✅ R1 challenge.v20 通過驗證
+✅ R1 balanceTool.v20 通過驗證
+✅ R1 career.v21 通過驗證
+✅ R1 balanceTool.v21 通過驗證
+✅ R1 challenge.v21 通過驗證
+✅ R1 career.v22 通過驗證
+✅ R1 balanceTool.v22 通過驗證
+✅ R1 career.v23 通過驗證
+✅ R1 balanceTool.v23 通過驗證
+✅ R2 career 對應 career.v20
+✅ R3 challenge 不開裝備（Competitive／Challenge 邊界）
+✅ R4 challenge.v20 重現現況：無技能、STANDARD、雙方素質
+✅ R7 生產 ruleset items=true 必須列 itemsV1
+✅ R7b R7 的反例只差 itemsV1：補上旗標即通過（R7 失敗原因唯一）
+✅ R12 登錄 ruleset 的 assemblyOrder：career／balanceTool＝live、challenge＝challengeV20；ASSEMBLY_ORDERS 凍結
+✅ R13 validateRuleset 要求 assemblyOrder：缺少或未知值 ⇒ 不通過
+✅ RS-1 career.v20 已啟用層必須列旗標且為真　heroSkillsV1,heroBattleTalentsV1,itemsV1
+✅ RS-1 challenge.v20 已啟用層必須列旗標且為真
+✅ RS-1 career.v21 已啟用層必須列旗標且為真　heroSkillsV1,heroBattleTalentsV1,itemsV1,mobaTacticalDirectorV21
+✅ RS-1 challenge.v21 已啟用層必須列旗標且為真　heroSkillsV1,mobaTacticalDirectorV21
+✅ RS-1 career.v22 已啟用層必須列旗標且為真　heroSkillsV1,heroBattleTalentsV1,itemsV1,mobaTacticalDirectorV21,mobaJungleV22
+✅ RS-1 career.v23 已啟用層必須列旗標且為真　heroSkillsV1,heroBattleTalentsV1,itemsV1,mobaTacticalDirectorV21,mobaJungleV22,mobaSafeRouteV23
+✅ RS-1.resolved career 已啟用層必須列旗標且為真
+✅ R5 旗標關閉 ⇒ 該層關閉（不強制開啟）
+✅ R6 ruleset 物件凍結
+✅ R8 全旗標開 ⇒ career.v20 層狀態
+✅ R9 heroSkillsV1=false ⇒ 技能相關全關
+✅ R10 heroBattleTalentsV1=false ⇒ battleTalents關
+✅ R11 resolveRulesetForMode releaseRequirements 凍結
+✅ R14 resolveRulesetForMode 保留 assemblyOrder（旗標只關布林層）
+✅ R15 基準樣本通過（R15 反例只差 tacticalDirector）
+✅ R15a 缺少 tacticalDirector ⇒ 通過，且視為 static
+✅ R15b tacticalDirector="static" ⇒ 通過
+✅ R15c tacticalDirector="dynamic" ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector="adaptive" ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector="" ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector="Static" ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector=null ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector=undefined ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector=0 ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector=1 ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector=true ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector=false ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector={} ⇒ 拒絕（tacticalDirector）
+✅ R15c tacticalDirector=["static"] ⇒ 拒絕（tacticalDirector）
+✅ R15d 只接受 static 與 core.v1（模式清單凍結）
+✅ R16 career.v20 與變更前逐字相同（未加 tacticalDirector）
+✅ R16 challenge.v20 與變更前逐字相同（未加 tacticalDirector）
+✅ R16 balanceTool.v20 與變更前逐字相同（未加 tacticalDirector）
+✅ R17 resolveRulesetForMode（career 8 種旗標組合＋challenge＋無旗標）輸出與變更前相同
+✅ R18 challenge.v21＝正式架構 §3 補充 1 的表：技能／被動／曲線 ON、天賦 OFF、裝備 OFF、佈局 bySeed、雙方素質、Live 順序、Director core.v1、laneFrame teamRelative；只收 legacy／std
+✅ R19' challenge 模式：旗標關 ⇒ challenge.v20（同一個物件）；Director＋技能＋Challenge 三個旗標都開 ⇒ challenge.v21；第一階段（Challenge 未開）或技能關 ⇒ 仍是 challenge.v20
+✅ R20' 每場挑戰的規則集由記下的版本凍結：v20 ⇒ challenge.v20、v21 ⇒ challenge.v21、其他 ⇒ null；正式旗標與第一階段旗標下新挑戰記 moba-sim.v20，三者都開才記 v21
+✅ R22 career.v21 逐字釘住
+✅ R22 challenge.v21 逐字釘住
+✅ R21 career.v21 的紅方是 AI 教練（redTactic aiCoachV1）；career.v20 仍是 styleTemplate（R16 已逐字釘住）
+
+Match Ruleset 3a：57/57 PASS

@@ -426,10 +426,12 @@ ck("S4 assembleMatch( 在 src/ 的呼叫端恰為 Live hook（useLocalServer）�
   const table = pinnedV1toV20.map((v) => `${v}=${SV.SIMULATION_SEMANTICS_FINGERPRINTS[v]}`).join(";");
   ck("V2 v1–v20 指紋表逐格不變（整表雜湊釘死；只有 moba-sim.v21 候選可以重新登記）", stableHash(table) === V1_TO_V20_TABLE_HASH, `${stableHash(table)} vs ${V1_TO_V20_TABLE_HASH}`);
   //  2026-11-11：目前版本改為 moba-sim.v22（未發布候選，jungleCamp 層）。v21 與 v20 都必須仍在已知清單，而且 v21 的凍結指紋原樣不變（不得覆寫 v21 的證據）。
-  ck("V3 目前版本是 moba-sim.v22（未發布候選）；v22 有指紋；v21 指紋仍是凍結值 620196ccea5a8249；v20、v21 都仍在已知清單",
-    SV.MOBA_SIMULATION_VERSION === "moba-sim.v22" && /^[0-9a-f]{16}$/.test(SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v22"] ?? "")
-    && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v21"] === "620196ccea5a8249" && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v22"] !== SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v21"]
-    && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v20") && SV.KNOWN_SIMULATION_VERSIONS.includes("moba-sim.v21"));
+  //  2026-11-12：目前版本改為 moba-sim.v23（未發布候選，safeRoute 層）。v22 的登記值也釘死（c2b507e0cc723382，不得覆寫 v22 的證據）。
+  ck("V3 目前版本是 moba-sim.v23（未發布候選）；v23 有指紋；v21 指紋仍是凍結值 620196ccea5a8249、v22 仍是 c2b507e0cc723382；v20、v21、v22 都仍在已知清單",
+    SV.MOBA_SIMULATION_VERSION === "moba-sim.v23" && /^[0-9a-f]{16}$/.test(SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v23"] ?? "")
+    && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v21"] === "620196ccea5a8249" && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v22"] === "c2b507e0cc723382"
+    && new Set(["moba-sim.v21", "moba-sim.v22", "moba-sim.v23"].map((v) => SV.SIMULATION_SEMANTICS_FINGERPRINTS[v])).size === 3
+    && ["moba-sim.v20", "moba-sim.v21", "moba-sim.v22"].every((v) => SV.KNOWN_SIMULATION_VERSIONS.includes(v)));
   //  組裝路徑上的模組：改它們可能改變同一份 setup 的結果 ⇒ 必須在語意清單。
   //  規則：組裝入口模組的每一條相對 import ⊆ 清單 ∪ 明列的例外（每個例外附理由，且必須真的被 import——不留死例外）。
   const ENTRY = ["src/battle/moba/matchAssembler.js", "src/battle/moba/matchAssemblerDepsCore.js", "src/battle/moba/matchAssemblerDeps.js", "src/battle/moba/liveMatchSetup.js",

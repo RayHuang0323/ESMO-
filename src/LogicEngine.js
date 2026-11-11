@@ -28,7 +28,7 @@ import {
 //    mobaNavigation（由地圖 wallItems 柵格化的距離場 + 動態結構圓）。
 //    `gameData.WALLS` 只剩 legacy 畫面在用，不再是碰撞來源。
 import {
-  HERO_RADIUS, moveTowards, projectToWalkable, findPath, recenterToCorridor, lineWalkable, structureList,
+  HERO_RADIUS, moveTowards, projectToWalkable, findPath, recenterToCorridor, lineWalkable, structureList, isWalkable,
 } from "./battle/moba/nav/mobaNavigation.js";
 //  H.2：塔位的單一真實來源（由地圖呈現座標推回 lane t），取代 posOnLane(lane, TOWER_T)。
 import {
@@ -96,12 +96,24 @@ const CAMP_STAND_INSET = 2.0;
 //   waitSpawnSec  沒有可打的敵方營地時，只要有一座在這麼多秒內會出生 ⇒ 往入口走、站著等；否則放棄。
 //                 40 秒＝涵蓋開局的走位：野怪第 30 秒才出生，而入侵者第 0 秒就出發（第一版只設 12 秒，開局第一刻就判「沒目標」，15/15 次入侵都立刻結束）。
 const INVASION_V2 = Object.freeze({ windowSec: 90, abortHp: 0.55, abortFoes: 2, nearRadius: 14, waitSpawnSec: 40 });
+//  safeRoute 層 v1（moba-sim.v23 候選；Owner 2026-11-12：入侵後撤退繞向敵塔送死）的常數：
+//   危險半徑＝敵塔射程＋towerSafePad（與 M1.7 塔區退出同一個餘裕）；繞行點放在危險半徑外 detourExtra。
+//   「目的地本身就在危險半徑內」＝有意進塔（圍攻／推線／越塔）⇒ 交給既有的塔區規則，不繞。
+const SAFE_ROUTE_V1 = Object.freeze({ detourExtra: 1.5 });
+/** 線段 a→b 是否穿過圓 c（{x, y, r}）。safeRoute v1 用。 */
+function segHitsDisk(a, b, c) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  const u = L2 > 0 ? Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / L2)) : 0;
+  return Math.hypot(a.x + dx * u - c.x, a.y + dy * u - c.y) < c.r;
+}
 
 export class LogicEngine {
   //  jungleCamp 層（moba-sim.v22 候選）：這個引擎的 configureMatch 認得 `jungleCamp`；組裝器以此做能力檢查。
   static SUPPORTS_JUNGLE_CAMP = true;
   //  invasion 層（moba-sim.v22 候選）：configureMatch 認得 `invasion`；組裝器以此做能力檢查。
   static SUPPORTS_INVASION = true;
+  //  safeRoute 層（moba-sim.v23 候選）：configureMatch 認得 `safeRoute`；組裝器以此做能力檢查。
+  static SUPPORTS_SAFE_ROUTE = true;
   //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
   //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
   static SUPPORTS_LANE_FRAME = true;
@@ -381,9 +393,12 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
+    //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
+    this._safeRouteV23 = safeRoute === "v1";
+    if (this._safeRouteV23) this.routeObs = { blue: { pathPlans: 0, radialExits: 0, blockedFallback: 0 }, red: { pathPlans: 0, radialExits: 0, blockedFallback: 0 } };
     //  invasion 層（moba-sim.v22 候選）：同 jungleCamp——缺少 ⇒ 舊行為逐位元不變。"v2" ⇒ 擲中入侵的打野真的去打敵方野怪（_invadeStepV2），有失敗條件。
     this._invasionV2 = invasion === "v2";
     //  jungleCamp 層（moba-sim.v22 候選）：組裝器只在 ruleset 帶 jungleCamp 層時傳這個鍵；缺少 ⇒ 舊行為逐位元不變。
@@ -1378,6 +1393,67 @@ export class LogicEngine {
     O.contactSecs += I.contact;
     if (I.arrivedAt !== null) O.afterArrivalSecs += this.t - I.arrivedAt;
     return null;
+  }
+
+  /**
+   * safeRoute v1（moba-sim.v23 候選）：把「這一刻的移動目標」換成不穿過敵塔射程的下一個路點。
+   *
+   * 根因（2026-11-12 逐 tick 追蹤，tool seed 17 紅方打野）：導航（_navMove）只避牆、只算距離，不知道塔；
+   * M1.7 的塔區規則只處理「目標點／目前位置在射程內」，而且**撤退中整段跳過**。
+   * ⇒ 入侵結束後回自家野區、或撤退回泉水，直線剛好擦過敵塔 ⇒ 吃塔、在射程邊緣來回、最後撤退穿過射程被塔收頭。
+   *
+   * 規則（決定性、不讀 rng、不改任何傷害／血量／門檻）：
+   *  · 危險圓＝敵塔射程＋towerSafePad（與 M1.7 塔區退出同一個餘裕）。
+   *  · 目的地在某座敵塔的危險圓內 ⇒ 有意進塔（圍攻、推線、越塔）⇒ 那座塔不處理（交給既有塔區規則）。
+   *  · 己方小兵正在扛塔、而我不是塔的威脅目標，且我不在撤退 ⇒ 那座塔不處理（推線的正常路過）。
+   *  · 已在某個危險圓內、而且還朝塔心方向走 ⇒ 先沿「塔 → 我」徑向退出（最短離開射程）。
+   *  · 在外面、直線穿過危險圓 ⇒ 用既有的 A*（findPath）多傳「危險圓不可走」求一條路，跟著走；
+   *    路徑快取到目的地移動 > 6 或 2 秒後重算。求不到路 ⇒ 維持原目標（＝舊行為，記在 routeObs.blockedFallback）。
+   *  · 直線不再穿過危險圓 ⇒ 直接回到原目的地。
+   *  第一版只在塔旁放一個繞行點：中路塔夾在牆與河岸之間，兩側繞行點都在牆裡 ⇒ 退回舊行為（實測 10 場塔殺沒有下降），所以改成尋路。
+   */
+  _safeWaypointV23(p, tgt) {
+    if (!tgt) return tgt;
+    const R = this.rules, pad = R.towerSafePad ?? 2.5, O = this.routeObs?.[p.side];
+    const alive = this._aliveStructs;
+    const disks = [];
+    let inside = null;
+    for (const tw of Object.values(this.towers)) {
+      if (tw.hp <= 0 || tw.side === p.side) continue;
+      const rad = this.towerRange(tw) + pad;
+      if (dist(tgt, tw.pos) <= rad) continue;                       // 目的地就在塔下＝有意進塔
+      if (!p.retreating && this._towerMinionsInRange(tw) > 0 && !((p.towerThreatUntil ?? 0) > this.t)) continue;
+      const dIn = dist(p.pos, tw.pos);
+      if (dIn < rad) {
+        //  已在圓內：直線本來就在離開（與「塔 → 我」同向）⇒ 不處理；否則記下（取最近的一座）。
+        if ((tgt.x - p.pos.x) * (p.pos.x - tw.pos.x) + (tgt.y - p.pos.y) * (p.pos.y - tw.pos.y) < 0 && (!inside || dIn < inside.d)) inside = { tw, rad, d: dIn };
+        continue;                                                   // 起點在圓內的那座不放進尋路的禁區（否則起點不可走）
+      }
+      disks.push({ x: tw.pos.x, y: tw.pos.y, r: rad });
+    }
+    const crosses = (a, b) => disks.some((c) => segHitsDisk(a, b, c));
+    if (inside) {
+      const { tw, rad, d } = inside;
+      const k = (rad + SAFE_ROUTE_V1.detourExtra) / (d || 1);
+      const out = { x: clampMapX(tw.pos.x + (p.pos.x - tw.pos.x) * k), y: clampMapY(tw.pos.y + (p.pos.y - tw.pos.y) * k) };
+      if (isWalkable(out.x, out.y, HERO_RADIUS, alive) && !disks.some((c) => Math.hypot(out.x - c.x, out.y - c.y) < c.r)) { if (O) O.radialExits++; return out; }
+    }
+    if (!disks.length || !crosses(p.pos, tgt)) { p._srPath = null; return tgt; }
+    let S = p._srPath;
+    if (!S || Math.hypot(S.gx - tgt.x, S.gy - tgt.y) > 6 || this.t >= S.until) {
+      const path = findPath(p.pos, tgt, HERO_RADIUS, alive, disks);
+      if (O) O.pathPlans++;
+      if (!path || !path.length) { p._srPath = null; if (O) O.blockedFallback++; return tgt; }
+      S = p._srPath = { gx: tgt.x, gy: tgt.y, path, until: this.t + 2 };
+    }
+    while (S.path.length > 1 && dist(p.pos, S.path[0]) < 1.5) S.path.shift();
+    //  往前看：取最遠一個「直線可走、且不穿過危險圓」的路點（格點折線很碎，逐格走會在轉角磨）。
+    let w = S.path[0];
+    for (let i = Math.min(S.path.length - 1, 12); i > 0; i--) {
+      const q = S.path[i];
+      if (!crosses(p.pos, q) && lineWalkable(p.pos, q, HERO_RADIUS, alive)) { w = q; break; }
+    }
+    return w;
   }
 
   _applyHeroSkillControl(target, kind, duration) {
@@ -7229,6 +7305,9 @@ export class LogicEngine {
           }
         } else p.idleReason = null;
       }
+      //  safeRoute v1（moba-sim.v23 候選）：移動前把目標換成不穿過敵塔射程的路點。層不存在 ⇒ 不呼叫（舊行為逐位元不變）。
+      //  放在嘲諷之前：被嘲諷時的強制目標不受影響。
+      if (this._safeRouteV23) tgt = this._safeWaypointV23(p, tgt);
       tgt = this._heroTauntTarget(p, tgt);
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *

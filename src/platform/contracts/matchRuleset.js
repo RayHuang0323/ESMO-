@@ -58,7 +58,16 @@ export const DEFAULT_INVASION = "legacy";
 /** 讀取 ruleset 的 invasion 層；缺少 ≡ "legacy"。 */
 export const invasionOf = (r) => r?.layers?.invasion ?? DEFAULT_INVASION;
 export const INVASION_RELEASE_FLAG = Object.freeze({ v2: "mobaJungleV22" });
-export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG)])]);
+//  safeRoute 層（moba-sim.v23 候選；Owner 2026-11-12：入侵後撤退繞向敵塔送死）：
+//   · "legacy"＝現狀（缺少這個鍵 ≡ legacy）：移動只避牆、只算距離；撤退中完全不看敵塔。
+//   · "v1"＝移動目標的直線路線穿過敵塔射程時先繞行或徑向退出（LogicEngine._safeWaypointV23）；目的地本身在塔下（有意進塔）不受影響。
+//  正式旗標 mobaSafeRouteV23（預設 OFF；只在 mobaJungleV22 也開時有意義：career.v23＝career.v22＋safeRoute）。v20／v21／v22 規則集永不加這個鍵。
+export const SAFE_ROUTES = Object.freeze(["legacy", "v1"]);
+export const DEFAULT_SAFE_ROUTE = "legacy";
+/** 讀取 ruleset 的 safeRoute 層；缺少 ≡ "legacy"。 */
+export const safeRouteOf = (r) => r?.layers?.safeRoute ?? DEFAULT_SAFE_ROUTE;
+export const SAFE_ROUTE_RELEASE_FLAG = Object.freeze({ v1: "mobaSafeRouteV23" });
+export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG), ...Object.values(SAFE_ROUTE_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 const BASE_RULESETS = Object.freeze({
   "career.v20": R({ rulesetId: "career.v20", kind: "production", simVersion: "moba-sim.v20",
@@ -98,10 +107,21 @@ const v22Of = (base, extraRequirements = []) => R({
   layers: { ...base.layers, jungleCamp: "v2", invasion: "v2" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
-export const MATCH_RULESETS = Object.freeze({
-  ...BASE_RULESETS,
+const V22_RULESETS = Object.freeze({
   "career.v22": v22Of(BASE_RULESETS["career.v21"], [JUNGLE_CAMP_RELEASE_FLAG.v2]),
   "balanceTool.v22": v22Of(BASE_RULESETS["balanceTool.v21"]),
+});
+//  moba-sim.v23 候選（2026-11-12）：從 v22 逐欄衍生，只多 safeRoute "v1"。v22 物件本身一個欄位都沒動。
+const v23Of = (base, extraRequirements = []) => R({
+  ...base, rulesetId: base.rulesetId.replace(".v22", ".v23"), simVersion: "moba-sim.v23",
+  layers: { ...base.layers, safeRoute: "v1" },
+  releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
+});
+export const MATCH_RULESETS = Object.freeze({
+  ...BASE_RULESETS,
+  ...V22_RULESETS,
+  "career.v23": v23Of(V22_RULESETS["career.v22"], [SAFE_ROUTE_RELEASE_FLAG.v1]),
+  "balanceTool.v23": v23Of(V22_RULESETS["balanceTool.v22"]),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
 //  戰術輸入的種類（Phase 3a T9）：每個 ruleset 接受哪幾種 `setup.tactic.<side>.kind`。
@@ -117,6 +137,8 @@ export const TACTIC_KINDS_BY_RULESET = Object.freeze({
   "balanceTool.v21": Object.freeze(["legacy", "std", "binding"]),
   "career.v22": Object.freeze(["legacy", "std", "binding"]),
   "balanceTool.v22": Object.freeze(["legacy", "std", "binding"]),
+  "career.v23": Object.freeze(["legacy", "std", "binding"]),
+  "balanceTool.v23": Object.freeze(["legacy", "std", "binding"]),
   //  T16：Challenge 雙方仍是快照裡選定的靜態模板（legacy）；不收 binding（自訂每時期戰術屬 3c）。
   "challenge.v21": Object.freeze(["legacy", "std"]),
 });
@@ -134,7 +156,9 @@ export function resolveRulesetForMode({ mode, flags }) {
   const director = on("mobaTacticalDirectorV21");
   //  moba-sim.v22 候選：mobaJungleV22 只在 mobaTacticalDirectorV21 也開時才有意義（career.v22 是 career.v21＋jungleCamp）；
   //  兩個旗標預設都關 ⇒ 與之前逐字相同。Challenge 不受影響（challenge.v22 不存在）。
-  const base = MATCH_RULESETS[director ? (on("mobaJungleV22") ? "career.v22" : "career.v21") : "career.v20"];
+  //  moba-sim.v23 候選：mobaSafeRouteV23 只在 mobaJungleV22（＋mobaTacticalDirectorV21）也開時才有意義（career.v23＝career.v22＋safeRoute）。
+  const jungle = director && on("mobaJungleV22");
+  const base = MATCH_RULESETS[director ? (jungle ? (on("mobaSafeRouteV23") ? "career.v23" : "career.v22") : "career.v21") : "career.v20"];
   const skills = on("heroSkillsV1");
   const newLayers = { ...base.layers, heroSkills: skills, heroPassives: skills, heroPowerCurve: skills,
     battleTalents: skills && on("heroBattleTalentsV1"), items: on("itemsV1") };
@@ -147,6 +171,7 @@ export function resolveRulesetForMode({ mode, flags }) {
   if (director) newReqs.push(TACTICAL_DIRECTOR_RELEASE_FLAG[newLayers.tacticalDirector]);
   if (director && newLayers.jungleCamp) newReqs.push(JUNGLE_CAMP_RELEASE_FLAG[newLayers.jungleCamp]);
   if (director && newLayers.invasion && !newReqs.includes(INVASION_RELEASE_FLAG[newLayers.invasion])) newReqs.push(INVASION_RELEASE_FLAG[newLayers.invasion]);
+  if (director && newLayers.safeRoute) newReqs.push(SAFE_ROUTE_RELEASE_FLAG[newLayers.safeRoute]);
 
   return R({ ...base, layers: newLayers, releaseRequirements: newReqs });
 }
@@ -173,6 +198,7 @@ export function validateRuleset(r) {
   //  jungleCamp：可選層——有這個鍵就必須是 JUNGLE_CAMPS 之一（缺少 ≡ "legacy"）。
   if (r?.layers && "jungleCamp" in r.layers && !JUNGLE_CAMPS.includes(r.layers.jungleCamp)) errors.push("jungleCamp");
   if (r?.layers && "invasion" in r.layers && !INVASIONS.includes(r.layers.invasion)) errors.push("invasion");
+  if (r?.layers && "safeRoute" in r.layers && !SAFE_ROUTES.includes(r.layers.safeRoute)) errors.push("safeRoute");
   //  Phase 3a-B 第一階段：可選層 templateBalance——有這個鍵就必須是已登錄的修正表 id（缺少 ≡ 出貨版模板）。
   if (r?.layers && "templateBalance" in r.layers && !TEMPLATE_BALANCES.includes(r.layers.templateBalance)) errors.push("templateBalance");
 
@@ -199,6 +225,11 @@ export function validateRuleset(r) {
     if (iv !== DEFAULT_INVASION && INVASIONS.includes(iv)) {
       const flag = INVASION_RELEASE_FLAG[iv];
       if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`invasion ${iv} requires ${flag ?? "a release flag"}`);
+    }
+    const sr = safeRouteOf(r);
+    if (sr !== DEFAULT_SAFE_ROUTE && SAFE_ROUTES.includes(sr)) {
+      const flag = SAFE_ROUTE_RELEASE_FLAG[sr];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`safeRoute ${sr} requires ${flag ?? "a release flag"}`);
     }
     for (const f of Array.isArray(r.releaseRequirements) ? r.releaseRequirements : []) {
       if (!RELEASE_FLAGS.includes(f)) errors.push(`releaseRequirements: ${String(f)} is not a release flag`);
