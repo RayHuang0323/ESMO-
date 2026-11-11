@@ -1,0 +1,7 @@
+❌ ⑥ 防禦塔應為 18 座（實得 22）
+❌ ⑧ GameView 應同時掛得起 legacy 與 runtime-v2
+❌ ⑧ GameView 應依 presentation mode 切換畫面
+❌ ⑫ 畫面上要有切回舊版的入口
+❌ 座標契約：地圖中心應映射到世界原點
+
+H.1 Runtime Map 接線檢查：61 通過、5 失敗

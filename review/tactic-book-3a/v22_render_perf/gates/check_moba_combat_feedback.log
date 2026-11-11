@@ -1,0 +1,66 @@
+── 跑兩場正式設定對局（Hero Skills＋Talent＋Items，DT 0.5）──
+   A：1865 tick、勝方 red；B：1730 tick、勝方 red
+
+── F 浮動數字 ──
+✅ F1 英雄傷害數字　1522
+✅ F2 野怪／龍／巴龍傷害數字　1288
+✅ F3 其中有龍或巴龍　160
+✅ F4 塔傷害數字　473
+✅ F5 補血數字　1177
+✅ F6 護盾數字　226
+✅ F7 每個英雄／塔數字都等於引擎**內部**真實 hp（＋護盾）差（誤差 ≤ 2% 或 2 點，來自 mhp 取整）　23823 筆原始事件
+✅ F8 推導不改 snapshot（純讀）
+✅ F9 小於門檻的碎片不單獨跳字　0
+✅ F10 合併：顯示數 ≤ 原始事件 60%（不每 tick 洗版）　4686/22365
+✅ F11 任一 sim 秒同時產生的數字 ≤ 物件池上限　peak 28/28
+✅ F12 重要傷害有強調（major）且只出現在傷害　1308
+✅ F13 合併後傷害總量守恆（≥ 原始 90%、不超過原始 +0.5%）　295068/295526
+✅ F14 小兵不出數字（snapshot 沒有絕對最大血量 ⇒ 不猜）
+✅ F15 護盾自然到期不跳傷害；被打破才算傷害
+
+── G +Gold ──
+✅ G1 場次 A：每位英雄顯示的 +Gold 總和 ＝ ⌊帳本非被動收入⌋（逐英雄精確相等）　總和 22321／帳本 22324.951（比例 0.99982）
+✅ G2 場次 A：每位英雄顯示金額不超過其總收入　[]
+✅ G1 場次 B：每位英雄顯示的 +Gold 總和 ＝ ⌊帳本非被動收入⌋（逐英雄精確相等）　總和 20410／帳本 20414.219（比例 0.99979）
+✅ G2 場次 B：每位英雄顯示金額不超過其總收入　[]
+✅ G5 帳本路徑：只有被動／tithe 增加 ⇒ 不跳；擊殺 300 ⇒ 恰好 300（同格被動不混進來）
+✅ G6 零頭不丟：30 筆 6.667 金 ⇒ 顯示總和 ＝ ⌊200.01⌋ ＝ 200　200
+✅ G3 沒有帳本 ⇒ 不出 +Gold（不從累計收入推算）
+✅ G4 UI 沒有寫死任何獎勵數字，也不自行計算被動收入（不 import INCOME_V1、不讀 passivePerSec）
+✅ G7 每一個顯示的 +Gold 都來自帳本（source: ledger）　1081 筆
+
+── L 帳本唯讀例外（Owner 2026-10-06：凍結模組的單一唯讀 contract exception）──
+✅ L1 目前程式碼：M1／M2 裝備模組與凍結基準逐字相同，唯一差異是唯讀例外
+✅ L2 突變 8 種（收入／被動／購買／屬性／效果、例外改成計算、搬位置、重複）全部讓 freeze 紅
+✅ L3 拿掉例外 ＝ 回到基準（仍綠、exceptionPresent=false）⇒ 例外是唯一差異
+✅ L4a 比較方法自檢：同一串 snapshot 擷取兩次，排除牆鐘時刻後逐字相同
+✅ L4 Replay：有／無 earnedMilliBySource 的同一串 snapshot ⇒ 擷取結果逐字相同　644088 bytes
+✅ L5a 比較方法自檢：同一份 snapshot 轉兩次，排除 id 後逐字相同
+✅ L5 BattleResult：有／無這個欄位 ⇒ 結果逐字相同　4537 bytes
+✅ L6 同 seed 重跑：snapshot 串流逐字相同（決定性；這個欄位不回頭影響模擬）　450 格
+
+── R 回城 ──
+✅ R1 有實際發生回城引導　1858 格
+✅ R2 每一格：呈現的「引導中」⇔ 引擎內部 recallT > 0（逐英雄逐格）　[]
+✅ R3 進度單調不倒退（同一次引導內）　[]
+✅ R4 有完成事件；完成那一格英雄已被傳離起點、起點＝上一格位置、rc 歸零　done 118，不符 0
+✅ R5 取消事件那一格 rc 已歸零（特效與引擎同格結束）　cancel 63
+✅ R6 回城特效沒有自己的計時器（不用 setTimeout／setInterval，總長讀 rules.recallChannelT）
+✅ R7 進度 = 1 − rc／recallChannelT
+✅ R8 迷霧中的敵方英雄不畫回城（fogHidden 檢查）
+
+── O 頭頂 UI ──
+✅ O1 名牌＝等級徽章＋英雄短名（來自英雄資料庫 heroById.zh），不再用選手名
+✅ O2 名牌預設開，且不因低畫質（手機）關掉
+✅ O3 血條上仍有 Shield 段（讀 statusEffects.shield.amount）
+✅ O4 名牌沒有「藍方／紅方」文字（隊伍識別靠徽章色＋血條色＋側標）
+✅ O5 短名上限規則：中文 4、拉丁 8
+
+── X 邊界 ──
+✅ X1 兩個新元件都把 source 傳進去（Replay 時 source 非 null ⇒ 不掛）
+✅ X2 兩個新元件在 source 非 null 時 return null
+❌ X3 沒動任何語意指紋檔（LogicEngine／規則／items runtime…）⇒ 不需升 sim version　src/LogicEngine.js,src/battle/moba/matchAssembler.js,src/platform/contracts/matchRuleset.js
+❌ X4 沒碰 CS／FPS、Online、地圖 topology、戰術 AI　"review/tactic-book-3a/v21_OwnerPreview_UI\350\210\207\345\260\215\346\210\260\345\223\201\350\263\252\346\252\242\346\237\245.md","review/tactic-book-3a/v21_Sprint0_Owner\350\243\201\345\256\232\350\210\207\345\276\214\347\272\214.md","review/tactic-book-3a/v21_Sprint0_\345\217\257\350\241\214\346\200\247\350\210\207\345\210\244\346\272\226\350\215\211\346\241\210.md",review/tactic-book-3a/v21_owner_preview/diag/buff_trace_seed11_v20.txt,review/tactic-book-3a/v21_owner_preview/diag/buff_trace_seed11_v21.txt,review/tactic-book-3a/v21_owner_preview/diag/invade.json,review/tactic-book-3a/v21_owner_preview/diag/leash.json,review/tactic-book-3a/v21_owner_preview/gates/browser_check_flags_off_release_3aB.log,review/tactic-book-3a/v21_owner_preview/gates/browser_check_stage1_flows_3aB.log,review/tactic-book-3a/v21_owner_preview/gates/browser_check_tactic_book_3a.log,review/tactic-book-3a/v21_owner_preview/gates/browser_v21.log,review/tactic-book-3a/v21_owner_preview/gates/check_tactic_book_view_3a.log,review/tactic-book-3a/v21_owner_preview/perf/sim_tick.json,review/tactic-book-3a/v21_owner_preview/perf/v20-build-perf.json,review/tactic-book-3a/v21_owner_preview/perf/v21-build-perf.json,review/tactic-book-3a/v21_owner_preview/perf/v21-dev-perf.json,review/tactic-book-3a/v21_owner_preview/ui/after-desktop1366-1-book-default.png,review/tactic-book-3a/v21_owner_preview/ui/after-desktop1366-2-book-set.png,review/tactic-book-3a/v21_owner_preview/ui/after-desktop1366-3-intel.png,review/tactic-book-3a/v21_owner_preview/ui/after-desktop1366-4-confirm.png,review/tactic-book-3a/v21_owner_preview/ui/after-layout.json,review/tactic-book-3a/v21_owner_preview/ui/after-mobile390-1-book-default.png,review/tactic-book-3a/v21_owner_preview/ui/after-mobile390-2-book-set.png,review/tactic-book-3a/v21_owner_preview/ui/after-mobile390-3-intel.png,review/tactic-book-3a/v21_owner_preview/ui/after-mobile390-4-confirm.png,review/tactic-book-3a/v21_owner_preview/ui/before-desktop1366-1-book-default.png,review/tactic-book-3a/v21_owner_preview/ui/before-desktop1366-2-book-set.png,review/tactic-book-3a/v21_owner_preview/ui/before-desktop1366-3-intel.png,review/tactic-book-3a/v21_owner_preview/ui/before-desktop1366-4-confirm.png,review/tactic-book-3a/v21_owner_preview/ui/before-layout.json,review/tactic-book-3a/v21_owner_preview/ui/before-mobile390-1-book-default.png,review/tactic-book-3a/v21_owner_preview/ui/before-mobile390-2-book-set.png,review/tactic-book-3a/v21_owner_preview/ui/before-mobile390-3-intel.png,review/tactic-book-3a/v21_owner_preview/ui/before-mobile390-4-confirm.png,review/tactic-book-3a/v21_owner_preview/v22/diag/camp_leash_v2_toggle.json,review/tactic-book-3a/v21_owner_preview/v22/diag/invade_v22.json,review/tactic-book-3a/v21_owner_preview/v22/gates/browser_check_flags_off_release_3aB.log,review/tactic-book-3a/v21_owner_preview/v22/gates/browser_check_tactic_book_v21.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_jungle_camp_v22.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_live_setup_3a.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_match_assembler_3a.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_match_golden_v21a.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_match_ruleset_3a.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_match_setup_3a.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_match_setup_contract_3a.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_stage1_split_3aB.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_tactical_directive_3c.log,review/tactic-book-3a/v21_owner_preview/v22/gates/check_tactical_director_3c.log,review/tactic-book-3a/v21_owner_preview/v22/gates/summary.txt,review/tactic-book-3a/v21_owner_preview/v22/perf/v20-build-glframes.json,review/tactic-book-3a/v21_owner_preview/v22/perf/v22-build-final-glframes.json,review/tactic-book-3a/v21_owner_preview/v22/perf/v22-build-glframes-raw4x.json,review/tactic-book-3a/v21_owner_preview/v22/perf/v22-build-glframes.json,review/tactic-book-3a/v21_owner_preview/v22/perf/v22-build-load8-glframes.json,review/tactic-book-3a/v21_sprint0/gate_tactic_book_v21.log,review/tactic-book-3a/v21_sprint0/power.mjs,review/tactic-book-3a/v21_sprint0/power.out.txt,review/tactic-book-3a/v21_sprint0/rho.mjs,review/tactic-book-3a/v21_sprint0/rho.out.json,review/tactic-book-3a/v21_sprint0/simver_gate.log,"review/tactic-book-3a/v21_\347\231\274\345\270\203\350\247\243\351\216\226\350\246\217\345\212\203.md","review/tactic-book-3a/v22_\345\200\231\351\201\270_Buff\345\205\245\344\276\265\350\210\207Lag\350\252\277\346\237\245.md",src/LogicEngine.js,src/battle/moba/matchAssembler.js,src/battle/moba/render/MobaRuntimeStructures.jsx,src/battle/moba/render/MobaRuntimeView3D.jsx,src/featureFlags.js,src/platform/contracts/matchRuleset.js,src/platform/contracts/simulationVersion.js,src/screens/moba/TacticScreen.jsx,src/screens/moba/tacticBook/ChoicePanel.jsx,src/screens/moba/tacticBook/ConfirmPanel.jsx,src/screens/moba/tacticBook/TemplateStrip.jsx,src/screens/moba/tacticBook/tacticBook.css,src/screens/moba/tacticBook/tacticBookOptions.js,tools/check_jungle_camp_v22.mjs,tools/check_match_setup_3a.mjs,tools/check_tactical_director_3c.mjs,tools/owner_preview/diag_camp_leash_v21.mjs,tools/owner_preview/diag_invade_v21.mjs,tools/owner_preview/diag_invade_v22.mjs,tools/owner_preview/perf_battle_v21.mjs,tools/owner_preview/perf_gl_frames_v21.mjs,tools/owner_preview/perf_sim_tick_v21.mjs,tools/owner_preview/shot_tactic_book_v21.mjs,tools/owner_preview/trace_camp_v21.mjs,tools/owner_preview/vite.v21-preview.config.mjs,src/battle/moba/render/MobaRenderPrewarm.jsx,tools/check_moba_render_perf_p0.mjs,tools/owner_preview/lib_battle_flow.mjs,tools/owner_preview/perf_cpu_profile.mjs,tools/owner_preview/perf_draw_sources.mjs,tools/owner_preview/shot_battle_ab.mjs
+✅ X5 沒動 Replay 契約與擷取（mobaReplay／replayBuffer／replayPresentationSource）
+
+MOBA Combat Feedback：48/50 PASS

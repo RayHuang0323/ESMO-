@@ -1,0 +1,12 @@
+✅ 戰鬥開始並推進到 ts ≥ 150
+✅ P1 技能格 P＝「生效中」或「資訊類」（v17 被動已開）、QWER 都有等級角標　[{"k":"P","st":"passive live","lv":false,"txt":"生效中"},{"k":"Q","st":"ready","lv":true,"txt":"可用"},{"k":"W","st":"ready","lv":true,"txt":"可用"},{"k":"E","st":"locked","lv":true,"txt":"Lv3"},{"k":"R","st":"locked","lv":true,"txt":"Lv6"}]
+✅ H1 底欄血條有刻度且帶絕對最大血量（snapshot mhp）　{"cls":"observer-health ticked","max":"1067","txt":"生命 100%"}
+✅ H2 生命文字仍在血條上　生命 100%
+✅ L1 觀戰英雄升級時出現「升級」角標
+✅ S1 英雄狀態列出現（含剩餘秒數）　["stun:✶ 1s"]
+✅ I1 手機英雄資訊 P/Q/W/E/R 圖示 5 張全部載入　{"n":10,"loaded":10,"fallback":0}
+✅ C1 英雄生涯面板有 5 張同源技能圖且全部載入（原本只有字母）　{"opened":true,"n":5,"loaded":5,"fallback":0}
+✅ D1 桌機底欄血條同樣有刻度　{"cls":"observer-health ticked","max":"1124"}
+✅ E1 page error 0
+
+MOBA Gameplay／Presentation Audit：10/10　RESULT=PASS　耗時 134667ms

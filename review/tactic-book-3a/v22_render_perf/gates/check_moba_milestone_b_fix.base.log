@@ -1,0 +1,440 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /borderLeft/. Input:
+
+'// ============================================================================\n' +
+  '//  battle/moba/render/MobaRuntimeHeroes.jsx — 正式 Runtime 的英雄呈現（H.1）\n' +
+  '//\n' +
+  '//  【職責】把 Runtime Adapter 輸出的 10 名英雄畫成 3D。**只畫**，不模擬：\n' +
+  '//   位置、血量、存活、等級全部來自 LogicEngine snapshot（經 mobaRuntimeMapAdapter）。\n' +
+  '//   本檔不 import LogicEngine、不寫任何 store、不決定英雄要往哪走。\n' +
+  '//\n' +
+  '//  【H.3 Prototype Hero】刻意做「看得懂、跑得動」的低成本角色，不是最終模型：\n' +
+  '//    · 共用膠囊本體 + 四種 role 原型配件（守衛/游擊/術士/射手）\n' +
+  '//    · 陣營色（藍 / 紅）＋ 腳底選取環\n' +
+  '//    · 頭頂血條（依 hpRatio 縮放）＋ 等級數字 ＋ 簡短名稱\n' +
+  '//    · 死亡：本體降下、變半透明、血條隱藏\n' +
+  '//    · 朝向：由 Adapter 依上一幀位移推出（snapshot 沒有 facing 欄位）\n' +
+  '//  正式角色模型留給後續 Hero Asset Pipeline 逐步替換 body geometry。\n' +
+  '//\n' +
+  '//  【效能】\n' +
+  '//    · geometry / material 只建立一次（useMemo），10 名英雄共用\n' +
+  '//    · 每幀更新走 ref.position / ref.scale，不觸發 React re-render\n' +
+  '//    · 名稱與等級使用 WebGL Plane，與血條共用 renderOrder；不會再由 DOM 疊在血條上\n' +
+  '// ============================================================================\n' +
+  'import React, { useEffect, useMemo, useRef, useLayoutEffect, useState } from "react";\n' +
+  'import { useFrame } from "@react-three/fiber";\n' +
+  'import * as THREE from "three";\n' +
+  'import { makeAuraMaterial, makeMoteMaterial } from "./auraSprite.js";\n' +
+  'import { WORLD_SCALE } from "../map/coordinateMapping.js";\n' +
+  'import { LAYER_Y } from "../map/mapVisualStyle.js";\n' +
+  'import { countMount, countUnmount } from "./runtimeDiagnostics.js";\n' +
+  'import { archetypeData, HERO_VISUALS } from "../presentation/heroArchetypes.js";\n' +
+  'import ChichuanHeroProxy from "./ChichuanHeroProxy.jsx";\n' +
+  'import DadiHeroProxy from "./DadiHeroProxy.jsx";\n' +
+  'import { heroProxyEnabled, heroProxyVariant } from "../../../featureFlags.js";\n' +
+  'import { heroById } from "../../../data/heroDatabase.js";\n' +
+  'import { pixelsPerWorld, isCompactViewport, overheadScaleOf, nameplateScaleOf } from "./overheadScale.js";\n' +
+  '\n' +
+  'const S = WORLD_SCALE;\n' +
+  'const TEAM_COLOR = { blue: 0x4d95f0, red: 0xf0574d };\n' +
+  'const TEAM_DARK = { blue: 0x1d3f6b, red: 0x6b2420 };\n' +
+  '\n' +
+  '/**\n' +
+  ' * 【H.1-close 修正 ⑦】陣亡英雄的呈現。\n' +
+  ' *\n' +
+  ' * 前一版的死亡狀態是「本體沉下去 + 28% 透明 + 藏血條藏環 + 藏名牌」。\n' +
+  ' * 資料上是對的（`deadHeroCount` 有值），但**畫面上等於看不見**：在全場視角\n' +
+  ' * 屍體只是一團幾乎透明的殘影，和地形混在一起，Codex 視覺驗收因此把\n' +
+  ' * 「03 中期截圖看不出陣亡英雄」列為 blocking。\n' +
+  ' *\n' +
+  ' * 這一版改成「看得出來是屍體，但明顯不是活人」：\n' +
+  ' *   · **倒地**：本體從站姿旋轉成橫躺（剪影和站著的英雄一眼就分得開）\n' +
+  ' *   · **降飽和**：隊色往灰色拉 60%，仍看得出藍／紅，但明顯褪色\n' +
+  ' *   · **適度透明**：0.55（不是 0.28）——夠淡但不會消失\n' +
+  ' *   · 血條、選取環、肩塊照樣隱藏\n' +
+  ' *   · **沒有地面陣亡標記**（Owner Review 2026-09-25）：死亡後地面上不留任何常駐符號。\n' +
+  ' *     陣亡由倒地本體、擊殺事件、HUD／Timeline、復活倒數表達；不要再換成另一種地面符號。\n' +
+  ' *   · 名牌不再全隱藏，改為半透明＋去飽和 ⇒ 全圖視角仍認得出是誰陣亡\n' +
+  ' */\n' +
+  'const TEAM_DEAD = { blue: 0x718fb3, red: 0xaf726e };   // 隊色混 60% 灰\n' +
+  '\n' +
+  'const DEAD = Object.freeze({\n' +
+  '  bodyOpacity: 0.55,\n' +
+  '  labelOpacity: 0.5,\n' +
+  '});\n' +
+  '\n' +
+  '/**\n' +
+  ' * 【H.1-close】英雄原本站在 world y = 0，但**地面不在 y = 0**：\n' +
+  ' * 路面在 HEIGHT.lane_surface（0.64）、路心亮帶 0.70、塔基 0.94。\n' +
+  ' * 結果是每個英雄的腳都陷進路面裡，腳底選取環（原本只抬 0.12×1.7 = 0.20）\n' +
+  ' * 更是整圈埋在地形底下、完全看不到。\n' +
+  ' *\n' +
+  ' * 這裡把英雄整體抬到走道表面，選取環再往上一點點壓過塔基\n' +
+  ' * ⇒ 純 transform 修正，不動地形資料、不動任何模擬數值。\n' +
+  ' *\n' +
+  ' * ⚠ 地面層高度在 **LAYER_Y**（0..1 的地面鋪層排序），不是 HEIGHT（量體厚度）。\n' +
+  ' *   兩個表都有 lane_surface 這個 key，取錯會拿到 undefined ⇒ position.y = NaN\n' +
+  ' *   ⇒ 整個 matrixWorld 變 NaN ⇒ **10 名英雄全部從畫面上消失**（H.1-close 實測踩過）。\n' +
+  ' *   下面的 GROUND_Y 之所以有 Number.isFinite 保險，就是為了讓這種取值錯誤\n' +
+  ' *   退化成「英雄站在 y=0」而不是「英雄全部不見」。\n' +
+  ' *\n' +
+  ' * ⚠ 已知限制（列入 H.1 收尾報告，不在本輪修）：高地平台厚度是\n' +
+  ' *   HEIGHT.base_platform = 3.6，站在自家基地平台上的英雄仍會陷入約 3 個世界單位。\n' +
+  ' *   要正確處理需要「地形高度查詢」，那會動到地圖資料層 ⇒ 留給 H.2。\n' +
+  ' */\n' +
+  'const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;\n' +
+  'const RING_LIFT = 0.35;        // 地面元素（接地陰影）相對英雄根節點的高度（壓過 tower_pad 0.94）\n' +
+  '\n' +
+  '/** 英雄本體尺寸（模擬單位 × WORLD_SCALE）。 */\n' +
+  'const HERO = {\n' +
+  '  radius: 1.15 * S,\n' +
+  '  height: 2.6 * S,\n' +
+  '  ringR: 1.9 * S,\n' +
+  '  barW: 3.4 * S,\n' +
+  '  barH: 0.42 * S,\n' +
+  '  barY: 5.0 * S,\n' +
+  '};\n' +
+  'const NAMEPLATE = Object.freeze({\n' +
+  '  width: HERO.barW * 0.84,\n' +
+  '  height: 0.68 * S,\n' +
+  '  compactWidth: HERO.barW * 0.64,\n' +
+  '  compactHeight: 0.58 * S,\n' +
+  '  y: HERO.barY + 1.18 * S,\n' +
+  '});\n' +
+  '\n' +
+  '/**\n' +
+  ' * @param heroes  mobaRuntimeMapAdapter.adaptHeroes() 的輸出（長度應為 10）\n' +
+  ' * @param showLabels 是否顯示名稱／等級（手機低階可關）\n' +
+  ' */\n' +
+  'export default function MobaRuntimeHeroes({\n' +
+  '  heroes = [],\n' +
+  '  frameRef = null,\n' +
+  '  showLabels = true,\n' +
+  '  compactLabels = false,\n' +
+  '}) {\n' +
+  '  const groupRefs = useRef(new Map());\n' +
+  '\n' +
+  '  //  共用資源：本體 / 肩塊 / 選取環 / 血條（10 名英雄共用同一組 geometry）\n' +
+  '  const geo = useMemo(() => ({\n' +
+  '    body: new THREE.CapsuleGeometry(HERO.radius, HERO.height, 4, 10),\n' +
+  '    shoulder: new THREE.BoxGeometry(HERO.radius * 2.1, HERO.radius * 0.7, HERO.radius * 1.1),\n' +
+  '    //  Battle Condition UX：腳下的**隊伍選取環**與四個 **Buff 環**已移除。\n' +
+  '    //  它們是「介面圖示畫在地上」，在 MOBA 總覽鏡頭下讓每個角色都像站在儀表板上。\n' +
+  '    //  取代品都掛在角色本體：\n' +
+  '    //    · contactShadow — 中性的接地陰影（不帶隊色，純粹讓角色不浮在地面上）\n' +
+  '    //    · aura          — 角色身上的柔光（隊色；有 Buff 時換成 Buff 色）\n' +
+  '    //    · mote          — 兩顆繞著角色轉的光點（只有帶 Buff 時出現）\n' +
+  '    //  ⚠ 技能範圍／鎖定／危險提示這類**有 gameplay 意義**的地面指示仍由\n' +
+  '    //    HeroVfxRuntime 負責（短暫出現、跟著技能走），不在這裡。\n' +
+  '    contactShadow: new THREE.CircleGeometry(HERO.ringR * 0.92, 18),\n' +
+  '    mote: new THREE.OctahedronGeometry(HERO.radius * 0.22, 0),\n' +
+  '    bar: new THREE.PlaneGeometry(1, 1),\n' +
+  '    shield: new THREE.CylinderGeometry(HERO.radius * 0.78, HERO.radius * 0.78, HERO.radius * 0.3, 8),\n' +
+  '    blade: new THREE.BoxGeometry(HERO.radius * 0.22, HERO.height * 0.92, HERO.radius * 0.18),\n' +
+  '    staff: new THREE.CylinderGeometry(HERO.radius * 0.12, HERO.radius * 0.12, HERO.height * 1.25, 6),\n' +
+  '    focus: new THREE.OctahedronGeometry(HERO.radius * 0.48, 0),\n' +
+  '    launcher: new THREE.BoxGeometry(HERO.radius * 0.42, HERO.radius * 0.42, HERO.height * 0.95),\n' +
+  '    crest: new THREE.ConeGeometry(HERO.radius * 0.42, HERO.radius * 0.72, 5),\n' +
+  '    badge: new THREE.OctahedronGeometry(HERO.radius * 0.34, 0),\n' +
+  '    helmBox: new THREE.BoxGeometry(HERO.radius * 1.05, HERO.radius * 0.88, HERO.radius * 1.0),\n' +
+  '    helmRound: new THREE.DodecahedronGeometry(HERO.radius * 0.58, 0),\n' +
+  '    gauntlet: new THREE.DodecahedronGeometry(HERO.radius * 0.6, 0),\n' +
+  '    chest: new THREE.BoxGeometry(HERO.radius * 1.75, HERO.radius * 0.82, HERO.radius * 1.2),\n' +
+  '    wing: new THREE.ConeGeometry(HERO.radius * 0.62, HERO.height * 1.1, 3),\n' +
+  '    hammer: new THREE.BoxGeometry(HERO.radius * 1.3, HERO.radius * 0.72, HERO.radius * 0.72),\n' +
+  '    teamBand: new THREE.TorusGeometry(HERO.radius * 0.92, HERO.radius * 0.16, 5, 14),\n' +
+  '    teamMarker: new THREE.RingGeometry(HERO.radius * 0.34, HERO.radius * 0.62, 4),\n' +
+  '    horn: new THREE.ConeGeometry(HERO.radius * 0.25, HERO.radius * 0.82, 5),\n' +
+  '    hood: new THREE.ConeGeometry(HERO.radius * 0.78, HERO.radius * 1.08, 7, 1, true),\n' +
+  '    halo: new THREE.TorusGeometry(HERO.radius * 0.72, HERO.radius * 0.1, 5, 16),\n' +
+  '    //  Gameplay/Presentation audit：升級回饋（腳下金環＋上升光柱）。\n' +
+  '    levelRing: new THREE.RingGeometry(HERO.ringR * 0.72, HERO.ringR * 0.98, 28),\n' +
+  '    levelBeam: new THREE.CylinderGeometry(HERO.radius * 0.95, HERO.radius * 1.25, HERO.height * 2.4, 12, 1, true),\n' +
+  '  }), []);\n' +
+  '\n' +
+  '  const mats = useMemo(() => {\n' +
+  '    const mk = (color, opts = {}) => new THREE.MeshStandardMaterial({\n' +
+  '      color, roughness: 0.55, metalness: 0.05, flatShading: true, ...opts,\n' +
+  '    });\n' +
+  '    const accentByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [\n' +
+  '      id, mk(spec.accent, { emissive: spec.accent, emissiveIntensity: 0.36, metalness: 0.2 }),\n' +
+  '    ]));\n' +
+  '    const bodyByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [\n' +
+  '      id, mk(spec.primary ?? spec.accent, {\n' +
+  '        emissive: spec.primary ?? spec.accent, emissiveIntensity: 0.14, metalness: 0.12,\n' +
+  '      }),\n' +
+  '    ]));\n' +
+  '    const secondaryByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [\n' +
+  '      id, mk(spec.secondary ?? spec.trim, {\n' +
+  '        emissive: spec.secondary ?? spec.trim, emissiveIntensity: 0.08, metalness: 0.16,\n' +
+  '      }),\n' +
+  '    ]));\n' +
+  '    return {\n' +
+  '      blue: mk(TEAM_COLOR.blue), red: mk(TEAM_COLOR.red),\n' +
+  '      blueDark: mk(TEAM_DARK.blue), redDark: mk(TEAM_DARK.red),\n' +
+  '      accent: mk(0xe8d7a4, { emissive: 0x5b4b25, emissiveIntensity: 0.35, metalness: 0.18 }),\n' +
+  '      accentByHero, bodyByHero, secondaryByHero,\n' +
+  '      //  陣亡本體：**去飽和的隊色** + 0.55 透明（0.28 太淡，全場視角等於消失）\n' +
+  '      blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),\n' +
+  '      //  隱身（snapshot statusEffects `stealth`）：隊色半透明＋自發光閃動，一眼看得出「還在、但隱形」。\n' +
+  '      blueStealth: mk(TEAM_COLOR.blue, { transparent: true, opacity: 0.3, depthWrite: false, emissive: TEAM_COLOR.blue, emissiveIntensity: 0.7 }),\n' +
+  '      redStealth: mk(TEAM_COLOR.red, { transparent: true, opacity: 0.3, depthWrite: false, emissive: TEAM_COLOR.red, emissiveIntensity: 0.7 }),\n' +
+  '      redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),\n' +
+  '      //  ── H.2-flicker：貼在地面上的環與標記一律加 polygonOffset ────────────────\n' +
+  '      //  這些東西和地形**幾乎共面**（選取環只抬 0.35 世界單位、塔環 0.11、目標環 0.09）。\n' +
+  '      //  只靠這點高度差要在深度緩衝裡分開，在 16-bit 的手機 context 上是不可能的\n' +
+  '      //  （Δz 比高度差還大 ⇒ 逐幀在地形與環之間跳 ⇒ 肉眼看到閃爍）。\n' +
+  '      //  polygonOffset 的單位是**深度緩衝的最小可解析差**，不是世界單位\n' +
+  '      //  ⇒ 不管 16-bit 還是 24-bit 都會被推到地形前面，這是貼花的標準解法。\n' +
+  '      //  ⚠ 刻意**不**關 depthTest：關掉的話環會穿透牆與塔畫在最上層，那是遮蔽錯誤。\n' +
+  '      //  接地陰影：不帶隊色、不發光。它的工作只有「讓角色踩在地上」。\n' +
+  '      contactShadow: new THREE.MeshBasicMaterial({\n' +
+  '        color: 0x05080d, transparent: true, opacity: 0.32, side: THREE.DoubleSide,\n' +
+  '        depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,\n' +
+  '      }),\n' +
+  '      //  角色柔光：一張徑向漸層貼圖（中心亮、邊緣透明）＋ Additive\n' +
+  '      //  ⇒ 看起來是角色身上的光，而不是地上的圖示。隊色／Buff 色共用同一張貼圖。\n' +
+  '      auraBlue: makeAuraMaterial(TEAM_COLOR.blue),\n' +
+  '      auraRed: makeAuraMaterial(TEAM_COLOR.red),\n' +
+  '      auraRedBuff: makeAuraMaterial(0xff5a43),\n' +
+  '      auraBlueBuff: makeAuraMaterial(0x48aaff),\n' +
+  '      auraDragon: makeAuraMaterial(0xc084fc),\n' +
+  '      auraBaron: makeAuraMaterial(0xf4b85a),\n' +
+  '      moteRedBuff: makeMoteMaterial(0xff7a5a),\n' +
+  '      moteBlueBuff: makeMoteMaterial(0x6dc0ff),\n' +
+  '      moteDragon: makeMoteMaterial(0xd8b4fe),\n' +
+  '      moteBaron: makeMoteMaterial(0xffd580),\n' +
+  '      //  ⚠ side: DoubleSide 是保險——血條群組已經每幀反轉回世界朝向（見 useFrame），\n' +
+  '      //    但只要有人日後改動 facing 的套用方式，單面材質會讓血條**整條消失**而不是畫錯。\n' +
+  '      //\n' +
+  '      //  ⚠⚠ 【H.1-close 修正 ③】三個血條材質**必須全部 transparent**。\n' +
+  '      //  three.js 的繪製順序是「先畫完所有不透明物件，再畫透明物件」，renderOrder\n' +
+  '      //  只在**同一個佇列內**有效。原本背板 transparent、填色不透明\n' +
+  '      //  ⇒ 填色先畫、深色背板後畫**蓋在上面** ⇒ 滿血血條看起來是一條全黑的空槽\n' +
+  '      //  （H.1-close 在 05 近景截圖實測到）。全部放進透明佇列，renderOrder 20/21 才生效。\n' +
+  '      barBg: new THREE.MeshBasicMaterial({ color: 0x'... 42945 more characters
+
+    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-v21-sprint0/tools/check_moba_milestone_b_fix.mjs:69:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '// ============================================================================\n' +
+    '//  battle/moba/render/MobaRuntimeHeroes.jsx — 正式 Runtime 的英雄呈現（H.1）\n' +
+    '//\n' +
+    '//  【職責】把 Runtime Adapter 輸出的 10 名英雄畫成 3D。**只畫**，不模擬：\n' +
+    '//   位置、血量、存活、等級全部來自 LogicEngine snapshot（經 mobaRuntimeMapAdapter）。\n' +
+    '//   本檔不 import LogicEngine、不寫任何 store、不決定英雄要往哪走。\n' +
+    '//\n' +
+    '//  【H.3 Prototype Hero】刻意做「看得懂、跑得動」的低成本角色，不是最終模型：\n' +
+    '//    · 共用膠囊本體 + 四種 role 原型配件（守衛/游擊/術士/射手）\n' +
+    '//    · 陣營色（藍 / 紅）＋ 腳底選取環\n' +
+    '//    · 頭頂血條（依 hpRatio 縮放）＋ 等級數字 ＋ 簡短名稱\n' +
+    '//    · 死亡：本體降下、變半透明、血條隱藏\n' +
+    '//    · 朝向：由 Adapter 依上一幀位移推出（snapshot 沒有 facing 欄位）\n' +
+    '//  正式角色模型留給後續 Hero Asset Pipeline 逐步替換 body geometry。\n' +
+    '//\n' +
+    '//  【效能】\n' +
+    '//    · geometry / material 只建立一次（useMemo），10 名英雄共用\n' +
+    '//    · 每幀更新走 ref.position / ref.scale，不觸發 React re-render\n' +
+    '//    · 名稱與等級使用 WebGL Plane，與血條共用 renderOrder；不會再由 DOM 疊在血條上\n' +
+    '// ============================================================================\n' +
+    'import React, { useEffect, useMemo, useRef, useLayoutEffect, useState } from "react";\n' +
+    'import { useFrame } from "@react-three/fiber";\n' +
+    'import * as THREE from "three";\n' +
+    'import { makeAuraMaterial, makeMoteMaterial } from "./auraSprite.js";\n' +
+    'import { WORLD_SCALE } from "../map/coordinateMapping.js";\n' +
+    'import { LAYER_Y } from "../map/mapVisualStyle.js";\n' +
+    'import { countMount, countUnmount } from "./runtimeDiagnostics.js";\n' +
+    'import { archetypeData, HERO_VISUALS } from "../presentation/heroArchetypes.js";\n' +
+    'import ChichuanHeroProxy from "./ChichuanHeroProxy.jsx";\n' +
+    'import DadiHeroProxy from "./DadiHeroProxy.jsx";\n' +
+    'import { heroProxyEnabled, heroProxyVariant } from "../../../featureFlags.js";\n' +
+    'import { heroById } from "../../../data/heroDatabase.js";\n' +
+    'import { pixelsPerWorld, isCompactViewport, overheadScaleOf, nameplateScaleOf } from "./overheadScale.js";\n' +
+    '\n' +
+    'const S = WORLD_SCALE;\n' +
+    'const TEAM_COLOR = { blue: 0x4d95f0, red: 0xf0574d };\n' +
+    'const TEAM_DARK = { blue: 0x1d3f6b, red: 0x6b2420 };\n' +
+    '\n' +
+    '/**\n' +
+    ' * 【H.1-close 修正 ⑦】陣亡英雄的呈現。\n' +
+    ' *\n' +
+    ' * 前一版的死亡狀態是「本體沉下去 + 28% 透明 + 藏血條藏環 + 藏名牌」。\n' +
+    ' * 資料上是對的（`deadHeroCount` 有值），但**畫面上等於看不見**：在全場視角\n' +
+    ' * 屍體只是一團幾乎透明的殘影，和地形混在一起，Codex 視覺驗收因此把\n' +
+    ' * 「03 中期截圖看不出陣亡英雄」列為 blocking。\n' +
+    ' *\n' +
+    ' * 這一版改成「看得出來是屍體，但明顯不是活人」：\n' +
+    ' *   · **倒地**：本體從站姿旋轉成橫躺（剪影和站著的英雄一眼就分得開）\n' +
+    ' *   · **降飽和**：隊色往灰色拉 60%，仍看得出藍／紅，但明顯褪色\n' +
+    ' *   · **適度透明**：0.55（不是 0.28）——夠淡但不會消失\n' +
+    ' *   · 血條、選取環、肩塊照樣隱藏\n' +
+    ' *   · **沒有地面陣亡標記**（Owner Review 2026-09-25）：死亡後地面上不留任何常駐符號。\n' +
+    ' *     陣亡由倒地本體、擊殺事件、HUD／Timeline、復活倒數表達；不要再換成另一種地面符號。\n' +
+    ' *   · 名牌不再全隱藏，改為半透明＋去飽和 ⇒ 全圖視角仍認得出是誰陣亡\n' +
+    ' */\n' +
+    'const TEAM_DEAD = { blue: 0x718fb3, red: 0xaf726e };   // 隊色混 60% 灰\n' +
+    '\n' +
+    'const DEAD = Object.freeze({\n' +
+    '  bodyOpacity: 0.55,\n' +
+    '  labelOpacity: 0.5,\n' +
+    '});\n' +
+    '\n' +
+    '/**\n' +
+    ' * 【H.1-close】英雄原本站在 world y = 0，但**地面不在 y = 0**：\n' +
+    ' * 路面在 HEIGHT.lane_surface（0.64）、路心亮帶 0.70、塔基 0.94。\n' +
+    ' * 結果是每個英雄的腳都陷進路面裡，腳底選取環（原本只抬 0.12×1.7 = 0.20）\n' +
+    ' * 更是整圈埋在地形底下、完全看不到。\n' +
+    ' *\n' +
+    ' * 這裡把英雄整體抬到走道表面，選取環再往上一點點壓過塔基\n' +
+    ' * ⇒ 純 transform 修正，不動地形資料、不動任何模擬數值。\n' +
+    ' *\n' +
+    ' * ⚠ 地面層高度在 **LAYER_Y**（0..1 的地面鋪層排序），不是 HEIGHT（量體厚度）。\n' +
+    ' *   兩個表都有 lane_surface 這個 key，取錯會拿到 undefined ⇒ position.y = NaN\n' +
+    ' *   ⇒ 整個 matrixWorld 變 NaN ⇒ **10 名英雄全部從畫面上消失**（H.1-close 實測踩過）。\n' +
+    ' *   下面的 GROUND_Y 之所以有 Number.isFinite 保險，就是為了讓這種取值錯誤\n' +
+    ' *   退化成「英雄站在 y=0」而不是「英雄全部不見」。\n' +
+    ' *\n' +
+    ' * ⚠ 已知限制（列入 H.1 收尾報告，不在本輪修）：高地平台厚度是\n' +
+    ' *   HEIGHT.base_platform = 3.6，站在自家基地平台上的英雄仍會陷入約 3 個世界單位。\n' +
+    ' *   要正確處理需要「地形高度查詢」，那會動到地圖資料層 ⇒ 留給 H.2。\n' +
+    ' */\n' +
+    'const GROUND_Y = Number.isFinite(LAYER_Y.lane_surface) ? LAYER_Y.lane_surface : 0;\n' +
+    'const RING_LIFT = 0.35;        // 地面元素（接地陰影）相對英雄根節點的高度（壓過 tower_pad 0.94）\n' +
+    '\n' +
+    '/** 英雄本體尺寸（模擬單位 × WORLD_SCALE）。 */\n' +
+    'const HERO = {\n' +
+    '  radius: 1.15 * S,\n' +
+    '  height: 2.6 * S,\n' +
+    '  ringR: 1.9 * S,\n' +
+    '  barW: 3.4 * S,\n' +
+    '  barH: 0.42 * S,\n' +
+    '  barY: 5.0 * S,\n' +
+    '};\n' +
+    'const NAMEPLATE = Object.freeze({\n' +
+    '  width: HERO.barW * 0.84,\n' +
+    '  height: 0.68 * S,\n' +
+    '  compactWidth: HERO.barW * 0.64,\n' +
+    '  compactHeight: 0.58 * S,\n' +
+    '  y: HERO.barY + 1.18 * S,\n' +
+    '});\n' +
+    '\n' +
+    '/**\n' +
+    ' * @param heroes  mobaRuntimeMapAdapter.adaptHeroes() 的輸出（長度應為 10）\n' +
+    ' * @param showLabels 是否顯示名稱／等級（手機低階可關）\n' +
+    ' */\n' +
+    'export default function MobaRuntimeHeroes({\n' +
+    '  heroes = [],\n' +
+    '  frameRef = null,\n' +
+    '  showLabels = true,\n' +
+    '  compactLabels = false,\n' +
+    '}) {\n' +
+    '  const groupRefs = useRef(new Map());\n' +
+    '\n' +
+    '  //  共用資源：本體 / 肩塊 / 選取環 / 血條（10 名英雄共用同一組 geometry）\n' +
+    '  const geo = useMemo(() => ({\n' +
+    '    body: new THREE.CapsuleGeometry(HERO.radius, HERO.height, 4, 10),\n' +
+    '    shoulder: new THREE.BoxGeometry(HERO.radius * 2.1, HERO.radius * 0.7, HERO.radius * 1.1),\n' +
+    '    //  Battle Condition UX：腳下的**隊伍選取環**與四個 **Buff 環**已移除。\n' +
+    '    //  它們是「介面圖示畫在地上」，在 MOBA 總覽鏡頭下讓每個角色都像站在儀表板上。\n' +
+    '    //  取代品都掛在角色本體：\n' +
+    '    //    · contactShadow — 中性的接地陰影（不帶隊色，純粹讓角色不浮在地面上）\n' +
+    '    //    · aura          — 角色身上的柔光（隊色；有 Buff 時換成 Buff 色）\n' +
+    '    //    · mote          — 兩顆繞著角色轉的光點（只有帶 Buff 時出現）\n' +
+    '    //  ⚠ 技能範圍／鎖定／危險提示這類**有 gameplay 意義**的地面指示仍由\n' +
+    '    //    HeroVfxRuntime 負責（短暫出現、跟著技能走），不在這裡。\n' +
+    '    contactShadow: new THREE.CircleGeometry(HERO.ringR * 0.92, 18),\n' +
+    '    mote: new THREE.OctahedronGeometry(HERO.radius * 0.22, 0),\n' +
+    '    bar: new THREE.PlaneGeometry(1, 1),\n' +
+    '    shield: new THREE.CylinderGeometry(HERO.radius * 0.78, HERO.radius * 0.78, HERO.radius * 0.3, 8),\n' +
+    '    blade: new THREE.BoxGeometry(HERO.radius * 0.22, HERO.height * 0.92, HERO.radius * 0.18),\n' +
+    '    staff: new THREE.CylinderGeometry(HERO.radius * 0.12, HERO.radius * 0.12, HERO.height * 1.25, 6),\n' +
+    '    focus: new THREE.OctahedronGeometry(HERO.radius * 0.48, 0),\n' +
+    '    launcher: new THREE.BoxGeometry(HERO.radius * 0.42, HERO.radius * 0.42, HERO.height * 0.95),\n' +
+    '    crest: new THREE.ConeGeometry(HERO.radius * 0.42, HERO.radius * 0.72, 5),\n' +
+    '    badge: new THREE.OctahedronGeometry(HERO.radius * 0.34, 0),\n' +
+    '    helmBox: new THREE.BoxGeometry(HERO.radius * 1.05, HERO.radius * 0.88, HERO.radius * 1.0),\n' +
+    '    helmRound: new THREE.DodecahedronGeometry(HERO.radius * 0.58, 0),\n' +
+    '    gauntlet: new THREE.DodecahedronGeometry(HERO.radius * 0.6, 0),\n' +
+    '    chest: new THREE.BoxGeometry(HERO.radius * 1.75, HERO.radius * 0.82, HERO.radius * 1.2),\n' +
+    '    wing: new THREE.ConeGeometry(HERO.radius * 0.62, HERO.height * 1.1, 3),\n' +
+    '    hammer: new THREE.BoxGeometry(HERO.radius * 1.3, HERO.radius * 0.72, HERO.radius * 0.72),\n' +
+    '    teamBand: new THREE.TorusGeometry(HERO.radius * 0.92, HERO.radius * 0.16, 5, 14),\n' +
+    '    teamMarker: new THREE.RingGeometry(HERO.radius * 0.34, HERO.radius * 0.62, 4),\n' +
+    '    horn: new THREE.ConeGeometry(HERO.radius * 0.25, HERO.radius * 0.82, 5),\n' +
+    '    hood: new THREE.ConeGeometry(HERO.radius * 0.78, HERO.radius * 1.08, 7, 1, true),\n' +
+    '    halo: new THREE.TorusGeometry(HERO.radius * 0.72, HERO.radius * 0.1, 5, 16),\n' +
+    '    //  Gameplay/Presentation audit：升級回饋（腳下金環＋上升光柱）。\n' +
+    '    levelRing: new THREE.RingGeometry(HERO.ringR * 0.72, HERO.ringR * 0.98, 28),\n' +
+    '    levelBeam: new THREE.CylinderGeometry(HERO.radius * 0.95, HERO.radius * 1.25, HERO.height * 2.4, 12, 1, true),\n' +
+    '  }), []);\n' +
+    '\n' +
+    '  const mats = useMemo(() => {\n' +
+    '    const mk = (color, opts = {}) => new THREE.MeshStandardMaterial({\n' +
+    '      color, roughness: 0.55, metalness: 0.05, flatShading: true, ...opts,\n' +
+    '    });\n' +
+    '    const accentByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [\n' +
+    '      id, mk(spec.accent, { emissive: spec.accent, emissiveIntensity: 0.36, metalness: 0.2 }),\n' +
+    '    ]));\n' +
+    '    const bodyByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [\n' +
+    '      id, mk(spec.primary ?? spec.accent, {\n' +
+    '        emissive: spec.primary ?? spec.accent, emissiveIntensity: 0.14, metalness: 0.12,\n' +
+    '      }),\n' +
+    '    ]));\n' +
+    '    const secondaryByHero = Object.fromEntries(Object.entries(HERO_VISUALS).map(([id, spec]) => [\n' +
+    '      id, mk(spec.secondary ?? spec.trim, {\n' +
+    '        emissive: spec.secondary ?? spec.trim, emissiveIntensity: 0.08, metalness: 0.16,\n' +
+    '      }),\n' +
+    '    ]));\n' +
+    '    return {\n' +
+    '      blue: mk(TEAM_COLOR.blue), red: mk(TEAM_COLOR.red),\n' +
+    '      blueDark: mk(TEAM_DARK.blue), redDark: mk(TEAM_DARK.red),\n' +
+    '      accent: mk(0xe8d7a4, { emissive: 0x5b4b25, emissiveIntensity: 0.35, metalness: 0.18 }),\n' +
+    '      accentByHero, bodyByHero, secondaryByHero,\n' +
+    '      //  陣亡本體：**去飽和的隊色** + 0.55 透明（0.28 太淡，全場視角等於消失）\n' +
+    '      blueDead: mk(TEAM_DEAD.blue, { transparent: true, opacity: DEAD.bodyOpacity }),\n' +
+    '      //  隱身（snapshot statusEffects `stealth`）：隊色半透明＋自發光閃動，一眼看得出「還在、但隱形」。\n' +
+    '      blueStealth: mk(TEAM_COLOR.blue, { transparent: true, opacity: 0.3, depthWrite: false, emissive: TEAM_COLOR.blue, emissiveIntensity: 0.7 }),\n' +
+    '      redStealth: mk(TEAM_COLOR.red, { transparent: true, opacity: 0.3, depthWrite: false, emissive: TEAM_COLOR.red, emissiveIntensity: 0.7 }),\n' +
+    '      redDead: mk(TEAM_DEAD.red, { transparent: true, opacity: DEAD.bodyOpacity }),\n' +
+    '      //  ── H.2-flicker：貼在地面上的環與標記一律加 polygonOffset ────────────────\n' +
+    '      //  這些東西和地形**幾乎共面**（選取環只抬 0.35 世界單位、塔環 0.11、目標環 0.09）。\n' +
+    '      //  只靠這點高度差要在深度緩衝裡分開，在 16-bit 的手機 context 上是不可能的\n' +
+    '      //  （Δz 比高度差還大 ⇒ 逐幀在地形與環之間跳 ⇒ 肉眼看到閃爍）。\n' +
+    '      //  polygonOffset 的單位是**深度緩衝的最小可解析差**，不是世界單位\n' +
+    '      //  ⇒ 不管 16-bit 還是 24-bit 都會被推到地形前面，這是貼花的標準解法。\n' +
+    '      //  ⚠ 刻意**不**關 depthTest：關掉的話環會穿透牆與塔畫在最上層，那是遮蔽錯誤。\n' +
+    '      //  接地陰影：不帶隊色、不發光。它的工作只有「讓角色踩在地上」。\n' +
+    '      contactShadow: new THREE.MeshBasicMaterial({\n' +
+    '        color: 0x05080d, transparent: true, opacity: 0.32, side: THREE.DoubleSide,\n' +
+    '        depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,\n' +
+    '      }),\n' +
+    '      //  角色柔光：一張徑向漸層貼圖（中心亮、邊緣透明）＋ Additive\n' +
+    '      //  ⇒ 看起來是角色身上的光，而不是地上的圖示。隊色／Buff 色共用同一張貼圖。\n' +
+    '      auraBlue: makeAuraMaterial(TEAM_COLOR.blue),\n' +
+    '      auraRed: makeAuraMaterial(TEAM_COLOR.red),\n' +
+    '      auraRedBuff: makeAuraMaterial(0xff5a43),\n' +
+    '      auraBlueBuff: makeAuraMaterial(0x48aaff),\n' +
+    '      auraDragon: makeAuraMaterial(0xc084fc),\n' +
+    '      auraBaron: makeAuraMaterial(0xf4b85a),\n' +
+    '      moteRedBuff: makeMoteMaterial(0xff7a5a),\n' +
+    '      moteBlueBuff: makeMoteMaterial(0x6dc0ff),\n' +
+    '      moteDragon: makeMoteMaterial(0xd8b4fe),\n' +
+    '      moteBaron: makeMoteMaterial(0xffd580),\n' +
+    '      //  ⚠ side: DoubleSide 是保險——血條群組已經每幀反轉回世界朝向（見 useFrame），\n' +
+    '      //    但只要有人日後改動 facing 的套用方式，單面材質會讓血條**整條消失**而不是畫錯。\n' +
+    '      //\n' +
+    '      //  ⚠⚠ 【H.1-close 修正 ③】三個血條材質**必須全部 transparent**。\n' +
+    '      //  three.js 的繪製順序是「先畫完所有不透明物件，再畫透明物件」，renderOrder\n' +
+    '      //  只在**同一個佇列內**有效。原本背板 transparent、填色不透明\n' +
+    '      //  ⇒ 填色先畫、深色背板後畫**蓋在上面** ⇒ 滿血血條看起來是一條全黑的空槽\n' +
+    '      //  （H.1-close 在 05 近景截圖實測到）。全部放進透明佇列，renderOrder 20/21 才生效。\n' +
+    '      barBg: new THREE.MeshBasicMaterial({ color: 0x'... 42945 more characters,
+  expected: /borderLeft/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

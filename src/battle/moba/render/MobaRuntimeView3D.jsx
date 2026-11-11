@@ -51,6 +51,7 @@ import {
 import { useGameStore } from "../../../useGameStore.js";
 import { ease, worldX, worldZ, WORLD_BOUNDS } from "../../../gameData.js";
 import { diagnosticsEnabled, installRuntimeDiagnostics, removeRuntimeDiagnostics, countMount, countUnmount } from "./runtimeDiagnostics.js";
+import MobaRenderPrewarm from "./MobaRenderPrewarm.jsx";
 
 const S = WORLD_SCALE;
 const numLerp = (a, b, t) => {
@@ -505,6 +506,8 @@ export default function MobaRuntimeView3D({
       <RuntimeFrameFeeder frameRef={frameRef} onShapeChange={onShapeChange} lockHeroId={lockHeroId} lockTarget={lockTarget} source={source} roster={roster} playbackRateRef={playbackRateRef} fogRef={fogRef} />
       <BattleCameraController source={source} perspective={RUNTIME_CAMERA} />
       <RuntimeCameraInput ctrl={ctrl} />
+      {/*  Lag P0：平面半透明材質單次繪製＋著色器預熱（不新增物件、不改畫面；見該檔檔頭）。 */}
+      <MobaRenderPrewarm />
       <RuntimeDiagnosticsBridge frameRef={frameRef} />
     </Canvas>
     <RuntimeDeviceDiagnosticsPanel />

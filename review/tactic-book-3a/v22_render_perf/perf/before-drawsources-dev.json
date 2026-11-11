@@ -1,0 +1,1774 @@
+{
+ "t+10s": {
+  "frames": 181,
+  "attributedPerFrame": 481.6,
+  "programs": 30,
+  "geometries": 199,
+  "textures": 143,
+  "sceneObjects": 1864,
+  "drawables": 1025,
+  "programParamRecomputesPerFrame": 223.6,
+  "recomputeTop": [
+   {
+    "key": "MeshBasicMaterial#148:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 48
+   },
+   {
+    "key": "MeshBasicMaterial#146:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#145:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#150:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#149:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#307:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#318:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#319:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#322:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#308:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 8.5
+   },
+   {
+    "key": "MeshBasicMaterial#137:T <- objective-pit-markers/objective-pit-marker-baron Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#135:T <- objective-pit-markers/objective-pit-marker-dragon Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#161:T <- moba-runtime-minions/moba-minion-objective-ring Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#171:T <- moba-runtime-effects/moba-combat-ring Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#159:T <- moba-runtime-minions/moba-minion-bars-bg Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#160:T <- moba-runtime-minions/moba-minion-bars-fill Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#184:T <- moba-runtime-effects/moba-combat-lock Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#183:T <- moba-runtime-effects/moba-combat-slash Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#905:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#938:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#970:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1038:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1003:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#906:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#311:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.5
+   },
+   {
+    "key": "MeshBasicMaterial#321:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.16
+   },
+   {
+    "key": "EffectMaterial#1619 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1620 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1621 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1622 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1623 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#315:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1624 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1625 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#170:T <- moba-runtime-effects/moba-combat-line Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1626 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1627 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1628 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1629 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1630 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1631 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1632 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1633 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1634 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1635 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1636 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1637 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1638 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1639 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1640 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1641 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1642 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1643 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1644 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#1645 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#1396 <- moba-runtime-neutrals-rigged Mesh attrs=normal,position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#1407 <- moba-runtime-neutrals-rigged Mesh attrs=normal,position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#1418 <- moba-runtime-neutrals-rigged Mesh attrs=normal,position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#1398 <- moba-runtime-neutrals-rigged Mesh attrs=normal,position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#1409 <- moba-runtime-neutrals-rigged Mesh attrs=normal,position,uv",
+    "perFrame": 0.01
+   }
+  ],
+  "byRoot": {
+   "moba-runtime-structures": 118,
+   "moba-runtime-heroes": 106.2,
+   "moba-runtime-neutrals-rigged": 96.2,
+   "ESMO_Rift_330_v1": 77,
+   "(unnamed)": 44.4,
+   "moba-runtime-effects": 16.7,
+   "moba-runtime-minions": 11,
+   "hero-status-fx": 5.1,
+   "hero-vfx-v1": 5,
+   "objective-pit-markers": 2
+  },
+  "top": [
+   {
+    "key": "moba-runtime-structures | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 48,
+    "trisPerFrame": 96
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_wolf002/wolf_rig002 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 30,
+    "trisPerFrame": 45360
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_stone-beetle002/stone-beetle_rig002 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 26.8,
+    "trisPerFrame": 36735
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 26.6,
+    "trisPerFrame": 53
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | OctahedronGeometry | MeshStandardMaterial",
+    "perFrame": 24,
+    "trisPerFrame": 192
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | RingGeometry | MeshBasicMaterial:T",
+    "perFrame": 24,
+    "trisPerFrame": 864
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | CylinderGeometry | MeshStandardMaterial",
+    "perFrame": 22,
+    "trisPerFrame": 704
+   },
+   {
+    "key": "(unnamed) | Scene | undefined | undefined",
+    "perFrame": 17,
+    "trisPerFrame": 0
+   },
+   {
+    "key": "(unnamed) | Mesh | BufferGeometry | ShaderMaterial",
+    "perFrame": 17,
+    "trisPerFrame": 17
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 14.7,
+    "trisPerFrame": 29
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_red-buff001/red-buff_rig001 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 11.6,
+    "trisPerFrame": 24012
+   },
+   {
+    "key": "(unnamed) | Sprite | BufferGeometry | SpriteMaterial:T",
+    "perFrame": 8.4,
+    "trisPerFrame": 17
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | OctahedronGeometry | MeshStandardMaterial",
+    "perFrame": 8,
+    "trisPerFrame": 64
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | BoxGeometry | MeshStandardMaterial",
+    "perFrame": 8,
+    "trisPerFrame": 96
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged | Mesh | PlaneGeometry | MeshBasicMaterial",
+    "perFrame": 7.5,
+    "trisPerFrame": 15
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-flame-hair | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 6,
+    "trisPerFrame": 90
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | TorusGeometry | MeshStandardMaterial",
+    "perFrame": 6,
+    "trisPerFrame": 860
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-inferno-horns | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 6,
+    "trisPerFrame": 90
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_blue-buff001/blue-buff_rig001 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 5.6,
+    "trisPerFrame": 10470
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 5,
+    "trisPerFrame": 75
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CapsuleGeometry | MeshStandardMaterial",
+    "perFrame": 5,
+    "trisPerFrame": 1700
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CircleGeometry | MeshBasicMaterial:T",
+    "perFrame": 5,
+    "trisPerFrame": 90
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | RingGeometry | MeshBasicMaterial:T",
+    "perFrame": 5,
+    "trisPerFrame": 40
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-fist | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 4,
+    "trisPerFrame": 144
+   },
+   {
+    "key": "moba-runtime-heroes/hero-signature-generated | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 4,
+    "trisPerFrame": 144
+   },
+   {
+    "key": "moba-runtime-heroes/hero-signature-bruiser | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 3,
+    "trisPerFrame": 108
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-bark-antlers | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 3,
+    "trisPerFrame": 45
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | OctahedronGeometry | MeshBasicMaterial:T",
+    "perFrame": 2.6,
+    "trisPerFrame": 21
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 72
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CylinderGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 56
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-skirmisher | Mesh | BoxGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 24
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_blue_(0,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 280
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_blue_(1,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 20
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_blue_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 60
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_blue_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 20
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_bronze_(0,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 112
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_bronze_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 156
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_bronze_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 156
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1519
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(0,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1736
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(3,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 2051
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(2,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1449
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 651
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(3,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1456
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(0,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1365
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 644
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 931
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(0,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1442
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(3,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1358
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafAmber_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 210
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafAmber_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 98
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafDusk_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 252
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafDusk_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 700
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafOlive_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 238
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafOlive_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 126
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_moss_(1,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 38
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_moss_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 76
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_moss_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 190
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_moss_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 190
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(1,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 3038
+   }
+  ]
+ },
+ "t+40s": {
+  "frames": 181,
+  "attributedPerFrame": 439.2,
+  "programs": 30,
+  "geometries": 220,
+  "textures": 169,
+  "sceneObjects": 1865,
+  "drawables": 1025,
+  "programParamRecomputesPerFrame": 256.1,
+  "recomputeTop": [
+   {
+    "key": "MeshBasicMaterial#148:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 48
+   },
+   {
+    "key": "MeshBasicMaterial#146:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#145:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#150:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#149:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#307:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 14
+   },
+   {
+    "key": "MeshBasicMaterial#318:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 14
+   },
+   {
+    "key": "MeshBasicMaterial#319:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#322:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#308:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 8
+   },
+   {
+    "key": "MeshBasicMaterial#344:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 5.59
+   },
+   {
+    "key": "MeshBasicMaterial#309:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 4
+   },
+   {
+    "key": "MeshBasicMaterial#320:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 4
+   },
+   {
+    "key": "MeshBasicMaterial#323:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 4
+   },
+   {
+    "key": "MeshBasicMaterial#137:T <- objective-pit-markers/objective-pit-marker-baron Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#161:T <- moba-runtime-minions/moba-minion-objective-ring Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#311:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#171:T <- moba-runtime-effects/moba-combat-ring Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#159:T <- moba-runtime-minions/moba-minion-bars-bg Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#160:T <- moba-runtime-minions/moba-minion-bars-fill Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#184:T <- moba-runtime-effects/moba-combat-lock Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#183:T <- moba-runtime-effects/moba-combat-slash Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1172:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1205:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#905:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#970:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#938:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1038:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1003:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#906:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#321:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.82
+   },
+   {
+    "key": "MeshBasicMaterial#135:T <- objective-pit-markers/objective-pit-marker-dragon Mesh attrs=normal,position,uv",
+    "perFrame": 1.43
+   },
+   {
+    "key": "MeshBasicMaterial#343:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 1.04
+   },
+   {
+    "key": "MeshBasicMaterial#345:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 1.04
+   },
+   {
+    "key": "MeshBasicMaterial#363:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.32
+   },
+   {
+    "key": "MeshBasicMaterial#365:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.3
+   },
+   {
+    "key": "MeshBasicMaterial#366:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.3
+   },
+   {
+    "key": "EffectMaterial#2034 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2035 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2036 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2037 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2038 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2039 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2040 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2041 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2042 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2043 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2044 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2045 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2046 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2047 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2048 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2049 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2050 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2051 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2052 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2053 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "MeshBasicMaterial#2054:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2055 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2056 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   }
+  ],
+  "byRoot": {
+   "moba-runtime-heroes": 148.7,
+   "moba-runtime-structures": 120.1,
+   "ESMO_Rift_330_v1": 61.2,
+   "(unnamed)": 52.8,
+   "moba-runtime-neutrals-rigged": 19.5,
+   "moba-runtime-effects": 16,
+   "moba-runtime-minions": 10.7,
+   "hero-status-fx": 5.1,
+   "hero-vfx-v1": 3.4,
+   "objective-pit-markers": 1.7
+  },
+  "top": [
+   {
+    "key": "moba-runtime-structures | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 48,
+    "trisPerFrame": 96
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 36.9,
+    "trisPerFrame": 74
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | OctahedronGeometry | MeshStandardMaterial",
+    "perFrame": 24,
+    "trisPerFrame": 192
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | RingGeometry | MeshBasicMaterial:T",
+    "perFrame": 24,
+    "trisPerFrame": 864
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | CylinderGeometry | MeshStandardMaterial",
+    "perFrame": 22,
+    "trisPerFrame": 704
+   },
+   {
+    "key": "(unnamed) | Scene | undefined | undefined",
+    "perFrame": 17,
+    "trisPerFrame": 0
+   },
+   {
+    "key": "(unnamed) | Mesh | BufferGeometry | ShaderMaterial",
+    "perFrame": 17,
+    "trisPerFrame": 17
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_wolf002/wolf_rig002 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 14.5,
+    "trisPerFrame": 22345
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | OctahedronGeometry | MeshStandardMaterial",
+    "perFrame": 13,
+    "trisPerFrame": 104
+   },
+   {
+    "key": "(unnamed) | Sprite | BufferGeometry | SpriteMaterial:T",
+    "perFrame": 12.5,
+    "trisPerFrame": 25
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | BoxGeometry | MeshStandardMaterial",
+    "perFrame": 11,
+    "trisPerFrame": 132
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-flame-hair | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 9,
+    "trisPerFrame": 135
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | TorusGeometry | MeshStandardMaterial",
+    "perFrame": 9,
+    "trisPerFrame": 1300
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 7,
+    "trisPerFrame": 105
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CapsuleGeometry | MeshStandardMaterial",
+    "perFrame": 7,
+    "trisPerFrame": 2380
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CircleGeometry | MeshBasicMaterial:T",
+    "perFrame": 7,
+    "trisPerFrame": 126
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | RingGeometry | MeshBasicMaterial:T",
+    "perFrame": 7,
+    "trisPerFrame": 56
+   },
+   {
+    "key": "moba-runtime-heroes/hero-signature-generated | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 6,
+    "trisPerFrame": 216
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-inferno-horns | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 6,
+    "trisPerFrame": 90
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-fist | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 4,
+    "trisPerFrame": 144
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-skirmisher | Mesh | BoxGeometry | MeshStandardMaterial",
+    "perFrame": 4,
+    "trisPerFrame": 48
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | OctahedronGeometry | MeshBasicMaterial:T",
+    "perFrame": 3.8,
+    "trisPerFrame": 30
+   },
+   {
+    "key": "(unnamed) | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 3.3,
+    "trisPerFrame": 7
+   },
+   {
+    "key": "moba-runtime-heroes/hero-signature-bruiser | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 3,
+    "trisPerFrame": 108
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-bark-antlers | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 3,
+    "trisPerFrame": 45
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 2.8,
+    "trisPerFrame": 6
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | OctahedronGeometry | MeshBasicMaterial:T",
+    "perFrame": 2.1,
+    "trisPerFrame": 17
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged | Mesh | PlaneGeometry | MeshBasicMaterial",
+    "perFrame": 2.1,
+    "trisPerFrame": 4
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 72
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CylinderGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 56
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-lightning-halo | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 30
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_bronze_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 156
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 651
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 644
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 931
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafAmber_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 210
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafAmber_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 98
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafOlive_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 238
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafOlive_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 126
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_moss_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 190
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 770
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 2126
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 617
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1398
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pineAmber_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 551
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pineAmber_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 284
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pineDusk_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1621
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pineOlive_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 607
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pineOlive_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 340
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_red_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 20
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_red_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 60
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_reed_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 5480
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_reed_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 8200
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_reed_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 8160
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_reed_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 5460
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_rock_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 8760
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_rock_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 15306
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_rock_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 9894
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_rock_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 5886
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_rockWarm_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 2820
+   }
+  ]
+ },
+ "t+80s": {
+  "frames": 180,
+  "attributedPerFrame": 489.3,
+  "programs": 31,
+  "geometries": 237,
+  "textures": 180,
+  "sceneObjects": 1867,
+  "drawables": 1025,
+  "programParamRecomputesPerFrame": 274.8,
+  "recomputeTop": [
+   {
+    "key": "MeshBasicMaterial#148:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 44
+   },
+   {
+    "key": "MeshBasicMaterial#145:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#149:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 24
+   },
+   {
+    "key": "MeshBasicMaterial#146:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 20
+   },
+   {
+    "key": "MeshBasicMaterial#150:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 20
+   },
+   {
+    "key": "MeshBasicMaterial#307:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 15.26
+   },
+   {
+    "key": "MeshBasicMaterial#318:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 15.26
+   },
+   {
+    "key": "MeshBasicMaterial#312:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#319:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#322:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 10
+   },
+   {
+    "key": "MeshBasicMaterial#332:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 5.62
+   },
+   {
+    "key": "MeshBasicMaterial#347:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 5.54
+   },
+   {
+    "key": "MeshBasicMaterial#320:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 5.26
+   },
+   {
+    "key": "MeshBasicMaterial#323:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 5.26
+   },
+   {
+    "key": "MeshBasicMaterial#309:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 5.06
+   },
+   {
+    "key": "MeshBasicMaterial#147:T <- moba-runtime-structures Mesh attrs=normal,position,uv",
+    "perFrame": 4
+   },
+   {
+    "key": "MeshBasicMaterial#344:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 3.33
+   },
+   {
+    "key": "MeshBasicMaterial#321:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2.01
+   },
+   {
+    "key": "MeshBasicMaterial#135:T <- objective-pit-markers/objective-pit-marker-dragon Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#161:T <- moba-runtime-minions/moba-minion-objective-ring Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#171:T <- moba-runtime-effects/moba-combat-ring Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#159:T <- moba-runtime-minions/moba-minion-bars-bg Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#160:T <- moba-runtime-minions/moba-minion-bars-fill Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#184:T <- moba-runtime-effects/moba-combat-lock Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#183:T <- moba-runtime-effects/moba-combat-slash Mesh[inst] attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#905:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#970:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#938:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1003:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1038:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#906:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#939:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 2
+   },
+   {
+    "key": "MeshBasicMaterial#1205:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.98
+   },
+   {
+    "key": "MeshBasicMaterial#1206:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.98
+   },
+   {
+    "key": "MeshBasicMaterial#1172:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.97
+   },
+   {
+    "key": "MeshBasicMaterial#137:T <- objective-pit-markers/objective-pit-marker-baron Mesh attrs=normal,position,uv",
+    "perFrame": 1.53
+   },
+   {
+    "key": "MeshBasicMaterial#1072:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.11
+   },
+   {
+    "key": "MeshBasicMaterial#1073:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 1.11
+   },
+   {
+    "key": "MeshBasicMaterial#346:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 1
+   },
+   {
+    "key": "MeshBasicMaterial#348:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 1
+   },
+   {
+    "key": "MeshBasicMaterial#331:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 1
+   },
+   {
+    "key": "MeshBasicMaterial#333:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 1
+   },
+   {
+    "key": "MeshBasicMaterial#367:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.49
+   },
+   {
+    "key": "MeshBasicMaterial#368:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.49
+   },
+   {
+    "key": "MeshBasicMaterial#369:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.49
+   },
+   {
+    "key": "MeshBasicMaterial#370:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.49
+   },
+   {
+    "key": "MeshBasicMaterial#371:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.48
+   },
+   {
+    "key": "MeshBasicMaterial#372:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.48
+   },
+   {
+    "key": "MeshBasicMaterial#343:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.36
+   },
+   {
+    "key": "MeshBasicMaterial#345:T <- (unnamed) Mesh attrs=normal,position,uv",
+    "perFrame": 0.36
+   },
+   {
+    "key": "MeshBasicMaterial#310:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 0.2
+   },
+   {
+    "key": "MeshBasicMaterial#1106:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 0.2
+   },
+   {
+    "key": "MeshBasicMaterial#1107:T <- moba-runtime-heroes Mesh attrs=normal,position,uv",
+    "perFrame": 0.2
+   },
+   {
+    "key": "EffectMaterial#2523 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2524 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2525 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2526 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2527 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2528 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   },
+   {
+    "key": "EffectMaterial#2529 <- (unnamed) Mesh attrs=position,uv",
+    "perFrame": 0.01
+   }
+  ],
+  "byRoot": {
+   "moba-runtime-heroes": 176.9,
+   "moba-runtime-structures": 120,
+   "(unnamed)": 58.7,
+   "ESMO_Rift_330_v1": 53.8,
+   "moba-runtime-neutrals-rigged": 41.2,
+   "moba-runtime-effects": 16.6,
+   "moba-runtime-minions": 10.7,
+   "hero-status-fx": 5.1,
+   "hero-vfx-v1": 4.5,
+   "objective-pit-markers": 1.8
+  },
+  "top": [
+   {
+    "key": "moba-runtime-structures | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 44,
+    "trisPerFrame": 88
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 42.8,
+    "trisPerFrame": 86
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | RingGeometry | MeshBasicMaterial:T",
+    "perFrame": 24,
+    "trisPerFrame": 864
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | CylinderGeometry | MeshStandardMaterial",
+    "perFrame": 22,
+    "trisPerFrame": 704
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | OctahedronGeometry | MeshStandardMaterial",
+    "perFrame": 22,
+    "trisPerFrame": 176
+   },
+   {
+    "key": "(unnamed) | Scene | undefined | undefined",
+    "perFrame": 17,
+    "trisPerFrame": 0
+   },
+   {
+    "key": "(unnamed) | Mesh | BufferGeometry | ShaderMaterial",
+    "perFrame": 17,
+    "trisPerFrame": 17
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_wolf002/wolf_rig002 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 16.7,
+    "trisPerFrame": 26426
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | OctahedronGeometry | MeshBasicMaterial:T",
+    "perFrame": 16,
+    "trisPerFrame": 128
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | OctahedronGeometry | MeshStandardMaterial",
+    "perFrame": 13.6,
+    "trisPerFrame": 109
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | BoxGeometry | MeshStandardMaterial",
+    "perFrame": 12.9,
+    "trisPerFrame": 155
+   },
+   {
+    "key": "(unnamed) | Sprite | BufferGeometry | SpriteMaterial:T",
+    "perFrame": 11.7,
+    "trisPerFrame": 23
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_blue-buff001/blue-buff_rig001 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 10.1,
+    "trisPerFrame": 19066
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | TorusGeometry | MeshStandardMaterial",
+    "perFrame": 9.6,
+    "trisPerFrame": 1386
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-flame-hair | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 9.3,
+    "trisPerFrame": 139
+   },
+   {
+    "key": "(unnamed) | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 8.4,
+    "trisPerFrame": 17
+   },
+   {
+    "key": "moba-runtime-structures | Mesh | TetrahedronGeometry | MeshBasicMaterial:T",
+    "perFrame": 8,
+    "trisPerFrame": 32
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 7.6,
+    "trisPerFrame": 114
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CapsuleGeometry | MeshStandardMaterial",
+    "perFrame": 7.6,
+    "trisPerFrame": 2593
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CircleGeometry | MeshBasicMaterial:T",
+    "perFrame": 7.6,
+    "trisPerFrame": 137
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | RingGeometry | MeshBasicMaterial:T",
+    "perFrame": 7.6,
+    "trisPerFrame": 61
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged | Mesh | PlaneGeometry | MeshBasicMaterial:T",
+    "perFrame": 6.5,
+    "trisPerFrame": 13
+   },
+   {
+    "key": "moba-runtime-heroes/hero-signature-generated | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 6.1,
+    "trisPerFrame": 219
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged/ESMO_Neutral_stone-beetle002/stone-beetle_rig002 | SkinnedMesh[skin] | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 6.1,
+    "trisPerFrame": 8391
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-inferno-horns | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 6,
+    "trisPerFrame": 90
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-skirmisher | Mesh | BoxGeometry | MeshStandardMaterial",
+    "perFrame": 5.1,
+    "trisPerFrame": 61
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-fist | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 4,
+    "trisPerFrame": 144
+   },
+   {
+    "key": "moba-runtime-heroes/hero-signature-bruiser | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 3,
+    "trisPerFrame": 108
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-bark-antlers | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 3,
+    "trisPerFrame": 45
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | DodecahedronGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 72
+   },
+   {
+    "key": "moba-runtime-heroes | Mesh | CylinderGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 56
+   },
+   {
+    "key": "moba-runtime-heroes/hero-head-lightning-halo | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 2,
+    "trisPerFrame": 30
+   },
+   {
+    "key": "(unnamed) | Mesh | CylinderGeometry | MeshBasicMaterial:T",
+    "perFrame": 1.9,
+    "trisPerFrame": 91
+   },
+   {
+    "key": "moba-runtime-neutrals-rigged | Mesh | PlaneGeometry | MeshBasicMaterial",
+    "perFrame": 1.3,
+    "trisPerFrame": 3
+   },
+   {
+    "key": "moba-runtime-heroes/hero-signature-rogue | Mesh | BoxGeometry | MeshStandardMaterial",
+    "perFrame": 1.1,
+    "trisPerFrame": 13
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-flame | Mesh | CylinderGeometry | MeshStandardMaterial",
+    "perFrame": 1.1,
+    "trisPerFrame": 26
+   },
+   {
+    "key": "moba-runtime-heroes/hero-archetype-flame | Mesh | ConeGeometry | MeshStandardMaterial",
+    "perFrame": 1.1,
+    "trisPerFrame": 17
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_blue_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 60
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_blue_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 20
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_bronze_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 156
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1519
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(3,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 2051
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(2,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1449
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 651
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(3,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 1456
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 644
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leaf_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 931
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafAmber_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 210
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafDusk_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 252
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafDusk_(2,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 700
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafOlive_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 238
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_leafOlive_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 126
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_moss_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 190
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_moss_(1,_1) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 190
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(1,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 3038
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(3,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 4102
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(2,_3) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 2898
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(2,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 770
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(3,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 2912
+   },
+   {
+    "key": "ESMO_Rift_330_v1/Rift_pine_(1,_2) | Mesh | BufferGeometry | MeshStandardMaterial",
+    "perFrame": 1,
+    "trisPerFrame": 2126
+   }
+  ]
+ },
+ "linksAfterBattleEntry": [
+  {
+   "t": 67,
+   "obj": "moba-runtime-structures Mesh",
+   "mat": "MeshStandardMaterial",
+   "vis": true
+  },
+  {
+   "t": 106,
+   "obj": "moba-runtime-heroes Mesh",
+   "mat": "MeshBasicMaterial:T:map",
+   "vis": true
+  },
+  {
+   "t": 117,
+   "obj": "moba-runtime-heroes Mesh",
+   "mat": "MeshBasicMaterial:T:map",
+   "vis": true
+  },
+  {
+   "t": 3292,
+   "obj": "(unnamed) Sprite",
+   "mat": "SpriteMaterial:T:map",
+   "vis": true
+  },
+  {
+   "t": 7408,
+   "obj": "moba-runtime-neutrals-rigged/ESMO_Neutral_red-buff001/red-buff_rig001 SkinnedMesh[skin]",
+   "mat": "red-buff_hide.001:map",
+   "vis": true
+  },
+  {
+   "t": 7464,
+   "obj": "moba-runtime-neutrals-rigged/ESMO_Neutral_red-buff001/red-buff_rig001 SkinnedMesh[skin]",
+   "mat": "red-buff_carapace.001",
+   "vis": true
+  },
+  {
+   "t": 8792,
+   "obj": "moba-runtime-neutrals-rigged Mesh",
+   "mat": "MeshBasicMaterial",
+   "vis": true
+  },
+  {
+   "t": 8927,
+   "obj": "moba-runtime-effects/moba-combat-ring Mesh[inst]",
+   "mat": "MeshBasicMaterial:T:vc",
+   "vis": true
+  },
+  {
+   "t": 8939,
+   "obj": "moba-runtime-effects/moba-combat-ring Mesh[inst]",
+   "mat": "MeshBasicMaterial:T:vc",
+   "vis": true
+  },
+  {
+   "t": 52067,
+   "obj": "moba-runtime-heroes Mesh",
+   "mat": "MeshStandardMaterial:T",
+   "vis": true
+  },
+  {
+   "t": 133314,
+   "obj": "moba-runtime-minions/moba-minion-objective-ring Mesh[inst]",
+   "mat": "MeshBasicMaterial:T",
+   "vis": true
+  },
+  {
+   "t": 133344,
+   "obj": "moba-runtime-minions/moba-minion-objective-ring Mesh[inst]",
+   "mat": "MeshBasicMaterial:T",
+   "vis": true
+  }
+ ]
+}

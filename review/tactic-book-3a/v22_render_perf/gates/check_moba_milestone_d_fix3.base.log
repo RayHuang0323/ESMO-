@@ -1,0 +1,21 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(Math.abs(blue.pos.x + red.pos.x - 220) < 1e-6)
+
+    at file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-v21-sprint0/tools/check_moba_milestone_d_fix3.mjs:77:10
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

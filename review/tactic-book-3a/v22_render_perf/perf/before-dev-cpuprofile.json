@@ -1,0 +1,434 @@
+{
+ "label": "before-dev",
+ "url": "http://127.0.0.1:5621/ESMO-/",
+ "totalMs": 15873,
+ "byFile": [
+  {
+   "k": "(native)",
+   "ms": 6394,
+   "pct": 40.3
+  },
+  {
+   "k": "chunk-CTAKFJQL.js",
+   "ms": 5695,
+   "pct": 35.9
+  },
+  {
+   "k": "chunk-ZKFVBSIG.js",
+   "ms": 1324,
+   "pct": 8.3
+  },
+  {
+   "k": "chunk-47BGB6KQ.js",
+   "ms": 432,
+   "pct": 2.7
+  },
+  {
+   "k": "react_jsx-dev-runtime.js",
+   "ms": 368,
+   "pct": 2.3
+  },
+  {
+   "k": "LogicEngine.js",
+   "ms": 226,
+   "pct": 1.4
+  },
+  {
+   "k": "mobaRuntimeMapAdapter.js",
+   "ms": 194,
+   "pct": 1.2
+  },
+  {
+   "k": "RiggedMobaRuntimeNeutrals.jsx",
+   "ms": 124,
+   "pct": 0.8
+  },
+  {
+   "k": "MobaRuntimeHeroes.jsx",
+   "ms": 107,
+   "pct": 0.7
+  },
+  {
+   "k": "mobaNavigation.js",
+   "ms": 95,
+   "pct": 0.6
+  },
+  {
+   "k": "@react-three_drei.js",
+   "ms": 69,
+   "pct": 0.4
+  },
+  {
+   "k": "HeroVfxRuntime.jsx",
+   "ms": 65,
+   "pct": 0.4
+  },
+  {
+   "k": "MobaRuntimeStructures.jsx",
+   "ms": 56,
+   "pct": 0.4
+  },
+  {
+   "k": "MobaRuntimeMinions.jsx",
+   "ms": 43,
+   "pct": 0.3
+  },
+  {
+   "k": "MobaRuntimeEffects.jsx",
+   "ms": 43,
+   "pct": 0.3
+  },
+  {
+   "k": "heroSkillLevels.js",
+   "ms": 38,
+   "pct": 0.2
+  },
+  {
+   "k": "chunk-KG5FU3NH.js",
+   "ms": 38,
+   "pct": 0.2
+  },
+  {
+   "k": "chunk-K423XWXQ.js",
+   "ms": 34,
+   "pct": 0.2
+  },
+  {
+   "k": "MobaRuntimeView3D.jsx",
+   "ms": 33,
+   "pct": 0.2
+  },
+  {
+   "k": "GoldChip.jsx",
+   "ms": 32,
+   "pct": 0.2
+  },
+  {
+   "k": "heroSkillContract.js",
+   "ms": 31,
+   "pct": 0.2
+  },
+  {
+   "k": "useLocalServer.js",
+   "ms": 30,
+   "pct": 0.2
+  },
+  {
+   "k": "HeroStatusFx.jsx",
+   "ms": 28,
+   "pct": 0.2
+  },
+  {
+   "k": "gameData.js",
+   "ms": 27,
+   "pct": 0.2
+  },
+  {
+   "k": "GameView.jsx",
+   "ms": 26,
+   "pct": 0.2
+  }
+ ],
+ "byFn": [
+  {
+   "k": "(idle) @ (native):-1",
+   "ms": 2927,
+   "pct": 18.4
+  },
+  {
+   "k": "(program) @ (native):-1",
+   "ms": 2507,
+   "pct": 15.8
+  },
+  {
+   "k": "getParameters @ chunk-CTAKFJQL.js:12762",
+   "ms": 1479,
+   "pct": 9.3
+  },
+  {
+   "k": "getProgram @ chunk-CTAKFJQL.js:17941",
+   "ms": 766,
+   "pct": 4.8
+  },
+  {
+   "k": "updateMatrixWorld @ chunk-CTAKFJQL.js:5119",
+   "ms": 728,
+   "pct": 4.6
+  },
+  {
+   "k": "updateHostComponent @ chunk-ZKFVBSIG.js:8063",
+   "ms": 638,
+   "pct": 4
+  },
+  {
+   "k": "jsxDEV @ react_jsx-dev-runtime.js:603",
+   "ms": 331,
+   "pct": 2.1
+  },
+  {
+   "k": "setProgram @ chunk-CTAKFJQL.js:18028",
+   "ms": 241,
+   "pct": 1.5
+  },
+  {
+   "k": "projectObject @ chunk-CTAKFJQL.js:17780",
+   "ms": 227,
+   "pct": 1.4
+  },
+  {
+   "k": "(garbage collector) @ (native):-1",
+   "ms": 211,
+   "pct": 1.3
+  },
+  {
+   "k": "multiplyMatrices @ chunk-CTAKFJQL.js:4133",
+   "ms": 209,
+   "pct": 1.3
+  },
+  {
+   "k": "WebGLRenderer.renderBufferDirect @ chunk-CTAKFJQL.js:17541",
+   "ms": 205,
+   "pct": 1.3
+  },
+  {
+   "k": "renderObject @ chunk-CTAKFJQL.js:17923",
+   "ms": 116,
+   "pct": 0.7
+  },
+  {
+   "k": "bindVertexArray @ (native):-1",
+   "ms": 113,
+   "pct": 0.7
+  },
+  {
+   "k": "copyArray @ chunk-CTAKFJQL.js:11467",
+   "ms": 112,
+   "pct": 0.7
+  },
+  {
+   "k": "now @ (native):-1",
+   "ms": 107,
+   "pct": 0.7
+  },
+  {
+   "k": "refreshUniformsCommon @ chunk-CTAKFJQL.js:16715",
+   "ms": 107,
+   "pct": 0.7
+  },
+  {
+   "k": "equ @ chunk-ZKFVBSIG.js:16067",
+   "ms": 100,
+   "pct": 0.6
+  },
+  {
+   "k": "update @ chunk-CTAKFJQL.js:11360",
+   "ms": 94,
+   "pct": 0.6
+  },
+  {
+   "k": "bufferSubData @ (native):-1",
+   "ms": 88,
+   "pct": 0.6
+  },
+  {
+   "k": "diffProperties @ chunk-47BGB6KQ.js:7617",
+   "ms": 87,
+   "pct": 0.5
+  },
+  {
+   "k": "update @ chunk-CTAKFJQL.js:8623",
+   "ms": 86,
+   "pct": 0.5
+  },
+  {
+   "k": "(anon) @ MobaRuntimeHeroes.jsx:213",
+   "ms": 75,
+   "pct": 0.5
+  },
+  {
+   "k": "isWalkable @ mobaNavigation.js:248",
+   "ms": 74,
+   "pct": 0.5
+  },
+  {
+   "k": "needsUpdate @ chunk-CTAKFJQL.js:9653",
+   "ms": 69,
+   "pct": 0.4
+  },
+  {
+   "k": "createWorkInProgress @ chunk-ZKFVBSIG.js:14675",
+   "ms": 68,
+   "pct": 0.4
+  },
+  {
+   "k": "(anon) @ chunk-ZKFVBSIG.js:16199",
+   "ms": 68,
+   "pct": 0.4
+  },
+  {
+   "k": "WebGLRenderer.render @ chunk-CTAKFJQL.js:17714",
+   "ms": 65,
+   "pct": 0.4
+  },
+  {
+   "k": "(anon) @ @react-three_drei.js:1282",
+   "ms": 57,
+   "pct": 0.4
+  },
+  {
+   "k": "uniformMatrix4fv @ (native):-1",
+   "ms": 55,
+   "pct": 0.3
+  },
+  {
+   "k": "(anon) @ RiggedMobaRuntimeNeutrals.jsx:125",
+   "ms": 52,
+   "pct": 0.3
+  },
+  {
+   "k": "applyProps$1 @ chunk-ZKFVBSIG.js:16223",
+   "ms": 52,
+   "pct": 0.3
+  },
+  {
+   "k": "getBindingState @ chunk-CTAKFJQL.js:9612",
+   "ms": 51,
+   "pct": 0.3
+  },
+  {
+   "k": "setValue @ chunk-CTAKFJQL.js:12007",
+   "ms": 49,
+   "pct": 0.3
+  },
+  {
+   "k": "upload @ chunk-CTAKFJQL.js:12015",
+   "ms": 49,
+   "pct": 0.3
+  },
+  {
+   "k": "render$1 @ chunk-ZKFVBSIG.js:16906",
+   "ms": 48,
+   "pct": 0.3
+  },
+  {
+   "k": "drawElements @ (native):-1",
+   "ms": 48,
+   "pct": 0.3
+  },
+  {
+   "k": "(anon) @ RiggedMobaRuntimeNeutrals.jsx:238",
+   "ms": 46,
+   "pct": 0.3
+  },
+  {
+   "k": "renderObjects @ chunk-CTAKFJQL.js:17910",
+   "ms": 46,
+   "pct": 0.3
+  },
+  {
+   "k": "updateMatrixWorld @ chunk-CTAKFJQL.js:19172",
+   "ms": 45,
+   "pct": 0.3
+  },
+  {
+   "k": "setValueM4 @ chunk-CTAKFJQL.js:11569",
+   "ms": 44,
+   "pct": 0.3
+  },
+  {
+   "k": "arraysEqual @ chunk-CTAKFJQL.js:11460",
+   "ms": 43,
+   "pct": 0.3
+  },
+  {
+   "k": "texSubImage2D @ (native):-1",
+   "ms": 42,
+   "pct": 0.3
+  },
+  {
+   "k": "setValueV3f @ chunk-CTAKFJQL.js:11503",
+   "ms": 41,
+   "pct": 0.3
+  },
+  {
+   "k": "useProgram @ (native):-1",
+   "ms": 38,
+   "pct": 0.2
+  },
+  {
+   "k": "(anon) @ MobaRuntimeStructures.jsx:131",
+   "ms": 38,
+   "pct": 0.2
+  },
+  {
+   "k": "updateHostComponent$1 @ chunk-ZKFVBSIG.js:9227",
+   "ms": 37,
+   "pct": 0.2
+  },
+  {
+   "k": "(anon) @ MobaRuntimeMinions.jsx:200",
+   "ms": 37,
+   "pct": 0.2
+  },
+  {
+   "k": "setFromEuler @ chunk-CTAKFJQL.js:2489",
+   "ms": 36,
+   "pct": 0.2
+  },
+  {
+   "k": "jsxWithValidation @ react_jsx-dev-runtime.js:808",
+   "ms": 36,
+   "pct": 0.2
+  },
+  {
+   "k": "setMaterial @ chunk-CTAKFJQL.js:14494",
+   "ms": 35,
+   "pct": 0.2
+  },
+  {
+   "k": "tick @ LogicEngine.js:5859",
+   "ms": 34,
+   "pct": 0.2
+  },
+  {
+   "k": "getProgramCacheKeyParameters @ chunk-CTAKFJQL.js:13001",
+   "ms": 34,
+   "pct": 0.2
+  },
+  {
+   "k": "validateProperty$1 @ chunk-47BGB6KQ.js:3360",
+   "ms": 34,
+   "pct": 0.2
+  },
+  {
+   "k": "updateHostComponent @ chunk-47BGB6KQ.js:14790",
+   "ms": 33,
+   "pct": 0.2
+  },
+  {
+   "k": "GoldChip @ GoldChip.jsx:19",
+   "ms": 32,
+   "pct": 0.2
+  },
+  {
+   "k": "setup @ chunk-CTAKFJQL.js:9570",
+   "ms": 31,
+   "pct": 0.2
+  },
+  {
+   "k": "(anon) @ MobaRuntimeEffects.jsx:212",
+   "ms": 28,
+   "pct": 0.2
+  },
+  {
+   "k": "reconcileChildrenArray @ chunk-ZKFVBSIG.js:5235",
+   "ms": 28,
+   "pct": 0.2
+  },
+  {
+   "k": "createWorkInProgress @ chunk-47BGB6KQ.js:20248",
+   "ms": 28,
+   "pct": 0.2
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+══ MOBA spectacle ＋ vision ══
+
+✅ V1 四個技能家族都有對應的 motif　{"sky":24,"lightning":19,"slam":37,"trail":44}
+✅ V2 家族層不靠地面環：pool 0（地面環）只出現在 sky 的落點預告一次　emit(0) × 1
+✅ V3 具名技能飽和度略升（只在具名技能繪製期間）
+✅ S1 引擎 statusEffects 的每一個 id 都在對照表（不再顯示英文 id）　3 種
+✅ S2 護盾與控制不共用造型（包覆型 vs 頭頂／腳下）　shield bubble,plates／control spikes,stars,icon
+✅ S3 HUD 兩處都讀同一份對照表
+✅ N1 營地／大型目標底下的常駐 objective-ring 已不渲染
+✅ N2 rigged 野怪沒有 ringGeometry（contact ring 已移除）
+✅ F1 迷霧模組不 import 引擎、store 或 React（純函式）
+✅ F2 視野外敵方英雄標記 fogHidden、視野內不標
+✅ F3 視野外敵方小兵從本幀移除
+✅ F4 迷霧中的特效：打不到我方視野 ⇒ 移除；打我方看得到的單位 ⇒ 保留
+✅ F5 迷霧預設關（View3D fogSide 預設 off）；Battle 與 Replay 以 blue 視角
+✅ J1 objSkillV1 只在 v3 規則集（v1／v2 逐位元不變）
+✅ J2 hero skills 開啟：英雄會對野怪／龍／巴龍施法（前 10 分鐘）　62 次
+✅ J3 hero skills 關閉：不會出現對物件施法（skill-off 不變）　0 次
+✅ J4 塔不是技能目標（_objectiveSkillTarget 只看 dragon／baron／camps）
+✅ C1 四種鏡頭：導播／標準／近戰／全景
+✅ C2 導播節拍：擊殺 ⇒ 特寫；物件；團戰；交戰；巡線
+✅ C3 防暈眩：換鏡停留用真實時間、yaw 不動
+✅ R1 moba-sim.v10 已登記（指紋 27dc4e0161024c06）、目前版本 ≥ v10、v9 保留、v9 的歷史重播明確拒絕
+
+MOBA spectacle ＋ vision：21/21 PASS
