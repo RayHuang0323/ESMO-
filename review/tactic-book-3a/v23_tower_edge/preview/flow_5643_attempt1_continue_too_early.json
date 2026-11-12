@@ -1,0 +1,28 @@
+{
+ "url": "http://127.0.0.1:5643/ESMO-/",
+ "steps": {
+  "toBattle": true,
+  "banner": "OWNER PREVIEW · v21＋v22＋v23（路線安全＋塔邊決策）候選 未核准發布 · 本機隔離",
+  "speed4": "true",
+  "hud": "▾\n🦭\n德國海豹\n0\n3:55\n0\n黑曜守望\n🔥\n$0.7萬\n擊殺 · 比賽時間 · 擊殺\n$0.7萬",
+  "quickFinish": "true",
+  "endScreen": true,
+  "endText": "DEFEAT 黑曜守望 獲勝 · 16:12 · 2:18 · 🐉3 👑2",
+  "continue": "false",
+  "afterContinue": " | 重生 51s 重生 70s 藍 Buff 紅 Buff 重生 4s Q · 旋律連射 ▾ 🦭 德國海豹 2 16:12 18 黑曜守望 🔥 $2.2萬 擊殺 · 比賽時間 · 擊殺 $3.3萬 推塔 藍方上路 2 塔 被摧毀 Drago"
+ },
+ "stored": [
+  {
+   "k": "esmo.profile.v1",
+   "size": 165940,
+   "seen": {
+    "rulesetId=career.v23": 1,
+    "simVersion=moba-sim.v23": 1,
+    "jungleCamp=v2": 1,
+    "invasion=v2": 1,
+    "safeRoute=v2": 1
+   }
+  }
+ ],
+ "pageErrors": []
+}
