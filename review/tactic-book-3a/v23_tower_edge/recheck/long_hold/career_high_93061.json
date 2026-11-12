@@ -1,0 +1,103 @@
+{
+ "path": "career",
+ "tier": "high",
+ "orient": "AB",
+ "seed": 93061,
+ "duration": 1160,
+ "over": true,
+ "longHolds": [
+  {
+   "id": "r1",
+   "side": "red",
+   "role": "top",
+   "t0": 116,
+   "sec": 27,
+   "hp0": 0.73,
+   "hpEnd": 0.22,
+   "pos": {
+    "x": 210.7,
+    "y": 231.1
+   },
+   "tower": {
+    "side": "blue",
+    "lane": "bot",
+    "x": 200.1,
+    "y": 242,
+    "gap": 2.5,
+    "wave": false
+   },
+   "blockedTasks": {
+    "對線": 54
+   },
+   "decisionLayerSaysRetreatFromTower": {
+    "yes": 54,
+    "no": 0
+   },
+   "foesNearMax": 2,
+   "endedBy": "retreat",
+   "endT": 143
+  },
+  {
+   "id": "b1",
+   "side": "blue",
+   "role": "top",
+   "t0": 125.5,
+   "sec": 21.5,
+   "hp0": 0.61,
+   "hpEnd": 0.26,
+   "pos": {
+    "x": 121.2,
+    "y": 100.5
+   },
+   "tower": {
+    "side": "red",
+    "lane": "top",
+    "x": 129.9,
+    "y": 88,
+    "gap": 2.5,
+    "wave": false
+   },
+   "blockedTasks": {
+    "對線": 43
+   },
+   "decisionLayerSaysRetreatFromTower": {
+    "yes": 43,
+    "no": 0
+   },
+   "foesNearMax": 2,
+   "endedBy": "retreat",
+   "endT": 147
+  },
+  {
+   "id": "b4",
+   "side": "blue",
+   "role": "adc",
+   "t0": 907,
+   "sec": 26,
+   "hp0": 0.52,
+   "hpEnd": 0.57,
+   "pos": {
+    "x": 253.7,
+    "y": 128.5
+   },
+   "tower": {
+    "side": "red",
+    "lane": "bot",
+    "x": 254.2,
+    "y": 112.5,
+    "gap": 2.5,
+    "wave": false
+   },
+   "blockedTasks": {
+    "對線": 52
+   },
+   "decisionLayerSaysRetreatFromTower": {
+    "yes": 52,
+    "no": 0
+   },
+   "foesNearMax": 0,
+   "endedBy": "task:對線",
+   "endT": 933
+  }
+ ]
+}

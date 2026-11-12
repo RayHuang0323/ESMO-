@@ -1,0 +1,104 @@
+{
+ "path": "tool",
+ "tier": "high",
+ "orient": "AB",
+ "seed": 93067,
+ "duration": 945.5,
+ "over": true,
+ "longHolds": [
+  {
+   "id": "b1",
+   "side": "blue",
+   "role": "top",
+   "t0": 148,
+   "sec": 20,
+   "hp0": 0.57,
+   "hpEnd": 0.4,
+   "pos": {
+    "x": 161.1,
+    "y": 155.8
+   },
+   "tower": {
+    "side": "red",
+    "lane": "mid",
+    "x": 176.2,
+    "y": 153.8,
+    "gap": 2.5,
+    "wave": false
+   },
+   "blockedTasks": {
+    "拉扯": 8,
+    "對線": 32
+   },
+   "decisionLayerSaysRetreatFromTower": {
+    "yes": 40,
+    "no": 0
+   },
+   "foesNearMax": 2,
+   "endedBy": "retreat",
+   "endT": 168
+  },
+  {
+   "id": "r1",
+   "side": "red",
+   "role": "top",
+   "t0": 169.5,
+   "sec": 32,
+   "hp0": 0.64,
+   "hpEnd": 0.8,
+   "pos": {
+    "x": 210.5,
+    "y": 230.9
+   },
+   "tower": {
+    "side": "blue",
+    "lane": "bot",
+    "x": 200.1,
+    "y": 242,
+    "gap": 2.5,
+    "wave": false
+   },
+   "blockedTasks": {
+    "對線": 64
+   },
+   "decisionLayerSaysRetreatFromTower": {
+    "yes": 64,
+    "no": 0
+   },
+   "foesNearMax": 2,
+   "endedBy": "task:對線",
+   "endT": 201.5
+  },
+  {
+   "id": "b1",
+   "side": "blue",
+   "role": "top",
+   "t0": 350.5,
+   "sec": 36,
+   "hp0": 0.56,
+   "hpEnd": 0.78,
+   "pos": {
+    "x": 119.9,
+    "y": 99.5
+   },
+   "tower": {
+    "side": "red",
+    "lane": "top",
+    "x": 129.9,
+    "y": 88,
+    "gap": 2.5,
+    "wave": false
+   },
+   "blockedTasks": {
+    "對線": 72
+   },
+   "decisionLayerSaysRetreatFromTower": {
+    "yes": 72,
+    "no": 0
+   },
+   "foesNearMax": 1,
+   "endedBy": "task:對線",
+   "endT": 386.5
+  }
+ ]
+}
