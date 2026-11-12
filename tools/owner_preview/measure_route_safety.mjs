@@ -64,6 +64,9 @@ function careerEngine(rulesetId, seed, tplBlue) {
   const opts = { seed, roster: C.appRoster(C.Runner.mirroredRoster(seed, C.M)), buildStrategy: "standard", opponentId: team.id, sessionId: `route-${seed}`, mode: "moba", tacticPlanBinding: bindingOf(tplBlue) };
   const out = prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
   if (!out.ok) throw new Error(`rejected ${rulesetId} ${seed}: ${JSON.stringify(out.errors).slice(0, 200)}`);
+  //  --safeRoute=v1（量測對照用）：生涯契約把正式層釘死在 "v2"，無法改規則集；"v2" 的新行為全部只看引擎旗標 _towerEdgeV23，
+  //  所以在第一個 tick 之前關掉它＝上一版 v23（逐 tick 雜湊與上一輪生涯證據相同才算數，見 v23_塔邊決策.md）。
+  if (arg("safeRoute", null) === "v1") out.engine._towerEdgeV23 = false;
   return out.engine;
 }
 
@@ -86,7 +89,7 @@ function runOne(rulesetId, seed, tplBlue, tplRed) {
   e._towerKillerFor = (foe) => { towerKill.add(foe.id); return tk(foe); };
   const S = { retreatEntry: 0, moveEntry: 0, routeCrossTicks: 0, retreatRouteCrossTicks: 0, towerOnMeTicks: 0, pingPong: 0, deaths: 0, towerDeaths: 0, retreatTowerDeaths: 0,
     jgDeaths: 0, jgRetreatTowerDeaths: 0, retreats: 0, retreatOk: 0, retreatDied: 0, retreatDiedInTowerRange: 0 };
-  const prevIn = new Map(), edgeLog = new Map(), lastRet = new Map(), retreatTrail = new Map();
+  const prevIn = new Map(), edgeLog = new Map(), lastRet = new Map(), retreatTrail = new Map(), lastSt = new Map(), deathLog = [];
   const h = createHash("sha1");
   let tickMs = 0, ticks = 0;
   const liveTowers = () => Object.values(e.towers).filter((t) => t.hp > 0);
@@ -101,6 +104,7 @@ function runOne(rulesetId, seed, tplBlue, tplRed) {
           prevIn.set(p.id + ":dead", true);
           S.deaths++; if (p.role === "jungle") S.jgDeaths++;
           const byT = towerKill.has(p.id); towerKill.delete(p.id);
+          { const L = lastSt.get(p.id) ?? []; deathLog.push({ t: e.t, id: p.id, side: p.side, role: p.role, byTower: byT, st: L.map((x) => x.st), intent: L.map((x) => x.intent) }); }
           if (byT) S.towerDeaths++;
           const tr = retreatTrail.get(p.id);
           const inRange = towers.some((tw) => tw.side !== p.side && dist(p.pos, tw.pos) <= e.towerRange(tw));
@@ -111,6 +115,7 @@ function runOne(rulesetId, seed, tplBlue, tplRed) {
         continue;
       }
       prevIn.delete(p.id + ":dead");
+      { const L = lastSt.get(p.id) ?? []; L.push({ st: p.state, intent: p.intent ?? null }); if (L.length > 6) L.shift(); lastSt.set(p.id, L); }
       if (p.retreating && !wasRet) S.retreats++;
       if (!p.retreating && wasRet) S.retreatOk++;
       lastRet.set(p.id, !!p.retreating);
@@ -138,7 +143,7 @@ function runOne(rulesetId, seed, tplBlue, tplRed) {
   S.towerDmg = Math.round(towerDmg); S.towerShots = towerShots;
   S.retreatOngoing = e.players.filter((q) => q.retreating && !q.dead).length;
   for (const sd of ["blue", "red"]) for (const [k, v] of Object.entries(e.routeObs?.[sd] ?? {})) S["route_" + k] = (S["route_" + k] ?? 0) + v;
-  return { rulesetId, seed, tplBlue, tplRed, path: PATH, tier: TIER, t: e.t, over: !!e.over, winner: e.winner ?? null, S, nav: e.navStats ? { pathCalls: e.navStats.pathCalls, pathNull: e.navStats.pathNull } : null, tickMs: +(tickMs / ticks).toFixed(3), streamHash: h.digest("hex").slice(0, 16) };
+  return { rulesetId, seed, tplBlue, tplRed, path: PATH, tier: TIER, t: e.t, over: !!e.over, winner: e.winner ?? null, S, nav: e.navStats ? { pathCalls: e.navStats.pathCalls, pathNull: e.navStats.pathNull } : null, tickMs: +(tickMs / ticks).toFixed(3), streamHash: h.digest("hex").slice(0, 16), deathLog };
 }
 
 const rows = [];

@@ -35,8 +35,9 @@ for (const id of ["career.v20", "challenge.v20", "balanceTool.v20", "career.v21"
 for (const [v22, v23] of [["career.v22", "career.v23"], ["balanceTool.v22", "balanceTool.v23"]]) {
   const a = MATCH_RULESETS[v22], b = MATCH_RULESETS[v23];
   const { safeRoute, ...restLayers } = b.layers;
-  ck(`I2 ${v23}＝${v22} 逐欄相同，只多 safeRoute "v1"、新的 id 與 simVersion v23${v23 === "career.v23" ? "、一個旗標" : ""}`,
-    safeRoute === "v1" && J(restLayers) === J(a.layers) && b.kind === a.kind && b.simVersion === "moba-sim.v23" && a.simVersion === "moba-sim.v22" && b.rulesetId === v23
+  //  2026-11-12 塔邊決策 Sprint：v23 規則集改用 safeRoute "v2"（＝v1＋塔邊決策；check_tower_edge_v23）。"v1" 仍是合法值，上一版證據可用工具覆寫重現。
+  ck(`I2 ${v23}＝${v22} 逐欄相同，只多 safeRoute "v2"、新的 id 與 simVersion v23${v23 === "career.v23" ? "、一個旗標" : ""}`,
+    safeRoute === "v2" && J(restLayers) === J(a.layers) && b.kind === a.kind && b.simVersion === "moba-sim.v23" && a.simVersion === "moba-sim.v22" && b.rulesetId === v23
     && J(b.releaseRequirements.slice(0, a.releaseRequirements.length)) === J(a.releaseRequirements)
     && b.releaseRequirements.length === a.releaseRequirements.length + (v23 === "career.v23" ? 1 : 0), J({ extra: b.releaseRequirements.slice(a.releaseRequirements.length) }));
   ck(`I3 ${v23} 通過 validateRuleset`, validateRuleset(b).ok, J(validateRuleset(b).errors));
@@ -69,10 +70,10 @@ const tool = (rulesetId, seed, tpl = "v2.jungle_invasion") => { const b = { kind
     const e = tool(rs, 11); let calls = 0;
     const orig = e._safeWaypointV23.bind(e); e._safeWaypointV23 = (p, t) => { calls++; return orig(p, t); };
     while (e.t < 60) e.tick(0.5);
-    flags[rs] = { on: e._safeRouteV23 === true, calls, obs: !!e.routeObs };
+    flags[rs] = { on: e._safeRouteV23 === true, edge: e._towerEdgeV23 === true, calls, obs: !!e.routeObs };
   }
-  ck("I8 引擎旗標：v20／v21／v22 為 false、整場 0 次呼叫、沒有 routeObs；v23 為 true 且有呼叫",
-    ["balanceTool.v20", "balanceTool.v21", "balanceTool.v22"].every((k) => !flags[k].on && flags[k].calls === 0 && !flags[k].obs) && flags["balanceTool.v23"].on && flags["balanceTool.v23"].calls > 0, J(flags));
+  ck("I8 引擎旗標：v20／v21／v22 的 safeRoute 與塔邊決策都是 false、整場 0 次呼叫、沒有 routeObs；v23 兩者皆 true 且有呼叫",
+    ["balanceTool.v20", "balanceTool.v21", "balanceTool.v22"].every((k) => !flags[k].on && !flags[k].edge && flags[k].calls === 0 && !flags[k].obs) && flags["balanceTool.v23"].on && flags["balanceTool.v23"].edge && flags["balanceTool.v23"].calls > 0, J(flags));
 }
 {
   //  findPath 的 avoid 參數省略 ⇒ 與舊呼叫完全相同（同一組點對，逐點比）

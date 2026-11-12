@@ -47,6 +47,8 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
 //   moba-sim.v23（候選，2026-11-12，Owner 要求；未發布）：v22 的所有行為＋可選層 safeRoute "v1"（只在 career.v23／balanceTool.v23）——
 //   移動目標的直線穿過敵塔射程時先繞行或徑向退出（LogicEngine._safeWaypointV23；review/tactic-book-3a/v23_戰術AI路徑與撤退合理性.md）。
 //   v20／v21／v22 的規則集沒有這個層 ⇒ 它們的 setup 與比賽結果逐位元不變。v21、v22 的指紋原樣保留，不覆寫。
+//   2026-11-12 塔邊決策 Sprint：同一個 v23 候選加 safeRoute "v2"（避塔有可走出口、不被站位層改寫成原地、塔邊承諾、求不到路不穿塔；
+//   LogicEngine._towerExitV23／_towerEdgeHoldV23／_safeRouteBlockedV23；review/tactic-book-3a/v23_塔邊決策.md）。career.v23／balanceTool.v23 改用 "v2"。
 export const MOBA_SIMULATION_VERSION = "moba-sim.v23";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
@@ -648,7 +650,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v22 候選（2026-11-11）：jungleCamp 層（Buff 營站位）＋invasion 層（野區入侵 v2）。v22 未凍結：每次語意檔再改就同版號重新登記（上一個值 7c2b2e65452d1664＝只有 jungleCamp 的版本，c5623ddd）。v21 那一行原樣保留（凍結證據的憑據，不得改）。
   "moba-sim.v22": "c2b507e0cc723382",
   //  v23 候選（2026-11-12）：safeRoute 層（路線安全）。v21、v22 那兩行原樣保留（歷史憑據，不得改）。v23 未凍結：語意檔再改就同版號重新登記。
-  "moba-sim.v23": "a97621e3b51cf125",
+  //  上一個值 a97621e3b51cf125＝只有 safeRoute "v1"（commit 2e626fa0；證據 review/tactic-book-3a/v23_safe_route/）。
+  //  目前值＝加上 safeRoute "v2" 塔邊決策（Owner 2026-11-12 核准的 Sprint；證據 review/tactic-book-3a/v23_tower_edge/）。"v1" 的行為逐位元保留（check_tower_edge_v23 E3）。
+  "moba-sim.v23": "b1cbfdd1be517e21",
 });
 
 export const isKnownSimulationVersion = (v) =>

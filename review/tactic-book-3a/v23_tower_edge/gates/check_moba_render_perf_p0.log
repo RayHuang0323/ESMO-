@@ -1,0 +1,25 @@
+✅ A1 平面幾何清單只有 Plane／Ring／Circle　"PlaneGeometry", "RingGeometry", "CircleGeometry"
+✅ A2 找得到 isSinglePassCandidate
+✅ A3 半透明雙面＋Plane ⇒ 可單次繪製
+✅ A4 半透明雙面＋Ring／Circle ⇒ 可單次繪製
+✅ A5 非平面（圓柱／球／八面體）⇒ 不可
+✅ A6 不透明或單面 ⇒ 不可
+✅ A7 沒有材質或幾何 ⇒ 不可（不丟例外）
+✅ A8 被用到非平面幾何的材質會還原（只還原自己開過的）
+✅ A9 同一輪同時用在平面與非平面的材質不會被開
+✅ B1 MobaRuntimeView3D 掛了 <MobaRenderPrewarm />
+✅ B2 預熱時綁離屏 target，結束後還原
+✅ B3 預熱失敗不影響畫面（有 catch，且把錯誤記下來）
+✅ B4 不 import LogicEngine／store（純呈現層）
+✅ B5 不新增場景物件（元件 return null）
+✅ C1 合批組別＝塔身×3、塔冠×4、血條×3　shaftBlue,shaftRed,shaftDead,crownBlue,crownRed,nexusCrownBlue,nexusCrownRed,barBg,barBlue,barRed
+✅ C2 每一組都有對應的 <instancedMesh>
+✅ C3 地環沒有合批（仍是逐結構的 mesh，材質每幀依存活切換）
+✅ C4 每座結構的 <group userData.structureId> 仍在
+✅ C5 part 名稱都還在
+✅ C6 血條的 renderOrder 沒變（底 48、填色 49）
+✅ C7 每幀結尾把實例數與矩陣送出
+✅ C8 被摧毀的塔：塔身縮成 0.3 並換殘骸組；塔冠與血條只畫存活的
+✅ C9 血條填色的實例矩陣＝原本 group＞mesh 的世界矩陣　最大差 0.00e+0
+
+check_moba_render_perf_p0：23/23

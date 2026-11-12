@@ -100,6 +100,9 @@ const INVASION_V2 = Object.freeze({ windowSec: 90, abortHp: 0.55, abortFoes: 2, 
 //   危險半徑＝敵塔射程＋towerSafePad（與 M1.7 塔區退出同一個餘裕）；繞行點放在危險半徑外 detourExtra。
 //   「目的地本身就在危險半徑內」＝有意進塔（圍攻／推線／越塔）⇒ 交給既有的塔區規則，不繞。
 const SAFE_ROUTE_V1 = Object.freeze({ detourExtra: 1.5 });
+//  safeRoute v2（v23 塔邊決策）：避塔後的承諾秒數（同一座塔擋下的任務，承諾期內不再派回去，除非進塔有理由）。
+//  4 秒＝涵蓋決策層一次重判（decisionEvalPeriod）加上 v19 塔區承諾上限 3.5 秒。
+const TOWER_EDGE_V23 = Object.freeze({ commitSec: 4 });
 /** 線段 a→b 是否穿過圓 c（{x, y, r}）。safeRoute v1 用。 */
 function segHitsDisk(a, b, c) {
   const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
@@ -397,8 +400,11 @@ export class LogicEngine {
     if (!blue && !red) return;
     this.tacticOn = true;
     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
-    this._safeRouteV23 = safeRoute === "v1";
+    //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
+    this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2";
+    this._towerEdgeV23 = safeRoute === "v2";
     if (this._safeRouteV23) this.routeObs = { blue: { pathPlans: 0, radialExits: 0, blockedFallback: 0 }, red: { pathPlans: 0, radialExits: 0, blockedFallback: 0 } };
+    if (this._towerEdgeV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { edgeExits: 0, edgeExitRotated: 0, edgeExitNone: 0, edgeHolds: 0, edgeReleases: 0, blockedRelaxed: 0, blockedHold: 0 });
     //  invasion 層（moba-sim.v22 候選）：同 jungleCamp——缺少 ⇒ 舊行為逐位元不變。"v2" ⇒ 擲中入侵的打野真的去打敵方野怪（_invadeStepV2），有失敗條件。
     this._invasionV2 = invasion === "v2";
     //  jungleCamp 層（moba-sim.v22 候選）：組裝器只在 ruleset 帶 jungleCamp 層時傳這個鍵；缺少 ⇒ 舊行為逐位元不變。
@@ -1443,9 +1449,11 @@ export class LogicEngine {
     if (!S || Math.hypot(S.gx - tgt.x, S.gy - tgt.y) > 6 || this.t >= S.until) {
       const path = findPath(p.pos, tgt, HERO_RADIUS, alive, disks);
       if (O) O.pathPlans++;
+      if ((!path || !path.length) && this._towerEdgeV23) return this._safeRouteBlockedV23(p, tgt, disks, alive);
       if (!path || !path.length) { p._srPath = null; if (O) O.blockedFallback++; return tgt; }
       S = p._srPath = { gx: tgt.x, gy: tgt.y, path, until: this.t + 2 };
     }
+    if (S.stop) return this._stopShortV23(p, tgt, disks);
     while (S.path.length > 1 && dist(p.pos, S.path[0]) < 1.5) S.path.shift();
     //  往前看：取最遠一個「直線可走、且不穿過危險圓」的路點（格點折線很碎，逐格走會在轉角磨）。
     let w = S.path[0];
@@ -1454,6 +1462,103 @@ export class LogicEngine {
       if (!crosses(p.pos, q) && lineWalkable(p.pos, q, HERO_RADIUS, alive)) { w = q; break; }
     }
     return w;
+  }
+
+  /**
+   * safeRoute v2（moba-sim.v23 候選「塔邊決策」）：避塔時的射程外出口。
+   * 舊式（M1.7／決策層 FALLBACK）＝沿「塔 → 我」徑向取射程＋餘裕的一點，不檢查走不走得到：
+   *  · 那一點常落在牆裡；_navMove 會把目標推回通道中心，推回的點可能又在射程內 ⇒ 站在塔下挨打。
+   * 新式（決定性、不讀 rng）：從徑向開始左右各 15° 輪流試到 ±120°，取第一個
+   *  「推回通道後仍在危險半徑外、可走、不在別座敵塔的危險半徑內、從目前位置直線走得到」的點。
+   * 全部不成立 ⇒ 回 null，呼叫端改回泉水（再由 _safeWaypointV23 尋一條避開敵塔的路）。
+   */
+  _towerExitV23(p, tw) {
+    const R = this.rules, alive = this._aliveStructs, pad = R.towerSafePad ?? 2.5, O = this.routeObs?.[p.side];
+    const rad = this.towerRange(tw) + pad;
+    const others = [];
+    for (const t of Object.values(this.towers)) {
+      if (t === tw || t.hp <= 0 || t.side === p.side) continue;
+      others.push({ x: t.pos.x, y: t.pos.y, r: this.towerRange(t) + pad });
+    }
+    const a0 = Math.atan2(p.pos.y - tw.pos.y, p.pos.x - tw.pos.x);
+    for (let i = 0; i <= 16; i++) {
+      const k = i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2);
+      const a = a0 + k * (Math.PI / 12);
+      const c = { x: clampMapX(tw.pos.x + Math.cos(a) * rad), y: clampMapY(tw.pos.y + Math.sin(a) * rad) };
+      const g = recenterToCorridor(c.x, c.y, HERO_RADIUS, alive);
+      if (dist(g, tw.pos) < rad - 0.5) continue;
+      if (!isWalkable(g.x, g.y, HERO_RADIUS, alive)) continue;
+      if (others.some((o) => Math.hypot(g.x - o.x, g.y - o.y) < o.r)) continue;
+      if (!lineWalkable(p.pos, g, HERO_RADIUS, alive)) continue;
+      if (O) { O.edgeExits++; if (k !== 0) O.edgeExitRotated++; }
+      return g;
+    }
+    if (O) O.edgeExitNone++;
+    return null;
+  }
+  /**
+   * safeRoute v2：帶危險圓求不到路時（v1 ＝退回原目標，直線穿過敵塔）。
+   *  ① 禁區縮回純射程（不含 towerSafePad）再求一次：目的地剛好在危險半徑外、被格點／投影推進禁區的情況大多因此有路。
+   *  ② 仍然沒有：不在撤退 ⇒ 沿直線走到第一個危險圓外就停（不穿塔；之後由再任務換事做）；
+   *     撤退中 ⇒ 照舊走原目標（停在原地多半更危險；次數記在 routeObs.blockedFallback）。
+   *  結果快取 2 秒（與成功路徑同一個重算條件），不每 tick 重跑 A*。
+   */
+  _safeRouteBlockedV23(p, tgt, disks, alive) {
+    const O = this.routeObs?.[p.side], pad = this.rules.towerSafePad ?? 2.5;
+    const tight = disks.map((c) => ({ x: c.x, y: c.y, r: c.r - pad }));
+    const path = findPath(p.pos, tgt, HERO_RADIUS, alive, tight);
+    if (O) O.pathPlans++;
+    if (path && path.length) {
+      if (O) O.blockedRelaxed++;
+      p._srPath = { gx: tgt.x, gy: tgt.y, path, until: this.t + 2 };
+      while (p._srPath.path.length > 1 && dist(p.pos, p._srPath.path[0]) < 1.5) p._srPath.path.shift();
+      return p._srPath.path[0];
+    }
+    if (p.retreating) { p._srPath = null; if (O) O.blockedFallback++; return tgt; }
+    if (O) O.blockedHold++;
+    p._srPath = { gx: tgt.x, gy: tgt.y, path: [], stop: true, until: this.t + 2 };
+    return this._stopShortV23(p, tgt, disks);
+  }
+  /** safeRoute v2：沿「我 → 目標」直線，走到第一個危險圓之外 0.5 就停（已在邊上 ⇒ 原地）。 */
+  _stopShortV23(p, tgt, disks) {
+    const L = dist(p.pos, tgt) || 1, ux = (tgt.x - p.pos.x) / L, uy = (tgt.y - p.pos.y) / L;
+    let s = 0;
+    while (s + 1 <= L) {
+      const q = { x: p.pos.x + ux * (s + 1), y: p.pos.y + uy * (s + 1) };
+      if (disks.some((c) => Math.hypot(q.x - c.x, q.y - c.y) < c.r + 0.5)) break;
+      s += 1;
+    }
+    return { x: p.pos.x + ux * s, y: p.pos.y + uy * s };
+  }
+  /** safeRoute v2：避塔（決策層 FALLBACK 或移動層 M1.7）＝取出口＋記下塔邊承諾（TOWER_EDGE_V23.commitSec 秒）。回傳移動目標。 */
+  _towerEdgeAvoidV23(p, tw) {
+    const exit = this._towerExitV23(p, tw);
+    p._edgeV23 = { tw, exit, until: this.t + TOWER_EDGE_V23.commitSec };
+    return exit ?? BASE[p.side];
+  }
+  /**
+   * safeRoute v2：塔邊承諾。剛因這座塔避塔的人，承諾期內新任務的目標若又落在這座塔的危險半徑（射程＋towerSafePad）內，
+   * 先用同一個塔區判定（_towerZoneV17：有兵線、拆得動的圍攻、驗證過的強殺）看「現在進塔有沒有理由」：
+   *  有 ⇒ 解除承諾、照常進塔（合理推塔／越塔不被一律禁止）；沒有 ⇒ 停在出口等，不把同一個危險任務每 tick 重派回去。
+   * 判定點＝目標往塔心方向、射程內 0.5 的那一點（目標若本來就在射程內就用目標本身）。
+   * 舊式：任務目標落在「射程外、但決策層塔區風險半徑（射程＋2）內」不會被攔 ⇒ 走到出口 → 原任務拉回 → 決策層又避塔（v23 實測重派 212 次／20 場）。
+   */
+  _towerEdgeHoldV23(p, st, effLane, tgt, alive) {
+    const E = p._edgeV23, tw = E.tw, rng = this.towerRange(tw), O = this.routeObs?.[p.side];
+    if (this.t >= E.until || tw.hp <= 0) { p._edgeV23 = null; return tgt; }
+    if (!tgt || dist(tgt, tw.pos) >= rng + (this.rules.towerSafePad ?? 2.5)) return tgt;
+    const d0 = dist(tgt, tw.pos) || 1, k = Math.min(d0, rng - 0.5) / d0;
+    const at = { x: tw.pos.x + (tgt.x - tw.pos.x) * k, y: tw.pos.y + (tgt.y - tw.pos.y) * k };
+    const zoneObjective = this._siegeTargetV19(p, st) ?? this.frontStructure(p.side, effLane, p.pos);
+    const z = this._towerZoneV17(p, alive, zoneObjective, at);
+    //  兩層都同意才解除：移動層（M1.7）允許進塔，而且決策層對同一座塔沒有退的理由（否則一進風險半徑決策層就 FALLBACK，又是一次來回）。
+    const fbWhy = p._fbV23?.tw === tw && p._fbV23.why;
+    if ((!z.inZone || z.allow) && !fbWhy) { p._edgeV23 = null; if (O) O.edgeReleases++; return tgt; }
+    if (!E.exit) return tgt;
+    //  理由還在 ⇒ 承諾延長（否則承諾一到期，原任務又把人拉回風險半徑，決策層再避塔：約每 4.5 秒一次的慢速來回）。
+    E.until = this.t + TOWER_EDGE_V23.commitSec;
+    p.intent = "塔邊等待時機"; if (O) O.edgeHolds++;
+    return E.exit;
   }
 
   _applyHeroSkillControl(target, kind, duration) {
@@ -3211,6 +3316,10 @@ export class LogicEngine {
     const towerFallback = inTowerRisk &&
       ((!hasWave && towerDefenders > 0 && alliesN === 1) ||
        (!hasWave && towerDefenders > alliesN) || hpRatio < fallbackHp);
+    //  safeRoute v2（v23 塔邊決策）：只記錄「撇開距離，這座塔現在有沒有讓我退的理由」，給塔邊承諾用（_towerEdgeHoldV23）。
+    //  不改任何決策；層不存在 ⇒ 不寫。
+    if (this._towerEdgeV23) p._fbV23 = enemyTower ? { tw: enemyTower,
+      why: (!hasWave && towerDefenders > 0 && alliesN === 1) || (!hasWave && towerDefenders > alliesN) || hpRatio < fallbackHp } : null;
     const cachedTargetAlive = !p.decisionTargetId ||
       alive.some((q) => q.id === p.decisionTargetId && !q.dead);
     const immediateContact = target && (!p.decisionTargetId || p.decisionAction === "LANE");
@@ -6980,7 +7089,8 @@ export class LogicEngine {
           const dd = dist(p.pos, tw.pos);
           if (dd < threatDist) { threatDist = dd; threatTower = tw; }
         }
-        if (threatTower) {
+        if (threatTower && this._towerEdgeV23) tgt = this._towerEdgeAvoidV23(p, threatTower);
+        else if (threatTower) {
           const safeDist = (R.towerSafetyV1 ? this.towerRange(threatTower) : (R.towerAggroRange ?? 8)) + 2.5;
           const ux = (p.pos.x - threatTower.pos.x) / (threatDist || 1);
           const uy = (p.pos.y - threatTower.pos.y) / (threatDist || 1);
@@ -7223,6 +7333,9 @@ export class LogicEngine {
       const waveAnchor = R.laneWaveAnchorV15 && this.heroSkillsOn && p._waveAnchorT === this.t && p.fsm === "LANE"
         && !p.decisionTargetId && !p.retreating && p.role !== "jungle" && p.role !== "sup";
       if (waveAnchor) { if (R.stableFormation) { p._archFoe = null; p._hold = false; } }
+      //  safeRoute v2（v23 塔邊決策）：決策層的避塔（FALLBACK）不交給站位層。站位層的「站定輸出」會把目標改寫成腳下
+      //  ⇒ 避塔的人站在塔下挨打（v23 實測原地挨打 46 次中 34 次是這個）。同撤退／回城的豁免，並清掉站定狀態。
+      else if (this._towerEdgeV23 && st === "避塔") { p._hold = false; p.dbgHold = false; }
       else tgt = this._archPosition(p, tgt, alive);
       //  ── Tactical AI Phase 1（v19）P0-1：再任務承諾 ─────────────────────────────
       //  M1.7 的發呆再任務（`_nextTaskV17`）只在「抵達」那一 tick 改寫目標；下一 tick 對線分支又把目標
@@ -7261,7 +7374,7 @@ export class LogicEngine {
           const tw = tz.tower;
           const d = dist(p.pos, tw.pos) || 1;
           const safe = this.towerRange(tw) + (R.towerSafePad ?? 2.5);
-          tgt = {
+          tgt = this._towerEdgeV23 ? this._towerEdgeAvoidV23(p, tw) : {
             x: clampMapX(tw.pos.x + (p.pos.x - tw.pos.x) / d * safe),
             y: clampMapY(tw.pos.y + (p.pos.y - tw.pos.y) / d * safe),
           };
@@ -7307,6 +7420,9 @@ export class LogicEngine {
       }
       //  safeRoute v1（moba-sim.v23 候選）：移動前把目標換成不穿過敵塔射程的路點。層不存在 ⇒ 不呼叫（舊行為逐位元不變）。
       //  放在嘲諷之前：被嘲諷時的強制目標不受影響。
+      //  safeRoute v2（v23 塔邊決策）：塔邊承諾放在**所有**任務改寫（決策、站位、再任務承諾、M1.7、發呆再任務）之後——
+      //  放在 M1.7 區塊裡會被後面的發呆再任務蓋掉（停在出口＝「已抵達」⇒ 立刻派推進／打野回塔下）。
+      if (this._towerEdgeV23 && p._edgeV23 && st !== "避塔" && !p.retreating && R.decisionV17) tgt = this._towerEdgeHoldV23(p, st, effLane, tgt, alive);
       if (this._safeRouteV23) tgt = this._safeWaypointV23(p, tgt);
       tgt = this._heroTauntTarget(p, tgt);
       const d = dist(p.pos, tgt),

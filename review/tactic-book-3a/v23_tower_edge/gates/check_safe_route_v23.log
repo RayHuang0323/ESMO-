@@ -1,0 +1,35 @@
+✅ I1 career.v20 沒有 safeRoute 鍵
+✅ I1 challenge.v20 沒有 safeRoute 鍵
+✅ I1 balanceTool.v20 沒有 safeRoute 鍵
+✅ I1 career.v21 沒有 safeRoute 鍵
+✅ I1 balanceTool.v21 沒有 safeRoute 鍵
+✅ I1 challenge.v21 沒有 safeRoute 鍵
+✅ I1 career.v22 沒有 safeRoute 鍵
+✅ I1 balanceTool.v22 沒有 safeRoute 鍵
+✅ I2 career.v23＝career.v22 逐欄相同，只多 safeRoute "v2"、新的 id 與 simVersion v23、一個旗標　{"extra":["mobaSafeRouteV23"]}
+✅ I3 career.v23 通過 validateRuleset　[]
+✅ I2 balanceTool.v23＝balanceTool.v22 逐欄相同，只多 safeRoute "v2"、新的 id 與 simVersion v23　{"extra":[]}
+✅ I3 balanceTool.v23 通過 validateRuleset　[]
+✅ I4 validateRuleset 擋下未知的 safeRoute 值、也擋下沒列 mobaSafeRouteV23 的正式規則集
+✅ I5 mobaSafeRouteV23 預設關閉；其他 v21／v22 旗標也還是關閉
+✅ I6 解析不串線：全關→v20、只開 v23 旗標→v20、director＋v23→v21、director＋jungle→v22、三個都開→v23　["career.v20","career.v20","career.v21","career.v22","career.v23"]
+✅ I7 challenge 模式不受 v23 旗標影響
+✅ I8 引擎旗標：v20／v21／v22 的 safeRoute 與塔邊決策都是 false、整場 0 次呼叫、沒有 routeObs；v23 兩者皆 true 且有呼叫　{"balanceTool.v20":{"on":false,"edge":false,"calls":0,"obs":false},"balanceTool.v21":{"on":false,"edge":false,"calls":0,"obs":false},"balanceTool.v22":{"on":false,"edge":false,"calls":0,"obs":false},"balanceTool.v23":{"on":true,"edge":true,"calls":1200,"obs":true}}
+✅ I9 findPath 不傳 avoid（或傳 null／空陣列）＝舊結果逐點相同
+✅ G1 重現案例的直線確實穿過藍方塔的危險圓（前提）　[{"x":153.8,"y":176.2}]
+✅ G2 穿越 ⇒ 換成路點，且「目前位置 → 路點」不再穿過任何危險圓、路點可走　{"x":162,"y":198}
+✅ G3 目的地在塔的危險圓內（有意進塔）⇒ 不改
+✅ G4 在圓內、朝塔心方向走 ⇒ 徑向退出（路點在危險圓外，且比現在離塔更遠）　{"radialOk":true}
+✅ G5 在圓內、本來就在離開 ⇒ 不改（或至少不往塔心走）
+✅ G6 己方小兵扛塔：非撤退的路過不繞、撤退中照樣繞　{"rNo":{"x":167,"y":126},"rRet":{"x":162,"y":198}}
+✅ G7 紅藍鏡射：鏡像位置與鏡像目的地 ⇒ 路點互為鏡像（誤差 < 0.5）　{"red":{"x":162,"y":198},"blue":{"x":168,"y":132},"mirrorOfRed":{"x":168,"y":132}}
+✅ B0 負向對照：v22 重現案例（seed 17 紅方打野）在 75 秒內陣亡　{"died":70,"enteredAfterInvade":0}
+✅ B1 v23 同一場：紅方打野 120 秒內沒有陣亡、入侵結束後一次都沒進敵塔射程　{"died":null,"enteredAfterInvade":0}
+✅ B2 10 場雙方入侵（10 分鐘）：塔收頭 v23 ≤ v22 的 30%　{"v22":{"blue":6,"red":4},"v23":{"blue":0,"red":0}}
+✅ B3 撤退時走進敵塔射程：v23 ≤ v22 的 30%　{"v22":{"blue":5,"red":4},"v23":{"blue":2,"red":0}}
+✅ B4 藍紅各自都改善（不是只修好一邊）　{"v22":[{"blue":6,"red":4},{"blue":5,"red":4}],"v23":[{"blue":0,"red":0},{"blue":2,"red":0}]}
+✅ B5 總陣亡沒有變多（不是把死亡換到別處）　{"v22":13,"v23":5}
+✅ B6 決定性：v23 同一個 Seed 重跑，逐 tick 座標／血量雜湊相同　["65d41d1af35f6fd8","65d41d1af35f6fd8"]
+✅ B7 模擬每 tick 成本：v23 ≤ v22 的 1.8 倍　{"v22":2.157,"v23":2.553}
+
+safeRoute v23 Gate：33/33 PASS
