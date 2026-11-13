@@ -1,0 +1,19 @@
+{
+ "gitHead": "6d7a5e56008eccd6fac2ae0b565404b56ae6afc6",
+ "builtAt": "2026-11-13T19:39:29.941Z",
+ "files": {
+  "artifacts/cs-final-integration/owner-review.html": "b2cdb1014750a69a",
+  "assets/engineStreamHash-CmcvWk0G.js": "28edaa9b49745fcb",
+  "assets/EnvironmentRuntime-DHhCOzJu.js": "87bd8a9b2ba976fa",
+  "assets/fpsSim.worker-BPxl3_YR.js": "5817ae92502379bf",
+  "assets/HeroPresentationGallery-BRIxtTMg.js": "3c231eacdbd1d846",
+  "assets/index-BSe5V2PV.js": "3ae159342fe85cac",
+  "assets/index-DXrKDBuF.js": "e912666282cd99df",
+  "assets/MobaMapPreview-DxFgSAhQ.js": "c7827f3aa82317d5",
+  "assets/MobaRuntimeBattleHarness-BxUz0WVg.js": "218c3b20cbccfd9b",
+  "assets/OrbitControls-DVcBvy2s.js": "b65567e26aec0668",
+  "assets/Profiler-C7xo8k3D.js": "abd6ed822871c6c1",
+  "assets/TerrainSandbox-CCMx9dzR.js": "45f128a40d799342",
+  "index.html": "d565c23eaec3de7a"
+ }
+}
