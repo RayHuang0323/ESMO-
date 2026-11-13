@@ -40,8 +40,8 @@ const bindingOf = (templateId) => C.bindTacticPlanToCurrentVersions(C.createTact
 const tool = (rulesetId, seed, tpl = "v2.jungle_invasion") => { const b = { kind: "binding", binding: bindingOf(tpl) }; return configure(seed, "standard", M, 1, null, { blue: b, red: b }, rulesetId).e; };
 
 // ── E 版本隔離 ──────────────────────────────────────────────────────────
-ck("E1 safeRoute 合法值＝legacy／v1／v2／v3；career.v23、balanceTool.v23 用 v3（小修後）；v1、v2 版的同一規則集仍通過 validateRuleset",
-  J(SAFE_ROUTES) === J(["legacy", "v1", "v2", "v3"]) && MATCH_RULESETS["career.v23"].layers.safeRoute === "v3" && MATCH_RULESETS["balanceTool.v23"].layers.safeRoute === "v3"
+ck("E1 safeRoute 合法值＝legacy／v1／v2／v3／v4；career.v23、balanceTool.v23 用 v4（導航與移動安全之後）；v1、v2 版的同一規則集仍通過 validateRuleset",
+  J(SAFE_ROUTES) === J(["legacy", "v1", "v2", "v3", "v4"]) && MATCH_RULESETS["career.v23"].layers.safeRoute === "v4" && MATCH_RULESETS["balanceTool.v23"].layers.safeRoute === "v4"
   && ["v1", "v2"].every((v) => validateRuleset({ ...MATCH_RULESETS["career.v23"], layers: { ...MATCH_RULESETS["career.v23"].layers, safeRoute: v } }).ok));
 {
   const e1 = withSafeRoute("v1", () => tool("balanceTool.v23", 11)), e2 = withSafeRoute("v2", () => tool("balanceTool.v23", 11));

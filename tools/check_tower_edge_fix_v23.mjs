@@ -13,11 +13,13 @@
 //   B  行為：複驗中已重現的三個 Seed（生涯高素質 93061、93139；工具 AB 93067）——v2 有 ≥ 20 秒的塔邊等待、v3 沒有
 //   P  效能：每 tick 成本
 //  ⚠ 不重錄任何 Golden、不用正式保留 Seeds（只用已公開、已用過的 Seeds 做回歸）。
+//  2026-11-13 導航與移動安全之後：career.v23／balanceTool.v23 預設是 "v4"。本 gate 繼續守 "v3"：
+//   工具路徑的引擎一律用 ESMO_BALANCE_SAFEROUTE=v3 建立；生涯路徑（層被正式路徑釘住）在第一個 tick 前關掉 _navSafetyV23（等價性見 check_nav_safety_v23 E2）。
 //  執行：node tools/check_tower_edge_fix_v23.mjs（約 2 分鐘）
 // ============================================================================
 import { createHash } from "node:crypto";
 import { careerContext, FLAG_SETS } from "./lib/careerLiveInputs.mjs";
-import { MATCH_RULESETS, SAFE_ROUTES, SAFE_ROUTE_RELEASE_FLAG } from "../src/platform/contracts/matchRuleset.js";
+import { MATCH_RULESETS, SAFE_ROUTES, SAFE_ROUTE_RELEASE_FLAG, validateRuleset } from "../src/platform/contracts/matchRuleset.js";
 
 const results = [];
 const ck = (name, ok, detail = "") => { results.push({ name, ok: !!ok }); console.log(`${ok ? "✅" : "❌"} ${name}${detail ? "　" + detail : ""}`); };
@@ -29,7 +31,8 @@ const { configure, modules } = await import("./balance/moba_items_balance_runner
 const M = await modules();
 const { prepareLiveMatch } = await import("../src/useLocalServer.js");
 const bindingOf = (templateId) => C.bindTacticPlanToCurrentVersions(C.createTacticPlan({ templateId, choices: {} }).plan);
-const tool = (seed, tb = "v2.jungle_invasion", tr = tb) => configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v23").e;
+const tool = (seed, tb = "v2.jungle_invasion", tr = tb) => withSafeRoute(process.env.ESMO_BALANCE_SAFEROUTE ?? "v3", () => toolRaw(seed, tb, tr));
+const toolRaw = (seed, tb, tr) => configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v23").e;
 function career(seed, statValue) {
   const flags = { ...FLAG_SETS(C.G)["career.v21"], mobaJungleV22: true, mobaSafeRouteV23: true };
   const ruleset = C.resolveLiveRuleset({ flags, dev: null, allowTool: false }).ruleset;
@@ -38,6 +41,7 @@ function career(seed, statValue) {
   const opts = { seed, roster: C.appRoster(C.Runner.mirroredRoster(seed, C.M)), buildStrategy: "standard", opponentId: team.id, sessionId: `recheck-${seed}`, mode: "moba", tacticPlanBinding: bindingOf("v2.jungle_invasion") };
   const out = prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
   if (!out.ok) throw new Error(`career setup rejected ${seed}`);
+  out.engine._navSafetyV23 = false;   //  守 "v3"
   return { e: out.engine, rulesetId: ruleset.rulesetId };
 }
 const hash10 = (e) => { const h = createHash("sha1"); while (e.t < 600 && !e.over) { e.tick(0.5); for (const p of e.players) h.update(`${p.id}${p.pos.x.toFixed(4)},${p.pos.y.toFixed(4)},${p.hp.toFixed(3)},${p.dead ? 1 : 0};`); } return h.digest("hex").slice(0, 16); };
@@ -45,8 +49,8 @@ const hash10 = (e) => { const h = createHash("sha1"); while (e.t < 600 && !e.ove
 // ── E 版本隔離 ──────────────────────────────────────────────────────────
 {
   const e3 = tool(11), e2 = withSafeRoute("v2", () => tool(11));
-  ck("E1 SAFE_ROUTES 含 v3、旗標同 mobaSafeRouteV23；career.v23／balanceTool.v23 用 v3；引擎：v3 ⇒ _edgeRedecideV23 true 且有新計數，v2 ⇒ false 且沒有",
-    SAFE_ROUTES.includes("v3") && SAFE_ROUTE_RELEASE_FLAG.v3 === "mobaSafeRouteV23" && MATCH_RULESETS["career.v23"].layers.safeRoute === "v3" && MATCH_RULESETS["balanceTool.v23"].layers.safeRoute === "v3"
+  ck("E1 SAFE_ROUTES 含 v3、旗標同 mobaSafeRouteV23；v3 版的 career.v23 規則集通過 validateRuleset；引擎：v3 ⇒ _edgeRedecideV23 true、_navSafetyV23 false 且有新計數，v2 ⇒ false 且沒有",
+    SAFE_ROUTES.includes("v3") && SAFE_ROUTE_RELEASE_FLAG.v3 === "mobaSafeRouteV23" && validateRuleset({ ...MATCH_RULESETS["career.v23"], layers: { ...MATCH_RULESETS["career.v23"].layers, safeRoute: "v3" } }).ok && e3._navSafetyV23 === false
     && e3._edgeRedecideV23 === true && e3._towerEdgeV23 === true && "edgeWaitWave" in e3.routeObs.blue && e2._edgeRedecideV23 === false && !("edgeWaitWave" in e2.routeObs.blue));
 }
 //  "v2" 小修前（HEAD 66b4f5e6）錄下的雜湊；"v3" 的雜湊＝本次登記（之後再改語意就會紅）。

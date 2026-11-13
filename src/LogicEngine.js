@@ -110,6 +110,9 @@ const TOWER_EDGE_V23 = Object.freeze({ commitSec: 4 });
 //   recoverEtaSec            安全時，以脫戰回復速率（含脫戰延遲）估計回到進塔血量門檻的秒數；超過就不原地等，改撤退
 //   waveSoonDist             己方最前面的小兵離那座塔不到「射程＋這個距離」⇒ 兵線即將抵達，值得等（同 waitWaveRange 28）
 //   maxWaitSec               「回血等待」與「等兵線」共同的上限（後備，不是主要出口）；到期依血量撤退或退回己方兵線
+//  safeRoute v4（v23 導航與移動安全）：撤退被危險圓包住時挑路線的成本＝路線格數＋exposureK × 落在被放行那座塔射程內的格數。
+//  只比射程內格數會選到「少挨 1 格、卻多繞 55 格深入敵方野區」的路線（藍方上路一、二塔之間的口袋實測）；4＝射程內一格當成五格。
+const NAV_SAFETY_V23 = Object.freeze({ exposureK: 4, tryDisks: 3 });
 const TOWER_EDGE_REDECIDE_V23 = Object.freeze({ hurtDrop: 0.08, hurtRecentSec: 1.5, threatRadius: 10, recoverEtaSec: 8, waveSoonDist: 28, maxWaitSec: 12 });
 /** 線段 a→b 是否穿過圓 c（{x, y, r}）。safeRoute v1 用。 */
 function segHitsDisk(a, b, c) {
@@ -411,11 +414,17 @@ export class LogicEngine {
     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
     //  "v3"（2026-11-13 Owner 核准的塔邊等待小修；同一個 v23 候選）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
     //  "v2" 保留且逐位元不變（新行為全部只看 _edgeRedecideV23）。
-    this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3";
-    this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3";
-    this._edgeRedecideV23 = safeRoute === "v3";
+    //  "v4"（2026-11-13 導航與移動安全，同一個 v23 候選）＝v3 全部行為＋_navSafetyV23：
+    //   ① 導航鏡射補上門牙塔（mobaNavigation.mirrorAlive；紅方半場的投影／尋路不再用錯的門牙塔存亡狀態）
+    //   ② 塔內徑向退出不把撤退的人推進「四周都是危險圓」的死路 ③ 撤退被危險圓包住時走射程內最短的路線穿出去（_retreatCrossV23）。
+    //  "v1"／"v2"／"v3" 保留且逐位元不變（新行為全部只看 _navSafetyV23）。
+    this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4";
+    this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4";
+    this._edgeRedecideV23 = safeRoute === "v3" || safeRoute === "v4";
+    this._navSafetyV23 = safeRoute === "v4";
     if (this._safeRouteV23) this.routeObs = { blue: { pathPlans: 0, radialExits: 0, blockedFallback: 0 }, red: { pathPlans: 0, radialExits: 0, blockedFallback: 0 } };
     if (this._towerEdgeV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { edgeExits: 0, edgeExitRotated: 0, edgeExitNone: 0, edgeHolds: 0, edgeReleases: 0, blockedRelaxed: 0, blockedHold: 0 });
+    if (this._navSafetyV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { radialSkipped: 0, blockedCross: 0 });
     if (this._edgeRedecideV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { edgeWaitRecover: 0, edgeWaitWave: 0, edgeRegroupHurt: 0, edgeRegroupThreat: 0, edgeRegroupNoWave: 0, edgeRegroupCap: 0, edgeRegroupHp: 0, edgeRetreatHurt: 0, edgeRetreatThreat: 0, edgeRetreatSlow: 0 });
     //  invasion 層（moba-sim.v22 候選）：同 jungleCamp——缺少 ⇒ 舊行為逐位元不變。"v2" ⇒ 擲中入侵的打野真的去打敵方野怪（_invadeStepV2），有失敗條件。
     this._invasionV2 = invasion === "v2";
@@ -1454,7 +1463,11 @@ export class LogicEngine {
       const { tw, rad, d } = inside;
       const k = (rad + SAFE_ROUTE_V1.detourExtra) / (d || 1);
       const out = { x: clampMapX(tw.pos.x + (p.pos.x - tw.pos.x) * k), y: clampMapY(tw.pos.y + (p.pos.y - tw.pos.y) * k) };
-      if (isWalkable(out.x, out.y, HERO_RADIUS, alive) && !disks.some((c) => Math.hypot(out.x - c.x, out.y - c.y) < c.r)) { if (O) O.radialExits++; return out; }
+      //  safeRoute v4：撤退中，徑向出口那一側若回不了家（出了圓就被危險圓包住，例如敵方一、二塔之間）⇒ 不用它，
+      //  改走下面的尋路（這座塔不在禁區內 ⇒ 直接穿過它、避開其他塔）。正在照「穿出去」的路線走時也不再往回推。
+      const skip = this._navSafetyV23 && p.retreating && (this._crossActiveV23(p, tgt) || !this._exitLeadsHomeV23(p, tw, out, tgt, disks, rad, alive));
+      if (skip) { if (O) O.radialSkipped++; }
+      else if (isWalkable(out.x, out.y, HERO_RADIUS, alive) && !disks.some((c) => Math.hypot(out.x - c.x, out.y - c.y) < c.r)) { if (O) O.radialExits++; return out; }
     }
     if (!disks.length || !crosses(p.pos, tgt)) { p._srPath = null; return tgt; }
     let S = p._srPath;
@@ -1526,10 +1539,59 @@ export class LogicEngine {
       while (p._srPath.path.length > 1 && dist(p.pos, p._srPath.path[0]) < 1.5) p._srPath.path.shift();
       return p._srPath.path[0];
     }
+    if (p.retreating && this._navSafetyV23) {
+      //  safeRoute v4：撤退被危險圓包住 ⇒ 不再直線回家（會穿過沿途每一座塔），改走「只穿過一座塔、在它射程內走最短」的路線。
+      const cross = this._retreatCrossV23(p, tgt, tight, alive);
+      if (cross) {
+        if (O) O.blockedCross++;
+        p._srPath = { gx: tgt.x, gy: tgt.y, path: cross, cross: true, until: this.t + 2 };
+        while (p._srPath.path.length > 1 && dist(p.pos, p._srPath.path[0]) < 1.5) p._srPath.path.shift();
+        return p._srPath.path[0];
+      }
+    }
     if (p.retreating) { p._srPath = null; if (O) O.blockedFallback++; return tgt; }
     if (O) O.blockedHold++;
     p._srPath = { gx: tgt.x, gy: tgt.y, path: [], stop: true, until: this.t + 2 };
     return this._stopShortV23(p, tgt, disks);
+  }
+  /** safeRoute v4：這名英雄是否正照著「穿出去」的路線走（同一個目的地、還沒到重算時間）。 */
+  _crossActiveV23(p, tgt) {
+    const S = p._srPath;
+    return !!(S && S.cross && this.t < S.until && Math.hypot(S.gx - tgt.x, S.gy - tgt.y) <= 6);
+  }
+  /**
+   * safeRoute v4：徑向出口 out（在塔 tw 的危險圓外）之後回得了家嗎？
+   * ＝從 out 到目的地，把這座塔與其他敵塔都當禁區（純射程，不含餘裕）仍求得到路。結果依「人＋塔」快取 2 秒。
+   */
+  _exitLeadsHomeV23(p, tw, out, tgt, disks, rad, alive) {
+    const C = p._exitHomeV23;
+    if (C && C.tw === tw && this.t < C.until) return C.ok;
+    const pad = this.rules.towerSafePad ?? 2.5;
+    const all = disks.map((c) => ({ x: c.x, y: c.y, r: c.r - pad }));
+    all.push({ x: tw.pos.x, y: tw.pos.y, r: rad - pad });
+    const path = findPath(out, tgt, HERO_RADIUS, alive, all);
+    const ok = !!(path && path.length);
+    p._exitHomeV23 = { tw, ok, until: this.t + 2 };
+    return ok;
+  }
+  /**
+   * safeRoute v4：撤退被危險圓包住時的路線。離我最近的 3 個危險圓各試一次「只放行這一座」，
+   * 取成本（路線格數＋NAV_SAFETY_V23.exposureK × 落在那座塔射程內的格數）最小的一條（相同 ⇒ 先試到的，也就是較近的那座）。
+   * 都求不到 ⇒ null（呼叫端照舊走原目標）。決定性、不讀 rng。
+   */
+  _retreatCrossV23(p, tgt, tight, alive) {
+    const order = tight.map((c, i) => ({ i, d: Math.hypot(p.pos.x - c.x, p.pos.y - c.y) - c.r })).sort((a, b) => a.d - b.d || a.i - b.i).slice(0, NAV_SAFETY_V23.tryDisks);
+    let best = null;
+    for (const { i } of order) {
+      const c = tight[i];
+      const path = findPath(p.pos, tgt, HERO_RADIUS, alive, tight.filter((_, j) => j !== i));
+      if (!path || !path.length) continue;
+      let exposed = 0;
+      for (const q of path) if (Math.hypot(q.x - c.x, q.y - c.y) < c.r) exposed++;
+      const cost = path.length + NAV_SAFETY_V23.exposureK * exposed;
+      if (!best || cost < best.cost) best = { path, cost };
+    }
+    return best ? best.path : null;
   }
   /** safeRoute v2：沿「我 → 目標」直線，走到第一個危險圓之外 0.5 就停（已在邊上 ⇒ 原地）。 */
   _stopShortV23(p, tgt, disks) {
@@ -6141,6 +6203,8 @@ export class LogicEngine {
     for (const [id, tw] of Object.entries(this.towers)) {
       if (tw.hp > 0) this._aliveStructs.add(id);
     }
+    //  safeRoute v4：導航鏡射時連門牙塔一起鏡射（見 mobaNavigation.mirrorAlive）。只是集合上的一個標記；層不存在 ⇒ 不寫。
+    if (this._navSafetyV23) this._aliveStructs.navMirrorV2 = true;
     // S29B1（v3）：lateAccelT 之後額外增陡（sudden death，雙方對稱）⇒ 無戰術平局
     //   不再拖出 30 分鐘長尾。v1/v2 無此欄位 ⇒ 第二項恆為 0，行為不變。
     const lateFactor = 1 + Math.max(0, this.t - 360) / 600 +

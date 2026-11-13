@@ -529,8 +529,16 @@ function mirrorAlive(alive) {
       out.add(`${side}_${MIRROR_LANE_ID[m[2]]}_${m[3]}`);
       continue;
     }
+    //  moba-sim.v23 候選 safeRoute "v4"：門牙塔（blue_nexus_0／1 ↔ red_nexus_0／1）原本沒有鏡射——上面的規則只認上／中／下三路，
+    //  門牙塔原樣留在集合裡 ⇒ 紅方半場的投影／尋路用的是「藍方門牙塔」的存亡狀態：
+    //   · 藍方門牙塔已倒、紅方的還在 ⇒ 紅方門牙塔在正規化後被當成不存在：傳送／技能位移落在它的碰撞圓裡（projectToWalkable 原樣回傳），
+    //     尋路穿過它；· 反過來 ⇒ 已倒的紅方門牙塔仍被當成障礙。
+    //  修正只在呼叫端在集合上標了 navMirrorV2 時生效（引擎的 safeRoute "v4"）；沒有標記 ⇒ 與舊版逐位元相同。
+    const g = src.navMirrorV2 ? /^(blue|red)_nexus_(\d+)$/.exec(id) : null;
+    if (g) { out.add(`${g[1] === "blue" ? "red" : "blue"}_nexus_${g[2]}`); continue; }
     out.add(id === "blue_nexus" ? "red_nexus" : id === "red_nexus" ? "blue_nexus" : id);
   }
+  if (src.navMirrorV2) out.navMirrorV2 = true;
   return out;
 }
 
