@@ -36,8 +36,9 @@ for (const [v22, v23] of [["career.v22", "career.v23"], ["balanceTool.v22", "bal
   const a = MATCH_RULESETS[v22], b = MATCH_RULESETS[v23];
   const { safeRoute, ...restLayers } = b.layers;
   //  2026-11-12 塔邊決策 Sprint：v23 規則集改用 safeRoute "v2"（＝v1＋塔邊決策；check_tower_edge_v23）。"v1" 仍是合法值，上一版證據可用工具覆寫重現。
-  ck(`I2 ${v23}＝${v22} 逐欄相同，只多 safeRoute "v2"、新的 id 與 simVersion v23${v23 === "career.v23" ? "、一個旗標" : ""}`,
-    safeRoute === "v2" && J(restLayers) === J(a.layers) && b.kind === a.kind && b.simVersion === "moba-sim.v23" && a.simVersion === "moba-sim.v22" && b.rulesetId === v23
+  //  2026-11-13 塔邊等待小修（Owner 核准）：改用 "v3"（＝v2＋塔邊等待重新決策；check_tower_edge_fix_v23）。"v2" 仍是合法值、逐位元保留。
+  ck(`I2 ${v23}＝${v22} 逐欄相同，只多 safeRoute "v3"、新的 id 與 simVersion v23${v23 === "career.v23" ? "、一個旗標" : ""}`,
+    safeRoute === "v3" && J(restLayers) === J(a.layers) && b.kind === a.kind && b.simVersion === "moba-sim.v23" && a.simVersion === "moba-sim.v22" && b.rulesetId === v23
     && J(b.releaseRequirements.slice(0, a.releaseRequirements.length)) === J(a.releaseRequirements)
     && b.releaseRequirements.length === a.releaseRequirements.length + (v23 === "career.v23" ? 1 : 0), J({ extra: b.releaseRequirements.slice(a.releaseRequirements.length) }));
   ck(`I3 ${v23} 通過 validateRuleset`, validateRuleset(b).ok, J(validateRuleset(b).errors));

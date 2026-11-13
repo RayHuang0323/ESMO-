@@ -93,8 +93,10 @@ ck("S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在�
   //  moba-sim.v22 候選：jungleCamp、invasion 各自只被轉成引擎自己的一個旗標，不經過 Director（Director 與每時期方針無關）。
   && ENGINE_CODE.includes('this._jungleCampV2 = jungleCamp === "v2";') && ENGINE_CODE.includes('this._invasionV2 = invasion === "v2";')
   //  moba-sim.v23 候選：safeRoute 同樣只變成引擎自己的一個旗標，不經過 Director。
-  && ENGINE_CODE.includes('this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2";')
-  && ENGINE_CODE.includes('this._towerEdgeV23 = safeRoute === "v2";')
+  //  2026-11-13 塔邊等待小修：多一個 "v3"（＝v2＋塔邊等待重新決策），同樣只變成引擎自己的旗標。
+  && ENGINE_CODE.includes('this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3";')
+  && ENGINE_CODE.includes('this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3";')
+  && ENGINE_CODE.includes('this._edgeRedecideV23 = safeRoute === "v3";')
   && !/directorArgs\.(jungleCamp|invasion|safeRoute)/.test(ENGINE_CODE)
   && (ENGINE_CODE.match(/\blaneFrame\b/g) ?? []).length === 4);
 ck("S2b _tidOf／_tidPhase 是一行委派給 Director",

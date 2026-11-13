@@ -1,0 +1,100 @@
+✅ S1 剝註解後的引擎沒有直接讀 this.tk／this.tid（整份掃、可跨行、含 (this)／解構）：出現處恰好＝允許清單（0 筆，即完全沒有）
+✅ S1d 屬性記號計數（.tk／.tid／"tk"／"tid"，不論前面是誰）恰好＝0（允許清單 0 筆）：抓自我別名與 Reflect.get　0
+✅ S1b 逐字樣式 this.tk[ this.tk. this.tk?. this.tid[ this.tid. this.tid?. 在剝註解後的引擎裡一次都沒有
+✅ S1c 允許清單為空（不留死例外），而且 configureMatch 沒有 this.tk／this.tid 的指派
+✅ S2 Director 只建立一次（configureMatch 內）；this.director 只在建構子（null）與 configureMatch 被指派
+❌ S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在收到時原樣轉交 Director（轉換只在 Director 做）
+✅ S2b _tidOf／_tidPhase 是一行委派給 Director
+✅ S2c 每一個 knobs 讀取點在未啟用戰術時仍回 null（`this.tacticOn ? this.director.knobs(…) : null`；configureMatch 內那一處除外）
+✅ S3 戰術階段界線（480／960 及其等價寫法：480.0、8 * 60、16 * 60、4.8e2、0x1e0…）只住在 Director：剝註解後引擎 0 次、Director 恰好 480 與 960 各 1 次　引擎 []、Director [480,960]
+✅ S6 引擎（剝註解）不呼叫 Director 的 directive()——check_tactical_directive_3c B2（契約不在語意清單）的前提
+✅ S7 每時期方針的挑選只住在 Director：剝註解後的引擎沒有 phases 索引、phases 只在 configureMatch 原樣轉交（4 次）、.phase( 呼叫點＝允許清單（_tidPhase 1 處）　索引 0、phases 記號 4、.phase( [_tidPhase() { return this.director.phase(this.t); }]
+✅ S7b Director 自己確實做每時期挑選（core.v1 以 phase(t) 查表；static 不看 phases）
+✅ S4 引擎 import Director；Director 在 SIMULATION_SEMANTICS_FILES
+✅ S5 Director 本身不讀 ruleset（C2 只有 static）、不 import 引擎、不用 Math.random／Date
+✅ N1 植入 `const x = this.tk[side];` ⇒ 抓到
+✅ N2 植入 `const y = this.tid?.blue;` ⇒ 抓到
+✅ N3 植入 `const { tk } = this;` ⇒ 抓到
+✅ N4 植入 `const z = this["tid"];` ⇒ 抓到
+✅ N5 只在註解裡（`// this.tk[side]`、`/* this.tid.blue */`）⇒ 不抓
+✅ N6 `this.tidObs` 不是 this.tid（字界）⇒ 不抓
+✅ N0 對照：未植入時三個檢查都綠（singleSourceOk／phaseOk／directiveOk）
+✅ N8 多行解構 `const {\n tk,\n} = this` ⇒ 單一讀取來源檢查轉紅
+✅ N9 自我別名 `const self = this; self.tk` ⇒ 單一讀取來源檢查轉紅
+✅ N10 括號 `(this).tk` ⇒ 單一讀取來源檢查轉紅
+✅ N11 `Reflect.get(this, 'tk')` ⇒ 單一讀取來源檢查轉紅
+✅ N12 點前換行 `this\n  .tk` ⇒ 單一讀取來源檢查轉紅
+✅ N13 `this[k]`（k = "tid"） ⇒ 單一讀取來源檢查轉紅
+✅ N14 多行解構右邊不是 this（`= self`） ⇒ 單一讀取來源檢查轉紅
+✅ N15 `480.0` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N16 `8 * 60` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N17 `16*60` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N18 `60 * 16` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N19 `4.8e2` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N20 `0x3c0` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N7 `480` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N21 引擎呼叫 `this.director.directive("blue", this.t)` ⇒ S6 轉紅
+✅ N22 引擎呼叫 `this.director["directive"](…)` ⇒ S6 轉紅
+✅ N24 引擎植入 `const K = this._ph.blue[this.director.phase(this.t)].knobs;`（引擎自己依時期挑） ⇒ S7 轉紅
+✅ N25 引擎植入 `return phases[1];` ⇒ S7 轉紅
+✅ N26 引擎植入 `return this._p.phases?.[2];` ⇒ S7 轉紅
+✅ N27 對照：只在註解裡的 `phases[1]`、`this.director.phase(t)` ⇒ S7 不紅
+✅ N23 對照：只在註解裡的 `.directive(`、`480`、`self.tk` ⇒ 三個檢查都不紅
+✅ B1 沒有 phases ⇒ mode＝static；TACTICAL_DIRECTOR_MODES＝[static, core.v1]（Director 轉出的就是契約 matchRuleset.js 的同一個物件，不是第二份定義）；Director 物件凍結
+✅ B2 knobs(side) 回傳傳入的**同一個參照**（藍／紅分開，不互串）
+✅ B2b knobs 物件不被凍結、不被改（static 不複製也不碰）
+✅ B3 identity(side) 回傳傳入的同一個參照
+✅ B4 identityOfKnobs：藍 knobs ⇒ 藍 identity、紅 ⇒ 紅、別的物件／null ⇒ null（以參照比對：內容相同的複本也是 null）
+✅ B5 identity 關閉（null）⇒ identity(side)、identityOfKnobs 一律 null；hasIdentity＝false；knobs 照常
+✅ B5b 只有一側有 identity ⇒ 另一側 null（＝舊式 `identity.red ?? null`）
+✅ B5c 兩側傳同一個 knobs 物件 ⇒ identityOfKnobs 回藍方（與舊式 `K === tk.blue ? … : K === tk.red ? …` 同序；C3 改成顯式 side 前不得改）
+✅ B6 phase 邊界：0→0、479.9→0、480→1、959.9→1、960→2、3000→2　0,0,1,1,2,2
+✅ B7 directive 通過 validateTacticalDirective、schema＝TacticalDirective.v1、side／phase 正確
+✅ B8 directive 深凍結、不與 knobs／identity 共用參照、值相同
+✅ B8b directive 之後輸入仍未被凍結或改動
+✅ B8c identity 關閉 ⇒ directive.identity＝null 且仍有效；紅方 phase 2
+✅ B9 同樣的輸入建兩次 ⇒ 回答完全相同（沒有模組層級狀態）
+✅ B11 R-4（legacyMirror）：明寫 legacyMirror 與不傳相同——兩側都是傳入的同一個參照、不凍結；Director 的 laneFrame 欄位＝legacyMirror
+✅ B12 R-4（teamRelative）：藍方是傳入的同一個參照；紅方是另一個物件、每次呼叫同一參照、凍結；輸入不被凍結或改動
+✅ B13 R-4（teamRelative）：identity 照舊（identity(side)、identityOfKnobs(交給引擎的 knobs)）；複本 ⇒ null
+✅ B14 R-4（teamRelative）：directive 仍是設定的己方視角（knobs 內容＝傳入的紅方設定，不是轉換後的世界路名）
+✅ B15 未知的 laneFrame ⇒ 建立時丟 TypeError；laneFrame 值清單＝契約 matchRuleset.js 的同一個物件
+✅ B10 Director 從建立到所有回答都沒有呼叫 Math.random　0 次
+✅ E1 未 configureMatch ⇒ director＝null、tacticOn＝false；_tidOf 回 null
+✅ E1b configureMatch 沒有 blue／red（提前 return）⇒ director 仍是 null
+✅ E2 規則開＋identity：knobs("blue") 是傳入的同一個物件；紅方＝傳入的同一個物件；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 規則開＋identity：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 規則開＋identity：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E4 規則開＋identity：_tidPhase()＝舊式（0/479.9/480/959.9/960/2000）
+✅ E2 規則關：knobs("blue") 是傳入的同一個物件；紅方＝傳入的同一個物件；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 規則關：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 規則關：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E2 規則開、沒傳 identity：knobs("blue") 是傳入的同一個物件；紅方＝傳入的同一個物件；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 規則開、沒傳 identity：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 規則開、沒傳 identity：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E2 紅方 null（補中性）：knobs("blue") 是傳入的同一個物件；紅方＝中性 knobs（與 _neutralKnobs() 同值）；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 紅方 null（補中性）：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 紅方 null（補中性）：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E4 紅方 null（補中性）：_tidPhase()＝舊式（0/479.9/480/959.9/960/2000）
+✅ E5 Director 的任何呼叫都不消耗 rng／rng2（同 seed 兩台引擎之後的序列相同）
+✅ E6 tidObs 在 identity 接線時建立（＝舊的 `if (this.tid)`）
+✅ C1 core.v1 各時期物件不同：目前時期命中 ⇒ 該時期 identity；其他時期的 knobs ⇒ 建立它的那個時期的 identity（不是 null）　ib0/ib1/ir2 ｜ ib0/ib1/ir2 ｜ ib0/ib1/ir2
+✅ C1b 不是任何時期的物件（含內容相同的複本）、null ⇒ null
+✅ C2 目前時期優先：X＝藍 early＝紅 mid ⇒ t=500 回 ir1（目前時期的紅方），t=100 回 ib0（目前時期的藍方），t=1500 回 ib0（對照表，先登記的藍方 early）　ib0/ir1/ib0
+✅ C3 identity 未接線 ⇒ 任何時期、任何物件都是 null（對照表不會繞過「未接線」）
+✅ C3b teamRelative：前期拿到的紅方（轉換後）knobs 在後期問 ⇒ 紅方 early identity；設定的原物件（未轉換）不在表內 ⇒ null
+✅ C4 R-4：三個時期共用同一份 ⇒ 任何 t 的 identityOfKnobs／knobs 與 static 逐參照相同
+✅ C5 引擎不把 knobs／identity 快取進狀態：knobs 只在 `const K = …director.knobs(…)` 讀、identity 只經 `const <名> = this._tidOf(…)`，那些名稱不出現在屬性指派／物件值／push／set
+✅ C6 this.t 只在建構子（= 0）與 tick（+= dt）寫入；tick 在 `this.t += dt` 之前不讀 Director ⇒ 同一 tick 內時期固定　this.t = 0; this.over = false; this.winner = null; ｜ this.t += dt;
+✅ CN1 植入 `this._kc = this.director.knobs("blue");` ⇒ C5 轉紅
+✅ CN2 植入 `const K = this.director.knobs(side); this._tac.blue.K = K;` ⇒ C5 轉紅
+✅ CN3 植入 `const I = this._tidOf(side); this._memo = { id: I };` ⇒ C5 轉紅
+✅ CN3b 植入物件簡寫 `this._memo = { K };` ⇒ C5 轉紅
+✅ CN3c 植入三元 `this._kk = side ? K : null;` ⇒ C5 轉紅
+✅ CN3d 植入陣列 `this._ks = [K];`、`Object.assign(this._o, K)` ⇒ C5 轉紅
+✅ CN3e 植入 `const I = this.director.identityOfKnobs(K); this._m = I;` ⇒ C5 轉紅（identityOfKnobs 的結果也被追蹤）
+✅ CN4 植入 `this.t = 5;` ⇒ C6 轉紅
+✅ CN5 對照：只在註解裡的 `this._kc = this.director.knobs("blue")`、`this.t = 5` ⇒ C5／C6 不紅
+
+Tactical Director 3c：96/97 FAIL
+EXIT 1

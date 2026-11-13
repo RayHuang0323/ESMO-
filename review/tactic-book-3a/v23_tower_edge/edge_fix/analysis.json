@@ -1,0 +1,6268 @@
+{
+ "generatedAt": "2026-11-13T13:11:42.457Z",
+ "pairs": 280,
+ "verdicts": [
+  {
+   "id": "P1a 塔邊等待 ≥ 20 秒：v3 ≤ v2 的 10%（全部配對）",
+   "ok": true,
+   "detail": {
+    "v2": 55,
+    "v3": 1
+   }
+  },
+  {
+   "id": "P1b 塔邊等待或退回兵線連續 ≥ 20 秒：v3 ≤ v2 塔邊等待 ≥ 20 秒的 25%",
+   "ok": true,
+   "detail": {
+    "edge20v3": 2,
+    "hold20v2": 55
+   }
+  },
+  {
+   "id": "P1c 各組（生涯低／中／高、工具 AB／BA）v2 ≥ 3 次者，v3 都比 v2 少",
+   "ok": true,
+   "detail": [
+    {
+     "k": "career:high",
+     "v2": 21,
+     "v3": 0
+    },
+    {
+     "k": "career:low",
+     "v2": 4,
+     "v3": 0
+    },
+    {
+     "k": "career:mid",
+     "v2": 10,
+     "v3": 0
+    },
+    {
+     "k": "tool:AB",
+     "v2": 13,
+     "v3": 1
+    },
+    {
+     "k": "tool:BA",
+     "v2": 7,
+     "v3": 0
+    }
+   ]
+  },
+  {
+   "id": "P2a 等待中從最高血量掉 ≥ 25%：v3 ≤ v2 的 25%（全部配對）",
+   "ok": true,
+   "detail": {
+    "v2": 276,
+    "v3": 4
+   }
+  },
+  {
+   "id": "P2b 藍、紅各自減少（等待 ≥ 20 秒＋等待中掉血 ≥ 25%）",
+   "ok": true,
+   "detail": {
+    "blue": [
+     {
+      "v2": 31,
+      "v3": 1
+     },
+     {
+      "v2": 157,
+      "v3": 2
+     }
+    ],
+    "red": [
+     {
+      "v2": 24,
+      "v3": 0
+     },
+     {
+      "v2": 119,
+      "v3": 2
+     }
+    ]
+   }
+  },
+  {
+   "id": "P3 career:pooled 不明顯惡化：推塔、Gank 出發、撤退成功率（CI 上界 < 0 且點估計 < −5% ⇒ 惡化）；總陣亡（CI 下界 > 0 且 > +5% ⇒ 惡化）",
+   "ok": false,
+   "detail": {
+    "towersDestroyed": [
+     1.54,
+     [
+      -2.67,
+      5.74
+     ]
+    ],
+    "gankStart": [
+     -6.87,
+     [
+      -12.87,
+      -0.87
+     ]
+    ],
+    "retreatSuccess": [
+     1.14,
+     [
+      0.36,
+      1.92
+     ]
+    ],
+    "deaths": [
+     -3.73,
+     [
+      -13.14,
+      5.68
+     ]
+    ]
+   }
+  },
+  {
+   "id": "P3 tool:pooled 不明顯惡化：推塔、Gank 出發、撤退成功率（CI 上界 < 0 且點估計 < −5% ⇒ 惡化）；總陣亡（CI 下界 > 0 且 > +5% ⇒ 惡化）",
+   "ok": true,
+   "detail": {
+    "towersDestroyed": [
+     -0.75,
+     [
+      -7.33,
+      5.84
+     ]
+    ],
+    "gankStart": [
+     -3.35,
+     [
+      -9.61,
+      2.91
+     ]
+    ],
+    "retreatSuccess": [
+     -0.26,
+     [
+      -1.06,
+      0.54
+     ]
+    ],
+    "deaths": [
+     7.45,
+     [
+      -19.91,
+      34.81
+     ]
+    ]
+   }
+  },
+  {
+   "id": "P3b 卡住 ≥ 20 秒與 30 秒內避塔 ≥ 6 次：v3 ≤ v2 × 1.1；座標不可走、NaN 皆 0",
+   "ok": false,
+   "detail": {
+    "stuck20": {
+     "v2": 517,
+     "v3": 491
+    },
+    "avoidLoop": {
+     "v2": 450,
+     "v3": 413
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 2
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    }
+   }
+  },
+  {
+   "id": "P4a 工具 AB 與 BA 的塔邊等待 ≥ 20 秒都減少",
+   "ok": true,
+   "detail": {
+    "AB": {
+     "v2": 13,
+     "v3": 1
+    },
+    "BA": {
+     "v2": 7,
+     "v3": 0
+    }
+   }
+  },
+  {
+   "id": "P4b career:pooled 藍方勝率配對差 95% CI 含 0（不含 ⇒ 列為風險，不擋）",
+   "ok": true,
+   "detail": {
+    "n": 200,
+    "baseMean": 0.575,
+    "meanDelta": -0.07,
+    "ci95": [
+     -0.1604,
+     0.0204
+    ],
+    "pctDelta": -12.17,
+    "pctCI": [
+     -27.9,
+     3.55
+    ]
+   }
+  },
+  {
+   "id": "P4b tool:pooled 藍方勝率配對差 95% CI 含 0（不含 ⇒ 列為風險，不擋）",
+   "ok": true,
+   "detail": {
+    "n": 80,
+    "baseMean": 0.525,
+    "meanDelta": -0.05,
+    "ci95": [
+     -0.2087,
+     0.1087
+    ],
+    "pctDelta": -9.52,
+    "pctCI": [
+     -39.75,
+     20.71
+    ]
+   }
+  },
+  {
+   "id": "P5 每 tick 成本：v3 ≤ v2 × 1.2（全部配對平均）",
+   "ok": true,
+   "detail": {
+    "v2": 6.743,
+    "v3": 2.297
+   }
+  },
+  {
+   "id": "P6 v2 臂與複驗批次 v2 的逐 tick 雜湊逐場相同（重疊的每一場）",
+   "ok": true,
+   "detail": {
+    "overlap": 240,
+    "same": 240,
+    "diff": []
+   }
+  }
+ ],
+ "groups": {
+  "career:high": {
+   "pairs": 80,
+   "totals": {
+    "deaths": {
+     "v2": 1673,
+     "v3": 1653
+    },
+    "towerDeaths": {
+     "v2": 83,
+     "v3": 74
+    },
+    "chasedDeaths": {
+     "v2": 842,
+     "v3": 796
+    },
+    "retreatSuccess": {
+     "v2": 69.017,
+     "v3": 70.025
+    },
+    "towersDestroyed": {
+     "v2": 1062,
+     "v3": 1089
+    },
+    "gankStart": {
+     "v2": 777,
+     "v3": 767
+    },
+    "gankKill": {
+     "v2": 70,
+     "v3": 80
+    },
+    "heroKills": {
+     "v2": 1590,
+     "v3": 1579
+    },
+    "duration": {
+     "v2": 83796,
+     "v3": 85553
+    },
+    "tickMs": {
+     "v2": 1466.308,
+     "v3": 214.944
+    },
+    "holdTicks": {
+     "v2": 8798,
+     "v3": 1482
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 1292
+    },
+    "hold20": {
+     "v2": 21,
+     "v3": 0
+    },
+    "edge20": {
+     "v2": 21,
+     "v3": 0
+    },
+    "holdDrained": {
+     "v2": 69,
+     "v3": 3
+    },
+    "stuck20": {
+     "v2": 124,
+     "v3": 134
+    },
+    "avoidLoop": {
+     "v2": 110,
+     "v3": 113
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 0
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 14,
+     "v3": 0
+    },
+    "redHold20": {
+     "v2": 7,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 43,
+     "v3": 2
+    },
+    "redDrained": {
+     "v2": 26,
+     "v3": 1
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 80,
+     "baseMean": 20.9125,
+     "meanDelta": -0.25,
+     "ci95": [
+      -3.7729,
+      3.2729
+     ],
+     "pctDelta": -1.2,
+     "pctCI": [
+      -18.04,
+      15.65
+     ]
+    },
+    "towerDeaths": {
+     "n": 80,
+     "baseMean": 1.0375,
+     "meanDelta": -0.1125,
+     "ci95": [
+      -0.4481,
+      0.2231
+     ],
+     "pctDelta": -10.84,
+     "pctCI": [
+      -43.19,
+      21.51
+     ]
+    },
+    "chasedDeaths": {
+     "n": 80,
+     "baseMean": 10.525,
+     "meanDelta": -0.575,
+     "ci95": [
+      -2.0038,
+      0.8538
+     ],
+     "pctDelta": -5.46,
+     "pctCI": [
+      -19.04,
+      8.11
+     ]
+    },
+    "retreatSuccess": {
+     "n": 80,
+     "baseMean": 0.8627,
+     "meanDelta": 0.0126,
+     "ci95": [
+      0.0009,
+      0.0243
+     ],
+     "pctDelta": 1.46,
+     "pctCI": [
+      0.11,
+      2.81
+     ]
+    },
+    "towersDestroyed": {
+     "n": 80,
+     "baseMean": 13.275,
+     "meanDelta": 0.3375,
+     "ci95": [
+      -0.5997,
+      1.2747
+     ],
+     "pctDelta": 2.54,
+     "pctCI": [
+      -4.52,
+      9.6
+     ]
+    },
+    "gankStart": {
+     "n": 80,
+     "baseMean": 9.7125,
+     "meanDelta": -0.125,
+     "ci95": [
+      -0.9311,
+      0.6811
+     ],
+     "pctDelta": -1.29,
+     "pctCI": [
+      -9.59,
+      7.01
+     ]
+    },
+    "gankKill": {
+     "n": 80,
+     "baseMean": 0.875,
+     "meanDelta": 0.125,
+     "ci95": [
+      -0.2057,
+      0.4557
+     ],
+     "pctDelta": 14.29,
+     "pctCI": [
+      -23.5,
+      52.08
+     ]
+    },
+    "heroKills": {
+     "n": 80,
+     "baseMean": 19.875,
+     "meanDelta": -0.1375,
+     "ci95": [
+      -3.5378,
+      3.2628
+     ],
+     "pctDelta": -0.69,
+     "pctCI": [
+      -17.8,
+      16.42
+     ]
+    },
+    "duration": {
+     "n": 80,
+     "baseMean": 1047.45,
+     "meanDelta": 21.9625,
+     "ci95": [
+      -34.2936,
+      78.2186
+     ],
+     "pctDelta": 2.1,
+     "pctCI": [
+      -3.27,
+      7.47
+     ]
+    },
+    "tickMs": {
+     "n": 80,
+     "baseMean": 18.3288,
+     "meanDelta": -15.642,
+     "ci95": [
+      -47.0514,
+      15.7673
+     ],
+     "pctDelta": -85.34,
+     "pctCI": [
+      -256.71,
+      86.02
+     ]
+    },
+    "holdTicks": {
+     "n": 80,
+     "baseMean": 109.975,
+     "meanDelta": -91.45,
+     "ci95": [
+      -110.3505,
+      -72.5495
+     ],
+     "pctDelta": -83.16,
+     "pctCI": [
+      -100.34,
+      -65.97
+     ]
+    },
+    "regroupTicks": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 16.15,
+     "ci95": [
+      13.8207,
+      18.4793
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 80,
+     "baseMean": 0.2625,
+     "meanDelta": -0.2625,
+     "ci95": [
+      -0.4124,
+      -0.1126
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -157.09,
+      -42.91
+     ]
+    },
+    "edge20": {
+     "n": 80,
+     "baseMean": 0.2625,
+     "meanDelta": -0.2625,
+     "ci95": [
+      -0.4124,
+      -0.1126
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -157.09,
+      -42.91
+     ]
+    },
+    "holdDrained": {
+     "n": 80,
+     "baseMean": 0.8625,
+     "meanDelta": -0.825,
+     "ci95": [
+      -1.0224,
+      -0.6276
+     ],
+     "pctDelta": -95.65,
+     "pctCI": [
+      -118.54,
+      -72.77
+     ]
+    },
+    "stuck20": {
+     "n": 80,
+     "baseMean": 1.55,
+     "meanDelta": 0.125,
+     "ci95": [
+      -0.3811,
+      0.6311
+     ],
+     "pctDelta": 8.06,
+     "pctCI": [
+      -24.59,
+      40.72
+     ]
+    },
+    "avoidLoop": {
+     "n": 80,
+     "baseMean": 1.375,
+     "meanDelta": 0.0375,
+     "ci95": [
+      -0.4774,
+      0.5524
+     ],
+     "pctDelta": 2.73,
+     "pctCI": [
+      -34.72,
+      40.17
+     ]
+    },
+    "unwalkable": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 80,
+     "baseMean": 0.175,
+     "meanDelta": -0.175,
+     "ci95": [
+      -0.2862,
+      -0.0638
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -163.56,
+      -36.44
+     ]
+    },
+    "redHold20": {
+     "n": 80,
+     "baseMean": 0.0875,
+     "meanDelta": -0.0875,
+     "ci95": [
+      -0.1686,
+      -0.0064
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -192.67,
+      -7.33
+     ]
+    },
+    "blueDrained": {
+     "n": 80,
+     "baseMean": 0.5375,
+     "meanDelta": -0.5125,
+     "ci95": [
+      -0.6794,
+      -0.3456
+     ],
+     "pctDelta": -95.35,
+     "pctCI": [
+      -126.39,
+      -64.31
+     ]
+    },
+    "redDrained": {
+     "n": 80,
+     "baseMean": 0.325,
+     "meanDelta": -0.3125,
+     "ci95": [
+      -0.4227,
+      -0.2023
+     ],
+     "pctDelta": -96.15,
+     "pctCI": [
+      -130.06,
+      -62.25
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 58,
+    "v3": 50,
+    "pairedDelta": {
+     "n": 80,
+     "baseMean": 0.725,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.2493,
+      0.0493
+     ],
+     "pctDelta": -13.79,
+     "pctCI": [
+      -34.38,
+      6.79
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "career:low": {
+   "pairs": 40,
+   "totals": {
+    "deaths": {
+     "v2": 765,
+     "v3": 779
+    },
+    "towerDeaths": {
+     "v2": 45,
+     "v3": 36
+    },
+    "chasedDeaths": {
+     "v2": 352,
+     "v3": 395
+    },
+    "retreatSuccess": {
+     "v2": 34.739,
+     "v3": 34.65
+    },
+    "towersDestroyed": {
+     "v2": 541,
+     "v3": 545
+    },
+    "gankStart": {
+     "v2": 245,
+     "v3": 232
+    },
+    "gankKill": {
+     "v2": 28,
+     "v3": 32
+    },
+    "heroKills": {
+     "v2": 720,
+     "v3": 743
+    },
+    "duration": {
+     "v2": 42122.5,
+     "v3": 42453.5
+    },
+    "tickMs": {
+     "v2": 105.962,
+     "v3": 105.621
+    },
+    "holdTicks": {
+     "v2": 4169,
+     "v3": 890
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 561
+    },
+    "hold20": {
+     "v2": 4,
+     "v3": 0
+    },
+    "edge20": {
+     "v2": 4,
+     "v3": 0
+    },
+    "holdDrained": {
+     "v2": 23,
+     "v3": 0
+    },
+    "stuck20": {
+     "v2": 81,
+     "v3": 85
+    },
+    "avoidLoop": {
+     "v2": 60,
+     "v3": 55
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 2
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 3,
+     "v3": 0
+    },
+    "redHold20": {
+     "v2": 1,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 15,
+     "v3": 0
+    },
+    "redDrained": {
+     "v2": 8,
+     "v3": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 40,
+     "baseMean": 19.125,
+     "meanDelta": 0.35,
+     "ci95": [
+      -3.1577,
+      3.8577
+     ],
+     "pctDelta": 1.83,
+     "pctCI": [
+      -16.51,
+      20.17
+     ]
+    },
+    "towerDeaths": {
+     "n": 40,
+     "baseMean": 1.125,
+     "meanDelta": -0.225,
+     "ci95": [
+      -0.6727,
+      0.2227
+     ],
+     "pctDelta": -20,
+     "pctCI": [
+      -59.79,
+      19.79
+     ]
+    },
+    "chasedDeaths": {
+     "n": 40,
+     "baseMean": 8.8,
+     "meanDelta": 1.075,
+     "ci95": [
+      -0.5507,
+      2.7007
+     ],
+     "pctDelta": 12.22,
+     "pctCI": [
+      -6.26,
+      30.69
+     ]
+    },
+    "retreatSuccess": {
+     "n": 40,
+     "baseMean": 0.8685,
+     "meanDelta": -0.0022,
+     "ci95": [
+      -0.0167,
+      0.0123
+     ],
+     "pctDelta": -0.26,
+     "pctCI": [
+      -1.93,
+      1.41
+     ]
+    },
+    "towersDestroyed": {
+     "n": 40,
+     "baseMean": 13.525,
+     "meanDelta": 0.1,
+     "ci95": [
+      -1.0251,
+      1.2251
+     ],
+     "pctDelta": 0.74,
+     "pctCI": [
+      -7.58,
+      9.06
+     ]
+    },
+    "gankStart": {
+     "n": 40,
+     "baseMean": 6.125,
+     "meanDelta": -0.325,
+     "ci95": [
+      -1.4491,
+      0.7991
+     ],
+     "pctDelta": -5.31,
+     "pctCI": [
+      -23.66,
+      13.05
+     ]
+    },
+    "gankKill": {
+     "n": 40,
+     "baseMean": 0.7,
+     "meanDelta": 0.1,
+     "ci95": [
+      -0.367,
+      0.567
+     ],
+     "pctDelta": 14.29,
+     "pctCI": [
+      -52.43,
+      81
+     ]
+    },
+    "heroKills": {
+     "n": 40,
+     "baseMean": 18,
+     "meanDelta": 0.575,
+     "ci95": [
+      -2.7659,
+      3.9159
+     ],
+     "pctDelta": 3.19,
+     "pctCI": [
+      -15.37,
+      21.75
+     ]
+    },
+    "duration": {
+     "n": 40,
+     "baseMean": 1053.0625,
+     "meanDelta": 8.275,
+     "ci95": [
+      -54.6438,
+      71.1938
+     ],
+     "pctDelta": 0.79,
+     "pctCI": [
+      -5.19,
+      6.76
+     ]
+    },
+    "tickMs": {
+     "n": 40,
+     "baseMean": 2.649,
+     "meanDelta": -0.0085,
+     "ci95": [
+      -0.1109,
+      0.0938
+     ],
+     "pctDelta": -0.32,
+     "pctCI": [
+      -4.19,
+      3.54
+     ]
+    },
+    "holdTicks": {
+     "n": 40,
+     "baseMean": 104.225,
+     "meanDelta": -81.975,
+     "ci95": [
+      -106.4981,
+      -57.4519
+     ],
+     "pctDelta": -78.65,
+     "pctCI": [
+      -102.18,
+      -55.12
+     ]
+    },
+    "regroupTicks": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 14.025,
+     "ci95": [
+      11.0972,
+      16.9528
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 40,
+     "baseMean": 0.1,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.2223,
+      0.0223
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -222.35,
+      22.35
+     ]
+    },
+    "edge20": {
+     "n": 40,
+     "baseMean": 0.1,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.2223,
+      0.0223
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -222.35,
+      22.35
+     ]
+    },
+    "holdDrained": {
+     "n": 40,
+     "baseMean": 0.575,
+     "meanDelta": -0.575,
+     "ci95": [
+      -0.8271,
+      -0.3229
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -143.84,
+      -56.16
+     ]
+    },
+    "stuck20": {
+     "n": 40,
+     "baseMean": 2.025,
+     "meanDelta": 0.1,
+     "ci95": [
+      -0.5065,
+      0.7065
+     ],
+     "pctDelta": 4.94,
+     "pctCI": [
+      -25.01,
+      34.89
+     ]
+    },
+    "avoidLoop": {
+     "n": 40,
+     "baseMean": 1.5,
+     "meanDelta": -0.125,
+     "ci95": [
+      -0.7632,
+      0.5132
+     ],
+     "pctDelta": -8.33,
+     "pctCI": [
+      -50.88,
+      34.21
+     ]
+    },
+    "unwalkable": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.0521,
+      0.1521
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 40,
+     "baseMean": 0.075,
+     "meanDelta": -0.075,
+     "ci95": [
+      -0.188,
+      0.038
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -250.63,
+      50.63
+     ]
+    },
+    "redHold20": {
+     "n": 40,
+     "baseMean": 0.025,
+     "meanDelta": -0.025,
+     "ci95": [
+      -0.076,
+      0.026
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -304.2,
+      104.2
+     ]
+    },
+    "blueDrained": {
+     "n": 40,
+     "baseMean": 0.375,
+     "meanDelta": -0.375,
+     "ci95": [
+      -0.5905,
+      -0.1595
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -157.47,
+      -42.53
+     ]
+    },
+    "redDrained": {
+     "n": 40,
+     "baseMean": 0.2,
+     "meanDelta": -0.2,
+     "ci95": [
+      -0.3498,
+      -0.0502
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -174.92,
+      -25.08
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 13,
+    "v3": 15,
+    "pairedDelta": {
+     "n": 40,
+     "baseMean": 0.325,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.1127,
+      0.2127
+     ],
+     "pctDelta": 15.38,
+     "pctCI": [
+      -34.67,
+      65.44
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "career:mid": {
+   "pairs": 80,
+   "totals": {
+    "deaths": {
+     "v2": 1824,
+     "v3": 1671
+    },
+    "towerDeaths": {
+     "v2": 89,
+     "v3": 83
+    },
+    "chasedDeaths": {
+     "v2": 864,
+     "v3": 813
+    },
+    "retreatSuccess": {
+     "v2": 68.572,
+     "v3": 69.617
+    },
+    "towersDestroyed": {
+     "v2": 1133,
+     "v3": 1144
+    },
+    "gankStart": {
+     "v2": 594,
+     "v3": 506
+    },
+    "gankKill": {
+     "v2": 65,
+     "v3": 58
+    },
+    "heroKills": {
+     "v2": 1735,
+     "v3": 1588
+    },
+    "duration": {
+     "v2": 88418.5,
+     "v3": 86873
+    },
+    "tickMs": {
+     "v2": 186.039,
+     "v3": 190.711
+    },
+    "holdTicks": {
+     "v2": 8831,
+     "v3": 1558
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 1334
+    },
+    "hold20": {
+     "v2": 10,
+     "v3": 0
+    },
+    "edge20": {
+     "v2": 10,
+     "v3": 1
+    },
+    "holdDrained": {
+     "v2": 70,
+     "v3": 1
+    },
+    "stuck20": {
+     "v2": 179,
+     "v3": 171
+    },
+    "avoidLoop": {
+     "v2": 156,
+     "v3": 104
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 0
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 4,
+     "v3": 0
+    },
+    "redHold20": {
+     "v2": 6,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 39,
+     "v3": 0
+    },
+    "redDrained": {
+     "v2": 31,
+     "v3": 1
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 80,
+     "baseMean": 22.8,
+     "meanDelta": -1.9125,
+     "ci95": [
+      -5.1376,
+      1.3126
+     ],
+     "pctDelta": -8.39,
+     "pctCI": [
+      -22.53,
+      5.76
+     ]
+    },
+    "towerDeaths": {
+     "n": 80,
+     "baseMean": 1.1125,
+     "meanDelta": -0.075,
+     "ci95": [
+      -0.3743,
+      0.2243
+     ],
+     "pctDelta": -6.74,
+     "pctCI": [
+      -33.65,
+      20.16
+     ]
+    },
+    "chasedDeaths": {
+     "n": 80,
+     "baseMean": 10.8,
+     "meanDelta": -0.6375,
+     "ci95": [
+      -1.9249,
+      0.6499
+     ],
+     "pctDelta": -5.9,
+     "pctCI": [
+      -17.82,
+      6.02
+     ]
+    },
+    "retreatSuccess": {
+     "n": 80,
+     "baseMean": 0.8571,
+     "meanDelta": 0.0131,
+     "ci95": [
+      0.003,
+      0.0231
+     ],
+     "pctDelta": 1.52,
+     "pctCI": [
+      0.35,
+      2.7
+     ]
+    },
+    "towersDestroyed": {
+     "n": 80,
+     "baseMean": 14.1625,
+     "meanDelta": 0.1375,
+     "ci95": [
+      -0.838,
+      1.113
+     ],
+     "pctDelta": 0.97,
+     "pctCI": [
+      -5.92,
+      7.86
+     ]
+    },
+    "gankStart": {
+     "n": 80,
+     "baseMean": 7.425,
+     "meanDelta": -1.1,
+     "ci95": [
+      -1.8323,
+      -0.3677
+     ],
+     "pctDelta": -14.81,
+     "pctCI": [
+      -24.68,
+      -4.95
+     ]
+    },
+    "gankKill": {
+     "n": 80,
+     "baseMean": 0.8125,
+     "meanDelta": -0.0875,
+     "ci95": [
+      -0.3542,
+      0.1792
+     ],
+     "pctDelta": -10.77,
+     "pctCI": [
+      -43.59,
+      22.06
+     ]
+    },
+    "heroKills": {
+     "n": 80,
+     "baseMean": 21.6875,
+     "meanDelta": -1.8375,
+     "ci95": [
+      -4.9118,
+      1.2368
+     ],
+     "pctDelta": -8.47,
+     "pctCI": [
+      -22.65,
+      5.7
+     ]
+    },
+    "duration": {
+     "n": 80,
+     "baseMean": 1105.2313,
+     "meanDelta": -19.3188,
+     "ci95": [
+      -73.8203,
+      35.1828
+     ],
+     "pctDelta": -1.75,
+     "pctCI": [
+      -6.68,
+      3.18
+     ]
+    },
+    "tickMs": {
+     "n": 80,
+     "baseMean": 2.3255,
+     "meanDelta": 0.0584,
+     "ci95": [
+      -0.028,
+      0.1448
+     ],
+     "pctDelta": 2.51,
+     "pctCI": [
+      -1.2,
+      6.23
+     ]
+    },
+    "holdTicks": {
+     "n": 80,
+     "baseMean": 110.3875,
+     "meanDelta": -90.9125,
+     "ci95": [
+      -107.3393,
+      -74.4857
+     ],
+     "pctDelta": -82.36,
+     "pctCI": [
+      -97.24,
+      -67.48
+     ]
+    },
+    "regroupTicks": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 16.675,
+     "ci95": [
+      13.7377,
+      19.6123
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 80,
+     "baseMean": 0.125,
+     "meanDelta": -0.125,
+     "ci95": [
+      -0.2148,
+      -0.0352
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -171.86,
+      -28.14
+     ]
+    },
+    "edge20": {
+     "n": 80,
+     "baseMean": 0.125,
+     "meanDelta": -0.1125,
+     "ci95": [
+      -0.2066,
+      -0.0184
+     ],
+     "pctDelta": -90,
+     "pctCI": [
+      -165.27,
+      -14.73
+     ]
+    },
+    "holdDrained": {
+     "n": 80,
+     "baseMean": 0.875,
+     "meanDelta": -0.8625,
+     "ci95": [
+      -1.0924,
+      -0.6326
+     ],
+     "pctDelta": -98.57,
+     "pctCI": [
+      -124.84,
+      -72.3
+     ]
+    },
+    "stuck20": {
+     "n": 80,
+     "baseMean": 2.2375,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.5925,
+      0.3925
+     ],
+     "pctDelta": -4.47,
+     "pctCI": [
+      -26.48,
+      17.54
+     ]
+    },
+    "avoidLoop": {
+     "n": 80,
+     "baseMean": 1.95,
+     "meanDelta": -0.65,
+     "ci95": [
+      -1.1706,
+      -0.1294
+     ],
+     "pctDelta": -33.33,
+     "pctCI": [
+      -60.03,
+      -6.64
+     ]
+    },
+    "unwalkable": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 80,
+     "baseMean": 0.05,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.1106,
+      0.0106
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -221.18,
+      21.18
+     ]
+    },
+    "redHold20": {
+     "n": 80,
+     "baseMean": 0.075,
+     "meanDelta": -0.075,
+     "ci95": [
+      -0.1441,
+      -0.0059
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -192.17,
+      -7.83
+     ]
+    },
+    "blueDrained": {
+     "n": 80,
+     "baseMean": 0.4875,
+     "meanDelta": -0.4875,
+     "ci95": [
+      -0.6466,
+      -0.3284
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -132.63,
+      -67.37
+     ]
+    },
+    "redDrained": {
+     "n": 80,
+     "baseMean": 0.3875,
+     "meanDelta": -0.375,
+     "ci95": [
+      -0.5316,
+      -0.2184
+     ],
+     "pctDelta": -96.77,
+     "pctCI": [
+      -137.19,
+      -56.36
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 44,
+    "v3": 36,
+    "pairedDelta": {
+     "n": 80,
+     "baseMean": 0.55,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.2534,
+      0.0534
+     ],
+     "pctDelta": -18.18,
+     "pctCI": [
+      -46.08,
+      9.72
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "tool:AB": {
+   "pairs": 40,
+   "totals": {
+    "deaths": {
+     "v2": 282,
+     "v3": 257
+    },
+    "towerDeaths": {
+     "v2": 30,
+     "v3": 24
+    },
+    "chasedDeaths": {
+     "v2": 123,
+     "v3": 127
+    },
+    "retreatSuccess": {
+     "v2": 38.436,
+     "v3": 38.566
+    },
+    "towersDestroyed": {
+     "v2": 525,
+     "v3": 520
+    },
+    "gankStart": {
+     "v2": 500,
+     "v3": 493
+    },
+    "gankKill": {
+     "v2": 5,
+     "v3": 6
+    },
+    "heroKills": {
+     "v2": 252,
+     "v3": 233
+    },
+    "duration": {
+     "v2": 41924,
+     "v3": 42787.5
+    },
+    "tickMs": {
+     "v2": 66.468,
+     "v3": 69.016
+    },
+    "holdTicks": {
+     "v2": 4536,
+     "v3": 722
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 805
+    },
+    "hold20": {
+     "v2": 13,
+     "v3": 1
+    },
+    "edge20": {
+     "v2": 13,
+     "v3": 1
+    },
+    "holdDrained": {
+     "v2": 57,
+     "v3": 0
+    },
+    "stuck20": {
+     "v2": 76,
+     "v3": 51
+    },
+    "avoidLoop": {
+     "v2": 66,
+     "v3": 75
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 0
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 5,
+     "v3": 1
+    },
+    "redHold20": {
+     "v2": 8,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 29,
+     "v3": 0
+    },
+    "redDrained": {
+     "v2": 28,
+     "v3": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 40,
+     "baseMean": 7.05,
+     "meanDelta": -0.625,
+     "ci95": [
+      -3.1458,
+      1.8958
+     ],
+     "pctDelta": -8.87,
+     "pctCI": [
+      -44.62,
+      26.89
+     ]
+    },
+    "towerDeaths": {
+     "n": 40,
+     "baseMean": 0.75,
+     "meanDelta": -0.15,
+     "ci95": [
+      -0.5859,
+      0.2859
+     ],
+     "pctDelta": -20,
+     "pctCI": [
+      -78.13,
+      38.13
+     ]
+    },
+    "chasedDeaths": {
+     "n": 40,
+     "baseMean": 3.075,
+     "meanDelta": 0.1,
+     "ci95": [
+      -1.092,
+      1.292
+     ],
+     "pctDelta": 3.25,
+     "pctCI": [
+      -35.51,
+      42.02
+     ]
+    },
+    "retreatSuccess": {
+     "n": 40,
+     "baseMean": 0.9609,
+     "meanDelta": 0.0033,
+     "ci95": [
+      -0.0074,
+      0.0139
+     ],
+     "pctDelta": 0.34,
+     "pctCI": [
+      -0.77,
+      1.44
+     ]
+    },
+    "towersDestroyed": {
+     "n": 40,
+     "baseMean": 13.125,
+     "meanDelta": -0.125,
+     "ci95": [
+      -1.3791,
+      1.1291
+     ],
+     "pctDelta": -0.95,
+     "pctCI": [
+      -10.51,
+      8.6
+     ]
+    },
+    "gankStart": {
+     "n": 40,
+     "baseMean": 12.5,
+     "meanDelta": -0.175,
+     "ci95": [
+      -1.4134,
+      1.0634
+     ],
+     "pctDelta": -1.4,
+     "pctCI": [
+      -11.31,
+      8.51
+     ]
+    },
+    "gankKill": {
+     "n": 40,
+     "baseMean": 0.125,
+     "meanDelta": 0.025,
+     "ci95": [
+      -0.1115,
+      0.1615
+     ],
+     "pctDelta": 20,
+     "pctCI": [
+      -89.23,
+      129.23
+     ]
+    },
+    "heroKills": {
+     "n": 40,
+     "baseMean": 6.3,
+     "meanDelta": -0.475,
+     "ci95": [
+      -2.9186,
+      1.9686
+     ],
+     "pctDelta": -7.54,
+     "pctCI": [
+      -46.33,
+      31.25
+     ]
+    },
+    "duration": {
+     "n": 40,
+     "baseMean": 1048.1,
+     "meanDelta": 21.5875,
+     "ci95": [
+      -53.7259,
+      96.9009
+     ],
+     "pctDelta": 2.06,
+     "pctCI": [
+      -5.13,
+      9.25
+     ]
+    },
+    "tickMs": {
+     "n": 40,
+     "baseMean": 1.6617,
+     "meanDelta": 0.0637,
+     "ci95": [
+      -0.0177,
+      0.1451
+     ],
+     "pctDelta": 3.83,
+     "pctCI": [
+      -1.07,
+      8.73
+     ]
+    },
+    "holdTicks": {
+     "n": 40,
+     "baseMean": 113.4,
+     "meanDelta": -95.35,
+     "ci95": [
+      -116.2019,
+      -74.4981
+     ],
+     "pctDelta": -84.08,
+     "pctCI": [
+      -102.47,
+      -65.69
+     ]
+    },
+    "regroupTicks": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 20.125,
+     "ci95": [
+      16.2615,
+      23.9885
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 40,
+     "baseMean": 0.325,
+     "meanDelta": -0.3,
+     "ci95": [
+      -0.5094,
+      -0.0906
+     ],
+     "pctDelta": -92.31,
+     "pctCI": [
+      -156.73,
+      -27.89
+     ]
+    },
+    "edge20": {
+     "n": 40,
+     "baseMean": 0.325,
+     "meanDelta": -0.3,
+     "ci95": [
+      -0.5094,
+      -0.0906
+     ],
+     "pctDelta": -92.31,
+     "pctCI": [
+      -156.73,
+      -27.89
+     ]
+    },
+    "holdDrained": {
+     "n": 40,
+     "baseMean": 1.425,
+     "meanDelta": -1.425,
+     "ci95": [
+      -1.7824,
+      -1.0676
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -125.08,
+      -74.92
+     ]
+    },
+    "stuck20": {
+     "n": 40,
+     "baseMean": 1.9,
+     "meanDelta": -0.625,
+     "ci95": [
+      -1.1455,
+      -0.1045
+     ],
+     "pctDelta": -32.89,
+     "pctCI": [
+      -60.29,
+      -5.5
+     ]
+    },
+    "avoidLoop": {
+     "n": 40,
+     "baseMean": 1.65,
+     "meanDelta": 0.225,
+     "ci95": [
+      -0.6896,
+      1.1396
+     ],
+     "pctDelta": 13.64,
+     "pctCI": [
+      -41.8,
+      69.07
+     ]
+    },
+    "unwalkable": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 40,
+     "baseMean": 0.125,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.2425,
+      0.0425
+     ],
+     "pctDelta": -80,
+     "pctCI": [
+      -194.02,
+      34.02
+     ]
+    },
+    "redHold20": {
+     "n": 40,
+     "baseMean": 0.2,
+     "meanDelta": -0.2,
+     "ci95": [
+      -0.3308,
+      -0.0692
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -165.4,
+      -34.6
+     ]
+    },
+    "blueDrained": {
+     "n": 40,
+     "baseMean": 0.725,
+     "meanDelta": -0.725,
+     "ci95": [
+      -1.0081,
+      -0.4419
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -139.04,
+      -60.96
+     ]
+    },
+    "redDrained": {
+     "n": 40,
+     "baseMean": 0.7,
+     "meanDelta": -0.7,
+     "ci95": [
+      -0.9335,
+      -0.4665
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -133.36,
+      -66.64
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 16,
+    "v3": 17,
+    "pairedDelta": {
+     "n": 40,
+     "baseMean": 0.4,
+     "meanDelta": 0.025,
+     "ci95": [
+      -0.2228,
+      0.2728
+     ],
+     "pctDelta": 6.25,
+     "pctCI": [
+      -55.7,
+      68.2
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "tool:BA": {
+   "pairs": 40,
+   "totals": {
+    "deaths": {
+     "v2": 228,
+     "v3": 291
+    },
+    "towerDeaths": {
+     "v2": 33,
+     "v3": 41
+    },
+    "chasedDeaths": {
+     "v2": 114,
+     "v3": 148
+    },
+    "retreatSuccess": {
+     "v2": 38.572,
+     "v3": 38.245
+    },
+    "towersDestroyed": {
+     "v2": 543,
+     "v3": 540
+    },
+    "gankStart": {
+     "v2": 545,
+     "v3": 517
+    },
+    "gankKill": {
+     "v2": 4,
+     "v3": 8
+    },
+    "heroKills": {
+     "v2": 195,
+     "v3": 250
+    },
+    "duration": {
+     "v2": 42204.5,
+     "v3": 43140
+    },
+    "tickMs": {
+     "v2": 63.21,
+     "v3": 62.767
+    },
+    "holdTicks": {
+     "v2": 4766,
+     "v3": 685
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 760
+    },
+    "hold20": {
+     "v2": 7,
+     "v3": 0
+    },
+    "edge20": {
+     "v2": 7,
+     "v3": 0
+    },
+    "holdDrained": {
+     "v2": 57,
+     "v3": 0
+    },
+    "stuck20": {
+     "v2": 57,
+     "v3": 50
+    },
+    "avoidLoop": {
+     "v2": 58,
+     "v3": 66
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 0
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 5,
+     "v3": 0
+    },
+    "redHold20": {
+     "v2": 2,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 31,
+     "v3": 0
+    },
+    "redDrained": {
+     "v2": 26,
+     "v3": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 40,
+     "baseMean": 5.7,
+     "meanDelta": 1.575,
+     "ci95": [
+      -0.9215,
+      4.0715
+     ],
+     "pctDelta": 27.63,
+     "pctCI": [
+      -16.17,
+      71.43
+     ]
+    },
+    "towerDeaths": {
+     "n": 40,
+     "baseMean": 0.825,
+     "meanDelta": 0.2,
+     "ci95": [
+      -0.2806,
+      0.6806
+     ],
+     "pctDelta": 24.24,
+     "pctCI": [
+      -34.01,
+      82.49
+     ]
+    },
+    "chasedDeaths": {
+     "n": 40,
+     "baseMean": 2.85,
+     "meanDelta": 0.85,
+     "ci95": [
+      -0.3768,
+      2.0768
+     ],
+     "pctDelta": 29.82,
+     "pctCI": [
+      -13.22,
+      72.87
+     ]
+    },
+    "retreatSuccess": {
+     "n": 40,
+     "baseMean": 0.9643,
+     "meanDelta": -0.0082,
+     "ci95": [
+      -0.0196,
+      0.0033
+     ],
+     "pctDelta": -0.85,
+     "pctCI": [
+      -2.03,
+      0.34
+     ]
+    },
+    "towersDestroyed": {
+     "n": 40,
+     "baseMean": 13.575,
+     "meanDelta": -0.075,
+     "ci95": [
+      -1.3755,
+      1.2255
+     ],
+     "pctDelta": -0.55,
+     "pctCI": [
+      -10.13,
+      9.03
+     ]
+    },
+    "gankStart": {
+     "n": 40,
+     "baseMean": 13.625,
+     "meanDelta": -0.7,
+     "ci95": [
+      -1.8284,
+      0.4284
+     ],
+     "pctDelta": -5.14,
+     "pctCI": [
+      -13.42,
+      3.14
+     ]
+    },
+    "gankKill": {
+     "n": 40,
+     "baseMean": 0.1,
+     "meanDelta": 0.1,
+     "ci95": [
+      -0.0761,
+      0.2761
+     ],
+     "pctDelta": 100,
+     "pctCI": [
+      -76.09,
+      276.09
+     ]
+    },
+    "heroKills": {
+     "n": 40,
+     "baseMean": 4.875,
+     "meanDelta": 1.375,
+     "ci95": [
+      -0.8399,
+      3.5899
+     ],
+     "pctDelta": 28.21,
+     "pctCI": [
+      -17.23,
+      73.64
+     ]
+    },
+    "duration": {
+     "n": 40,
+     "baseMean": 1055.1125,
+     "meanDelta": 23.3875,
+     "ci95": [
+      -61.5329,
+      108.3079
+     ],
+     "pctDelta": 2.22,
+     "pctCI": [
+      -5.83,
+      10.27
+     ]
+    },
+    "tickMs": {
+     "n": 40,
+     "baseMean": 1.5802,
+     "meanDelta": -0.0111,
+     "ci95": [
+      -0.0811,
+      0.0589
+     ],
+     "pctDelta": -0.7,
+     "pctCI": [
+      -5.13,
+      3.73
+     ]
+    },
+    "holdTicks": {
+     "n": 40,
+     "baseMean": 119.15,
+     "meanDelta": -102.025,
+     "ci95": [
+      -131.3524,
+      -72.6976
+     ],
+     "pctDelta": -85.63,
+     "pctCI": [
+      -110.24,
+      -61.01
+     ]
+    },
+    "regroupTicks": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 19,
+     "ci95": [
+      14.6615,
+      23.3385
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 40,
+     "baseMean": 0.175,
+     "meanDelta": -0.175,
+     "ci95": [
+      -0.3366,
+      -0.0134
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -192.37,
+      -7.63
+     ]
+    },
+    "edge20": {
+     "n": 40,
+     "baseMean": 0.175,
+     "meanDelta": -0.175,
+     "ci95": [
+      -0.3366,
+      -0.0134
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -192.37,
+      -7.63
+     ]
+    },
+    "holdDrained": {
+     "n": 40,
+     "baseMean": 1.425,
+     "meanDelta": -1.425,
+     "ci95": [
+      -1.8247,
+      -1.0253
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -128.05,
+      -71.95
+     ]
+    },
+    "stuck20": {
+     "n": 40,
+     "baseMean": 1.425,
+     "meanDelta": -0.175,
+     "ci95": [
+      -0.7594,
+      0.4094
+     ],
+     "pctDelta": -12.28,
+     "pctCI": [
+      -53.29,
+      28.73
+     ]
+    },
+    "avoidLoop": {
+     "n": 40,
+     "baseMean": 1.45,
+     "meanDelta": 0.2,
+     "ci95": [
+      -0.4867,
+      0.8867
+     ],
+     "pctDelta": 13.79,
+     "pctCI": [
+      -33.56,
+      61.15
+     ]
+    },
+    "unwalkable": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 40,
+     "baseMean": 0.125,
+     "meanDelta": -0.125,
+     "ci95": [
+      -0.2746,
+      0.0246
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -219.69,
+      19.69
+     ]
+    },
+    "redHold20": {
+     "n": 40,
+     "baseMean": 0.05,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.1213,
+      0.0213
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -242.53,
+      42.53
+     ]
+    },
+    "blueDrained": {
+     "n": 40,
+     "baseMean": 0.775,
+     "meanDelta": -0.775,
+     "ci95": [
+      -1.0894,
+      -0.4606
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -140.56,
+      -59.44
+     ]
+    },
+    "redDrained": {
+     "n": 40,
+     "baseMean": 0.65,
+     "meanDelta": -0.65,
+     "ci95": [
+      -0.8759,
+      -0.4241
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -134.76,
+      -65.24
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 26,
+    "v3": 21,
+    "pairedDelta": {
+     "n": 40,
+     "baseMean": 0.65,
+     "meanDelta": -0.125,
+     "ci95": [
+      -0.3342,
+      0.0842
+     ],
+     "pctDelta": -19.23,
+     "pctCI": [
+      -51.42,
+      12.96
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "career:pooled": {
+   "pairs": 200,
+   "totals": {
+    "deaths": {
+     "v2": 4262,
+     "v3": 4103
+    },
+    "towerDeaths": {
+     "v2": 217,
+     "v3": 193
+    },
+    "chasedDeaths": {
+     "v2": 2058,
+     "v3": 2004
+    },
+    "retreatSuccess": {
+     "v2": 172.328,
+     "v3": 174.293
+    },
+    "towersDestroyed": {
+     "v2": 2736,
+     "v3": 2778
+    },
+    "gankStart": {
+     "v2": 1616,
+     "v3": 1505
+    },
+    "gankKill": {
+     "v2": 163,
+     "v3": 170
+    },
+    "heroKills": {
+     "v2": 4045,
+     "v3": 3910
+    },
+    "duration": {
+     "v2": 214337,
+     "v3": 214879.5
+    },
+    "tickMs": {
+     "v2": 1758.309,
+     "v3": 511.276
+    },
+    "holdTicks": {
+     "v2": 21798,
+     "v3": 3930
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 3187
+    },
+    "hold20": {
+     "v2": 35,
+     "v3": 0
+    },
+    "edge20": {
+     "v2": 35,
+     "v3": 1
+    },
+    "holdDrained": {
+     "v2": 162,
+     "v3": 4
+    },
+    "stuck20": {
+     "v2": 384,
+     "v3": 390
+    },
+    "avoidLoop": {
+     "v2": 326,
+     "v3": 272
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 2
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 21,
+     "v3": 0
+    },
+    "redHold20": {
+     "v2": 14,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 97,
+     "v3": 2
+    },
+    "redDrained": {
+     "v2": 65,
+     "v3": 2
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 200,
+     "baseMean": 21.31,
+     "meanDelta": -0.795,
+     "ci95": [
+      -2.8003,
+      1.2103
+     ],
+     "pctDelta": -3.73,
+     "pctCI": [
+      -13.14,
+      5.68
+     ]
+    },
+    "towerDeaths": {
+     "n": 200,
+     "baseMean": 1.085,
+     "meanDelta": -0.12,
+     "ci95": [
+      -0.3173,
+      0.0773
+     ],
+     "pctDelta": -11.06,
+     "pctCI": [
+      -29.24,
+      7.12
+     ]
+    },
+    "chasedDeaths": {
+     "n": 200,
+     "baseMean": 10.29,
+     "meanDelta": -0.27,
+     "ci95": [
+      -1.0958,
+      0.5558
+     ],
+     "pctDelta": -2.62,
+     "pctCI": [
+      -10.65,
+      5.4
+     ]
+    },
+    "retreatSuccess": {
+     "n": 200,
+     "baseMean": 0.8616,
+     "meanDelta": 0.0098,
+     "ci95": [
+      0.0031,
+      0.0166
+     ],
+     "pctDelta": 1.14,
+     "pctCI": [
+      0.36,
+      1.92
+     ]
+    },
+    "towersDestroyed": {
+     "n": 200,
+     "baseMean": 13.68,
+     "meanDelta": 0.21,
+     "ci95": [
+      -0.3659,
+      0.7859
+     ],
+     "pctDelta": 1.54,
+     "pctCI": [
+      -2.67,
+      5.74
+     ]
+    },
+    "gankStart": {
+     "n": 200,
+     "baseMean": 8.08,
+     "meanDelta": -0.555,
+     "ci95": [
+      -1.0399,
+      -0.0701
+     ],
+     "pctDelta": -6.87,
+     "pctCI": [
+      -12.87,
+      -0.87
+     ]
+    },
+    "gankKill": {
+     "n": 200,
+     "baseMean": 0.815,
+     "meanDelta": 0.035,
+     "ci95": [
+      -0.1556,
+      0.2256
+     ],
+     "pctDelta": 4.29,
+     "pctCI": [
+      -19.09,
+      27.68
+     ]
+    },
+    "heroKills": {
+     "n": 200,
+     "baseMean": 20.225,
+     "meanDelta": -0.675,
+     "ci95": [
+      -2.5987,
+      1.2487
+     ],
+     "pctDelta": -3.34,
+     "pctCI": [
+      -12.85,
+      6.17
+     ]
+    },
+    "duration": {
+     "n": 200,
+     "baseMean": 1071.685,
+     "meanDelta": 2.7125,
+     "ci95": [
+      -30.5681,
+      35.9931
+     ],
+     "pctDelta": 0.25,
+     "pctCI": [
+      -2.85,
+      3.36
+     ]
+    },
+    "tickMs": {
+     "n": 200,
+     "baseMean": 8.7915,
+     "meanDelta": -6.2352,
+     "ci95": [
+      -18.6732,
+      6.2029
+     ],
+     "pctDelta": -70.92,
+     "pctCI": [
+      -212.4,
+      70.55
+     ]
+    },
+    "holdTicks": {
+     "n": 200,
+     "baseMean": 108.99,
+     "meanDelta": -89.34,
+     "ci95": [
+      -100.2955,
+      -78.3845
+     ],
+     "pctDelta": -81.97,
+     "pctCI": [
+      -92.02,
+      -71.92
+     ]
+    },
+    "regroupTicks": {
+     "n": 200,
+     "baseMean": 0,
+     "meanDelta": 15.935,
+     "ci95": [
+      14.3469,
+      17.5231
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 200,
+     "baseMean": 0.175,
+     "meanDelta": -0.175,
+     "ci95": [
+      -0.2485,
+      -0.1015
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -142.01,
+      -57.99
+     ]
+    },
+    "edge20": {
+     "n": 200,
+     "baseMean": 0.175,
+     "meanDelta": -0.17,
+     "ci95": [
+      -0.2444,
+      -0.0956
+     ],
+     "pctDelta": -97.14,
+     "pctCI": [
+      -139.67,
+      -54.62
+     ]
+    },
+    "holdDrained": {
+     "n": 200,
+     "baseMean": 0.81,
+     "meanDelta": -0.79,
+     "ci95": [
+      -0.9199,
+      -0.6601
+     ],
+     "pctDelta": -97.53,
+     "pctCI": [
+      -113.56,
+      -81.5
+     ]
+    },
+    "stuck20": {
+     "n": 200,
+     "baseMean": 1.92,
+     "meanDelta": 0.03,
+     "ci95": [
+      -0.2723,
+      0.3323
+     ],
+     "pctDelta": 1.56,
+     "pctCI": [
+      -14.18,
+      17.31
+     ]
+    },
+    "avoidLoop": {
+     "n": 200,
+     "baseMean": 1.63,
+     "meanDelta": -0.27,
+     "ci95": [
+      -0.5869,
+      0.0469
+     ],
+     "pctDelta": -16.56,
+     "pctCI": [
+      -36.01,
+      2.88
+     ]
+    },
+    "unwalkable": {
+     "n": 200,
+     "baseMean": 0,
+     "meanDelta": 0.01,
+     "ci95": [
+      -0.0098,
+      0.0298
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 200,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 200,
+     "baseMean": 0.105,
+     "meanDelta": -0.105,
+     "ci95": [
+      -0.1601,
+      -0.0499
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -152.45,
+      -47.55
+     ]
+    },
+    "redHold20": {
+     "n": 200,
+     "baseMean": 0.07,
+     "meanDelta": -0.07,
+     "ci95": [
+      -0.1133,
+      -0.0267
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -161.83,
+      -38.17
+     ]
+    },
+    "blueDrained": {
+     "n": 200,
+     "baseMean": 0.485,
+     "meanDelta": -0.475,
+     "ci95": [
+      -0.5752,
+      -0.3748
+     ],
+     "pctDelta": -97.94,
+     "pctCI": [
+      -118.59,
+      -77.28
+     ]
+    },
+    "redDrained": {
+     "n": 200,
+     "baseMean": 0.325,
+     "meanDelta": -0.315,
+     "ci95": [
+      -0.3963,
+      -0.2337
+     ],
+     "pctDelta": -96.92,
+     "pctCI": [
+      -121.95,
+      -71.9
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 115,
+    "v3": 101,
+    "pairedDelta": {
+     "n": 200,
+     "baseMean": 0.575,
+     "meanDelta": -0.07,
+     "ci95": [
+      -0.1604,
+      0.0204
+     ],
+     "pctDelta": -12.17,
+     "pctCI": [
+      -27.9,
+      3.55
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "career:layout=STANDARD": {
+   "pairs": 114,
+   "totals": {
+    "deaths": {
+     "v2": 2543,
+     "v3": 2355
+    },
+    "towerDeaths": {
+     "v2": 135,
+     "v3": 103
+    },
+    "chasedDeaths": {
+     "v2": 1185,
+     "v3": 1119
+    },
+    "retreatSuccess": {
+     "v2": 98.45,
+     "v3": 99.429
+    },
+    "towersDestroyed": {
+     "v2": 1591,
+     "v3": 1575
+    },
+    "gankStart": {
+     "v2": 959,
+     "v3": 848
+    },
+    "gankKill": {
+     "v2": 96,
+     "v3": 91
+    },
+    "heroKills": {
+     "v2": 2408,
+     "v3": 2252
+    },
+    "duration": {
+     "v2": 124321,
+     "v3": 122609.5
+    },
+    "tickMs": {
+     "v2": 285.887,
+     "v3": 288.928
+    },
+    "holdTicks": {
+     "v2": 12172,
+     "v3": 2278
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 1894
+    },
+    "hold20": {
+     "v2": 17,
+     "v3": 0
+    },
+    "edge20": {
+     "v2": 17,
+     "v3": 1
+    },
+    "holdDrained": {
+     "v2": 106,
+     "v3": 2
+    },
+    "stuck20": {
+     "v2": 209,
+     "v3": 220
+    },
+    "avoidLoop": {
+     "v2": 199,
+     "v3": 149
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 0
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 9,
+     "v3": 0
+    },
+    "redHold20": {
+     "v2": 8,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 62,
+     "v3": 0
+    },
+    "redDrained": {
+     "v2": 44,
+     "v3": 2
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 114,
+     "baseMean": 22.307,
+     "meanDelta": -1.6491,
+     "ci95": [
+      -4.4013,
+      1.1031
+     ],
+     "pctDelta": -7.39,
+     "pctCI": [
+      -19.73,
+      4.94
+     ]
+    },
+    "towerDeaths": {
+     "n": 114,
+     "baseMean": 1.1842,
+     "meanDelta": -0.2807,
+     "ci95": [
+      -0.5318,
+      -0.0296
+     ],
+     "pctDelta": -23.7,
+     "pctCI": [
+      -44.91,
+      -2.5
+     ]
+    },
+    "chasedDeaths": {
+     "n": 114,
+     "baseMean": 10.3947,
+     "meanDelta": -0.5789,
+     "ci95": [
+      -1.6312,
+      0.4733
+     ],
+     "pctDelta": -5.57,
+     "pctCI": [
+      -15.69,
+      4.55
+     ]
+    },
+    "retreatSuccess": {
+     "n": 114,
+     "baseMean": 0.8636,
+     "meanDelta": 0.0086,
+     "ci95": [
+      -0.0003,
+      0.0175
+     ],
+     "pctDelta": 0.99,
+     "pctCI": [
+      -0.04,
+      2.03
+     ]
+    },
+    "towersDestroyed": {
+     "n": 114,
+     "baseMean": 13.9561,
+     "meanDelta": -0.1404,
+     "ci95": [
+      -0.9319,
+      0.6512
+     ],
+     "pctDelta": -1.01,
+     "pctCI": [
+      -6.68,
+      4.67
+     ]
+    },
+    "gankStart": {
+     "n": 114,
+     "baseMean": 8.4123,
+     "meanDelta": -0.9737,
+     "ci95": [
+      -1.6266,
+      -0.3208
+     ],
+     "pctDelta": -11.57,
+     "pctCI": [
+      -19.34,
+      -3.81
+     ]
+    },
+    "gankKill": {
+     "n": 114,
+     "baseMean": 0.8421,
+     "meanDelta": -0.0439,
+     "ci95": [
+      -0.2808,
+      0.1931
+     ],
+     "pctDelta": -5.21,
+     "pctCI": [
+      -33.34,
+      22.93
+     ]
+    },
+    "heroKills": {
+     "n": 114,
+     "baseMean": 21.1228,
+     "meanDelta": -1.3684,
+     "ci95": [
+      -4.0002,
+      1.2634
+     ],
+     "pctDelta": -6.48,
+     "pctCI": [
+      -18.94,
+      5.98
+     ]
+    },
+    "duration": {
+     "n": 114,
+     "baseMean": 1090.5351,
+     "meanDelta": -15.0132,
+     "ci95": [
+      -60.8322,
+      30.8059
+     ],
+     "pctDelta": -1.38,
+     "pctCI": [
+      -5.58,
+      2.82
+     ]
+    },
+    "tickMs": {
+     "n": 114,
+     "baseMean": 2.5078,
+     "meanDelta": 0.0267,
+     "ci95": [
+      -0.0446,
+      0.0979
+     ],
+     "pctDelta": 1.06,
+     "pctCI": [
+      -1.78,
+      3.9
+     ]
+    },
+    "holdTicks": {
+     "n": 114,
+     "baseMean": 106.7719,
+     "meanDelta": -86.7895,
+     "ci95": [
+      -100.6596,
+      -72.9193
+     ],
+     "pctDelta": -81.28,
+     "pctCI": [
+      -94.28,
+      -68.29
+     ]
+    },
+    "regroupTicks": {
+     "n": 114,
+     "baseMean": 0,
+     "meanDelta": 16.614,
+     "ci95": [
+      14.2705,
+      18.9575
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 114,
+     "baseMean": 0.1491,
+     "meanDelta": -0.1491,
+     "ci95": [
+      -0.2431,
+      -0.0551
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -163.04,
+      -36.96
+     ]
+    },
+    "edge20": {
+     "n": 114,
+     "baseMean": 0.1491,
+     "meanDelta": -0.1404,
+     "ci95": [
+      -0.2365,
+      -0.0442
+     ],
+     "pctDelta": -94.12,
+     "pctCI": [
+      -158.57,
+      -29.66
+     ]
+    },
+    "holdDrained": {
+     "n": 114,
+     "baseMean": 0.9298,
+     "meanDelta": -0.9123,
+     "ci95": [
+      -1.0877,
+      -0.7368
+     ],
+     "pctDelta": -98.11,
+     "pctCI": [
+      -116.98,
+      -79.25
+     ]
+    },
+    "stuck20": {
+     "n": 114,
+     "baseMean": 1.8333,
+     "meanDelta": 0.0965,
+     "ci95": [
+      -0.303,
+      0.496
+     ],
+     "pctDelta": 5.26,
+     "pctCI": [
+      -16.53,
+      27.05
+     ]
+    },
+    "avoidLoop": {
+     "n": 114,
+     "baseMean": 1.7456,
+     "meanDelta": -0.4386,
+     "ci95": [
+      -0.8674,
+      -0.0098
+     ],
+     "pctDelta": -25.13,
+     "pctCI": [
+      -49.69,
+      -0.56
+     ]
+    },
+    "unwalkable": {
+     "n": 114,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 114,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 114,
+     "baseMean": 0.0789,
+     "meanDelta": -0.0789,
+     "ci95": [
+      -0.1407,
+      -0.0172
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -178.25,
+      -21.75
+     ]
+    },
+    "redHold20": {
+     "n": 114,
+     "baseMean": 0.0702,
+     "meanDelta": -0.0702,
+     "ci95": [
+      -0.1243,
+      -0.016
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -177.14,
+      -22.86
+     ]
+    },
+    "blueDrained": {
+     "n": 114,
+     "baseMean": 0.5439,
+     "meanDelta": -0.5439,
+     "ci95": [
+      -0.6761,
+      -0.4117
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -124.31,
+      -75.69
+     ]
+    },
+    "redDrained": {
+     "n": 114,
+     "baseMean": 0.386,
+     "meanDelta": -0.3684,
+     "ci95": [
+      -0.4886,
+      -0.2482
+     ],
+     "pctDelta": -95.45,
+     "pctCI": [
+      -126.6,
+      -64.31
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 67,
+    "v3": 52,
+    "pairedDelta": {
+     "n": 114,
+     "baseMean": 0.5877,
+     "meanDelta": -0.1316,
+     "ci95": [
+      -0.2472,
+      -0.016
+     ],
+     "pctDelta": -22.39,
+     "pctCI": [
+      -42.05,
+      -2.72
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "career:layout=SWAPPED": {
+   "pairs": 86,
+   "totals": {
+    "deaths": {
+     "v2": 1719,
+     "v3": 1748
+    },
+    "towerDeaths": {
+     "v2": 82,
+     "v3": 90
+    },
+    "chasedDeaths": {
+     "v2": 873,
+     "v3": 885
+    },
+    "retreatSuccess": {
+     "v2": 73.878,
+     "v3": 74.863
+    },
+    "towersDestroyed": {
+     "v2": 1145,
+     "v3": 1203
+    },
+    "gankStart": {
+     "v2": 657,
+     "v3": 657
+    },
+    "gankKill": {
+     "v2": 67,
+     "v3": 79
+    },
+    "heroKills": {
+     "v2": 1637,
+     "v3": 1658
+    },
+    "duration": {
+     "v2": 90016,
+     "v3": 92270
+    },
+    "tickMs": {
+     "v2": 1472.422,
+     "v3": 222.348
+    },
+    "holdTicks": {
+     "v2": 9626,
+     "v3": 1652
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 1293
+    },
+    "hold20": {
+     "v2": 18,
+     "v3": 0
+    },
+    "edge20": {
+     "v2": 18,
+     "v3": 0
+    },
+    "holdDrained": {
+     "v2": 56,
+     "v3": 2
+    },
+    "stuck20": {
+     "v2": 175,
+     "v3": 170
+    },
+    "avoidLoop": {
+     "v2": 127,
+     "v3": 123
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 2
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 12,
+     "v3": 0
+    },
+    "redHold20": {
+     "v2": 6,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 35,
+     "v3": 2
+    },
+    "redDrained": {
+     "v2": 21,
+     "v3": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 86,
+     "baseMean": 19.9884,
+     "meanDelta": 0.3372,
+     "ci95": [
+      -2.6434,
+      3.3178
+     ],
+     "pctDelta": 1.69,
+     "pctCI": [
+      -13.22,
+      16.6
+     ]
+    },
+    "towerDeaths": {
+     "n": 86,
+     "baseMean": 0.9535,
+     "meanDelta": 0.093,
+     "ci95": [
+      -0.2254,
+      0.4114
+     ],
+     "pctDelta": 9.76,
+     "pctCI": [
+      -23.64,
+      43.15
+     ]
+    },
+    "chasedDeaths": {
+     "n": 86,
+     "baseMean": 10.1512,
+     "meanDelta": 0.1395,
+     "ci95": [
+      -1.2108,
+      1.4899
+     ],
+     "pctDelta": 1.37,
+     "pctCI": [
+      -11.93,
+      14.68
+     ]
+    },
+    "retreatSuccess": {
+     "n": 86,
+     "baseMean": 0.859,
+     "meanDelta": 0.0115,
+     "ci95": [
+      0.0009,
+      0.022
+     ],
+     "pctDelta": 1.33,
+     "pctCI": [
+      0.1,
+      2.57
+     ]
+    },
+    "towersDestroyed": {
+     "n": 86,
+     "baseMean": 13.314,
+     "meanDelta": 0.6744,
+     "ci95": [
+      -0.1745,
+      1.5233
+     ],
+     "pctDelta": 5.07,
+     "pctCI": [
+      -1.31,
+      11.44
+     ]
+    },
+    "gankStart": {
+     "n": 86,
+     "baseMean": 7.6395,
+     "meanDelta": 0,
+     "ci95": [
+      -0.7278,
+      0.7278
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      -9.53,
+      9.53
+     ]
+    },
+    "gankKill": {
+     "n": 86,
+     "baseMean": 0.7791,
+     "meanDelta": 0.1395,
+     "ci95": [
+      -0.1798,
+      0.4588
+     ],
+     "pctDelta": 17.91,
+     "pctCI": [
+      -23.08,
+      58.9
+     ]
+    },
+    "heroKills": {
+     "n": 86,
+     "baseMean": 19.0349,
+     "meanDelta": 0.2442,
+     "ci95": [
+      -2.6337,
+      3.1221
+     ],
+     "pctDelta": 1.28,
+     "pctCI": [
+      -13.84,
+      16.4
+     ]
+    },
+    "duration": {
+     "n": 86,
+     "baseMean": 1046.6977,
+     "meanDelta": 26.2093,
+     "ci95": [
+      -22.8585,
+      75.2771
+     ],
+     "pctDelta": 2.5,
+     "pctCI": [
+      -2.18,
+      7.19
+     ]
+    },
+    "tickMs": {
+     "n": 86,
+     "baseMean": 17.1212,
+     "meanDelta": -14.5357,
+     "ci95": [
+      -43.754,
+      14.6825
+     ],
+     "pctDelta": -84.9,
+     "pctCI": [
+      -255.55,
+      85.76
+     ]
+    },
+    "holdTicks": {
+     "n": 86,
+     "baseMean": 111.9302,
+     "meanDelta": -92.7209,
+     "ci95": [
+      -110.7981,
+      -74.6438
+     ],
+     "pctDelta": -82.84,
+     "pctCI": [
+      -98.99,
+      -66.69
+     ]
+    },
+    "regroupTicks": {
+     "n": 86,
+     "baseMean": 0,
+     "meanDelta": 15.0349,
+     "ci95": [
+      12.9696,
+      17.1002
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 86,
+     "baseMean": 0.2093,
+     "meanDelta": -0.2093,
+     "ci95": [
+      -0.3291,
+      -0.0895
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -157.24,
+      -42.76
+     ]
+    },
+    "edge20": {
+     "n": 86,
+     "baseMean": 0.2093,
+     "meanDelta": -0.2093,
+     "ci95": [
+      -0.3291,
+      -0.0895
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -157.24,
+      -42.76
+     ]
+    },
+    "holdDrained": {
+     "n": 86,
+     "baseMean": 0.6512,
+     "meanDelta": -0.6279,
+     "ci95": [
+      -0.8209,
+      -0.4349
+     ],
+     "pctDelta": -96.43,
+     "pctCI": [
+      -126.07,
+      -66.78
+     ]
+    },
+    "stuck20": {
+     "n": 86,
+     "baseMean": 2.0349,
+     "meanDelta": -0.0581,
+     "ci95": [
+      -0.5334,
+      0.4171
+     ],
+     "pctDelta": -2.86,
+     "pctCI": [
+      -26.21,
+      20.5
+     ]
+    },
+    "avoidLoop": {
+     "n": 86,
+     "baseMean": 1.4767,
+     "meanDelta": -0.0465,
+     "ci95": [
+      -0.5258,
+      0.4328
+     ],
+     "pctDelta": -3.15,
+     "pctCI": [
+      -35.61,
+      29.31
+     ]
+    },
+    "unwalkable": {
+     "n": 86,
+     "baseMean": 0,
+     "meanDelta": 0.0233,
+     "ci95": [
+      -0.0233,
+      0.0698
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 86,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 86,
+     "baseMean": 0.1395,
+     "meanDelta": -0.1395,
+     "ci95": [
+      -0.2397,
+      -0.0394
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -171.77,
+      -28.23
+     ]
+    },
+    "redHold20": {
+     "n": 86,
+     "baseMean": 0.0698,
+     "meanDelta": -0.0698,
+     "ci95": [
+      -0.1422,
+      0.0026
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -203.78,
+      3.78
+     ]
+    },
+    "blueDrained": {
+     "n": 86,
+     "baseMean": 0.407,
+     "meanDelta": -0.3837,
+     "ci95": [
+      -0.5395,
+      -0.228
+     ],
+     "pctDelta": -94.29,
+     "pctCI": [
+      -132.56,
+      -56.01
+     ]
+    },
+    "redDrained": {
+     "n": 86,
+     "baseMean": 0.2442,
+     "meanDelta": -0.2442,
+     "ci95": [
+      -0.3485,
+      -0.1399
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -142.7,
+      -57.3
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 48,
+    "v3": 49,
+    "pairedDelta": {
+     "n": 86,
+     "baseMean": 0.5581,
+     "meanDelta": 0.0116,
+     "ci95": [
+      -0.1344,
+      0.1577
+     ],
+     "pctDelta": 2.08,
+     "pctCI": [
+      -24.09,
+      28.25
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "tool:pooled": {
+   "pairs": 80,
+   "totals": {
+    "deaths": {
+     "v2": 510,
+     "v3": 548
+    },
+    "towerDeaths": {
+     "v2": 63,
+     "v3": 65
+    },
+    "chasedDeaths": {
+     "v2": 237,
+     "v3": 275
+    },
+    "retreatSuccess": {
+     "v2": 77.008,
+     "v3": 76.811
+    },
+    "towersDestroyed": {
+     "v2": 1068,
+     "v3": 1060
+    },
+    "gankStart": {
+     "v2": 1045,
+     "v3": 1010
+    },
+    "gankKill": {
+     "v2": 9,
+     "v3": 14
+    },
+    "heroKills": {
+     "v2": 447,
+     "v3": 483
+    },
+    "duration": {
+     "v2": 84128.5,
+     "v3": 85927.5
+    },
+    "tickMs": {
+     "v2": 129.678,
+     "v3": 131.783
+    },
+    "holdTicks": {
+     "v2": 9302,
+     "v3": 1407
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 1565
+    },
+    "hold20": {
+     "v2": 20,
+     "v3": 1
+    },
+    "edge20": {
+     "v2": 20,
+     "v3": 1
+    },
+    "holdDrained": {
+     "v2": 114,
+     "v3": 0
+    },
+    "stuck20": {
+     "v2": 133,
+     "v3": 101
+    },
+    "avoidLoop": {
+     "v2": 124,
+     "v3": 141
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 0
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 10,
+     "v3": 1
+    },
+    "redHold20": {
+     "v2": 10,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 60,
+     "v3": 0
+    },
+    "redDrained": {
+     "v2": 54,
+     "v3": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 80,
+     "baseMean": 6.375,
+     "meanDelta": 0.475,
+     "ci95": [
+      -1.2691,
+      2.2191
+     ],
+     "pctDelta": 7.45,
+     "pctCI": [
+      -19.91,
+      34.81
+     ]
+    },
+    "towerDeaths": {
+     "n": 80,
+     "baseMean": 0.7875,
+     "meanDelta": 0.025,
+     "ci95": [
+      -0.2932,
+      0.3432
+     ],
+     "pctDelta": 3.17,
+     "pctCI": [
+      -37.23,
+      43.58
+     ]
+    },
+    "chasedDeaths": {
+     "n": 80,
+     "baseMean": 2.9625,
+     "meanDelta": 0.475,
+     "ci95": [
+      -0.3616,
+      1.3116
+     ],
+     "pctDelta": 16.03,
+     "pctCI": [
+      -12.21,
+      44.27
+     ]
+    },
+    "retreatSuccess": {
+     "n": 80,
+     "baseMean": 0.9626,
+     "meanDelta": -0.0025,
+     "ci95": [
+      -0.0102,
+      0.0052
+     ],
+     "pctDelta": -0.26,
+     "pctCI": [
+      -1.06,
+      0.54
+     ]
+    },
+    "towersDestroyed": {
+     "n": 80,
+     "baseMean": 13.35,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.9792,
+      0.7792
+     ],
+     "pctDelta": -0.75,
+     "pctCI": [
+      -7.33,
+      5.84
+     ]
+    },
+    "gankStart": {
+     "n": 80,
+     "baseMean": 13.0625,
+     "meanDelta": -0.4375,
+     "ci95": [
+      -1.2549,
+      0.3799
+     ],
+     "pctDelta": -3.35,
+     "pctCI": [
+      -9.61,
+      2.91
+     ]
+    },
+    "gankKill": {
+     "n": 80,
+     "baseMean": 0.1125,
+     "meanDelta": 0.0625,
+     "ci95": [
+      -0.0463,
+      0.1713
+     ],
+     "pctDelta": 55.56,
+     "pctCI": [
+      -41.12,
+      152.23
+     ]
+    },
+    "heroKills": {
+     "n": 80,
+     "baseMean": 5.5875,
+     "meanDelta": 0.45,
+     "ci95": [
+      -1.1683,
+      2.0683
+     ],
+     "pctDelta": 8.05,
+     "pctCI": [
+      -20.91,
+      37.02
+     ]
+    },
+    "duration": {
+     "n": 80,
+     "baseMean": 1051.6063,
+     "meanDelta": 22.4875,
+     "ci95": [
+      -32.7456,
+      77.7206
+     ],
+     "pctDelta": 2.14,
+     "pctCI": [
+      -3.11,
+      7.39
+     ]
+    },
+    "tickMs": {
+     "n": 80,
+     "baseMean": 1.621,
+     "meanDelta": 0.0263,
+     "ci95": [
+      -0.0266,
+      0.0792
+     ],
+     "pctDelta": 1.62,
+     "pctCI": [
+      -1.64,
+      4.89
+     ]
+    },
+    "holdTicks": {
+     "n": 80,
+     "baseMean": 116.275,
+     "meanDelta": -98.6875,
+     "ci95": [
+      -116.214,
+      -81.161
+     ],
+     "pctDelta": -84.87,
+     "pctCI": [
+      -99.95,
+      -69.8
+     ]
+    },
+    "regroupTicks": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 19.5625,
+     "ci95": [
+      16.7328,
+      22.3922
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 80,
+     "baseMean": 0.25,
+     "meanDelta": -0.2375,
+     "ci95": [
+      -0.367,
+      -0.108
+     ],
+     "pctDelta": -95,
+     "pctCI": [
+      -146.79,
+      -43.21
+     ]
+    },
+    "edge20": {
+     "n": 80,
+     "baseMean": 0.25,
+     "meanDelta": -0.2375,
+     "ci95": [
+      -0.367,
+      -0.108
+     ],
+     "pctDelta": -95,
+     "pctCI": [
+      -146.79,
+      -43.21
+     ]
+    },
+    "holdDrained": {
+     "n": 80,
+     "baseMean": 1.425,
+     "meanDelta": -1.425,
+     "ci95": [
+      -1.6859,
+      -1.1641
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -118.31,
+      -81.69
+     ]
+    },
+    "stuck20": {
+     "n": 80,
+     "baseMean": 1.6625,
+     "meanDelta": -0.4,
+     "ci95": [
+      -0.7842,
+      -0.0158
+     ],
+     "pctDelta": -24.06,
+     "pctCI": [
+      -47.17,
+      -0.95
+     ]
+    },
+    "avoidLoop": {
+     "n": 80,
+     "baseMean": 1.55,
+     "meanDelta": 0.2125,
+     "ci95": [
+      -0.344,
+      0.769
+     ],
+     "pctDelta": 13.71,
+     "pctCI": [
+      -22.2,
+      49.62
+     ]
+    },
+    "unwalkable": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 80,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 80,
+     "baseMean": 0.125,
+     "meanDelta": -0.1125,
+     "ci95": [
+      -0.2131,
+      -0.0119
+     ],
+     "pctDelta": -90,
+     "pctCI": [
+      -170.47,
+      -9.53
+     ]
+    },
+    "redHold20": {
+     "n": 80,
+     "baseMean": 0.125,
+     "meanDelta": -0.125,
+     "ci95": [
+      -0.1994,
+      -0.0506
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -159.53,
+      -40.47
+     ]
+    },
+    "blueDrained": {
+     "n": 80,
+     "baseMean": 0.75,
+     "meanDelta": -0.75,
+     "ci95": [
+      -0.9559,
+      -0.5441
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -127.46,
+      -72.54
+     ]
+    },
+    "redDrained": {
+     "n": 80,
+     "baseMean": 0.675,
+     "meanDelta": -0.675,
+     "ci95": [
+      -0.8332,
+      -0.5168
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -123.44,
+      -76.56
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 42,
+    "v3": 38,
+    "pairedDelta": {
+     "n": 80,
+     "baseMean": 0.525,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.2087,
+      0.1087
+     ],
+     "pctDelta": -9.52,
+     "pctCI": [
+      -39.75,
+      20.71
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  },
+  "all": {
+   "pairs": 280,
+   "totals": {
+    "deaths": {
+     "v2": 4772,
+     "v3": 4651
+    },
+    "towerDeaths": {
+     "v2": 280,
+     "v3": 258
+    },
+    "chasedDeaths": {
+     "v2": 2295,
+     "v3": 2279
+    },
+    "retreatSuccess": {
+     "v2": 249.336,
+     "v3": 251.103
+    },
+    "towersDestroyed": {
+     "v2": 3804,
+     "v3": 3838
+    },
+    "gankStart": {
+     "v2": 2661,
+     "v3": 2515
+    },
+    "gankKill": {
+     "v2": 172,
+     "v3": 184
+    },
+    "heroKills": {
+     "v2": 4492,
+     "v3": 4393
+    },
+    "duration": {
+     "v2": 298465.5,
+     "v3": 300807
+    },
+    "tickMs": {
+     "v2": 1887.987,
+     "v3": 643.059
+    },
+    "holdTicks": {
+     "v2": 31100,
+     "v3": 5337
+    },
+    "regroupTicks": {
+     "v2": 0,
+     "v3": 4752
+    },
+    "hold20": {
+     "v2": 55,
+     "v3": 1
+    },
+    "edge20": {
+     "v2": 55,
+     "v3": 2
+    },
+    "holdDrained": {
+     "v2": 276,
+     "v3": 4
+    },
+    "stuck20": {
+     "v2": 517,
+     "v3": 491
+    },
+    "avoidLoop": {
+     "v2": 450,
+     "v3": 413
+    },
+    "unwalkable": {
+     "v2": 0,
+     "v3": 2
+    },
+    "nan": {
+     "v2": 0,
+     "v3": 0
+    },
+    "blueHold20": {
+     "v2": 31,
+     "v3": 1
+    },
+    "redHold20": {
+     "v2": 24,
+     "v3": 0
+    },
+    "blueDrained": {
+     "v2": 157,
+     "v3": 2
+    },
+    "redDrained": {
+     "v2": 119,
+     "v3": 2
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 280,
+     "baseMean": 17.0429,
+     "meanDelta": -0.4321,
+     "ci95": [
+      -1.9469,
+      1.0826
+     ],
+     "pctDelta": -2.54,
+     "pctCI": [
+      -11.42,
+      6.35
+     ]
+    },
+    "towerDeaths": {
+     "n": 280,
+     "baseMean": 1,
+     "meanDelta": -0.0786,
+     "ci95": [
+      -0.2457,
+      0.0885
+     ],
+     "pctDelta": -7.86,
+     "pctCI": [
+      -24.57,
+      8.85
+     ]
+    },
+    "chasedDeaths": {
+     "n": 280,
+     "baseMean": 8.1964,
+     "meanDelta": -0.0571,
+     "ci95": [
+      -0.6932,
+      0.5789
+     ],
+     "pctDelta": -0.7,
+     "pctCI": [
+      -8.46,
+      7.06
+     ]
+    },
+    "retreatSuccess": {
+     "n": 280,
+     "baseMean": 0.8905,
+     "meanDelta": 0.0063,
+     "ci95": [
+      0.001,
+      0.0116
+     ],
+     "pctDelta": 0.71,
+     "pctCI": [
+      0.11,
+      1.31
+     ]
+    },
+    "towersDestroyed": {
+     "n": 280,
+     "baseMean": 13.5857,
+     "meanDelta": 0.1214,
+     "ci95": [
+      -0.3587,
+      0.6016
+     ],
+     "pctDelta": 0.89,
+     "pctCI": [
+      -2.64,
+      4.43
+     ]
+    },
+    "gankStart": {
+     "n": 280,
+     "baseMean": 9.5036,
+     "meanDelta": -0.5214,
+     "ci95": [
+      -0.9372,
+      -0.1057
+     ],
+     "pctDelta": -5.49,
+     "pctCI": [
+      -9.86,
+      -1.11
+     ]
+    },
+    "gankKill": {
+     "n": 280,
+     "baseMean": 0.6143,
+     "meanDelta": 0.0429,
+     "ci95": [
+      -0.0966,
+      0.1823
+     ],
+     "pctDelta": 6.98,
+     "pctCI": [
+      -15.72,
+      29.68
+     ]
+    },
+    "heroKills": {
+     "n": 280,
+     "baseMean": 16.0429,
+     "meanDelta": -0.3536,
+     "ci95": [
+      -1.8016,
+      1.0944
+     ],
+     "pctDelta": -2.2,
+     "pctCI": [
+      -11.23,
+      6.82
+     ]
+    },
+    "duration": {
+     "n": 280,
+     "baseMean": 1065.9482,
+     "meanDelta": 8.3625,
+     "ci95": [
+      -20.0506,
+      36.7756
+     ],
+     "pctDelta": 0.78,
+     "pctCI": [
+      -1.88,
+      3.45
+     ]
+    },
+    "tickMs": {
+     "n": 280,
+     "baseMean": 6.7428,
+     "meanDelta": -4.4462,
+     "ci95": [
+      -13.3304,
+      4.4381
+     ],
+     "pctDelta": -65.94,
+     "pctCI": [
+      -197.7,
+      65.82
+     ]
+    },
+    "holdTicks": {
+     "n": 280,
+     "baseMean": 111.0714,
+     "meanDelta": -92.0107,
+     "ci95": [
+      -101.2712,
+      -82.7503
+     ],
+     "pctDelta": -82.84,
+     "pctCI": [
+      -91.18,
+      -74.5
+     ]
+    },
+    "regroupTicks": {
+     "n": 280,
+     "baseMean": 0,
+     "meanDelta": 16.9714,
+     "ci95": [
+      15.5723,
+      18.3706
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "hold20": {
+     "n": 280,
+     "baseMean": 0.1964,
+     "meanDelta": -0.1929,
+     "ci95": [
+      -0.2568,
+      -0.1289
+     ],
+     "pctDelta": -98.18,
+     "pctCI": [
+      -130.76,
+      -65.61
+     ]
+    },
+    "edge20": {
+     "n": 280,
+     "baseMean": 0.1964,
+     "meanDelta": -0.1893,
+     "ci95": [
+      -0.2538,
+      -0.1248
+     ],
+     "pctDelta": -96.36,
+     "pctCI": [
+      -129.21,
+      -63.51
+     ]
+    },
+    "holdDrained": {
+     "n": 280,
+     "baseMean": 0.9857,
+     "meanDelta": -0.9714,
+     "ci95": [
+      -1.0945,
+      -0.8484
+     ],
+     "pctDelta": -98.55,
+     "pctCI": [
+      -111.04,
+      -86.07
+     ]
+    },
+    "stuck20": {
+     "n": 280,
+     "baseMean": 1.8464,
+     "meanDelta": -0.0929,
+     "ci95": [
+      -0.3353,
+      0.1496
+     ],
+     "pctDelta": -5.03,
+     "pctCI": [
+      -18.16,
+      8.1
+     ]
+    },
+    "avoidLoop": {
+     "n": 280,
+     "baseMean": 1.6071,
+     "meanDelta": -0.1321,
+     "ci95": [
+      -0.4085,
+      0.1442
+     ],
+     "pctDelta": -8.22,
+     "pctCI": [
+      -25.42,
+      8.97
+     ]
+    },
+    "unwalkable": {
+     "n": 280,
+     "baseMean": 0,
+     "meanDelta": 0.0071,
+     "ci95": [
+      -0.007,
+      0.0213
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 280,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueHold20": {
+     "n": 280,
+     "baseMean": 0.1107,
+     "meanDelta": -0.1071,
+     "ci95": [
+      -0.1556,
+      -0.0587
+     ],
+     "pctDelta": -96.77,
+     "pctCI": [
+      -140.54,
+      -53.01
+     ]
+    },
+    "redHold20": {
+     "n": 280,
+     "baseMean": 0.0857,
+     "meanDelta": -0.0857,
+     "ci95": [
+      -0.1232,
+      -0.0483
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -143.69,
+      -56.31
+     ]
+    },
+    "blueDrained": {
+     "n": 280,
+     "baseMean": 0.5607,
+     "meanDelta": -0.5536,
+     "ci95": [
+      -0.6468,
+      -0.4603
+     ],
+     "pctDelta": -98.73,
+     "pctCI": [
+      -115.35,
+      -82.1
+     ]
+    },
+    "redDrained": {
+     "n": 280,
+     "baseMean": 0.425,
+     "meanDelta": -0.4179,
+     "ci95": [
+      -0.4935,
+      -0.3422
+     ],
+     "pctDelta": -98.32,
+     "pctCI": [
+      -116.12,
+      -80.51
+     ]
+    }
+   },
+   "blueWin": {
+    "v2": 157,
+    "v3": 139,
+    "pairedDelta": {
+     "n": 280,
+     "baseMean": 0.5607,
+     "meanDelta": -0.0643,
+     "ci95": [
+      -0.1428,
+      0.0142
+     ],
+     "pctDelta": -11.46,
+     "pctCI": [
+      -25.47,
+      2.54
+     ]
+    }
+   },
+   "unfinished": {
+    "v2": 0,
+    "v3": 0
+   }
+  }
+ },
+ "hashes": [
+  {
+   "k": "career:high",
+   "seed": 93001,
+   "v2": "4f8e9675f400239b",
+   "v3": "251992e2218e202f"
+  },
+  {
+   "k": "career:high",
+   "seed": 93003,
+   "v2": "2fedf5d3b6bd2bdc",
+   "v3": "9bd149f05c16151c"
+  },
+  {
+   "k": "career:high",
+   "seed": 93005,
+   "v2": "a6db520ab2231a77",
+   "v3": "a20dde9b5d99eb5b"
+  },
+  {
+   "k": "career:high",
+   "seed": 93007,
+   "v2": "30dd52f259af99c8",
+   "v3": "4f594034bfed7ff8"
+  },
+  {
+   "k": "career:high",
+   "seed": 93009,
+   "v2": "4d6a9af6f3a24a81",
+   "v3": "ec9a54598148167e"
+  },
+  {
+   "k": "career:high",
+   "seed": 93011,
+   "v2": "9ad1d08eb1960f91",
+   "v3": "c8b31201645cafcb"
+  },
+  {
+   "k": "career:high",
+   "seed": 93013,
+   "v2": "dd328be59e752f26",
+   "v3": "427c3cbb83a6ca7a"
+  },
+  {
+   "k": "career:high",
+   "seed": 93015,
+   "v2": "a024f6bf28a9dd88",
+   "v3": "807b2f875b963cb1"
+  },
+  {
+   "k": "career:high",
+   "seed": 93017,
+   "v2": "f20b9debfaa5a7f1",
+   "v3": "a2d78a77dc1b778f"
+  },
+  {
+   "k": "career:high",
+   "seed": 93019,
+   "v2": "a0f235674584396c",
+   "v3": "95d1f9bf24b40159"
+  },
+  {
+   "k": "career:high",
+   "seed": 93021,
+   "v2": "ed2a41e715cbda62",
+   "v3": "e6ebb36fb504e4c3"
+  },
+  {
+   "k": "career:high",
+   "seed": 93023,
+   "v2": "2634013b92bef7b3",
+   "v3": "c199d1cfb53e9ada"
+  },
+  {
+   "k": "career:high",
+   "seed": 93025,
+   "v2": "ec7c5085bb41243c",
+   "v3": "f8c279891bf009bb"
+  },
+  {
+   "k": "career:high",
+   "seed": 93027,
+   "v2": "5e206f0bc30223bb",
+   "v3": "3ecc67cf78678a78"
+  },
+  {
+   "k": "career:high",
+   "seed": 93029,
+   "v2": "e47f9c280d353e0e",
+   "v3": "9cc04a3b6a90f429"
+  },
+  {
+   "k": "career:high",
+   "seed": 93031,
+   "v2": "42c298aa6fdf5ad4",
+   "v3": "ef6c635ccc078806"
+  },
+  {
+   "k": "career:high",
+   "seed": 93033,
+   "v2": "321deacb86358b9c",
+   "v3": "2db3b5a39daca527"
+  },
+  {
+   "k": "career:high",
+   "seed": 93035,
+   "v2": "17e760404886041a",
+   "v3": "fc9257afc33454e8"
+  },
+  {
+   "k": "career:high",
+   "seed": 93037,
+   "v2": "08a52e7b92c17802",
+   "v3": "524c88f87311c8f7"
+  },
+  {
+   "k": "career:high",
+   "seed": 93039,
+   "v2": "941d6dd0abf2f41f",
+   "v3": "99c14aa37cca8c87"
+  },
+  {
+   "k": "career:high",
+   "seed": 93041,
+   "v2": "bdd9d21867f71c2b",
+   "v3": "63cf2a8df3bdc00f"
+  },
+  {
+   "k": "career:high",
+   "seed": 93043,
+   "v2": "b36a96ffeffbcb5f",
+   "v3": "4a553f7e8c366be3"
+  },
+  {
+   "k": "career:high",
+   "seed": 93045,
+   "v2": "53decb0aa9de8d9b",
+   "v3": "c418bfba268b8586"
+  },
+  {
+   "k": "career:high",
+   "seed": 93047,
+   "v2": "a0a23d5ade85eab3",
+   "v3": "f0c1e86b8d39dec3"
+  },
+  {
+   "k": "career:high",
+   "seed": 93049,
+   "v2": "f8ad831557940e0d",
+   "v3": "9663d4077b75ed40"
+  },
+  {
+   "k": "career:high",
+   "seed": 93051,
+   "v2": "19b73593b67f00e3",
+   "v3": "3b64025b94591ede"
+  },
+  {
+   "k": "career:high",
+   "seed": 93053,
+   "v2": "d7994be542f9572f",
+   "v3": "2b53495614ad1349"
+  },
+  {
+   "k": "career:high",
+   "seed": 93055,
+   "v2": "86c4057b026c934a",
+   "v3": "050d603db29c620c"
+  },
+  {
+   "k": "career:high",
+   "seed": 93057,
+   "v2": "812d39c6bc14c9fa",
+   "v3": "3f6de09be64ccc41"
+  },
+  {
+   "k": "career:high",
+   "seed": 93059,
+   "v2": "b78ff7717fac3ec6",
+   "v3": "8339aa9a7055c718"
+  },
+  {
+   "k": "career:high",
+   "seed": 93061,
+   "v2": "3ed200cd1ecbad1c",
+   "v3": "2742c9b116be3929"
+  },
+  {
+   "k": "career:high",
+   "seed": 93063,
+   "v2": "ca82bbd261ac1ddf",
+   "v3": "f7a859c9a017cb8b"
+  },
+  {
+   "k": "career:high",
+   "seed": 93065,
+   "v2": "02ee269942908206",
+   "v3": "f64aa1988f43cadc"
+  },
+  {
+   "k": "career:high",
+   "seed": 93067,
+   "v2": "a395ee94e5a4f3ff",
+   "v3": "451f928e257300e6"
+  },
+  {
+   "k": "career:high",
+   "seed": 93069,
+   "v2": "368e0f3ac4200915",
+   "v3": "5a389a37cb743513"
+  },
+  {
+   "k": "career:high",
+   "seed": 93071,
+   "v2": "20e4e4e32cc598df",
+   "v3": "1dad56b273e9c325"
+  },
+  {
+   "k": "career:high",
+   "seed": 93073,
+   "v2": "f238aa61510c733c",
+   "v3": "432c84663bfb68d3"
+  },
+  {
+   "k": "career:high",
+   "seed": 93075,
+   "v2": "6efd327316e2943e",
+   "v3": "77711a84f54aced0"
+  },
+  {
+   "k": "career:high",
+   "seed": 93077,
+   "v2": "60326ef3f8c0d674",
+   "v3": "69ba039518ef1dc3"
+  },
+  {
+   "k": "career:high",
+   "seed": 93079,
+   "v2": "5411f87575ecede4",
+   "v3": "167fcdd8df2f3876"
+  },
+  {
+   "k": "career:high",
+   "seed": 93081,
+   "v2": "680293215c6b9d68",
+   "v3": "50c59702d6e59746"
+  },
+  {
+   "k": "career:high",
+   "seed": 93083,
+   "v2": "a268199a47c51a02",
+   "v3": "dcea56c21649cf04"
+  },
+  {
+   "k": "career:high",
+   "seed": 93085,
+   "v2": "975fff7f2efcc404",
+   "v3": "2dd9e29576ab1366"
+  },
+  {
+   "k": "career:high",
+   "seed": 93087,
+   "v2": "3044548436e70bfa",
+   "v3": "c70e808b8a5f7a7f"
+  },
+  {
+   "k": "career:high",
+   "seed": 93089,
+   "v2": "3a05e1cc7d873993",
+   "v3": "aa5bf754cf182bb9"
+  },
+  {
+   "k": "career:high",
+   "seed": 93091,
+   "v2": "9cb685ebe5c821d2",
+   "v3": "47b5ef1db0649789"
+  },
+  {
+   "k": "career:high",
+   "seed": 93093,
+   "v2": "b0638e3cdb8203a0",
+   "v3": "108e3ab72745a087"
+  },
+  {
+   "k": "career:high",
+   "seed": 93095,
+   "v2": "b27120bee9986dc0",
+   "v3": "877b714c23e9219c"
+  },
+  {
+   "k": "career:high",
+   "seed": 93097,
+   "v2": "407823cb049e2468",
+   "v3": "e78d8b3cdd54147a"
+  },
+  {
+   "k": "career:high",
+   "seed": 93099,
+   "v2": "693aa7b8fbc570e3",
+   "v3": "becead7fe023eab7"
+  },
+  {
+   "k": "career:high",
+   "seed": 93101,
+   "v2": "a517481520b007c8",
+   "v3": "f1f2f9639c6d234e"
+  },
+  {
+   "k": "career:high",
+   "seed": 93103,
+   "v2": "4a717be248c05795",
+   "v3": "bc12e48bcb5fbf8c"
+  },
+  {
+   "k": "career:high",
+   "seed": 93105,
+   "v2": "c833bf462e8fefe4",
+   "v3": "3fa86418646e272f"
+  },
+  {
+   "k": "career:high",
+   "seed": 93107,
+   "v2": "c8218fdd8f2f576a",
+   "v3": "b563e2b9e285b6a2"
+  },
+  {
+   "k": "career:high",
+   "seed": 93109,
+   "v2": "d21f01de1c2d97a7",
+   "v3": "af7b7026a46cb0be"
+  },
+  {
+   "k": "career:high",
+   "seed": 93111,
+   "v2": "c505def4661d9745",
+   "v3": "dada84942a6e1c50"
+  },
+  {
+   "k": "career:high",
+   "seed": 93113,
+   "v2": "e9477e75f6c3ef8d",
+   "v3": "ee03d4261b3af4f5"
+  },
+  {
+   "k": "career:high",
+   "seed": 93115,
+   "v2": "eaf7b66f903b19ce",
+   "v3": "39340045b2ad9479"
+  },
+  {
+   "k": "career:high",
+   "seed": 93117,
+   "v2": "86d0ffd266004652",
+   "v3": "2a8bd395d9e00c3c"
+  },
+  {
+   "k": "career:high",
+   "seed": 93119,
+   "v2": "988548499c39be23",
+   "v3": "ffab57bdfee923cb"
+  },
+  {
+   "k": "career:high",
+   "seed": 93121,
+   "v2": "3612110253a777bf",
+   "v3": "097b50ac91342491"
+  },
+  {
+   "k": "career:high",
+   "seed": 93123,
+   "v2": "c6bab85ded45f6e9",
+   "v3": "55929c2b5b984b12"
+  },
+  {
+   "k": "career:high",
+   "seed": 93125,
+   "v2": "c774aecda0e3d6bf",
+   "v3": "7c954f74d36bb186"
+  },
+  {
+   "k": "career:high",
+   "seed": 93127,
+   "v2": "c4d336282940b0a2",
+   "v3": "d00c1be783d60822"
+  },
+  {
+   "k": "career:high",
+   "seed": 93129,
+   "v2": "8ef7902c4665d266",
+   "v3": "ff15468e51f48b48"
+  },
+  {
+   "k": "career:high",
+   "seed": 93131,
+   "v2": "0850d14119e2df27",
+   "v3": "669072e0bd6f04f4"
+  },
+  {
+   "k": "career:high",
+   "seed": 93133,
+   "v2": "235ceac25c7ce8f6",
+   "v3": "8f7aa6977f2142df"
+  },
+  {
+   "k": "career:high",
+   "seed": 93135,
+   "v2": "87448f1003dc36c0",
+   "v3": "a785020140bcd8e6"
+  },
+  {
+   "k": "career:high",
+   "seed": 93137,
+   "v2": "8c35e0187a6df5fd",
+   "v3": "8a011cd9c15c3604"
+  },
+  {
+   "k": "career:high",
+   "seed": 93139,
+   "v2": "e417031f50fa96ef",
+   "v3": "5288c47903475cc7"
+  },
+  {
+   "k": "career:high",
+   "seed": 93141,
+   "v2": "8a2e924b3785b5a8",
+   "v3": "17975d2617d7c8e9"
+  },
+  {
+   "k": "career:high",
+   "seed": 93143,
+   "v2": "32fb37df33e6f377",
+   "v3": "75b00c1b3cb1bfae"
+  },
+  {
+   "k": "career:high",
+   "seed": 93145,
+   "v2": "f8f2f6f043d9f768",
+   "v3": "3c7a9f2855bb92d5"
+  },
+  {
+   "k": "career:high",
+   "seed": 93147,
+   "v2": "f9295e11bc3ebd98",
+   "v3": "6b06afeaeb1408e0"
+  },
+  {
+   "k": "career:high",
+   "seed": 93149,
+   "v2": "59618a4024f84340",
+   "v3": "c7bb028a0d7b83aa"
+  },
+  {
+   "k": "career:high",
+   "seed": 93151,
+   "v2": "902b3514fe27afb8",
+   "v3": "536b8458047e5fbf"
+  },
+  {
+   "k": "career:high",
+   "seed": 93153,
+   "v2": "1aa073e4b02902ec",
+   "v3": "c97bc2688da568d2"
+  },
+  {
+   "k": "career:high",
+   "seed": 93155,
+   "v2": "3b0195f9c7f7c348",
+   "v3": "7bfee1e01581e7e7"
+  },
+  {
+   "k": "career:high",
+   "seed": 93157,
+   "v2": "bf4a77feffa02d00",
+   "v3": "c766f40be0a09092"
+  },
+  {
+   "k": "career:high",
+   "seed": 93159,
+   "v2": "99b0742a131341e6",
+   "v3": "3f5d71878d0a94d7"
+  },
+  {
+   "k": "career:low",
+   "seed": 93001,
+   "v2": "5fdb15c0a5ed977f",
+   "v3": "0cd927c8313edf7f"
+  },
+  {
+   "k": "career:low",
+   "seed": 93003,
+   "v2": "1ddebc749622ea0d",
+   "v3": "8e0d21898373a59b"
+  },
+  {
+   "k": "career:low",
+   "seed": 93005,
+   "v2": "234e53203bef943c",
+   "v3": "8347ff4ff840ee64"
+  },
+  {
+   "k": "career:low",
+   "seed": 93007,
+   "v2": "478c8d62941b9caf",
+   "v3": "a2114f9e6c403aa6"
+  },
+  {
+   "k": "career:low",
+   "seed": 93009,
+   "v2": "c0d770c53df242dc",
+   "v3": "583f92a6464043d8"
+  },
+  {
+   "k": "career:low",
+   "seed": 93011,
+   "v2": "062fc75014553a1d",
+   "v3": "70a78c339f769069"
+  },
+  {
+   "k": "career:low",
+   "seed": 93013,
+   "v2": "c5852c740c7b65fa",
+   "v3": "9e35e9bfb152d687"
+  },
+  {
+   "k": "career:low",
+   "seed": 93015,
+   "v2": "5639b724cc260b4f",
+   "v3": "8a5148e8412f266d"
+  },
+  {
+   "k": "career:low",
+   "seed": 93017,
+   "v2": "2988e00aa44934e7",
+   "v3": "59d00c95fa4dbd71"
+  },
+  {
+   "k": "career:low",
+   "seed": 93019,
+   "v2": "7951b10c612d885f",
+   "v3": "427b0ccf8faf60c6"
+  },
+  {
+   "k": "career:low",
+   "seed": 93021,
+   "v2": "0b95df0b23670d0d",
+   "v3": "a6d036c3765ee82a"
+  },
+  {
+   "k": "career:low",
+   "seed": 93023,
+   "v2": "bd3aca0f68aff8e1",
+   "v3": "ccb1baaca87ed5da"
+  },
+  {
+   "k": "career:low",
+   "seed": 93025,
+   "v2": "53328c4cff96a330",
+   "v3": "58f303df21fb6333"
+  },
+  {
+   "k": "career:low",
+   "seed": 93027,
+   "v2": "15574de249393e2d",
+   "v3": "9e20dbb740f10a16"
+  },
+  {
+   "k": "career:low",
+   "seed": 93029,
+   "v2": "6b216025075b9a3d",
+   "v3": "f07e352bd3d80595"
+  },
+  {
+   "k": "career:low",
+   "seed": 93031,
+   "v2": "676e00b4b60139ea",
+   "v3": "ac53b682360f4778"
+  },
+  {
+   "k": "career:low",
+   "seed": 93033,
+   "v2": "602b8f830fcb5847",
+   "v3": "903cb673a5d0f723"
+  },
+  {
+   "k": "career:low",
+   "seed": 93035,
+   "v2": "06ba34cf1ec80a23",
+   "v3": "f947672c9546b3a6"
+  },
+  {
+   "k": "career:low",
+   "seed": 93037,
+   "v2": "3758891fcd3e1404",
+   "v3": "b3bdfbcd08b0574c"
+  },
+  {
+   "k": "career:low",
+   "seed": 93039,
+   "v2": "f322721b5a20aae4",
+   "v3": "4f8f11c109aa39a9"
+  },
+  {
+   "k": "career:low",
+   "seed": 93041,
+   "v2": "d3369bd7a5a180f5",
+   "v3": "5c14d5f8e44a04e6"
+  },
+  {
+   "k": "career:low",
+   "seed": 93043,
+   "v2": "6df75902c75f1906",
+   "v3": "5b5a475afcefc95f"
+  },
+  {
+   "k": "career:low",
+   "seed": 93045,
+   "v2": "9e6303ff0c11cc63",
+   "v3": "c2280180884734cc"
+  },
+  {
+   "k": "career:low",
+   "seed": 93047,
+   "v2": "5b770ae1cbdb4e16",
+   "v3": "11874b5d9d64aed3"
+  },
+  {
+   "k": "career:low",
+   "seed": 93049,
+   "v2": "710ab53e1a612565",
+   "v3": "696b7f64168b19b8"
+  },
+  {
+   "k": "career:low",
+   "seed": 93051,
+   "v2": "cbf599ad3af22fcf",
+   "v3": "0462f5cfacc47a74"
+  },
+  {
+   "k": "career:low",
+   "seed": 93053,
+   "v2": "4d7f1431ccba9003",
+   "v3": "7884e7e53bb90879"
+  },
+  {
+   "k": "career:low",
+   "seed": 93055,
+   "v2": "a719b7b305557417",
+   "v3": "991bfe8aa885cf23"
+  },
+  {
+   "k": "career:low",
+   "seed": 93057,
+   "v2": "d8484a19cb179634",
+   "v3": "501079fd6079aa6a"
+  },
+  {
+   "k": "career:low",
+   "seed": 93059,
+   "v2": "668507e9a44166ee",
+   "v3": "c1a06230d8da0a75"
+  },
+  {
+   "k": "career:low",
+   "seed": 93061,
+   "v2": "b8c36b2e5e05082f",
+   "v3": "95cd514ef9b690ce"
+  },
+  {
+   "k": "career:low",
+   "seed": 93063,
+   "v2": "3399ec62e14de3f7",
+   "v3": "063c306374d88111"
+  },
+  {
+   "k": "career:low",
+   "seed": 93065,
+   "v2": "b56f6973eb15f61d",
+   "v3": "84c912bdc0a36e40"
+  },
+  {
+   "k": "career:low",
+   "seed": 93067,
+   "v2": "0ad6aae3d3709229",
+   "v3": "55cf7aaf0dbea550"
+  },
+  {
+   "k": "career:low",
+   "seed": 93069,
+   "v2": "da07a1ca28a4ea15",
+   "v3": "3267bdbdafee2c6c"
+  },
+  {
+   "k": "career:low",
+   "seed": 93071,
+   "v2": "f046930b1918fcc6",
+   "v3": "f73adcfdb2672bca"
+  },
+  {
+   "k": "career:low",
+   "seed": 93073,
+   "v2": "9b164792fa920676",
+   "v3": "883c1f9476ac4ecc"
+  },
+  {
+   "k": "career:low",
+   "seed": 93075,
+   "v2": "6212b8194f3bf5f3",
+   "v3": "4ff92664fa74d66f"
+  },
+  {
+   "k": "career:low",
+   "seed": 93077,
+   "v2": "20800ccaa1089e23",
+   "v3": "e5e08507b6e0f50c"
+  },
+  {
+   "k": "career:low",
+   "seed": 93079,
+   "v2": "73378145f44d730f",
+   "v3": "1dcad11bdddc1f72"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93001,
+   "v2": "6af71e08aa2a4512",
+   "v3": "d3037e7af1c56af4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93003,
+   "v2": "a5802d9086ef11d0",
+   "v3": "0e8f15ada1ce766c"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93005,
+   "v2": "2d82ee969b96232c",
+   "v3": "2745c094fce864f4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93007,
+   "v2": "62f40999e02cd740",
+   "v3": "2b1f56bde5394b52"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93009,
+   "v2": "2d90c699dd9ae2bb",
+   "v3": "9678de8e0bb60336"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93011,
+   "v2": "73821c69a2fb8d49",
+   "v3": "bc85f5d4f633362c"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93013,
+   "v2": "4281ffcaebbfea70",
+   "v3": "d55817ae32242851"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93015,
+   "v2": "c0df5a2036c4fe4f",
+   "v3": "a1af5a17ce0f490d"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93017,
+   "v2": "fcddc5095c342779",
+   "v3": "1603e290759ada37"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93019,
+   "v2": "6bea1b88d66703fb",
+   "v3": "8a20baeebfcce250"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93021,
+   "v2": "d3d2d9b08e1ed094",
+   "v3": "6894656112e79103"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93023,
+   "v2": "2e072a23659b753c",
+   "v3": "a8a953c0aa266894"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93025,
+   "v2": "32011aeeae7c08ce",
+   "v3": "cf9ade8b951f82d5"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93027,
+   "v2": "9fbb8156d6c16e05",
+   "v3": "ec8a3917e3669324"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93029,
+   "v2": "00e7033384d10dd4",
+   "v3": "3e907c83abac6a77"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93031,
+   "v2": "76f52782b7bd9d7f",
+   "v3": "ca3bb1486caba22c"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93033,
+   "v2": "da542a0ad9e64e55",
+   "v3": "168a91037316c48a"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93035,
+   "v2": "54684dd975ddcfc4",
+   "v3": "1698e9889c77292e"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93037,
+   "v2": "76441d1c5068391a",
+   "v3": "24726f075b0c0aa4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93039,
+   "v2": "2a5721cdee237a06",
+   "v3": "8f35e24e2fa5d457"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93041,
+   "v2": "c05d01a304cc8c27",
+   "v3": "2fc9f54809f42b77"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93043,
+   "v2": "269198074ad45009",
+   "v3": "b950846500734f3a"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93045,
+   "v2": "0ddd62576d9e8942",
+   "v3": "d3abb26cb0420997"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93047,
+   "v2": "a68624fc7084a268",
+   "v3": "6117fac1249121de"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93049,
+   "v2": "d8d0ee83d43f7639",
+   "v3": "f2833e1d54c4a61b"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93051,
+   "v2": "321050d05140dfd5",
+   "v3": "711f321c33e83179"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93053,
+   "v2": "9771d048e34ca931",
+   "v3": "9b3b811f952105aa"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93055,
+   "v2": "2cdf5dd20a581569",
+   "v3": "30451c16b5861052"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93057,
+   "v2": "f26fd7e43a81b202",
+   "v3": "c9ab87a2028f8ab4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93059,
+   "v2": "d4161e974b4ee639",
+   "v3": "900a1faab92732f4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93061,
+   "v2": "3b1f1f5af7eb22ec",
+   "v3": "1db9b5c022f100ba"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93063,
+   "v2": "68aaa6ab7cbca6ae",
+   "v3": "3df48ccc74b96172"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93065,
+   "v2": "21954c78a15efaba",
+   "v3": "53037f177c09c0a5"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93067,
+   "v2": "ddd89c3763a7854f",
+   "v3": "ba9aea73b8e005e8"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93069,
+   "v2": "e8460ac0793aa9b2",
+   "v3": "9db05824db45637b"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93071,
+   "v2": "38f03addcbf7fbf7",
+   "v3": "4c5620e03c66a1fd"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93073,
+   "v2": "e7f301810720d87a",
+   "v3": "354945cbf7f32c88"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93075,
+   "v2": "303b60861f026f98",
+   "v3": "bdfda3c8f42f6e46"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93077,
+   "v2": "ae5963bd8d4b0fd2",
+   "v3": "a6ebb25668f0e9fc"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93079,
+   "v2": "bcae890ae6c998a1",
+   "v3": "8886d718addd5a9f"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93081,
+   "v2": "fa1d798e2551003a",
+   "v3": "07b323df38631b66"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93083,
+   "v2": "1348784ab3fc8fff",
+   "v3": "7fd5c88ae0243559"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93085,
+   "v2": "784bdb7b15820a76",
+   "v3": "12a13b2e1c6c152d"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93087,
+   "v2": "7184e1ceeba333c9",
+   "v3": "e48603b0c9d51d55"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93089,
+   "v2": "3d998389228f9009",
+   "v3": "8fe214e2c73cefcf"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93091,
+   "v2": "162b0e75149e1ec5",
+   "v3": "91ec2311c25d12d0"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93093,
+   "v2": "102337d0c925642a",
+   "v3": "71c1dc1e33832bdf"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93095,
+   "v2": "896e0683adbebd86",
+   "v3": "bf97914151661098"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93097,
+   "v2": "35d2a16f6a9f824d",
+   "v3": "84578527b5898166"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93099,
+   "v2": "21da87c996971f2d",
+   "v3": "540e4582b8eecb97"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93101,
+   "v2": "b1305816271a5131",
+   "v3": "13062488020ca5d4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93103,
+   "v2": "47f537f31d2cecce",
+   "v3": "85c7c6477cf644be"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93105,
+   "v2": "f22c050401aba103",
+   "v3": "f08b3da08de8c7e4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93107,
+   "v2": "ce0a71edcd1efdc2",
+   "v3": "180fa1ec9e884fce"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93109,
+   "v2": "3f62926f43a647ea",
+   "v3": "5137657c01b50b17"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93111,
+   "v2": "58d383a2303044b9",
+   "v3": "d58f5c1ac3b6b8c8"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93113,
+   "v2": "ac4b5b6feccca312",
+   "v3": "ecf4c590fa850c22"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93115,
+   "v2": "d32597fbea065962",
+   "v3": "cc113433e3002176"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93117,
+   "v2": "6051f26934c4ac1f",
+   "v3": "441450eac9e99c0b"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93119,
+   "v2": "03ee16bef8c371f3",
+   "v3": "42fd31333435013a"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93121,
+   "v2": "19870280d8737774",
+   "v3": "dea85740a0525c15"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93123,
+   "v2": "1164cd7bfd28ed0e",
+   "v3": "6e8e6ca30dde82ac"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93125,
+   "v2": "abc078933e0b6867",
+   "v3": "17f612c34f88d80f"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93127,
+   "v2": "8c700d4e3d8b6ab7",
+   "v3": "23b903c7be145bfb"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93129,
+   "v2": "b52bc0e452fcf432",
+   "v3": "5c74a87469891bfd"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93131,
+   "v2": "7cb7f3256afd3488",
+   "v3": "d06e968b319036a0"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93133,
+   "v2": "283a0a4eae269644",
+   "v3": "1d39df9450944c24"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93135,
+   "v2": "fe07990c37cbed51",
+   "v3": "1d6a41104256ae60"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93137,
+   "v2": "317123e5ffdd0a79",
+   "v3": "4398e4b20fcb2384"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93139,
+   "v2": "d23fcc1b444b0c7b",
+   "v3": "280a8f3e9cc700b1"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93141,
+   "v2": "14104bb565b9cd9e",
+   "v3": "6a223ec0b1a6e563"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93143,
+   "v2": "bd333d1d96e51a24",
+   "v3": "6049350ad10b343c"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93145,
+   "v2": "c884492e52e89712",
+   "v3": "f416d63543308699"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93147,
+   "v2": "ca107f7c7760a4d0",
+   "v3": "33097cc02c42dc7b"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93149,
+   "v2": "85b6f5c1b667e9dd",
+   "v3": "03e7c6dc77488a95"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93151,
+   "v2": "a4a1b26e0607ed1c",
+   "v3": "d70bffce39c2351e"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93153,
+   "v2": "814586943c89b099",
+   "v3": "0e7b58ba3bb7e662"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93155,
+   "v2": "31b3b0fc79e06ff2",
+   "v3": "0ecf33e660788e0a"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93157,
+   "v2": "3d192863e0750d90",
+   "v3": "cb9eb9b3648f33d2"
+  },
+  {
+   "k": "career:mid",
+   "seed": 93159,
+   "v2": "a9ab3488692e9edd",
+   "v3": "57637aa155555da7"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93001,
+   "v2": "eac1573422d09ad5",
+   "v3": "01cfeb73af175db0"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93003,
+   "v2": "dbe09827af6cc386",
+   "v3": "03c7f958589e9380"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93005,
+   "v2": "e439e4180bb3944d",
+   "v3": "d86a6890f4dfcf18"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93007,
+   "v2": "d166268717d8cf75",
+   "v3": "f966661efea62462"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93009,
+   "v2": "3753d7c3263df869",
+   "v3": "63eef559ddfa4967"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93011,
+   "v2": "80223ffed8c0e9cb",
+   "v3": "50c8fec0db563e65"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93013,
+   "v2": "3326db50f213fb0c",
+   "v3": "66e1b226da73c987"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93015,
+   "v2": "d2ba491ac4cfa777",
+   "v3": "f5a96a0b43ce9b63"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93017,
+   "v2": "e562cda1460e51a8",
+   "v3": "e126d4874b2ecbba"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93019,
+   "v2": "ab813e9829dd4a11",
+   "v3": "f4c056413ee4e0c1"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93021,
+   "v2": "2ab22d585df026ed",
+   "v3": "00c16f1d1e020a75"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93023,
+   "v2": "c799413a3c237abc",
+   "v3": "ef980de39c0ac8ba"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93025,
+   "v2": "233e36b8613d5738",
+   "v3": "79e6fbb23aff070b"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93027,
+   "v2": "a2f32821f1e8ce89",
+   "v3": "7f9a2b8096a2647b"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93029,
+   "v2": "48764e2d92d51d0c",
+   "v3": "5e0a61981bbbc392"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93031,
+   "v2": "4ddd08fc44510d52",
+   "v3": "e48c0b77633dca6e"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93033,
+   "v2": "d747836fd37101fa",
+   "v3": "bcce1a2e4f22efca"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93035,
+   "v2": "5045fb47bb41c89f",
+   "v3": "4cfcb1de36426bbb"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93037,
+   "v2": "8188ffdc7fc81089",
+   "v3": "bf258fe86390b691"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93039,
+   "v2": "e467dd2f1adf8726",
+   "v3": "2c4acd9304123fe7"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93041,
+   "v2": "9e5358f34e512326",
+   "v3": "28153601416ddce8"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93043,
+   "v2": "4b539891df16e4d8",
+   "v3": "bce6c29d44a4098c"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93045,
+   "v2": "b6480faff071f64f",
+   "v3": "862f67159ca298f0"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93047,
+   "v2": "90cca5627e410432",
+   "v3": "b6e74b7eacccbf86"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93049,
+   "v2": "ab54d5f8727f325f",
+   "v3": "8d605213c3a54677"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93051,
+   "v2": "dbc4415ae09989a7",
+   "v3": "a76aa84a4188fd45"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93053,
+   "v2": "842c40a3d0f28d9a",
+   "v3": "48aabfc31f54de21"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93055,
+   "v2": "6ffe4f49a3464d1a",
+   "v3": "50458520fcbb4310"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93057,
+   "v2": "842c28331b7edc6e",
+   "v3": "2f4b3cbdb250272f"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93059,
+   "v2": "2b3c8be85c23cbde",
+   "v3": "3018361f61f85cd4"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93061,
+   "v2": "5e9ef2c47227b8de",
+   "v3": "1236469e193e8d81"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93063,
+   "v2": "6091a5cf3505e779",
+   "v3": "38abf557ebc3f5a8"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93065,
+   "v2": "e0b01c3520402ab9",
+   "v3": "5beee934345d4b5b"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93067,
+   "v2": "950ea004c99e2ed8",
+   "v3": "fe3041e804a543ef"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93069,
+   "v2": "8a22fe17da9a6784",
+   "v3": "27e6f8183a1a6c2c"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93071,
+   "v2": "3ddbd8d5671955fb",
+   "v3": "878ab141459e4b26"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93073,
+   "v2": "f539e284244ea610",
+   "v3": "4aff8fd5a80f8f0f"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93075,
+   "v2": "2c2db6a3bd7e3304",
+   "v3": "07edd77df0b2a56c"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93077,
+   "v2": "6d8febc47f0f78d7",
+   "v3": "f0318b44e3829903"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 93079,
+   "v2": "ffb5f80b2ba3f67f",
+   "v3": "b8b928062ec30caf"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93001,
+   "v2": "9fe3121d1f32b970",
+   "v3": "a1708b14710c87e8"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93003,
+   "v2": "46dd08f1e640d788",
+   "v3": "3d9a1f4a9168a571"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93005,
+   "v2": "e61c878a9f952db6",
+   "v3": "bd304d8d3fa8f216"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93007,
+   "v2": "c31b92ed2c958650",
+   "v3": "565c3934ff7eb5f7"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93009,
+   "v2": "f68250b0521adef9",
+   "v3": "2808cca344334525"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93011,
+   "v2": "5a2dd4ed3e85cc3f",
+   "v3": "044d064677c6a446"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93013,
+   "v2": "fb7165bd2349015d",
+   "v3": "ca61d282bd3fc7f4"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93015,
+   "v2": "6042bf8e7df1e877",
+   "v3": "ffc78accda1acd6b"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93017,
+   "v2": "eea81488b82f7cbc",
+   "v3": "ea341c6d96012600"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93019,
+   "v2": "ef1b40c0f15a73f5",
+   "v3": "355fca16d7279fc1"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93021,
+   "v2": "ee6b97a9651c686d",
+   "v3": "8caa4b0b40636b02"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93023,
+   "v2": "fe4d478cf31bff21",
+   "v3": "08afe2fa14b734bc"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93025,
+   "v2": "03423aa8e2da53c1",
+   "v3": "b8621aa00797deaf"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93027,
+   "v2": "3b0c72864e0369ef",
+   "v3": "0f41198d55e406da"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93029,
+   "v2": "c3d4aa06ae9926ab",
+   "v3": "386aefcaa04fae6f"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93031,
+   "v2": "e5b82557f63b74cc",
+   "v3": "7f59c4252afe0144"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93033,
+   "v2": "69b02704b4caaa11",
+   "v3": "78658a17cafed799"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93035,
+   "v2": "184f93e92820fcdc",
+   "v3": "be0717076caaba25"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93037,
+   "v2": "e7264c8629ccbd76",
+   "v3": "60dd97c3cc67f33a"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93039,
+   "v2": "ad753ff2ffa49aa5",
+   "v3": "f29a683db65c8b26"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93041,
+   "v2": "5d5d50c5283a6131",
+   "v3": "a701f29ce6c6a6ea"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93043,
+   "v2": "9eec643857f5cffb",
+   "v3": "5a7653db3ee4ea0c"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93045,
+   "v2": "5e8e2cfb15f88096",
+   "v3": "110656830f349f60"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93047,
+   "v2": "6815b865ec11eb95",
+   "v3": "54bc0de3f2014291"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93049,
+   "v2": "3a0390eabfc2ba53",
+   "v3": "6950a1e7c099a13d"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93051,
+   "v2": "1af109cccf480198",
+   "v3": "89eebf018f019fc1"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93053,
+   "v2": "bee129b872e774db",
+   "v3": "105977a5481b34be"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93055,
+   "v2": "b1f70c30e2cf3f13",
+   "v3": "368a59ad4309f3d3"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93057,
+   "v2": "4074d2905bd3716d",
+   "v3": "e8aa412c83f2fcfd"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93059,
+   "v2": "756598232e73eca6",
+   "v3": "3633a1eb207806b8"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93061,
+   "v2": "687074697e04fe68",
+   "v3": "43be0e7c57fd4745"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93063,
+   "v2": "ce37d12e0d26f837",
+   "v3": "4426570aa81a4cea"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93065,
+   "v2": "5a4a082124fe58a9",
+   "v3": "2c800c01fcd2231b"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93067,
+   "v2": "c33af9eb74d8fae4",
+   "v3": "f26e2c7b74edac46"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93069,
+   "v2": "4fc530757696f5dd",
+   "v3": "ce1af83ba1f79eef"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93071,
+   "v2": "526b948ec5f2fbd1",
+   "v3": "416a8fcd16a32175"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93073,
+   "v2": "82ed21c527dfaa24",
+   "v3": "9bd829a06341f34b"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93075,
+   "v2": "799ace12dd578f72",
+   "v3": "10c8a6d5afab3f6c"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93077,
+   "v2": "c713fa234bd155ca",
+   "v3": "4fe38e4649eae43c"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 93079,
+   "v2": "e806405ba85c577d",
+   "v3": "5ec2ea7dfc03d354"
+  }
+ ]
+}
