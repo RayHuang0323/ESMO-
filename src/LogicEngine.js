@@ -103,6 +103,14 @@ const SAFE_ROUTE_V1 = Object.freeze({ detourExtra: 1.5 });
 //  safeRoute v2（v23 塔邊決策）：避塔後的承諾秒數（同一座塔擋下的任務，承諾期內不再派回去，除非進塔有理由）。
 //  4 秒＝涵蓋決策層一次重判（decisionEvalPeriod）加上 v19 塔區承諾上限 3.5 秒。
 const TOWER_EDGE_V23 = Object.freeze({ commitSec: 4 });
+//  safeRoute v3（v23 塔邊等待小修，Owner 2026-11-13）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
+//  v2 的等待只要決策層對那座塔還有退的理由就無限延長（複驗 160 場生涯 31 次 ≥ 20 秒，3/9 段在等待中被消耗到 22–40% 血）。
+//   hurtDrop／hurtRecentSec  這段等待中從最高血量掉了 hurtDrop 以上，而且最近 hurtRecentSec 秒內還在受傷 ⇒ 持續受傷
+//   threatRadius             這個半徑內敵方英雄多於己方（不含自己）⇒ 敵方威脅
+//   recoverEtaSec            安全時，以脫戰回復速率（含脫戰延遲）估計回到進塔血量門檻的秒數；超過就不原地等，改撤退
+//   waveSoonDist             己方最前面的小兵離那座塔不到「射程＋這個距離」⇒ 兵線即將抵達，值得等（同 waitWaveRange 28）
+//   maxWaitSec               「回血等待」與「等兵線」共同的上限（後備，不是主要出口）；到期依血量撤退或退回己方兵線
+const TOWER_EDGE_REDECIDE_V23 = Object.freeze({ hurtDrop: 0.08, hurtRecentSec: 1.5, threatRadius: 10, recoverEtaSec: 8, waveSoonDist: 28, maxWaitSec: 12 });
 /** 線段 a→b 是否穿過圓 c（{x, y, r}）。safeRoute v1 用。 */
 function segHitsDisk(a, b, c) {
   const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
@@ -401,10 +409,14 @@ export class LogicEngine {
     this.tacticOn = true;
     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
-    this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2";
-    this._towerEdgeV23 = safeRoute === "v2";
+    //  "v3"（2026-11-13 Owner 核准的塔邊等待小修；同一個 v23 候選）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
+    //  "v2" 保留且逐位元不變（新行為全部只看 _edgeRedecideV23）。
+    this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3";
+    this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3";
+    this._edgeRedecideV23 = safeRoute === "v3";
     if (this._safeRouteV23) this.routeObs = { blue: { pathPlans: 0, radialExits: 0, blockedFallback: 0 }, red: { pathPlans: 0, radialExits: 0, blockedFallback: 0 } };
     if (this._towerEdgeV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { edgeExits: 0, edgeExitRotated: 0, edgeExitNone: 0, edgeHolds: 0, edgeReleases: 0, blockedRelaxed: 0, blockedHold: 0 });
+    if (this._edgeRedecideV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { edgeWaitRecover: 0, edgeWaitWave: 0, edgeRegroupHurt: 0, edgeRegroupThreat: 0, edgeRegroupNoWave: 0, edgeRegroupCap: 0, edgeRegroupHp: 0, edgeRetreatHurt: 0, edgeRetreatThreat: 0, edgeRetreatSlow: 0 });
     //  invasion 層（moba-sim.v22 候選）：同 jungleCamp——缺少 ⇒ 舊行為逐位元不變。"v2" ⇒ 擲中入侵的打野真的去打敵方野怪（_invadeStepV2），有失敗條件。
     this._invasionV2 = invasion === "v2";
     //  jungleCamp 層（moba-sim.v22 候選）：組裝器只在 ruleset 帶 jungleCamp 層時傳這個鍵；缺少 ⇒ 舊行為逐位元不變。
@@ -1557,8 +1569,73 @@ export class LogicEngine {
     if (!E.exit) return tgt;
     //  理由還在 ⇒ 承諾延長（否則承諾一到期，原任務又把人拉回風險半徑，決策層再避塔：約每 4.5 秒一次的慢速來回）。
     E.until = this.t + TOWER_EDGE_V23.commitSec;
+    //  safeRoute v3：理由還在時不再一律原地等，依情境重新決策（見 _towerEdgeRedecideV23）。回傳 null ⇒ 照 v2 在出口等。
+    if (this._edgeRedecideV23) { const r = this._towerEdgeRedecideV23(p, E, tw, rng, alive, O); if (r) return r; }
     p.intent = "塔邊等待時機"; if (O) O.edgeHolds++;
     return E.exit;
+  }
+  /**
+   * safeRoute v3（v23 塔邊等待小修）：塔邊等待時，決策層對那座塔仍有退的理由 ⇒ 依情境決定「繼續等」「退回己方兵線」或「撤退」。
+   * 進塔的出口（兵線抵達、血量回到門檻、塔倒、任務不再指向塔下）全部沿用 v2 的判定，在呼叫本函式之前已處理。
+   *  ① 持續受傷或敵方威脅：血量低於回場門檻 ⇒ 撤退（交給既有撤退／退守／回城生命週期）；否則 ⇒ 退回己方兵線（離開被消耗的位置）。
+   *  ② 安全、血量不足：估計脫戰回復到門檻的秒數 ≤ recoverEtaSec ⇒ 原地回血等待；否則 ⇒ 低於回場門檻就撤退，不然退回己方兵線。
+   *  ③ 安全、血量足夠（理由是沒有兵線、敵方有人守塔）：己方兵線即將抵達 ⇒ 等；否則 ⇒ 退回己方兵線。
+   *  ②③ 的等待共用上限 maxWaitSec（後備）。退回兵線後，承諾照常延長，直到 v2 的放行條件成立（兵線到塔下、理由消失）或撤退。
+   * 撤退不在這裡直接改 retreating：記下時間，下一 tick 在既有撤退判定之後套用（這一 tick 的移動速度與目標不受影響）。
+   * 回傳 null ⇒ 照 v2 在出口等（呼叫端寫 intent 與 edgeHolds）；否則回傳移動目標。
+   */
+  _towerEdgeRedecideV23(p, E, tw, rng, alive, O) {
+    const K = TOWER_EDGE_REDECIDE_V23, hpF = p.hp / p.maxHp;
+    const H = (E.h ??= { t0: this.t, peak: hpF, mode: "wait" });
+    if (hpF > H.peak) H.peak = hpF;
+    const hpNeed = p._fbV23?.hpNeed ?? 0, retAt = p._retAtV23 ?? 0.6;
+    let foes = 0, allies = 0;
+    for (const q of alive) {
+      if (q === p || q.dead || dist(q.pos, p.pos) > K.threatRadius) continue;
+      if (q.side === p.side) allies++; else foes++;
+    }
+    const hurt = H.peak - hpF >= K.hurtDrop && this.t - (p.lastDamagedAt ?? -Infinity) <= K.hurtRecentSec;
+    const threat = foes > 0 && foes > allies;
+    const retreat = (why) => { p._edgeV23 = null; p._edgeRetreatV23 = this.t; p.intent = "塔邊受壓，撤退"; if (O) O[why]++; return E.exit; };
+    const regroup = (why) => { if (H.mode !== "regroup") { H.mode = "regroup"; if (O) O[why]++; } };
+    if (hurt || threat) {
+      if (hpF < retAt) return retreat(hurt ? "edgeRetreatHurt" : "edgeRetreatThreat");
+      regroup(hurt ? "edgeRegroupHurt" : "edgeRegroupThreat");
+    } else if (H.mode === "wait") {
+      const waited = this.t - H.t0;
+      if (hpF < hpNeed) {
+        const RG = this.rules.regen, rate = RG ? RG.outOfCombatPctPerSec : 0.02;
+        const delay = RG ? Math.max(0, RG.outOfCombatDelaySec - (this.t - (p.lastDamagedAt ?? -Infinity))) : 0;
+        if (waited <= K.maxWaitSec && delay + (hpNeed - hpF) / rate <= K.recoverEtaSec) { if (O) O.edgeWaitRecover++; return null; }
+        if (hpF < retAt) return retreat("edgeRetreatSlow");
+        regroup("edgeRegroupHp");
+      } else if (waited <= K.maxWaitSec && this._ownWaveSoonV23(p, tw, rng + K.waveSoonDist)) { if (O) O.edgeWaitWave++; return null; }
+      else regroup(waited > K.maxWaitSec ? "edgeRegroupCap" : "edgeRegroupNoWave");
+    }
+    if (H.mode !== "regroup") return null;
+    p.intent = "退回己方兵線";
+    return this._edgeRegroupPosV23(p, tw, rng + (this.rules.towerSafePad ?? 2.5)) ?? E.exit;
+  }
+  /** safeRoute v3：這座塔那一路的己方最前面小兵；沒有 ⇒ null。 */
+  _ownLeadMinionV23(p, tw) {
+    const arr = this.lanes[tw.lane]?.[p.side === "blue" ? "bm" : "rm"];
+    if (!arr || !arr.length) return null;
+    return posOnLane(tw.lane, p.side === "blue" ? Math.max(...arr.map((m) => m.t)) : Math.min(...arr.map((m) => m.t)));
+  }
+  /** safeRoute v3：己方兵線是否即將抵達這座塔（最前面的小兵離塔 ≤ within）。 */
+  _ownWaveSoonV23(p, tw, within) {
+    const lead = this._ownLeadMinionV23(p, tw);
+    return !!lead && dist(lead, tw.pos) <= within;
+  }
+  /**
+   * safeRoute v3：退回己方兵線的位置＝這一路己方最前面的小兵；它已經在危險半徑內（兵線正在進塔）⇒ null（呼叫端改在出口等）。
+   * 這一路沒有己方小兵 ⇒ 己方這一路的前線塔（等下一波）；也沒有 ⇒ null。
+   */
+  _edgeRegroupPosV23(p, tw, danger) {
+    const lead = this._ownLeadMinionV23(p, tw);
+    if (lead) return dist(lead, tw.pos) < danger ? null : lead;
+    const own = this.lanes[tw.lane] ? this.frontTower(p.side === "blue" ? "red" : "blue", tw.lane) : null;
+    return own ? { x: own.pos.x, y: own.pos.y } : null;
   }
 
   _applyHeroSkillControl(target, kind, duration) {
@@ -3320,6 +3397,8 @@ export class LogicEngine {
     //  不改任何決策；層不存在 ⇒ 不寫。
     if (this._towerEdgeV23) p._fbV23 = enemyTower ? { tw: enemyTower,
       why: (!hasWave && towerDefenders > 0 && alliesN === 1) || (!hasWave && towerDefenders > alliesN) || hpRatio < fallbackHp } : null;
+    //  safeRoute v3：另記這座塔的進塔血量門檻，給塔邊等待估計「回血要等多久」（_towerEdgeRedecideV23）。
+    if (this._edgeRedecideV23 && p._fbV23) p._fbV23.hpNeed = fallbackHp;
     const cachedTargetAlive = !p.decisionTargetId ||
       alive.some((q) => q.id === p.decisionTargetId && !q.dead);
     const immediateContact = target && (!p.decisionTargetId || p.decisionAction === "LANE");
@@ -6897,6 +6976,14 @@ export class LogicEngine {
       // 低血量／人數劣勢的局部評估可比固定 25% 門檻更早觸發撤退；
       // 一旦進入既有 retreating 流程，回城、受擊中斷與回血遲滯仍沿用原機制。
       if (localDecision?.action === "RETREAT") p.retreating = true;
+      //  safeRoute v3：塔邊等待在上一 tick 判定撤退（_towerEdgeRedecideV23）⇒ 在既有撤退判定之後進入撤退；回場門檻記下來給下一次判定。
+      if (this._edgeRedecideV23) {
+        p._retAtV23 = returnAtEff;
+        if (p._edgeRetreatV23 != null) {
+          if (this.t - p._edgeRetreatV23 <= 1 && !p.retreating) { p.retreating = true; p.retreatEvalT = this.t + (R.retreatReevalPeriod ?? 0); }
+          p._edgeRetreatV23 = null;
+        }
+      }
       let tgt, st, effLane = p.lane, stOv = null;
       if (R.decisionV17) { p.intent = null; p.idleReason = null; p.dbgTower = null; }
       // S24：帶線分推 —— 指定分推路的選手在會戰熱點出現時仍留線推進（黏性決策，6 秒重評一次）

@@ -16,6 +16,8 @@
 //   B  行為（工具路徑、公開測試 Seeds 11–29、雙方入侵與雙方經典 m7，10 分鐘）："v1" 對 "v2"
 //   P  效能：每 tick 成本上限
 //  ⚠ 不重錄任何 Golden、不用正式保留 Seeds。v20／v21 由 check_match_setup_3a、check_match_golden_v21a 負責。
+//  2026-11-13 塔邊等待小修：career.v23／balanceTool.v23 改用 safeRoute "v3"（v2＋塔邊等待重新決策；另見 check_tower_edge_fix_v23）。
+//   本 gate 繼續守 "v2"：E1 接受 v3、E3 加釘 "v2" 在小修前（66b4f5e6）錄下的雜湊；B 明確用 "v2" 對 "v1"（不隨預設值改變）。
 //  執行：node tools/check_tower_edge_v23.mjs（約 4 分鐘）
 // ============================================================================
 import { createHash } from "node:crypto";
@@ -38,21 +40,23 @@ const bindingOf = (templateId) => C.bindTacticPlanToCurrentVersions(C.createTact
 const tool = (rulesetId, seed, tpl = "v2.jungle_invasion") => { const b = { kind: "binding", binding: bindingOf(tpl) }; return configure(seed, "standard", M, 1, null, { blue: b, red: b }, rulesetId).e; };
 
 // ── E 版本隔離 ──────────────────────────────────────────────────────────
-ck("E1 safeRoute 合法值＝legacy／v1／v2；career.v23、balanceTool.v23 用 v2；v1 版的同一規則集仍通過 validateRuleset",
-  J(SAFE_ROUTES) === J(["legacy", "v1", "v2"]) && MATCH_RULESETS["career.v23"].layers.safeRoute === "v2" && MATCH_RULESETS["balanceTool.v23"].layers.safeRoute === "v2"
-  && validateRuleset({ ...MATCH_RULESETS["career.v23"], layers: { ...MATCH_RULESETS["career.v23"].layers, safeRoute: "v1" } }).ok);
+ck("E1 safeRoute 合法值＝legacy／v1／v2／v3；career.v23、balanceTool.v23 用 v3（小修後）；v1、v2 版的同一規則集仍通過 validateRuleset",
+  J(SAFE_ROUTES) === J(["legacy", "v1", "v2", "v3"]) && MATCH_RULESETS["career.v23"].layers.safeRoute === "v3" && MATCH_RULESETS["balanceTool.v23"].layers.safeRoute === "v3"
+  && ["v1", "v2"].every((v) => validateRuleset({ ...MATCH_RULESETS["career.v23"], layers: { ...MATCH_RULESETS["career.v23"].layers, safeRoute: v } }).ok));
 {
-  const e1 = withSafeRoute("v1", () => tool("balanceTool.v23", 11)), e2 = tool("balanceTool.v23", 11);
+  const e1 = withSafeRoute("v1", () => tool("balanceTool.v23", 11)), e2 = withSafeRoute("v2", () => tool("balanceTool.v23", 11));
   let calls1 = 0; { const o = e1._towerExitV23.bind(e1); e1._towerExitV23 = (...a) => { calls1++; return o(...a); }; }
   while (e1.t < 300) e1.tick(0.5);
   ck("E2 v1：塔邊決策旗標 false、整場 0 次出口計算、routeObs 沒有新欄位；v2：旗標 true",
-    e1._safeRouteV23 === true && e1._towerEdgeV23 === false && calls1 === 0 && !("edgeExits" in e1.routeObs.blue) && e2._towerEdgeV23 === true, J({ calls1, edge2: e2._towerEdgeV23 }));
+    e1._safeRouteV23 === true && e1._towerEdgeV23 === false && calls1 === 0 && !("edgeExits" in e1.routeObs.blue) && e2._towerEdgeV23 === true && e2._edgeRedecideV23 === false && !("edgeWaitWave" in e2.routeObs.blue), J({ calls1, edge2: e2._towerEdgeV23, redecide2: e2._edgeRedecideV23 }));
 }
 //  逐 tick 串流雜湊（與 tools/owner_preview/diag_tower_edge.mjs 同一格式）。值＝本 Sprint 改引擎之前（HEAD 2e626fa0）錄下的。
 const PINNED = [
   ["balanceTool.v20", null, "v2.jungle_invasion", 11, "73badd362041a8a9"], ["balanceTool.v20", null, "classic.m7", 13, "594f765123b96931"],
   ["balanceTool.v22", null, "v2.jungle_invasion", 11, "3d5946f21282f435"], ["balanceTool.v22", null, "classic.m7", 13, "3efc3bc5ddb6afee"],
   ["balanceTool.v23", "v1", "v2.jungle_invasion", 11, "6c8d53424206db0e"], ["balanceTool.v23", "v1", "classic.m7", 13, "0ef6e58c005d8030"],
+  //  "v2"：塔邊等待小修之前（HEAD 66b4f5e6，src 與 190b4eda 相同）錄下的值。
+  ["balanceTool.v23", "v2", "v2.jungle_invasion", 11, "825664b7105d0aa7"], ["balanceTool.v23", "v2", "classic.m7", 13, "6e649c69855673fa"],
 ];
 function streamHash(rs, sr, tpl, seed) {
   return withSafeRoute(sr, () => {
@@ -68,7 +72,7 @@ for (const [rs, sr, tpl, seed, want] of PINNED) {
 
 // ── U 單元 ─────────────────────────────────────────────────────────────
 {
-  const e = tool("balanceTool.v23", 17);
+  const e = withSafeRoute("v2", () => tool("balanceTool.v23", 17));   //  本 gate 守 "v2"（小修後預設是 v3）
   while (e.t < 1) e.tick(0.5);
   const pad = e.rules.towerSafePad ?? 2.5, alive = e._aliveStructs;
   const dirs = Array.from({ length: 12 }, (_, i) => [Math.cos(i * Math.PI / 6), Math.sin(i * Math.PI / 6)]);
@@ -157,7 +161,7 @@ const sum = (sr) => withSafeRoute(sr, () => {
   }
   return { T, hashes };
 });
-const A = sum("v1"), B = sum(null);
+const A = sum("v1"), B = sum("v2");
 const a = A.T, b = B.T, side = (o, k, sd) => o[`${k}_${sd}`] ?? 0;
 const ppNoWave = (o) => o.pingPong - (o.pp_wave ?? 0);
 ck("B1 原地挨打（避塔中、沒移動、被塔打中）：v2 ≤ v1 的 10%（前提 v1 ≥ 20）", a.stillHit >= 20 && b.stillHit <= 0.1 * a.stillHit, J({ v1: a.stillHit, v2: b.stillHit }));
@@ -170,7 +174,7 @@ ck("B6 總陣亡沒有變多：v2 ≤ v1 × 1.1", b.deaths <= a.deaths * 1.1, J(
 ck("B7 不過度保守：推掉的塔 v2 ≥ v1 × 0.9、Gank 出發 v2 ≥ v1 × 0.9", b.towersDown >= 0.9 * a.towersDown && b.gankStart >= 0.9 * a.gankStart, J({ towers: [a.towersDown, b.towersDown], gank: [a.gankStart, b.gankStart] }));
 ck("B8 不卡在塔邊：連續停在出口 ≥ 20 秒的次數 ≤ 每場 0.5 次", b.longHold <= 0.5 * b.matches, J({ longHold: b.longHold, matches: b.matches }));
 {
-  const again = withSafeRoute(null, () => runOne("balanceTool.v23", SEEDS[0], TPLS[0], TPLS[0]).streamHash);
+  const again = withSafeRoute("v2", () => runOne("balanceTool.v23", SEEDS[0], TPLS[0], TPLS[0]).streamHash);
   ck("B9 決定性：v2 同一個 Seed 重跑，逐 tick 雜湊相同", again === B.hashes[0], J([again, B.hashes[0]]));
 }
 // ── P 效能 ─────────────────────────────────────────────────────────────

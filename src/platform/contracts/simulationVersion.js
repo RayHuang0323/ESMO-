@@ -49,6 +49,8 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
 //   v20／v21／v22 的規則集沒有這個層 ⇒ 它們的 setup 與比賽結果逐位元不變。v21、v22 的指紋原樣保留，不覆寫。
 //   2026-11-12 塔邊決策 Sprint：同一個 v23 候選加 safeRoute "v2"（避塔有可走出口、不被站位層改寫成原地、塔邊承諾、求不到路不穿塔；
 //   LogicEngine._towerExitV23／_towerEdgeHoldV23／_safeRouteBlockedV23；review/tactic-book-3a/v23_塔邊決策.md）。career.v23／balanceTool.v23 改用 "v2"。
+//   2026-11-13 塔邊等待小修：同一個 v23 候選加 safeRoute "v3"（塔邊等待依情境重新決策：受傷／威脅／回血太慢 ⇒ 撤退或退回己方兵線；
+//   LogicEngine._towerEdgeRedecideV23）。career.v23／balanceTool.v23 改用 "v3"；"v2" 保留且逐位元不變。
 export const MOBA_SIMULATION_VERSION = "moba-sim.v23";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
@@ -651,8 +653,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   "moba-sim.v22": "c2b507e0cc723382",
   //  v23 候選（2026-11-12）：safeRoute 層（路線安全）。v21、v22 那兩行原樣保留（歷史憑據，不得改）。v23 未凍結：語意檔再改就同版號重新登記。
   //  上一個值 a97621e3b51cf125＝只有 safeRoute "v1"（commit 2e626fa0；證據 review/tactic-book-3a/v23_safe_route/）。
-  //  目前值＝加上 safeRoute "v2" 塔邊決策（Owner 2026-11-12 核准的 Sprint；證據 review/tactic-book-3a/v23_tower_edge/）。"v1" 的行為逐位元保留（check_tower_edge_v23 E3）。
-  "moba-sim.v23": "b1cbfdd1be517e21",
+  //  上一個值 b1cbfdd1be517e21＝加上 safeRoute "v2" 塔邊決策（commit 190b4eda；Owner 2026-11-12 核准的 Sprint；證據 review/tactic-book-3a/v23_tower_edge/ 與 recheck/）。
+  //  目前值＝再加上 safeRoute "v3" 塔邊等待依情境重新決策（Owner 2026-11-13 核准的小修；證據 review/tactic-book-3a/v23_tower_edge/edge_fix/）。
+  //  "v1"、"v2" 的行為逐位元保留（check_tower_edge_v23 E3 釘住改動前錄下的串流雜湊；v2 臂與複驗批次的雜湊逐場相同）。
+  "moba-sim.v23": "2a974b68ebf2c8f1",
 });
 
 export const isKnownSimulationVersion = (v) =>

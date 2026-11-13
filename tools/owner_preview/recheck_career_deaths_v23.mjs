@@ -12,6 +12,11 @@
 //        --path=tool  --orient=AB|BA（AI 對 AI，A＝v2.jungle_invasion、B＝classic.m7；BA＝紅藍換邊）
 //  用法：node tools/owner_preview/recheck_career_deaths_v23.mjs --path=career --tier=mid --seeds=71001,71003 --out=<batch.json>
 //        node tools/owner_preview/recheck_career_deaths_v23.mjs --selfcheck   （v1 等價性與工具健康檢查，用已用過的公開 Seed 11／13）
+//
+//  2026-11-13 塔邊等待小修（safeRoute "v3"）後：career.v23／balanceTool.v23 改用 "v3"，新行為只看引擎旗標 _edgeRedecideV23。
+//   --pair=v1v2（預設；原本的複驗）：兩臂都關掉 _edgeRedecideV23 ⇒ 與 v3 之前逐位元相同，舊批次可原樣重現。
+//   --pair=v2v3（小修回歸）：輸出鍵 v1＝v2 臂（關掉 _edgeRedecideV23）、v2＝v3 臂（原樣）；檔案記 arms 標明。
+//   --tier=low（30）也可用。多記：edge20（塔邊等待或退回兵線連續 ≥ 20 秒）、holdDrained（一段塔邊等待中從最高血量掉 ≥ 25%）。
 // ============================================================================
 import fs from "node:fs";
 import { createHash } from "node:crypto";
@@ -20,8 +25,10 @@ import { isWalkable, HERO_RADIUS } from "../../src/battle/moba/nav/mobaNavigatio
 import { BASE } from "../../src/gameData.js";
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
-const PATH = arg("path", "career"), TIER = arg("tier", "mid"), ORIENT = arg("orient", "AB");
-const TIER_VALUE = { mid: 60, high: 90 };
+const PATH = arg("path", "career"), TIER = arg("tier", "mid"), ORIENT = arg("orient", "AB"), PAIR = arg("pair", "v1v2");
+const TIER_VALUE = { low: 30, mid: 60, high: 90 };
+const ARMS = PAIR === "v2v3" ? { v1: "v2", v2: "v3" } : { v1: "v1", v2: "v2" };
+if (!["v1v2", "v2v3"].includes(PAIR)) throw new Error(`unknown --pair ${PAIR}`);
 const CAP = Number(arg("cap", "3000"));
 const TPL_A = "v2.jungle_invasion", TPL_B = "classic.m7";
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -64,14 +71,15 @@ function instrument(e) {
 }
 
 function newStats() {
-  const side = () => ({ deaths: 0, towerDeaths: 0, heroDeaths: 0, retreatDeaths: 0, chasedDeaths: 0, kills: 0, retreats: 0, retreatOk: 0, retreatDied: 0, retreatPath: 0, retreatStraight: 0, retreatSec: 0, towerShots: 0 });
-  return { blue: side(), red: side(), holdTicks: 0, avoidTicks: 0, inv: { stuck20: 0, hold20: 0, unwalkable: 0, nan: 0, avoidLoop: 0 }, deaths: [] };
+  const side = () => ({ deaths: 0, towerDeaths: 0, heroDeaths: 0, retreatDeaths: 0, chasedDeaths: 0, kills: 0, retreats: 0, retreatOk: 0, retreatDied: 0, retreatPath: 0, retreatStraight: 0, retreatSec: 0, towerShots: 0, hold20: 0, edge20: 0, holdDrained: 0 });
+  return { blue: side(), red: side(), holdTicks: 0, avoidTicks: 0, regroupTicks: 0, inv: { stuck20: 0, hold20: 0, unwalkable: 0, nan: 0, avoidLoop: 0, edge20: 0, holdDrained: 0 }, deaths: [] };
 }
 
 function runPair(seed) {
   const a = build(seed), b = build(seed);
   const E = { v1: a.e, v2: b.e };
-  E.v1._towerEdgeV23 = false;                       // v1：同一個 v2 引擎關掉塔邊決策（見檔頭）
+  if (PAIR === "v1v2") { E.v1._towerEdgeV23 = false; E.v1._edgeRedecideV23 = false; E.v2._edgeRedecideV23 = false; }   // v1：同一個引擎關掉塔邊決策（見檔頭）；兩臂都不含 v3
+  else { if (E.v2._edgeRedecideV23 !== true) throw new Error("v3 arm is not v3"); E.v1._edgeRedecideV23 = false; }   // v2v3：v1 鍵＝v2 臂
   const I = { v1: instrument(E.v1), v2: instrument(E.v2) };
   const S = { v1: newStats(), v2: newStats() };
   const H = { v1: createHash("sha1"), v2: createHash("sha1") };
@@ -90,7 +98,7 @@ function runPair(seed) {
         H[v].update(`${p.id}${p.pos.x.toFixed(4)},${p.pos.y.toFixed(4)},${p.hp.toFixed(3)},${p.dead ? 1 : 0};`);
         const st = S[v], sd = st[p.side];
         let R = T[v].get(p.id);
-        if (!R) { R = { prev: { ...p.pos }, still: 0, hold: 0, avoidT: [], ret: null, wasDead: false, hist: [] }; T[v].set(p.id, R); }
+        if (!R) { R = { prev: { ...p.pos }, still: 0, hold: 0, edge: 0, ep: null, avoidT: [], ret: null, wasDead: false, hist: [] }; T[v].set(p.id, R); }
         sd.towerShots += I[v].shots.get(p.id) ?? 0;
         if (p.dead) {
           if (!R.wasDead) {
@@ -112,7 +120,7 @@ function runPair(seed) {
               lastStates: R.hist.slice(-6).map((h) => h.st) });
             R.ret = null; R.hist = [];
           }
-          R.prev = { ...p.pos }; continue;
+          R.edge = 0; R.ep = null; R.prev = { ...p.pos }; continue;
         }
         R.wasDead = false;
         if (!Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.y) || !Number.isFinite(p.hp)) st.inv.nan++;
@@ -124,7 +132,10 @@ function runPair(seed) {
         if (!p.retreating && R.ret) { sd.retreatOk++; sd.retreatPath += R.ret.path; sd.retreatStraight += dist(R.ret.start, p.pos); sd.retreatSec += e.t - R.ret.t0; R.ret = null; }
         //  不變量
         const hold = p.intent === "塔邊等待時機";
-        if (hold) { st.holdTicks++; R.hold++; if (R.hold === 40) st.inv.hold20++; } else R.hold = 0;
+        if (hold) { st.holdTicks++; R.hold++; if (R.hold === 40) { st.inv.hold20++; sd.hold20++; } } else R.hold = 0;
+        const regroup = p.intent === "退回己方兵線"; if (regroup) st.regroupTicks++;
+        if (hold || regroup) { R.edge++; if (R.edge === 40) { st.inv.edge20++; sd.edge20++; } } else R.edge = 0;
+        if (hold) { const f = p.hp / p.maxHp; if (!R.ep) R.ep = { peak: f, hit: false }; R.ep.peak = Math.max(R.ep.peak, f); if (!R.ep.hit && R.ep.peak - f >= 0.25) { R.ep.hit = true; st.inv.holdDrained++; sd.holdDrained++; } } else R.ep = null;
         if (p.state === "避塔") { st.avoidTicks++; if (R.hist.at(-1)?.st !== "避塔") { R.avoidT = R.avoidT.filter((t) => e.t - t <= 30); R.avoidT.push(e.t); if (R.avoidT.length === 6) st.inv.avoidLoop++; } }
         const atBase = dist(p.pos, BASE[p.side]) < 25;
         const foeClose = e.players.some((q) => q.side !== p.side && !q.dead && dist(q.pos, p.pos) <= 9);
@@ -151,14 +162,14 @@ function runPair(seed) {
     const ro = {}; for (const sd of ["blue", "red"]) for (const [k, n] of Object.entries(e.routeObs?.[sd] ?? {})) ro[k] = (ro[k] ?? 0) + n;
     return { over: !!e.over, winner: e.winner ?? null, duration: +e.t.toFixed(1), routeObs: ro, stats: st, tickMs: +(ms[v] / ticks[v]).toFixed(3), streamHash: H[v].digest("hex").slice(0, 16) };
   };
-  return { seed, path: PATH, tier: PATH === "career" ? TIER : null, orient: PATH === "tool" ? ORIENT : null, meta: b.meta, firstDiv, v1: fin("v1"), v2: fin("v2") };
+  return { seed, path: PATH, tier: PATH === "career" ? TIER : null, orient: PATH === "tool" ? ORIENT : null, pair: PAIR, arms: ARMS, meta: b.meta, firstDiv, v1: fin("v1"), v2: fin("v2") };
 }
 
 if (process.argv.includes("--selfcheck")) {
   //  ① v1＝引擎旗標關掉 ⇒ 與 "v1" 規則集（工具路徑 ESMO_BALANCE_SAFEROUTE=v1）逐 tick 雜湊相同（工具路徑 10 分鐘，Seed 11）。
   const hashOf = (e) => { const h = createHash("sha1"); while (e.t < 600 && !e.over) { e.tick(0.5); for (const p of e.players) h.update(`${p.id}${p.pos.x.toFixed(4)},${p.pos.y.toFixed(4)},${p.hp.toFixed(3)},${p.dead ? 1 : 0};`); } return h.digest("hex").slice(0, 16); };
   const b0 = { kind: "binding", binding: bindingOf(TPL_A) };
-  const ef = configure(11, "standard", M, 1, null, { blue: b0, red: b0 }, "balanceTool.v23").e; ef._towerEdgeV23 = false;
+  const ef = configure(11, "standard", M, 1, null, { blue: b0, red: b0 }, "balanceTool.v23").e; ef._towerEdgeV23 = false; ef._edgeRedecideV23 = false;
   process.env.ESMO_BALANCE_SAFEROUTE = "v1"; const ev = configure(11, "standard", M, 1, null, { blue: b0, red: b0 }, "balanceTool.v23").e; delete process.env.ESMO_BALANCE_SAFEROUTE;
   const h1 = hashOf(ef), h2 = hashOf(ev);
   console.log(JSON.stringify({ selfcheck: "flagOff==rulesetV1", flagOff: h1, rulesetV1: h2, pinned: "6c8d53424206db0e", ok: h1 === h2 && h2 === "6c8d53424206db0e" }));
@@ -174,5 +185,5 @@ for (const s of seeds) {
   rows.push(runPair(s));
   process.stderr.write(`[recheck] ${PATH}${PATH === "career" ? ":" + TIER : ":" + ORIENT} seed ${s} done (${rows.length}/${seeds.length}) rss ${Math.round(process.memoryUsage().rss / 1048576)}MB\n`);
 }
-fs.writeFileSync(OUT, JSON.stringify({ tool: "recheck_career_deaths_v23", gitHead: arg("head", null), path: PATH, tier: PATH === "career" ? TIER : null, orient: PATH === "tool" ? ORIENT : null, seeds, wallSec: Math.round((Date.now() - t0) / 1000), rows }));
+fs.writeFileSync(OUT, JSON.stringify({ tool: "recheck_career_deaths_v23", gitHead: arg("head", null), pair: PAIR, arms: ARMS, path: PATH, tier: PATH === "career" ? TIER : null, orient: PATH === "tool" ? ORIENT : null, seeds, wallSec: Math.round((Date.now() - t0) / 1000), rows }));
 console.log(JSON.stringify({ ok: true, out: OUT, n: rows.length, wallSec: Math.round((Date.now() - t0) / 1000), rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
