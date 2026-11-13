@@ -67,12 +67,14 @@ export const INVASION_RELEASE_FLAG = Object.freeze({ v2: "mobaJungleV22" });
 //  "v3"（2026-11-13 Owner 核准的塔邊等待小修；同一個 v23 候選）＝v2＋塔邊等待依情境重新決策（受傷／威脅／回血太慢 ⇒ 撤退或退回己方兵線；兵線將到或很快回滿 ⇒ 等）。
 //  "v2" 保留（塔邊決策 Sprint 與生涯複驗的證據可以原樣重現）。
 //  "v4"（2026-11-13 導航與移動安全；同一個 v23 候選）＝v3＋導航鏡射補上門牙塔、塔內徑向退出不把撤退的人推進死路、撤退被危險圓包住時走射程內最短的路線。
-//  "v3" 保留（塔邊等待小修的回歸證據可以原樣重現）；career.v23／balanceTool.v23 改用 "v4"。
-export const SAFE_ROUTES = Object.freeze(["legacy", "v1", "v2", "v3", "v4"]);
+//  "v3" 保留（塔邊等待小修的回歸證據可以原樣重現）。
+//  "v5"（2026-11-14；同一個 v23 候選）＝v4＋口袋安靜時留在射程外回城、受威脅才穿塔。"v4" 的獨立驗證量到生涯被塔擊殺 +25.5%（登記判準不通過，照實保留）。
+//  "v4" 保留（那次驗證的證據可以原樣重現）；career.v23／balanceTool.v23 改用 "v5"。
+export const SAFE_ROUTES = Object.freeze(["legacy", "v1", "v2", "v3", "v4", "v5"]);
 export const DEFAULT_SAFE_ROUTE = "legacy";
 /** 讀取 ruleset 的 safeRoute 層；缺少 ≡ "legacy"。 */
 export const safeRouteOf = (r) => r?.layers?.safeRoute ?? DEFAULT_SAFE_ROUTE;
-export const SAFE_ROUTE_RELEASE_FLAG = Object.freeze({ v1: "mobaSafeRouteV23", v2: "mobaSafeRouteV23", v3: "mobaSafeRouteV23", v4: "mobaSafeRouteV23" });
+export const SAFE_ROUTE_RELEASE_FLAG = Object.freeze({ v1: "mobaSafeRouteV23", v2: "mobaSafeRouteV23", v3: "mobaSafeRouteV23", v4: "mobaSafeRouteV23", v5: "mobaSafeRouteV23" });
 export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG), ...Object.values(SAFE_ROUTE_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 const BASE_RULESETS = Object.freeze({
@@ -117,16 +119,16 @@ const V22_RULESETS = Object.freeze({
   "career.v22": v22Of(BASE_RULESETS["career.v21"], [JUNGLE_CAMP_RELEASE_FLAG.v2]),
   "balanceTool.v22": v22Of(BASE_RULESETS["balanceTool.v21"]),
 });
-//  moba-sim.v23 候選（2026-11-12）：從 v22 逐欄衍生，只多 safeRoute（"v4"＝路線安全＋塔邊決策＋塔邊等待重新決策＋導航與移動安全；之前依序是 "v1"、"v2"、"v3"）。v22 物件本身一個欄位都沒動。
+//  moba-sim.v23 候選（2026-11-12）：從 v22 逐欄衍生，只多 safeRoute（"v5"＝路線安全＋塔邊決策＋塔邊等待重新決策＋導航與移動安全（含口袋安靜時回城）；之前依序是 "v1"～"v4"）。v22 物件本身一個欄位都沒動。
 const v23Of = (base, extraRequirements = []) => R({
   ...base, rulesetId: base.rulesetId.replace(".v22", ".v23"), simVersion: "moba-sim.v23",
-  layers: { ...base.layers, safeRoute: "v4" },
+  layers: { ...base.layers, safeRoute: "v5" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
 export const MATCH_RULESETS = Object.freeze({
   ...BASE_RULESETS,
   ...V22_RULESETS,
-  "career.v23": v23Of(V22_RULESETS["career.v22"], [SAFE_ROUTE_RELEASE_FLAG.v4]),
+  "career.v23": v23Of(V22_RULESETS["career.v22"], [SAFE_ROUTE_RELEASE_FLAG.v5]),
   "balanceTool.v23": v23Of(V22_RULESETS["balanceTool.v22"]),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;

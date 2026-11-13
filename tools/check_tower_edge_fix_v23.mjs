@@ -41,7 +41,7 @@ function career(seed, statValue) {
   const opts = { seed, roster: C.appRoster(C.Runner.mirroredRoster(seed, C.M)), buildStrategy: "standard", opponentId: team.id, sessionId: `recheck-${seed}`, mode: "moba", tacticPlanBinding: bindingOf("v2.jungle_invasion") };
   const out = prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
   if (!out.ok) throw new Error(`career setup rejected ${seed}`);
-  out.engine._navSafetyV23 = false;   //  守 "v3"
+  out.engine._navSafetyV23 = false; out.engine._quietPocketV23 = false;   //  守 "v3"
   return { e: out.engine, rulesetId: ruleset.rulesetId };
 }
 const hash10 = (e) => { const h = createHash("sha1"); while (e.t < 600 && !e.over) { e.tick(0.5); for (const p of e.players) h.update(`${p.id}${p.pos.x.toFixed(4)},${p.pos.y.toFixed(4)},${p.hp.toFixed(3)},${p.dead ? 1 : 0};`); } return h.digest("hex").slice(0, 16); };

@@ -18,6 +18,11 @@
 //   B  行為：已重現的 Seeds（生涯中素質 93001–93011、低素質 93079）
 //   P  效能
 //  ⚠ 不重錄任何 Golden、不用正式保留 Seeds（只用已公開、已用過的 Seeds）。
+//
+//  2026-11-14 "v5"＝"v4"＋_quietPocketV23：v4 的獨立驗證（Seeds 97001–97079 奇數，140 組）量到生涯被塔擊殺 +25.5%（登記判準 N3 不通過，照實保留）。
+//   原因：v3 把人推進口袋之後，附近沒有敵人時會在射程外回城；v4 一律要他穿塔回家，殘血時被塔打死。
+//   v5：口袋安靜（回城啟動距離內沒有敵方英雄）⇒ 照 v3 退到射程外、原地等回城；受威脅才照 v4 穿出去。
+//   本 gate 同時守 "v4"（E3 釘住、U7–U11 在關掉 _quietPocketV23 的引擎上跑）與 "v5"（E4、U13–U16、B）。
 //  執行：node tools/check_nav_safety_v23.mjs（約 3 分鐘）
 // ============================================================================
 import { createHash } from "node:crypto";
@@ -69,24 +74,33 @@ function fullRun(e) {
 
 // ── E 版本隔離 ──────────────────────────────────────────────────────────
 {
-  const e4 = tool(11), e3 = withSafeRoute("v3", () => tool(11));
-  ck("E1 SAFE_ROUTES 含 v4、旗標同 mobaSafeRouteV23；career.v23／balanceTool.v23 用 v4；v1／v2／v3 版的同一規則集仍通過 validateRuleset；引擎：v4 ⇒ _navSafetyV23 true 且有新計數，v3 ⇒ false 且沒有",
-    J(SAFE_ROUTES) === J(["legacy", "v1", "v2", "v3", "v4"]) && SAFE_ROUTE_RELEASE_FLAG.v4 === "mobaSafeRouteV23"
-    && MATCH_RULESETS["career.v23"].layers.safeRoute === "v4" && MATCH_RULESETS["balanceTool.v23"].layers.safeRoute === "v4"
-    && ["v1", "v2", "v3"].every((v) => validateRuleset({ ...MATCH_RULESETS["career.v23"], layers: { ...MATCH_RULESETS["career.v23"].layers, safeRoute: v } }).ok)
-    && e4._navSafetyV23 === true && e4._edgeRedecideV23 === true && e4._towerEdgeV23 === true && "blockedCross" in e4.routeObs.blue
-    && e3._navSafetyV23 === false && e3._edgeRedecideV23 === true && !("blockedCross" in e3.routeObs.blue));
+  const e5 = tool(11), e4 = withSafeRoute("v4", () => tool(11)), e3 = withSafeRoute("v3", () => tool(11));
+  ck("E1 SAFE_ROUTES＝legacy／v1～v5、旗標同 mobaSafeRouteV23；career.v23／balanceTool.v23 用 v5；v1～v4 版的同一規則集仍通過 validateRuleset；引擎：v5 ⇒ _navSafetyV23 與 _quietPocketV23 皆 true 且有新計數，v4 ⇒ 只有 _navSafetyV23，v3 ⇒ 兩者皆 false",
+    J(SAFE_ROUTES) === J(["legacy", "v1", "v2", "v3", "v4", "v5"]) && SAFE_ROUTE_RELEASE_FLAG.v4 === "mobaSafeRouteV23" && SAFE_ROUTE_RELEASE_FLAG.v5 === "mobaSafeRouteV23"
+    && MATCH_RULESETS["career.v23"].layers.safeRoute === "v5" && MATCH_RULESETS["balanceTool.v23"].layers.safeRoute === "v5"
+    && ["v1", "v2", "v3", "v4"].every((v) => validateRuleset({ ...MATCH_RULESETS["career.v23"], layers: { ...MATCH_RULESETS["career.v23"].layers, safeRoute: v } }).ok)
+    && e5._navSafetyV23 === true && e5._quietPocketV23 === true && "pocketHold" in e5.routeObs.blue
+    && e4._navSafetyV23 === true && e4._quietPocketV23 === false && e4._edgeRedecideV23 === true && e4._towerEdgeV23 === true && "blockedCross" in e4.routeObs.blue && !("pocketHold" in e4.routeObs.blue)
+    && e3._navSafetyV23 === false && e3._quietPocketV23 === false && e3._edgeRedecideV23 === true && !("blockedCross" in e3.routeObs.blue));
 }
 //  整場雜湊：工具路徑 AB（藍 v2.jungle_invasion／紅 classic.m7）Seed 93067。
 //  "v2"／"v3" 的值＝本次改動之前的批次紀錄（review/tactic-book-3a/v23_tower_edge/edge_fix/batches/tool_AB_4.json，commit fa8776af）。
 const PIN = { v2: "950ea004c99e2ed8", v3: "fe3041e804a543ef" };
-const run93067 = (sr, flagOff = false) => { const e = withSafeRoute(sr, () => tool(93067, "v2.jungle_invasion", "classic.m7")); if (flagOff) e._navSafetyV23 = false; return fullRun(e); };
-const R2 = run93067("v2"), R3 = run93067("v3"), R3off = run93067(null, true), R4 = run93067(null), R4b = run93067(null);
+const run93067 = (sr, off = []) => { const e = withSafeRoute(sr, () => tool(93067, "v2.jungle_invasion", "classic.m7")); for (const k of off) e[k] = false; return fullRun(e); };
+const R2 = run93067("v2"), R3 = run93067("v3"), R3off = run93067("v4", ["_navSafetyV23"]), R4 = run93067("v4"), R4b = run93067("v4");
 ck("E2 整場雜湊（工具 AB Seed 93067）：\"v2\"、\"v3\" 規則集＝改動前的批次紀錄；v4 引擎關掉 _navSafetyV23 ⇒ 與 \"v3\" 相同（新行為只經由這個旗標）",
   R2.hash === PIN.v2 && R3.hash === PIN.v3 && R3off.hash === PIN.v3, J({ v2: R2.hash, v3: R3.hash, v4FlagOff: R3off.hash }));
 //  "v4" 的雜湊＝本次登記（之後再改語意就會紅）。
 const V4_PIN = "76717b3212b0430d";
 ck("E3 \"v4\" 整場雜湊＝登記值，而且與 \"v3\" 不同（可區分）；同一個 Seed 重跑相同（決定性）", R4.hash === V4_PIN && R4.hash !== R3.hash && R4b.hash === R4.hash, J({ v4: R4.hash, again: R4b.hash, want: V4_PIN }));
+//  "v5"：生涯中素質 Seed 97003（v4 驗證批次 career_mid_1 的 v4 雜湊＝改動前紀錄）。v5 引擎關掉 _quietPocketV23 ⇒ 與那筆 v4 紀錄相同。
+const V4_97003 = "e5d8a1b1adf09370", V5_97003 = "b0e96a457e61dd6a";
+{
+  const off = career(97003, 60); off._quietPocketV23 = false; const h4 = fullRun(off).hash;
+  const h5 = fullRun(career(97003, 60)).hash, h5b = fullRun(career(97003, 60)).hash;
+  ck("E4 生涯中素質 Seed 97003：v5 引擎關掉 _quietPocketV23 ⇒ 與 v4 驗證批次的紀錄相同（新行為只經由這個旗標）；\"v5\" 整場雜湊＝登記值、與 v4 不同、重跑相同",
+    h4 === V4_97003 && h5 === V5_97003 && h5 !== h4 && h5b === h5, J({ v4: h4, wantV4: V4_97003, v5: h5, again: h5b, wantV5: V5_97003 }));
+}
 
 // ── U 單元：鏡射、投影、尋路 ───────────────────────────────────────────
 {
@@ -147,6 +161,7 @@ ck("E3 \"v4\" 整場雜湊＝登記值，而且與 \"v3\" 不同（可區分）�
 {
   const e = tool(17);
   while (e.t < 1) e.tick(0.5);
+  e._quietPocketV23 = false;   //  U6–U12 守 "v4" 的行為；"v5" 的口袋規則在 U13–U16
   const alive = e._aliveStructs, pad = e.rules.towerSafePad ?? 2.5;
   const p = e.players.find((q) => q.side === "red" && q.role === "adc");
   const t1 = e.towers.blue_top_1, t0 = e.towers.blue_top_0, home = FOUNTAIN.red;
@@ -205,6 +220,30 @@ ck("E3 \"v4\" 整場雜湊＝登記值，而且與 \"v3\" 不同（可區分）�
     ck("U11 從口袋照 v4 的路點走：離開得了（所有危險圓之外、比口袋離家近 25 以上），確實穿過射程（≥ 1 tick）但時間 ≤ 穿過一座塔直徑所需的 1.5 倍，沒有來回",
       out && ticksIn >= 1 && ticksIn <= Math.ceil(1.5 * 2 * e.towerRange(t1) / spd) && back <= 2, J({ ticks, ticksIn, back, limit: Math.ceil(1.5 * 2 * e.towerRange(t1) / spd) }));
   }
+  //  ── "v5"：口袋安靜時回城、受威脅才穿出去 ──
+  {
+    e._navSafetyV23 = true; e._quietPocketV23 = true;
+    const foe = e.players.find((q) => q.side === "blue" && q.role === "top"), others = e.players.filter((q) => q.side === "blue");
+    const park = () => { for (const q of others) { q.pos.x = 100; q.pos.y = 300; } };            // 藍方全員遠離口袋（> 回城啟動距離）
+    const threat = () => { foe.pos.x = pocket.x + 6; foe.pos.y = pocket.y + 6; };
+    const rr = e.rules.recallSafeDist * 1.4;
+    park(); place(insideFar.x, insideFar.y); s = snap(); const q1 = e._safeWaypointV23(p, home);
+    ck("U13 v5、口袋安靜（敵方英雄都在回城啟動距離外）：撤退的人在塔的敵方基地側 ⇒ 照 v3 退到射程外（pocketExit，不計 radialSkipped）",
+      O.pocketExit - s.pocketExit === 1 && O.radialSkipped === s.radialSkipped && q1.x === w3.x && q1.y === w3.y, J({ q1, rr }));
+    place(pocket.x, pocket.y); s = snap(); const q2 = e._safeWaypointV23(p, home); const q2b = e._safeWaypointV23(p, home);
+    ck("U14 v5、口袋安靜、被危險圓包住 ⇒ 原地等（pocketHold；不穿塔、不計 blockedFallback／blockedCross），結果快取（第二次不重算）",
+      q2.x === pocket.x && q2.y === pocket.y && q2b.x === pocket.x && O.pocketHold - s.pocketHold === 1 && O.blockedCross === s.blockedCross && O.blockedFallback === s.blockedFallback && p._srPath?.hold === true);
+    threat(); s = snap(); const q3 = e._safeWaypointV23(p, home);
+    ck("U15 v5、正在口袋裡等時敵方英雄靠近（回城啟動距離內）⇒ 立刻改成穿出路線（blockedCross），不等快取到期",
+      O.blockedCross - s.blockedCross === 1 && p._srPath?.cross === true && (q3.x !== pocket.x || q3.y !== pocket.y), J({ q3 }));
+    place(insideFar.x, insideFar.y); foe.pos.x = w3.x + 5; foe.pos.y = w3.y + 5; s = snap(); const q4 = e._safeWaypointV23(p, home);
+    ck("U16 v5、出口那一側有敵方英雄 ⇒ 不退進口袋（radialSkipped，同 v4），下一個路點比目前位置更靠近家",
+      O.radialSkipped - s.radialSkipped === 1 && O.pocketExit === s.pocketExit && dist(q4, home) < dist(insideFar, home));
+    const noRecall = e.rules.recallChannel; e.rules = { ...e.rules, recallChannel: false }; park();
+    const t17 = e._pocketThreatV23(p, pocket); e.rules = { ...e.rules, recallChannel: noRecall };
+    ck("U17 規則集沒有回城引導 ⇒ 一律當成有威脅（＝v4 行為，不會在口袋裡等不到回城）", t17 === true && e._pocketThreatV23(p, pocket) === false);
+    e._quietPocketV23 = false;
+  }
   //  傳送落點：引擎的 _navTeleport 在不對稱門牙塔狀態下落在可走點
   {
     e.towers.blue_nexus_0.hp = 0; e.tick(0.5);
@@ -220,18 +259,18 @@ ck("E3 \"v4\" 整場雜湊＝登記值，而且與 \"v3\" 不同（可區分）�
 
 // ── B 行為：已重現的 Seeds ─────────────────────────────────────────────
 const CASES = [[93001, 60], [93003, 60], [93005, 60], [93007, 60], [93079, 30]];
-const runCase = ([seed, v], off) => { const e = career(seed, v); if (off) e._navSafetyV23 = false; return fullRun(e); };
-const B3 = CASES.map((c) => runCase(c, true)), B4 = CASES.map((c) => runCase(c, false));
+const runCase = ([seed, v], off) => { const e = career(seed, v); if (off) { e._navSafetyV23 = false; e._quietPocketV23 = false; } return fullRun(e); };
+const B3 = CASES.map((c) => runCase(c, true)), B4 = CASES.map((c) => runCase(c, false));   // B4＝"v5"（規則集原樣）
 const sumRo = (L, k) => L.reduce((s, x) => s + (x.ro[k] ?? 0), 0);
-ck("B1 撤退中求不到安全路線、退回直線回家（blockedFallback）：v3 ≥ 5 次，v4 ≤ v3 的 20%", sumRo(B3, "blockedFallback") >= 5 && sumRo(B4, "blockedFallback") <= 0.2 * sumRo(B3, "blockedFallback"),
-  J({ v3: B3.map((x) => x.ro.blockedFallback), v4: B4.map((x) => x.ro.blockedFallback), v4Cross: sumRo(B4, "blockedCross"), v4RadialSkipped: sumRo(B4, "radialSkipped") }));
-ck("B2 座標不可走：v3 在 Seed 93079 重現（≥ 1 tick），v4 全部 0", B3[4].unwalkable >= 1 && B4.every((x) => x.unwalkable === 0), J({ v3: B3.map((x) => x.unwalkable), v4: B4.map((x) => x.unwalkable) }));
-ck("B3 撤退中被塔打中的次數沒有變多：v4 ≤ v3 × 1.1（5 場合計）", B4.reduce((s, x) => s + x.retreatShots, 0) <= 1.1 * B3.reduce((s, x) => s + x.retreatShots, 0),
-  J({ v3: B3.reduce((s, x) => s + x.retreatShots, 0), v4: B4.reduce((s, x) => s + x.retreatShots, 0) }));
+ck("B1 撤退中求不到安全路線、退回直線回家（blockedFallback）：v3 ≥ 5 次，v5 ≤ v3 的 20%", sumRo(B3, "blockedFallback") >= 5 && sumRo(B4, "blockedFallback") <= 0.2 * sumRo(B3, "blockedFallback"),
+  J({ v3: B3.map((x) => x.ro.blockedFallback), v5: B4.map((x) => x.ro.blockedFallback), cross: sumRo(B4, "blockedCross"), radialSkipped: sumRo(B4, "radialSkipped"), pocketExit: sumRo(B4, "pocketExit"), pocketHold: sumRo(B4, "pocketHold") }));
+ck("B2 座標不可走：v3 在 Seed 93079 重現（≥ 1 tick），v5 全部 0", B3[4].unwalkable >= 1 && B4.every((x) => x.unwalkable === 0), J({ v3: B3.map((x) => x.unwalkable), v5: B4.map((x) => x.unwalkable) }));
+ck("B3 撤退中被塔打中的次數沒有變多：v5 ≤ v3 × 1.1（5 場合計）", B4.reduce((s, x) => s + x.retreatShots, 0) <= 1.1 * B3.reduce((s, x) => s + x.retreatShots, 0),
+  J({ v3: B3.reduce((s, x) => s + x.retreatShots, 0), v5: B4.reduce((s, x) => s + x.retreatShots, 0) }));
 // ── P 效能 ─────────────────────────────────────────────────────────────
 {
   const a = B3.reduce((s, x) => s + x.tickMs, 0) / B3.length, b = B4.reduce((s, x) => s + x.tickMs, 0) / B4.length;
-  ck("P1 模擬每 tick 成本：v4 ≤ v3 的 1.5 倍（寬鬆上限；量測有雜訊）", b <= 1.5 * a, J({ v3: +a.toFixed(3), v4: +b.toFixed(3) }));
+  ck("P1 模擬每 tick 成本：v5 ≤ v3 的 1.5 倍（寬鬆上限；量測有雜訊）", b <= 1.5 * a, J({ v3: +a.toFixed(3), v5: +b.toFixed(3) }));
 }
 const pass = results.filter((r) => r.ok).length;
 console.log(`\ncheck_nav_safety_v23：${pass}/${results.length} ${pass === results.length ? "PASS" : "FAIL"}`);

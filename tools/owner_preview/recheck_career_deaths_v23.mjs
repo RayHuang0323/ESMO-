@@ -29,8 +29,11 @@ const PATH = arg("path", "career"), TIER = arg("tier", "mid"), ORIENT = arg("ori
 const TIER_VALUE = { low: 30, mid: 60, high: 90 };
 //  2026-11-13 safeRoute "v4"（導航與移動安全）後：規則集預設是 "v4"，新行為只看 _navSafetyV23。
 //   --pair=v3v4：輸出鍵 v1＝v3 臂（關掉 _navSafetyV23）、v2＝v4 臂（原樣）。v1v2／v2v3 兩臂都關掉 _navSafetyV23 ⇒ 舊批次可原樣重現。
-const ARMS = PAIR === "v3v4" ? { v1: "v3", v2: "v4" } : PAIR === "v2v3" ? { v1: "v2", v2: "v3" } : { v1: "v1", v2: "v2" };
-if (!["v1v2", "v2v3", "v3v4"].includes(PAIR)) throw new Error(`unknown --pair ${PAIR}`);
+//  2026-11-14 safeRoute "v5"（口袋安靜時回城）後：規則集預設是 "v5"，新行為只看 _quietPocketV23。
+//   --pair=v3v5：v1＝v3 臂（關掉 _navSafetyV23 與 _quietPocketV23）、v2＝v5 臂（原樣）。--pair=v4v5：v1＝v4 臂（只關 _quietPocketV23）。
+//   v1v2／v2v3／v3v4 的兩臂都關掉 _quietPocketV23 ⇒ 舊批次可原樣重現。
+const ARMS = { v1v2: { v1: "v1", v2: "v2" }, v2v3: { v1: "v2", v2: "v3" }, v3v4: { v1: "v3", v2: "v4" }, v3v5: { v1: "v3", v2: "v5" }, v4v5: { v1: "v4", v2: "v5" } }[PAIR];
+if (!ARMS) throw new Error(`unknown --pair ${PAIR}`);
 const CAP = Number(arg("cap", "3000"));
 const TPL_A = "v2.jungle_invasion", TPL_B = "classic.m7";
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -80,9 +83,15 @@ function newStats() {
 function runPair(seed) {
   const a = build(seed), b = build(seed);
   const E = { v1: a.e, v2: b.e };
-  if (PAIR !== "v3v4") { E.v1._navSafetyV23 = false; E.v2._navSafetyV23 = false; }
-  else { if (E.v2._navSafetyV23 !== true) throw new Error("v4 arm is not v4"); E.v1._navSafetyV23 = false; }
-  if (PAIR === "v3v4") { /* 兩臂都保留 v3 的塔邊行為 */ }
+  const NEW = PAIR === "v3v4" || PAIR === "v3v5" || PAIR === "v4v5";
+  if (!NEW) { for (const v of ["v1", "v2"]) { E[v]._navSafetyV23 = false; E[v]._quietPocketV23 = false; } }
+  else {
+    if (E.v2._navSafetyV23 !== true || E.v2._quietPocketV23 !== true) throw new Error("base engine is not v5");
+    if (PAIR === "v3v4") { E.v1._navSafetyV23 = false; E.v1._quietPocketV23 = false; E.v2._quietPocketV23 = false; }
+    if (PAIR === "v3v5") { E.v1._navSafetyV23 = false; E.v1._quietPocketV23 = false; }
+    if (PAIR === "v4v5") { E.v1._quietPocketV23 = false; }
+  }
+  if (NEW) { /* 兩臂都保留 v3 的塔邊行為 */ }
   else if (PAIR === "v1v2") { E.v1._towerEdgeV23 = false; E.v1._edgeRedecideV23 = false; E.v2._edgeRedecideV23 = false; }   // v1：同一個引擎關掉塔邊決策（見檔頭）；兩臂都不含 v3
   else { if (E.v2._edgeRedecideV23 !== true) throw new Error("v3 arm is not v3"); E.v1._edgeRedecideV23 = false; }   // v2v3：v1 鍵＝v2 臂
   const I = { v1: instrument(E.v1), v2: instrument(E.v2) };
@@ -166,7 +175,7 @@ function runPair(seed) {
       st[sd].retreatOngoing = e.players.filter((q) => q.side === sd && q.retreating && !q.dead).length;
     }
     const ro = {}; for (const sd of ["blue", "red"]) for (const [k, n] of Object.entries(e.routeObs?.[sd] ?? {})) ro[k] = (ro[k] ?? 0) + n;
-    const roSide = Object.fromEntries(["blue", "red"].map((sd) => [sd, { blockedFallback: e.routeObs?.[sd]?.blockedFallback ?? 0, blockedCross: e.routeObs?.[sd]?.blockedCross ?? 0 }]));
+    const roSide = Object.fromEntries(["blue", "red"].map((sd) => [sd, { blockedFallback: e.routeObs?.[sd]?.blockedFallback ?? 0, blockedCross: e.routeObs?.[sd]?.blockedCross ?? 0, pocketHold: e.routeObs?.[sd]?.pocketHold ?? 0 }]));
     return { over: !!e.over, winner: e.winner ?? null, duration: +e.t.toFixed(1), routeObs: ro, routeObsSide: roSide, stats: st, tickMs: +(ms[v] / ticks[v]).toFixed(3), streamHash: H[v].digest("hex").slice(0, 16) };
   };
   return { seed, path: PATH, tier: PATH === "career" ? TIER : null, orient: PATH === "tool" ? ORIENT : null, pair: PAIR, arms: ARMS, meta: b.meta, firstDiv, v1: fin("v1"), v2: fin("v2") };
@@ -176,7 +185,7 @@ if (process.argv.includes("--selfcheck")) {
   //  ① v1＝引擎旗標關掉 ⇒ 與 "v1" 規則集（工具路徑 ESMO_BALANCE_SAFEROUTE=v1）逐 tick 雜湊相同（工具路徑 10 分鐘，Seed 11）。
   const hashOf = (e) => { const h = createHash("sha1"); while (e.t < 600 && !e.over) { e.tick(0.5); for (const p of e.players) h.update(`${p.id}${p.pos.x.toFixed(4)},${p.pos.y.toFixed(4)},${p.hp.toFixed(3)},${p.dead ? 1 : 0};`); } return h.digest("hex").slice(0, 16); };
   const b0 = { kind: "binding", binding: bindingOf(TPL_A) };
-  const ef = configure(11, "standard", M, 1, null, { blue: b0, red: b0 }, "balanceTool.v23").e; ef._towerEdgeV23 = false; ef._edgeRedecideV23 = false; ef._navSafetyV23 = false;
+  const ef = configure(11, "standard", M, 1, null, { blue: b0, red: b0 }, "balanceTool.v23").e; ef._towerEdgeV23 = false; ef._edgeRedecideV23 = false; ef._navSafetyV23 = false; ef._quietPocketV23 = false;
   process.env.ESMO_BALANCE_SAFEROUTE = "v1"; const ev = configure(11, "standard", M, 1, null, { blue: b0, red: b0 }, "balanceTool.v23").e; delete process.env.ESMO_BALANCE_SAFEROUTE;
   const h1 = hashOf(ef), h2 = hashOf(ev);
   console.log(JSON.stringify({ selfcheck: "flagOff==rulesetV1", flagOff: h1, rulesetV1: h2, pinned: "6c8d53424206db0e", ok: h1 === h2 && h2 === "6c8d53424206db0e" }));

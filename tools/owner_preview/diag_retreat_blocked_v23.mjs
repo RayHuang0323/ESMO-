@@ -35,7 +35,8 @@ function build(seed) {
 const T = { matches: 0, events: 0, episodes: 0, caged1: 0, navOkOnly: 0, noNav: 0, startInDisk: 0, shotsAfter: 0, diedAfter: 0, byCage: {}, mirrorAsym: 0, samples: [] };
 for (const seed of seeds) {
   const e = build(seed); T.matches++;
-  if (ROUTE === "v3" && PATH === "career") e._navSafetyV23 = false;   // 生涯規則集的層被正式路徑釘住 ⇒ 用引擎旗標關掉 v4（等價性由 check_nav_safety_v23 E2 證明）
+  if (ROUTE === "v3" && PATH === "career") { e._navSafetyV23 = false; e._quietPocketV23 = false; }
+  if (ROUTE === "v4" && PATH === "career") e._quietPocketV23 = false;   // 生涯規則集的層被正式路徑釘住 ⇒ 用引擎旗標關掉 v4（等價性由 check_nav_safety_v23 E2 證明）
   T.navSafety = e._navSafetyV23 === true;
   const open = new Map();   // id → { until, shots }
   const shots = new Map();

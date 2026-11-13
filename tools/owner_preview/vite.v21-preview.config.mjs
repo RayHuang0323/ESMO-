@@ -35,7 +35,7 @@ const OUTSIDE = join(tmpdir(), "esmo-v21-owner-preview");
 const EMPTY_ENV_DIR = join(OUTSIDE, "empty-env");
 mkdirSync(EMPTY_ENV_DIR, { recursive: true });
 
-const BANNER = `<div data-owner-preview="v21" style="position:fixed;left:6px;bottom:6px;z-index:2147483647;pointer-events:none;font:700 10px/1.3 system-ui,sans-serif;color:#111;background:#ffd54a;border-radius:4px;padding:2px 6px;opacity:.85">OWNER PREVIEW · v21＋v22＋v23（路線安全＋塔邊決策＋塔邊等待 v3＋導航安全 v4）候選 未核准發布 · 本機隔離</div>`;
+const BANNER = `<div data-owner-preview="v21" style="position:fixed;left:6px;bottom:6px;z-index:2147483647;pointer-events:none;font:700 10px/1.3 system-ui,sans-serif;color:#111;background:#ffd54a;border-radius:4px;padding:2px 6px;opacity:.85">OWNER PREVIEW · v21＋v22＋v23（路線安全＋塔邊決策＋塔邊等待 v3＋導航安全 v5）候選 未核准發布 · 本機隔離</div>`;
 
 const v21FlagPreview = {
   name: "esmo-owner-preview-v21-flag",

@@ -95,10 +95,12 @@ ck("S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在�
   //  moba-sim.v23 候選：safeRoute 同樣只變成引擎自己的一個旗標，不經過 Director。
   //  2026-11-13 塔邊等待小修：多一個 "v3"（＝v2＋塔邊等待重新決策），同樣只變成引擎自己的旗標。
   //  2026-11-13 導航與移動安全：再多一個 "v4"（＝v3＋_navSafetyV23），同樣只變成引擎自己的旗標。
-  && ENGINE_CODE.includes('this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4";')
-  && ENGINE_CODE.includes('this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4";')
-  && ENGINE_CODE.includes('this._edgeRedecideV23 = safeRoute === "v3" || safeRoute === "v4";')
-  && ENGINE_CODE.includes('this._navSafetyV23 = safeRoute === "v4";')
+  //  2026-11-14：再多一個 "v5"（＝v4＋_quietPocketV23）。
+  && ENGINE_CODE.includes('this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._edgeRedecideV23 = safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._navSafetyV23 = safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._quietPocketV23 = safeRoute === "v5";')
   && !/directorArgs\.(jungleCamp|invasion|safeRoute)/.test(ENGINE_CODE)
   && (ENGINE_CODE.match(/\blaneFrame\b/g) ?? []).length === 4);
 ck("S2b _tidOf／_tidPhase 是一行委派給 Director",

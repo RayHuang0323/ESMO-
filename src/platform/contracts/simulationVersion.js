@@ -53,6 +53,8 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
 //   LogicEngine._towerEdgeRedecideV23）。career.v23／balanceTool.v23 改用 "v3"；"v2" 保留且逐位元不變。
 //   2026-11-13 導航與移動安全：同一個 v23 候選加 safeRoute "v4"（導航鏡射補上門牙塔、撤退出口不進死路、撤退被包住時的穿出路線；
 //   LogicEngine._navSafetyV23／_exitLeadsHomeV23／_retreatCrossV23、mobaNavigation.mirrorAlive）。career.v23／balanceTool.v23 改用 "v4"；"v3" 保留且逐位元不變。
+//   2026-11-14：同一個 v23 候選加 safeRoute "v5"（＝v4＋口袋安靜時留在射程外回城；LogicEngine._quietPocketV23／_pocketThreatV23）。
+//   career.v23／balanceTool.v23 改用 "v5"；"v4" 保留且逐位元不變（它的獨立驗證不通過，紀錄保留）。
 export const MOBA_SIMULATION_VERSION = "moba-sim.v23";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
@@ -657,10 +659,12 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  上一個值 a97621e3b51cf125＝只有 safeRoute "v1"（commit 2e626fa0；證據 review/tactic-book-3a/v23_safe_route/）。
   //  上一個值 b1cbfdd1be517e21＝加上 safeRoute "v2" 塔邊決策（commit 190b4eda；Owner 2026-11-12 核准的 Sprint；證據 review/tactic-book-3a/v23_tower_edge/ 與 recheck/）。
   //  上一個值 2a974b68ebf2c8f1＝再加上 safeRoute "v3" 塔邊等待依情境重新決策（commit 5c8ed84a；Owner 2026-11-13 核准的小修；證據 review/tactic-book-3a/v23_tower_edge/edge_fix/）。
-  //  目前值＝再加上 safeRoute "v4" 導航與移動安全（導航鏡射補上門牙塔、撤退出口不進死路、撤退被包住時走射程內成本最小的路線；
-  //  Owner 2026-11-13「引擎品質改善」A 項；證據 review/tactic-book-3a/v23_nav_safety/）。mobaNavigation.js 的改動只在呼叫端標了 navMirrorV2 時生效。
-  //  "v1"、"v2"、"v3" 的行為逐位元保留（check_tower_edge_v23 E3、check_tower_edge_fix_v23 E2／E3、check_nav_safety_v23 E2 釘住改動前錄下的雜湊）。
-  "moba-sim.v23": "9ef5cd1e9fdda547",
+  //  上一個值 9ef5cd1e9fdda547＝再加上 safeRoute "v4" 導航與移動安全（commit 184e43c9：導航鏡射補上門牙塔、撤退出口不進死路、撤退被包住時走成本最小的路線；
+  //  Owner 2026-11-13「引擎品質改善」A 項）。mobaNavigation.js 的改動只在呼叫端標了 navMirrorV2 時生效。
+  //  "v4" 的獨立驗證不通過（生涯被塔擊殺 +25.5%；review/tactic-book-3a/v23_nav_safety/RESULTS_v4.md），程式與證據保留。
+  //  目前值＝再加上 safeRoute "v5"（口袋安靜時留在射程外回城、受威脅才穿塔；證據 review/tactic-book-3a/v23_nav_safety/）。
+  //  "v1"～"v4" 的行為逐位元保留（check_tower_edge_v23 E3、check_tower_edge_fix_v23 E2／E3、check_nav_safety_v23 E2／E3／E4 釘住改動前錄下的雜湊）。
+  "moba-sim.v23": "69237cce78edf2be",
 });
 
 export const isKnownSimulationVersion = (v) =>

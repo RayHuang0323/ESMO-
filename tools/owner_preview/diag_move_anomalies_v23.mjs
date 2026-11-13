@@ -25,7 +25,7 @@ function build(seed) {
 const inc = (o, k) => { o[k] = (o[k] ?? 0) + 1; };
 const T = { matches: 0, minutes: 0, stuck: {}, stuckN: 0, loop: {}, loopN: 0, zig: {}, zigN: 0, samples: [] };
 for (const seed of seeds) {
-  const e = build(seed); if (ROUTE === "v3") e._navSafetyV23 = false; T.matches++;
+  const e = build(seed); if (ROUTE === "v3") { e._navSafetyV23 = false; e._quietPocketV23 = false; } T.matches++;
   const S = new Map();
   while (!e.over && e.t < 3000) {
     e.tick(0.5);

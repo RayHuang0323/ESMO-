@@ -25,7 +25,7 @@ function build(seed) {
   return prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) }).engine;
 }
 function run(seed, arm) {
-  const e = build(seed); e._navSafetyV23 = false; if (arm === "v2") e._edgeRedecideV23 = false;
+  const e = build(seed); e._navSafetyV23 = false; e._quietPocketV23 = false; if (arm === "v2") e._edgeRedecideV23 = false;
   const ganks = [], open = [];
   const killer = new Map();
   { const rk = e._resolveKill.bind(e); e._resolveKill = (k, v) => { if (v) killer.set(v.id, k?.id ?? null); return rk(k, v); }; }
