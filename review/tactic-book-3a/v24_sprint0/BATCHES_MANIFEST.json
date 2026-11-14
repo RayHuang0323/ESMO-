@@ -1,0 +1,91 @@
+{
+ "location": "C:/Users/ifikn/esmo-measure/v24-sprint0-98201",
+ "gitHead": "0801b892",
+ "note": "原始批次放在 repo 外（共約 18 MB）；這裡只留每個檔案的 sha256 與大小。",
+ "files": {
+  "AB_1.json": {
+   "sha256": "13087925b164e36d116b42b1cc5d0174b9ca771e43eeac170938a7667d9487d1",
+   "bytes": 1066674
+  },
+  "AB_2.json": {
+   "sha256": "0a91d98464e33921b7645a5e44f4554f3a15118fd8ddd83a9812efb0e5d6c123",
+   "bytes": 1018233
+  },
+  "AB_3.json": {
+   "sha256": "5ae49cf9f5eae1008c23490f0aac1ee61cac90f94113faf9a0f4c28fbe7ab784",
+   "bytes": 502018
+  },
+  "BA_1.json": {
+   "sha256": "6d9bc7452c50cd4a81a74b23746f63741fc30174997d5343c5fc532c7ae56035",
+   "bytes": 1008207
+  },
+  "BA_2.json": {
+   "sha256": "7daf7fe2ecaae86a7f58be0d7db5d6b1ee51e072192702c43c7b219eb70c9060",
+   "bytes": 1002701
+  },
+  "BA_3.json": {
+   "sha256": "a2cb36b6ca87bab200da1cc3c8cadcf40d36384d3c18eefe987bc016a3c48de5",
+   "bytes": 505696
+  },
+  "career_high_1.json": {
+   "sha256": "a06045b55b2f7c8b678ecfacdb108281b6ebf99f53b9da0484d0c4977e8caa87",
+   "bytes": 821432
+  },
+  "career_high_2.json": {
+   "sha256": "b611b9de8793bfb3c16140b55b8cd062d13f70b2ac4ebd3ad0776c91ba98dddf",
+   "bytes": 776873
+  },
+  "career_high_3.json": {
+   "sha256": "ce47dfda6746488469c3e0a74541670346f8c7059419bccdde0c764f63ad6867",
+   "bytes": 801716
+  },
+  "career_low_1.json": {
+   "sha256": "43c6b29cb30326933a131e40e418fa596a94dd3bf5fed5ac344771a095c8619d",
+   "bytes": 779759
+  },
+  "career_low_2.json": {
+   "sha256": "90cd077a2f2d0c80bb71f094612bbe39b9076760c9e867f823d6b469683faf35",
+   "bytes": 803862
+  },
+  "career_low_3.json": {
+   "sha256": "261151947327381dab13025b5edba97f25b3851317812359f754be9bf17cd434",
+   "bytes": 790006
+  },
+  "career_mid_1.json": {
+   "sha256": "2aeb787040de4bb89cac57fe97e6a18e01a51024ca6f99a75c52557f8f3983b9",
+   "bytes": 792519
+  },
+  "career_mid_2.json": {
+   "sha256": "9e6711b2342ef52f0b320ff0e988558682c7ae0704fe3cd77f82ece70cfcba15",
+   "bytes": 809316
+  },
+  "career_mid_3.json": {
+   "sha256": "4aa3110d87dd8bdc1cac6c81c0d6f0a30cf21921ac57fbf87faa899cc71f5173",
+   "bytes": 793280
+  },
+  "career_mid_4.json": {
+   "sha256": "2bacac629ea72c6c4014ab0a2c6a4c26ce2620939fb301899336c243a66e9457",
+   "bytes": 790533
+  },
+  "inv_1.json": {
+   "sha256": "b4f8f4dfa91806ac0a732629946b75d7ad31d78a37312bbe540cc7f4f8b8966e",
+   "bytes": 1032698
+  },
+  "inv_2.json": {
+   "sha256": "71fb895fda079f732fece9a573d838c49d6a7f4f68777b1218cabe6568f71d44",
+   "bytes": 1006358
+  },
+  "inv_3.json": {
+   "sha256": "efb5f16c20601edec1a59edfc06cfe6f84ec4225d8cf5c2cd64301706fe07253",
+   "bytes": 1037832
+  },
+  "inv_4.json": {
+   "sha256": "4aa3e20bf7f84861faaba0a949e03c2628299a92a9e796d061b9c2ff76ed8830",
+   "bytes": 1039789
+  },
+  "inv_5.json": {
+   "sha256": "763dd0e0abed9f4c21487259e7c0f5c4a49c7308f80420b05cf9c8568acf0b10",
+   "bytes": 997858
+  }
+ }
+}
