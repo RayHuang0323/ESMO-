@@ -1,0 +1,399 @@
+# Gate 與 Build 輸出（2026-11-14，commit ce0ab800 之上；單線依序執行）
+# 註：背景執行的外殼在 build 進行中被系統因記憶體不足停掉，build 本身跑完了（見 build.log 的 built in）；沒有重跑。
+[start] check_v23_freeze 19:27:33
+[done] check_v23_freeze exit=0 19:27:37
+[start] check_simulation_version_gate 19:27:37
+[done] check_simulation_version_gate exit=0 19:27:39
+[start] check_layer_isolation_v21 19:27:39
+[done] check_layer_isolation_v21 exit=0 19:28:08
+[start] check_task_arbitration_obs_v1 19:28:08
+[done] check_task_arbitration_obs_v1 exit=0 19:28:19
+[start] check_nav_safety_v23 19:28:19
+[done] check_nav_safety_v23 exit=0 19:29:33
+[start] check_tower_edge_fix_v23 19:29:33
+[done] check_tower_edge_fix_v23 exit=0 19:30:04
+[start] check_tower_edge_v23 19:30:05
+[done] check_tower_edge_v23 exit=0 19:31:45
+[start] check_safe_route_v23 19:31:45
+[done] check_safe_route_v23 exit=0 19:32:28
+[start] check_tactical_director_3c 19:32:28
+[done] check_tactical_director_3c exit=0 19:32:31
+[start] build 19:32:31
+
+===== check_v23_freeze =====
+✅ F1a moba-sim.v23 的登記指紋＝凍結值 69237cce78edf2be　{"got":"69237cce78edf2be"}
+✅ F1b career.v23／balanceTool.v23 的 safeRoute＝v5
+✅ F1c 凍結清單的版本、指紋、層值與本 gate 的常數一致
+✅ F2 目前版本仍是 v23：語意清單 50 支檔案逐檔內容＝凍結清單
+✅ F3 已知依賴缺口 22 支（引擎 import 得到、指紋涵蓋不到）逐檔內容＝凍結清單，而且沒有新缺口
+
+PASS 5/5
+
+===== check_simulation_version_gate =====
+
+── simulationVersion Gate ──
+✅ 版本字串存在且格式正確　moba-sim.v23
+✅ 目前版本在已知清單裡
+✅ 每個已知版本都登記了指紋（舊版本的憑據不得被刪）　moba-sim.v1,moba-sim.v2,moba-sim.v3,moba-sim.v4,moba-sim.v5,moba-sim.v6,moba-sim.v7,moba-sim.v8,moba-sim.v9,moba-sim.v10,moba-sim.v11,moba-sim.v12,moba-sim.v13,moba-sim.v14,moba-sim.v15,moba-sim.v16,moba-sim.v17,moba-sim.v18,moba-sim.v19,moba-sim.v20,moba-sim.v21,moba-sim.v22,moba-sim.v23
+✅ 語意檔案清單非空　50 支
+✅ 語意檔案存在：src/battle/moba/skills/heroSkillGameplay.js
+✅ 語意檔案存在：src/battle/moba/skills/heroPassiveGameplay.js
+✅ 語意檔案存在：src/battle/moba/heroPowerCurve.js
+✅ 語意檔案存在：src/battle/moba/heroPowerCurveTable.js
+✅ 語意檔案存在：src/battle/moba/skills/heroSkillLevels.js
+✅ 語意檔案存在：src/battle/moba/skills/heroSkillTargetCapabilities.js
+✅ 語意檔案存在：src/battle/moba/talents/heroBattleTalents.js
+✅ 語意檔案存在：src/LogicEngine.js
+✅ 語意檔案存在：src/battle/moba/mobaPlayerStats.js
+✅ 語意檔案存在：src/platform/contracts/MobaTacticConfig.js
+✅ 語意檔案存在：src/hero/heroProgress.js
+✅ 語意檔案存在：src/platform/challenge/challengeRunner.js
+✅ 語意檔案存在：src/gameData.js
+✅ 語意檔案存在：src/battle/moba/map/riftMapMetrics.js
+✅ 語意檔案存在：src/battle/moba/matchProgression.js
+✅ 語意檔案存在：src/battle/moba/nav/mobaNavigation.js
+✅ 語意檔案存在：src/battle/moba/map/mobaTowerPlacement.js
+✅ 語意檔案存在：src/battle/moba/map/mapTerrainShapes.js
+✅ 語意檔案存在：src/battle/moba/map/mobaMapLayout.js
+✅ 語意檔案存在：src/platform/contracts/objectiveLayout.js
+✅ 語意檔案存在：src/battle/moba/map/mapJungleTopology.js
+✅ 語意檔案存在：src/battle/moba/map/mapPassability.js
+✅ 語意檔案存在：src/platform/challenge/draftPolicy.js
+✅ 語意檔案存在：src/platform/challenge/draftResult.js
+✅ 語意檔案存在：src/battle/moba/mobaDraftAssignment.js
+✅ 語意檔案存在：src/battle/moba/mobaHeroProfile.js
+✅ 語意檔案存在：src/battle/moba/mobaHeroLoadout.js
+✅ 語意檔案存在：src/data/heroCombatArchetypes.js
+✅ 語意檔案存在：src/data/heroClassification.js
+✅ 語意檔案存在：src/platform/contracts/matchLineup.js
+✅ 語意檔案存在：src/platform/contracts/matchRuleset.js
+✅ 語意檔案存在：src/battle/moba/matchAssembler.js
+✅ 語意檔案存在：src/platform/challenge/challengeMatchSetup.js
+✅ 語意檔案存在：src/battle/moba/matchAssemblerDepsCore.js
+✅ 語意檔案存在：src/battle/moba/items/itemsEngineAdapter.js
+✅ 語意檔案存在：src/battle/moba/items/buildStrategyPrep.js
+✅ 語意檔案存在：src/battle/moba/items/buildPolicy.js
+✅ 語意檔案存在：src/battle/moba/mobaRosterAdapter.js
+✅ 語意檔案存在：src/battle/moba/liveMatchSetup.js
+✅ 語意檔案存在：src/battle/moba/matchAssemblerDeps.js
+✅ 語意檔案存在：src/platform/contracts/matchSetup.js
+✅ 語意檔案存在：src/platform/tactics/tacticOverlays.js
+✅ 語意檔案存在：src/platform/mastery/tacticVariant.js
+✅ 語意檔案存在：src/battle/moba/tactics/tacticResolver.js
+✅ 語意檔案存在：src/platform/tactics/tacticChoiceMapping.js
+✅ 語意檔案存在：src/platform/tactics/tacticTemplates.js
+✅ 語意檔案存在：src/platform/tactics/tacticPlan.js
+✅ 語意檔案存在：src/platform/tactics/capabilityRegistry.js
+✅ 語意檔案存在：src/battle/moba/tactics/tacticalDirector.js
+✅ 語意檔案存在：src/platform/tactics/aiCoach.js
+✅ 清單涵蓋 LogicEngine.js
+✅ 清單涵蓋 mobaPlayerStats.js
+✅ 清單涵蓋 MobaTacticConfig.js
+✅ 清單涵蓋 heroProgress.js
+✅ 清單涵蓋 challengeRunner.js
+✅ 語意指紋與目前版本登記的一致　69237cce78edf2be
+
+── 閘門檢定力自我測試（記憶體內，不動檔案）──
+✅ §A 只加註解 ⇒ 指紋不變（不要求 bump）　無變化
+✅ §A2 註解含 // 與 /* 的字串 ⇒ 仍然不變（沒有自己剝註解）
+✅ §B 只改空白／縮排／換行 ⇒ 指紋不變　無變化
+✅ §C 探針錨點仍存在（自我測試沒有失效）　export const CHALLENGE_DT = 0.5;
+✅ §C 改動模擬步長（真語意變化）⇒ 指紋改變（要求 bump）　69237cce78edf2be → 1250ebc28b318eac
+✅ §C2 識別名改動也會被偵測（沒有開 minifyIdentifiers）
+✅ §G0 gameData.js 已納入語意清單
+✅ §G1 gameData 只加註解 ⇒ 指紋不變（不要求 bump）
+✅ §G2 gameData 只改空白／縮排 ⇒ 指紋不變
+✅ §G3 探針錨點仍存在（自我測試沒有失效）　maxX: 220 * RIFT_EXTENT_RATIO
+✅ §G4 gameData 真語意改動（地圖範圍）⇒ 指紋改變（要求 bump）　69237cce78edf2be → 2be055c0ace9f171
+✅ §G5 riftMapMetrics 也在清單裡（否則改比例值會繞過閘門）
+✅ §G6 改 RIFT_EXTENT_RATIO ⇒ 指紋改變　69237cce78edf2be → 3fc65c97161ae7f7
+✅ §D0 推導得出下一個版號　moba-sim.v23 → moba-sim.v24
+✅ §D 開新版號並替新版號登記指紋 ⇒ 恢復通過　舊版本指紋仍保留
+✅ §D2 只 bump 版號但不登記指紋 ⇒ 仍然不通過
+✅ §H 舊版本仍留在已知清單裡（歷史憑據不刪）
+✅ §H 以 moba-sim.v1 記錄的挑戰**不可重播**　這場使用 moba-sim.v1 的模擬語意，目前是 moba-sim.v23，不可重播
+✅ §H 拒絕理由明講是版本不符（不是靜默重算）　這場使用 moba-sim.v1 的模擬語意，目前是 moba-sim.v23，不可重播
+✅ §H 目前版本自己可重播
+✅ ChallengeInstance 會記錄 simulationVersion
+✅ 雙方快照版本不一致時拒絕建立 challenge
+✅ 跨版本一律拒絕重播（不做相容性推測）
+
+simulationVersion Gate：83/83 PASS
+
+===== check_layer_isolation_v21 =====
+✅ L0 版本表裡 v21 的指紋仍是凍結值 620196ccea5a8249
+✅ L1 結構：balanceTool.v21 沒有 jungleCamp／invasion／safeRoute 層　["heroSkills","heroPassives","heroPowerCurve","battleTalents","items","tacticIdentity","playerStatSides","objectiveLayout","redTactic","assemblyOrder","tacticalDirector","laneFrame","templateBalance"]
+✅ L1 結構：career.v21 沒有 jungleCamp／invasion／safeRoute 層　["heroSkills","heroPassives","heroPowerCurve","battleTalents","items","tacticIdentity","playerStatSides","objectiveLayout","redTactic","assemblyOrder","tacticalDirector","laneFrame","templateBalance"]
+✅ L1 引擎開關：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"086f9aafe0a2b069","want":"086f9aafe0a2b069"}
+✅ L1 引擎開關：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 13 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 13 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 13 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"ec0ddbffa4d37c59","want":"ec0ddbffa4d37c59"}
+✅ L1 引擎開關：balanceTool.v21 classic.m7 對 v2.standard_macro seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 classic.m7 對 v2.standard_macro seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 classic.m7 對 v2.standard_macro seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"50ae78f04c98c9ae","want":"50ae78f04c98c9ae"}
+✅ L1 引擎開關：balanceTool.v21 v2.standard_macro 對 classic.m5 seed 13 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.standard_macro 對 classic.m5 seed 13 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.standard_macro 對 classic.m5 seed 13 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"baab52c9a3ac33f0","want":"baab52c9a3ac33f0"}
+✅ L1 引擎開關：balanceTool.v21 v2.jungle_invasion 對 v2.jungle_invasion seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.jungle_invasion 對 v2.jungle_invasion seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.jungle_invasion 對 v2.jungle_invasion seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"d32bf85c63a8527c","want":"d32bf85c63a8527c"}
+✅ L1 引擎開關：balanceTool.v21 classic.m1 對 classic.m3 seed 17 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 classic.m1 對 classic.m3 seed 17 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 classic.m1 對 classic.m3 seed 17 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"e44ab310eb5ab600","want":"e44ab310eb5ab600"}
+✅ L1 引擎開關：career.v21 v2.standard_macro seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：career.v21 v2.standard_macro seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：career.v21 v2.standard_macro seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"8bbe3ea955d9bb96","want":"8bbe3ea955d9bb96"}
+✅ L1 引擎開關：career.v21 v2.jungle_invasion seed 13 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：career.v21 v2.jungle_invasion seed 13 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：career.v21 v2.jungle_invasion seed 13 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"de8bc10a81b799ca","want":"de8bc10a81b799ca"}
+✅ L1 引擎開關：career.v21 classic.m7 seed 17 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：career.v21 classic.m7 seed 17 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：career.v21 classic.m7 seed 17 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"d171f0e768a30622","want":"d171f0e768a30622"}
+
+PASS 30/30
+
+===== check_task_arbitration_obs_v1 =====
+{"selfcheck":"arbitration_obs_is_passive","plain":"248f1373712d9c835bcdfa35bf143cbe9690998c","observed":"248f1373712d9c835bcdfa35bf143cbe9690998c","ticks":1996,"ok":true}
+✅ ① observer on/off per-tick hash equal (seed 93001 career mid)　ticks=1996
+✅ ② winner ∈ TASKS, reason ∈ REASONS, rewrites ⊂ REWRITES, suppressed ⊂ SUPPRESSED_KEYS　records=19108 bad=0
+✅ ③ exactly one record per living hero per tick　badTicks=0 unseen=0 observerErrors=0
+✅ ④ no own key added to players/engine beyond wrapped methods; detach() restores originals　wrapped=21 engineAdded=[] engineMissing=[] playerDiff=[] notRestored=[] missingMethods=[]
+✅ ⑤ lib has no field assignment on p./e./engine. except the method wrapping　wrapAssignments=2 illegal=[] defineProperty=false otherDeletes=[]
+✅ ⑥ git diff --quiet HEAD -- src
+{"rules":{"decisionV17":true,"taskCommitV19":true,"engagementFsm":true,"teamCallV20":true,"twoPhaseTick":true,"tacticOn":true,"invasionV2":true,"towerEdgeV23":true,"safeRouteV23":true},"winners":{"default":11971,"local":499,"team_call":131,"tower_fallback":167,"fight_join":41,"retreat":2479,"disengage":95,"objective_window":2887,"chase":4,"initiative_siege":834},"reasons":{"default_lane":10371,"de
+
+check_task_arbitration_obs_v1：6/6 PASS  (11.2 s)
+
+===== check_nav_safety_v23 =====
+✅ E1 SAFE_ROUTES＝legacy／v1～v5、旗標同 mobaSafeRouteV23；career.v23／balanceTool.v23 用 v5；v1～v4 版的同一規則集仍通過 validateRuleset；引擎：v5 ⇒ _navSafetyV23 與 _quietPocketV23 皆 true 且有新計數，v4 ⇒ 只有 _navSafetyV23，v3 ⇒ 兩者皆 false
+✅ E2 整場雜湊（工具 AB Seed 93067）："v2"、"v3" 規則集＝改動前的批次紀錄；v4 引擎關掉 _navSafetyV23 ⇒ 與 "v3" 相同（新行為只經由這個旗標）　{"v2":"950ea004c99e2ed8","v3":"fe3041e804a543ef","v4FlagOff":"fe3041e804a543ef"}
+✅ E3 "v4" 整場雜湊＝登記值，而且與 "v3" 不同（可區分）；同一個 Seed 重跑相同（決定性）　{"v4":"76717b3212b0430d","again":"76717b3212b0430d","want":"76717b3212b0430d"}
+✅ E4 生涯中素質 Seed 97003：v5 引擎關掉 _quietPocketV23 ⇒ 與 v4 驗證批次的紀錄相同（新行為只經由這個旗標）；"v5" 整場雜湊＝登記值、與 v4 不同、重跑相同　{"v4":"e5d8a1b1adf09370","wantV4":"e5d8a1b1adf09370","v5":"b0e96a457e61dd6a","again":"b0e96a457e61dd6a","wantV5":"b0e96a457e61dd6a"}
+✅ U1 門牙塔存亡不對稱時，落在活著的門牙塔碰撞圓內的點：舊鏡射會原樣回傳不可走的點（缺陷重現）；標了 navMirrorV2 ⇒ 投影結果全部可走　{"tried":32,"oldBad":16,"newBad":0}
+✅ U2 修正後的投影在 180° 鏡射下等變（鏡像點＋鏡像建築狀態 ⇒ 鏡像結果）　{"mirrorBad":0}
+✅ U3 Seed 93079 第 746 秒的落點（251.62, 88.40）：舊 ⇒ 原樣回傳、不可走；修正 ⇒ 可走，位移 < 2　{"old":{"x":251.6197527147571,"y":88.4027781677444},"fixed":{"x":252.15008280064703,"y":88.93310825363432}}
+✅ U4 尋路：活著的紅方門牙塔（藍方對應的那座已倒）——舊鏡射的路線穿過它的碰撞圓，修正後一格都不穿　{"routes":8,"oldHit":34,"newHit":0}
+✅ U5 雙方門牙塔狀態相同時，標不標 navMirrorV2 的投影結果逐位元相同（修正只影響不對稱局面）　{"n":288,"diff":0}
+✅ U6 前提：口袋那一點在兩座塔的危險圓外，而且帶著所有危險圓求不到回家的路（被包住）　{"pocket":{"x":71.67649658880441,"y":185.2260545791293}}
+✅ U7 撤退、在敵塔靠敵方基地那一側的射程內：v3 往外推（離家更遠，進口袋）；v4 不用那個出口（radialSkipped），下一個路點比目前位置更靠近家　{"v3":{"x":71.67649658880441,"y":185.2260545791293},"v4":{"x":261,"y":65}}
+✅ U8 撤退、在塔的回家側：本來就在離開 ⇒ 照舊（不計 radialSkipped、不走穿出路線）
+✅ U9 不在撤退：徑向退出與 v3 相同（v4 只改撤退）
+✅ U10 被包住的撤退：v3 退回原目標（blockedFallback）；v4 走穿出路線（blockedCross、不計 blockedFallback），整條路線只穿過一座塔的射程，而且選的是往回家方向的那一座（不為了少 1 格射程多繞 55 格）　{"crossed":["blue_top_1"],"len":196,"first":{"x":73,"y":184}}
+✅ U11 從口袋照 v4 的路點走：離開得了（所有危險圓之外、比口袋離家近 25 以上），確實穿過射程（≥ 1 tick）但時間 ≤ 穿過一座塔直徑所需的 1.5 倍，沒有來回　{"ticks":10,"ticksIn":4,"back":0,"limit":13}
+✅ U13 v5、口袋安靜（敵方英雄都在回城啟動距離外）：撤退的人在塔的敵方基地側 ⇒ 照 v3 退到射程外（pocketExit，不計 radialSkipped）　{"q1":{"x":71.67649658880441,"y":185.2260545791293},"rr":16.799999999999997}
+✅ U14 v5、口袋安靜、被危險圓包住 ⇒ 原地等（pocketHold；不穿塔、不計 blockedFallback／blockedCross），結果快取（第二次不重算）
+✅ U15 v5、正在口袋裡等時敵方英雄靠近（回城啟動距離內）⇒ 立刻改成穿出路線（blockedCross），不等快取到期　{"q3":{"x":73,"y":184}}
+✅ U16 v5、出口那一側有敵方英雄 ⇒ 不退進口袋（radialSkipped，同 v4），下一個路點比目前位置更靠近家
+✅ U17 規則集沒有回城引導 ⇒ 一律當成有威脅（＝v4 行為，不會在口袋裡等不到回城）
+✅ U12 引擎 _navTeleport（藍方門牙塔 0 已倒、落點在紅方門牙塔 0 的碰撞圓內）：v4 落在可走點；關掉旗標 ⇒ 落在不可走點（缺陷重現）　{"v4":true,"v3":false}
+✅ B1 撤退中求不到安全路線、退回直線回家（blockedFallback）：v3 ≥ 5 次，v5 ≤ v3 的 20%　{"v3":[3,3,2,1,2],"v5":[0,0,0,0,0],"cross":0,"radialSkipped":10,"pocketExit":29,"pocketHold":14}
+✅ B2 座標不可走：v3 在 Seed 93079 重現（≥ 1 tick），v5 全部 0　{"v3":[0,0,0,0,2],"v5":[0,0,0,0,0]}
+✅ B3 撤退中被塔打中的次數沒有變多：v5 ≤ v3 × 1.1（5 場合計）　{"v3":346,"v5":327}
+✅ P1 模擬每 tick 成本：v5 ≤ v3 的 1.5 倍（寬鬆上限；量測有雜訊）　{"v3":1.796,"v5":1.84}
+
+check_nav_safety_v23：25/25 PASS
+
+===== check_tower_edge_fix_v23 =====
+✅ E1 SAFE_ROUTES 含 v3、旗標同 mobaSafeRouteV23；v3 版的 career.v23 規則集通過 validateRuleset；引擎：v3 ⇒ _edgeRedecideV23 true、_navSafetyV23 false 且有新計數，v2 ⇒ false 且沒有
+✅ E2 v3 引擎在第一個 tick 前關掉 _edgeRedecideV23 ⇒ 與 v2 小修前的雜湊相同（新行為只經由這個旗標）　{"got":"825664b7105d0aa7","want":"825664b7105d0aa7"}
+✅ E3 v3 逐 tick 雜湊（10 分鐘）＝登記值：Seed 11 v2.jungle_invasion、Seed 13 classic.m7　{"got":["065d18fd5cc6e68a","e49ee17d79766015"],"want":["065d18fd5cc6e68a","e49ee17d79766015"]}
+✅ U1 安全回血：沒有受傷、沒有敵人，脫戰回復估計 ≤ 8 秒就回到進塔門檻 ⇒ 在出口等（記為回血等待）　{"r":{"x":213.72314767969715,"y":107.51070296395116},"intent":"塔邊等待時機"}
+✅ U2 安全但回血太慢（估計 > 8 秒）、血量低於回場門檻 ⇒ 撤退：承諾解除、下一 tick 進入撤退
+✅ U3 回血太慢、但血量已高於回場門檻 ⇒ 不撤退，退回己方兵線　{"r":{"x":212.72314767969715,"y":159.01070296395116}}
+✅ U4 持續受傷（等待中從最高血量掉 ≥ 8%、1.5 秒內還在受傷）、低於回場門檻 ⇒ 撤退
+✅ U5 持續受傷、血量仍高 ⇒ 不撤退，離開被消耗的位置、退回己方兵線　{"r":{"x":212.72314767969715,"y":159.01070296395116}}
+✅ U6 敵方威脅（10 單位內敵多於我）、低於回場門檻 ⇒ 撤退
+✅ U7 敵方威脅、血量高 ⇒ 退回己方兵線
+✅ U8 身邊敵我人數相同不算威脅；血量足夠、己方兵線即將抵達 ⇒ 等兵線
+✅ U9 血量足夠、己方兵線還很遠（理由是沒兵線、有人守塔）⇒ 退回己方兵線（不在出口乾等）
+✅ U10 等待上限（12 秒）到期：即使兵線即將抵達也不再等 ⇒ 退回己方兵線
+✅ U11 退回兵線中、己方小兵已進入危險半徑（兵線正在進塔）⇒ 改在出口等，不跟著穿進塔下
+✅ U12 放行條件沿用 v2：塔區允許且決策層沒有退的理由 ⇒ 解除承諾、照原任務進塔（退回兵線中也一樣）
+✅ U13 撤退在下一 tick 套用；超過 1 秒的舊標記（例如中間陣亡）不套用並清除　{"applied":true,"ret2":false}
+✅ B1 三個重現 Seed：v2 每個都有 ≥ 20 秒的塔邊等待，v3 一次都沒有（含退回兵線也沒有連續 ≥ 20 秒）　{"v2":[3,3,3],"v3":[[0,0],[0,0],[0,0]]}
+✅ B2 等待中被消耗（從最高血量掉 ≥ 25%）：v3 ≤ v2　{"v2":[2,1,2],"v3":[0,0,0]}
+✅ B3 決定性：v3 同一個 Seed 重跑，逐 tick 雜湊相同　["fe3041e804a543ef","fe3041e804a543ef"]
+✅ P1 模擬每 tick 成本：v3 ≤ v2 的 1.5 倍（寬鬆上限；量測有雜訊）　{"v2":1.779,"v3":1.741}
+
+check_tower_edge_fix_v23：20/20 PASS
+
+===== check_tower_edge_v23 =====
+✅ E1 safeRoute 合法值＝legacy／v1～v5；career.v23、balanceTool.v23 用 v5（導航與移動安全之後）；v1、v2 版的同一規則集仍通過 validateRuleset
+✅ E2 v1：塔邊決策旗標 false、整場 0 次出口計算、routeObs 沒有新欄位；v2：旗標 true　{"calls1":0,"edge2":true,"redecide2":false}
+✅ E3 balanceTool.v20 v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"73badd362041a8a9","want":"73badd362041a8a9"}
+✅ E3 balanceTool.v20 classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"594f765123b96931","want":"594f765123b96931"}
+✅ E3 balanceTool.v22 v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"3d5946f21282f435","want":"3d5946f21282f435"}
+✅ E3 balanceTool.v22 classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"3efc3bc5ddb6afee","want":"3efc3bc5ddb6afee"}
+✅ E3 balanceTool.v23（safeRoute v1） v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"6c8d53424206db0e","want":"6c8d53424206db0e"}
+✅ E3 balanceTool.v23（safeRoute v1） classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"0ef6e58c005d8030","want":"0ef6e58c005d8030"}
+✅ E3 balanceTool.v23（safeRoute v2） v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"825664b7105d0aa7","want":"825664b7105d0aa7"}
+✅ E3 balanceTool.v23（safeRoute v2） classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"6e649c69855673fa","want":"6e649c69855673fa"}
+✅ U1 出口幾何：射程內 12 個方向的可走點（紅藍各自的敵塔）⇒ 出口在危險半徑外、可走、直線走得到、不在別座敵塔的危險半徑內　{"tried":254,"good":250,"none":4,"bad":[]}
+✅ U2 紅藍鏡射：鏡像位置對鏡像塔 ⇒ 出口互為鏡像（最大誤差 < 1.0）　{"pairs":125,"worst":0}
+✅ U3 承諾期內、目標在危險半徑內、進塔沒有理由 ⇒ 停在出口，而且承諾延長　{"h1":{"x":242.72314767969715,"y":85.41070296395117}}
+✅ U4 塔區判定允許、決策層也沒有退的理由 ⇒ 解除承諾、照原目標（合理推塔／越塔不被禁止）
+✅ U5 塔區判定允許、但決策層對同一座塔仍有退的理由 ⇒ 不解除（兩層都同意才放行）
+✅ U6 承諾到期 ⇒ 解除、照原目標
+✅ U7 目標在危險半徑外 ⇒ 不改、承諾保留
+✅ U8 求不到路、不在撤退 ⇒ 沿直線停在危險圓外（不穿塔），且比原地更靠近目的地　{"s1":{"x":85.86180628670104,"y":265.13819371329896},"d":23}
+✅ U9 求不到路、撤退中 ⇒ 照舊走原目標（次數記在 routeObs.blockedFallback）
+✅ B1 原地挨打（避塔中、沒移動、被塔打中）：v2 ≤ v1 的 10%（前提 v1 ≥ 20）　{"v1":46,"v2":0}
+✅ B2 同一座塔擋下後 8 秒內又被同一座塔打中：v2 ≤ v1 的 30%（前提 v1 ≥ 100）　{"v1":432,"v2":64}
+✅ B3 塔邊乒乓（扣掉己方小兵扛塔的推線進出）：v2 ≤ v1 的 75%　{"v1":48,"v2":29,"v1All":96,"v2All":77}
+✅ B4 藍紅各自都改善（原地挨打＋同塔再打中）　[[271,22],[207,42]]
+✅ B5 被塔擊殺沒有回升：v2 ≤ v1＋1　{"v1":2,"v2":0}
+✅ B6 總陣亡沒有變多：v2 ≤ v1 × 1.1　{"v1":12,"v2":9}
+✅ B7 不過度保守：推掉的塔 v2 ≥ v1 × 0.9、Gank 出發 v2 ≥ v1 × 0.9　{"towers":[23,27],"gank":[160,185]}
+✅ B8 不卡在塔邊：連續停在出口 ≥ 20 秒的次數 ≤ 每場 0.5 次　{"longHold":4,"matches":20}
+✅ B9 決定性：v2 同一個 Seed 重跑，逐 tick 雜湊相同　["825664b7105d0aa7","825664b7105d0aa7"]
+✅ P1 模擬每 tick 成本：v2 ≤ v1 的 1.5 倍　{"v1":1.586,"v2":1.532}
+
+towerEdge v23 Gate：29/29 PASS
+
+===== check_safe_route_v23 =====
+✅ I1 career.v20 沒有 safeRoute 鍵
+✅ I1 challenge.v20 沒有 safeRoute 鍵
+✅ I1 balanceTool.v20 沒有 safeRoute 鍵
+✅ I1 career.v21 沒有 safeRoute 鍵
+✅ I1 balanceTool.v21 沒有 safeRoute 鍵
+✅ I1 challenge.v21 沒有 safeRoute 鍵
+✅ I1 career.v22 沒有 safeRoute 鍵
+✅ I1 balanceTool.v22 沒有 safeRoute 鍵
+✅ I2 career.v23＝career.v22 逐欄相同，只多 safeRoute "v5"、新的 id 與 simVersion v23、一個旗標　{"extra":["mobaSafeRouteV23"]}
+✅ I3 career.v23 通過 validateRuleset　[]
+✅ I2 balanceTool.v23＝balanceTool.v22 逐欄相同，只多 safeRoute "v5"、新的 id 與 simVersion v23　{"extra":[]}
+✅ I3 balanceTool.v23 通過 validateRuleset　[]
+✅ I4 validateRuleset 擋下未知的 safeRoute 值、也擋下沒列 mobaSafeRouteV23 的正式規則集
+✅ I5 mobaSafeRouteV23 預設關閉；其他 v21／v22 旗標也還是關閉
+✅ I6 解析不串線：全關→v20、只開 v23 旗標→v20、director＋v23→v21、director＋jungle→v22、三個都開→v23　["career.v20","career.v20","career.v21","career.v22","career.v23"]
+✅ I7 challenge 模式不受 v23 旗標影響
+✅ I8 引擎旗標：v20／v21／v22 的 safeRoute 與塔邊決策都是 false、整場 0 次呼叫、沒有 routeObs；v23 兩者皆 true 且有呼叫　{"balanceTool.v20":{"on":false,"edge":false,"calls":0,"obs":false},"balanceTool.v21":{"on":false,"edge":false,"calls":0,"obs":false},"balanceTool.v22":{"on":false,"edge":false,"calls":0,"obs":false},"balanceTool.v23":{"on":true,"edge":true,"call
+✅ I9 findPath 不傳 avoid（或傳 null／空陣列）＝舊結果逐點相同
+✅ G1 重現案例的直線確實穿過藍方塔的危險圓（前提）　[{"x":153.8,"y":176.2}]
+✅ G2 穿越 ⇒ 換成路點，且「目前位置 → 路點」不再穿過任何危險圓、路點可走　{"x":162,"y":198}
+✅ G3 目的地在塔的危險圓內（有意進塔）⇒ 不改
+✅ G4 在圓內、朝塔心方向走 ⇒ 徑向退出（路點在危險圓外，且比現在離塔更遠）　{"radialOk":true}
+✅ G5 在圓內、本來就在離開 ⇒ 不改（或至少不往塔心走）
+✅ G6 己方小兵扛塔：非撤退的路過不繞、撤退中照樣繞　{"rNo":{"x":167,"y":126},"rRet":{"x":162,"y":198}}
+✅ G7 紅藍鏡射：鏡像位置與鏡像目的地 ⇒ 路點互為鏡像（誤差 < 0.5）　{"red":{"x":162,"y":198},"blue":{"x":168,"y":132},"mirrorOfRed":{"x":168,"y":132}}
+✅ B0 負向對照：v22 重現案例（seed 17 紅方打野）在 75 秒內陣亡　{"died":70,"enteredAfterInvade":0}
+✅ B1 v23 同一場：紅方打野 120 秒內沒有陣亡、入侵結束後一次都沒進敵塔射程　{"died":null,"enteredAfterInvade":0}
+✅ B2 10 場雙方入侵（10 分鐘）：塔收頭 v23 ≤ v22 的 30%　{"v22":{"blue":6,"red":4},"v23":{"blue":0,"red":0}}
+✅ B3 撤退時走進敵塔射程：v23 ≤ v22 的 30%　{"v22":{"blue":5,"red":4},"v23":{"blue":1,"red":0}}
+✅ B4 藍紅各自都改善（不是只修好一邊）　{"v22":[{"blue":6,"red":4},{"blue":5,"red":4}],"v23":[{"blue":0,"red":0},{"blue":1,"red":0}]}
+✅ B5 總陣亡沒有變多（不是把死亡換到別處）　{"v22":13,"v23":4}
+✅ B6 決定性：v23 同一個 Seed 重跑，逐 tick 座標／血量雜湊相同　["1062d8b54ac039c4","1062d8b54ac039c4"]
+✅ B7 模擬每 tick 成本：v23 ≤ v22 的 1.8 倍　{"v22":1.418,"v23":1.582}
+
+safeRoute v23 Gate：33/33 PASS
+
+===== check_tactical_director_3c =====
+✅ S1 剝註解後的引擎沒有直接讀 this.tk／this.tid（整份掃、可跨行、含 (this)／解構）：出現處恰好＝允許清單（0 筆，即完全沒有）
+✅ S1d 屬性記號計數（.tk／.tid／"tk"／"tid"，不論前面是誰）恰好＝0（允許清單 0 筆）：抓自我別名與 Reflect.get　0
+✅ S1b 逐字樣式 this.tk[ this.tk. this.tk?. this.tid[ this.tid. this.tid?. 在剝註解後的引擎裡一次都沒有
+✅ S1c 允許清單為空（不留死例外），而且 configureMatch 沒有 this.tk／this.tid 的指派
+✅ S2 Director 只建立一次（configureMatch 內）；this.director 只在建構子（null）與 configureMatch 被指派
+✅ S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在收到時原樣轉交 Director（轉換只在 Director 做）
+✅ S2b _tidOf／_tidPhase 是一行委派給 Director
+✅ S2c 每一個 knobs 讀取點在未啟用戰術時仍回 null（`this.tacticOn ? this.director.knobs(…) : null`；configureMatch 內那一處除外）
+✅ S3 戰術階段界線（480／960 及其等價寫法：480.0、8 * 60、16 * 60、4.8e2、0x1e0…）只住在 Director：剝註解後引擎 0 次、Director 恰好 480 與 960 各 1 次　引擎 []、Director [480,960]
+✅ S6 引擎（剝註解）不呼叫 Director 的 directive()——check_tactical_directive_3c B2（契約不在語意清單）的前提
+✅ S7 每時期方針的挑選只住在 Director：剝註解後的引擎沒有 phases 索引、phases 只在 configureMatch 原樣轉交（4 次）、.phase( 呼叫點＝允許清單（_tidPhase 1 處）　索引 0、phases 記號 4、.phase( [_tidPhase() { return this.director.phase(this.t); }]
+✅ S7b Director 自己確實做每時期挑選（core.v1 以 phase(t) 查表；static 不看 phases）
+✅ S4 引擎 import Director；Director 在 SIMULATION_SEMANTICS_FILES
+✅ S5 Director 本身不讀 ruleset（C2 只有 static）、不 import 引擎、不用 Math.random／Date
+✅ N1 植入 `const x = this.tk[side];` ⇒ 抓到
+✅ N2 植入 `const y = this.tid?.blue;` ⇒ 抓到
+✅ N3 植入 `const { tk } = this;` ⇒ 抓到
+✅ N4 植入 `const z = this["tid"];` ⇒ 抓到
+✅ N5 只在註解裡（`// this.tk[side]`、`/* this.tid.blue */`）⇒ 不抓
+✅ N6 `this.tidObs` 不是 this.tid（字界）⇒ 不抓
+✅ N0 對照：未植入時三個檢查都綠（singleSourceOk／phaseOk／directiveOk）
+✅ N8 多行解構 `const {\n tk,\n} = this` ⇒ 單一讀取來源檢查轉紅
+✅ N9 自我別名 `const self = this; self.tk` ⇒ 單一讀取來源檢查轉紅
+✅ N10 括號 `(this).tk` ⇒ 單一讀取來源檢查轉紅
+✅ N11 `Reflect.get(this, 'tk')` ⇒ 單一讀取來源檢查轉紅
+✅ N12 點前換行 `this\n  .tk` ⇒ 單一讀取來源檢查轉紅
+✅ N13 `this[k]`（k = "tid"） ⇒ 單一讀取來源檢查轉紅
+✅ N14 多行解構右邊不是 this（`= self`） ⇒ 單一讀取來源檢查轉紅
+✅ N15 `480.0` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N16 `8 * 60` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N17 `16*60` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N18 `60 * 16` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N19 `4.8e2` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N20 `0x3c0` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N7 `480` 植回引擎 ⇒ 階段界線檢查（S3）轉紅
+✅ N21 引擎呼叫 `this.director.directive("blue", this.t)` ⇒ S6 轉紅
+✅ N22 引擎呼叫 `this.director["directive"](…)` ⇒ S6 轉紅
+✅ N24 引擎植入 `const K = this._ph.blue[this.director.phase(this.t)].knobs;`（引擎自己依時期挑） ⇒ S7 轉紅
+✅ N25 引擎植入 `return phases[1];` ⇒ S7 轉紅
+✅ N26 引擎植入 `return this._p.phases?.[2];` ⇒ S7 轉紅
+✅ N27 對照：只在註解裡的 `phases[1]`、`this.director.phase(t)` ⇒ S7 不紅
+✅ N23 對照：只在註解裡的 `.directive(`、`480`、`self.tk` ⇒ 三個檢查都不紅
+✅ B1 沒有 phases ⇒ mode＝static；TACTICAL_DIRECTOR_MODES＝[static, core.v1]（Director 轉出的就是契約 matchRuleset.js 的同一個物件，不是第二份定義）；Director 物件凍結
+✅ B2 knobs(side) 回傳傳入的**同一個參照**（藍／紅分開，不互串）
+✅ B2b knobs 物件不被凍結、不被改（static 不複製也不碰）
+✅ B3 identity(side) 回傳傳入的同一個參照
+✅ B4 identityOfKnobs：藍 knobs ⇒ 藍 identity、紅 ⇒ 紅、別的物件／null ⇒ null（以參照比對：內容相同的複本也是 null）
+✅ B5 identity 關閉（null）⇒ identity(side)、identityOfKnobs 一律 null；hasIdentity＝false；knobs 照常
+✅ B5b 只有一側有 identity ⇒ 另一側 null（＝舊式 `identity.red ?? null`）
+✅ B5c 兩側傳同一個 knobs 物件 ⇒ identityOfKnobs 回藍方（與舊式 `K === tk.blue ? … : K === tk.red ? …` 同序；C3 改成顯式 side 前不得改）
+✅ B6 phase 邊界：0→0、479.9→0、480→1、959.9→1、960→2、3000→2　0,0,1,1,2,2
+✅ B7 directive 通過 validateTacticalDirective、schema＝TacticalDirective.v1、side／phase 正確
+✅ B8 directive 深凍結、不與 knobs／identity 共用參照、值相同
+✅ B8b directive 之後輸入仍未被凍結或改動
+✅ B8c identity 關閉 ⇒ directive.identity＝null 且仍有效；紅方 phase 2
+✅ B9 同樣的輸入建兩次 ⇒ 回答完全相同（沒有模組層級狀態）
+✅ B11 R-4（legacyMirror）：明寫 legacyMirror 與不傳相同——兩側都是傳入的同一個參照、不凍結；Director 的 laneFrame 欄位＝legacyMirror
+✅ B12 R-4（teamRelative）：藍方是傳入的同一個參照；紅方是另一個物件、每次呼叫同一參照、凍結；輸入不被凍結或改動
+✅ B13 R-4（teamRelative）：identity 照舊（identity(side)、identityOfKnobs(交給引擎的 knobs)）；複本 ⇒ null
+✅ B14 R-4（teamRelative）：directive 仍是設定的己方視角（knobs 內容＝傳入的紅方設定，不是轉換後的世界路名）
+✅ B15 未知的 laneFrame ⇒ 建立時丟 TypeError；laneFrame 值清單＝契約 matchRuleset.js 的同一個物件
+✅ B10 Director 從建立到所有回答都沒有呼叫 Math.random　0 次
+✅ E1 未 configureMatch ⇒ director＝null、tacticOn＝false；_tidOf 回 null
+✅ E1b configureMatch 沒有 blue／red（提前 return）⇒ director 仍是 null
+✅ E2 規則開＋identity：knobs("blue") 是傳入的同一個物件；紅方＝傳入的同一個物件；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 規則開＋identity：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 規則開＋identity：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E4 規則開＋identity：_tidPhase()＝舊式（0/479.9/480/959.9/960/2000）
+✅ E2 規則關：knobs("blue") 是傳入的同一個物件；紅方＝傳入的同一個物件；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 規則關：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 規則關：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E2 規則開、沒傳 identity：knobs("blue") 是傳入的同一個物件；紅方＝傳入的同一個物件；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 規則開、沒傳 identity：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 規則開、沒傳 identity：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E2 紅方 null（補中性）：knobs("blue") 是傳入的同一個物件；紅方＝中性 knobs（與 _neutralKnobs() 同值）；Director 的 knobs 與傳入的 tk 物件同參照（紅方 null 時為 Director 補的中性 knobs）
+✅ E3 紅方 null（補中性）：identityOfKnobs／_tidOf／hasIdentity＝舊式在傳入物件（tk／tid）上的值（4 種 K × 2 側）
+✅ E3b 紅方 null（補中性）：引擎實例上沒有舊的觀測欄位（e.tk／e.tid 皆 undefined）
+✅ E4 紅方 null（補中性）：_tidPhase()＝舊式（0/479.9/480/959.9/960/2000）
+✅ E5 Director 的任何呼叫都不消耗 rng／rng2（同 seed 兩台引擎之後的序列相同）
+✅ E6 tidObs 在 identity 接線時建立（＝舊的 `if (this.tid)`）
+✅ C1 core.v1 各時期物件不同：目前時期命中 ⇒ 該時期 identity；其他時期的 knobs ⇒ 建立它的那個時期的 identity（不是 null）　ib0/ib1/ir2 ｜ ib0/ib1/ir2 ｜ ib0/ib1/ir2
+✅ C1b 不是任何時期的物件（含內容相同的複本）、null ⇒ null
+✅ C2 目前時期優先：X＝藍 early＝紅 mid ⇒ t=500 回 ir1（目前時期的紅方），t=100 回 ib0（目前時期的藍方），t=1500 回 ib0（對照表，先登記的藍方 early）　ib0/ir1/ib0
+✅ C3 identity 未接線 ⇒ 任何時期、任何物件都是 null（對照表不會繞過「未接線」）
+✅ C3b teamRelative：前期拿到的紅方（轉換後）knobs 在後期問 ⇒ 紅方 early identity；設定的原物件（未轉換）不在表內 ⇒ null
+✅ C4 R-4：三個時期共用同一份 ⇒ 任何 t 的 identityOfKnobs／knobs 與 static 逐參照相同
+✅ C5 引擎不把 knobs／identity 快取進狀態：knobs 只在 `const K = …director.knobs(…)` 讀、identity 只經 `const <名> = this._tidOf(…)`，那些名稱不出現在屬性指派／物件值／push／set
+✅ C6 this.t 只在建構子（= 0）與 tick（+= dt）寫入；tick 在 `this.t += dt` 之前不讀 Director ⇒ 同一 tick 內時期固定　this.t = 0; this.over = false; this.winner = null; ｜ this.t += dt;
+✅ CN1 植入 `this._kc = this.director.knobs("blue");` ⇒ C5 轉紅
+✅ CN2 植入 `const K = this.director.knobs(side); this._tac.blue.K = K;` ⇒ C5 轉紅
+✅ CN3 植入 `const I = this._tidOf(side); this._memo = { id: I };` ⇒ C5 轉紅
+✅ CN3b 植入物件簡寫 `this._memo = { K };` ⇒ C5 轉紅
+✅ CN3c 植入三元 `this._kk = side ? K : null;` ⇒ C5 轉紅
+✅ CN3d 植入陣列 `this._ks = [K];`、`Object.assign(this._o, K)` ⇒ C5 轉紅
+✅ CN3e 植入 `const I = this.director.identityOfKnobs(K); this._m = I;` ⇒ C5 轉紅（identityOfKnobs 的結果也被追蹤）
+✅ CN4 植入 `this.t = 5;` ⇒ C6 轉紅
+✅ CN5 對照：只在註解裡的 `this._kc = this.director.knobs("blue")`、`this.t = 5` ⇒ C5／C6 不紅
+
+Tactical Director 3c：97/97 PASS
+
+===== build =====
+[33m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 24.86s[39m

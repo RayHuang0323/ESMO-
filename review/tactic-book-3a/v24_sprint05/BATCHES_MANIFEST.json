@@ -1,0 +1,590 @@
+{
+ "note": "raw batches kept outside the repo",
+ "dirs": {
+  "calibration_round1": {
+   "dir": "C:/Users/ifikn/esmo-measure/v24-sprint05-cal-98201",
+   "totalBytes": 27619988,
+   "files": {
+    "AB_1.json": {
+     "sha256": "f65829967b6a7d3efa6bff21be12c70520216dec0940ec55eaf8efa70744aedf",
+     "bytes": 1591159,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98301,
+     "last": 98319,
+     "wallSec": 33
+    },
+    "AB_2.json": {
+     "sha256": "b631017ef9fd6cdc24f57ddca972bfb9c5f26a499ceadf72cf5e0414c70e6ec3",
+     "bytes": 1556222,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98321,
+     "last": 98339,
+     "wallSec": 35
+    },
+    "AB_3.json": {
+     "sha256": "3cd1424885c03a6c252c7ad694ba970c5362b5c1b33b993abec28f374bfc6e91",
+     "bytes": 776052,
+     "gitHead": "aa45009b",
+     "seeds": 5,
+     "first": 98341,
+     "last": 98349,
+     "wallSec": 17
+    },
+    "BA_1.json": {
+     "sha256": "2cd4b079875d45962d7120757ce8758b4268806796daf197174a4c9e5b823cd4",
+     "bytes": 1558192,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98351,
+     "last": 98369,
+     "wallSec": 39
+    },
+    "BA_2.json": {
+     "sha256": "35b71a1aee54e7e628ccd5e534097ac13e838c059d98de1b0b950fa6ac558905",
+     "bytes": 1551708,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98371,
+     "last": 98389,
+     "wallSec": 33
+    },
+    "BA_3.json": {
+     "sha256": "ef0b5cc6b9e1b42c71759a2758ed03b923c64dd9fbc0e883f7f254a4910295fd",
+     "bytes": 781856,
+     "gitHead": "aa45009b",
+     "seeds": 5,
+     "first": 98391,
+     "last": 98399,
+     "wallSec": 17
+    },
+    "career_high_1.json": {
+     "sha256": "159f981e2fa1bd827e2784b72291a06d5b5290e2d770f8fa84aff9fae8cd4c08",
+     "bytes": 1231164,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 36
+    },
+    "career_high_2.json": {
+     "sha256": "2e77fb83898fe2902bdc09cae753b1dab117982564fc022ddf81e818a6c89b24",
+     "bytes": 1198354,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 34
+    },
+    "career_high_3.json": {
+     "sha256": "d80e3f0b5fe2626cebf47c513bb75877ae818e3ac7f1f331941fcc70b115306e",
+     "bytes": 1216143,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 37
+    },
+    "career_low_1.json": {
+     "sha256": "8c69ffe26669cb5fef2d798cd4be5f9c534525525388cc8ac61069b766f836c8",
+     "bytes": 1160393,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 44
+    },
+    "career_low_2.json": {
+     "sha256": "08639f18ac1fce503e5367621d14cc621afd10a08d7a47750a65f7af0b013573",
+     "bytes": 1204544,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 41
+    },
+    "career_low_3.json": {
+     "sha256": "36827250a22b61629b8440309e03093b465febee8c81f1817869785ef8580086",
+     "bytes": 1190444,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 39
+    },
+    "career_mid_1.json": {
+     "sha256": "652c7a398da49ecdb25d213afb4f0f4686a5249d2d18c747d090bdb1815d2154",
+     "bytes": 1187932,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 45
+    },
+    "career_mid_2.json": {
+     "sha256": "87cb196eb0171a9c1e8179315ceb64ae581c5038fe81e35e296e5d2d4b7a4c20",
+     "bytes": 1220358,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 36
+    },
+    "career_mid_3.json": {
+     "sha256": "942a4d05dff0ad65f75865f9402235190bf752df897ef300d748c48e7e87a787",
+     "bytes": 1192709,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 38
+    },
+    "career_mid_4.json": {
+     "sha256": "35b3aaf031ec631a038d8453bf36db91d53065db0034749e7c2410f94cc0bf00",
+     "bytes": 1202216,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98261,
+     "last": 98279,
+     "wallSec": 33
+    },
+    "inv_1.json": {
+     "sha256": "0592378fad5b45472abfc9a8911f0ea60ccbd005b08aa8ec505d92bc6ffb736a",
+     "bytes": 1570681,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 31
+    },
+    "inv_2.json": {
+     "sha256": "44ed15bf896d3ba58b79ac9ed2e2dafeaa6c4b5a296722842f3132c720e516a6",
+     "bytes": 1556090,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 34
+    },
+    "inv_3.json": {
+     "sha256": "f431742dcc18edc5b5e901fdb17952c7799efd572bfc0e3b02a4bdc7933f3299",
+     "bytes": 1561195,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 36
+    },
+    "inv_4.json": {
+     "sha256": "92efc7faa6e16566aa8e461b959d5cddd08391fa32b4aa83da3b666a4f2ef590",
+     "bytes": 1568891,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98261,
+     "last": 98279,
+     "wallSec": 34
+    },
+    "inv_5.json": {
+     "sha256": "8dd3d203ef03b0389609b79b00f2e8cb95b71b1f59cd254d4a3e35f0dc09b66c",
+     "bytes": 1543685,
+     "gitHead": "aa45009b",
+     "seeds": 10,
+     "first": 98281,
+     "last": 98299,
+     "wallSec": 35
+    }
+   }
+  },
+  "calibration_round2": {
+   "dir": "C:/Users/ifikn/esmo-measure/v24-sprint05-cal2-98201",
+   "totalBytes": 28598834,
+   "files": {
+    "AB_1.json": {
+     "sha256": "81ce8780f3821b603e1df50306696ac973888272423ac812855511ef5eeb1169",
+     "bytes": 1647712,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98301,
+     "last": 98319,
+     "wallSec": 34
+    },
+    "AB_2.json": {
+     "sha256": "58a959b80c5be74d37af5d15dac611ab58ed4821137660560acfca249b4ea7c2",
+     "bytes": 1612233,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98321,
+     "last": 98339,
+     "wallSec": 36
+    },
+    "AB_3.json": {
+     "sha256": "1b544b183e73bac1addd8c5422bfc4248a6f89b24a55339968b868af098573a1",
+     "bytes": 804024,
+     "gitHead": "744b180e",
+     "seeds": 5,
+     "first": 98341,
+     "last": 98349,
+     "wallSec": 17
+    },
+    "BA_1.json": {
+     "sha256": "76f22802752d647b5f55ff2c9e79c3eb3dfdb3f424947c5ad86b6da6661656d1",
+     "bytes": 1614541,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98351,
+     "last": 98369,
+     "wallSec": 40
+    },
+    "BA_2.json": {
+     "sha256": "e9072e77799c51135ace9bc5608632936aca5e01fd2ef58a0d7ec4ff75943ad3",
+     "bytes": 1608081,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98371,
+     "last": 98389,
+     "wallSec": 34
+    },
+    "BA_3.json": {
+     "sha256": "b997fee896d677219f5259afa1d793bbc0f9d209955e9b37d7d1c138f8f12c67",
+     "bytes": 809853,
+     "gitHead": "744b180e",
+     "seeds": 5,
+     "first": 98391,
+     "last": 98399,
+     "wallSec": 17
+    },
+    "career_high_1.json": {
+     "sha256": "369c276090bb7c9768d94f0727338d74bcd97bb012d41ac3372af8e860b3fb5c",
+     "bytes": 1273955,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 36
+    },
+    "career_high_2.json": {
+     "sha256": "f5de832a5f6500169363bdcd03aea040cd908ffe998870445d3b92d2add2f4fc",
+     "bytes": 1240604,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 33
+    },
+    "career_high_3.json": {
+     "sha256": "8d64e7f5fd9feb8ccd4340ccb4ed6aaa3864b3fceafbd1e35cf728dc95c588b2",
+     "bytes": 1258941,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 35
+    },
+    "career_low_1.json": {
+     "sha256": "f0dcd4963cd72d572c2d8c85d57c0d1493fdcb3f0712dd897e322dae723f2c00",
+     "bytes": 1200613,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 43
+    },
+    "career_low_2.json": {
+     "sha256": "49770c2b023c723154da6e1ff30d10e453d7f5459b0ce1d173f4ee698a85ce81",
+     "bytes": 1246392,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 42
+    },
+    "career_low_3.json": {
+     "sha256": "987f9c962b1c385f77ef9ec0e520238dee1185d1d35a44939ecb8d36172973ba",
+     "bytes": 1231890,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 38
+    },
+    "career_mid_1.json": {
+     "sha256": "50de81d7cf547a440c568a7d8b7bfb337e99f58a7e01c29c740b1d95ed44c583",
+     "bytes": 1229298,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 42
+    },
+    "career_mid_2.json": {
+     "sha256": "5f3eb779cf0b89ad0f70da97d703ab5fb28bb1e5b0067102d6d3d6dbc3a7f908",
+     "bytes": 1262876,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 34
+    },
+    "career_mid_3.json": {
+     "sha256": "a927dfacc7a69a1eff54f2dea57fe8820199882970c1613bfd66125fbefb93c3",
+     "bytes": 1234373,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 38
+    },
+    "career_mid_4.json": {
+     "sha256": "00309739e722407081c750ebe16e6d215b7dda5c8b9fb855f4a938cd8a65aaa0",
+     "bytes": 1244257,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98261,
+     "last": 98279,
+     "wallSec": 33
+    },
+    "inv_1.json": {
+     "sha256": "52b7939ddf8f447d9dc566864536ad0cba91ee2040b6c6d2dbf5d580ccc9fea7",
+     "bytes": 1626615,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98201,
+     "last": 98219,
+     "wallSec": 31
+    },
+    "inv_2.json": {
+     "sha256": "97fed122ec2e3f00332cb233b64c1dcdf0ec116eadbad68bf2d94b385ffb6b76",
+     "bytes": 1612134,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98221,
+     "last": 98239,
+     "wallSec": 34
+    },
+    "inv_3.json": {
+     "sha256": "c31751ead45e095a015a2a593bc4bef2f4ea1b3d09b9605b197a5e031044e396",
+     "bytes": 1616217,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98241,
+     "last": 98259,
+     "wallSec": 35
+    },
+    "inv_4.json": {
+     "sha256": "d3ed842b660f66cfbd7ac4051dbb1a58a84b176dd54a5427968eb8c77bf132e2",
+     "bytes": 1624882,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98261,
+     "last": 98279,
+     "wallSec": 33
+    },
+    "inv_5.json": {
+     "sha256": "a0c34732cce6787f3d47fdf842f3613ee969b2c63ef0c7002c8f905f0b2042b4",
+     "bytes": 1599343,
+     "gitHead": "744b180e",
+     "seeds": 10,
+     "first": 98281,
+     "last": 98299,
+     "wallSec": 35
+    }
+   }
+  },
+  "validation": {
+   "dir": "C:/Users/ifikn/esmo-measure/v24-sprint05-val-98401",
+   "totalBytes": 28732795,
+   "files": {
+    "AB_1.json": {
+     "sha256": "8baed7f7ed84efc9bc6fd233a068b1a1209be6c9a6a9f6a8380da50dfed92060",
+     "bytes": 1590241,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98501,
+     "last": 98519,
+     "wallSec": 38
+    },
+    "AB_2.json": {
+     "sha256": "bbca720782a65f55a26af9b777efdea4f16537ce30084c6bbe4c832157f18466",
+     "bytes": 1625532,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98521,
+     "last": 98539,
+     "wallSec": 35
+    },
+    "AB_3.json": {
+     "sha256": "d73a19368054e1c67c77c6e90cf10423fe4af0e1e8492553799da8846135e49e",
+     "bytes": 804313,
+     "gitHead": "ece70408",
+     "seeds": 5,
+     "first": 98541,
+     "last": 98549,
+     "wallSec": 19
+    },
+    "BA_1.json": {
+     "sha256": "6423d8142aafa91a2c3f07344331706827e873556ab5fef2d5891261a96220d6",
+     "bytes": 1616798,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98551,
+     "last": 98569,
+     "wallSec": 36
+    },
+    "BA_2.json": {
+     "sha256": "17dc89fdd76350395c4da36fcb74c25aa4c572e8187e5633506c0410989c4cd9",
+     "bytes": 1615506,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98571,
+     "last": 98589,
+     "wallSec": 43
+    },
+    "BA_3.json": {
+     "sha256": "bdaf0b7badb2d9135fcaef38a914f22d1227074716f38cc1eb1cbbf2274f8923",
+     "bytes": 800079,
+     "gitHead": "ece70408",
+     "seeds": 5,
+     "first": 98591,
+     "last": 98599,
+     "wallSec": 16
+    },
+    "career_high_1.json": {
+     "sha256": "c982b45651f9374c1a8c984a15dd385cda3ca0878656889db1ae697af3d17a8b",
+     "bytes": 1305810,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98401,
+     "last": 98419,
+     "wallSec": 38
+    },
+    "career_high_2.json": {
+     "sha256": "9748d4bf05cf13b4b395b655a2481f0f921c82da8b847132c43b9b19701f8bdc",
+     "bytes": 1225338,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98421,
+     "last": 98439,
+     "wallSec": 37
+    },
+    "career_high_3.json": {
+     "sha256": "a9dcdbced7a3696346775b5438756561b9d4e8701d6eae72093755c5239b1034",
+     "bytes": 1299936,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98441,
+     "last": 98459,
+     "wallSec": 34
+    },
+    "career_low_1.json": {
+     "sha256": "86e4ae4a44ad53ec46ffdc8eaba131d70755fc9e6c46cd6875ffed70c84d8f58",
+     "bytes": 1260592,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98401,
+     "last": 98419,
+     "wallSec": 44
+    },
+    "career_low_2.json": {
+     "sha256": "039a84bf38fbe3785ccf1fe74d9f846c4f10cd396cf000b7e4910cf57cb4ef78",
+     "bytes": 1172396,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98421,
+     "last": 98439,
+     "wallSec": 40
+    },
+    "career_low_3.json": {
+     "sha256": "a75ca501adfe886411d919cedbde5951bdc503352eab9755b5688db92d37f3c6",
+     "bytes": 1291058,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98441,
+     "last": 98459,
+     "wallSec": 36
+    },
+    "career_mid_1.json": {
+     "sha256": "a7a820fb8915749082d7714a947df447d9ccbc9df3deabc604729429dc2e0c2e",
+     "bytes": 1305021,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98401,
+     "last": 98419,
+     "wallSec": 46
+    },
+    "career_mid_2.json": {
+     "sha256": "064ff04a68a6c4cd9857a344067f600cb9f0ea5dcd0053ca6471dcb2ad5dc04b",
+     "bytes": 1207619,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98421,
+     "last": 98439,
+     "wallSec": 41
+    },
+    "career_mid_3.json": {
+     "sha256": "9de32fd3db13eb177a28cabd8d8b6aa3067b31c8d62a820cbdf5ee0ee6325187",
+     "bytes": 1243236,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98441,
+     "last": 98459,
+     "wallSec": 42
+    },
+    "career_mid_4.json": {
+     "sha256": "d6db25f9a62f69ca435fe193e9a9892cb90ed30984ea14a7243575d098fd8989",
+     "bytes": 1248558,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98461,
+     "last": 98479,
+     "wallSec": 49
+    },
+    "inv_1.json": {
+     "sha256": "bc79781767a26260c740ed93cb0bcd65854eab750291951e6fa579253d03ecdb",
+     "bytes": 1624483,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98401,
+     "last": 98419,
+     "wallSec": 37
+    },
+    "inv_2.json": {
+     "sha256": "272a6aa3c5e0767f92756e8e7e4aad1ca770915c4c7c9f5e384433e2b2ca88cf",
+     "bytes": 1614862,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98421,
+     "last": 98439,
+     "wallSec": 36
+    },
+    "inv_3.json": {
+     "sha256": "96bd9ac39ca3d8a7c7715657c24809e213f93f856e897461d37221667e03739a",
+     "bytes": 1638523,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98441,
+     "last": 98459,
+     "wallSec": 33
+    },
+    "inv_4.json": {
+     "sha256": "0b91c01e0dd210387c911d92bef3b4e5241d8a2336da543bf29d1a28ba3456d7",
+     "bytes": 1634380,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98461,
+     "last": 98479,
+     "wallSec": 37
+    },
+    "inv_5.json": {
+     "sha256": "7b8b52c688ef879bae6b256885967808434003f0a37159d9cd6fe5cd61ab4dfb",
+     "bytes": 1608514,
+     "gitHead": "ece70408",
+     "seeds": 10,
+     "first": 98481,
+     "last": 98499,
+     "wallSec": 42
+    }
+   }
+  }
+ }
+}
