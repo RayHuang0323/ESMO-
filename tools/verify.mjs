@@ -33,7 +33,9 @@
 //   · 跑全部時只要有區段沒跑完／被中斷 ⇒ exit 2（**不允許 exit 0**）
 //   · 狀態檔記錄每段的 exit code 與輸出尾巴，未完成就是未完成
 // ============================================================================
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
+import { createHash as provHash } from "node:crypto";
+import { readFileSync as provRead } from "node:fs";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -223,10 +225,10 @@ const SEGMENTS = [
 const argv = process.argv.slice(2);
 // 查用法或拼錯參數不可默默展開全部長驗證／資料產出。
 if (argv.includes('--help')) {
-  console.log('用法：node tools/verify.mjs [--list] [--only=<id,...>] [--resume] [--timeout=<ms>]');
+  console.log('用法：node tools/verify.mjs [--list] [--only=<id,...>] [--resume] [--dry-run] [--trust-legacy-state] [--timeout=<ms>]');
   process.exit(0);
 }
-const unsupported = argv.filter(arg => !['--list','--resume'].includes(arg) && !/^--(only|timeout)=.+$/.test(arg));
+const unsupported = argv.filter(arg => !['--list','--resume','--dry-run','--trust-legacy-state'].includes(arg) && !/^--(only|timeout)=.+$/.test(arg));
 if (unsupported.length) {
   console.error(`不支援的參數：${unsupported.join(', ')}。請用 --help 查看用法；未啟動驗證。`);
   process.exit(2);
@@ -246,6 +248,43 @@ const saveState = (s) => {
   writeFileSync(STATE, JSON.stringify(s, null, 2), "utf8");
 };
 
+//  ── 出處戳記（provenance）：每次執行算一次，隨每段結果存成 `prov` ─────────
+//  --resume 只沿用「同一個 commit、同一個模擬指紋、工作樹乾淨」時記下的 PASS，
+//  避免程式改了之後還拿舊的 PASS 跳過（加法欄位，舊狀態檔照樣讀得進來）。
+const sha7 = (h) => (h ? String(h).slice(0, 7) : "none");
+const computeProv = async () => {
+  const git = (cmd) => { try { return execSync(cmd, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }); } catch { return null; } };
+  const head = git("git rev-parse HEAD");
+  const porcelain = git("git status --porcelain -- src tools");
+  let simVersion = null, simFingerprint = null;
+  try {
+    const m = await import(new URL("../src/platform/contracts/simulationVersion.js", import.meta.url));
+    simVersion = m.MOBA_SIMULATION_VERSION ?? null;
+    simFingerprint = m.SIMULATION_SEMANTICS_FINGERPRINTS?.[simVersion] ?? null;
+  } catch { /* 讀不到 ⇒ null，下面的比對會判成 stale */ }
+  //  工作樹不乾淨時記下「不乾淨的內容」的雜湊（已追蹤檔的 diff＋未追蹤檔的內容）：同一份未提交內容下中斷再 --resume 仍可沿用，內容一變就失效。
+  let dirtyHash = null;
+  if (porcelain !== null && porcelain.trim() !== "") {
+    const h = provHash("sha1");
+    h.update(git("git diff HEAD -- src tools") ?? "?");
+    for (const f of (git("git ls-files -o --exclude-standard -- src tools") ?? "").split("\n").filter(Boolean).sort()) {
+      h.update(f); try { h.update(provRead(resolve(ROOT, f))); } catch { h.update("?"); }
+    }
+    dirtyHash = h.digest("hex").slice(0, 16);
+  }
+  return { gitHead: head ? head.trim() : null, dirtySrc: porcelain === null ? true : porcelain.trim() !== "", dirtyHash, simVersion, simFingerprint };
+};
+const PROV = await computeProv();
+/** 回傳 null ＝可沿用；否則回傳 stale 的原因。 */
+const staleReason = (r) => {
+  const p = r?.prov;
+  if (!p) return "no provenance recorded";
+  if (p.dirtySrc || PROV.dirtySrc) { if (!(p.dirtySrc && PROV.dirtySrc && p.dirtyHash && p.dirtyHash === PROV.dirtyHash && p.gitHead === PROV.gitHead)) return "dirty tree changed"; }
+  if (!p.gitHead || !PROV.gitHead || p.gitHead !== PROV.gitHead) return `recorded at ${sha7(p.gitHead)}, now ${sha7(PROV.gitHead)}`;
+  if (!p.simFingerprint || !PROV.simFingerprint || p.simFingerprint !== PROV.simFingerprint) return `fingerprint ${p.simFingerprint ?? "none"} → ${PROV.simFingerprint ?? "none"}`;
+  return null;
+};
+
 if (flag("list")) {
   const st = loadState();
   console.log("區段清單（--only=<id>[,<id>...] 可指定單段或多段）\n");
@@ -253,8 +292,10 @@ if (flag("list")) {
     const r = st.runs?.[s.id];
     const mark = !r ? "  未執行" : r.status === "PASS" ? "✅ PASS " : r.status === "SKIP" ? "⏭ SKIP " : "❌ FAIL ";
     const when = r?.finishedAt ? `　${r.finishedAt.slice(0, 19).replace("T", " ")}　${(r.ms / 1000).toFixed(0)}s` : "";
-    console.log(`${mark} ${s.id.padEnd(20)} ${s.note}${when}`);
+    const prov = !r ? "" : !r.prov ? "　[no-prov]" : `　[${sha7(r.prov.gitHead)} ${staleReason(r) ? "stale" : "current"}]`;
+    console.log(`${mark} ${s.id.padEnd(20)} ${s.note}${when}${prov}`);
   }
+  console.log(`\n目前出處：HEAD ${sha7(PROV.gitHead)}${PROV.dirtySrc ? `（src/tools 有未提交變更 ${PROV.dirtyHash}）` : ""}　${PROV.simVersion ?? "?"} ${PROV.simFingerprint ?? "?"}`);
   console.log(`\n狀態檔：${STATE}`);
   process.exit(0);
 }
@@ -274,10 +315,30 @@ const resume = flag("resume");
 const timeoutMs = Number(val("timeout") ?? 0) || 45 * 60 * 1000;
 
 let queue = SEGMENTS.filter((s) => !wanted || wanted.includes(s.id));
+const dryRun = flag("dry-run");
+const trustLegacy = flag("trust-legacy-state");
+const why = {};
 if (resume) {
   const before = queue.length;
-  queue = queue.filter((s) => state.runs?.[s.id]?.status !== "PASS");
+  if (trustLegacy) console.log("⚠ --trust-legacy-state：沿用任何已記錄的 PASS，不檢查出處（commit／模擬指紋／工作樹）");
+  queue = queue.filter((s) => {
+    const r = state.runs?.[s.id];
+    if (r?.status !== "PASS") { why[s.id] = r ? `last ${r.status}` : "never run"; return true; }
+    if (trustLegacy) return false;
+    const reason = staleReason(r);
+    if (!reason) return false;
+    why[s.id] = `STALE PASS (${reason})`;
+    if (!dryRun) console.log(`↻ ${s.id.padEnd(20)} STALE PASS (${reason})`);
+    return true;
+  });
   console.log(`--resume：略過 ${before - queue.length} 個已通過的區段\n`);
+}
+
+if (dryRun) {
+  console.log(`--dry-run：不執行任何區段、不寫狀態檔。目前出處 HEAD ${sha7(PROV.gitHead)}${PROV.dirtySrc ? "（dirty）" : ""}　${PROV.simVersion ?? "?"} ${PROV.simFingerprint ?? "?"}`);
+  console.log(`將會執行 ${queue.length} 個區段：`);
+  for (const s of queue) console.log(`  ▶ ${s.id.padEnd(20)} ${why[s.id] ?? "selected"}`);
+  process.exit(0);
 }
 
 if (!queue.length) {
@@ -314,6 +375,7 @@ function runSegment(seg) {
         finishedAt: new Date().toISOString(),
         //  留下輸出尾巴：失敗時要看得出是斷言紅了還是被砍了
         tail: (out + err).split("\n").filter(Boolean).slice(-6).join("\n"),
+        prov: PROV,
       });
     });
   });

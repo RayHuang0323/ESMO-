@@ -664,6 +664,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  "v4" 的獨立驗證不通過（生涯被塔擊殺 +25.5%；review/tactic-book-3a/v23_nav_safety/RESULTS_v4.md），程式與證據保留。
   //  目前值＝再加上 safeRoute "v5"（口袋安靜時留在射程外回城、受威脅才穿塔；證據 review/tactic-book-3a/v23_nav_safety/）。
   //  "v1"～"v4" 的行為逐位元保留（check_tower_edge_v23 E3、check_tower_edge_fix_v23 E2／E3、check_nav_safety_v23 E2／E3／E4 釘住改動前錄下的雜湊）。
+  //  ★ 2026-11-14 Owner Review 決策 1：**v23（safeRoute "v5"）凍結**，作為 v24 的穩定基礎；尚未核准發布。
+  //  上面「v23 未凍結：語意檔再改就同版號重新登記」從這一天起不再適用：這一行的值不得再改，之後的語意改動全部進 moba-sim.v24 候選。
+  //  守門：tools/check_v23_freeze.mjs（凍結清單 review/tactic-book-3a/v23_freeze/FREEZE_MANIFEST.json，含指紋涵蓋不到的 22 支依賴檔）。
   "moba-sim.v23": "69237cce78edf2be",
 });
 
