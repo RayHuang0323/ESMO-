@@ -1,0 +1,82 @@
+[
+ {
+  "id": "D1-a",
+  "ok": true,
+  "detail": "auto 0.026 [-0.002,0.055]  allin -0.057 [-0.089,-0.026]"
+ },
+ {
+  "id": "D1-b",
+  "ok": true,
+  "detail": "eta−role {\"conservative\":-0.002,\"auto\":0.002,\"aggressive\":0,\"allin\":0}（gate ⑤ 另跑）"
+ },
+ {
+  "id": "D1-c",
+  "ok": true,
+  "detail": "auto no_leader 藍−紅 -0.042 [-0.082,-0.002]；0–90 秒血量<0.65 藍 0.075 紅 0.202"
+ },
+ {
+  "id": "D1-d",
+  "ok": true,
+  "detail": "入侵方 紅(BA) 0.431 vs 藍(AB) 0.38；被動方 紅(AB) 0.487 vs 藍(BA) 0.415"
+ },
+ {
+  "id": "D2-1",
+  "ok": true,
+  "detail": "conservative 0.305（校準 0.29，範圍 0.22–0.36）；auto 2.803（校準 2.708，範圍 2.03–3.39）；aggressive 3.635（校準 3.645，範圍 2.73–4.56）；allin 2.848（校準 2.905，範圍 2.18–3.63）"
+ },
+ {
+  "id": "D2-2",
+  "ok": true,
+  "detail": "conservative→auto 4.995 [4.784,5.206]；auto→aggressive 1.665 [1.38,1.95]"
+ },
+ {
+  "id": "D2-3",
+  "ok": true,
+  "detail": "auto L3 0.257／L0 0.497（上限 0.348）；aggressive L3 0.3／L0 0.484（上限 0.339）；allin L3 0.28／L0 0.459（上限 0.321）"
+ },
+ {
+  "id": "D2-4",
+  "ok": null,
+  "detail": "自動：L0 判出發時打野的任務 {\"default:farm\":0.541,\"objective_window\":0.253,\"default:lane\":0.055,\"invading\":0.05,\"default:gank\":0.036,\"local\":0.028,\"disengage\":0.008,\"initiative_siege\":0.007,\"team_call\":0.007,\"fight_join\":0.005,\"tower_fallback\":0.003,\"default:other\":0.003,\"chase\":0.003}"
+ },
+ {
+  "id": "D2-5",
+  "ok": null,
+  "detail": "亮旗：aggressive；conservative -0.02 [-0.155,0.115]；auto 0.14 [-0.153,0.433]；aggressive -0.52 [-0.82,-0.22]；allin -0.24 [-0.487,0.007]"
+ },
+ {
+  "id": "D2-integrity",
+  "ok": true,
+  "detail": "{\"arbErrors\":0,\"evalsMissingArb\":0,\"rowsMissingTimeline\":0}"
+ },
+ {
+  "id": "D3-1 career:mid",
+  "ok": true,
+  "detail": "對線↔推進 每英雄分鐘 3.631 → 1.509，Δ -2.122 [-2.424,-1.82]"
+ },
+ {
+  "id": "D3-1 tool",
+  "ok": true,
+  "detail": "對線↔推進 每英雄分鐘 3.489 → 1.811，Δ -1.678 [-1.982,-1.374]"
+ },
+ {
+  "id": "D3-2",
+  "ok": null,
+  "detail": "承諾改寫每場 off 0 → on 321.988；覆寫值 {\"off\":[false],\"on\":[true]}"
+ },
+ {
+  "id": "D3-3 all",
+  "ok": null,
+  "detail": "副作用旗：無｜時長 17.12→17.42 分 Δ 0.295 [-0.556,1.146]；卡住 Δ -0.312 [-0.725,0.1]；>35 分 0→0；最長 24.025→23.992；拆塔 Δ 0.35 [-0.439,1.139]；勝方改變 41/80"
+ },
+ {
+  "id": "D3-3 career:mid",
+  "ok": null,
+  "detail": "副作用旗：無｜時長 17.44→17.71 分 Δ 0.268 [-0.911,1.447]；卡住 Δ -0.575 [-1.246,0.096]；>35 分 0→0；最長 24.025→23.842；拆塔 Δ -0.1 [-1.287,1.087]；勝方改變 22/40"
+ },
+ {
+  "id": "D3-3 tool",
+  "ok": null,
+  "detail": "副作用旗：無｜時長 16.80→17.12 分 Δ 0.322 [-0.959,1.602]；卡住 Δ -0.05 [-0.546,0.446]；>35 分 0→0；最長 23.992→23.992；拆塔 Δ 0.8 [-0.272,1.872]；勝方改變 19/40"
+ }
+]

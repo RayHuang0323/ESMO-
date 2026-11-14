@@ -96,6 +96,14 @@ function layerMetrics(rs, P, layer, cooldown) {
   const intr = {}; for (const s of startsAll) if (s.intr) intr[s.intr] = (intr[s.intr] ?? 0) + 1;
   const reasons = {}; for (const x of perSide) for (const [k, v] of Object.entries(x.reasons)) reasons[k] = (reasons[k] ?? 0) + v;
   const sizes = {}; for (const s of startsAll) sizes[s.n] = (sizes[s.n] ?? 0) + 1;
+  //  分邊：每場每邊的平均原因碼次數與出發次數（看紅藍差在哪一層、哪個原因碼放大）
+  const bySide = {};
+  for (const S of SIDES) {
+    const xs = pm.map((m) => m[S]), n = xs.length || 1, rs = {};
+    for (const x of xs) for (const [k, v] of Object.entries(x.reasons)) rs[k] = (rs[k] ?? 0) + v;
+    bySide[S] = { startsPerMatch: r3(xs.reduce((s, x) => s + x.starts.length, 0) / n), goEvalsPerMatch: r3(xs.reduce((s, x) => s + x.goEvals, 0) / n),
+      reasonsPerMatch: Object.fromEntries(Object.entries(rs).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, r3(v / n)])) };
+  }
   return {
     goEvalsPerSideMatch: summ(perSide.map((x) => x.goEvals)),
     startsPerSideMatch: summ(perSide.map((x) => x.starts.length)),
@@ -104,7 +112,7 @@ function layerMetrics(rs, P, layer, cooldown) {
     buffShareOfStarts: share(startsAll.filter((s) => s.buff === 1).length, startsAll.length),
     sizeShare: Object.fromEntries(Object.entries(sizes).map(([k, v]) => [k, share(v, startsAll.length)])),
     holdCooldownPerSideMatch: layer === "L3" ? summ(perSide.map((x) => x.holdCd)) : null,
-    reasons,
+    reasons, bySide,
     _pm: pm,
   };
 }
