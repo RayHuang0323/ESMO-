@@ -35,7 +35,7 @@ export const CASES = [
   ["career.v21", "classic.m7", null, 17],
 ];
 
-function build(rs, tb, tr, seed) {
+export function build(rs, tb, tr, seed) {
   if (rs.startsWith("balanceTool")) {
     return configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, rs).e;
   }
@@ -49,8 +49,10 @@ function build(rs, tb, tr, seed) {
   return out.engine;
 }
 
+//  被 gate import 時不自動執行（check_layer_isolation_v21 只借用 CASES 與 build）
+const IS_MAIN = /pin_v21_stream\.mjs$/.test(process.argv[1] ?? "");
 const rows = [];
-for (const [rs, tb, tr, seed] of CASES) {
+for (const [rs, tb, tr, seed] of IS_MAIN ? CASES : []) {
   let row;
   try {
     const e = build(rs, tb, tr, seed), h = createHash("sha1");
@@ -64,4 +66,4 @@ for (const [rs, tb, tr, seed] of CASES) {
 }
 const out = { tool: "pin_v21_stream", simVersion: MOBA_SIMULATION_VERSION, currentFingerprint: SIMULATION_SEMANTICS_FINGERPRINTS[MOBA_SIMULATION_VERSION], v21Fingerprint: SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v21"] ?? null, rows };
 const OUT = arg("out", null);
-if (OUT) fs.writeFileSync(OUT, JSON.stringify(out, null, 1));
+if (IS_MAIN && OUT) fs.writeFileSync(OUT, JSON.stringify(out, null, 1));

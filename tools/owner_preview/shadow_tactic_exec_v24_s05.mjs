@@ -209,6 +209,15 @@ function runMatch(seed, { path = PATH, tier = TIER, shadow = true, cap = 3000 } 
     rec.enemyFull = { count: full.count, power: r3(full.power) };
     rec.enemyKnown = { count: known.count, power: r3(known.power), unseen: known.unseen, never: known.never };
     rec.reachKnown = known.count;
+    //  敵方打野的「已知狀態」（主對話 2026-11-14 第二輪校準加；第一輪顯示實際到場的人有 55% 是敵方打野，而且多半看不見）：
+    //  ej＝[已陣亡, 現在看得見, 看得見時的到場時間, 距離上次看見幾秒（沒看過＝null）, 上次看見的位置到目標的到場時間]。只讀，不寫引擎。
+    {
+      const ej = e.players.find((q) => q.side === foe && q.role === "jungle");
+      if (ej) {
+        const seenNow = !ej.dead && e._seenV20(S, ej, alive), m = mem[S].get(ej.id);
+        rec.ej = [ej.dead ? 1 : 0, seenNow ? 1 : 0, seenNow ? r2(eta(ej.pos)) : null, m ? r2(e.t - m.t) : null, m ? r2(eta(m.pos)) : null];
+      }
+    }
     rec.nowFull = nowFull; rec.nowKnown = nowKnown; rec.apprFull = apprFull; rec.apprKnown = apprKnown; rec.apprNearFull = apprNearFull; rec.apprNearKnown = apprNearKnown;
     if (!noLeader) {
       rec.ratioFull = rec.ownPower.map((p) => (p == null ? null : r3(p / (full.power + 0.5))));

@@ -106,6 +106,18 @@ function explore() {
 }
 
 //  ======================== B. 決策 ========================
+//  敵方打野的先驗（第二輪校準）：沒有反證就假設他在自家野區（算 1 人）。反證＝已陣亡；現在看得見而且 15 秒內到不了；
+//  或 10 秒內看過他、而且從那個位置扣掉經過的時間後仍然 15 秒內到不了。其他敵人只在「看得見而且在場或逼近」時才算。
+const EJ_NEAR_ETA = 15, EJ_MEM_FRESH = 10, JG_BIT = 2;
+function ejPrior(ev) {
+  const j = ev.ej; if (!j) return 0;
+  const [dead, seen, etaNow, age, memEta] = j;
+  if (dead) return 0;
+  if (seen) return etaNow <= EJ_NEAR_ETA ? JG_BIT : 0;
+  if (age != null && age <= EJ_MEM_FRESH && memEta - age > EJ_NEAR_ETA) return 0;
+  return JG_BIT;
+}
+const priorKnownMask = (ev) => ((((ev.nowKnown ?? 0) | (ev.apprNearKnown ?? 0)) & ~JG_BIT) | ejPrior(ev));
 function decide(ev, P, maskMode = "known") {
   if (ev.noTarget) return { d: "declined:no_target" };
   if (ev.jAvail !== 1 || !(ev.jHp >= P.jHpMin)) return { d: "declined:no_leader" };
@@ -121,7 +133,7 @@ function decide(ev, P, maskMode = "known") {
   if (members.length < P.sizeMin) return { d: "declined:no_party" };
   //  威脅集合：P.threat === "all" ⇒ 現在＋所有逼近；預設 "near" ⇒ 現在＋逼近而且 15 秒內到得了（主對話 2026-11-14 加，量測前）
   const aF = P.threat === "all" ? ev.apprFull : ev.apprNearFull, aK = P.threat === "all" ? ev.apprKnown : ev.apprNearKnown;
-  const T = maskMode === "full" ? popcount((ev.nowFull ?? 0) | (aF ?? 0)) : popcount((ev.nowKnown ?? 0) | (aK ?? 0));
+  const T = maskMode === "full" ? popcount((ev.nowFull ?? 0) | (aF ?? 0)) : P.threat === "prior" ? popcount(priorKnownMask(ev)) : popcount((ev.nowKnown ?? 0) | (aK ?? 0));
   let marginOk = false;
   for (let n = P.sizeMin; n <= Math.min(P.sizeMax, members.length); n++) {
     if (n - T < P.marginMin) continue;
@@ -258,6 +270,7 @@ function analyze(cfg) {
       nowOrApprKnown: (ev) => (ev.nowKnown ?? 0) | (ev.apprKnown ?? 0),
       nowOrApprNearKnown: (ev) => (ev.nowKnown ?? 0) | (ev.apprNearKnown ?? 0),
       nowOrApprNearFull: (ev) => (ev.nowFull ?? 0) | (ev.apprNearFull ?? 0),
+      priorKnown: priorKnownMask,
       nowKnown: (ev) => ev.nowKnown ?? 0,
     };
     const res = { evals: evs.length };
