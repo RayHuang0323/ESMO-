@@ -49,6 +49,7 @@ import { curveKAt, phaseIndexOf } from './battle/moba/heroPowerCurve.js';
 import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './platform/contracts/objectiveLayout.js';
 //  Phase 3a-C2：戰術資料（knobs／Tactical Identity／戰術階段）的唯一讀取入口（static 模式＝設定值原樣回傳）。
 import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.js";
+import { createTaskArbitrationLedger, movedTarget as arbMovedV24 } from "./battle/moba/tactics/taskArbitrationLedger.js";
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -128,6 +129,9 @@ export class LogicEngine {
   static SUPPORTS_INVASION = true;
   //  safeRoute 層（moba-sim.v23 候選）：configureMatch 認得 `safeRoute`；組裝器以此做能力檢查。
   static SUPPORTS_SAFE_ROUTE = true;
+  //  moba-sim.v24 候選：configureMatch 認得 `taskArbitration`（任務仲裁紀錄）與 `taskCommit`（推進是否承諾）；組裝器以此做能力檢查。
+  static SUPPORTS_TASK_ARBITRATION = true;
+  static SUPPORTS_TASK_COMMIT = true;
   //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
   //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
   static SUPPORTS_LANE_FRAME = true;
@@ -407,9 +411,14 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
+    //  moba-sim.v24 候選：taskArbitration "v1" ⇒ 引擎每 tick 替每名存活英雄記一筆仲裁紀錄（this.arbLedger；只寫，不影響任何決定）。
+    //  taskCommit "v19push" ⇒ v19 再任務承諾也承諾「推進」（預設 "v19"＝現狀）。缺少這兩個鍵 ⇒ 舊行為逐位元不變。
+    this._arbV24 = taskArbitration === "v1";
+    this._commitPushV24 = taskCommit === "v19push";
+    if (this._arbV24) this.arbLedger = createTaskArbitrationLedger();
     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
     //  "v3"（2026-11-13 Owner 核准的塔邊等待小修；同一個 v23 候選）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
@@ -6935,6 +6944,9 @@ export class LogicEngine {
       //  v20 ③：呼叫在全員決策凍結後才發出與回應（與陣列順序無關）。
       if (R.teamCallV20) this._teamCallsV20(alive, decisionPlans);
     }
+    //  moba-sim.v24 taskArbitration "v1"：仲裁紀錄（只寫）。層不存在 ⇒ ARB＝null，下面每一處紀錄都不執行。
+    const ARB = this._arbV24 ? this.arbLedger : null;
+    if (ARB) ARB.beginTick();
     for (const p of this.players) {
       if (p.dead) {
         if (R.explainableCombatDecisions) {
@@ -7077,6 +7089,7 @@ export class LogicEngine {
         }
       }
       let tgt, st, effLane = p.lane, stOv = null;
+      const AT = ARB ? ARB.turn(p) : null;
       if (R.decisionV17) { p.intent = null; p.idleReason = null; p.dbgTower = null; }
       // S24：帶線分推 —— 指定分推路的選手在會戰熱點出現時仍留線推進（黏性決策，6 秒重評一次）
       let skipFight = false;
@@ -7101,6 +7114,7 @@ export class LogicEngine {
       } else if (this._invasionV2 && K && p._invV2 && !p._invV2.done && (p.role === "jungle" || p.role === "mid")) {
         //  第一個條件不成立而入侵還沒結束：不是一般撤退接手了（retreat），就是入侵窗到了（window）。
         this._invadeEndV2(p, p.retreating ? "retreat" : "window");
+        if (AT && p.retreating) AT.sup.push("invade");
       }
       // S24：打野 Gank 節奏機（依 tempo 週期、依權重挑路；到點後 9 秒壓該路前線）
       if (K && !tacTgt && p.role === "jungle" && !p.retreating) {
@@ -7183,6 +7197,8 @@ export class LogicEngine {
         ? alive.find((q) => q.id === localDecision.targetId && !q.dead) ?? null
         : null;
       if (p.retreating) {
+        //  原因：血量門檻（retreatReason）＞局部決策撤退＞其他（塔邊等待重新決策、或撤退遲滯延續）。
+        if (AT) { AT.w = "retreat"; AT.reason = p.retreatReason != null ? "hp_low" : localDecision?.action === "RETREAT" ? "local_retreat" : this._edgeRedecideV23 ? "edge_retreat" : "hp_low"; }
         //  ── Retreat Hold（兩段式撤退）──────────────────────────────────
         //  舊行為只有一個撤退終點＝泉水 ⇒ 每次撤退都是整趟離場：
         //  補到 94% 血、再從離敵塔 172 單位的地方走回來，首次推塔要 47.5 秒，
@@ -7252,12 +7268,13 @@ export class LogicEngine {
         }
         }
       }
-      else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; }
-      else if (chaseFoe) { tgt = { x: chaseFoe.pos.x, y: chaseFoe.pos.y }; st = "追擊"; p.fsm = "CHASE"; }
+      else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; if (AT) { AT.w = "invade"; AT.reason = "invade_window"; } }
+      else if (chaseFoe) { tgt = { x: chaseFoe.pos.x, y: chaseFoe.pos.y }; st = "追擊"; p.fsm = "CHASE"; if (AT) { AT.w = "chase"; AT.reason = "chase_hold"; } }
       // S29B1（v3）：脫戰——團戰解散後短暫退到自家前線塔，不立即找下一場架
       else if (R.engagementFsm && p.fsm === "DISENGAGE" && this.t < p.fsmUntil) {
         const ownTw = this.frontTower(p.side === "blue" ? "red" : "blue", p.lane);
         tgt = ownTw ? ownTw.pos : BASE[p.side]; st = "脫戰";
+        if (AT) { AT.w = "disengage"; AT.reason = "disengage"; }
       }
       // Milestone D-fix2：沒有兵線或人數不夠時不單人硬闖敵塔。這只改移動目標；
       // 塔傷、塔仇恨、碰撞與正式 tower single source 均不變。
@@ -7276,12 +7293,14 @@ export class LogicEngine {
           tgt = { x: threatTower.pos.x + ux * safeDist, y: threatTower.pos.y + uy * safeDist };
         } else tgt = BASE[p.side];
         st = "避塔"; p.fsm = "SETUP";
+        if (AT) { AT.w = "tower_fallback"; AT.reason = "tower_fallback"; }
       }
       // S29B1（v3）：團隊目標窗（龍/巴龍）——窗開著才集結；打野/輔助必去、其他人吃 knob
       else if (R.engagementFsm && this.neutrals && !skipFight && this.fsm3[p.side].objGo &&
                this._objJoinV3(p, this.fsm3[p.side].objKey, K, M)) {
         tgt = R.objIdleFixV1 && this.heroSkillsOn ? this._objectiveStandSpot(p, this.fsm3[p.side].objKey) : this._pitOf(this.fsm3[p.side].objKey);
         st = "團戰!"; p.fsm = "OBJECTIVE";
+        if (AT) { AT.w = "objective_window"; AT.reason = "objective_window"; }
       }
       // ── Milestone F：主動權窗 · 攻城 ──────────────────────────────────
       //  剛打贏一波、附近沒有可打的龍／巴龍 ⇒ 把人數優勢換成塔，而不是各自走回線上。
@@ -7289,6 +7308,7 @@ export class LogicEngine {
       else if (R.engagementFsm && !skipFight && this._initiativeSiegeV3(p)) {
         const tw = this.towers[this.fsm3[p.side].initTarget];
         tgt = tw.pos; st = "圍攻"; p.fsm = "OBJECTIVE";
+        if (AT) { AT.w = "initiative_siege"; AT.reason = "initiative_siege"; }
       }
       //  v20 ③：回應了隊友的集火／殘血呼叫 ⇒ 前往目標（只追看得見的目標；目標死亡或呼叫過期即結束）。
       else if (R.teamCallV20 && !skipFight && this.t >= p.reengageAt && (() => {
@@ -7300,6 +7320,7 @@ export class LogicEngine {
         const tq = alive.find((q) => q.id === p.callV20.targetId);
         tgt = { x: tq.pos.x, y: tq.pos.y }; st = "支援"; p.fsm = "SETUP";
         p.intent = p.callV20.type === "lowhp" ? "回應殘血呼叫" : "回應集火呼叫";
+        if (AT) { AT.w = "team_call"; AT.reason = p.callV20.type === "lowhp" ? "call_lowhp" : "call_focus"; }
       }
       // S28：團戰/目標集結門檻 += joinAdj（勇氣/戰術/配合/溝通/反應＋隊伍領導平均）
       //   或 objAdj（龍/巴龍坑：視野/戰術/專注/溝通＋隊伍領導平均）。
@@ -7311,6 +7332,7 @@ export class LogicEngine {
         : (p.role === "jungle" || p.role === "sup" || (K ? this.rng2() < this._joinChance(K, hot, M) : this.rng() < this._joinChance(null, hot, M))))) {
         //  Combat Decision B：`_joinV3` 已做完投入決策（decline 不會走到這裡）。
         //    commit = 進場｜hold = 在 standoff 待命等隊友
+        if (AT) { AT.w = "fight_join"; AT.reason = "fight_join"; }
         if (p._tfGate === "hold") {
           const dHot = dist(p.pos, hot);
           const standoff = R.syncStandoffR ?? 15;
@@ -7346,6 +7368,7 @@ export class LogicEngine {
                localDecision?.action === "SUPPORT" && localTarget) {
         tgt = { x: localTarget.pos.x, y: localTarget.pos.y };
         st = "支援"; p.fsm = "SETUP";
+        if (AT) { AT.w = "local"; AT.reason = "local_engage"; }
       }
       else if (!skipFight && localTarget &&
                ((localDecision?.action === "ENGAGE" && dist(p.pos, localTarget.pos) <= 6.5) ||
@@ -7356,6 +7379,7 @@ export class LogicEngine {
         //  Milestone H：**站位**＝席位基準距離 × 英雄定位倍率。
         //    坦克／戰士貼得更近、射手／法師站得更遠；倍率限幅 0.7–1.25，
         //    不改移速、不改攻擊距離判定、不改傷害。
+        if (AT) { AT.w = "local"; AT.reason = "local_engage"; }
         const engageDistance = (p.role === "top" ? 2.6 : p.role === "jungle" ? 2.2 :
           p.role === "mid" ? 5.0 : p.role === "adc" ? 5.8 : 5.2)
           * (this._heroMod(p)?.engageDistK ?? 1);
@@ -7509,6 +7533,15 @@ export class LogicEngine {
       //  只跳過**這一種**覆寫：一旦有交戰目標（被打、gank、團戰、撤退、戰術指令都會設 decisionTargetId
       //  或改變 fsm），站位層照舊接手 ⇒ 不會變成「永遠先打小兵」。打野、輔助不套用（不搶線）。
       //  ⚠ 與 v10–v13 同一個慣例：只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）串流與 v14 逐位元相同。
+      //  v24 仲裁紀錄：第一段到這裡結束。記下標籤與「前提也成立」的低優先任務（只讀決策當下已有的值）。
+      if (AT) {
+        AT.label = st; AT.tgt0 = tgt;
+        if (R.engagementFsm && this.neutrals && this.fsm3[p.side].objGo) AT.sup.push("objective_window");
+        if (hot) AT.sup.push("fight_join");
+        const GS = this.tacticOn ? S : this.fsm3[p.side];
+        if (p.role === "jungle" && GS && this.t < (GS.gankUntil ?? 0)) AT.sup.push("default:gank");
+        if (p.role === "sup" && this.tacticOn && S && this.t < (S.roamUntil ?? 0)) AT.sup.push("default:roam");
+      }
       const waveAnchor = R.laneWaveAnchorV15 && this.heroSkillsOn && p._waveAnchorT === this.t && p.fsm === "LANE"
         && !p.decisionTargetId && !p.retreating && p.role !== "jungle" && p.role !== "sup";
       if (waveAnchor) { if (R.stableFormation) { p._archFoe = null; p._hold = false; } }
@@ -7516,6 +7549,7 @@ export class LogicEngine {
       //  ⇒ 避塔的人站在塔下挨打（v23 實測原地挨打 46 次中 34 次是這個）。同撤退／回城的豁免，並清掉站定狀態。
       else if (this._towerEdgeV23 && st === "避塔") { p._hold = false; p.dbgHold = false; }
       else tgt = this._archPosition(p, tgt, alive);
+      if (AT && arbMovedV24(AT.tgt0, tgt)) AT.rw.push("rewrite:formation");
       //  ── Tactical AI Phase 1（v19）P0-1：再任務承諾 ─────────────────────────────
       //  M1.7 的發呆再任務（`_nextTaskV17`）只在「抵達」那一 tick 改寫目標；下一 tick 對線分支又把目標
       //  拉回兵線站位點 ⇒ 往前一步、往後一步（實測 v18 決策目標乒乓 3.95 次／英雄分鐘，七成是「推進」）。
@@ -7528,7 +7562,7 @@ export class LogicEngine {
           this._foeMinionWithin(p, this._engageRange(p) + 1) ||
           alive.some((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) <= this._engageRange(p));
         if (!laneDefault || engaged || T.lane !== effLane || this.t >= T.until || dist(p.pos, T.pos) <= 1.5) p._taskV19 = null;
-        else { tgt = T.pos; st = T.st; p.fsm = T.fsm; p.intent = T.intent; }
+        else { if (AT && arbMovedV24(tgt, T.pos)) AT.rw.push("rewrite:task_commit"); tgt = T.pos; st = T.st; p.fsm = T.fsm; p.intent = T.intent; }
       }
       //  ── M1.7 ②：塔區退出。允許有計畫的越塔，禁止「站到殘血為止」──────────
       if (R.decisionV17 && !p.retreating) {
@@ -7548,6 +7582,7 @@ export class LogicEngine {
           ? { allow: tz.allow, siege: !!tz.sieging, wave: !!tz.hasWave, hp: !!tz.hpOk, shots: p.towerHits ?? 0, kill: !!tz.kill }
           : null;
         if (tz.inZone && !tz.allow) {
+          if (AT) AT.rw.push("rewrite:tower_zone");
           //  退到塔射程外緣＋餘裕的方向（沿「塔 → 我」的射線，不是瞬移、不是強制位移：
           //  只是把移動目標換掉，走路仍然由既有 nav 決定）
           const tw = tz.tower;
@@ -7587,9 +7622,10 @@ export class LogicEngine {
           if (!p.idleReason) {
             const next = this._nextTaskV17(p, effLane, alive);
             if (next) {
+              if (AT) AT.rw.push("rewrite:idle_retask");
               tgt = next.pos; st = next.st; p.fsm = next.fsm; p.intent = next.intent;
               //  v19：承諾這個任務（見上方「再任務承諾」）。
-              if (R.taskCommitV19 && (next.st !== "推進" || R.taskCommitPush !== false)) p._taskV19 = { pos: { x: next.pos.x, y: next.pos.y }, st: next.st, fsm: next.fsm,
+              if (R.taskCommitV19 && (next.st !== "推進" || R.taskCommitPush !== false || this._commitPushV24 === true)) p._taskV19 = { pos: { x: next.pos.x, y: next.pos.y }, st: next.st, fsm: next.fsm,
                 intent: next.intent, lane: effLane,
                 until: this.t + clamp((R.taskCommitSec ?? 4) + this._riskV19(p) * (R.taskCommitRiskK ?? -6),
                   R.taskCommitMin ?? 2, R.taskCommitMax ?? 6) };
@@ -7601,9 +7637,13 @@ export class LogicEngine {
       //  放在嘲諷之前：被嘲諷時的強制目標不受影響。
       //  safeRoute v2（v23 塔邊決策）：塔邊承諾放在**所有**任務改寫（決策、站位、再任務承諾、M1.7、發呆再任務）之後——
       //  放在 M1.7 區塊裡會被後面的發呆再任務蓋掉（停在出口＝「已抵達」⇒ 立刻派推進／打野回塔下）。
-      if (this._towerEdgeV23 && p._edgeV23 && st !== "避塔" && !p.retreating && R.decisionV17) tgt = this._towerEdgeHoldV23(p, st, effLane, tgt, alive);
-      if (this._safeRouteV23) tgt = this._safeWaypointV23(p, tgt);
-      tgt = this._heroTauntTarget(p, tgt);
+      if (this._towerEdgeV23 && p._edgeV23 && st !== "避塔" && !p.retreating && R.decisionV17) {
+        const t0 = tgt; tgt = this._towerEdgeHoldV23(p, st, effLane, tgt, alive);
+        if (AT && arbMovedV24(t0, tgt)) AT.rw.push("rewrite:edge_hold");
+      }
+      if (this._safeRouteV23) { const t0 = tgt; tgt = this._safeWaypointV23(p, tgt); if (AT && arbMovedV24(t0, tgt)) AT.rw.push("rewrite:safe_route"); }
+      { const t0 = tgt; tgt = this._heroTauntTarget(p, tgt); if (AT && arbMovedV24(t0, tgt)) AT.rw.push("rewrite:taunt"); }
+      if (AT) ARB.close(AT, this.t);
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *

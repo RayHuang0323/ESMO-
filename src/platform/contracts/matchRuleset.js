@@ -75,7 +75,27 @@ export const DEFAULT_SAFE_ROUTE = "legacy";
 /** 讀取 ruleset 的 safeRoute 層；缺少 ≡ "legacy"。 */
 export const safeRouteOf = (r) => r?.layers?.safeRoute ?? DEFAULT_SAFE_ROUTE;
 export const SAFE_ROUTE_RELEASE_FLAG = Object.freeze({ v1: "mobaSafeRouteV23", v2: "mobaSafeRouteV23", v3: "mobaSafeRouteV23", v4: "mobaSafeRouteV23", v5: "mobaSafeRouteV23" });
-export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG), ...Object.values(SAFE_ROUTE_RELEASE_FLAG)])]);
+//  ── moba-sim.v24 候選（Owner 2026-11-15 核准開版；v23 已凍結，之後的語意改動全部在這裡）──────────────────────────────
+//  taskArbitration 層：任務仲裁紀錄（TaskArbitration.v1 的觀測帳）搬進引擎。
+//   · "none"＝沒有紀錄（缺少這個鍵 ≡ none）。v20～v23 規則集永不加這個鍵。
+//   · "v1"  ＝引擎每 tick 替每名存活英雄記一筆「贏的任務、原因碼、被壓下的任務、第二段改寫」（LogicEngine.arbObs／p.arbV24）。
+//     **只寫紀錄，不改任何決策**：帶這個層與不帶，整場逐 tick 相同（tools/check_layer_isolation_v24.mjs 釘住）。
+export const TASK_ARBITRATIONS = Object.freeze(["none", "v1"]);
+export const DEFAULT_TASK_ARBITRATION = "none";
+/** 讀取 ruleset 的 taskArbitration 層；缺少 ≡ "none"。 */
+export const taskArbitrationOf = (r) => r?.layers?.taskArbitration ?? DEFAULT_TASK_ARBITRATION;
+//  taskCommit 層（Owner 2026-11-15 決策 4：獨立候選層、預設關閉）：v19 再任務承諾要不要也承諾「推進」。
+//   · "v19"    ＝現狀（缺少這個鍵 ≡ v19）：推進不承諾（rules.taskCommitPush false）。
+//   · "v19push"＝推進也承諾（診斷 Sprint：對線 ↔ 推進來回 −48～58%）。**career.v24／balanceTool.v24 登錄值都是 "v19"**；
+//     只有工具規則集可以覆寫成 "v19push" 做量測。要啟用必須先獨立完成 regress2、換邊配對勝率與入侵承諾衝突驗證，再由 Owner 決定。
+export const TASK_COMMITS = Object.freeze(["v19", "v19push"]);
+export const DEFAULT_TASK_COMMIT = "v19";
+/** 讀取 ruleset 的 taskCommit 層；缺少 ≡ "v19"。 */
+export const taskCommitOf = (r) => r?.layers?.taskCommit ?? DEFAULT_TASK_COMMIT;
+//  正式旗標 mobaTacticExecV24（預設 OFF；只在 mobaTacticalDirectorV21＋mobaJungleV22＋mobaSafeRouteV23 也開時有意義：career.v24＝career.v23＋v24 的層）。
+export const TASK_ARBITRATION_RELEASE_FLAG = Object.freeze({ v1: "mobaTacticExecV24" });
+export const TASK_COMMIT_RELEASE_FLAG = Object.freeze({ v19push: "mobaTacticExecV24" });
+export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG), ...Object.values(SAFE_ROUTE_RELEASE_FLAG), ...Object.values(TASK_ARBITRATION_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 const BASE_RULESETS = Object.freeze({
   "career.v20": R({ rulesetId: "career.v20", kind: "production", simVersion: "moba-sim.v20",
@@ -125,11 +145,23 @@ const v23Of = (base, extraRequirements = []) => R({
   layers: { ...base.layers, safeRoute: "v5" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
+const V23_RULESETS = Object.freeze({
+  "career.v23": v23Of(V22_RULESETS["career.v22"], [SAFE_ROUTE_RELEASE_FLAG.v5]),
+  "balanceTool.v23": v23Of(V22_RULESETS["balanceTool.v22"]),
+});
+//  moba-sim.v24 候選（2026-11-15）：從 v23 逐欄衍生，只多 v24 的層。v23 物件本身一個欄位都沒動（v23 已凍結）。
+//  交付點 A（基礎版本）：taskArbitration "v1"（只寫紀錄）＋taskCommit "v19"（＝現狀）⇒ v24 的對局與 v23 逐 tick 相同。
+const v24Of = (base, extraRequirements = []) => R({
+  ...base, rulesetId: base.rulesetId.replace(".v23", ".v24"), simVersion: "moba-sim.v24",
+  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19" },
+  releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
+});
 export const MATCH_RULESETS = Object.freeze({
   ...BASE_RULESETS,
   ...V22_RULESETS,
-  "career.v23": v23Of(V22_RULESETS["career.v22"], [SAFE_ROUTE_RELEASE_FLAG.v5]),
-  "balanceTool.v23": v23Of(V22_RULESETS["balanceTool.v22"]),
+  ...V23_RULESETS,
+  "career.v24": v24Of(V23_RULESETS["career.v23"], [TASK_ARBITRATION_RELEASE_FLAG.v1]),
+  "balanceTool.v24": v24Of(V23_RULESETS["balanceTool.v23"]),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
 //  戰術輸入的種類（Phase 3a T9）：每個 ruleset 接受哪幾種 `setup.tactic.<side>.kind`。
@@ -147,6 +179,8 @@ export const TACTIC_KINDS_BY_RULESET = Object.freeze({
   "balanceTool.v22": Object.freeze(["legacy", "std", "binding"]),
   "career.v23": Object.freeze(["legacy", "std", "binding"]),
   "balanceTool.v23": Object.freeze(["legacy", "std", "binding"]),
+  "career.v24": Object.freeze(["legacy", "std", "binding"]),
+  "balanceTool.v24": Object.freeze(["legacy", "std", "binding"]),
   //  T16：Challenge 雙方仍是快照裡選定的靜態模板（legacy）；不收 binding（自訂每時期戰術屬 3c）。
   "challenge.v21": Object.freeze(["legacy", "std"]),
 });
@@ -166,7 +200,9 @@ export function resolveRulesetForMode({ mode, flags }) {
   //  兩個旗標預設都關 ⇒ 與之前逐字相同。Challenge 不受影響（challenge.v22 不存在）。
   //  moba-sim.v23 候選：mobaSafeRouteV23 只在 mobaJungleV22（＋mobaTacticalDirectorV21）也開時才有意義（career.v23＝career.v22＋safeRoute）。
   const jungle = director && on("mobaJungleV22");
-  const base = MATCH_RULESETS[director ? (jungle ? (on("mobaSafeRouteV23") ? "career.v23" : "career.v22") : "career.v21") : "career.v20"];
+  //  moba-sim.v24 候選：mobaTacticExecV24 只在前三個旗標都開時才有意義（career.v24＝career.v23＋v24 的層）。四個旗標預設都關 ⇒ 與之前逐字相同。
+  const route = jungle && on("mobaSafeRouteV23");
+  const base = MATCH_RULESETS[director ? (jungle ? (route ? (on("mobaTacticExecV24") ? "career.v24" : "career.v23") : "career.v22") : "career.v21") : "career.v20"];
   const skills = on("heroSkillsV1");
   const newLayers = { ...base.layers, heroSkills: skills, heroPassives: skills, heroPowerCurve: skills,
     battleTalents: skills && on("heroBattleTalentsV1"), items: on("itemsV1") };
@@ -180,6 +216,7 @@ export function resolveRulesetForMode({ mode, flags }) {
   if (director && newLayers.jungleCamp) newReqs.push(JUNGLE_CAMP_RELEASE_FLAG[newLayers.jungleCamp]);
   if (director && newLayers.invasion && !newReqs.includes(INVASION_RELEASE_FLAG[newLayers.invasion])) newReqs.push(INVASION_RELEASE_FLAG[newLayers.invasion]);
   if (director && newLayers.safeRoute) newReqs.push(SAFE_ROUTE_RELEASE_FLAG[newLayers.safeRoute]);
+  if (director && newLayers.taskArbitration && TASK_ARBITRATION_RELEASE_FLAG[newLayers.taskArbitration]) newReqs.push(TASK_ARBITRATION_RELEASE_FLAG[newLayers.taskArbitration]);
 
   return R({ ...base, layers: newLayers, releaseRequirements: newReqs });
 }
@@ -207,6 +244,9 @@ export function validateRuleset(r) {
   if (r?.layers && "jungleCamp" in r.layers && !JUNGLE_CAMPS.includes(r.layers.jungleCamp)) errors.push("jungleCamp");
   if (r?.layers && "invasion" in r.layers && !INVASIONS.includes(r.layers.invasion)) errors.push("invasion");
   if (r?.layers && "safeRoute" in r.layers && !SAFE_ROUTES.includes(r.layers.safeRoute)) errors.push("safeRoute");
+  //  moba-sim.v24 候選的層：有這個鍵就必須是登錄的值（缺少 ≡ 預設）。
+  if (r?.layers && "taskArbitration" in r.layers && !TASK_ARBITRATIONS.includes(r.layers.taskArbitration)) errors.push("taskArbitration");
+  if (r?.layers && "taskCommit" in r.layers && !TASK_COMMITS.includes(r.layers.taskCommit)) errors.push("taskCommit");
   //  Phase 3a-B 第一階段：可選層 templateBalance——有這個鍵就必須是已登錄的修正表 id（缺少 ≡ 出貨版模板）。
   if (r?.layers && "templateBalance" in r.layers && !TEMPLATE_BALANCES.includes(r.layers.templateBalance)) errors.push("templateBalance");
 
@@ -238,6 +278,16 @@ export function validateRuleset(r) {
     if (sr !== DEFAULT_SAFE_ROUTE && SAFE_ROUTES.includes(sr)) {
       const flag = SAFE_ROUTE_RELEASE_FLAG[sr];
       if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`safeRoute ${sr} requires ${flag ?? "a release flag"}`);
+    }
+    const ta = taskArbitrationOf(r);
+    if (ta !== DEFAULT_TASK_ARBITRATION && TASK_ARBITRATIONS.includes(ta)) {
+      const flag = TASK_ARBITRATION_RELEASE_FLAG[ta];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`taskArbitration ${ta} requires ${flag ?? "a release flag"}`);
+    }
+    const tc = taskCommitOf(r);
+    if (tc !== DEFAULT_TASK_COMMIT && TASK_COMMITS.includes(tc)) {
+      const flag = TASK_COMMIT_RELEASE_FLAG[tc];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`taskCommit ${tc} requires ${flag ?? "a release flag"}`);
     }
     for (const f of Array.isArray(r.releaseRequirements) ? r.releaseRequirements : []) {
       if (!RELEASE_FLAGS.includes(f)) errors.push(`releaseRequirements: ${String(f)} is not a release flag`);

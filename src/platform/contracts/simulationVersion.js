@@ -55,11 +55,15 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
 //   LogicEngine._navSafetyV23／_exitLeadsHomeV23／_retreatCrossV23、mobaNavigation.mirrorAlive）。career.v23／balanceTool.v23 改用 "v4"；"v3" 保留且逐位元不變。
 //   2026-11-14：同一個 v23 候選加 safeRoute "v5"（＝v4＋口袋安靜時留在射程外回城；LogicEngine._quietPocketV23／_pocketThreatV23）。
 //   career.v23／balanceTool.v23 改用 "v5"；"v4" 保留且逐位元不變（它的獨立驗證不通過，紀錄保留）。
-export const MOBA_SIMULATION_VERSION = "moba-sim.v23";
+//   2026-11-14：v23 凍結（指紋 69237cce78edf2be，Owner Review 決策 1）。
+//   moba-sim.v24（候選，2026-11-15，Owner 核准開版；未發布、正式旗標 mobaTacticExecV24 預設關）：v23 的所有行為＋
+//   ① 可選層 taskArbitration "v1"（任務仲裁紀錄進引擎，只寫紀錄）＋taskCommit "v19"（＝現狀；"v19push" 預設不開）——只在 career.v24／balanceTool.v24；
+//   ② 語意清單補上 22 支引擎走得到的依賴檔（指紋的算法因此改變）。交付點 A：v24 的對局與 v23 逐 tick 相同；v20～v23 的釘點逐值不變。
+export const MOBA_SIMULATION_VERSION = "moba-sim.v24";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", "moba-sim.v21", "moba-sim.v22", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", "moba-sim.v21", "moba-sim.v22", "moba-sim.v23", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -236,6 +240,37 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   //    （platform/challenge/challengeVersion.js 不收：它只決定**新**挑戰記下哪個版本，同 snapshotAuthority.js 的判準；
   //     既有挑戰由記下的版本經 matchRuleset.challengeRulesetForVersion 決定規則集，那一段在清單內。）
   "src/platform/tactics/aiCoach.js",
+
+  //  ── 2026-11-15（moba-sim.v24 候選第一次登記；Owner 核准「補齊模擬語意清單的缺漏依賴」）─────────────────────────────
+  //  tools/audit_semantics_deps.mjs 盤出來的「LogicEngine 走得到、但清單沒有」的檔案（review/tactic-book-3a/驗證可靠性盤查.md 案 2）。
+  //  v23 凍結期間由 tools/check_v23_freeze.mjs F3 逐檔釘住內容；從 v24 起改成正式進指紋。
+  //  補清單本身不改任何行為：補之前與之後，v20～v23 的逐 tick 釘點必須逐值相同（tools/check_layer_isolation_v24.mjs）。
+  //  · 裝備：LogicEngine 直接 import itemsEngineRuntime.js；其餘是它與 buildPolicy／buildStrategyPrep 的依賴（數值表、效果、合成、經濟）。
+  "src/battle/moba/items/itemsEngineRuntime.js",
+  "src/battle/moba/items/itemEffects.js",
+  "src/battle/moba/items/itemEffectKeys.js",
+  "src/battle/moba/items/combatStatsV1.js",
+  "src/battle/moba/items/itemCatalog.js",
+  "src/battle/moba/items/itemEconomy.js",
+  "src/battle/moba/items/itemInventory.js",
+  "src/battle/moba/items/itemRecipes.js",
+  //  · 地圖幾何：mapTerrainShapes／mobaMapLayout 的依賴（碰撞場由它們推導 ⇒ 改它們會改走位）。
+  "src/battle/moba/map/mapBaseBlueprint.js",
+  "src/battle/moba/map/mapBaseFrame.js",
+  "src/battle/moba/map/mapBaseLayoutStyle.js",
+  "src/battle/moba/map/mapBushCover.js",
+  "src/battle/moba/map/mapCampLayout.js",
+  "src/battle/moba/map/mapLaneStyle.js",
+  "src/battle/moba/map/mapMonsterShapes.js",
+  "src/battle/moba/map/mapShapePrimitives.js",
+  "src/battle/moba/map/mapTowerLayoutStyle.js",
+  "src/battle/moba/map/mapVisualStyle.js",
+  "src/battle/moba/map/mapZones.js",
+  "src/battle/moba/map/riftLaneClearance.js",
+  "src/battle/moba/map/riftLayoutGeometry.js",
+  //  · v24 新增：任務仲裁紀錄（LogicEngine 直接 import；只寫紀錄，但仍在引擎的 tick 路徑上）。
+  "src/battle/moba/tactics/taskArbitrationLedger.js",
+  //  ⚠ src/platform/contracts/tacticalDirective.js 仍然不收：引擎沒有呼叫 directive()（G-AC2 S6 的守門照舊）。
 ]);
 
 /**
@@ -668,6 +703,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  上面「v23 未凍結：語意檔再改就同版號重新登記」從這一天起不再適用：這一行的值不得再改，之後的語意改動全部進 moba-sim.v24 候選。
   //  守門：tools/check_v23_freeze.mjs（凍結清單 review/tactic-book-3a/v23_freeze/FREEZE_MANIFEST.json，含指紋涵蓋不到的 22 支依賴檔）。
   "moba-sim.v23": "69237cce78edf2be",
+  //  v24 候選（2026-11-15，Owner 核准開版）：交付點 A＝taskArbitration "v1"（只寫紀錄）＋taskCommit 層（預設 "v19"）＋語意清單補上 22 支依賴檔。
+  //  v24 未凍結：語意檔再改就同版號重新登記，舊值寫在這裡。v20～v23 那幾行原樣保留（v23 已凍結，不得改）。
+  "moba-sim.v24": "78d1fb305ba1f72a",
 });
 
 export const isKnownSimulationVersion = (v) =>

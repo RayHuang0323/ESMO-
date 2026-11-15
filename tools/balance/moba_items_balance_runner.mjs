@@ -159,6 +159,13 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic 
     if (!("safeRoute" in base.layers)) throw new Error(`balance_saferoute_unsupported: ${rulesetId} has no safeRoute layer`);
     ruleset.layers.safeRoute = safeRouteOverride;
   }
+  //  v24 候選：`ESMO_BALANCE_TASKCOMMIT`（呼叫當下讀取）＝覆寫工具規則集的 taskCommit 層（"v19push"＝推進也承諾；Owner 2026-11-15 決策 4：預設關，只做量測）。
+  //  只在規則集本來就有這一層時接受；值由 validateRuleset 檢查。未設定 ⇒ 不動。
+  const taskCommitOverride = process.env.ESMO_BALANCE_TASKCOMMIT;
+  if (taskCommitOverride) {
+    if (!("taskCommit" in base.layers)) throw new Error(`balance_taskcommit_unsupported: ${rulesetId} has no taskCommit layer`);
+    ruleset.layers.taskCommit = taskCommitOverride;
+  }
   const tool = {};
   if (RULE_OVERRIDES) tool.ruleOverrides = RULE_OVERRIDES;
   if (layoutOn) {

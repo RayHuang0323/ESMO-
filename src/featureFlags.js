@@ -121,6 +121,12 @@ export const FEATURE_FLAGS = Object.freeze({
    * 只有 Owner 能決定打開。
    */
   mobaSafeRouteV23: false,
+  /**
+   * moba-sim.v24 候選（Owner 2026-11-15 核准開版；未核准發布）：任務仲裁紀錄進引擎，以及之後的自適應戰術執行。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21、mobaJungleV22、mobaSafeRouteV23 都開時生效**（career.v24＝career.v23＋v24 的層）。
+   * 只有 Owner 能決定打開。
+   */
+  mobaTacticExecV24: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */
