@@ -3020,3 +3020,8 @@ Android／低RAM／熱降頻仍NOT_RUN／未認證，CPU4×FAIL與2118MiB歷史�
 ## 2026-11-16 CS Competition Map Pool v1：Audit／介面提案，Owner Review
 
 正式 main 即時回讀仍 7cf1cebc；起點 d2540e56。既有 BO1／BO3／Major／MatchSession 不重建。原創三圖沿用 legacy mapKey、靠 sceneVersion 區分，正式 session 的 Store／history／恢復與 AI fixture 投影需協調真實地圖身分；依 Owner 禁止跨權威修改的邊界，本輪只有設計，沒有產品候選或新圖正式流程 PASS。TD-CS-COMP-01：正式池 map identity 與 session snapshot 尚未定義；TD-CS-COMP-02：CS 賽事規格開頭尚未實作標記落後於現況。詳 docs/design/CS_Competition_Map_Pool_v1.md。Claude 現役 MOBA HEAD 77780df3 的未推送提交與 6 修改／2 未追蹤檔保護。BO1／BO3新圖、獎勵、Replay、恢復及公平性 NOT_RUN；未啟動舊流程冒充候選預覽。等待架構 owner 核定介面，維持正式池與舊存檔。未Push／Deploy／清理／新增Worktree。
+
+
+## 2026-11-16 CS Professional Expansion：本機候選／新池驗收BLOCKED
+
+分支 feature/cs-professional-expansion-20261116；產品候選110ee3a5，Phase1 4b04b1a5／Phase2 63834f1a／Phase3 e3f83c4a。新增武器任務鎖消耗端防護、真事件首殺轉換戰報、合法訓練案例、original-v1正式CS測試池及身分／layout快照。預設池不變、舊結果不migration；未修改MOBA／BP-9權威。新池Browser SHA Gate實際BLOCKED exit2（300秒supervisor），只確認選圖／恢復／場景參數，未完成真戰報，禁止整合發布。Node邊界、既有Veto／series、build、Progress／MOBA回歸與save bundle通過；BP-9容量壓力中止，不算PASS。TD-CS-PRO-01：原創池仍沿用legacy選圖評分與history分群，需競賽身分隔離／校準；TD-CS-PRO-02：新池真實BO1／BO3／獎勵／Replay／恢復／公平性未認證。真Android／低RAM／熱降頻NOT_RUN、CPU4×FAIL／2118MiB風險保留。完整狀態、16能力消費鏈、Before/After與續跑優先序：review/cs-professional-expansion-20261116/RESUME_CHECKPOINT.md。預覽 http://127.0.0.1:5189/ESMO-/；無公開tunnel。沒有push／deploy／新增worktree／清理歷史。停止受阻的新池放行工作，保留Owner Review候選；五階段並未全部完成。

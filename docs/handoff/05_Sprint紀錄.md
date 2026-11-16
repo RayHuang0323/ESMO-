@@ -27112,3 +27112,8 @@ Android／低 RAM／熱降頻 NOT_RUN、CPU4× FAIL、Replay 2118 MiB 風險及�
 
 ## 2026-11-16 Phase 4：原創池最小候選（尚未整合放行）
 新增 csMapIdentity 純解析邊界與 original-v1 三圖layout快照；profileStore只新增CS opt-in動作，首圖部署前可選，已有戰鬥／完成地圖不能切換。選圖與fixture帳本保存同一快照，版本不同拒絕繼續；原預設池不變。新增原創結果mapIdentity僅取真sceneVersion及raw mapLayoutId，舊資料不回填假layout，不做migration。純邊界12/12、原Veto35/35／series99/99與build PASS；原創池全Browser尚在驗證，不宣稱正式賽全流程或公平性通過。
+
+
+## 2026-11-16 CS Professional Expansion：本機候選／新池驗收BLOCKED
+
+分支 feature/cs-professional-expansion-20261116；產品候選110ee3a5，Phase1 4b04b1a5／Phase2 63834f1a／Phase3 e3f83c4a。新增武器任務鎖消耗端防護、真事件首殺轉換戰報、合法訓練案例、original-v1正式CS測試池及身分／layout快照。預設池不變、舊結果不migration；未修改MOBA／BP-9權威。新池Browser SHA Gate實際BLOCKED exit2（300秒supervisor），只確認選圖／恢復／場景參數，未完成真戰報，禁止整合發布。Node邊界、既有Veto／series、build、Progress／MOBA回歸與save bundle通過；BP-9容量壓力中止，不算PASS。TD-CS-PRO-01：原創池仍沿用legacy選圖評分與history分群，需競賽身分隔離／校準；TD-CS-PRO-02：新池真實BO1／BO3／獎勵／Replay／恢復／公平性未認證。真Android／低RAM／熱降頻NOT_RUN、CPU4×FAIL／2118MiB風險保留。完整狀態、16能力消費鏈、Before/After與續跑優先序：review/cs-professional-expansion-20261116/RESUME_CHECKPOINT.md。預覽 http://127.0.0.1:5189/ESMO-/；無公開tunnel。沒有push／deploy／新增worktree／清理歷史。停止受阻的新池放行工作，保留Owner Review候選；五階段並未全部完成。

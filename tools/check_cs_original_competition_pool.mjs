@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {csOriginalMapIdentity,resolveCsMapIdentity} from '../src/battle/fps/csMapIdentity.js';
 import {slimProfileRecord} from '../src/platform/persistence/saveSlim.js';
-import {toCsMatchResult} from '../src/platform/contracts/csMatchResult.js';
+import {toCsMatchResult} from '../src/platform/contracts/CsMatchResult.js';
 globalThis.localStorage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}};
 const {useProfileStore:store}=await import('../src/platform/profileStore.js');
 const selection={schema:'CsMapSelection.v1',kind:'bo3',status:'resolved',mapOrder:['mirage','dust2','inferno']};
