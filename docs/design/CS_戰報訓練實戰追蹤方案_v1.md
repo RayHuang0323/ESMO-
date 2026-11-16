@@ -32,3 +32,9 @@
 先把唯讀 view model 接到既有 `CsProfessionalReport` 的個人表現分頁，以三場、十場趨勢與證據展開呈現；按鈕只開啟既有 TrainingScreen 並預選選手／課程，不直接排課。沿用 `useViewport`、GC、現有 report CSS；320／360／390／430px 與真機另驗。
 
 驗收必須涵蓋：同名選手拒絕錯配、舊摘要戰報沒有 analytics 時顯示資料不足、場景版本不混樣本、潛力封頂／低體能／已有課程的真實預估、合法課程完成後 growthLog 與 statChanges 一致、重載不重發獎，以及後續同條件實戰差異。結果改善只能列關聯；需要因果結論時，另跑固定 seed／同敵方／同條件的合法成長配對模擬。
+
+## 2026-11-16 v1已實作範圍（取代上方未接UI的現況敘述）
+
+新增獨立「培養建議」頁保留原四頁，以同一csCoachingAdvice供UI及工具，收斂同layout／版本／角色樣本、同名拒絕；原真fixture的2項建議收斂為1項。僅預選Training，由玩家確認安排；calculator／成長／存檔均沿既有權威。UI位置用URL提示，不新增持久化追蹤schema；進行中session阻擋新入口。已驗真成長→刷新→下一場Worker消費、四種手機寬度與reduced-motion，未經真機實測。
+
+同seed合法成長前後實戰已有可重現差異，但兩場都落敗，不以此宣稱課程保證勝率；三場自動追蹤與對手／武器條件完整分組仍未實作。詳review/cs-tactical-coaching-20261116/RESUME_CHECKPOINT.md與本輪新SHA收據。

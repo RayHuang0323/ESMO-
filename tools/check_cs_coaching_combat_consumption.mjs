@@ -1,0 +1,20 @@
+// Real legal training receipts and real next-Worker input. Fixed-seed diagnostic;
+// never write a synthetic result into career progress or require a win increase.
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {loadFpsMajorTestApi} from './lib/fpsMajorTestApi.mjs';
+import {toFpsRoster} from '../src/battle/fps/fpsRoster.js';
+const [directory,output]=process.argv.slice(2);if(!directory||!output||fs.existsSync(output))throw Error('Unique output required');
+const before=JSON.parse(fs.readFileSync(path.join(directory,'before-training.save.json'))),after=JSON.parse(fs.readFileSync(path.join(directory,'after-training.save.json'))),worker=JSON.parse(fs.readFileSync(path.join(directory,'next-worker-input.json'))),loop=JSON.parse(fs.readFileSync(path.join(directory,'loop-summary.json')));
+const id=loop.evidence.playerId,beforePlayer=before.players.find(p=>p.id===id),afterPlayer=after.players.find(p=>p.id===id),actor=worker.actual;
+const reference=toFpsRoster(after.players,after.csLineup).find(p=>p._gid===id);assert.deepEqual(actor.stats,reference.stats);
+const controlledBefore=after.players.map(p=>p.id===id?{...p,stats:beforePlayer.stats}:p),old=toFpsRoster(controlledBefore,after.csLineup).find(p=>p._gid===id);
+assert.notDeepEqual(old.stats,actor.stats,'Legally grown stats must reach real battle adapter');
+const args=structuredClone(worker.args),priorArgs=structuredClone(args);priorArgs[4]=priorArgs[4].map(p=>p._gid===id?{...p,stats:old.stats}:p);
+const api=await loadFpsMajorTestApi(fs.readFileSync('src/battle/fps/EsportsFPS3D.jsx','utf8')),hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
+const measure=args=>{const sim=api.simulateFps(...args),trace=sim.frames.map(f=>{const p=f.players.find(p=>p._gid===id||p.id===actor.id);return [f.rnd,f.roundSec,p?.pos,p?.state,p?.dead];});return {completed:sim.completed,score:[sim.tScore,sim.ctScore],roundHash:hash(sim.roundHist),actorTraceHash:hash(trace),shotsHash:hash(sim.shotCadenceTelemetry)};};
+const baseline=measure(priorArgs);globalThis.gc?.();const trained=measure(args);globalThis.gc?.();const repeat=measure(args);globalThis.gc?.();
+assert.ok(baseline.completed&&trained.completed);assert.deepEqual(trained,repeat,'Same input remains deterministic');
+fs.writeFileSync(output,JSON.stringify({status:'PASS',playerId:id,beforeStats:beforePlayer.stats,afterStats:afterPlayer.stats,beforeEffective:old.stats,afterEffective:actor.stats,seed:args[3],map:args[0],scene:args[6],baseline,trained,repeat,behaviorChanged:baseline.actorTraceHash!==trained.actorTraceHash,method:'Only saved legal base-stat changes varied; both use after-training condition/energy/roster/opponent/tactic/seed. Real Worker consumption checked separately; no forced outcome or guaranteed improvement.'},null,2),{flag:'wx'});console.log('CS_COACHING_COMBAT RESULT=PASS deterministic=true behaviorChanged='+(baseline.actorTraceHash!==trained.actorTraceHash));

@@ -1,0 +1,11 @@
+.cs-training-review { margin-bottom:18px; padding:16px; border:1px solid var(--coach-line); border-left:3px solid var(--coach-accent); border-radius:9px; background:var(--coach-card); color:var(--coach-text); min-width:0; overflow-wrap:anywhere; }
+.cs-training-review small { color:var(--coach-accent); font-size:11px; }
+.cs-training-review h2 { font-size:17px; margin:10px 0; }
+.cs-training-review p { color:var(--coach-muted); font-size:12px; line-height:1.7; }
+.cs-training-review-gains { display:flex; flex-wrap:wrap; gap:8px; }
+.cs-training-review-gains span { padding:7px 9px; border:1px solid var(--coach-line); border-radius:5px; font-size:11px; }
+.cs-training-review-gains b { color:var(--coach-gain); font-family:var(--coach-mono); }
+.cs-training-review button { min-height:44px; padding:10px 16px; border:0; border-radius:7px; background:var(--coach-accent); color:var(--coach-bg); font-weight:800; cursor:pointer; }
+.cs-training-review button:disabled { opacity:.5; cursor:default; }
+.cs-training-review button:focus-visible { outline:2px solid var(--coach-text); outline-offset:3px; }
+.cs-training-review summary { min-height:40px; font-size:12px; cursor:pointer; }

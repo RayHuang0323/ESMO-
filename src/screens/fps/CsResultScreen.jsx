@@ -19,12 +19,16 @@ import { makeTransactionId } from "../../platform/contracts/matchProgressTransac
 import { GC, FONT, MONO } from "../../ui/theme.js";
 import RewardReceiptPanel from "../../ui/RewardReceiptPanel.jsx";
 import CsProfessionalReport from './CsProfessionalReport.jsx';
+import {csCoachingTrainingBlock} from './csCoachingNavigation.js';
 import "../../battle/fps/fpsBattleHud.css";
 
 const K = { t: "#fb923c", tL: "#fed7aa", ct: "#38bdf8", ctL: "#a7e0ff" };
 const ratingCol = (r) => (r >= 1.2 ? GC.gold : r >= 1.0 ? GC.green : r >= 0.85 ? K.tL : GC.gray);
 
-export default function CsResultScreen({ result, onDone, settlementReceipt = null }) {
+export default function CsResultScreen({ result, onDone, settlementReceipt = null, onTrainingRequest }) {
+  const coachingPlayers = useProfileStore(s=>s.players);
+  const coachingHistory = useProfileStore(s=>s.csHistory);
+  const coachingSession = useProfileStore(s=>s.matchmaking?.session);
   // S25：本畫面**不結算**（結算已在 AppShell 的比賽完成邊界做掉），只讀 receipt。
   //   → 沒有 useEffect 發獎、沒有重算獎勵；重整 / 返回再進來都不會重複發放。
   const txId = result?.matchId ? makeTransactionId("cs", result.matchId) : null;
@@ -51,7 +55,7 @@ export default function CsResultScreen({ result, onDone, settlementReceipt = nul
   const mvp = r.mvp;
   const rounds = r.summaryEvents ?? [];
 
-  if(['major.v1','major.v2','major.v3','major.v4','major.v5'].includes(r.sceneVersion))return <CsProfessionalReport result={r} receipt={receipt} recorded={recorded} onDone={onDone}/>;
+  if(['major.v1','major.v2','major.v3','major.v4','major.v5'].includes(r.sceneVersion))return <CsProfessionalReport result={r} receipt={receipt} recorded={recorded} onDone={onDone} coachingPlayers={coachingPlayers} coachingHistory={coachingHistory} onTrainingRequest={onTrainingRequest} trainingBlockedReason={csCoachingTrainingBlock(coachingSession)}/>;
 
 
   return (

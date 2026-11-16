@@ -6,10 +6,11 @@ import RewardReceiptPanel from '../../ui/RewardReceiptPanel.jsx';
 import { ARCHIVED_SUMMARY, ARCHIVED_SUMMARY_TEXT } from "../../platform/persistence/saveSlim.js";
 import {isPracticeSource} from '../../platform/progress/matchSource.js';
 import './csProfessionalReport.css';
+import CsCoachingPanel from './CsCoachingPanel.jsx';
 
 const fmt=(x,d=0)=>Number.isFinite(x)?x.toFixed(d):'—';
 const why={elim:'殲滅',bomb:'引爆',defuse:'拆除',time:'時間耗盡'};
-const tabs=[['overview','總覽'],['team','團隊分析'],['player','個人表現'],['round','逐局覆盤']];
+const tabs=[['overview','總覽'],['team','團隊分析'],['player','個人表現'],['round','逐局覆盤'],['coaching','培養建議']];
 function Metric({label,value,note,kind='number'}){return <div className="cs-report-metric" data-metric-kind={kind}><small>{label}</small><strong>{value}</strong>{note&&<span>{note}</span>}</div>;}
 function Panel({title,sub,children}){return <section className="cs-report-panel"><h2>{title}</h2>{sub&&<p>{sub}</p>}{children}</section>;}
 function Bars({rows,max,percent=false}){const ceiling=max||Math.max(1,...rows.map(r=>r.value||0));return <div className="cs-report-bars">{rows.map(r=><div className="cs-report-bar" key={r.label}><span>{r.label}</span><div><i style={{width:`${Math.max(0,Math.min(100,(r.value||0)/ceiling*100))}%`,background:r.enemy?'var(--enemy)':'var(--us)'}}/></div><b>{fmt(r.value,r.decimals||0)}{percent?'%':''}</b></div>)}</div>;}
@@ -20,7 +21,7 @@ function Trend({rows,a,b,label,names=['我方','對手'],money=false}){
 }
 function Compare({a,b,label,unit=''}){return <div className="cs-report-compare"><div><b>{fmt(a)}{unit}</b><span>{label}</span><b>{fmt(b)}{unit}</b></div><div className="cs-report-split"><i style={{flex:Math.max(.01,a||0)}}/><i style={{flex:Math.max(.01,b||0)}}/></div></div>;}
 
-export default function CsProfessionalReport({result:r,receipt,recorded,onDone}){
+export default function CsProfessionalReport({result:r,receipt,recorded,onDone,coachingPlayers=[],coachingHistory=[],onTrainingRequest,trainingBlockedReason}){
  const [tab,setTab]=useState('overview'),[team,setTeam]=useState('all'),[sort,setSort]=useState('rating'),[selected,setSelected]=useState(null),[round,setRound]=useState(1);
  const data=r.analytics?.version===1?r.analytics:null;
  const players=useMemo(()=>data?.players||[...(r.players||[]).map(p=>({...p,id:`us-${p.playerId||p.playerName}`,name:p.playerName,teamId:'us'})),...(r.opponents||[]).map(p=>({...p,id:`enemy-${p.playerId||p.playerName}`,name:p.playerName,teamId:'enemy'}))],[r,data]);
@@ -58,6 +59,7 @@ export default function CsProfessionalReport({result:r,receipt,recorded,onDone})
     <div className="cs-report-grid"><Panel title="本場任務時間" sub="依正式模擬每個存活非購買階段的實際任務累計"><Bars rows={Object.entries(chosen.dutySamples||{}).map(([key,value])=>({label:({entry:'首波突破',trade:'跟進補槍',carrier:'目標執行',overwatch:'狙擊架線',flank:'側線牽制',anchor:'守點',rotator:'機動回防',information:'資訊架線'})[key]||key,value}))}/></Panel><Panel title="擊殺位置" sub="地圖座標分布 · 擊殺發生位置"><svg className="cs-report-map" viewBox="0 0 100 100" role="img" aria-label={`${chosen.name} 真實擊殺座標`}><rect x="0" y="0" width="100" height="100" fill="var(--card2)"/>{[20,40,60,80].map(x=><path key={x} d={`M${x} 0V100M0 ${x}H100`} stroke="var(--line)"/>)}{(data?.engagements||[]).filter(e=>e.killerId===chosen.id).map((e,i)=><circle key={i} cx={e.x} cy={e.y} r="1.7" fill="var(--us)"><title>R{e.round} {e.gun} {e.hs?'爆頭':''} · {e.x.toFixed(1)},{e.y.toFixed(1)}</title></circle>)}</svg><p>黃點為該選手擊殺，不是完整場景縮圖。</p></Panel></div>
    </>}
    {tab==='round'&&<><Panel title="逐局覆盤"><div className="cs-report-filters"><label>回合 <select data-testid="cs-report-round-select" value={round} onChange={e=>setRound(Number(e.target.value))}>{strip.map(rd=><option value={rd.round} key={rd.round}>R{rd.round} · {why[rd.how]||rd.how}</option>)}</select></label><span>{roundMeta?`${roundMeta.winner==='us'?names[0]:names[1]} · ${why[roundMeta.how]||roundMeta.how}`:''}</span></div><div className="cs-report-table-scroll"><table><thead><tr><th>選手</th><th>K / D / A</th><th>傷害</th><th>道具傷害</th><th>回合結果</th></tr></thead><tbody>{(roundData?.players||[]).map(p=><tr key={p.id}><td>{p.name}</td><td>{p.k}/{p.d}/{p.a}</td><td>{p.dmg}</td><td>{fmt(p.utilDmg)}</td><td>{p.clutch?'殘局勝利':p.survived?'存活':p.traded?'已補槍':'陣亡'}</td></tr>)}</tbody></table></div></Panel><Panel title="本局交戰紀錄"><ol className="cs-report-events">{(data?.engagements||[]).filter(e=>e.round===round).map((e,i)=><li key={i}><time>{e.sec.toFixed(1)}s</time><strong>{players.find(p=>p.id===e.killerId)?.name||'未記錄'}</strong><span>{e.gun}{e.hs?' · 爆頭':''} →</span><b>{players.find(p=>p.id===e.victimId)?.name||'未記錄'}</b></li>)}</ol></Panel></>}
+   {tab==='coaching'&&<CsCoachingPanel result={r} players={coachingPlayers} history={coachingHistory} onTrainingRequest={onTrainingRequest} trainingBlockedReason={trainingBlockedReason}/>}
    <details className="cs-report-panel"><summary>指標定義與資料範圍</summary><p>ADR：每回合平均實際傷害。KAST：有擊殺、助攻、存活或死亡後被補槍的回合比例。HS：爆頭擊殺占比。UD：道具造成的實際傷害。評分使用 ESMO 引擎公式，非 HLTV／Valve 官方評級。</p><p>射擊、交戰、致盲、目標與逐回合資料均取本場模擬紀錄。未記錄的欄位顯示「—」；本頁不估算未被記錄的勝率、影響力或經濟效益。</p></details>
    <details className="cs-report-panel" data-testid="cs-report-rewards"><summary>選手成長與入帳明細</summary><RewardReceiptPanel receipt={receipt} accent={GC.gold}/><p>{isPracticeSource(receipt?.metadata?.matchSource)?'快速練習不列入對戰紀錄':recorded?'已儲存 CS 對戰紀錄':receipt?.ok===false?'結算未完成，尚未寫入對戰紀錄':'正在寫入對戰紀錄'}</p></details>
   </div>

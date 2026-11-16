@@ -23,6 +23,8 @@ import ManageFrame from "./ManageFrame.jsx";
 import { ADVANCE_REASONS } from "../../platform/time/worldClock.js";
 //  ⚠ DEV 專用，正式模式不會渲染任何東西。移除時連同下方那一行 JSX 一起刪。
 import DevQuickRecovery from "../../debug/DevQuickRecovery/index.jsx";
+import CsTrainingReview from '../fps/CsTrainingReview.jsx';
+import {csCoachingTrainingBlock} from '../fps/csCoachingNavigation.js';
 
 const condColorOf = (c) => (c === "精神飽滿" ? GC.green : c === "正常" ? "#d4d4d8" : c === "疲勞" ? GC.gold : GC.red);
 const gainText = (result) => {
@@ -31,13 +33,15 @@ const gainText = (result) => {
   return parts.length ? parts.join("、") : "本次無能力成長";
 };
 
-export default function TrainingScreen({ onBack }) {
+export default function TrainingScreen({ onBack, recommendation = null }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const meta = useProfileStore((s) => s.meta);
   const assignTraining = useProfileStore((s) => s.assignTraining);
   const cancelTraining = useProfileStore((s) => s.cancelTraining);
   const advanceWorldDays = useProfileStore((s) => s.advanceWorldDays);
-  const [selId, setSelId] = useState(null);
+  const activeSession = useProfileStore(s=>s.matchmaking?.session);
+  const [selId, setSelId] = useState(recommendation?.playerId ?? null);
+  const [coachingCourse, setCoachingCourse] = useState(recommendation?.courseId ?? null);
   const [log, setLog] = useState([]);
 
   //  日誌一筆 = { t: 文字, entry: 成長紀錄或 null }。有 entry 就一併畫出能力增幅膠囊。
@@ -90,9 +94,10 @@ export default function TrainingScreen({ onBack }) {
       right={<span style={{ background: "rgba(167,139,250,0.15)", color: GC.purp, fontSize: 11, fontWeight: 800, borderRadius: 8, padding: "4px 10px", whiteSpace: "nowrap" }}>第 {meta.week ?? 1} 週</span>}
     >
       <DevQuickRecovery />
+      {recommendation&&<CsTrainingReview player={players.find(p=>p.id===selId)} courseId={coachingCourse} blockedReason={csCoachingTrainingBlock(activeSession)} onConfirm={()=>{const state=useProfileStore.getState(),p=state.players.find(p=>p.id===selId);if(p&&!p.training&&!csCoachingTrainingBlock(state.matchmaking?.session))assign(p,coachingCourse);}}/>}
       <div style={{ color: GC.gray, fontSize: 10, marginBottom: 12 }}>指派訓練後需推進天數才完成，訓練期間選手無法操作</div>
 
-      <button onClick={advance}
+      <button data-testid="training-advance-day" onClick={advance}
         style={{ width: "100%", background: training.length > 0 ? `linear-gradient(135deg,${GC.purp},#7c3aed)` : GC.card, border: training.length > 0 ? "none" : "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 13, cursor: "pointer", color: training.length > 0 ? "#fff" : GC.gray, fontSize: 14, fontWeight: 800, marginBottom: 14 }}>
         ⏭️ {training.length > 0 ? `推進訓練日（${training.length} 人訓練中）` : "推進一天"}
       </button>
@@ -192,7 +197,7 @@ export default function TrainingScreen({ onBack }) {
                 // 預估與完成時 applyCourse 使用同一個純 calculator，不在 UI 重算。
                 const preview = calculateCourse(sel, c.id);
                 return (
-                  <button key={c.id} onClick={() => { if (canDo) assign(sel, c.id); }}
+                  <button key={c.id} data-course-id={c.id} onClick={() => { if (canDo) { if(recommendation)setCoachingCourse(c.id);else assign(sel, c.id); } }}
                     style={{ background: canDo ? GC.card : "rgba(255,255,255,0.02)", border: `1px solid ${canDo ? (isRest ? GC.green : GC.purp) + "33" : "rgba(255,255,255,0.04)"}`, borderRadius: 10, padding: 10, cursor: canDo ? "pointer" : "not-allowed", opacity: canDo ? 1 : 0.5, textAlign: "left" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
                       <span style={{ fontSize: 14 }}>{c.emoji}</span>

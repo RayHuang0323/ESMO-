@@ -1,0 +1,26 @@
+.cs-coaching { color:var(--text); min-width:0; }
+.cs-coaching-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:6px 0 18px; flex-wrap:wrap; }
+.cs-coaching-heading small { color:var(--muted); letter-spacing:.1em; font-size:10px; }
+.cs-coaching-heading h2 { margin:7px 0 0; font-size:20px; }
+.cs-coaching-heading>span,.cs-coaching-person>span { color:var(--us); font-size:11px; }
+.cs-coaching-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr)); gap:14px; }
+.cs-coaching-card { min-width:0; padding:18px; border:1px solid var(--line); border-top:3px solid var(--us); border-radius:10px; background:var(--card); animation:cs-coach-enter .28s ease-out both; overflow-wrap:anywhere; }
+.cs-coaching-person { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.cs-coaching-person strong { font-size:18px; }
+.cs-coaching-card h3 { font-size:14px; margin:18px 0 8px; }
+.cs-coaching-card p { font-size:12px; line-height:1.7; color:var(--muted); }
+.cs-coaching-course { display:flex; align-items:center; gap:10px; padding-top:14px; margin-top:15px; border-top:1px solid var(--line); font-size:14px; }
+.cs-coaching-course>span { font-size:23px; }
+.cs-coaching-gains { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.cs-coaching-gains span { padding:7px 9px; border:1px solid var(--line); border-radius:6px; font-size:11px; }
+.cs-coaching-gains b { color:var(--positive); font-family:var(--mono); margin-left:5px; }
+.cs-coaching-card details { padding:10px 0; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
+.cs-coaching-card summary { min-height:32px; cursor:pointer; display:flex; align-items:center; }
+.cs-coaching-card ul { padding-left:18px; line-height:1.9; }
+.cs-coaching-card button { width:100%; min-height:44px; margin-top:12px; background:var(--us); color:var(--bg); border:0; border-radius:7px; font-weight:800; cursor:pointer; }
+.cs-coaching-card button:disabled { opacity:.5; cursor:default; }
+.cs-coaching-card button:focus-visible { outline:2px solid var(--text); outline-offset:3px; }
+.cs-coaching-footnote,.cs-coaching-empty { color:var(--muted); font-size:12px; line-height:1.8; }
+.cs-coaching-empty { padding:22px; border:1px solid var(--line); border-radius:8px; }
+@keyframes cs-coach-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .cs-coaching-card { animation:none; } }

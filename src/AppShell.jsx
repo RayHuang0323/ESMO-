@@ -72,6 +72,7 @@ import CsMapSelectScreen from "./screens/fps/CsMapSelectScreen.jsx";
 import CsTacticScreen from "./screens/fps/CsTacticScreen.jsx";
 import CsLoadingScreen from "./screens/fps/CsLoadingScreen.jsx";
 import CsResultScreen from "./screens/fps/CsResultScreen.jsx";
+import {readCsCoachingLocation,writeCsCoachingLocation} from './screens/fps/csCoachingNavigation.js';
 // ── Sprint25：賽後結算（MOBA 在 useBattleFeed 終局；CS 在此處的比賽完成邊界）──
 import { settleCsMatch } from "./platform/progress/settleCsMatch.js";
 import { recoverPendingCommits } from "./platform/progress/commitMatch.js";
@@ -150,7 +151,11 @@ const VIEWPORT_LOCKED_SCREENS = new Set([
 ]);
 
 export default function AppShell() {
-  const [screen, setScreen] = useState(() => (getC5CDirectConfig() ? "cs" : "dashboard"));
+  const [screen, setScreen] = useState(() => {
+    if(getC5CDirectConfig())return 'cs';
+    const hint=readCsCoachingLocation();
+    return hint?.mode==='training'?'training':hint?.mode==='report'?'csResult':'dashboard';
+  });
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState(null);
   const [draft, setDraft] = useState(null);     // S18/S19：BanPick 結果 {picks,bans}
@@ -178,10 +183,17 @@ export default function AppShell() {
   const [talentSelections, setTalentSelections] = useState(null); // 本場英雄戰鬥天賦；與選手成長天賦分開。
   const [playerId, setPlayerId] = useState(null); // S21：PlayerDetail 目標選手
   const [csConfig, setCsConfig] = useState(() => getC5CDirectConfig()); // S23/C5B：CS 賽前選擇含四階段 tacticalLayout
-  const [csResult, setCsResult] = useState(null); // S23：CsMatchResult.v1（Match → Result 傳遞）
+  const [csResult, setCsResult] = useState(() => {const hint=readCsCoachingLocation();return hint?(useProfileStore.getState().csHistory||[]).find(r=>r.matchId===hint.matchId)??null:null;}); // Read existing history only; never settle on restore.
   const [csSettlementReceipt, setCsSettlementReceipt] = useState(null); // presentation only; also carries rejected settlement errors
+  const [csTrainingIntent,setCsTrainingIntent]=useState(()=>{const hint=readCsCoachingLocation();return hint?.mode==='training'?hint:null;});
+  const openCoachingTraining=hint=>{const intent={...hint,mode:'training'};writeCsCoachingLocation(intent);setCsTrainingIntent(intent);setScreen('training');};
+  const returnFromCoachingTraining=()=>{
+    const result=(useProfileStore.getState().csHistory||[]).find(r=>r.matchId===csTrainingIntent?.matchId);
+    if(result){writeCsCoachingLocation({mode:'report',matchId:result.matchId});setCsResult(result);setScreen('csResult');}
+    else{writeCsCoachingLocation(null);setCsTrainingIntent(null);setScreen('dashboard');}
+  };
   const go = (s) => () => setScreen(s);
-  const home = go("dashboard");
+  const home = () => {writeCsCoachingLocation(null);setCsTrainingIntent(null);setScreen('dashboard');};
   //  BP-1：從賽事中心 CS 分頁去排先發時，回來要回到 CS 分頁，不是首頁。
   const [csPrepFromHub, setCsPrepFromHub] = useState(false);
   const [hubInitialMode, setHubInitialMode] = useState(undefined);
@@ -394,7 +406,7 @@ export default function AppShell() {
            purpose="talent" 只改標題與每張卡的動作 —— 點選手**直達該選手的天賦樹**，
            不再停在一般名單。天賦樹本身仍是既有的 PlayerTalentScreen（無第二套）。 */}
       {screen === "talentPick" && <RosterScreen purpose="talent" onBack={home} onPlayer={(id) => { setPlayerId(id); setScreen("playerTalent"); }} />}
-      {screen === "training" && <TrainingScreen onBack={home} />}
+      {screen === "training" && <TrainingScreen recommendation={csTrainingIntent} onBack={csTrainingIntent?returnFromCoachingTraining:home} />}
       {screen === "teamDevelopment" && <TeamDevelopmentScreen onBack={home} />}
       {screen === "playerChallenge" && (
         <PlayerChallengeScreen onBack={home} onDraft={() => setScreen("challengeDraft")}
@@ -441,7 +453,8 @@ export default function AppShell() {
               畫面狀態重整就沒了，而 series 跟著場次一起存檔。
             ⚠ 走 `resumeActiveMatch()` 而不是另開一場：場次根本沒有結束，
               令牌也早就用掉了。恢復回來的 `phase` 是 `map` ⇒ 直接落在選圖畫面。 */}
-      {screen === "csResult" && <CsResultScreen result={csResult} settlementReceipt={csSettlementReceipt} onDone={() => {
+      {screen === "csResult" && <CsResultScreen result={csResult} settlementReceipt={csSettlementReceipt} onTrainingRequest={openCoachingTraining} onDone={() => {
+        writeCsCoachingLocation(null);setCsTrainingIntent(null);
         const series = useProfileStore.getState().activeSeriesView();
         setCsResult(null);
         setCsSettlementReceipt(null);
