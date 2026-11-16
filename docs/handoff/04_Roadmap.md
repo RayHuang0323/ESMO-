@@ -3015,3 +3015,8 @@ R4文件eb209b96已安全備份至獨立GitHub分支archive/cs-map-v2-beta-r4-20
 Android／低RAM／熱降頻仍NOT_RUN／未認證，CPU4×FAIL與2118MiB歷史峰值等風險不關閉；本次封存不代表全面Release Gate PASS。清理報告：review/cs-integration-20261107/ARCHIVE_CLEANUP_REVIEW_20261108.md，精確停點／遠端回讀見同目錄ARCHIVE_CLEANUP_CHECKPOINT.md及C:\Users\ifikn\esmo-measure\cs-beta-archive-cleanup-20261108\final-checkpoint.json。剩餘資料只提案，停Owner Review。
 
 下一步僅Owner審核剩餘清理清單；Android、低RAM或新CS功能須另開明確授權任務，不自動接續。
+
+
+## 2026-11-16 CS Competition Map Pool v1：Audit／介面提案，Owner Review
+
+正式 main 即時回讀仍 7cf1cebc；起點 d2540e56。既有 BO1／BO3／Major／MatchSession 不重建。原創三圖沿用 legacy mapKey、靠 sceneVersion 區分，正式 session 的 Store／history／恢復與 AI fixture 投影需協調真實地圖身分；依 Owner 禁止跨權威修改的邊界，本輪只有設計，沒有產品候選或新圖正式流程 PASS。TD-CS-COMP-01：正式池 map identity 與 session snapshot 尚未定義；TD-CS-COMP-02：CS 賽事規格開頭尚未實作標記落後於現況。詳 docs/design/CS_Competition_Map_Pool_v1.md。Claude 現役 MOBA HEAD 77780df3 的未推送提交與 6 修改／2 未追蹤檔保護。BO1／BO3新圖、獎勵、Replay、恢復及公平性 NOT_RUN；未啟動舊流程冒充候選預覽。等待架構 owner 核定介面，維持正式池與舊存檔。未Push／Deploy／清理／新增Worktree。

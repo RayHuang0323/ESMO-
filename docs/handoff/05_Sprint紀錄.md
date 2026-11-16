@@ -27098,3 +27098,8 @@ Android／低 RAM／熱降頻 NOT_RUN、CPU4× FAIL、Replay 2118 MiB 風險及�
 ## 2026-11-16 重開機資源唯讀核對（非 Sprint）
 
 以 2026-11-08 保存的 109 筆 worktree 清單比對，新增 D:\OneDrive\文件\GitHub\ESMO\.sprints\moba-v21-sprint0，分支 feature/moba-tower-edge-v23，HEAD 77780df3e4fe5dded402459d8455c20dec43bc88。提交及修改內容屬現役 MOBA v24 候選開發；Git metadata 不記錄建立 agent。D 槽可用容量下降 2.558 GiB；此新工作區目錄 metadata 枚舉為 0.587 GiB 邏輯檔案，只能作為部分線索，未對全碟或其他大型工作區掃描。CS D 槽獨立備份／SHA／恢復驗證未開始；Owner 尚未指定獨立目的地。完整唯讀結果見 review/cs-integration-20261107/POST_REBOOT_AUDIT_20261116.md。未開始新 Sprint、未改產品、未刪除、未 Push／Deploy。
+
+
+## 2026-11-16 CS Competition Map Pool v1：Audit／介面提案，Owner Review
+
+正式 main 即時回讀仍 7cf1cebc；起點 d2540e56。既有 BO1／BO3／Major／MatchSession 不重建。原創三圖沿用 legacy mapKey、靠 sceneVersion 區分，正式 session 的 Store／history／恢復與 AI fixture 投影需協調真實地圖身分；依 Owner 禁止跨權威修改的邊界，本輪只有設計，沒有產品候選或新圖正式流程 PASS。TD-CS-COMP-01：正式池 map identity 與 session snapshot 尚未定義；TD-CS-COMP-02：CS 賽事規格開頭尚未實作標記落後於現況。詳 docs/design/CS_Competition_Map_Pool_v1.md。Claude 現役 MOBA HEAD 77780df3 的未推送提交與 6 修改／2 未追蹤檔保護。BO1／BO3新圖、獎勵、Replay、恢復及公平性 NOT_RUN；未啟動舊流程冒充候選預覽。等待架構 owner 核定介面，維持正式池與舊存檔。未Push／Deploy／清理／新增Worktree。
