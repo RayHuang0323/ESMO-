@@ -27093,3 +27093,8 @@ D 兩根去重配置 42.773 GiB；共用 host 3.584 GiB 必留。備份、SHA �
 Android／低 RAM／熱降頻 NOT_RUN、CPU4× FAIL、Replay 2118 MiB 風險及自然容量 3/4 缺口維持，不宣稱全面 Gate PASS。最新 [清理報告](../../review/cs-integration-20261107/CONTROLLED_CLEANUP_R2_20261108.md)、[D 封存提案](../../review/cs-integration-20261107/D_WORKSPACE_ARCHIVE_PLAN_20261108.md)、[Checkpoint](../../review/cs-integration-20261107/CONTROLLED_CLEANUP_R2_CHECKPOINT.md)。精確最終 SHA／遠端回讀與容量：C:\Users\ifikn\esmo-measure\cs-beta-controlled-cleanup-r2-20261108\final-checkpoint.json。完成停 Owner Review，不再開發 CS 功能。
 
 維護性核驗，不新增 Sprint 或產品 Gate。既有 R4 收據未被文件版本取代，原始失敗、未完成與風險保持原樣。
+
+
+## 2026-11-16 重開機資源唯讀核對（非 Sprint）
+
+以 2026-11-08 保存的 109 筆 worktree 清單比對，新增 D:\OneDrive\文件\GitHub\ESMO\.sprints\moba-v21-sprint0，分支 feature/moba-tower-edge-v23，HEAD 77780df3e4fe5dded402459d8455c20dec43bc88。提交及修改內容屬現役 MOBA v24 候選開發；Git metadata 不記錄建立 agent。D 槽可用容量下降 2.558 GiB；此新工作區目錄 metadata 枚舉為 0.587 GiB 邏輯檔案，只能作為部分線索，未對全碟或其他大型工作區掃描。CS D 槽獨立備份／SHA／恢復驗證未開始；Owner 尚未指定獨立目的地。完整唯讀結果見 review/cs-integration-20261107/POST_REBOOT_AUDIT_20261116.md。未開始新 Sprint、未改產品、未刪除、未 Push／Deploy。
