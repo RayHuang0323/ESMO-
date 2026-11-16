@@ -17,12 +17,13 @@
 // ============================================================================
 
 export const TASK_ARBITRATION_CONTRACT = "TaskArbitration.v1";
-export const TASKS = Object.freeze(["retreat", "invade", "chase", "disengage", "tower_fallback", "objective_window",
+//  "defend"（v24 Sprint 1）：tacticExec 的回防者。與 invade 同一個優先序位置（排在 invade 之後）。
+export const TASKS = Object.freeze(["retreat", "invade", "defend", "chase", "disengage", "tower_fallback", "objective_window",
   "initiative_siege", "team_call", "fight_join", "local", "default"]);
 export const DEFAULT_KINDS = Object.freeze(["lane", "farm", "gank", "roam", "push", "other"]);
 export const REASONS = Object.freeze(["hp_low", "local_retreat", "edge_retreat", "invade_window", "chase_hold", "disengage",
   "tower_fallback", "objective_window", "initiative_siege", "call_focus", "call_lowhp", "fight_join", "local_engage",
-  "default_lane", "default_farm", "gank_window", "roam_window", "default_push", "default_other"]);
+  "default_lane", "default_farm", "gank_window", "roam_window", "default_push", "default_other", "defend_window"]);
 export const REWRITES = Object.freeze(["rewrite:formation", "rewrite:task_commit", "rewrite:tower_zone", "rewrite:idle_retask",
   "rewrite:edge_hold", "rewrite:safe_route", "rewrite:taunt"]);
 export const SUPPRESSED_KEYS = Object.freeze(["invade", "objective_window", "fight_join", "default:gank", "default:roam"]);

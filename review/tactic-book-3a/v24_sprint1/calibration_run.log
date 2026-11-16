@@ -1,0 +1,9 @@
+[start] t1 02:26:08
+[done] t1 exit=0 02:29:11
+[start] t2 02:29:11
+[done] t2 exit=0 02:32:31
+[start] c1 02:32:31
+[done] c1 exit=0 02:33:54
+[start] c2 02:33:54
+[done] c2 exit=0 02:35:09
+[all-done] 02:35:09

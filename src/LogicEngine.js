@@ -50,6 +50,7 @@ import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './
 //  Phase 3a-C2：戰術資料（knobs／Tactical Identity／戰術階段）的唯一讀取入口（static 模式＝設定值原樣回傳）。
 import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.js";
 import { createTaskArbitrationLedger, movedTarget as arbMovedV24 } from "./battle/moba/tactics/taskArbitrationLedger.js";
+import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24 } from "./battle/moba/tactics/tacticExecV24.js";
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -132,6 +133,8 @@ export class LogicEngine {
   //  moba-sim.v24 候選：configureMatch 認得 `taskArbitration`（任務仲裁紀錄）與 `taskCommit`（推進是否承諾）；組裝器以此做能力檢查。
   static SUPPORTS_TASK_ARBITRATION = true;
   static SUPPORTS_TASK_COMMIT = true;
+  //  v24 Sprint 1：configureMatch 認得 `tacticExec`（自適應戰術執行 TacticalExecution.v1）。
+  static SUPPORTS_TACTIC_EXEC = true;
   //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
   //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
   static SUPPORTS_LANE_FRAME = true;
@@ -411,7 +414,7 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
     //  moba-sim.v24 候選：taskArbitration "v1" ⇒ 引擎每 tick 替每名存活英雄記一筆仲裁紀錄（this.arbLedger；只寫，不影響任何決定）。
@@ -419,6 +422,9 @@ export class LogicEngine {
     this._arbV24 = taskArbitration === "v1";
     this._commitPushV24 = taskCommit === "v19push";
     if (this._arbV24) this.arbLedger = createTaskArbitrationLedger();
+    //  v24 Sprint 1：tacticExec "adaptive.v1" ⇒ 入侵不再開局擲骰決定（亂數照樣抽，序列不變），改成整場評估（battle/moba/tactics/tacticExecV24.js）。
+    //  需要 invasion "v2" 的執行生命週期；缺少這個鍵 ⇒ 舊行為逐位元不變。
+    this._tacExecV24 = tacticExec === "adaptive.v1" && invasion === "v2";
     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
     //  "v3"（2026-11-13 Owner 核准的塔邊等待小修；同一個 v23 候選）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
@@ -502,9 +508,10 @@ export class LogicEngine {
       //   無能力層 ⇒ 原值。無論如何 rng2 都抽一次 ⇒ 序列不變。
       const jg = this._modById(side[0] + "2");
       const invadeChance = jg ? clamp(K.invadeChance + jg.invadeAdj, 0, 1) : K.invadeChance;
-      if (this.rng2() < invadeChance) { st.invadeUntil = this._invasionV2 ? INVASION_V2.windowSec : (this.rules.invasionWindow ?? 50); this.exec[side].invadeAttempts++; }
+      if (this.rng2() < invadeChance && !this._tacExecV24) { st.invadeUntil = this._invasionV2 ? INVASION_V2.windowSec : (this.rules.invasionWindow ?? 50); this.exec[side].invadeAttempts++; }
       this._tac[side] = st;
     }
+    if (this._tacExecV24) this.tacExec = createTacticExecState(this);
   }
   /**
    * 團戰參與率：依 hot 是否為龍/巴龍坑取對應 knob（原固定 0.6）。
@@ -1403,7 +1410,8 @@ export class LogicEngine {
     const dtv = this.t - I.lastT; I.lastT = this.t;
     const foes = alive.filter((q) => q.side !== side && !q.dead && dist(q.pos, p.pos) < INVASION_V2.nearRadius);
     if (foes.length) I.contact += dtv;
-    if (p.hp < p.maxHp * INVASION_V2.abortHp) return this._invadeEndV2(p, "hp");
+    //  v24 Sprint 1：自適應入侵把依傾向的中止門檻帶在 I.abortHp（設計 §3.4）；舊的開局入侵沒有這個欄位 ⇒ 原式。
+    if (p.hp < p.maxHp * (I.abortHp ?? INVASION_V2.abortHp)) return this._invadeEndV2(p, "hp");
     if (foes.length >= INVASION_V2.abortFoes) return this._invadeEndV2(p, "outnumbered");
     if (p.role !== "jungle") return { tgt: INVASION_POINT[side], st: "入侵" };
     const foeSide = side === "blue" ? "red" : "blue";
@@ -6947,6 +6955,8 @@ export class LogicEngine {
     //  moba-sim.v24 taskArbitration "v1"：仲裁紀錄（只寫）。層不存在 ⇒ ARB＝null，下面每一處紀錄都不執行。
     const ARB = this._arbV24 ? this.arbLedger : null;
     if (ARB) ARB.beginTick();
+    //  v24 Sprint 1：英雄移動之前，用同一份凍結位置做記憶更新、回防觸發與入侵評估（與陣列順序無關）。
+    if (this._tacExecV24 && this.tacticOn) tacticExecTick(this, this.tacExec, alive);
     for (const p of this.players) {
       if (p.dead) {
         if (R.explainableCombatDecisions) {
@@ -7103,10 +7113,14 @@ export class LogicEngine {
       }
       // S24：開局野區入侵（configureMatch 時擲骰；打野＋跟進中路在前 50 秒壓入敵方野區）
       let tacTgt = null;
-      if (K && !p.retreating && this.t < (S.invadeUntil || 0) && (p.role === "jungle" || (K.invadeWithMid && p.role === "mid"))) {
+      //  v24 Sprint 1：只有評估後真的出發的打野走這條（隊友另外由 partnerStep 帶，不再固定是中路）。
+      const invWho = this._tacExecV24 ? (p.role === "jungle" && !!p._invV2 && !p._invV2.done) : (p.role === "jungle" || (K?.invadeWithMid && p.role === "mid"));
+      if (K && !p.retreating && this.t < (S.invadeUntil || 0) && invWho) {
         if (this._invasionV2) {
           //  v2：打野去打敵方野怪、中路到入口支援；有失敗條件。回傳 null ⇒ 這個英雄的入侵結束，回到一般行為（農自家野區、Gank）。
-          const inv = this._invadeStepV2(p, S, alive);
+          //  v24：本隊物件窗打開 ⇒ 入侵讓位（objective_call）。
+          const g = this._tacExecV24 ? tacInvadeGuardV24(this, p) : null;
+          const inv = g ? this._invadeEndV2(p, g) : this._invadeStepV2(p, S, alive);
           if (inv) { tacTgt = inv.tgt; stOv = inv.st; }
         } else {
           tacTgt = INVASION_POINT[p.side]; stOv = "入侵";
@@ -7115,6 +7129,13 @@ export class LogicEngine {
         //  第一個條件不成立而入侵還沒結束：不是一般撤退接手了（retreat），就是入侵窗到了（window）。
         this._invadeEndV2(p, p.retreating ? "retreat" : "window");
         if (AT && p.retreating) AT.sup.push("invade");
+      }
+      //  v24 Sprint 1：入侵隊友與回防者（與入侵同一個優先序：撤退、以及本隊物件窗會讓它們結束）。
+      let tacExecKind = null;
+      if (this._tacExecV24 && K && !tacTgt && (p._tacPartnerV24 || p._defV24)) {
+        const isDef = !p._tacPartnerV24;
+        const r = isDef ? tacDefendStepV24(this, this.tacExec, p, alive) : tacPartnerStepV24(this, this.tacExec, p, alive);
+        if (r) { tacTgt = r.tgt; stOv = r.st; tacExecKind = isDef ? "defend" : "invade"; }
       }
       // S24：打野 Gank 節奏機（依 tempo 週期、依權重挑路；到點後 9 秒壓該路前線）
       if (K && !tacTgt && p.role === "jungle" && !p.retreating) {
@@ -7268,7 +7289,7 @@ export class LogicEngine {
         }
         }
       }
-      else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; if (AT) { AT.w = "invade"; AT.reason = "invade_window"; } }
+      else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; if (AT) { AT.w = tacExecKind === "defend" ? "defend" : "invade"; AT.reason = tacExecKind === "defend" ? "defend_window" : "invade_window"; } }
       else if (chaseFoe) { tgt = { x: chaseFoe.pos.x, y: chaseFoe.pos.y }; st = "追擊"; p.fsm = "CHASE"; if (AT) { AT.w = "chase"; AT.reason = "chase_hold"; } }
       // S29B1（v3）：脫戰——團戰解散後短暫退到自家前線塔，不立即找下一場架
       else if (R.engagementFsm && p.fsm === "DISENGAGE" && this.t < p.fsmUntil) {
@@ -7602,7 +7623,10 @@ export class LogicEngine {
       //  的成因是「已抵達目標點就站著等」——決策層給的是一個**位置**，
       //  站到了就沒有下一個任務。連續發呆平均 19.4 秒、最長 125.5 秒。
       //  合法停留只有下面這幾種；其餘一律取得下一個有效任務。
-      if (R.decisionV17 && tgt && !p.retreating) {
+      //  v24 Sprint 1 任務鎖定（仲裁步驟 B 的第一條）：入侵（打野與隊友）與回防進行中，發呆再任務不得改掉目標
+      //  （步驟 A 量到入侵被發呆再任務覆寫 1,107 tick；入侵在入口等野怪出生是合法停留）。
+      const lockedV24 = this._tacExecV24 && (st === "入侵" || (st === "回防" && !!p._defV24));
+      if (R.decisionV17 && tgt && !p.retreating && !lockedV24) {
         //  「抵達」不能只看 0.9：打建築是**站在攻擊距離上**輸出（4–8 單位），
         //  用 0.9 判定的話，站在建築前面的人永遠不算抵達 ⇒ 永遠不會再任務。
         //  這正是把 M1.5 的兵線閘門變成死局的那一步：門牙塔／主堡沒有己方兵線

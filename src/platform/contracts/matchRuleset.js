@@ -92,6 +92,15 @@ export const TASK_COMMITS = Object.freeze(["v19", "v19push"]);
 export const DEFAULT_TASK_COMMIT = "v19";
 /** 讀取 ruleset 的 taskCommit 層；缺少 ≡ "v19"。 */
 export const taskCommitOf = (r) => r?.layers?.taskCommit ?? DEFAULT_TASK_COMMIT;
+//  tacticExec 層（v24 Sprint 1，Owner 2026-11-15 核准）：自適應戰術執行 TacticalExecution.v1。
+//   · "off"        ＝沒有（缺少這個鍵 ≡ off）：入侵照舊開局擲一次骰（＝v23）。工具規則集可以覆寫成 off 當 v23 對照。
+//   · "adaptive.v1"＝整場每 5 秒評估入侵（go／declined:<原因>）、價值優先的目標選擇、冷卻與任務仲裁、1～2 人編隊、
+//                    看得見才觸發的回防、任務鎖定與放棄原因紀錄（battle/moba/tactics/tacticExecV24.js）。需要 invasion "v2"。
+export const TACTIC_EXECS = Object.freeze(["off", "adaptive.v1"]);
+export const DEFAULT_TACTIC_EXEC = "off";
+/** 讀取 ruleset 的 tacticExec 層；缺少 ≡ "off"。 */
+export const tacticExecOf = (r) => r?.layers?.tacticExec ?? DEFAULT_TACTIC_EXEC;
+export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24" });
 //  正式旗標 mobaTacticExecV24（預設 OFF；只在 mobaTacticalDirectorV21＋mobaJungleV22＋mobaSafeRouteV23 也開時有意義：career.v24＝career.v23＋v24 的層）。
 export const TASK_ARBITRATION_RELEASE_FLAG = Object.freeze({ v1: "mobaTacticExecV24" });
 export const TASK_COMMIT_RELEASE_FLAG = Object.freeze({ v19push: "mobaTacticExecV24" });
@@ -150,10 +159,11 @@ const V23_RULESETS = Object.freeze({
   "balanceTool.v23": v23Of(V22_RULESETS["balanceTool.v22"]),
 });
 //  moba-sim.v24 候選（2026-11-15）：從 v23 逐欄衍生，只多 v24 的層。v23 物件本身一個欄位都沒動（v23 已凍結）。
-//  交付點 A（基礎版本）：taskArbitration "v1"（只寫紀錄）＋taskCommit "v19"（＝現狀）⇒ v24 的對局與 v23 逐 tick 相同。
+//  交付點 A（基礎版本，commit 77780df3）：taskArbitration "v1"（只寫紀錄）＋taskCommit "v19"（＝現狀）⇒ v24 的對局與 v23 逐 tick 相同。
+//  交付點 B（Sprint 1）：再加 tacticExec "adaptive.v1"。工具規則集可用 ESMO_BALANCE_TACTICEXEC=off 覆寫回 A 的行為（＝v23）。
 const v24Of = (base, extraRequirements = []) => R({
   ...base, rulesetId: base.rulesetId.replace(".v23", ".v24"), simVersion: "moba-sim.v24",
-  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19" },
+  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
 export const MATCH_RULESETS = Object.freeze({
@@ -247,6 +257,7 @@ export function validateRuleset(r) {
   //  moba-sim.v24 候選的層：有這個鍵就必須是登錄的值（缺少 ≡ 預設）。
   if (r?.layers && "taskArbitration" in r.layers && !TASK_ARBITRATIONS.includes(r.layers.taskArbitration)) errors.push("taskArbitration");
   if (r?.layers && "taskCommit" in r.layers && !TASK_COMMITS.includes(r.layers.taskCommit)) errors.push("taskCommit");
+  if (r?.layers && "tacticExec" in r.layers && !TACTIC_EXECS.includes(r.layers.tacticExec)) errors.push("tacticExec");
   //  Phase 3a-B 第一階段：可選層 templateBalance——有這個鍵就必須是已登錄的修正表 id（缺少 ≡ 出貨版模板）。
   if (r?.layers && "templateBalance" in r.layers && !TEMPLATE_BALANCES.includes(r.layers.templateBalance)) errors.push("templateBalance");
 
@@ -288,6 +299,11 @@ export function validateRuleset(r) {
     if (tc !== DEFAULT_TASK_COMMIT && TASK_COMMITS.includes(tc)) {
       const flag = TASK_COMMIT_RELEASE_FLAG[tc];
       if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`taskCommit ${tc} requires ${flag ?? "a release flag"}`);
+    }
+    const te = tacticExecOf(r);
+    if (te !== DEFAULT_TACTIC_EXEC && TACTIC_EXECS.includes(te)) {
+      const flag = TACTIC_EXEC_RELEASE_FLAG[te];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`tacticExec ${te} requires ${flag ?? "a release flag"}`);
     }
     for (const f of Array.isArray(r.releaseRequirements) ? r.releaseRequirements : []) {
       if (!RELEASE_FLAGS.includes(f)) errors.push(`releaseRequirements: ${String(f)} is not a release flag`);

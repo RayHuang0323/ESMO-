@@ -65,7 +65,10 @@
 
 ## 4. 提交後的複驗
 
-（提交後補上：`check_task_arbitration_obs_v1`、`check_v24_diag_sprint`。）
+A 的 commit 是 **`77780df3`**。提交後在同一個 commit 上重跑：
+
+- `check_task_arbitration_obs_v1`：**6/6 PASS**（⑥ src 乾淨）。
+- `check_v24_diag_sprint`：**6/6 PASS**（影子被動、v23 凍結 F1、src 乾淨）。
 
 ## 5. 沒有做的事
 

@@ -59,9 +59,11 @@ const V24_CASES = [
   ["balanceTool", "v2.standard_macro", "v2.standard_macro", 11, null], ["balanceTool", "v2.jungle_invasion", "v2.jungle_invasion", 11, null],
   ["balanceTool", "v2.jungle_invasion", "classic.m7", 13, null], ["balanceTool", "classic.m7", "v2.jungle_invasion", 17, null],
   ["balanceTool", "classic.m1", "classic.m3", 17, null], ["balanceTool", "classic.m5", "v2.standard_macro", 19, null],
-  ["career", "v2.standard_macro", null, 11, null], ["career", "v2.jungle_invasion", null, 13, null], ["career", "classic.m7", null, 17, null],
-  ["career", "v2.jungle_invasion", null, 93001, "mid"], ["career", "v2.jungle_invasion", null, 93003, "low"], ["career", "v2.jungle_invasion", null, 93021, "high"],
 ];
+//  交付點 B（2026-11-17）：v24 規則集多了 tacticExec "adaptive.v1"，會改變對局（這是 Sprint 1 的目的）。
+//  所以 I2 改成「v24 把 tacticExec 覆寫成 off ⇒ 與 v23 逐 tick 相同」（＝交付點 A 的保證仍成立）。
+//  career.v24 是正式規則集、層值被 createMatchSetup 鎖住，不能覆寫成 off；生涯路徑的「v23 不變」由 I1 的 24 場生涯釘點涵蓋。
+const withTacticExecOff = (fn) => { process.env.ESMO_BALANCE_TACTICEXEC = "off"; try { return fn(); } finally { delete process.env.ESMO_BALANCE_TACTICEXEC; } };
 const C = await (await imp("tools/lib/careerLiveInputs.mjs")).careerContext();
 const { prepareLiveMatch } = await imp("src/useLocalServer.js");
 const bindingOf = (t) => C.bindTacticPlanToCurrentVersions(C.createTacticPlan({ templateId: t, choices: {} }).plan);
@@ -81,19 +83,20 @@ function buildV24(kind, tb, tr, seed, tier) {
   const want = new Map(BASE.rows.map((r) => [r.key, r.hash]));
   let same = 0, ledgers = 0; const diffs = [];
   for (const [kind, tb, tr, seed, tier] of V24_CASES) {
-    const e = buildV24(kind, tb, tr, seed, tier);
+    const e = withTacticExecOff(() => buildV24(kind, tb, tr, seed, tier));
     const r = P.streamHash(e);
-    if (e.arbLedger) ledgers++;
+    if (e.arbLedger && e.tacExec === undefined) ledgers++;
     const k23 = P.caseKey([`${kind}.v23`, tb, tr, seed, tier]);
     if (want.get(k23) === r.hash) same++; else diffs.push(k23);
   }
-  ck("I2 v24（仲裁紀錄 v1＋承諾 v19）與同輸入的 v23 整場逐 tick 相同（工具 6、生涯 6）", same === V24_CASES.length && ledgers === V24_CASES.length,
+  ck("I2 v24（仲裁紀錄 v1＋承諾 v19，tacticExec 覆寫成 off）與同輸入的 v23 整場逐 tick 相同（工具 6）", same === V24_CASES.length && ledgers === V24_CASES.length,
     `same=${same}/${V24_CASES.length} ledgers=${ledgers}${diffs.length ? " diff=" + J(diffs) : ""}`);
 }
 
 // ── I4 ──
 {
-  const e = buildV24("career", "v2.jungle_invasion", null, 93001, "mid");
+  //  交付點 B：外部觀測器（步驟 A）不認識 tacticExec 的回防與隊友任務 ⇒ 比對在 tacticExec off 的 v24 上做（仲裁帳本身照樣開著）。
+  const e = withTacticExecOff(() => buildV24("balanceTool", "v2.jungle_invasion", "classic.m7", 13, null));
   const obs = attachTaskArbitration(e, { keep: false });
   let ticks = 0, badCount = 0, badEnum = 0, cmp = 0, agree = 0, ex = null;
   const conf = {};
@@ -120,7 +123,7 @@ function buildV24(kind, tb, tr, seed, tier) {
 
 // ── I5 ──
 {
-  const V24_KEYS = ["taskArbitration", "taskCommit"];
+  const V24_KEYS = ["taskArbitration", "taskCommit", "tacticExec"];
   const old = Object.values(RS.MATCH_RULESETS).filter((r) => !r.rulesetId.endsWith(".v24"));
   const leaked = old.filter((r) => V24_KEYS.some((k) => k in r.layers)).map((r) => r.rulesetId);
   const pair = (a, b) => {
@@ -136,8 +139,8 @@ function buildV24(kind, tb, tr, seed, tier) {
   const onlyV24 = RS.resolveRulesetForMode({ mode: "career", flags: { ...C.G.featureFlags, mobaTacticExecV24: true } }).rulesetId;
   const flagsOff = ["mobaTacticalDirectorV21", "mobaJungleV22", "mobaSafeRouteV23", "mobaTacticExecV24", "mobaChallengeV21"].every((f) => FF.FEATURE_FLAGS[f] === false);
   const v24Valid = ["career.v24", "balanceTool.v24"].every((id) => RS.validateRuleset(RS.MATCH_RULESETS[id]).ok);
-  ck("I5 規則集：v20～v23 沒有 v24 的層；v24＝v23 逐欄＋恰好兩個新鍵（v1／v19）；旗標全關 ⇒ career.v20、只開 v24 ⇒ 仍 career.v20",
-    leaked.length === 0 && c.same && t.same && J(c.extra) === J(V24_KEYS) && J(t.extra) === J(V24_KEYS) && J(c.layers) === J(["v1", "v19"]) && J(t.layers) === J(["v1", "v19"])
+  ck("I5 規則集：v20～v23 沒有 v24 的層；v24＝v23 逐欄＋恰好三個新鍵（v1／v19／adaptive.v1）；旗標全關 ⇒ career.v20、只開 v24 ⇒ 仍 career.v20",
+    leaked.length === 0 && c.same && t.same && J(c.extra) === J(V24_KEYS) && J(t.extra) === J(V24_KEYS) && J(c.layers) === J(["v1", "v19", "adaptive.v1"]) && J(t.layers) === J(["v1", "v19", "adaptive.v1"])
     && c.sim === "moba-sim.v24" && off === "career.v20" && three === "career.v23" && four === "career.v24" && onlyV24 === "career.v20" && flagsOff && v24Valid
     && RS.MATCH_RULESETS["career.v24"].releaseRequirements.includes("mobaTacticExecV24"),
     `leaked=${J(leaked)} career=${J(c)} tool=${J(t)} resolve off/3/4/onlyV24=${off}/${three}/${four}/${onlyV24} flagsOff=${flagsOff} valid=${v24Valid}`);

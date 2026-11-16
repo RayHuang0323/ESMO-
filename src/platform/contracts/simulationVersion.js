@@ -270,6 +270,8 @@ export const SIMULATION_SEMANTICS_FILES = Object.freeze([
   "src/battle/moba/map/riftLayoutGeometry.js",
   //  · v24 新增：任務仲裁紀錄（LogicEngine 直接 import；只寫紀錄，但仍在引擎的 tick 路徑上）。
   "src/battle/moba/tactics/taskArbitrationLedger.js",
+  //  · v24 Sprint 1（2026-11-17）：自適應戰術執行 TacticalExecution.v1（入侵評估、目標選擇、冷卻與仲裁、編隊、回防）。
+  "src/battle/moba/tactics/tacticExecV24.js",
   //  ⚠ src/platform/contracts/tacticalDirective.js 仍然不收：引擎沒有呼叫 directive()（G-AC2 S6 的守門照舊）。
 ]);
 
@@ -705,7 +707,9 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   "moba-sim.v23": "69237cce78edf2be",
   //  v24 候選（2026-11-15，Owner 核准開版）：交付點 A＝taskArbitration "v1"（只寫紀錄）＋taskCommit 層（預設 "v19"）＋語意清單補上 22 支依賴檔。
   //  v24 未凍結：語意檔再改就同版號重新登記，舊值寫在這裡。v20～v23 那幾行原樣保留（v23 已凍結，不得改）。
-  "moba-sim.v24": "78d1fb305ba1f72a",
+  //  上一個值 78d1fb305ba1f72a＝交付點 A（commit 77780df3）。
+  //  目前值＝交付點 B（v24 Sprint 1）：tacticExec "adaptive.v1"（自適應入侵、價值優先目標、冷卻與仲裁、1～2 人編隊、回防觸發、任務鎖定）。
+  "moba-sim.v24": "5950a5b11782df9e",
 });
 
 export const isKnownSimulationVersion = (v) =>

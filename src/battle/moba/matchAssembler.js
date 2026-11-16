@@ -51,7 +51,7 @@
 // ============================================================================
 import { BUILD_STRATEGIES } from "./items/buildPolicy.js";
 import { MATCH_SETUP_VERSION, fnv1a64Hex } from "../../platform/contracts/matchSetup.js";
-import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME, templateBalanceOf, JUNGLE_CAMPS, DEFAULT_JUNGLE_CAMP, INVASIONS, DEFAULT_INVASION, SAFE_ROUTES, DEFAULT_SAFE_ROUTE, TASK_ARBITRATIONS, DEFAULT_TASK_ARBITRATION, TASK_COMMITS, DEFAULT_TASK_COMMIT } from "../../platform/contracts/matchRuleset.js";
+import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME, templateBalanceOf, JUNGLE_CAMPS, DEFAULT_JUNGLE_CAMP, INVASIONS, DEFAULT_INVASION, SAFE_ROUTES, DEFAULT_SAFE_ROUTE, TASK_ARBITRATIONS, DEFAULT_TASK_ARBITRATION, TASK_COMMITS, DEFAULT_TASK_COMMIT, TACTIC_EXECS, DEFAULT_TACTIC_EXEC } from "../../platform/contracts/matchRuleset.js";
 import { stableStringify } from "../../platform/contracts/squadSnapshot.js";
 
 export const MATCH_ASSEMBLER_VERSION = "MatchAssembler.v1";
@@ -154,6 +154,7 @@ export function assembleMatch(setup, deps = {}) {
   //  moba-sim.v24 候選的層（taskArbitration、taskCommit）：同上，層不存在 ⇒ 整個鍵不出現（v20～v23 的 configureMatch 引數逐字不變）。
   const hasTaskArbitration = Object.prototype.hasOwnProperty.call(L, "taskArbitration");
   const hasTaskCommit = Object.prototype.hasOwnProperty.call(L, "taskCommit");
+  const hasTacticExec = Object.prototype.hasOwnProperty.call(L, "tacticExec");
 
   // ── 驗證（全部在建構引擎之前；有任何錯誤就不建引擎、零 configure 呼叫）──────────
   if (!TACTICAL_DIRECTOR_MODES.includes(directorMode)) err("tactical_director_unknown", "ruleset.layers.tacticalDirector", `unknown tactical director mode "${directorMode}" (known: ${TACTICAL_DIRECTOR_MODES.join("|")})`);
@@ -163,6 +164,7 @@ export function assembleMatch(setup, deps = {}) {
   if (hasSafeRoute && !SAFE_ROUTES.includes(L.safeRoute)) err("safe_route_unknown", "ruleset.layers.safeRoute", `unknown safe route mode "${L.safeRoute}" (known: ${SAFE_ROUTES.join("|")})`);
   if (hasTaskArbitration && !TASK_ARBITRATIONS.includes(L.taskArbitration)) err("task_arbitration_unknown", "ruleset.layers.taskArbitration", `unknown task arbitration mode "${L.taskArbitration}" (known: ${TASK_ARBITRATIONS.join("|")})`);
   if (hasTaskCommit && !TASK_COMMITS.includes(L.taskCommit)) err("task_commit_unknown", "ruleset.layers.taskCommit", `unknown task commit mode "${L.taskCommit}" (known: ${TASK_COMMITS.join("|")})`);
+  if (hasTacticExec && !TACTIC_EXECS.includes(L.tacticExec)) err("tactic_exec_unknown", "ruleset.layers.tacticExec", `unknown tactic exec mode "${L.tacticExec}" (known: ${TACTIC_EXECS.join("|")})`);
   if (!ASSEMBLY_ORDERS.includes(order)) err("assembly_order_unknown", "ruleset.layers.assemblyOrder", `unknown assembly order "${order}" (known: ${ASSEMBLY_ORDERS.join("|")})`);
   if (order === "challengeV20") {
     const unsupported = [E.layoutConfigured && "layout", E.heroSkills && "heroSkills", E.heroPassives && "heroPassives",
@@ -211,6 +213,8 @@ export function assembleMatch(setup, deps = {}) {
       need(LogicEngine.SUPPORTS_TASK_ARBITRATION === true, "deps.LogicEngine.SUPPORTS_TASK_ARBITRATION", `taskArbitration ${L.taskArbitration}: the engine in use does not declare taskArbitration support`);
     if (hasTaskCommit && L.taskCommit !== DEFAULT_TASK_COMMIT && typeof LogicEngine === "function")
       need(LogicEngine.SUPPORTS_TASK_COMMIT === true, "deps.LogicEngine.SUPPORTS_TASK_COMMIT", `taskCommit ${L.taskCommit}: the engine in use does not declare taskCommit support`);
+    if (hasTacticExec && L.tacticExec !== DEFAULT_TACTIC_EXEC && typeof LogicEngine === "function")
+      need(LogicEngine.SUPPORTS_TACTIC_EXEC === true, "deps.LogicEngine.SUPPORTS_TACTIC_EXEC", `tacticExec ${L.tacticExec}: the engine in use does not declare tacticExec support`);
   }
   if (E.items) needFn(isTool ? "toEngineItems" : "matchItemsConfig", "items layer");
   if (E.archetypes) {
@@ -416,7 +420,7 @@ export function assembleMatch(setup, deps = {}) {
           identity: L.tacticIdentity ? { blue: resolved.blue.identity, red: resolved.red.identity } : null,
           phases: { blue: resolved.blue.phases, red: resolved.red.phases },
         });
-        call("configureMatch", { blue: m.blue, red: m.red, identity: m.identity, meta: tacticMeta, phases: m.phases, ...(hasLaneFrame ? { laneFrame: L.laneFrame } : {}), ...(hasJungleCamp ? { jungleCamp: L.jungleCamp } : {}), ...(hasInvasion ? { invasion: L.invasion } : {}), ...(hasSafeRoute ? { safeRoute: L.safeRoute } : {}), ...(hasTaskArbitration ? { taskArbitration: L.taskArbitration } : {}), ...(hasTaskCommit ? { taskCommit: L.taskCommit } : {}) });
+        call("configureMatch", { blue: m.blue, red: m.red, identity: m.identity, meta: tacticMeta, phases: m.phases, ...(hasLaneFrame ? { laneFrame: L.laneFrame } : {}), ...(hasJungleCamp ? { jungleCamp: L.jungleCamp } : {}), ...(hasInvasion ? { invasion: L.invasion } : {}), ...(hasSafeRoute ? { safeRoute: L.safeRoute } : {}), ...(hasTaskArbitration ? { taskArbitration: L.taskArbitration } : {}), ...(hasTaskCommit ? { taskCommit: L.taskCommit } : {}), ...(hasTacticExec ? { tacticExec: L.tacticExec } : {}) });
         return;
       }
       call("configureMatch", {
@@ -433,6 +437,7 @@ export function assembleMatch(setup, deps = {}) {
         ...(hasSafeRoute ? { safeRoute: L.safeRoute } : {}),
         ...(hasTaskArbitration ? { taskArbitration: L.taskArbitration } : {}),
         ...(hasTaskCommit ? { taskCommit: L.taskCommit } : {}),
+        ...(hasTacticExec ? { tacticExec: L.tacticExec } : {}),
       });
     },
     //  production：useLocalServer:290-295（matchItemsConfig）；tool：runner:146-156（每側策略＋incomeK）。

@@ -90,7 +90,9 @@ ck("S2 Director 只建立一次（configureMatch 內）；this.director 只在�
   && /configureMatch\(\{[^)]*\} = \{\}\) \{[\s\S]*?this\.director = createTacticalDirector\(/.test(ENGINE_CODE.slice(ENGINE_CODE.indexOf("configureMatch({"), ENGINE_CODE.indexOf("_joinChance(K, hot"))));
 ck("S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在收到時原樣轉交 Director（轉換只在 Director 做）",
   //  moba-sim.v24 候選（2026-11-15）：引數多 taskArbitration、taskCommit（各自只變成引擎自己的旗標，不經過 Director；見下方 v24 那幾行）。
-  ENGINE_CODE.includes("phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
+  //  v24 Sprint 1（2026-11-17）：再多 tacticExec（同樣只變成引擎自己的旗標，不經過 Director）。
+  ENGINE_CODE.includes("phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
+  && ENGINE_CODE.includes('this._tacExecV24 = tacticExec === "adaptive.v1" && invasion === "v2";') && !/directorArgs\.tacticExec/.test(ENGINE_CODE)
   && ENGINE_CODE.includes('this._arbV24 = taskArbitration === "v1";') && ENGINE_CODE.includes('this._commitPushV24 = taskCommit === "v19push";')
   && !/directorArgs\.(taskArbitration|taskCommit)/.test(ENGINE_CODE)
   //  moba-sim.v22 候選：jungleCamp、invasion 各自只被轉成引擎自己的一個旗標，不經過 Director（Director 與每時期方針無關）。

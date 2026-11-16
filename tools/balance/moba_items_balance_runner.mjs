@@ -166,6 +166,12 @@ export function buildBalanceMatchSetup(seed, config, M, incomeK, roster, tactic 
     if (!("taskCommit" in base.layers)) throw new Error(`balance_taskcommit_unsupported: ${rulesetId} has no taskCommit layer`);
     ruleset.layers.taskCommit = taskCommitOverride;
   }
+  //  v24 Sprint 1：`ESMO_BALANCE_TACTICEXEC`（呼叫當下讀取）＝覆寫工具規則集的 tacticExec 層（"off"＝交付點 A 的行為＝v23，作為對照臂）。
+  const tacticExecOverride = process.env.ESMO_BALANCE_TACTICEXEC;
+  if (tacticExecOverride) {
+    if (!("tacticExec" in base.layers)) throw new Error(`balance_tacticexec_unsupported: ${rulesetId} has no tacticExec layer`);
+    ruleset.layers.tacticExec = tacticExecOverride;
+  }
   const tool = {};
   if (RULE_OVERRIDES) tool.ruleOverrides = RULE_OVERRIDES;
   if (layoutOn) {
