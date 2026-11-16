@@ -1,0 +1,39 @@
+[start] tool_1 02:37:13 seeds 99301..99319
+[done] tool_1 exit=0 02:40:38  [█░░░░░░░░░░░░░░░░░░░] 1/19
+[start] tool_2 02:40:38 seeds 99321..99339
+[done] tool_2 exit=0 02:43:53  [██░░░░░░░░░░░░░░░░░░] 2/19
+[start] tool_3 02:43:53 seeds 99341..99359
+[done] tool_3 exit=0 02:47:21  [███░░░░░░░░░░░░░░░░░] 3/19
+[start] tool_4 02:47:21 seeds 99361..99379
+[done] tool_4 exit=0 02:50:47  [████░░░░░░░░░░░░░░░░] 4/19
+[start] tool_5 02:50:47 seeds 99381..99399
+[done] tool_5 exit=0 02:53:58  [█████░░░░░░░░░░░░░░░] 5/19
+[start] tool_6 02:53:58 seeds 99401..99419
+[done] tool_6 exit=0 02:57:28  [██████░░░░░░░░░░░░░░] 6/19
+[start] tool_7 02:57:28 seeds 99421..99439
+[done] tool_7 exit=0 03:00:52  [███████░░░░░░░░░░░░░] 7/19
+[start] tool_8 03:00:52 seeds 99441..99459
+[done] tool_8 exit=0 03:04:09  [████████░░░░░░░░░░░░] 8/19
+[start] tool_9 03:04:09 seeds 99461..99479
+[done] tool_9 exit=0 03:07:26  [█████████░░░░░░░░░░░] 9/19
+[start] tool_10 03:07:26 seeds 99481..99499
+[done] tool_10 exit=0 03:10:46  [███████████░░░░░░░░░] 10/19
+[start] career_low_1 03:10:46 seeds 99501..99519
+[done] career_low_1 exit=0 03:12:06  [████████████░░░░░░░░] 11/19
+[start] career_low_2 03:12:06 seeds 99521..99539
+[done] career_low_2 exit=0 03:13:23  [█████████████░░░░░░░] 12/19
+[start] career_low_3 03:13:23 seeds 99541..99559
+[done] career_low_3 exit=0 03:14:41  [██████████████░░░░░░] 13/19
+[start] career_mid_1 03:14:41 seeds 99501..99519
+[done] career_mid_1 exit=0 03:16:07  [███████████████░░░░░] 14/19
+[start] career_mid_2 03:16:07 seeds 99521..99539
+[done] career_mid_2 exit=0 03:17:29  [████████████████░░░░] 15/19
+[start] career_mid_3 03:17:29 seeds 99541..99559
+[done] career_mid_3 exit=0 03:18:44  [█████████████████░░░] 16/19
+[start] career_high_1 03:18:44 seeds 99501..99519
+[done] career_high_1 exit=0 03:19:58  [██████████████████░░] 17/19
+[start] career_high_2 03:19:58 seeds 99521..99539
+[done] career_high_2 exit=0 03:21:16  [███████████████████░] 18/19
+[start] career_high_3 03:21:16 seeds 99541..99559
+[done] career_high_3 exit=0 03:22:32  [████████████████████] 19/19
+[all-done] 03:22:32

@@ -233,3 +233,54 @@
 - 公開 Seeds 帳新增：**98601–98799 奇數**（診斷第一、二項驗證）、**98801–98959 奇數**（`taskCommitPush` 對照）。98401–98599 本輪又用了一次（校準）。下一段可用的從 **98961** 起（奇數）。
 - 本輪工具：`shadow_tactic_exec_v24_diag.mjs`（影子＋仲裁觀測器）、`analyze_shadow_v24_diag.mjs`、`diag_side_asymmetry_v24.mjs`、`diag_task_commit_push_v24.mjs`、`analyze_task_commit_push_v24.mjs`、`judge_v24_diag.mjs`、兩支批次執行器（可續跑，不重跑已完成的批次）、gate `check_v24_diag_sprint.mjs`（6/6，約 50 秒）。
 - 原始批次在 repo 外 `C:\Users\ifikn\esmo-measure\v24-diag-*`（雜湊在 `v24_diag/BATCHES_MANIFEST.json`）。
+
+## 2026-11-17 更新（moba-sim.v24 候選：交付點 A、B 之後）
+
+依據：`v24_base/RESULTS_A.md`、`v24_sprint1/RESULTS.md`。上面的內容保留原樣；這一節是目前的狀態。
+
+### 版本
+
+| 項目 | 值 |
+|---|---|
+| 目前版本 | `moba-sim.v24`（未發布候選；正式旗標 `mobaTacticExecV24` 預設 false） |
+| 指紋 | A `78d1fb305ba1f72a`（commit `77780df3`）→ **B `5950a5b11782df9e`**（commit `e9d86b32`）。v24 未凍結 |
+| 規則集 | `career.v24`／`balanceTool.v24`＝v23 逐欄＋`taskArbitration "v1"`＋`taskCommit "v19"`＋`tacticExec "adaptive.v1"` |
+| v23 | 凍結值 `69237cce78edf2be` 不變；v20～v23 的 48 場整場逐 tick 釘點＝改動前基準（`check_layer_isolation_v24`） |
+| 預覽 | v24：http://127.0.0.1:5644/ESMO-/（5643 v23 預覽未動） |
+
+### 技術債務：狀態有變的
+
+| 編號 | 更新 |
+|---|---|
+| TD-REL-08 | **已修**（A）：21 支引擎依賴檔補進語意清單（v24 起進指紋） |
+| TD-TAC-05 | **Sprint 1 完成**：入侵改成整場評估，不擲骰；但到場率 20%（S2 FAIL），見 TD-TAC-19 |
+| TD-TAC-07 | **已修**（v24 層內）：入侵與回防期間發呆再任務不得改目標 |
+| TD-TAC-08 | **已修**（A）：仲裁紀錄進引擎；與步驟 A 觀測器 19,108 筆逐筆一致 |
+| TD-TAC-11／15 | 目標改成先篩價值（含可達性、安全撤退、情報）再挑最近；8a 規則對稱 PASS；8b 勝率 INCONCLUSIVE、金錢 PASS |
+| TD-TAC-12 | **已重新校準**：回防存在後 s05 偏差 +0.42、誤差 0.59（PASS）；s05reach 不合格 |
+| TD-TAC-13 | 冷卻（只計實際出發）＋仲裁（含物件時間窗與意圖）已實作 |
+| TD-TAC-16 | 保守傾向定義已改（1～2 人安全試探）；**這輪對局沒有保守傾向的隊伍，沒有對局數據** |
+| TD-TAC-03／18 | taskCommit "v19push" 已是獨立候選層，預設關；啟用前的三項驗證未做 |
+
+### 技術債務：新增的
+
+| 編號 | 問題 | 證據 | 狀態 |
+|---|---|---|---|
+| TD-TAC-19 | 入侵到場率 20%、搶到 14%；有意圖的邊×場只有 56% 至少到過一次營地 | Sprint 1 S2 FAIL | 修正提案見 `v24_sprint1/RESULTS.md` §3（人數規則、途中重新評估、自家野區優先） |
+| TD-TAC-20 | 打野每場少清 1.9 座自家營；陣亡 +0.98／邊／場；比賽長 0.5 分 | S5、S6 FAIL | 同上 |
+| TD-TAC-21 | 回防到營地 30%；物件窗叫回 1,187 次 | Sprint 1 §2.2 | 觀察中 |
+| TD-REL-14 | 正式規則集的層值鎖住，`career.v24` 沒有 off 對照臂；生涯對照只能用 `career.v23` | 量測工具 | 已知限制 |
+| TD-REL-15 | 8b 的勝率 DiD 需要約 4 倍樣本才判得出 ±0.08 | S10a INCONCLUSIVE | 發布前要補 |
+
+### Roadmap（取代前一節的順序）
+
+| 順序 | 項目 | 改語意嗎 | 狀態 |
+|---|---|---|---|
+| 1～4 | v23 凍結、Sprint 0.5、步驟 A、診斷 Sprint | 否 | 完成 |
+| 5 | v24 交付點 A（基礎版本） | 動語意檔、行為不變 | **完成**（`77780df3`） |
+| 6 | v24 交付點 B（Sprint 1） | 是 | **完成，效果 FAIL 三項**（`e9d86b32`＋結果 commit） |
+| 7 | **Sprint 1 修正小輪**：到場率與自家營損失（TD-TAC-19／20） | 是（v24 同版號重新登記） | **建議下一個，待 Owner 核准** |
+| 8 | 8b 擴大樣本（約 400 個 Seed） | 否 | 待核准 |
+| 9 | taskCommit v19push 的三項獨立驗證 | 否（量測） | 待核准 |
+| 10 | Sprint 2：護送、3～4 人、救援 | 是 | 等 7 通過 |
+| 11 | 發布線（G-A8 新判準等） | 否 | 待 Owner |

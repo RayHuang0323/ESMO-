@@ -1,0 +1,36 @@
+$ node tools/check_layer_isolation_v21.mjs
+✅ L0 版本表裡 v21 的指紋仍是凍結值 620196ccea5a8249
+✅ L1 結構：balanceTool.v21 沒有 jungleCamp／invasion／safeRoute 層　["heroSkills","heroPassives","heroPowerCurve","battleTalents","items","tacticIdentity","playerStatSides","objectiveLayout","redTactic","assemblyOrder","tacticalDirector","laneFrame","templateBalance"]
+✅ L1 結構：career.v21 沒有 jungleCamp／invasion／safeRoute 層　["heroSkills","heroPassives","heroPowerCurve","battleTalents","items","tacticIdentity","playerStatSides","objectiveLayout","redTactic","assemblyOrder","tacticalDirector","laneFrame","templateBalance"]
+✅ L1 引擎開關：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"086f9aafe0a2b069","want":"086f9aafe0a2b069"}
+✅ L1 引擎開關：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 13 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 13 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.standard_macro 對 v2.standard_macro seed 13 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"ec0ddbffa4d37c59","want":"ec0ddbffa4d37c59"}
+✅ L1 引擎開關：balanceTool.v21 classic.m7 對 v2.standard_macro seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 classic.m7 對 v2.standard_macro seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 classic.m7 對 v2.standard_macro seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"50ae78f04c98c9ae","want":"50ae78f04c98c9ae"}
+✅ L1 引擎開關：balanceTool.v21 v2.standard_macro 對 classic.m5 seed 13 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.standard_macro 對 classic.m5 seed 13 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.standard_macro 對 classic.m5 seed 13 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"baab52c9a3ac33f0","want":"baab52c9a3ac33f0"}
+✅ L1 引擎開關：balanceTool.v21 v2.jungle_invasion 對 v2.jungle_invasion seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 v2.jungle_invasion 對 v2.jungle_invasion seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 v2.jungle_invasion 對 v2.jungle_invasion seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"d32bf85c63a8527c","want":"d32bf85c63a8527c"}
+✅ L1 引擎開關：balanceTool.v21 classic.m1 對 classic.m3 seed 17 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：balanceTool.v21 classic.m1 對 classic.m3 seed 17 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：balanceTool.v21 classic.m1 對 classic.m3 seed 17 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"e44ab310eb5ab600","want":"e44ab310eb5ab600"}
+✅ L1 引擎開關：career.v21 v2.standard_macro seed 11 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：career.v21 v2.standard_macro seed 11 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：career.v21 v2.standard_macro seed 11 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"8bbe3ea955d9bb96","want":"8bbe3ea955d9bb96"}
+✅ L1 引擎開關：career.v21 v2.jungle_invasion seed 13 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：career.v21 v2.jungle_invasion seed 13 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：career.v21 v2.jungle_invasion seed 13 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"de8bc10a81b799ca","want":"de8bc10a81b799ca"}
+✅ L1 引擎開關：career.v21 classic.m7 seed 17 的 v22／v23 層開關全關　{"flagsOn":[],"missing":[]}
+✅ L2 零呼叫：career.v21 classic.m7 seed 17 整場 16 個 v22／v23 方法 0 次呼叫　{}
+✅ L3 雜湊：career.v21 classic.m7 seed 17 整場逐 tick 雜湊＝v21 凍結點錄下的值　{"got":"d171f0e768a30622","want":"d171f0e768a30622"}
+
+PASS 30/30
+
+
+[25s] [exit 0]
