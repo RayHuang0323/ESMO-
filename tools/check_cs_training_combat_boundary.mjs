@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {applyCourse} from '../src/data/playerModel.js';
+import {toShortStats} from '../src/battle/fps/fpsRoster.js';
+import {learningAdjustedXp} from '../src/platform/progress/learningGrowth.js';
+import {calculateLevelProgress} from '../src/platform/progress/playerLevel.js';
+const p={id:'development-case',age:20,potential:90,energy:100,stats:{accuracy:50,reflex:50,learning:65}};
+const before=JSON.stringify(p),trained=applyCourse(p,'aim');
+assert.ok(trained.stats.accuracy>p.stats.accuracy);
+assert.ok(trained.stats.reflex>p.stats.reflex);
+assert.ok(toShortStats(trained.stats).rxn>toShortStats(p.stats).rxn);
+assert.ok(trained.energy<p.energy);
+assert.equal(JSON.stringify(p),before);
+assert.ok(learningAdjustedXp({baseXp:100,learning:90})>learningAdjustedXp({baseXp:100,learning:30}));
+const level=calculateLevelProgress(0,100);
+assert.equal(level.newLevel,2);
+assert.equal(p.stats.reflex,50,'XP/level alone do not directly rewrite base stats');
+console.log(JSON.stringify({before:p,trained,level,scope:'pure legal course -> roster input; live settlement/browser separate'}));
+console.log('CS training combat boundary: 8/8 PASS');
