@@ -61,3 +61,7 @@ CsMapSelectScreen.jsx:67–69 明確限制 prototype 只能在 practice。Conflu
 
 ## 2026-11-16 Phase 4：原創池最小候選（尚未整合放行）
 新增 csMapIdentity 純解析邊界與 original-v1 三圖layout快照；profileStore只新增CS opt-in動作，首圖部署前可選，已有戰鬥／完成地圖不能切換。選圖與fixture帳本保存同一快照，版本不同拒絕繼續；原預設池不變。新增原創結果mapIdentity僅取真sceneVersion及raw mapLayoutId，舊資料不回填假layout，不做migration。純邊界12/12、原Veto35/35／series99/99與build PASS；原創池全Browser尚在驗證，不宣稱正式賽全流程或公平性通過。
+
+## 2026-11-16 自然賽季與新正式Replay補證
+
+e86ef026之後已以原始新局名單完成14場真實聯賽10勝4敗、第1自然晉級；Major準決賽Browser0:2、新正式Replay25/25，後續季軍戰真實0:2及第88天自然封季。沒有補席位或指定勝負。另發現正常Dune原生Replay超既有256MiB上限，以原創v3/v4無損tactical-pool wire tag修正，保留全部Frame／Result及舊decoder，不改正式預設池。72場描述性基準與Dune CT偏向、角色／起始方未認證界線，以及最後新SHA Gate，統一見review/cs-competitive-quality-20261116/RESUME_CHECKPOINT.md。舊Audit與BLOCKED段落保留為歷史。

@@ -1,6 +1,6 @@
 // Saved authoritative frames only. This module never runs a match.
 import {CS_PLAYER_POOL_ENCODING,packCsReplayPlayers,unpackCsReplayPlayers} from './fpsReplayPlayerPool.js';
-import {CS_FOUNDRY_POOL_ENCODING,packFoundryReplayExtras,unpackFoundryReplayExtras} from './fpsFoundryReplayPool.js';
+import {CS_FOUNDRY_POOL_ENCODING,CS_TACTICAL_POOL_ENCODING,packFoundryReplayExtras,unpackFoundryReplayExtras} from './fpsFoundryReplayPool.js';
 import {DUNE_TERMINAL_LAYOUT} from './fpsDuneTerminal.js';
 import {FOUNDRY_CIRCUIT_LAYOUT} from './fpsFoundryCircuit.js';
 import {validSmokeFlight} from './fpsSmokeProjectile.js';
@@ -29,9 +29,10 @@ export function validateCsReplay(replay) {
   const reject = message => { if (errors.length < 8) errors.push(message); };
   if (!replay || typeof replay !== "object") return { ok: false, errors: ["重播檔內容不完整"] };
   if (replay.schema !== CS_REPLAY_SCHEMA) reject("重播檔版本不支援");
-  if (replay.encoding != null && !["round-prefix.v1",CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING].includes(replay.encoding)) reject("重播檔編碼不支援");
+  if (replay.encoding != null && !["round-prefix.v1",CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING,CS_TACTICAL_POOL_ENCODING].includes(replay.encoding)) reject("重播檔編碼不支援");
   const metadata = replay.metadata, sim = replay.simulation, result = replay.rawResult;
   if(replay.encoding===CS_FOUNDRY_POOL_ENCODING&&metadata?.sceneVersion!=='major.v5')reject('重播場景與共用資料版本不一致');
+  if(replay.encoding===CS_TACTICAL_POOL_ENCODING&&!['major.v3','major.v4'].includes(metadata?.sceneVersion))reject('重播場景與共用資料版本不一致');
   if (!metadata || !MAPS.has(metadata.mapKey) || !SCENES.has(metadata.sceneVersion) || !Number.isSafeInteger(metadata.seed) || [metadata.teamName, metadata.opponentName].some(name => typeof name !== "string" || !name.length || name.length > 120)) reject("地圖、場景或比賽識別資料不完整");
   if(['major.v2','major.v3'].includes(metadata?.sceneVersion)&&metadata.mapKey!=='mirage')reject('原型地圖版本不一致');
   if(metadata?.sceneVersion==='major.v3'&&sim?.mapLayoutId!=null&&!['esmo-confluence.v3.2','esmo-confluence.v3.3'].includes(sim.mapLayoutId))reject('重播場景版本不支援');
@@ -74,11 +75,16 @@ export function readCsReplay(input) {
     try{unpackFoundryReplayExtras(replay.simulation,replay.foundryValuePool);}catch(error){fail([error.message]);}
     delete replay.foundryValuePool;
   }
-  if([CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING].includes(replay?.encoding)){
+  if(replay?.encoding===CS_TACTICAL_POOL_ENCODING){
+    if(!['major.v3','major.v4'].includes(replay.metadata?.sceneVersion))fail(['重播場景與共用資料版本不一致']);
+    try{unpackFoundryReplayExtras(replay.simulation,replay.tacticalValuePool);}catch(error){fail([error.message]);}
+    delete replay.tacticalValuePool;
+  }
+  if([CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING,CS_TACTICAL_POOL_ENCODING].includes(replay?.encoding)){
     try{unpackCsReplayPlayers(replay.simulation,replay.playerValuePool);}catch(error){fail([error.message]);}
     delete replay.playerValuePool;
   }
-  if (["round-prefix.v1",CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING].includes(replay?.encoding) && Array.isArray(replay.simulation?.frames) && Array.isArray(replay.simulation.roundHist)) {
+  if (["round-prefix.v1",CS_PLAYER_POOL_ENCODING,CS_FOUNDRY_POOL_ENCODING,CS_TACTICAL_POOL_ENCODING].includes(replay?.encoding) && Array.isArray(replay.simulation?.frames) && Array.isArray(replay.simulation.roundHist)) {
     const history = replay.simulation.roundHist;
     for (const frame of replay.simulation.frames) {
       if (!frame || typeof frame !== "object" || Array.isArray(frame)) fail(["保存畫面資料不完整"]);
@@ -99,6 +105,10 @@ export function serializeCsReplay(replay) {
   if(replay.metadata.sceneVersion==='major.v5'){
     const extra=packFoundryReplayExtras(compact.frames);
     return JSON.stringify({...replay,encoding:CS_FOUNDRY_POOL_ENCODING,playerValuePool:compact.pool,foundryValuePool:extra.pool,simulation:{...replay.simulation,frames:extra.frames.map(({roundHist,...frame})=>({...frame,roundHistCount:frame.roundHistCount??roundHist.length}))}});
+  }
+  if(['major.v3','major.v4'].includes(replay.metadata.sceneVersion)){
+    const extra=packFoundryReplayExtras(compact.frames);
+    return JSON.stringify({...replay,encoding:CS_TACTICAL_POOL_ENCODING,playerValuePool:compact.pool,tacticalValuePool:extra.pool,simulation:{...replay.simulation,frames:extra.frames.map(({roundHist,...frame})=>({...frame,roundHistCount:frame.roundHistCount??roundHist.length}))}});
   }
   return JSON.stringify({ ...replay, encoding: CS_PLAYER_POOL_ENCODING, playerValuePool:compact.pool, simulation: { ...replay.simulation, frames: compact.frames.map(({ roundHist, ...frame }) => ({ ...frame, roundHistCount: frame.roundHistCount ?? roundHist.length })) } });
 }

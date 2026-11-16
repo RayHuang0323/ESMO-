@@ -1,5 +1,8 @@
 // Foundry新增的重複規劃資料僅在wire去重；還原所有欄位後才進既有驗證器。
 export const CS_FOUNDRY_POOL_ENCODING='round-prefix-foundry-pool.v1';
+// Dune/Confluence carry the same repeated tactical plans. Keep a distinct
+// wire tag so older clients reject the new codec instead of playing markers.
+export const CS_TACTICAL_POOL_ENCODING='round-prefix-tactical-pool.v1';
 const FIELDS=['utilityPlans','holdCoverPlan','_foundryEarnedLanes'],MARKER='$fpsFoundryValue';
 export function packFoundryReplayExtras(frames){
  const texts=new WeakMap(),counts=new Map(),text=v=>{let s=texts.get(v);if(s===undefined){s=JSON.stringify(v);texts.set(v,s);}return s;};
