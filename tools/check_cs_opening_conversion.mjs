@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {buildFpsMatchAnalytics} from '../src/battle/fps/fpsMatchAnalytics.js';
+const event={id:'first',type:'kill',firstKill:true,killerId:'a',victimId:'b',roundSec:12,pos:{x:10,y:20}};
+const sim={sceneVersion:'major.v3',players:[{id:'a',teamId:'us'},{id:'b',teamId:'enemy'}],roundHist:[{winnerTeam:'us',roundStats:[]},{winnerTeam:'enemy',roundStats:[]}],frames:[{rnd:0,roundSec:12,players:[],events:[event]},{rnd:0,roundSec:12.5,players:[],events:[event]},{rnd:1,roundSec:4,players:[],events:[{...event,id:'second'}]}]};
+const before=JSON.stringify(sim),a=buildFpsMatchAnalytics(sim);
+assert.equal(a.openings.length,2);
+assert.deepEqual(a.openings.map(o=>o.won),[true,false]);
+assert.equal(JSON.stringify(sim),before);
+assert.deepEqual(a,buildFpsMatchAnalytics(sim));
+assert.equal(buildFpsMatchAnalytics({...sim,frames:[]}).openings.length,0);
+console.log('CS opening conversion: 5/5 PASS');
