@@ -239,6 +239,7 @@ try {
     if(process.env.C5V_ORIGINAL_POOL!=='1')evidence[format] = restored;
     if(process.env.C5V_ORIGINAL_POOL==='1'){
       ck(`${format} original pool snapshot survives reload`,restored.competitionPoolId==='original-v1'&&Object.keys(restored.competitionPoolSnapshot||{}).length===3);
+      if(format==='bo3')ck('BO3 order chips use original map identities',await chrome.evaluate(`const text=document.querySelector('[data-testid="cs-bo3-map-order"]')?.innerText??'';return ['Confluence Station','Dune Terminal','Foundry Circuit'].every(name=>text.includes(name))&&!/Dust II|Inferno|Mirage/.test(text);`));
       if(process.env.C5V_SCREENSHOT_DIR&&['bo1','bo3'].includes(scenario)){const shot=await chrome.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(`${process.env.C5V_SCREENSHOT_DIR}/${scenario}-original-pool.png`,Buffer.from(shot.data,'base64'),{flag:'wx'});}
       const completedMaps=[];
       for(let mapIndex=0;mapIndex<(format==='bo3'?3:1);mapIndex++){

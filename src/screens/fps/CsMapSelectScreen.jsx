@@ -16,8 +16,8 @@ const RISK_C = { 低: GC.green, 中: GC.gold, 高: GC.red };
 const KIND_LABEL = { practice: "快速練習", matchmaking: "一般對戰地圖交集", bo1: "BO1 Map Veto", bo3: "BO3 Map Veto" };
 const PHASE_LABEL = { ban: "Ban", pick: "Pick", decider: "Decider", complete: "已決定" };
 
-function MapChip({ mapKey }) {
-  const map = CS_MAPS.find((item) => item.key === mapKey);
+function MapChip({ mapKey, maps = CS_MAPS }) {
+  const map = maps.find((item) => item.key === mapKey);
   return <span style={{ padding: "2px 7px", borderRadius: 6, background: "rgba(255,255,255,0.06)", color: "#d1d5db", fontSize: 8.5, fontWeight: 800 }}>{map?.name ?? mapKey}</span>;
 }
 export default function CsMapSelectScreen({ onNext, onBack }) {
@@ -177,7 +177,7 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
         {selection?.kind === "bo3" && selection.status === "resolved" && (
           <div data-testid="cs-bo3-map-order" style={{ marginBottom: 12, padding: 10, borderRadius: 10, border: "1px solid rgba(52,211,153,0.28)", background: "rgba(6,78,59,0.18)" }}>
             <div style={{ color: "#a7f3d0", fontSize: 9, fontWeight: 900, marginBottom: 6 }}>BO3 地圖順序</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>{selection.mapOrder.map((key, index) => <React.Fragment key={key}><span style={{ color: GC.gray, fontSize: 8 }}>M{index + 1}</span><MapChip mapKey={key} /></React.Fragment>)}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>{selection.mapOrder.map((key, index) => <React.Fragment key={key}><span style={{ color: GC.gray, fontSize: 8 }}>M{index + 1}</span><MapChip mapKey={key} maps={maps} /></React.Fragment>)}</div>
           </div>
         )}
 

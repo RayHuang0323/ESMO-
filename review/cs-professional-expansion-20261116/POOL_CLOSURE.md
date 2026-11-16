@@ -37,6 +37,8 @@ Replay重用受保護的三份R4 gz fixture，未生成新大型Replay／Heap；
 
 ## Owner入口與邊界
 
+最後實際截圖覆核補正：BO3順序籤曾固定查Legacy CS_MAPS，與已正確顯示的原創卡片不一致；改為使用本場同一份maps呈現，加入Browser三個原創名稱及不含Legacy名稱斷言。此前506357f7的Browser82/82、BP-9 112/112及三Gate assert均PASS；本項顯示修改之後需對新Checkpoint重新取得收據，不能沿用506357f7的PASS。原截圖與全部失敗證據均保留。
+
 http://127.0.0.1:5190/ESMO-/ （production preview，取代有React Refresh問題的5189 dev入口）。進CS正式賽程→準備／確認→選圖前點「啟用本系列原創三圖測試池」→戰術→比賽；可用產品「快速完成」及原生確認→查看戰報。比賽中的「保存與開啟重播」沿用既有匯入／匯出入口。賽程需依真實遊戲日出現，不新增偽造Owner戰果或修改日常存檔。
 
 本機測試候選不等於正式發版。Android／低RAM／熱降頻NOT_RUN，CPU4×FAIL、Replay2118MiB歷史風險保留。自然Major晉級全季與大樣本公平性未認證；三圖mapFit／style權重獨立校準仍列待辦。最終Gate若不通過，維持HOLD。
