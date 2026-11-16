@@ -27109,3 +27109,6 @@ Android／低 RAM／熱降頻 NOT_RUN、CPU4× FAIL、Replay 2118 MiB 風險及�
 
 ## 2026-11-16 Professional Expansion Phase 3（部分完成）
 沿用唯一 CS Learning→XP→level／talent→成長／Training→effective roster 鏈。check_cs_learning_lifecycle_r55 PASS，重送結算與存讀檢查通過；check_cs_training_combat_boundary 8/8 PASS。合法aim課程案例能力50→52.2、體力100→85；真模擬固定Confluence seed61001訓練案例 reflex78→79.5、accuracy72→73.8，roundDigest確實不同。平均反應延遲265.32→265.43ms（遭遇樣本不同），不宣稱整場均值必定改善；只比較基礎能力，疲勞輸入固定，不冒充完整Career UI閉環。未改Profile／Progress公式、Online權威或永久加能力規則。完整log位於 esmo-measure/cs-professional-expansion-20261116。
+
+## 2026-11-16 Phase 4：原創池最小候選（尚未整合放行）
+新增 csMapIdentity 純解析邊界與 original-v1 三圖layout快照；profileStore只新增CS opt-in動作，首圖部署前可選，已有戰鬥／完成地圖不能切換。選圖與fixture帳本保存同一快照，版本不同拒絕繼續；原預設池不變。新增原創結果mapIdentity僅取真sceneVersion及raw mapLayoutId，舊資料不回填假layout，不做migration。純邊界12/12、原Veto35/35／series99/99與build PASS；原創池全Browser尚在驗證，不宣稱正式賽全流程或公平性通過。

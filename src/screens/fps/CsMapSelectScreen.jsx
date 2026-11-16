@@ -8,6 +8,7 @@ import React, { useMemo, useState } from "react";
 import { useProfileStore } from "../../platform/profileStore.js";
 import { CS_MAPS, mapFit } from "../../battle/fps/csPrepData.js";
 import { statZh } from "../../data/playerModel.js";
+import {csOriginalMapIdentity,csOriginalCompetitionSnapshot} from '../../battle/fps/csMapIdentity.js';
 import { GC, FONT } from "../../ui/theme.js";
 
 const ACC = "#fb923c";
@@ -23,6 +24,8 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
   const players = useProfileStore((s) => s.players) ?? [];
   const session = useProfileStore((s) => s.matchmaking?.session ?? null);
   const selection = session?.mapSelection ?? null;
+  const maps = selection?.competitionPoolId==='original-v1'
+    ? CS_MAPS.map(map=>({...map,...csOriginalMapIdentity(map.key)})) : CS_MAPS;
   const series = session?.series ?? null;
   const applyVeto = useProfileStore((s) => s.applyCsMapVeto);
   const selectPracticeMap = useProfileStore((s) => s.selectCsPracticeSessionMap);
@@ -39,7 +42,7 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
     ?? selection?.finalMapKey
     ?? selection?.mapOrder?.[0]
     ?? legacySelection;
-  const currentMap = CS_MAPS.find((map) => map.key === currentMapKey) ?? null;
+  const currentMap = maps.find((map) => map.key === currentMapKey) ?? null;
   const official = selection?.kind === "bo1" || selection?.kind === "bo3";
   const pending = selection?.status === "pending";
   const playerTurn = pending && selection?.turn === "us";
@@ -64,9 +67,10 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
 
   const finish = () => {
     if (!currentMap || !canContinue) return;
-    const usePrototype=prototype===currentMap.key&&['mirage','dust2','inferno'].includes(currentMap.key)&&(!selection||selection.kind==='practice');
+    if(selection?.competitionPoolId==='original-v1'&&JSON.stringify(selection.competitionPoolSnapshot)!==JSON.stringify(csOriginalCompetitionSnapshot())){setError('測試地圖版本已變更，請保留存檔並回報，不能改用其他場景繼續');return;}
+    const usePrototype=selection?.competitionPoolId==='original-v1'||(prototype===currentMap.key&&['mirage','dust2','inferno'].includes(currentMap.key)&&(!selection||selection.kind==='practice'));
     const original=currentMap.key==='inferno'?{name:'Foundry Circuit',sceneVersion:'major.v5'}:currentMap.key==='dust2'?{name:'Dune Terminal',sceneVersion:'major.v4'}:{name:'Confluence Station',sceneVersion:'major.v3'};
-    onNext({ ...currentMap, ...(usePrototype?original:{sceneVersion:'major.v1'}), selectionId: selection?.selectionId ?? null });
+    onNext({ ...currentMap, ...(usePrototype?{...original,...csOriginalMapIdentity(currentMap.key)}:{sceneVersion:'major.v1'}), selectionId: selection?.selectionId ?? null });
   };
 
   return (
@@ -88,6 +92,7 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
         </div>
 
         {['mirage','dust2','inferno'].includes(currentMapKey)&&(!selection||selection.kind==='practice')&&<label style={{display:'flex',alignItems:'center',gap:10,minHeight:44,marginBottom:12,color:GC.blueL,fontSize:12}}><input data-testid="cs-original-map-prototype" type="checkbox" checked={prototype===currentMapKey} onChange={e=>setPrototype(e.target.checked?currentMapKey:null)} style={{width:22,height:22,accentColor:GC.gold}}/>體驗原創 {currentMapKey==='inferno'?'Foundry Circuit':currentMapKey==='dust2'?'Dune Terminal':'Confluence Station'}</label>}
+        {official && <div style={{marginBottom:12,color:GC.gold,fontSize:12}}>{selection?.competitionPoolId==='original-v1'?'本系列測試地圖池：Confluence Station／Dune Terminal／Foundry Circuit':(series?.maps?.length??0)===0&&<button data-testid="cs-original-competition-pool" onClick={()=>{const r=useProfileStore.getState().optInCsOriginalCompetitionPool();if(!r.ok)setError(r.errors[0].message);}}>啟用本系列原創三圖測試池</button>}</div>}
         {series && (
           <div data-testid="cs-series-banner" style={{ marginBottom: 10, padding: "8px 12px", borderRadius: 10, background: `${ACC}14`, border: `1px solid ${ACC}44`, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{ color: ACC, fontSize: 11, fontWeight: 900 }}>{String(series.format).toUpperCase()}</span>
@@ -125,7 +130,7 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 7 }}>
                 {selection.log.map((entry) => (
                   <span key={`${entry.index}-${entry.mapKey}`} style={{ color: entry.phase === "ban" ? "#fca5a5" : entry.phase === "pick" ? "#86efac" : "#fde68a", fontSize: 8.5, fontWeight: 800 }}>
-                    {entry.side === "us" ? "我方" : entry.side === "opponent" ? "對手" : "系統"} {PHASE_LABEL[entry.phase]} {CS_MAPS.find((map) => map.key === entry.mapKey)?.name ?? entry.mapKey}
+                    {entry.side === "us" ? "我方" : entry.side === "opponent" ? "對手" : "系統"} {PHASE_LABEL[entry.phase]} {maps.find((map) => map.key === entry.mapKey)?.name ?? entry.mapKey}
                   </span>
                 ))}
               </div>
@@ -136,7 +141,7 @@ export default function CsMapSelectScreen({ onNext, onBack }) {
         {error && <div role="alert" style={{ marginBottom: 9, color: "#fecaca", background: "rgba(127,29,29,0.5)", border: "1px solid rgba(248,113,113,0.4)", borderRadius: 8, padding: "7px 9px", fontSize: 9 }}>{error}</div>}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-          {CS_MAPS.map((map) => {
+          {maps.map((map) => {
             const played = playedMaps.has(map.key);
             const banned = !!selection?.banned?.some((entry) => entry.mapKey === map.key);
             const picked = !!selection?.picks?.some((entry) => entry.mapKey === map.key);

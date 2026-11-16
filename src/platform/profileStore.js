@@ -35,6 +35,7 @@
 //      只有 money/fans/reputation，沒有 xp）。
 // ============================================================================
 import { create } from "zustand";
+import {csOriginalCompetitionSnapshot} from '../battle/fps/csMapIdentity.js';
 //  `HERO_ASSIGN`：席位 → 英雄。Slice 2 用它把英雄熟練查成快照裡的 loadout
 //  （與 `useLocalServer.start()` 的 `getLoadout()` 同一份對應表）。
 import { TEAMS, HERO_ASSIGN } from "../data/roster.js";
@@ -3554,6 +3555,24 @@ export const useProfileStore = create((rawSet, get) => {
       resolved: selection?.status === "resolved",
       series: seriesView(session?.series ?? null),
     };
+  },
+  // CS-only opt-in snapshot. Once a BO3 has started, its pool cannot change.
+  optInCsOriginalCompetitionPool() {
+    const mm = get().matchmaking ?? {}, session = mm.session;
+    const selection = session?.mapSelection;
+    if (session?.mode !== 'cs' || !['bo1','bo3'].includes(selection?.kind)
+      || (session?.series?.maps?.length ?? 0) > 0
+      || !['map','veto'].includes(session?.activeMatch?.phase)) {
+      return { ok: false, errors: [{ message: '只能在正式賽首圖部署前啟用測試地圖池' }] };
+    }
+    if (selection.competitionPoolId) return {ok:selection.competitionPoolId==='original-v1',errors:[]};
+    const snapshot = csOriginalCompetitionSnapshot();
+    const nextSelection = { ...selection, competitionPoolId: 'original-v1', competitionPoolSnapshot: JSON.parse(JSON.stringify(snapshot)) };
+    const fixtureId = fixtureIdOfSession(session);
+    set({ matchmaking: { ...mm, session: { ...session, mapSelection: nextSelection },
+      mapSelectionByFixture: fixtureId ? { ...(mm.mapSelectionByFixture ?? {}), [fixtureId]: nextSelection } : mm.mapSelectionByFixture } });
+    get().save();
+    return { ok: true };
   },
   /**
    * C5V：玩家執行一次 Ban/Pick，接著只讓 deterministic AI 跑到下一個玩家回合。

@@ -1,3 +1,4 @@
+import {resolveCsMapIdentity} from '../../battle/fps/csMapIdentity.js';
 // ============================================================================
 //  CsMatchResult.js — CS 專屬結果契約（Sprint23）
 //
@@ -57,6 +58,9 @@ export function toCsMatchResult(raw, ctx = {}) {
     matchId: raw.id,
     seed: ctx.seed ?? null,
     mapId: raw.map ?? ctx.mapKey ?? null,
+    ...(['major.v3','major.v4','major.v5'].includes(raw.sceneVersion) ? {
+      mapIdentity: {...resolveCsMapIdentity({mapKey:raw.map??ctx.mapKey,sceneVersion:raw.sceneVersion}),layoutId:raw.mapLayoutId??null},
+    } : {}),
     mapName: raw.sceneVersion==='major.v5'?'Foundry Circuit':raw.sceneVersion==='major.v4'?'Dune Terminal':raw.sceneVersion==='major.v3'?'Confluence Station':ctx.mapName ?? raw.map ?? null,
     // 賽前部署（Legacy TACTICS_LIB.fps 的團隊戰術）與引擎實際執行的地圖戰術分開記錄
     tacticId: ctx.tacticId ?? null,

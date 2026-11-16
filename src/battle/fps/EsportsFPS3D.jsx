@@ -2357,6 +2357,7 @@ function buildMatchResult(sim,opts={}){
   return{
     id:matchId ?? stableResultId(sim, seed, tacticT, tacticCT),mode:"CS",map:sim.mapKey,date,
     ...(sim.sceneVersion&&sim.sceneVersion!=="legacy"?{sceneVersion:sim.sceneVersion}:{}),
+    ...(sim.mapLayoutId?{mapLayoutId:sim.mapLayoutId}:{}),
     completed:sim.completed,winner:sim.winner,win,scoreT:sim.tScore,scoreCT:sim.ctScore,tName,ctName,
     tactic:{ours:tacticT?.name||null,theirs:tacticCT?.name||null,ourType:tacticT?.type||null,theirType:tacticCT?.type||null},
     players:sim.players,ourPlayers,theirPlayers,

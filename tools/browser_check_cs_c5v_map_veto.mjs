@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // CS-C5V browser smoke：中文 UI、Practice 三圖、matchmaking intersection、BO1/BO3、390px、Battle handoff。
 import { launchChrome } from "./browser/cdp.mjs";
+import fs from 'node:fs';
 
 const APP = process.env.C5V_PREVIEW_URL ?? "http://127.0.0.1:5187/ESMO-/";
 const CDP_PORT = 9487;
@@ -184,6 +185,10 @@ try {
       : { width: 1280, height: 900, mobile: false });
     await click(chrome, '[data-testid="resume-active-match"]', `${format} resume`);
     await waitFor(chrome, `document.querySelector('[data-testid="cs-veto-progress"]')`, 30_000, `${format} veto UI`);
+    if(process.env.C5V_ORIGINAL_POOL==='1'){
+      await click(chrome,'[data-testid="cs-original-competition-pool"]','original pool opt in');
+      await waitFor(chrome,`document.body.innerText.includes('本系列測試地圖池')`,10000,'original pool visible precondition');
+    }
     ck(`${format.toUpperCase()} 中文 Veto UI 可見`, await chrome.evaluate(`return document.body.innerText.includes("地圖 Veto")&&document.body.innerText.includes("Ban")`));
     for (let guard = 0; guard < 4; guard += 1) {
       const resolved = await chrome.evaluate(`return !document.querySelector('[data-testid="cs-map-confirm"]')?.disabled`);
@@ -219,6 +224,17 @@ try {
     const restored = saved.matchmaking.session.mapSelection;
     ck(`${format.toUpperCase()} reload / resume 不重擲 Veto`, signature === JSON.stringify({ log: restored.log, finalMapKey: restored.finalMapKey, mapOrder: restored.mapOrder }));
     evidence[format] = restored;
+    if(process.env.C5V_ORIGINAL_POOL==='1'){
+      ck(`${format} original pool snapshot survives reload`,restored.competitionPoolId==='original-v1'&&Object.keys(restored.competitionPoolSnapshot||{}).length===3);
+      if(process.env.C5V_SCREENSHOT_DIR){const shot=await chrome.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(`${process.env.C5V_SCREENSHOT_DIR}/${format}-original-pool.png`,Buffer.from(shot.data,'base64'),{flag:'wx'});}
+      await enterBattleFromMap(chrome);
+      const launched=await readSaved(chrome),config=launched.matchmaking.session.activeMatch.config.csConfig;
+      ck(`${format} original scene is authoritative config`,['major.v3','major.v4','major.v5'].includes(config.sceneVersion));
+      await waitFor(chrome,`!document.querySelector('[data-testid="fps-map-preparing"]')&&[...document.querySelectorAll('button')].some(b=>b.innerText.includes('快速完成'))`,90000,'scene and finish ready');
+      await chrome.evaluate(`const b=[...document.querySelectorAll('button')].find(b=>b.innerText.includes('快速完成'));if(!b)throw Error('finish missing');b.click();return true;`);
+      await waitFor(chrome,`document.querySelector('[data-testid="cs-professional-report"]')`,45000,'true simulation result report');
+      ck(`${format} real report has original map name`,await chrome.evaluate(`return ['Confluence Station','Dune Terminal','Foundry Circuit'].some(n=>document.body.innerText.includes(n))`));
+    }
   }
 
   evidence.errors = {
@@ -229,6 +245,7 @@ try {
     JSON.stringify(evidence.errors));
 } catch (error) {
   fail += 1;
+  if(chrome){try{evidence.failure={text:await chrome.evaluate('return document.body.innerText.slice(0,2500)'),pageErrors:chrome.pageErrors,console:chrome.consoleLines.filter(line=>line.startsWith('[error]'))};}catch{}}
   console.error(error?.stack ?? error);
 } finally {
   if (chrome) await chrome.close();

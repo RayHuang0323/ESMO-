@@ -58,3 +58,6 @@ CsMapSelectScreen.jsx:67–69 明確限制 prototype 只能在 practice。Conflu
 沒有可驗收的 Competition Map Pool 畫面，因此不啟動會展示舊流程的預覽服務。cloudflared 不在 PATH，本輪不安裝。正式 BO1／BO3 新圖畫面、獎勵、Replay 與重整恢復均 NOT_RUN；不提供假入口或沿用 R4 PASS。
 
 下一步：架構 owner 核定 map identity／session snapshot／history 相容介面後，CS owner 才實作 catalog、明確測試選項與必要接線，保持預設池不變。D 槽歷史資料與 34 WIP／證據不動；D 容量差尚未完整歸因。停 Owner Review。
+
+## 2026-11-16 Phase 4：原創池最小候選（尚未整合放行）
+新增 csMapIdentity 純解析邊界與 original-v1 三圖layout快照；profileStore只新增CS opt-in動作，首圖部署前可選，已有戰鬥／完成地圖不能切換。選圖與fixture帳本保存同一快照，版本不同拒絕繼續；原預設池不變。新增原創結果mapIdentity僅取真sceneVersion及raw mapLayoutId，舊資料不回填假layout，不做migration。純邊界12/12、原Veto35/35／series99/99與build PASS；原創池全Browser尚在驗證，不宣稱正式賽全流程或公平性通過。
