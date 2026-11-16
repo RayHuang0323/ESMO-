@@ -27103,3 +27103,6 @@ Android／低 RAM／熱降頻 NOT_RUN、CPU4× FAIL、Replay 2118 MiB 風險及�
 ## 2026-11-16 CS Competition Map Pool v1：Audit／介面提案，Owner Review
 
 正式 main 即時回讀仍 7cf1cebc；起點 d2540e56。既有 BO1／BO3／Major／MatchSession 不重建。原創三圖沿用 legacy mapKey、靠 sceneVersion 區分，正式 session 的 Store／history／恢復與 AI fixture 投影需協調真實地圖身分；依 Owner 禁止跨權威修改的邊界，本輪只有設計，沒有產品候選或新圖正式流程 PASS。TD-CS-COMP-01：正式池 map identity 與 session snapshot 尚未定義；TD-CS-COMP-02：CS 賽事規格開頭尚未實作標記落後於現況。詳 docs/design/CS_Competition_Map_Pool_v1.md。Claude 現役 MOBA HEAD 77780df3 的未推送提交與 6 修改／2 未追蹤檔保護。BO1／BO3新圖、獎勵、Replay、恢復及公平性 NOT_RUN；未啟動舊流程冒充候選預覽。等待架構 owner 核定介面，維持正式池與舊存檔。未Push／Deploy／清理／新增Worktree。
+
+## 2026-11-16 Professional Expansion Phase 1（部分完成）
+武器任務鎖消耗端補齊 _objectiveLocked；反例 Before FAIL／After 4/4 PASS，Owner4F 17/17 PASS。三圖 seed61001 單一 t1 reflex30→90 真模擬完成，反應延遲均下降，非勝率保證；16能力消費鏈沿用 OWNER4F_16_STATS.md，Learning僅成長。Owner4H工具舊抽取缺 mapKey/sceneVersion，以及 knownBombThreat 呼叫數應為3而非2（現有產品接線），只修驗證上下文與來源斷言，未降低行為要求；原9/11與失敗log保留，重跑11/11 PASS。完整log：C:\Users\ifikn\esmo-measure\cs-professional-expansion-20261116。尚缺所有能力／戰術矩陣與第二項有證據的戰鬥修正，Phase1不宣稱完成。

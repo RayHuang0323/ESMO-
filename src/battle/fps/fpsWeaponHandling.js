@@ -50,7 +50,7 @@ export function fpsWeaponReadyAtMs(player, nowMs) {
 
 export function consumeFpsWeaponShot(player, shotAtMs) {
   const state = advanceFpsWeaponHandling(player,shotAtMs);
-  if (player.dead || state.reloading || state.ammo<=0) return {fired:false,state};
+  if (player.dead || player._objectiveLocked || state.reloading || state.ammo<=0) return {fired:false,state};
   const ammoBefore=state.ammo;
   state.ammo-=1;
   return {fired:true,ammoBefore,state:advanceFpsWeaponHandling({...player,...state},shotAtMs)};
