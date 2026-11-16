@@ -27117,3 +27117,8 @@ Android／低 RAM／熱降頻 NOT_RUN、CPU4× FAIL、Replay 2118 MiB 風險及�
 ## 2026-11-16 CS Professional Expansion：本機候選／新池驗收BLOCKED
 
 分支 feature/cs-professional-expansion-20261116；產品候選110ee3a5，Phase1 4b04b1a5／Phase2 63834f1a／Phase3 e3f83c4a。新增武器任務鎖消耗端防護、真事件首殺轉換戰報、合法訓練案例、original-v1正式CS測試池及身分／layout快照。預設池不變、舊結果不migration；未修改MOBA／BP-9權威。新池Browser SHA Gate實際BLOCKED exit2（300秒supervisor），只確認選圖／恢復／場景參數，未完成真戰報，禁止整合發布。Node邊界、既有Veto／series、build、Progress／MOBA回歸與save bundle通過；BP-9容量壓力中止，不算PASS。TD-CS-PRO-01：原創池仍沿用legacy選圖評分與history分群，需競賽身分隔離／校準；TD-CS-PRO-02：新池真實BO1／BO3／獎勵／Replay／恢復／公平性未認證。真Android／低RAM／熱降頻NOT_RUN、CPU4×FAIL／2118MiB風險保留。完整狀態、16能力消費鏈、Before/After與續跑優先序：review/cs-professional-expansion-20261116/RESUME_CHECKPOINT.md。預覽 http://127.0.0.1:5189/ESMO-/；無公開tunnel。沒有push／deploy／新增worktree／清理歷史。停止受阻的新池放行工作，保留Owner Review候選；五階段並未全部完成。
+
+
+## 2026-11-16 Original Competition Pool closure（本機候選）
+
+延續4577c858。定位dev Worker被React Refresh注入window錯誤及工具未處理原生confirm；改用production preview5190並修工具，不跳過就緒。Replay真PRODUCT_FAIL（Three async compile讀已dispose材質）以可變整場景同步compile修正，原59/60保留、修後60/60。另補正式對手actors／隊名與凍結快照、原創vslegacy歷史分群，舊場次不migration。8隊Adapter／6項history分群通過；新正式對手Browser71/71：三圖BO1、BO3打滿三圖1:2真敗場、Replay及入史恢復。BP-9完整20季112/112；舊INTERRUPTED保留。Shader子測14/14但runner期待12/12造成shape FAIL，僅同步為14/14，未刪或放寬斷言。最後SHA Gate與戰鬥中reload／唯一fixture／交易斷言以本輪新收據為準；未推main／Deploy、不變正式預設池。細節review/cs-professional-expansion-20261116/POOL_CLOSURE.md。TD-CS-PRO-02場景阻擋已有明確根因及修正；最終驗收須以新Gate判定。TD-CS-PRO-01歷史分群已隔離，mapFit／style校準仍未認證。Android／低RAM／CPU4×及2118MiB風險保留。

@@ -3060,8 +3060,11 @@ function FpsScene3D({mapKey,sceneVersion="major.v1",mapLayoutId,roster=[],liveRe
         if(!current())return;
         if(!assets.ok||shader.status==='failed')throw new Error('地圖資源準備失敗');
         for(const texture of environment.textures)st.renderer.initTexture?.(texture);
-        if(st.renderer.compileAsync)await st.renderer.compileAsync(scene,st.camera);
-        else st.renderer.compile(scene,st.camera);
+        // The live scene can be rebuilt on Replay/layout changes. Three's
+        // compileAsync timer retains its materials after they are disposed,
+        // then dereferences a missing currentProgram. Compile this mutable
+        // scene synchronously; isolated roof probes keep their async warmup.
+        st.renderer.compile(scene,st.camera);
         if(current())st.presentationAssetsReady=true;
       }).catch(()=>{if(current())setMapPresentationPhase("failed");});
     }

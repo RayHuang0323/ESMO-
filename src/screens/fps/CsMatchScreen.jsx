@@ -22,6 +22,8 @@ import { toFpsRoster, CS_MAP_KEYS } from "../../battle/fps/fpsRoster.js";
 import { csMapByKey } from "../../battle/fps/csPrepData.js";
 import { toCsMatchResult } from "../../platform/contracts/CsMatchResult.js";
 import { GC, FONT } from "../../ui/theme.js";
+import {csFixtureOpponentSnapshot} from '../../battle/fps/csFixtureOpponent.js';
+import {careerYearOf} from '../../platform/time/worldClock.js';
 import CsLongMatchProgress from "./CsLongMatchProgress.jsx";
 import { csLoadMark } from "../../battle/fps/csLoadTiming.js";
 import { preloadFpsCharacterAssets } from "../../battle/fps/presentation/FpsCharacterRenderer.js";
@@ -76,6 +78,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
   //  Milestone O1：以**出賽陣容**建立引擎名單（誰上場不再看陣列順序）
   const csLineup = useProfileStore((s) => s.csLineup);
   const roster = useMemo(() => toFpsRoster(players, csLineup), [players, csLineup]);
+  const [opponentSnapshot] = useState(()=>csFixtureOpponentSnapshot({session,config,existingSimulation:Boolean(activeSnapshot),year:careerYearOf(useProfileStore.getState().meta?.days??1).year}));
   const [result, setResult] = useState(null); // 引擎原生 MatchResult
   const [replayMode, setReplayMode] = useState(false);
   const [replayMetadata, setReplayMetadata] = useState(null);
@@ -110,11 +113,11 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
       snapshot: p.snapshot,
       simulationTimeSec: p.simulationTimeSec,
       phase: "battle",
-      config: { csConfig: { ...config, seed, sceneVersion } },
+      config: { csConfig: { ...config, seed, sceneVersion,...(opponentSnapshot?{opponentSnapshot}:{}) } },
       status: paused ? "paused" : "active",
       now,
     });
-  }, [config, seed, sceneVersion]);
+  }, [config, seed, sceneVersion,opponentSnapshot]);
   const handleProgress = useCallback((progress) => saveProgress(progress), [saveProgress]);
   const handleBack = useCallback(() => {
     saveProgress(progressRef.current, { paused: true, force: true });
@@ -151,7 +154,7 @@ export default function CsMatchScreen({ config, onFinish, onBack }) {
 
       {/* hotfix/cs-resume-worker：模擬在 Web Worker 算的期間，顯示回到比賽的進度（主執行緒不再凍結） */}
       <Suspense fallback={<CsSimulationProgress resuming={Number(activeSnapshot?.frameIndex) > 0} mapName={mapName} />}>
-        <EsportsFPS3D embedded asyncSimulation={workerReady} roster={roster ?? undefined} mapKey={mapKey} sceneVersion={sceneVersion} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
+        <EsportsFPS3D embedded asyncSimulation={workerReady} roster={roster ?? undefined} opponent={opponentSnapshot?.actors} oppName={opponentSnapshot?.name} mapKey={mapKey} sceneVersion={sceneVersion} seed={seed} tactic={config?.tacticId ?? undefined} tacticType={config?.tacticType ?? undefined} tacticalLayout={config?.tacticalLayout ?? undefined} teamName={team?.name} onComplete={setResult}
           resumeFrameIndex={Number(activeSnapshot?.frameIndex) || 0} onProgress={handleProgress} onReplayModeChange={handleReplayModeChange} />
       </Suspense>
 

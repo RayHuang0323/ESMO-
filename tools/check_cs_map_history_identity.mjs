@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {csMapScorecard} from '../src/platform/contracts/csMapVeto.js';
+import {csOriginalCompetitionSnapshot} from '../src/battle/fps/csMapIdentity.js';
+const identities=csOriginalCompetitionSnapshot();
+const history=[{mapId:'mirage',winner:'us'},{mapId:'mirage',winner:'enemy',sceneVersion:'major.v3',mapIdentity:{...identities.mirage,poolId:'original-v1'}}];
+const before=JSON.stringify(history);
+assert.equal(csMapScorecard({history}).evidence.mirage.historyGames,1);
+assert.equal(csMapScorecard({history}).evidence.mirage.historyWins,1);
+assert.equal(csMapScorecard({history,identities}).evidence.mirage.historyGames,1);
+assert.equal(csMapScorecard({history,identities}).evidence.mirage.historyWins,0);
+assert.equal(csMapScorecard({history,identities:{mirage:{...identities.mirage,layoutId:'future'}}}).evidence.mirage.historyGames,0);
+assert.equal(JSON.stringify(history),before);
+console.log('CS map history identity: 6/6 PASS');

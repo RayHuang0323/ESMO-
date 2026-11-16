@@ -1,3 +1,5 @@
+最新續跑：請先讀 POOL_CLOSURE.md；以下保留4577c858時的原始停點，不以舊BLOCKED覆蓋新收據。
+
 # CS Professional Expansion — 本機候選交接
 
 2026-11-16；Owner Review。計畫尚未全部完成，不可整合／發布原創正式池。

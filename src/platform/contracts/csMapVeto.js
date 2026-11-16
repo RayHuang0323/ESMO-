@@ -75,8 +75,10 @@ export function normalizeCsMapPreferences(value) {
   };
 }
 
-const historyScore = (history, mapKey) => {
-  const rows = (Array.isArray(history) ? history : []).filter((row) => row?.mapId === mapKey);
+const historyScore = (history, mapKey, identity) => {
+  const rows = (Array.isArray(history) ? history : []).filter((row) => row?.mapId === mapKey && (identity
+    ? row.mapIdentity?.competitionMapId===identity.competitionMapId && row.mapIdentity?.layoutId===identity.layoutId
+    : !['major.v3','major.v4','major.v5'].includes(row.sceneVersion) && row.mapIdentity?.poolId!=='original-v1'));
   if (!rows.length) return { score: 50, games: 0, wins: 0 };
   const wins = rows.filter((row) => row.winner === "us").length;
   return { score: Math.round((wins / rows.length) * 100), games: rows.length, wins };
@@ -106,14 +108,14 @@ const tacticBonus = (tacticType, mapKey) => {
  * 建立一方的 map score snapshot。分數只用既有 roster/mapFit、真實 csHistory、
  * AI team style 與已選 tactic；資料缺少時才加入很小的 deterministic fallback。
  */
-export function csMapScorecard({ roster = [], history = [], style = null, tacticType = null, seed = 0, side = "us" } = {}) {
+export function csMapScorecard({ roster = [], history = [], identities = null, style = null, tacticType = null, seed = 0, side = "us" } = {}) {
   const hasRoster = Array.isArray(roster) && roster.length > 0;
   const scores = {};
   const evidence = {};
   for (const mapKey of CS_MAP_KEYS) {
     const map = mapOf(mapKey);
     const fit = hasRoster ? mapFit(roster, map) : { score: null, grade: "未知" };
-    const past = historyScore(history, mapKey);
+    const past = historyScore(history, mapKey, identities?.[mapKey]);
     const fitScore = fit.score == null ? 50 : fit.score;
     const historyWeight = past.games > 0 ? Math.min(0.36, 0.12 + past.games * 0.06) : 0;
     const fallback = hash32(`${seed}:${side}:${mapKey}:fallback`) % 7;

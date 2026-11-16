@@ -2,6 +2,7 @@
 // CS-C5V browser smoke：中文 UI、Practice 三圖、matchmaking intersection、BO1/BO3、390px、Battle handoff。
 import { launchChrome } from "./browser/cdp.mjs";
 import fs from 'node:fs';
+import path from 'node:path';
 
 const APP = process.env.C5V_PREVIEW_URL ?? "http://127.0.0.1:5187/ESMO-/";
 const CDP_PORT = 9487;
@@ -58,13 +59,14 @@ const driveFixtureToLaunch = () => {
   st().launchMatchSession(fixtureClock + 20);
 };
 
-const officialSave = (format) => {
+const officialSave = (format, skip = 0, declaredMap = null) => {
   freshSave();
   st().ensureCompetitionSeason("cs");
   let fixture = null;
   if (format === "bo1") {
     for (let i = 0; i < 120 && !fixture; i += 1) {
       fixture = st().competitionView("cs").today;
+      if(fixture&&skip>0){st().forfeitFixture(fixture.id);fixture=null;skip--;}
       if (!fixture) st().advanceDay(1);
     }
   } else {
@@ -93,6 +95,7 @@ const officialSave = (format) => {
     fixture = patched.fixtures.find((item) => item.id === semifinal.id);
   }
   fixtureClock += 10_000;
+  if(declaredMap){const cs=st().competitionByMode.cs;st()._setCompetitionStateFor('cs',{...cs,fixtures:cs.fixtures.map(f=>f.id===fixture.id?{...f,matchFormat:{...f.matchFormat,mapPool:[declaredMap]}}:f)});}
   const started = st().startFixtureMatch(fixture.id, fixtureClock);
   if (!started.ok) throw new Error(`fixture ${format} start failed: ${started.reason}`);
   driveFixtureToLaunch();
@@ -107,6 +110,9 @@ const baseSaves = {
   general: freshSave(),
   bo1: officialSave("bo1"),
   bo3: officialSave("bo3"),
+  bo1next: officialSave('bo1',1),
+  bo1confluence:officialSave('bo1',0,'mirage'),
+  bo1dune:officialSave('bo1',0,'dust2'),
 };
 
 let pass = 0;
@@ -138,16 +144,19 @@ const waitReadyAndConfirm = async (chrome) => {
 };
 
 const enterBattleFromMap = async (chrome) => {
+  if(process.env.C5V_CAPTURE_ARGS==='1')await chrome.evaluate(`if(!window.__csWorkerObserver){window.__csWorkerObserver=true;window.__csWorkerEvents=[];const original=Worker.prototype.postMessage;Worker.prototype.postMessage=function(message,...rest){if(Array.isArray(message?.args)){window.__csWorkerArgs=structuredClone(message.args);window.__csWorkerEvents.push({type:'sent',at:performance.now()});this.addEventListener('message',e=>window.__csWorkerEvents.push({type:'received',at:performance.now(),ok:e.data?.ok,ms:e.data?.ms,frames:e.data?.sim?.frames?.length}));this.addEventListener('error',e=>window.__csWorkerEvents.push({type:'error',message:e.message}));}return original.call(this,message,...rest);};}return true;`);
   await click(chrome, '[data-testid="cs-map-confirm"]', "map confirm");
   await waitFor(chrome, `document.querySelector('[data-testid="cs-tactic-confirm"]')`, 30_000, "tactic screen");
   await click(chrome, '[data-testid="cs-tactic-confirm"]', "tactic confirm");
-  await waitFor(chrome, `document.querySelector('[data-testid="cs-match-speed-controls"]')`, 45_000, "Battle");
+  try{await waitFor(chrome, `document.querySelector('[data-testid="cs-match-speed-controls"]')`, 45_000, "Battle");}catch(error){if(process.env.C5V_DIAG_WAIT!=='1')throw error;console.error('DIAGNOSTIC_ONLY original 45s gate failed: '+error.message);await waitFor(chrome,`document.querySelector('[data-testid="cs-match-speed-controls"]')`,90000,'diagnostic only extended observation');throw error;}
 };
 
 let chrome = null;
 try {
   chrome = await launchChrome({ url: APP, port: CDP_PORT, headless: true });
-  for (const mapKey of ["dust2", "mirage", "inferno"]) {
+  const dialogs=[];
+  chrome.on('Page.javascriptDialogOpening',dialog=>{dialogs.push({type:dialog.type,message:dialog.message});if(dialog.type==='confirm'&&dialog.message.includes('快速完成本場'))void chrome.send('Page.handleJavaScriptDialog',{accept:true});});
+  for (const mapKey of (process.env.C5V_ONLY_OFFICIAL==='1'?[]:["dust2", "mirage", "inferno"])) {
     const mobile = mapKey === "inferno";
     await inject(chrome, baseSaves[mapKey], mobile
       ? { width: 390, height: 844, mobile: true }
@@ -166,6 +175,7 @@ try {
     evidence.practice.push({ mapKey, viewport, config: saved.matchmaking.session.activeMatch.config.csConfig });
   }
 
+  if(process.env.C5V_ONLY_OFFICIAL!=='1'){
   await inject(chrome, baseSaves.general);
   await enterCsPrep(chrome);
   ck("一般對戰三圖 pool checkbox 中文 UI 可見", await chrome.evaluate(`return ["dust2","mirage","inferno"].every(k=>document.querySelector('[data-testid="cs-map-pool-' + k + '"]'))`));
@@ -178,9 +188,11 @@ try {
     && generalSelection.playerPool.includes(generalSelection.finalMapKey)
     && generalSelection.opponentPool.includes(generalSelection.finalMapKey));
   evidence.general = generalSelection;
+  }
 
-  for (const format of ["bo1", "bo3"]) {
-    await inject(chrome, baseSaves[format].save, format === "bo1"
+  for (const scenario of (process.env.C5V_EXPANDED==='1'?['bo1','bo1confluence','bo1dune','bo3']:process.env.C5V_ONLY_BO1==='1'?["bo1"]:["bo1", "bo3"])) {
+    const format=scenario==='bo3'?'bo3':'bo1';
+    await inject(chrome, baseSaves[scenario] .save, format === "bo1"
       ? { width: 390, height: 844, mobile: true }
       : { width: 1280, height: 900, mobile: false });
     await click(chrome, '[data-testid="resume-active-match"]', `${format} resume`);
@@ -194,7 +206,7 @@ try {
       const resolved = await chrome.evaluate(`return !document.querySelector('[data-testid="cs-map-confirm"]')?.disabled`);
       if (resolved) break;
       const result = await chrome.evaluate(`
-        const node=[...document.querySelectorAll('[data-map-key]')].find(x=>!x.disabled);
+        const choices=[...document.querySelectorAll('[data-map-key]')].filter(x=>!x.disabled);const node=${scenario==='bo1alternate'?'choices.at(-1)':'choices[0]'};
         if(!node)return false;node.click();return true;
       `);
       if (!result) break;
@@ -206,7 +218,8 @@ try {
     ck(`${format.toUpperCase()} Veto resolved 寫入同一 Session`, selection.status === "resolved"
       && saved.matchmaking.session.activeMatch.config.csConfig.mapKey);
     if (format === "bo1") {
-      ck("BO1 雙方輪流 Ban，最後剩餘地圖為比賽地圖", selection.banned.length === 2
+      if(['bo1confluence','bo1dune'].includes(scenario))ck(`${scenario} declared single-map fixture respected`,selection.mapPool.length===1&&selection.finalMapKey===(scenario==='bo1dune'?'dust2':'mirage'));
+      else ck("BO1 雙方輪流 Ban，最後剩餘地圖為比賽地圖", selection.banned.length === 2
         && new Set(selection.banned.map((entry) => entry.side)).size === 2
         && selection.finalMapKey === selection.remaining[0]);
       ck("390px BO1 Veto 無頁面橫向溢出", await chrome.evaluate(`return innerWidth===390&&document.documentElement.scrollWidth<=innerWidth+1`));
@@ -223,17 +236,60 @@ try {
     saved = await readSaved(chrome);
     const restored = saved.matchmaking.session.mapSelection;
     ck(`${format.toUpperCase()} reload / resume 不重擲 Veto`, signature === JSON.stringify({ log: restored.log, finalMapKey: restored.finalMapKey, mapOrder: restored.mapOrder }));
-    evidence[format] = restored;
+    if(process.env.C5V_ORIGINAL_POOL!=='1')evidence[format] = restored;
     if(process.env.C5V_ORIGINAL_POOL==='1'){
       ck(`${format} original pool snapshot survives reload`,restored.competitionPoolId==='original-v1'&&Object.keys(restored.competitionPoolSnapshot||{}).length===3);
-      if(process.env.C5V_SCREENSHOT_DIR){const shot=await chrome.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(`${process.env.C5V_SCREENSHOT_DIR}/${format}-original-pool.png`,Buffer.from(shot.data,'base64'),{flag:'wx'});}
+      if(process.env.C5V_SCREENSHOT_DIR&&['bo1','bo3'].includes(scenario)){const shot=await chrome.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(`${process.env.C5V_SCREENSHOT_DIR}/${scenario}-original-pool.png`,Buffer.from(shot.data,'base64'),{flag:'wx'});}
+      const completedMaps=[];
+      for(let mapIndex=0;mapIndex<(format==='bo3'?3:1);mapIndex++){
       await enterBattleFromMap(chrome);
       const launched=await readSaved(chrome),config=launched.matchmaking.session.activeMatch.config.csConfig;
       ck(`${format} original scene is authoritative config`,['major.v3','major.v4','major.v5'].includes(config.sceneVersion));
       await waitFor(chrome,`!document.querySelector('[data-testid="fps-map-preparing"]')&&[...document.querySelectorAll('button')].some(b=>b.innerText.includes('快速完成'))`,90000,'scene and finish ready');
+      if(process.env.C5V_BATTLE_RELOAD==='1'&&scenario==='bo1'&&mapIndex===0){
+        const prior=await readSaved(chrome);
+        await chrome.reload();await waitFor(chrome,`document.querySelector('[data-testid="resume-active-match"]')`,30000,'live battle resume prompt');await click(chrome,'[data-testid="resume-active-match"]','resume live official match');
+        await waitFor(chrome,`document.querySelector('[data-testid="cs-match-speed-controls"]')&&!document.querySelector('[data-testid="fps-map-preparing"]')`,90000,'restored real scene ready');
+        const resumed=await readSaved(chrome);ck('live battle reload retains session / scene / opponent',resumed.matchmaking.session.sessionId===prior.matchmaking.session.sessionId&&JSON.stringify(resumed.matchmaking.session.activeMatch.config.csConfig.opponentSnapshot)===JSON.stringify(prior.matchmaking.session.activeMatch.config.csConfig.opponentSnapshot)&&resumed.matchmaking.session.activeMatch.config.csConfig.sceneVersion===config.sceneVersion);
+      }
+      if(process.env.C5V_REPLAY_FIXTURES==='1'){
+        const files={'major.v3':'review/cs-major-upgrade/evidence/cs-map-v2-release-gate-20261107/performance-r1/confluence-match.replay.json.gz','major.v4':'review/cs-major-upgrade/evidence/cs-map-v2-release-gate-20261107/performance-r1/dune-match.replay.json.gz','major.v5':'review/cs-major-upgrade/evidence/foundry-20261024/match-foundry-execute-b-830102-r14.replay.json.gz'};
+        await chrome.evaluate(`document.querySelector('.fps-major-replay summary').click();return true;`);
+        const doc=await chrome.send('DOM.getDocument'),node=await chrome.send('DOM.querySelector',{nodeId:doc.root.nodeId,selector:'[data-testid="cs-replay-import"]'});
+        await chrome.send('DOM.setFileInputFiles',{nodeId:node.nodeId,files:[path.resolve(files[config.sceneVersion])]});
+        await waitFor(chrome,`document.querySelector('[data-testid="cs-replay-mode"]')&&!document.querySelector('[data-testid="fps-map-preparing"]')`,60000,'saved frame replay ready');
+        await click(chrome,'[data-testid="cs-replay-exit"]','return original match');
+        await waitFor(chrome,`!document.querySelector('[data-testid="cs-replay-mode"]')&&!document.querySelector('[data-testid="fps-map-preparing"]')`,60000,'original match ready again');
+        const replayReturn=await readSaved(chrome);ck(`${scenario} replay returns to same official session`,replayReturn.matchmaking.session.sessionId===launched.matchmaking.session.sessionId&&replayReturn.matchmaking.session.activeMatch.config.csConfig.sceneVersion===config.sceneVersion);
+      }
       await chrome.evaluate(`const b=[...document.querySelectorAll('button')].find(b=>b.innerText.includes('快速完成'));if(!b)throw Error('finish missing');b.click();return true;`);
+      ck(`${format} native quick-finish confirmation handled`,dialogs.some(d=>d.type==='confirm'&&d.message.includes('快速完成本場')));
+      await waitFor(chrome,`[...document.querySelectorAll('button')].some(b=>b.innerText.includes('查看賽後戰報'))`,45000,'true result ready');
+      await chrome.evaluate(`const b=[...document.querySelectorAll('button')].find(b=>b.innerText.includes('查看賽後戰報'));b.click();return true;`);
       await waitFor(chrome,`document.querySelector('[data-testid="cs-professional-report"]')`,45000,'true simulation result report');
       ck(`${format} real report has original map name`,await chrome.evaluate(`return ['Confluence Station','Dune Terminal','Foundry Circuit'].some(n=>document.body.innerText.includes(n))`));
+      const after=await readSaved(chrome),history=after.csHistory||[],last=history[0];
+      ck(`${scenario} actual history identity`,last?.sceneVersion===config.sceneVersion&&last?.mapIdentity?.mapKey===config.mapKey);
+      ck(`${scenario} true result creates settlement transaction`,Object.keys(after.processedMatchTransactions||{}).length>Object.keys(launched.processedMatchTransactions||{}).length);
+      if(process.env.C5V_CANONICAL_OPPONENT==='1'){
+        const opponent=after.matchmaking?.session?.activeMatch?.config?.csConfig?.opponentSnapshot;
+        ck(`${scenario} declared opponent name and actual roster match`,opponent?.teamId===launched.matchmaking.session.opponent.id&&last?.oppName===opponent?.name&&last?.opponents?.length===5&&last.opponents.every(p=>opponent.actors.some(a=>a.name===p.playerName)));
+      }
+      completedMaps.push({key:config.mapKey,scene:config.sceneVersion,matchId:last?.matchId,score:[last?.ourScore,last?.enemyScore]});
+      const series=after.matchmaking?.session?.series;
+      if(format!=='bo3'||series?.decided||series?.status==='decided')break;
+      if(mapIndex===2)break;
+      await chrome.evaluate(`const b=[...document.querySelectorAll('button')].find(b=>b.innerText==='返回 Dashboard');if(!b)throw Error('return missing');b.click();return true;`);
+      await waitFor(chrome,`document.querySelector('[data-testid="cs-map-confirm"]')`,15000,'next series map');
+      }
+      ck(`${scenario} series maps unique`,new Set(completedMaps.map(m=>m.key)).size===completedMaps.length);
+      evidence[scenario]={selection:restored,completedMaps};
+      const beforeReload=await readSaved(chrome),receiptIds=Object.keys(beforeReload.processedMatchTransactions||{}),historyIds=(beforeReload.csHistory||[]).map(r=>r.matchId);
+      ck(`${scenario} exactly one official fixture outcome`,(beforeReload.competitionByMode.cs.outcomes||[]).filter(o=>o.fixtureId===baseSaves[scenario].fixtureId).length===1);
+      if(format==='bo3'){const final=beforeReload.matchmaking?.session?.series;ck('BO3 true series reaches two wins',final?.status==='decided'&&Math.max(final.wins.us,final.wins.opponent)===2&&completedMaps.length>=2);}
+      await chrome.reload();await waitFor(chrome,`document.querySelector('[data-testid="home-mode-cs"]')||document.querySelector('[data-testid="resume-active-match"]')`,30000,'post settlement reload');
+      const afterReload=await readSaved(chrome);
+      ck(`${scenario} reward and history reload idempotent`,JSON.stringify(receiptIds)===JSON.stringify(Object.keys(afterReload.processedMatchTransactions||{}))&&JSON.stringify(historyIds)===JSON.stringify((afterReload.csHistory||[]).map(r=>r.matchId)));
     }
   }
 
@@ -241,11 +297,13 @@ try {
     console: chrome.consoleLines.filter((line) => line.startsWith("[error]")),
     page: chrome.pageErrors,
   };
+  if(process.env.C5V_EXPANDED==='1')ck('BO1 original three-map coverage',new Set(['bo1','bo1confluence','bo1dune'].flatMap(k=>evidence[k]?.completedMaps?.map(m=>m.key)||[])).size===3);
   ck("Browser console / page errors = 0", evidence.errors.console.length === 0 && evidence.errors.page.length === 0,
     JSON.stringify(evidence.errors));
 } catch (error) {
   fail += 1;
-  if(chrome){try{evidence.failure={text:await chrome.evaluate('return document.body.innerText.slice(0,2500)'),pageErrors:chrome.pageErrors,console:chrome.consoleLines.filter(line=>line.startsWith('[error]'))};}catch{}}
+  if(chrome){try{evidence.failure={text:await chrome.evaluate('return document.body.innerText.slice(0,2500)'),workerEvents:await chrome.evaluate('return window.__csWorkerEvents??[]'),pageErrors:chrome.pageErrors,console:chrome.consoleLines.filter(line=>line.startsWith('[error]'))};}catch{}}
+  if(chrome&&process.env.C5V_CAPTURE_ARGS==='1'&&process.env.C5V_SCREENSHOT_DIR){try{const args=await chrome.evaluate('return window.__csWorkerArgs??null');fs.writeFileSync(`${process.env.C5V_SCREENSHOT_DIR}/worker-input.json`,JSON.stringify(args),{flag:'wx'});}catch(error){console.error('worker observation '+error.message);}}
   console.error(error?.stack ?? error);
 } finally {
   if (chrome) await chrome.close();

@@ -69,7 +69,7 @@ const SEGMENTS = [
   { id: "cs_visibility_bounds", script: "tools/check_cs_visibility_bounds.mjs", shape: /CS visibility bounds: 8\/8 PASS/, note: "CS 真實產品visibility snapshot原生／major完整欄位等價與安全診斷" },
   { id: "cs_major_navigation_cache", script: "tools/check_cs_major_navigation_cache.mjs", shape: /CS Major Navigation Cache: 23\/23 PASS/, note: "CS major 有界精確路段快取／三圖路線及完整模擬與未快取等價" },
   { id: "cs_major_room_fixtures", script: "tools/check_cs_major_room_fixtures.mjs", shape: /CS Major Room Fixtures: 15\/15 PASS/, note: "CS major 工位同源bounds／正式移動與LOS／4.8m通廊半徑帶／雙門導航" },
-  { id: "cs_major_shader_warmup", script: "tools/check_cs_major_shader_warmup.mjs", shape: /CS Major Shader Warmup: 12\/12 PASS/, note: "CS major 屋頂／真透明Standard特效一次性預熱／共用資產不改動／取消與釋放生命週期" },
+  { id: "cs_major_shader_warmup", script: "tools/check_cs_major_shader_warmup.mjs", shape: /CS Major Shader Warmup: 14\/14 PASS/, note: "CS major 屋頂／真透明Standard特效一次性預熱／共用資產不改動／取消與釋放生命週期" },
   { id: "cs_major_scene_v1", script: "tools/check_cs_major_scene_v1.mjs", shape: /CS Major Scene v1: 120\/120 PASS/, note: "CS Major 原創場景／CC0來源／幾何預算／collision與高度／雙入口與工位實際幾何／設施足跡眼高／道路shader隔離／平面陰影單pass／淡出釋放" },
   { id: "cs_major_camera_framing", script: "tools/check_cs_major_camera_framing.mjs", shape: /CS Major camera framing: 16\/16 PASS/, note: "CS Major 桌機／窄版真實透視、近拍前側背、縮放焦點與legacy保持、炸彈邊界" },
   { id: "cs_camera_recovery", script: "tools/check_cs_camera_recovery.mjs", shape: /CS camera recovery: 21\/21 checks passed/, note: "CS 鏡頭恢復／局部遮擋／POV實牆／major透明shader狀態切換／legacy保留" },

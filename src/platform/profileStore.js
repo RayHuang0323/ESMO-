@@ -3566,8 +3566,15 @@ export const useProfileStore = create((rawSet, get) => {
       return { ok: false, errors: [{ message: '只能在正式賽首圖部署前啟用測試地圖池' }] };
     }
     if (selection.competitionPoolId) return {ok:selection.competitionPoolId==='original-v1',errors:[]};
+    if(selection.log?.some(entry=>entry.source==='player'))return {ok:false,errors:[{message:'請在手動選圖前啟用測試地圖池'}]};
     const snapshot = csOriginalCompetitionSnapshot();
-    const nextSelection = { ...selection, competitionPoolId: 'original-v1', competitionPoolSnapshot: JSON.parse(JSON.stringify(snapshot)) };
+    const byId=new Map((get().players??[]).map(p=>[p.id,p]));
+    const opponent=csAiTeamById(session.opponent?.id);
+    const made=createCsMapVeto({matchFormat:{series:selection.kind==='bo3'?'bo3':null,mapPool:selection.mapPool},seed:selection.seed,
+      us:{roster:Object.values(get().csLineup??{}).map(id=>byId.get(id)).filter(Boolean),history:get().csHistory??[],identities:snapshot},
+      opponent:{roster:opponent?.roster??[],style:opponent?.style??null,identities:snapshot}});
+    if(!made.ok)return {ok:false,errors:made.errors};
+    const nextSelection = { ...advanceAiCsMapVeto(made.selection), competitionPoolId: 'original-v1', competitionPoolSnapshot: JSON.parse(JSON.stringify(snapshot)) };
     const fixtureId = fixtureIdOfSession(session);
     set({ matchmaking: { ...mm, session: { ...session, mapSelection: nextSelection },
       mapSelectionByFixture: fixtureId ? { ...(mm.mapSelectionByFixture ?? {}), [fixtureId]: nextSelection } : mm.mapSelectionByFixture } });
