@@ -21,6 +21,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const otherSide = (s) => (s === "blue" ? "red" : "blue");
 const ENEMY_BITS = ["top", "jungle", "mid", "adc", "sup"];   // bit0＝top（與影子研究相同）
 const bitOf = (role) => { const i = ENEMY_BITS.indexOf(role); return i < 0 ? 0 : 1 << i; };
+const typeOf = (c) => (c.type === "buff" ? "buff" : "camp");
 const popcount = (m) => { let c = 0; m >>>= 0; while (m) { c += m & 1; m >>>= 1; } return c; };
 
 /** 參數（全部是常數；改任何一格＝改對局 ⇒ 同版號重新登記指紋）。 */
@@ -58,6 +59,60 @@ export const TACTIC_EXEC_V24 = Object.freeze({
 });
 const C = TACTIC_EXEC_V24;
 
+/**
+ *  Sprint 1.1（tacticExec "adaptive.v1.1"，Owner 2026-11-17 核准）的追加參數。adaptive.v1 不讀這裡任何一格（Sprint 1 原樣重現）。
+ *  根因（Sprint 1 驗證資料，已用過的 Seeds 99301–99559，只做診斷）：92% 的出發是「預估 1 名敵人（敵方打野先驗）＋單人＋敵方 Buff」，
+ *  到場率 17.5%；一般營 83%。中止多在血量 0.4、一般撤退接手、被圍 ⇒ 打野半血回家、自家營少清 1.9 座，敵方營幾乎沒多拿（+0.03）。
+ */
+export const TACTIC_EXEC_V24_1 = Object.freeze({
+  partyEtaSlack: 3,           // 隊友的實際尋路到場時間最多比帶隊者晚這麼多秒（v1 是直線估計＋6 秒）
+  regroupLagSec: 1,           // 到場前隊友落後超過這麼多秒 ⇒ 帶隊者原地等（等到落後 ≤ regroupResumeSec 才繼續）；兩人一起到，帶隊者不先單獨撞上對方
+  regroupResumeSec: 0.5,
+  regroupMaxSec: 4,           // 累計等超過這麼久 ⇒ 用當下資訊重評：單人條件成立 ⇒ 放隊友回去、單人繼續（partner_released）；否則 partner_lag 撤退
+  campEtaExtra: 5,            // 一般營的到場時間上限＝傾向的 etaMax ＋ 這麼多秒（一般營成功率高；往返成本另由 econ11 把關）
+  priorAnyTimeTypes: ["camp"],   // 從沒看過的一般營：任何時間都依公開的首次出生時間當作活著（Sprint 1 一般營目標到場時還活著 52/54；對方打野平常只清得到理論上限的約 2 成）。Buff 仍要 introPriorSec 內或有情報
+  soloPriorTypes: ["camp"],   // 只有「敵方打野先驗」這一項威脅時，單人只去一般營（Buff 是敵方打野的預設位置，Sprint 1 單人 Buff 到場率 17.5%）
+  memberHpMin: 0.7,           // 隊友出發血量（v1 是傾向的 memberHpMin 0.5～0.7）：低於這個值的線上英雄常在半路被一般撤退接手
+  contactR: 7,                // 看得見的敵人離帶隊者這麼近 ⇒ 算已接觸（不論是否在營地旁）
+  approachR: 28,              // 逼近只算在營地這麼近以內的敵人（線上走動的英雄不算）
+  partnerWithR: 22,           // 隊友離帶隊者這麼近（約 4 秒路程）⇒ 動態撤退把他算在我方在場人數裡
+  //  野區經濟（期望值，Owner 本輪第 3 項；單位＝營地價值 value，Buff 1、一般營 0.67）：
+  //  期望收益＝價值 × 成功率（依目標類型與出發時的威脅情況）×（1＋denyShare）；
+  //  機會成本＝lossPerSec × 自家營平均價值 × 往返秒數（到場＋清營＋回到最近的自家營地）。期望收益 < econK × 機會成本 ⇒ 這個目標不合格（own_farm）。
+  //  兩個數字都在「已用過的」Seeds 上量，登記在這裡、不在新 Seeds 上調：
+  //   · 成功率＝搶到營地的比例（Sprint 1 驗證資料，Seeds 99301–99559，2,561 次出發）：一般營 clear 6/7、prior 40/54＝0.74、contested 2/7；
+  //     Buff clear 33/71＝0.46、prior 248/2296＝0.11、contested 25/110＝0.23（clear＝預估 0 名敵人；prior＝唯一的威脅是沒看見的敵方打野；contested＝其他）
+  //   · lossPerSec＝打野清自家營的實際效率（v23 臂，Seeds 98401–98419：每邊在自家營旁 430 秒、清 7.42 座 ⇒ 0.0173 座／秒）。
+  //     ⚠ 第一版用 Sprint 1 的實際損失 0.0218（含失敗入侵的血量與陣亡連鎖）⇒ 30 個用過的 Seeds 上每邊每場只出發 0.06 次，等於禁止入侵，所以改用時間本身的成本。
+  //   · prior_early（開局 earlyPriorSec 秒內的 prior）：v1.1 第十版在用過的 Seeds 99301–99359 上量的，單人一般營 28/209＝0.13（對方打野這時在清自己的野區）；
+  //     同一版開局後 300～900 秒單人一般營 53/74＝0.72（與 Sprint 1 的 0.74 一致，沿用 0.74）。Buff 沒有分開的資料，沿用 0.11。
+  successP: Object.freeze({ camp: Object.freeze({ clear: 0.85, prior: 0.74, prior_early: 0.13, contested: 0.29 }), buff: Object.freeze({ clear: 0.46, prior: 0.11, prior_early: 0.11, contested: 0.23 }) }),
+  earlyPriorSec: 300,
+  //  successP2：2 人編隊的成功率（v1.1 第十一版，用過的 Seeds 99301–99359）：一般營 prior (101+27)/(297+72)＝0.35、clear (7+4+0)/(26+11+3)＝0.28
+  //  （隊友實際到場只有 34%：途中被既有的撤退／回城／回線接手，或在塔邊等待）。其他格沒有 2 人資料，沿用單人值。
+  //  2 人仍然優先：2 人的期望收益 ≥ 機會成本才 2 人出發；否則單人條件成立就單人，不成立就不出發（own_farm）。
+  successP2: Object.freeze({ camp: Object.freeze({ clear: 0.28, prior: 0.35, prior_early: 0.13, contested: 0.29 }), buff: Object.freeze({ clear: 0.46, prior: 0.11, prior_early: 0.11, contested: 0.23 }) }),
+  stuckSec: 6, stuckMin: 3,   // 到場前每 stuckSec 秒離營地沒有近 stuckMin 以上（等隊友的時間不算）⇒ stuck 撤退（塔邊進不去的營地）
+  lossPerSec: 0.0173,
+  //  denyShare：搶到的敵方營，對方本來會清到的比例（v23 臂，Sprint 1 驗證資料 780 個邊×場：每邊清自家營 10.73 座 ÷ 理論上限 31.6 座＝0.34）。
+  //  ⚠ 第二、三版只算成功率（單位＝座數）⇒ 30 個用過的 Seeds 上每邊每場出發 0.17～0.24 次（一般營往返 44～52 秒，成本 0.76～0.9 座 > 0.74），Owner 2026-11-17 選方案 1：
+  //    以經濟與安全為主、目標每邊每場約 1 次有價值的入侵，優先一般營、Buff 不永久封死 ⇒ 改成價值單位並計入拒絕收益。
+  denyShare: 0.34,
+  //  econK（選擇性）：期望收益至少是機會成本的 econK 倍才出發。Owner 2026-11-17 方案 1：目標每邊每場約 1 次有實際價值的入侵、不得幾乎禁止。
+  //  用過的 Seeds 99301–99359（工具路徑 180 個邊×場）的取捨：1.0 ⇒ 每邊每場出發 2.69、營地 Δ−0.99；1.1 ⇒ 1.46、Δ−0.75；1.2 ⇒ 0.62、Δ−0.78；1.4 ⇒ 0.07（幾乎禁止，不採用）。
+  //  取 1.1（最接近「約 1 次」且不是禁止）；之後不再調，獨立驗證在事先登記的新 Seeds 上做。
+  econK: 1.1,
+  postures: Object.freeze({
+    //  needAdvantage：預估有敵人時，人數必須多於預估（auto）。Owner 決策 2：保守型不要求人數優勢（仍保留看得見的敵人一律不去）。
+    //  contestedAbortHp：看得見敵人在場時的中止血量（比單純清營的 abortHp 高 ⇒ 及早撤離）。powK：敵方看得見的血量和 > 我方 × powK ⇒ 不利。
+    conservative: { needAdvantage: false, contestedAbortHp: 0.65, powK: 0.8 },
+    auto:         { needAdvantage: true, contestedAbortHp: 0.6, powK: 1.0 },
+    aggressive:   { needAdvantage: false, contestedAbortHp: 0.5, powK: 1.25 },
+    allin:        { needAdvantage: false, contestedAbortHp: 0.4, powK: 1.5 },
+  }),
+});
+const C1 = TACTIC_EXEC_V24_1;
+
 /** 傾向：Sprint 1 由戰術書既有的入侵傾向決定（玩家自選傾向屬 Sprint 3）。 */
 export function postureOf(knobs) {
   const ic = knobs?.invadeChance ?? 0;
@@ -75,7 +130,7 @@ const newObs = () => ({
 
 /** configureMatch 時建立。 */
 export function createTacticExecState(E) {
-  const st = { log: [], hist: [], obs: { blue: newObs(), red: newObs() }, side: {} };
+  const st = { log: [], hist: [], obs: { blue: newObs(), red: newObs() }, side: {}, v11: E._tacExecVariant === "adaptive.v1.1" };
   for (const S of ["blue", "red"]) {
     const K = E.director?.knobs(S) ?? null;
     const posture = postureOf(K);
@@ -221,17 +276,19 @@ function threatOf(E, X, S, target, alive, eta) {
   const JG = bitOf("jungle");
   //  敵方打野先驗：沒有反證就當作在他自己的野區
   const ej = E.players.find((q) => q.side === foe && q.role === "jungle");
-  let ejBit = 0;
+  let ejBit = 0, ejKind = "none";
   if (ej && !ej.dead) {
-    if (seen(E, S, ej, alive)) ejBit = eta(ej.pos) <= C.ejNearEta ? JG : 0;
+    if (seen(E, S, ej, alive)) { ejBit = eta(ej.pos) <= C.ejNearEta ? JG : 0; ejKind = "seen"; }
     else {
       const m = X.side[S].foeMem.get(ej.id);
-      ejBit = m && E.t - m.t <= C.ejMemFresh && eta(m.pos) - (E.t - m.t) > C.ejNearEta ? 0 : JG;
+      const fresh = !!m && E.t - m.t <= C.ejMemFresh;
+      ejBit = fresh && eta(m.pos) - (E.t - m.t) > C.ejNearEta ? 0 : JG;
+      ejKind = fresh ? "memory" : "prior";
     }
   }
   const s05 = (nowOrAppr & ~JG) | ejBit;
   const s05reach = s05 | (reach & ~JG);
-  return { s05: popcount(s05), s05reach: popcount(s05reach), seenNear: popcount(nowOrAppr), mask: s05, maskReach: s05reach };
+  return { s05: popcount(s05), s05reach: popcount(s05reach), seenNear: popcount(nowOrAppr), mask: s05, maskReach: s05reach, ejKind };
 }
 
 /** 匯出給 gate（8a 規則對稱、資訊公平的行為測試）；引擎只經 tacticExecTick 呼叫。 */
@@ -256,14 +313,16 @@ export function evaluateInvade(E, X, S, alive) {
     const b = believedCamp(E, X, S, c, alive);
     if (!b.alive) { inc(why, "no_target"); continue; }
     //  情報可信度：看得見、或有記憶（重生時間是公開資訊）⇒ 可信；從沒看過 ⇒ 只在開局 introPriorSec 內相信「首次出生之後就在」
-    if (b.intel === "prior" && E.t > C.introPriorSec) { inc(why, "no_intel"); continue; }
+    if (b.intel === "prior" && E.t > C.introPriorSec && !(X.v11 && C1.priorAnyTimeTypes.includes(c.type === "buff" ? "buff" : "camp"))) { inc(why, "no_intel"); continue; }
     const etaJ = eta(jg.pos, c.pos);
-    if (etaJ > P.etaMax) { inc(why, "too_far"); continue; }
+    const etaCap = P.etaMax + (X.v11 && c.type !== "buff" ? C1.campEtaExtra : 0);
+    if (etaJ > etaCap) { inc(why, "too_far"); continue; }
     const type = c.type === "buff" ? "buff" : "camp";
     const rate = C.value[type] / (etaJ + C.clearSec[type] * Math.max(0.2, b.hp));
-    if (rate < P.rateMin) { inc(why, "low_value"); continue; }
+    //  v1.1：價值改由 econ11 判斷（期望收益 vs 往返機會成本，已含距離）；舊的收益率門檻等於「一般營超過 12 秒就不合格」，而敵方一般營都在 18 秒以上。
+    if (rate < P.rateMin && !X.v11) { inc(why, "low_value"); continue; }
     if (!exitSafe(E, S, c)) { inc(why, "no_exit"); continue; }
-    ok.push({ c, etaJ, type, rate, intel: b.intel });
+    ok.push({ c, etaJ, type, rate, intel: b.intel, hp: b.hp });
   }
   ok.sort((a, b) => a.etaJ - b.etaJ || String(a.c.id).localeCompare(String(b.c.id)));
   let best = null;
@@ -271,12 +330,13 @@ export function evaluateInvade(E, X, S, alive) {
     const len = routeLength(E, S, jg.pos, cand.c.pos);
     if (len == null) { inc(why, "unreachable"); continue; }
     const etaPath = len / moveSpeed;
-    if (etaPath > P.etaMax) { inc(why, "too_far"); continue; }
+    if (etaPath > P.etaMax + (X.v11 && cand.type !== "buff" ? C1.campEtaExtra : 0)) { inc(why, "too_far"); continue; }
+    if (X.v11) { const ev = econ11(E, X, S, alive, { ...cand, etaJ: etaPath }, eta); if (!ev.ok) { inc(why, "own_farm"); rec.econFail ??= { target: cand.c.id, type: cand.type, ...ev.rec }; continue; } cand.econ = ev; }
     best = { ...cand, etaJ: etaPath };
     break;
   }
   if (!best) {
-    const order = ["unreachable", "too_far", "low_value", "no_exit", "no_intel", "no_target"];
+    const order = ["own_farm", "unreachable", "too_far", "low_value", "no_exit", "no_intel", "no_target"];
     return decline(order.find((k) => why[k]) ?? "no_target", { why });
   }
   Object.assign(rec, { target: best.c.id, targetType: best.type, etaJ: Math.round(best.etaJ * 100) / 100, intel: best.intel });
@@ -284,6 +344,7 @@ export function evaluateInvade(E, X, S, alive) {
   const horizon = best.etaJ + C.clearSec[best.type] + C.objHorizonPad;
   const ob = objectiveBlock(E, S, horizon);
   if (ob) return decline(ob);
+  if (X.v11) return evaluateParty11(E, X, S, alive, { jg, best, P, rec, decline, eta, moveSpeed });
   //  編隊（打野＋最多一名隊友；隊友依登記的角色順序 mid → sup → top）
   const members = [jg];
   for (const role of C.candidateRoles) {
@@ -313,6 +374,78 @@ export function evaluateInvade(E, X, S, alive) {
   return { target: best.c, etaJ: best.etaJ, members: pick };
 }
 
+/**
+ * Sprint 1.1 野區經濟（目標篩選的一部分；單位＝營地價值）：期望收益＝價值 × successP[類型][威脅情況] ×（1＋denyShare）；
+ * 機會成本＝lossPerSec × 自家營平均價值 × 往返秒數
+ * （到場＋清營 × 剩餘血量比例＋回到最近的自家營地）。另外，自家營地都還沒重生、往返期間也不會重生 ⇒ 打野這段時間本來就沒有自家營可清 ⇒ 機會成本 0。
+ * 不是「自家有野怪就禁止」：期望收益夠高的目標（一般營、敵方打野已知在別處的 Buff）照樣可以去。
+ */
+function econ11(E, X, S, alive, cand, eta) {
+  const r4 = (x) => Math.round(x * 10000) / 10000;
+  const own = (E.neutrals?.camps ?? []).filter((c) => c.side === S);
+  let back = Infinity;
+  for (const c of own) back = Math.min(back, eta(cand.c.pos, c.pos));
+  if (!Number.isFinite(back)) back = 0;
+  const trip = cand.etaJ + C.clearSec[cand.type] * Math.max(0.2, cand.hp ?? 1) + back;
+  const idleOwn = own.some((c) => c.alive || (Number.isFinite(c.respawnAt) && c.respawnAt - E.t < trip));
+  const th = threatOf(E, X, S, cand.c, alive, (pos) => eta(pos, cand.c.pos));
+  const cond0 = th.s05 === 0 && th.seenNear === 0 ? "clear" : th.s05 === 1 && th.mask === bitOf("jungle") && th.ejKind === "prior" && th.seenNear === 0 ? "prior" : "contested";
+  const cond = cond0 === "prior" && E.t < C1.earlyPriorSec ? "prior_early" : cond0;
+  const ownValue = own.length ? own.reduce((sum, c) => sum + C.value[typeOf(c)], 0) / own.length : 0;
+  const ev = C.value[cand.type] * C1.successP[cand.type][cond] * (1 + C1.denyShare);
+  const cost = idleOwn ? C1.lossPerSec * ownValue * trip : 0;
+  //  X.tune 只有量測工具的診斷臂會設（引擎從不設）⇒ 對局一律用登記的 econK。
+  const ev2 = C.value[cand.type] * C1.successP2[cand.type][cond] * (1 + C1.denyShare);
+  const k = X.tune?.econK ?? C1.econK;
+  return { ok: ev >= k * cost, duoOk: ev2 >= k * cost, rec: { trip: r4(trip), ev: r4(ev), ev2: r4(ev2), cost: r4(cost), cond } };
+}
+
+/**
+ * Sprint 1.1 出發前的後半段（只在 adaptive.v1.1）：
+ *  ① 野區經濟已在目標篩選時做完（econ11：期望收益 vs 往返機會成本；不合格的目標跳過，換下一個近的）。
+ *  ② 威脅（同 s05）；保守型看得見威脅一律不去。
+ *  ③ 編隊：預估有敵人 ⇒ 優先 2 人（auto 要人數多於預估）；隊友要不忙、血量夠、自己那一路沒被壓塔，而且「實際尋路」到場時間
+ *     ≤ 帶隊者 + partyEtaSlack。找不到 ⇒ 只有單人條件成立才單人：沒有看得見／逼近／最近看過的敵人，預估 0；
+ *     或唯一的威脅是「沒看見、也沒有新鮮記憶的敵方打野先驗」而且目標是一般營（不是 Buff）。
+ */
+function evaluateParty11(E, X, S, alive, { jg, best, P, rec, decline, eta, moveSpeed }) {
+  const O = X.obs[S], sd = X.side[S], P1 = C1.postures[sd.posture];
+  const r4 = (x) => Math.round(x * 10000) / 10000;
+  Object.assign(rec, best.econ.rec);
+  const th = threatOf(E, X, S, best.c, alive, (pos) => eta(pos, best.c.pos));
+  Object.assign(rec, { threat: th.s05, threatReach: th.s05reach, seenNear: th.seenNear, ej: th.ejKind });
+  if (P.noSeenThreat && th.seenNear > 0) return decline("threat_seen");
+  const T = th.s05, JG = bitOf("jungle");
+  const quiet = th.seenNear === 0 && th.s05reach === th.s05;
+  const priorOnly = T === 1 && th.mask === JG && th.ejKind === "prior";
+  const soloOk = P.sizeMin <= 1 && quiet && (T === 0 || (priorOnly && C1.soloPriorTypes.includes(best.type)));
+  const need = T === 0 ? 1 : P1.needAdvantage ? T + 1 : Math.max(1, T + P.marginMin);
+  let partner = null;
+  const why2 = {};
+  if (!(T === 0 && soloOk) && P.sizeMax >= 2) {
+    for (const role of C.candidateRoles) {
+      if (role === "jungle") continue;
+      const hh = E.players.find((p) => p.side === S && p.role === role);
+      if (!hh) continue;
+      if (busyReason(E, hh)) { inc(why2, "busy"); continue; }
+      if (hh.hp / hh.maxHp < Math.max(P.memberHpMin, C1.memberHpMin)) { inc(why2, "hp"); continue; }
+      if (laneCostOf(E, S, hh) > P.laneCostMax) { inc(why2, "lane_cost"); continue; }
+      if (dist(hh.pos, best.c.pos) / moveSpeed > best.etaJ + C1.partyEtaSlack) { inc(why2, "late"); continue; }
+      const len = routeLength(E, S, hh.pos, best.c.pos);
+      if (len == null || len / moveSpeed > best.etaJ + C1.partyEtaSlack) { inc(why2, "late"); continue; }
+      partner = hh; break;
+    }
+  }
+  let pick = null;
+  if (partner && need <= 2 && best.econ.duoOk) pick = [jg, partner];
+  else if (soloOk) pick = [jg];
+  if (!pick) return decline(partner && need <= 2 ? "own_farm" : need > P.sizeMax ? "threat" : "no_party", { party: why2, need, soloOk });
+  O.go++; O.partySize[pick.length]++; O.targets[best.type]++;
+  Object.assign(rec, { d: "go", n: pick.length, members: pick.map((h) => h.id), need, soloOk });
+  pushLog(X, rec);
+  return { target: best.c, etaJ: best.etaJ, members: pick, soloOk };
+}
+
 /** 出發：沿用既有入侵生命週期（打野 _invadeStepV2；目標預先指定），隊友由 partnerStep 帶。冷卻只在這裡開始計算。 */
 function startInvade(E, X, S, go) {
   const sd = X.side[S], O = X.obs[S], P = C.postures[sd.posture];
@@ -324,6 +457,7 @@ function startInvade(E, X, S, go) {
   E.exec[S].invadeAttempts++;
   if (partner) partner._tacPartnerV24 = { leaderId: leader.id, camp: go.target.id, startedAt: E.t, arrivedAt: null };
   sd.active = { leaderId: leader.id, partnerId: partner?.id ?? null, camp: go.target.id, startedAt: E.t };
+  if (X.v11) { sd.active.soloOk = !!go.soloOk; sd.active.soloNow = partner == null; sd.active.n0 = go.members.length; }
   sd.cooldownUntil = E.t + P.cooldown;
   O.starts++;
 }
@@ -397,7 +531,8 @@ export function tacticExecTick(E, X, alive) {
         if (P2 && P2._tacPartnerV24) endPartner(X, P2, `leader_${reason}`, E.t);
         inc(X.obs[S].ends, reason);
         pushLog(X, { t: E.t, side: S, kind: "invade_end", reason, camp: sd.active.camp, dur: Math.round((E.t - sd.active.startedAt) * 10) / 10,
-          arrived: L?._invV2?.arrivedAt != null, hp0: L?._invV2?.hp0 ?? null, hp1: L && !L.dead ? Math.round((L.hp / L.maxHp) * 1000) / 1000 : 0, contact: L?._invV2 ? Math.round(L._invV2.contact * 10) / 10 : null });
+          arrived: L?._invV2?.arrivedAt != null, hp0: L?._invV2?.hp0 ?? null, hp1: L && !L.dead ? Math.round((L.hp / L.maxHp) * 1000) / 1000 : 0, contact: L?._invV2 ? Math.round(L._invV2.contact * 10) / 10 : null,
+          ...(X.v11 ? { n: sd.active.n0 ?? (sd.active.partnerId ? 2 : 1), released: !!sd.active.released, held: Math.round((sd.active.regroup?.held ?? 0) * 10) / 10 } : {}) });
         if (L?._invV2?.arrivedAt != null) X.obs[S].arrived++;
         if (reason === "stolen") X.obs[S].steals++;
         sd.active = null;
@@ -411,13 +546,108 @@ export function tacticExecTick(E, X, alive) {
 }
 
 /** 入侵進行中的額外中止條件（在 _invadeStepV2 之前問）：本隊物件窗打開 ⇒ objective_call。回傳原因或 null。 */
-export function invadeGuard(E, p) {
+export function invadeGuard(E, p, X = null, alive = null) {
   if (E.fsm3?.[p.side]?.objGo) return "objective_call";
+  if (!X?.v11 || !alive) return null;
+  return retreatCheck11(E, X, p, alive);
+}
+
+/**
+ * Sprint 1.1 動態撤退（帶隊者每 tick；只讀看得見的敵人＋2 秒前的位置歷史，與評估同一套資訊公平規則）：
+ *  · 看得見的敵人在營地 threatR 內、離帶隊者 contactR 內、或在營地 approachR 內且（2 秒內）朝營地逼近 approachMin 以上 ⇒ 算在場敵人 F
+ *    （血量比例相加＝fPow）。只是路過、待在線上的敵人不算（Sprint 1.1 第一、二輪量測：途中看見線上英雄就撤，到場率反而更低）。
+ *  · 我方在場＝帶隊者＋離帶隊者 partnerWithR 內的隊友 M（血量比例相加＝mPow）
+ *  · 有敵人在場而帶隊者血量 < contestedAbortHp ⇒ retreat_hp（及早撤離，不等到 abortHp）
+ *  · F > M，或 fPow > mPow × powK ⇒ retreat_threat（戰力不利）
+ *  · 到場前每 stuckSec 秒離營地沒有近 stuckMin（不含等隊友）⇒ stuck
+ *  · 到場前隊友沒了（陣亡、撤退、回城、自己的失敗條件）⇒ 用當下看得見的資訊重新評估：F＝0 而且單人條件成立
+ *    （s05 預估 0，或唯一的威脅是敵方打野先驗而目標是一般營）⇒ 單人繼續；否則 partner_lost
+ *  撤退之後的再出發受冷卻限制（從出發算起），不會反覆出發／撤退。
+ */
+export function retreatCheck11(E, X, p, alive) {
+  const sd = X.side[p.side], A = sd.active;
+  if (!A || A.leaderId !== p.id) return null;
+  const P1 = C1.postures[sd.posture];
+  if (!P1) return null;
+  const camp = (E.neutrals?.camps ?? []).find((c) => c.id === A.camp) ?? null;
+  const foe = otherSide(p.side);
+  const moveSpeed = Math.max(1e-6, E.rules.moveSpeed ?? 5.6);
+  let F = 0, fPow = 0;
+  for (const q of alive) {
+    if (q.side !== foe || !seen(E, p.side, q, alive)) continue;
+    const near = dist(q.pos, p.pos) <= C1.contactR || (!!camp && dist(q.pos, camp.pos) <= C.threatR);
+    let appr = false;
+    if (!near && camp && dist(q.pos, camp.pos) <= C1.approachR) {
+      const old = posAgo(X, q.id, E.t);
+      appr = !!old && dist(q.pos, camp.pos) <= dist(old, camp.pos) - C.approachMin && (dist(q.pos, camp.pos) * C.detour) / moveSpeed <= C.approachNearEta;
+    }
+    if (near || appr) { F++; fPow += q.hp / q.maxHp; }
+  }
+  const partner = A.partnerId ? E.players.find((q) => q.id === A.partnerId) ?? null : null;
+  const pOk = !!partner && !partner.dead && !!partner._tacPartnerV24;
+  const pNear = pOk && dist(partner.pos, p.pos) <= C1.partnerWithR;
+  const M = 1 + (pNear ? 1 : 0), mPow = p.hp / p.maxHp + (pNear ? partner.hp / partner.maxHp : 0);
+  if (F > 0 && p.hp / p.maxHp < P1.contestedAbortHp) return "retreat_hp";
+  if (camp && p._invV2?.arrivedAt == null && !A.regroup?.holding) {
+    const d = dist(p.pos, camp.pos), G = (A.prog ??= { t: E.t, d });
+    if (E.t - G.t >= C1.stuckSec) { if (G.d - d < C1.stuckMin) return "stuck"; G.t = E.t; G.d = d; }
+  }
+  if (F > M || (F > 0 && fPow > mPow * P1.powK)) return "retreat_threat";
+  if (A.partnerId && !pOk && p._invV2?.arrivedAt == null && !A.soloNow) {
+    if (F > 0 || !camp || !soloNow11(E, X, p.side, camp, alive)) return "partner_lost";
+    A.soloNow = true;                 // 已改成單人繼續（之後照單人處理，不再重算）
+  }
   return null;
+}
+/** 單人條件（出發後重評用；與出發時同一套）：沒有看得見／逼近／最近看過的敵人，預估 0；或唯一的威脅是敵方打野先驗而目標是一般營。 */
+function soloNow11(E, X, S, camp, alive) {
+  const moveSpeed = Math.max(1e-6, E.rules.moveSpeed ?? 5.6);
+  const th = threatOf(E, X, S, camp, alive, (pos) => (dist(pos, camp.pos) * C.detour) / moveSpeed);
+  return th.seenNear === 0 && th.s05reach === th.s05 && (th.s05 === 0 || (th.s05 === 1 && th.mask === bitOf("jungle") && th.ejKind === "prior" && C1.soloPriorTypes.includes(typeOf(camp))));
+}
+
+/**
+ * Sprint 1.1 等隊友（帶隊者每 tick，在 _invadeStepV2 之後）：到場前隊友落後 > regroupLagSec ⇒ 原地等，
+ * 落後 ≤ regroupResumeSec 才繼續（遲滯，避免走走停停）；累計等超過 regroupMaxSec ⇒ 用當下資訊重評單人條件：
+ * 成立 ⇒ 放隊友回去（partner_end released）、單人繼續；不成立 ⇒ partner_lag 撤退。adaptive.v1 原樣回傳。
+ */
+export function invadeLead(E, X, p, inv, alive = null) {
+  if (!X?.v11 || !inv) return inv;
+  const A = X.side[p.side].active, I = p._invV2;
+  if (!A || A.leaderId !== p.id || !A.partnerId || !I || I.arrivedAt != null) return inv;
+  const partner = E.players.find((q) => q.id === A.partnerId);
+  const camp = (E.neutrals?.camps ?? []).find((c) => c.id === A.camp);
+  if (!partner || partner.dead || !partner._tacPartnerV24 || !camp) return inv;
+  const G = (A.regroup ??= { holding: false, held: 0, lastT: E.t });
+  const dt = E.t - G.lastT; G.lastT = E.t;
+  const moveSpeed = Math.max(1e-6, E.rules.moveSpeed ?? 5.6);
+  const lag = (dist(partner.pos, camp.pos) - dist(p.pos, camp.pos)) / moveSpeed;
+  if (G.holding ? lag > C1.regroupResumeSec : lag > C1.regroupLagSec) {
+    if (G.holding) G.held += dt;
+    G.holding = true;
+    if (G.held > C1.regroupMaxSec) {
+      if (alive && soloNow11(E, X, p.side, camp, alive)) {      // 單人條件成立 ⇒ 放隊友回去，帶隊者單人繼續
+        endPartner(X, partner, "released", E.t);
+        A.partnerId = null; A.soloNow = true; A.released = true; G.holding = false;
+        return inv;
+      }
+      E._invadeEndV2(p, "partner_lag"); return null;
+    }
+    return { tgt: { x: p.pos.x, y: p.pos.y }, st: "入侵" };
+  }
+  G.holding = false;
+  return inv;
 }
 
 function endPartner(X, p, reason, t = null) {
   inc(X.obs[p.side].partnerEnds, reason);
+  if (X.v11) {
+    const arrived = p._tacPartnerV24?.arrivedAt != null;
+    if (arrived) X.obs[p.side].partnerArrived = (X.obs[p.side].partnerArrived ?? 0) + 1;
+    pushLog(X, { t, side: p.side, kind: "partner_end", id: p.id, reason, arrived });
+    p._tacPartnerV24 = null;
+    return;
+  }
   pushLog(X, { t, side: p.side, kind: "partner_end", id: p.id, reason });
   p._tacPartnerV24 = null;
 }

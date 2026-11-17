@@ -52,6 +52,8 @@ const CAREER_FLAGS = (rs) => {
   if (rs === "career.v21") return base["career.v21"];
   if (rs === "career.v22") return { ...base["career.v21"], mobaJungleV22: true };
   if (rs === "career.v23") return { ...base["career.v21"], mobaJungleV22: true, mobaSafeRouteV23: true };
+  //  v24 Sprint 1.1：career.v24（＝v23 的旗標＋mobaTacticExecV24）。只給 v24 的 gate 用；v20～v23 的釘點不經過這一行。
+  if (rs === "career.v24") return { ...base["career.v21"], mobaJungleV22: true, mobaSafeRouteV23: true, mobaTacticExecV24: true };
   throw new Error(`no flag set for ${rs}`);
 };
 

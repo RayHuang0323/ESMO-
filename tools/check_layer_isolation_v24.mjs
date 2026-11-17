@@ -139,8 +139,10 @@ function buildV24(kind, tb, tr, seed, tier) {
   const onlyV24 = RS.resolveRulesetForMode({ mode: "career", flags: { ...C.G.featureFlags, mobaTacticExecV24: true } }).rulesetId;
   const flagsOff = ["mobaTacticalDirectorV21", "mobaJungleV22", "mobaSafeRouteV23", "mobaTacticExecV24", "mobaChallengeV21"].every((f) => FF.FEATURE_FLAGS[f] === false);
   const v24Valid = ["career.v24", "balanceTool.v24"].every((id) => RS.validateRuleset(RS.MATCH_RULESETS[id]).ok);
-  ck("I5 規則集：v20～v23 沒有 v24 的層；v24＝v23 逐欄＋恰好三個新鍵（v1／v19／adaptive.v1）；旗標全關 ⇒ career.v20、只開 v24 ⇒ 仍 career.v20",
-    leaked.length === 0 && c.same && t.same && J(c.extra) === J(V24_KEYS) && J(t.extra) === J(V24_KEYS) && J(c.layers) === J(["v1", "v19", "adaptive.v1"]) && J(t.layers) === J(["v1", "v19", "adaptive.v1"])
+  //  Sprint 1.1（2026-11-18）：v24 規則集的 tacticExec 改成 "adaptive.v1.1"（"adaptive.v1" 仍是合法值，只給工具重現 Sprint 1）。
+  ck("I5 規則集：v20～v23 沒有 v24 的層；v24＝v23 逐欄＋恰好三個新鍵（v1／v19／adaptive.v1.1）；旗標全關 ⇒ career.v20、只開 v24 ⇒ 仍 career.v20",
+    leaked.length === 0 && c.same && t.same && J(c.extra) === J(V24_KEYS) && J(t.extra) === J(V24_KEYS) && J(c.layers) === J(["v1", "v19", "adaptive.v1.1"]) && J(t.layers) === J(["v1", "v19", "adaptive.v1.1"])
+    && RS.TACTIC_EXECS.includes("adaptive.v1")
     && c.sim === "moba-sim.v24" && off === "career.v20" && three === "career.v23" && four === "career.v24" && onlyV24 === "career.v20" && flagsOff && v24Valid
     && RS.MATCH_RULESETS["career.v24"].releaseRequirements.includes("mobaTacticExecV24"),
     `leaked=${J(leaked)} career=${J(c)} tool=${J(t)} resolve off/3/4/onlyV24=${off}/${three}/${four}/${onlyV24} flagsOff=${flagsOff} valid=${v24Valid}`);

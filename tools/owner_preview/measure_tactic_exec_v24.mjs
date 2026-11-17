@@ -3,6 +3,9 @@
 //  tools/owner_preview/measure_tactic_exec_v24.mjs — v24 Sprint 1 的量測（2026-11-15；量測工具，不改引擎）
 //
 //  每個 Seed 跑兩臂：adaptive（balanceTool.v24／career.v24 原樣）與 off（tacticExec 覆寫成 "off"＝交付點 A＝v23 的行為）。
+//  Sprint 1.1（2026-11-17）：v24 規則集改成 adaptive.v1.1；多一臂 s1＝原 Sprint 1（adaptive.v1）。
+//    工具路徑：ESMO_BALANCE_TACTICEXEC=adaptive.v1；生涯路徑（正式規則集鎖層）：建好引擎、第一個 tick 之前把 tacExec.v11 關掉
+//    （createTacticExecState 只差這一格；check_tactic_exec_v24 T7 驗兩種做法逐 tick 相同，且與 Sprint 1 的驗證雜湊相同）。
 //   --path=tool    三種模板配置：inv（雙方 v2.jungle_invasion）、AB（藍 v2.jungle_invasion／紅 classic.m7）、BA（反過來）。
 //                  AB 與 BA 是同 Seed、同陣容（鏡像）的換邊配對 ⇒ 驗收 8b 的差中之差。
 //   --path=career  生涯（career.v24 vs 同旗標但 tacticExec off 的 career.v23 等價臂），藍方 v2.jungle_invasion，素質＝--tier。
@@ -24,6 +27,7 @@ const PATH = arg("path", "tool"), TIER = arg("tier", "mid"), OUT = arg("out", nu
 const seeds = arg("seeds", "").split(",").filter(Boolean).map(Number);
 const CONFIGS = (arg("configs", "inv,AB,BA")).split(",");
 const ARMS = (arg("arms", "off,adaptive")).split(",");
+const S1_VIA = arg("s1via", "env");   // env | flip（工具路徑；生涯一律 flip）
 const TIER_VALUE = { low: 30, mid: 60, high: 90 };
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const C = await careerContext();
@@ -38,22 +42,42 @@ function build(seed, cfg, arm) {
   if (PATH === "tool") {
     const [tb, tr] = TEMPLATES[cfg];
     if (arm === "off") process.env.ESMO_BALANCE_TACTICEXEC = "off";
-    try { return configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v24").e; }
+    if (arm === "s1" && S1_VIA === "env") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1";
+    try { const e = configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v24").e; return arm === "s1" && S1_VIA === "flip" ? flipToS1(e) : e; }
     finally { delete process.env.ESMO_BALANCE_TACTICEXEC; }
   }
-  const flags = { ...C.G.featureFlags, mobaTacticalDirectorV21: true, mobaJungleV22: true, mobaSafeRouteV23: true, mobaTacticExecV24: arm === "adaptive" };
+  const flags = { ...C.G.featureFlags, mobaTacticalDirectorV21: true, mobaJungleV22: true, mobaSafeRouteV23: true, mobaTacticExecV24: arm !== "off" };
   const ruleset = C.resolveLiveRuleset({ flags, dev: null, allowTool: false }).ruleset;
-  if (ruleset.rulesetId !== (arm === "adaptive" ? "career.v24" : "career.v23")) throw new Error(`resolved ${ruleset.rulesetId}`);
+  if (ruleset.rulesetId !== (arm !== "off" ? "career.v24" : "career.v23")) throw new Error(`resolved ${ruleset.rulesetId}`);
   const team = C.AI_TEAMS[seed % C.AI_TEAMS.length], v = TIER_VALUE[TIER];
   const players = C.G.inputs.players.map((pl) => ({ ...pl, stats: Object.fromEntries(Object.keys(pl.stats).map((k) => [k, v])) }));
   const opts = { seed, roster: C.appRoster(C.Runner.mirroredRoster(seed, C.M)), buildStrategy: "standard", opponentId: team.id, sessionId: `te24-${seed}`, mode: "moba", tacticPlanBinding: bindingOf("v2.jungle_invasion") };
   const out = prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
   if (!out.ok) throw new Error(`rejected ${seed}`);
-  return out.engine;
+  return arm === "s1" ? flipToS1(out.engine) : out.engine;
+}
+/** 原 Sprint 1：同一個模組、v11 關掉（第一個 tick 之前）。 */
+function flipToS1(e) {
+  if (!e.tacExec || e._tacExecVariant !== "adaptive.v1.1" || e.t !== 0) throw new Error("flipToS1: expected a fresh adaptive.v1.1 engine");
+  e._tacExecVariant = "adaptive.v1"; e.tacExec.v11 = false;
+  return e;
 }
 
+//  診斷臂（只給根因分析，不進驗證判準；實例層、第一個 tick 之前）：
+//   nodef＝adaptive 但雙方回防永遠不觸發（回防冷卻設成無限大）；noinv＝adaptive 但雙方都不評估入侵（傾向設成 null）；bare＝兩者皆是。
+const DIAG = { nodef: [true, false], noinv: [false, true], bare: [true, true] };
+//  戰術傾向報告臂（Sprint 1.1 登記的「只報」項；實例層、第一個 tick 之前）：pc／pg／pl＝adaptive 但有入侵意圖的一邊強制成 conservative／aggressive／allin。
+//  Sprint 1 的傾向來自戰術書的 invadeChance（模板 v2.jungle_invasion＝auto），玩家自選傾向屬 Sprint 3 ⇒ 其他三種只能這樣量。
+const POSTURE_ARMS = { pc: "conservative", pg: "aggressive", pl: "allin" };
 function runMatch(seed, cfg, arm) {
-  const e = build(seed, cfg, arm);
+  const tuneK = /^k(\d+(?:\.\d+)?)$/.exec(arm);   // 診斷臂 k<值>＝adaptive 但 econK 換成這個值（只給取捨曲線，不進驗證）
+  const e = build(seed, cfg, DIAG[arm] || tuneK || POSTURE_ARMS[arm] ? "adaptive" : arm);
+  if (POSTURE_ARMS[arm]) for (const S of ["blue", "red"]) if (e.tacExec.side[S].posture) { e.tacExec.side[S].posture = POSTURE_ARMS[arm]; e.tacExec.obs[S].posture = POSTURE_ARMS[arm]; }
+  if (tuneK) e.tacExec.tune = { econK: Number(tuneK[1]) };
+  if (DIAG[arm]) for (const S of ["blue", "red"]) {
+    if (DIAG[arm][0]) e.tacExec.side[S].defendCooldownUntil = Infinity;
+    if (DIAG[arm][1]) { e.tacExec.side[S].posture = null; e.tacExec.obs[S].posture = null; }
+  }
   const h = createHash("sha1");
   const towerKilled = new Set();
   const tk = e._towerKillerFor.bind(e);

@@ -50,7 +50,7 @@ import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './
 //  Phase 3a-C2：戰術資料（knobs／Tactical Identity／戰術階段）的唯一讀取入口（static 模式＝設定值原樣回傳）。
 import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.js";
 import { createTaskArbitrationLedger, movedTarget as arbMovedV24 } from "./battle/moba/tactics/taskArbitrationLedger.js";
-import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24 } from "./battle/moba/tactics/tacticExecV24.js";
+import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, invadeLead as tacInvadeLeadV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24 } from "./battle/moba/tactics/tacticExecV24.js";
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -424,7 +424,9 @@ export class LogicEngine {
     if (this._arbV24) this.arbLedger = createTaskArbitrationLedger();
     //  v24 Sprint 1：tacticExec "adaptive.v1" ⇒ 入侵不再開局擲骰決定（亂數照樣抽，序列不變），改成整場評估（battle/moba/tactics/tacticExecV24.js）。
     //  需要 invasion "v2" 的執行生命週期；缺少這個鍵 ⇒ 舊行為逐位元不變。
-    this._tacExecV24 = tacticExec === "adaptive.v1" && invasion === "v2";
+    //  Sprint 1.1：tacticExec "adaptive.v1.1"＝同一個模組的修正版（編隊、動態撤退、野區機會成本）；"adaptive.v1" 原樣保留（工具重現 Sprint 1）。
+    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1") && invasion === "v2";
+    this._tacExecVariant = this._tacExecV24 ? tacticExec : null;
     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
     //  "v3"（2026-11-13 Owner 核准的塔邊等待小修；同一個 v23 候選）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
@@ -7119,8 +7121,10 @@ export class LogicEngine {
         if (this._invasionV2) {
           //  v2：打野去打敵方野怪、中路到入口支援；有失敗條件。回傳 null ⇒ 這個英雄的入侵結束，回到一般行為（農自家野區、Gank）。
           //  v24：本隊物件窗打開 ⇒ 入侵讓位（objective_call）。
-          const g = this._tacExecV24 ? tacInvadeGuardV24(this, p) : null;
-          const inv = g ? this._invadeEndV2(p, g) : this._invadeStepV2(p, S, alive);
+          //  v24 Sprint 1.1：中止條件另看看得見的敵人與隊友（adaptive.v1 只看物件窗）；等隊友（invadeLead）只在 adaptive.v1.1 生效。
+          const g = this._tacExecV24 ? tacInvadeGuardV24(this, p, this.tacExec, alive) : null;
+          let inv = g ? this._invadeEndV2(p, g) : this._invadeStepV2(p, S, alive);
+          if (inv && this._tacExecV24) inv = tacInvadeLeadV24(this, this.tacExec, p, inv, alive);
           if (inv) { tacTgt = inv.tgt; stOv = inv.st; }
         } else {
           tacTgt = INVASION_POINT[p.side]; stOv = "入侵";

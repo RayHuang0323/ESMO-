@@ -708,8 +708,10 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v24 候選（2026-11-15，Owner 核准開版）：交付點 A＝taskArbitration "v1"（只寫紀錄）＋taskCommit 層（預設 "v19"）＋語意清單補上 22 支依賴檔。
   //  v24 未凍結：語意檔再改就同版號重新登記，舊值寫在這裡。v20～v23 那幾行原樣保留（v23 已凍結，不得改）。
   //  上一個值 78d1fb305ba1f72a＝交付點 A（commit 77780df3）。
-  //  目前值＝交付點 B（v24 Sprint 1）：tacticExec "adaptive.v1"（自適應入侵、價值優先目標、冷卻與仲裁、1～2 人編隊、回防觸發、任務鎖定）。
-  "moba-sim.v24": "5950a5b11782df9e",
+  //  上一個值 5950a5b11782df9e＝交付點 B（v24 Sprint 1，commit e9d86b32）：tacticExec "adaptive.v1"（自適應入侵、價值優先目標、冷卻與仲裁、1～2 人編隊、回防觸發、任務鎖定）。
+  //  目前值＝v24 Sprint 1.1（Owner 2026-11-17 核准）：v24 規則集改用 tacticExec "adaptive.v1.1"（人數優勢編隊、動態撤退、野區期望值經濟）；
+  //  "adaptive.v1" 原樣保留（工具重現 Sprint 1，逐 tick 與 Sprint 1 驗證雜湊相同）。證據 review/tactic-book-3a/v24_sprint1/S11_*。
+  "moba-sim.v24": "a0a1c2d1356c7f39",
 });
 
 export const isKnownSimulationVersion = (v) =>
