@@ -1,0 +1,45 @@
+[start] tool_1 00:44:05 seeds 110001..110019
+[done] tool_1 exit=0 00:49:35  [█░░░░░░░░░░░░░░░░░░░] 1/22
+[start] tool_2 00:49:35 seeds 110021..110039
+[done] tool_2 exit=0 00:54:41  [██░░░░░░░░░░░░░░░░░░] 2/22
+[start] tool_3 00:54:41 seeds 110041..110059
+[done] tool_3 exit=0 01:00:04  [███░░░░░░░░░░░░░░░░░] 3/22
+[start] tool_4 01:00:04 seeds 110061..110079
+[done] tool_4 exit=0 01:05:20  [████░░░░░░░░░░░░░░░░] 4/22
+[start] tool_5 01:05:20 seeds 110081..110099
+[done] tool_5 exit=0 01:10:18  [█████░░░░░░░░░░░░░░░] 5/22
+[start] tool_6 01:10:18 seeds 110101..110119
+[done] tool_6 exit=0 01:15:21  [█████░░░░░░░░░░░░░░░] 6/22
+[start] tool_7 01:15:21 seeds 110121..110139
+[done] tool_7 exit=0 01:20:34  [██████░░░░░░░░░░░░░░] 7/22
+[start] tool_8 01:20:34 seeds 110141..110159
+[done] tool_8 exit=0 01:26:05  [███████░░░░░░░░░░░░░] 8/22
+[start] tool_9 01:26:05 seeds 110161..110179
+[done] tool_9 exit=0 01:31:19  [████████░░░░░░░░░░░░] 9/22
+[start] tool_10 01:31:19 seeds 110181..110199
+[done] tool_10 exit=0 01:36:18  [█████████░░░░░░░░░░░] 10/22
+[start] career_low_1 01:36:18 seeds 110201..110219
+[done] career_low_1 exit=0 01:38:20  [██████████░░░░░░░░░░] 11/22
+[start] career_low_2 01:38:20 seeds 110221..110239
+[done] career_low_2 exit=0 01:40:12  [███████████░░░░░░░░░] 12/22
+[start] career_low_3 01:40:12 seeds 110241..110259
+[done] career_low_3 exit=0 01:42:09  [████████████░░░░░░░░] 13/22
+[start] career_mid_1 01:42:09 seeds 110201..110219
+[done] career_mid_1 exit=0 01:44:05  [█████████████░░░░░░░] 14/22
+[start] career_mid_2 01:44:05 seeds 110221..110239
+[done] career_mid_2 exit=0 01:45:53  [██████████████░░░░░░] 15/22
+[start] career_mid_3 01:45:53 seeds 110241..110259
+[done] career_mid_3 exit=0 01:47:45  [███████████████░░░░░] 16/22
+[start] career_high_1 01:47:45 seeds 110201..110219
+[done] career_high_1 exit=0 01:49:36  [███████████████░░░░░] 17/22
+[start] career_high_2 01:49:36 seeds 110221..110239
+[done] career_high_2 exit=0 01:51:30  [████████████████░░░░] 18/22
+[start] career_high_3 01:51:30 seeds 110241..110259
+[done] career_high_3 exit=0 01:53:13  [█████████████████░░░] 19/22
+[start] posture_1 01:53:13 seeds 110001..110019
+[done] posture_1 exit=0 01:55:09  [██████████████████░░] 20/22
+[start] posture_2 01:55:09 seeds 110021..110039
+[done] posture_2 exit=0 01:56:58  [███████████████████░] 21/22
+[start] posture_3 01:56:58 seeds 110041..110059
+[done] posture_3 exit=0 01:58:48  [████████████████████] 22/22
+[all-done] 01:58:48
