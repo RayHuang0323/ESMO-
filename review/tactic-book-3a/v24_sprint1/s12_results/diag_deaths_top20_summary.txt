@@ -1,0 +1,36 @@
+reproduction vs validation rows: same 120, different 0
+
+==== intent sides: deaths per side-match, paired diff arm - off (n side-matches)
+-- adaptive (n=80; duration diff +4.08 [2.73, 5.43] min)
+   all                  level  8.60   diff +6.14 [3.13, 9.15]
+   jungler              level  1.98   diff +1.31 [0.77, 1.86]
+   during_invade        level  0.03   diff +0.03 [-0.01, 0.06]
+   after_invade_30s     level  0.16   diff +0.16 [0.07, 0.26]
+   after_invade_90s     level  0.14   diff +0.14 [0.03, 0.24]
+   defending            level  0.13   diff +0.13 [0.05, 0.20]
+   after_defend_30s     level  0.21   diff +0.21 [0.12, 0.31]
+   other                level  7.94   diff +5.47 [2.60, 8.35]
+   jg:during+after30    level  0.19   diff +0.19 [0.08, 0.29]
+   enemy_jungle         level  0.40   diff +0.17 [0.02, 0.33]
+
+==== nonIntent sides: deaths per side-match, paired diff arm - off (n side-matches)
+-- adaptive (n=40; duration diff +3.62 [2.16, 5.07] min)
+   all                  level  6.40   diff +4.10 [1.84, 6.36]
+   jungler              level  1.55   diff +0.85 [0.29, 1.41]
+   during_invade        level  0.00   diff +0.00 [0.00, 0.00]
+   after_invade_30s     level  0.15   diff +0.15 [0.04, 0.26]
+   after_invade_90s     level  0.17   diff +0.17 [0.06, 0.29]
+   defending            level  0.00   diff +0.00 [0.00, 0.00]
+   after_defend_30s     level  0.15   diff +0.15 [0.04, 0.26]
+   other                level  5.92   diff +3.63 [1.43, 5.82]
+   jg:during+after30    level  0.13   diff +0.13 [0.02, 0.23]
+   enemy_jungle         level  0.55   diff +0.23 [-0.12, 0.57]
+
+==== jungler seconds per intent side-match (mean): invading / recall / dead / ownJungle
+   off       invading 30  recall 93  dead 18  ownJungle 417
+   s11       invading 0  recall 0  dead 0  ownJungle 0
+   adaptive  invading 25  recall 112  dead 63  ownJungle 482
+
+s11: deaths during / within 30 s of an invade end: 0 with hp record, mean hp at end 0.00; by end reason {}
+
+adaptive: deaths during / within 30 s of an invade end: 21 with hp record, mean hp at end 0.78; by end reason {"stolen":10,"outnumbered":1,"partner":1,"killed":2,"retreat_hp":1,"objective_call":3,"retreat":1,"retreat_threat":2}

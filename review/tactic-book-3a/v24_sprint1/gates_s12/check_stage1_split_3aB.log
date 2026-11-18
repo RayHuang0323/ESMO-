@@ -1,0 +1,81 @@
+$ node tools/check_stage1_split_3aB.mjs
+✅ S1 三份 v20 規則集與 challenge.v21 逐位元等於改動前；它們都沒有 templateBalance；career.v21／balanceTool.v21 只多了 templateBalance v21.b2（原本 v21.b1，登記 stage1r2_release_registration_3aB.json）　{"same":[],"v20Key":[],"v21Only":[]}
+✅ S2a 旗標全關／出貨旗標：Live 與 Challenge 的解析結果與改動前逐位元相同
+✅ S2b 第一階段旗標（Live v21 開、Challenge 未開）：Live＝career.v21（帶 v21.b2）、Challenge＝challenge.v20、新挑戰記 moba-sim.v20
+✅ S2c 三個旗標都開：Challenge＝challenge.v21（物件與改動前相同）；任何一個沒開 ⇒ challenge.v20
+✅ S2d 規則集的修正表清單與 tacticTemplates 的修正表 id 相同（兩份不得各寫一份不同的）
+✅ S3a MOBA_TACTICS、STANDARD_OPP_TACTIC 與 21 個模板物件逐位元等於改動前
+✅ S3b v21.b2 恰好是 m3／m6／m7／m8、hard_engage、three_lane（m5、m1、defensive_hold 不在裡面；Owner 第 4、5 點）；m3／m7／m8 與 v21.b1 同值；不碰帶線、席位優先、std、classic.m2
+✅ S3c 修正表每一項落在已出貨範圍內（數值在所有模板的 [min,max]、列舉是既有值）
+✅ S3d 修正後的六個旋鈕組彼此不同，也不等於任何出貨模板
+✅ S3e 修正值是絕對值：在修正後的設定上再套一次不變
+✅ S4a 修正表下六個模板（沒有選擇）解析＝篩選臂 M3_C／M7_M／M8_C／M6_B／HE_R／TLP_R 的旋鈕；沒有修正表＝出貨模板
+✅ S4b 計畫合法性是聯集：m7 前期強邊上路（出貨版不提供、修正表提供）可以建立，在兩種設定下都解析得出來；planHash 與規則集無關
+✅ S4c 不認得的修正表 id ⇒ 明確拒絕（template_balance_unknown），不默默用出貨版
+✅ S5a 風格模板退路：修正表下由 id 重建一次（aggressive→m7、defensive→m8、balanced→std、objective→m4、skirmish→m3）；套兩次＝套一次；沒有修正表 ⇒ 同一個物件
+✅ S5b AI 教練的 STYLE_TEMPLATES 只有一個在修正表裡：skirmish 的 v2.hard_engage_stack（Owner 第 1 點的連帶影響；登記 stage1r2）　v2.jungle_invasion,std,v2.protect_core_scaling,v2.defensive_hold,std,v2.dragon_pit_macro,v2.hard_engage_stack
+✅ S5c skirmish 教練：計畫是沒有選擇的 hard_engage；經 Resolver 在修正表下＝HE_R 旋鈕（只套一次），沒有修正表＝出貨版；教練不多加選擇　{"schema":"TacticPlan.v2","templateId":"v2.hard_engage_stack","overlayIds":[],"choices":{},"contingencies":[]}
+✅ S6 ① v21＋binding ⇒ 藍方是 binding（Resolver 套修正表）
+✅ S6 ② v21＋legacy m7（v20 畫面確認後旗標打開）⇒ 由 id 重建成修正後的 m7
+✅ S6 ② v21＋legacy m8＋變體（m8_early_footing）⇒ 修正後的 m8 再套同一個變體
+✅ S6 ② 修正在變體之前（植入修正表改 lanePlan.jungle）：重建結果＝修正後再套變體，變體的值勝出
+✅ S6 ③ v20＋經典 binding（戰術書確認後旗標關閉）⇒ 不用 binding、藍方＝正式站的 m7；本場拿掉計畫的每一個選擇；沒有替換
+✅ S6 ③ v20＋std／v2 binding ⇒ 藍方＝標準運營；std 計畫本來就是標準運營（不算替換、選擇列為本場拿掉）；v2 計畫帶「模板被替換」（沒有選擇的 v2 計畫也不會無聲換掉）
+✅ S6 ③ prepareLiveMatch 把模板替換交給畫面（templateSubstitution）
+✅ S6 ④ v20＋legacy ⇒ 原樣（正式站 v20 的路徑）
+✅ S6 恢復：旗標已關、落盤的是 career.v21 ⇒ 依本場規則集沿用 binding（矩陣看規則集，不看旗標）
+✅ S6 DEV 工具規則集（static）＝情況 ③（矩陣以層決定，不以規則集 id）
+✅ S5c 開局：career.v21 教練排不出來 ⇒ 紅方風格模板 m7 是修正後的；career.v20 ⇒ 正式站的 m7
+✅ S6 v20TacticForBinding 對經典變體計畫：正式站的經典＋同一個變體
+✅ S7a Challenge 路徑沒有任何一支讀模板修正表（快照只存 tacticId，challenge 以出貨設定開打）
+✅ S7b 兩份 Challenge 規則集都沒有 templateBalance；記下 moba-sim.v20 的挑戰重播用 challenge.v20
+✅ S7c Challenge 路徑上以版本為參數的呼叫端都明確帶 Challenge 版本（預設值是 CHALLENGE_SIMULATION_VERSION，不是 MOBA_SIMULATION_VERSION）
+✅ S8a v21 下 m7 的文案逐字＝Owner（名稱、風險、重點、描述、缺點）；id 仍是 classic.m7／tacticId m7
+✅ S8b v20 下與模板物件本身的文案不變；修正後的引擎設定也不帶文案（名稱仍是原文，archetype／emoji／fit／evidence 不變）
+✅ S8c 對手情報的退回名稱與 AI 教練概要：v21 下 m7 用修正文案、v20 用原文
+✅ S8d 戰術書畫面的文案面都經修正文案：模板列（templateGroups(templateBalance)）、標題／風險／優勢／缺點（cur）、確認頁名稱、讀取畫面／HUD 的顯示物件（applied）、歷史表現列
+✅ S9a TacticScreenV20.jsx＝1d0e219 的 TacticScreen.jsx（只差第 2 行檔名說明），也＝合併前的正式 main
+✅ S9b AppShell 用開局時同一個解析函式切換：static ⇒ TacticScreenV20、core.v1 ⇒ 戰術書；binding 鍵只在有值或要清掉舊的一份時才寫
+✅ S9c v20 畫面不產生戰術書 binding（onNext 只有三個參數）
+✅ S10 tacticBook 仍是雲端存檔切片；帶修正表模板與 v21 選擇的計畫存檔→讀回原樣、不會被丟到 unreadable；存檔切片本身不讀旗標或規則集（兩種旗標狀態下是同一段程式）
+✅ S11 畫面＝引擎：v21.b2 的六個模板 × 出貨版／v21.b2 × 單一選擇＋兩兩組合（701 組），畫面上的值＝解析後的引擎設定（5652 格）；提供的非預設選項都改變旋鈕；時期維度的非預設選項（109 個）解析後整場設定或該時期方針真的改變
+✅ S12 名稱：career.v21 下 m7 的賽果（tacticMeta）與重播（replayConfig）名稱＝前期野區入侵；career.v20 ⇒ 前期壓制；沒有 templateBalance 層的規則集（含兩份 Challenge，S7b）名稱一律取 config.name　["前期野區入侵","前期壓制"]
+✅ S13a 排除表：帶 templateBalance:null 的既有列＝P6 重新判定過的列（4 列），其他列與 REPLICATION_WITHHELD 都不帶　{"nullRows":["classic.m3|objectives.tower|high","classic.m8|phases.late.grouping|group","classic.m8|phases.mid.grouping|group","classic.m8|phases.mid.objectiveOrder|baron"],"keyedInStudy":["classic.m3|objectives.tower|high","classic.m8|phases.late.grouping|group","classic.m8|phases.mid.grouping|group","classic.m8|phases.mid.objectiveOrder|baron"],"otherKeyed":0}
+✅ S13b 排除表：BALANCE_EXCLUSIONS＝P6 結果逐欄推出的 6 列（v21.b1、v21.b2 各一份，m3／m7／m8 同值）＋v21.b2 研究推出的 3 列；P6 19 列與研究 4 列在 v21.b2／core.v1 下提供與否都照判定　{"wrong":[],"table":["{\"blue\":{\"n\":400,\"rel\":0.042536,\"z\":2.193149},\"choice\":\"group\",\"dimension\":\"phases.mid.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.mid\",\"reason\":\"not_replicated\",\"red\":{\"n\":400,\"rel\":0.072589,\"z\":3.560399},\"template\":\"classic.m8\",\"templateBalance\":\"v21.b1\",\"verdict\":\"not_replicated\"}","{\"blue\":{\"n\":400,\"rel\":0.042536,\"z\":2.193149},\"choice\":\"group\",\"dimension\":\"phases.mid.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.mid\",\"reason\":\"not_replicated\",\"red\":{\"n\":400,\"rel\":0.072589,\"z\":3.560399},\"template\":\"classic.m8\",\"templateBalance\":\"v21.b2\",\"verdict\":\"not_replicated\"}","{\"choice\":\"aggressive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b1\",\"z\":null}","{\"choice\":\"aggressive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"aggressive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m6\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"baron\",\"dimension\":\"phases.mid.objectiveOrder\",\"metric\":\"contestShare.baron.mid\",\"n\":100,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b1\",\"z\":-0.376339}","{\"choice\":\"baron\",\"dimension\":\"phases.mid.objectiveOrder\",\"metric\":\"contestShare.baron.mid\",\"n\":100,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b2\",\"z\":-0.376339}","{\"choice\":\"group\",\"dimension\":\"phases.late.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.late\",\"n\":70,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b1\",\"z\":0.87288}","{\"choice\":\"group\",\"dimension\":\"phases.late.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.late\",\"n\":70,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b2\",\"z\":0.87288}","{\"choice\":\"passive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b1\",\"z\":null}","{\"choice\":\"passive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"passive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m6\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"standard\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b1\",\"z\":null}","{\"choice\":\"standard\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"standard\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m6\",\"templateBalance\":\"v21.b2\",\"z\":null}"],"want":["{\"blue\":{\"n\":400,\"rel\":0.042536,\"z\":2.193149},\"choice\":\"group\",\"dimension\":\"phases.mid.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.mid\",\"reason\":\"not_replicated\",\"red\":{\"n\":400,\"rel\":0.072589,\"z\":3.560399},\"template\":\"classic.m8\",\"templateBalance\":\"v21.b1\",\"verdict\":\"not_replicated\"}","{\"blue\":{\"n\":400,\"rel\":0.042536,\"z\":2.193149},\"choice\":\"group\",\"dimension\":\"phases.mid.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.mid\",\"reason\":\"not_replicated\",\"red\":{\"n\":400,\"rel\":0.072589,\"z\":3.560399},\"template\":\"classic.m8\",\"templateBalance\":\"v21.b2\",\"verdict\":\"not_replicated\"}","{\"choice\":\"aggressive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b1\",\"z\":null}","{\"choice\":\"aggressive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"aggressive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m6\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"baron\",\"dimension\":\"phases.mid.objectiveOrder\",\"metric\":\"contestShare.baron.mid\",\"n\":100,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b1\",\"z\":-0.376339}","{\"choice\":\"baron\",\"dimension\":\"phases.mid.objectiveOrder\",\"metric\":\"contestShare.baron.mid\",\"n\":100,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b2\",\"z\":-0.376339}","{\"choice\":\"group\",\"dimension\":\"phases.late.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.late\",\"n\":70,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b1\",\"z\":0.87288}","{\"choice\":\"group\",\"dimension\":\"phases.late.grouping\",\"metric\":\"joinGoGeneralStartsPerMin.late\",\"n\":70,\"reason\":\"no_measured_effect\",\"template\":\"classic.m8\",\"templateBalance\":\"v21.b2\",\"z\":0.87288}","{\"choice\":\"passive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b1\",\"z\":null}","{\"choice\":\"passive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"passive\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m6\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"standard\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b1\",\"z\":null}","{\"choice\":\"standard\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m3\",\"templateBalance\":\"v21.b2\",\"z\":null}","{\"choice\":\"standard\",\"dimension\":\"teamfight.posture\",\"metric\":null,\"n\":0,\"reason\":\"unmeasurable\",\"template\":\"classic.m6\",\"templateBalance\":\"v21.b2\",\"z\":null}"]}
+✅ S13c 排除表：出貨版 1827 格提供清單與勝利條件展開，與套用排除列之前逐位元相同（4406efb8afa3a585）　4406efb8afa3a585
+✅ S13c2 排除表：v21.b2 下 84 格勝利條件展開與提供清單與釘值相同（只要動就要看得見地改）（cb0e50ae7fc52473）　cb0e50ae7fc52473
+✅ S13d 排除表：植入的列與實際的列都實測：帶 templateBalance 的只在那個設定下生效（含 null）、不帶的兩種設定都生效
+✅ S13e2 排除表：m3 存檔帶團戰保守＋推塔高，照畫面的順序（先 offeredChoicesOnly 再 tacticBookView）沒有矛盾提示；推塔高留著、姿態被拿掉　{"screenChoices":{"objectives":{"tower":"high"}},"c":[]}
+✅ S13e 排除表：存檔裡帶 m3 團戰姿態的計畫在 v21.b2 下仍可解析；戰術書不列該維度、載入時拿掉、恢復比賽時標成沿用；出貨版不受影響　{"ok":true,"dropped":[{"dimension":"teamfight.posture","choice":"passive"}],"kept":[{"dimension":"teamfight.posture","choice":"passive"}],"kept0":[]}
+✅ S14 矛盾提示用本場修正表下的有效選擇：m8＋推塔高在修正表下團戰姿態是 standard ⇒ 沒有「主動接戰變少」；出貨版下有；戰術書畫面（v21）與函式一致　{"c21":[],"c20":["siege_vs_passive_fights"]}
+✅ S15 沒輸入名稱存戰術書 ⇒ 用畫面上的模板名稱（v21 下 m7＝前期野區入侵，與 placeholder 同一個 cur.name）
+✅ S16 帶經典 tacticId 但不是經典的設定（v2 野區入侵）不被換成經典 m7；修正表下仍打出貨版 m7 的 legacy 保留原名「前期壓制」，修正後的 m7 才叫「前期野區入侵」　{"keep":true,"shippedName":"前期壓制","balancedName":"前期野區入侵"}
+✅ S17a 修正表：m3、m8 風險＝中；名稱與重點（定位）不變　{"m3":{"name":"強開團","risk":"中","focus":"輔助","desc":"先手開團強起會戰","detail":"輔助/坦克先手開團","cons":"吃溝通與先手品質"},"m8":{"name":"後期決戰","risk":"中","focus":"下路","desc":"穩健發育拖到後期","detail":"前期穩健防守","cons":null}}
+✅ S17b 修正表：已登記要刪的句子都不在文案裡；m8 缺點整行拿掉（null）　{"m3":{"name":"強開團","risk":"中","focus":"輔助","desc":"先手開團強起會戰","detail":"輔助/坦克先手開團","cons":"吃溝通與先手品質"},"m8":{"name":"後期決戰","risk":"中","focus":"下路","desc":"穩健發育拖到後期","detail":"前期穩健防守","cons":null}}
+✅ S17c 只刪不寫：v21 文案的每個逗號分句都在出貨版同一欄出現過
+✅ S17d 出貨版文案（v20）不變；文案不進引擎設定
+✅ S18a career.v21 下 m3／m7／m8（binding 或重建的 legacy）的賽果帶 evidenceGoals unscored　{"on":["unscored","unscored","unscored"],"legacyOn":"unscored"}
+✅ S18b 修正表沒動的模板、career.v20：tacticMeta 沒有這個鍵（形狀與改動前相同）　[{"tacticId":"m1","tacticName":"速推流","version":"MobaTacticConfig.v1","opponentTacticId":"std"},{"tacticId":"m4","tacticName":"龍堆運營","version":"MobaTacticConfig.v1","opponentTacticId":"std"},{"tacticId":"m7","tacticName":"前期壓制","version":"MobaTacticConfig.v1","opponentTacticId":"std"},{"tacticId":"m7","tacticName":"前期壓制","version":"MobaTacticConfig.v1","opponentTacticId":"std"}]
+✅ S18c 賽後面板在 unscored 時走另一支：沒有目標、沒有打勾、沒有執行度
+✅ S18d 專精 intent：同一份全達標的計數，v20 記 intent；unscored 不記（v20 目標不寫進存檔），使用次數的 tacticId 照帶　[true,false]
+✅ S19a 顯示名稱＝引擎拿到的名稱（10 格）
+✅ S19b 旗標關、沒有 binding：回傳同一個物件（v20 顯示逐位元不變）；什麼都沒有 ⇒ null
+✅ S19c 旗標沒變（v21、修正表沒動的經典模板）：顯示欄位與確認時的設定相同
+✅ S19d AppShell：讀取畫面與 HUD 用顯示物件；開局輸入仍是 tactic＋binding
+✅ S20a m6：風險中、名稱與重點不變；優勢與缺點只刪不寫；已登記要刪的詞都不在；v20 文案不變　{"name":"全圖游走","risk":"中","focus":"打野","desc":"中野聯動全圖製造人數差","detail":"中單與打野高機動游走","cons":"游走撲空就虧線"}
+✅ S20a2 m6 保留中野快節奏遊走定位：節奏 fast、中路前壓、打野抓人、輔助遊走都沒動；文案沒有說比賽更快結束（Owner r3 第 3 點）
+✅ S20b hard_engage：名稱與風險中保留強開定位；描述只少「投入門檻較低」和「適合…」兩句，優勢＝描述；缺點＝Owner 裁定的取捨句，依據是 grouping 與 join.fight，沒有勝率或實測字眼；描述文案閘門零違規；v20 文案不變　{"name":"抱團強開","risk":"中","focus":"—","desc":"隊伍加入團戰的程度比平常高很多。中期隊伍更敢主動接戰。中期對巴龍的爭奪更願意參與，後期對巴龍的爭奪也稍微更願意參與。輔助出手救人的時機也比較早。","detail":"隊伍加入團戰的程度比平常高很多。中期隊伍更敢主動接戰。中期對巴龍的爭奪更願意參與，後期對巴龍的爭奪也稍微更願意參與。輔助出手救人的時機也比較早。","cons":"隊員更常加入團戰，留在各路的人手就比較少。"}
+✅ S20b2 hard_engage：只動 risk；抱團、中期姿態、巴龍優先、輔助保護、aggression 都與出貨版相同
+✅ S20c three_lane（未證實候選）：只動 risk；三路前壓、快節奏、aggression 與出貨版相同；描述只少「適合…」句，缺點不變；文案閘門零違規；風險標示維持高（Owner r3 第 2 點）
+✅ S20c2 three_lane 在登記裡明確標成未證實候選、不得稱為已通過（Owner 第 2 點）；原始碼也有這句話
+✅ S20d defensive_hold：只拿掉「適合陣容比對手弱的時候」；不在數值表（旋鈕與賽後評分都不變）；v20 文案不變
+✅ S20e m5、m1 不在數值表也沒有文案覆寫（Owner 第 4 點）
+✅ S20f 每個數值表模板賽後都不用出貨版目標評分（m6、hard_engage、three_lane 跟著 m3／m7／m8）
+✅ S20h m6 團戰姿態在 v21.b2 下撤下（戰術書不列）、jungle.focus=invade 留著；帶姿態的舊計畫仍解析得到；出貨版提供清單不變
+✅ S20i m6 舊存檔帶團戰姿態（Owner r3 第 1 點）：存檔讀回不掉；v21.b2 戰術書載入時拿掉、恢復比賽時標成沿用；開局組得起來；v20 仍是正式站的 m6，提供清單不變　{"d":{},"keptM6":[{"dimension":"teamfight.posture","choice":"passive"}],"keptM60":[],"plans":1,"live":true,"v20":true}
+✅ S20g v21.b1 的值與文案還在（舊證據解析得到），沒有規則集讀它
+
+Stage-1 Split 3a-B：75/75 PASS
+
+
+[202s] [exit 0]

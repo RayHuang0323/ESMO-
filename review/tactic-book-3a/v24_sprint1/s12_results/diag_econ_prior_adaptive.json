@@ -1,0 +1,388 @@
+{
+ "econ|career|cost>0|n1|buff": {
+  "n": 2,
+  "arrived": 0,
+  "stolen": 0,
+  "lost_race": 0,
+  "ends": {
+   "retreat": 1,
+   "retreat_threat": 1
+  },
+  "arrivedRate": 0,
+  "stealRate": 0,
+  "lostRaceRate": 0
+ },
+ "econ|career|cost>0|n1|camp": {
+  "n": 25,
+  "arrived": 12,
+  "stolen": 13,
+  "lost_race": 5,
+  "ends": {
+   "stolen": 13,
+   "retreat_threat": 2,
+   "lost_race": 5,
+   "objective_call": 1,
+   "outnumbered": 2,
+   "stuck": 1,
+   "retreat_hp": 1
+  },
+  "arrivedRate": 0.48,
+  "stealRate": 0.52,
+  "lostRaceRate": 0.2
+ },
+ "econ|career|cost>0|n2|buff": {
+  "n": 2,
+  "arrived": 1,
+  "stolen": 1,
+  "lost_race": 1,
+  "ends": {
+   "stolen": 1,
+   "lost_race": 1
+  },
+  "arrivedRate": 0.5,
+  "stealRate": 0.5,
+  "lostRaceRate": 0.5
+ },
+ "econ|tool|cost>0|n1|buff": {
+  "n": 29,
+  "arrived": 13,
+  "stolen": 12,
+  "lost_race": 0,
+  "ends": {
+   "stolen": 12,
+   "outnumbered": 4,
+   "killed": 2,
+   "retreat": 5,
+   "retreat_threat": 4,
+   "objective_call": 2
+  },
+  "arrivedRate": 0.448,
+  "stealRate": 0.414,
+  "lostRaceRate": 0
+ },
+ "econ|tool|cost>0|n1|camp": {
+  "n": 573,
+  "arrived": 417,
+  "stolen": 391,
+  "lost_race": 6,
+  "ends": {
+   "outnumbered": 14,
+   "stolen": 391,
+   "retreat": 9,
+   "retreat_threat": 68,
+   "retreat_hp": 20,
+   "objective_call": 49,
+   "stuck": 13,
+   "lost_race": 6,
+   "killed": 3
+  },
+  "arrivedRate": 0.728,
+  "stealRate": 0.682,
+  "lostRaceRate": 0.01
+ },
+ "econ|tool|cost>0|n2|buff": {
+  "n": 30,
+  "arrived": 12,
+  "stolen": 12,
+  "lost_race": 1,
+  "ends": {
+   "retreat": 3,
+   "partner_lag": 1,
+   "objective_call": 3,
+   "stolen": 12,
+   "outnumbered": 3,
+   "partner_lost": 5,
+   "retreat_threat": 2,
+   "lost_race": 1
+  },
+  "arrivedRate": 0.4,
+  "stealRate": 0.4,
+  "lostRaceRate": 0.033
+ },
+ "econ|tool|cost>0|n2|camp": {
+  "n": 1,
+  "arrived": 1,
+  "stolen": 1,
+  "lost_race": 0,
+  "ends": {
+   "stolen": 1
+  },
+  "arrivedRate": 1,
+  "stealRate": 1,
+  "lostRaceRate": 0
+ },
+ "intel|career|buff|memory|t300-900": {
+  "n": 1,
+  "arrived": 0,
+  "stolen": 0,
+  "lost_race": 1,
+  "ends": {
+   "lost_race": 1
+  },
+  "arrivedRate": 0,
+  "stealRate": 0,
+  "lostRaceRate": 1
+ },
+ "intel|career|buff|memory|t900+": {
+  "n": 3,
+  "arrived": 1,
+  "stolen": 1,
+  "lost_race": 0,
+  "ends": {
+   "stolen": 1,
+   "retreat": 1,
+   "retreat_threat": 1
+  },
+  "arrivedRate": 0.333,
+  "stealRate": 0.333,
+  "lostRaceRate": 0
+ },
+ "intel|career|camp|memory|t300-900": {
+  "n": 5,
+  "arrived": 2,
+  "stolen": 2,
+  "lost_race": 2,
+  "ends": {
+   "stolen": 2,
+   "lost_race": 2,
+   "retreat_threat": 1
+  },
+  "arrivedRate": 0.4,
+  "stealRate": 0.4,
+  "lostRaceRate": 0.4
+ },
+ "intel|career|camp|memory|t900+": {
+  "n": 10,
+  "arrived": 4,
+  "stolen": 5,
+  "lost_race": 2,
+  "ends": {
+   "stolen": 5,
+   "objective_call": 1,
+   "lost_race": 2,
+   "outnumbered": 1,
+   "retreat_hp": 1
+  },
+  "arrivedRate": 0.4,
+  "stealRate": 0.5,
+  "lostRaceRate": 0.2
+ },
+ "intel|career|camp|prior|t300-900": {
+  "n": 6,
+  "arrived": 3,
+  "stolen": 3,
+  "lost_race": 1,
+  "ends": {
+   "stolen": 3,
+   "retreat_threat": 1,
+   "outnumbered": 1,
+   "lost_race": 1
+  },
+  "arrivedRate": 0.5,
+  "stealRate": 0.5,
+  "lostRaceRate": 0.167
+ },
+ "intel|career|camp|seen|t300-900": {
+  "n": 2,
+  "arrived": 2,
+  "stolen": 2,
+  "lost_race": 0,
+  "ends": {
+   "stolen": 2
+  },
+  "arrivedRate": 1,
+  "stealRate": 1,
+  "lostRaceRate": 0
+ },
+ "intel|career|camp|seen|t900+": {
+  "n": 2,
+  "arrived": 1,
+  "stolen": 1,
+  "lost_race": 0,
+  "ends": {
+   "stuck": 1,
+   "stolen": 1
+  },
+  "arrivedRate": 0.5,
+  "stealRate": 0.5,
+  "lostRaceRate": 0
+ },
+ "intel|tool|buff|memory|t300-900": {
+  "n": 19,
+  "arrived": 7,
+  "stolen": 7,
+  "lost_race": 1,
+  "ends": {
+   "partner_lag": 1,
+   "stolen": 7,
+   "outnumbered": 3,
+   "retreat": 1,
+   "retreat_threat": 3,
+   "objective_call": 2,
+   "partner_lost": 1,
+   "lost_race": 1
+  },
+  "arrivedRate": 0.368,
+  "stealRate": 0.368,
+  "lostRaceRate": 0.053
+ },
+ "intel|tool|buff|memory|t900+": {
+  "n": 33,
+  "arrived": 14,
+  "stolen": 12,
+  "lost_race": 0,
+  "ends": {
+   "retreat": 6,
+   "objective_call": 3,
+   "stolen": 12,
+   "outnumbered": 4,
+   "killed": 2,
+   "retreat_threat": 3,
+   "partner_lost": 3
+  },
+  "arrivedRate": 0.424,
+  "stealRate": 0.364,
+  "lostRaceRate": 0
+ },
+ "intel|tool|buff|seen|t900+": {
+  "n": 6,
+  "arrived": 4,
+  "stolen": 4,
+  "lost_race": 0,
+  "ends": {
+   "retreat": 1,
+   "stolen": 4,
+   "partner_lost": 1
+  },
+  "arrivedRate": 0.667,
+  "stealRate": 0.667,
+  "lostRaceRate": 0
+ },
+ "intel|tool|buff|seen|t<300": {
+  "n": 1,
+  "arrived": 0,
+  "stolen": 1,
+  "lost_race": 0,
+  "ends": {
+   "stolen": 1
+  },
+  "arrivedRate": 0,
+  "stealRate": 1,
+  "lostRaceRate": 0
+ },
+ "intel|tool|camp|memory|t300-900": {
+  "n": 150,
+  "arrived": 111,
+  "stolen": 105,
+  "lost_race": 3,
+  "ends": {
+   "outnumbered": 4,
+   "stolen": 105,
+   "retreat_threat": 16,
+   "retreat_hp": 7,
+   "stuck": 3,
+   "retreat": 2,
+   "lost_race": 3,
+   "objective_call": 10
+  },
+  "arrivedRate": 0.74,
+  "stealRate": 0.7,
+  "lostRaceRate": 0.02
+ },
+ "intel|tool|camp|memory|t900+": {
+  "n": 173,
+  "arrived": 115,
+  "stolen": 107,
+  "lost_race": 0,
+  "ends": {
+   "stolen": 107,
+   "retreat_hp": 6,
+   "retreat_threat": 22,
+   "objective_call": 23,
+   "outnumbered": 7,
+   "killed": 3,
+   "retreat": 5
+  },
+  "arrivedRate": 0.665,
+  "stealRate": 0.618,
+  "lostRaceRate": 0
+ },
+ "intel|tool|camp|prior|t300-900": {
+  "n": 187,
+  "arrived": 146,
+  "stolen": 136,
+  "lost_race": 3,
+  "ends": {
+   "stolen": 136,
+   "stuck": 8,
+   "retreat_hp": 4,
+   "retreat_threat": 23,
+   "outnumbered": 3,
+   "objective_call": 9,
+   "lost_race": 3,
+   "retreat": 1
+  },
+  "arrivedRate": 0.781,
+  "stealRate": 0.727,
+  "lostRaceRate": 0.016
+ },
+ "intel|tool|camp|prior|t900+": {
+  "n": 31,
+  "arrived": 21,
+  "stolen": 21,
+  "lost_race": 0,
+  "ends": {
+   "retreat": 1,
+   "stolen": 21,
+   "retreat_threat": 3,
+   "retreat_hp": 3,
+   "objective_call": 3
+  },
+  "arrivedRate": 0.677,
+  "stealRate": 0.677,
+  "lostRaceRate": 0
+ },
+ "intel|tool|camp|prior|t<300": {
+  "n": 17,
+  "arrived": 14,
+  "stolen": 14,
+  "lost_race": 0,
+  "ends": {
+   "stolen": 14,
+   "stuck": 1,
+   "retreat_threat": 2
+  },
+  "arrivedRate": 0.824,
+  "stealRate": 0.824,
+  "lostRaceRate": 0
+ },
+ "intel|tool|camp|seen|t300-900": {
+  "n": 5,
+  "arrived": 2,
+  "stolen": 2,
+  "lost_race": 0,
+  "ends": {
+   "objective_call": 2,
+   "stolen": 2,
+   "retreat_threat": 1
+  },
+  "arrivedRate": 0.4,
+  "stealRate": 0.4,
+  "lostRaceRate": 0
+ },
+ "intel|tool|camp|seen|t900+": {
+  "n": 11,
+  "arrived": 9,
+  "stolen": 7,
+  "lost_race": 0,
+  "ends": {
+   "retreat_threat": 1,
+   "objective_call": 2,
+   "stolen": 7,
+   "stuck": 1
+  },
+  "arrivedRate": 0.818,
+  "stealRate": 0.636,
+  "lostRaceRate": 0
+ }
+}

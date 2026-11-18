@@ -1,0 +1,191 @@
+{
+ "buff|mem10-30|career": {
+  "n": 7,
+  "pEj": 0.286,
+  "otherMean": 0.143,
+  "s05bias": 0.714,
+  "s05mae": 0.714,
+  "cover": 1,
+  "goShare": 0.143
+ },
+ "buff|mem10-30|tool": {
+  "n": 1,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 1,
+  "s05mae": 1,
+  "cover": null,
+  "goShare": 0
+ },
+ "buff|mem30-60|career": {
+  "n": 5,
+  "pEj": 0.2,
+  "otherMean": 0,
+  "s05bias": 0.8,
+  "s05mae": 0.8,
+  "cover": 1,
+  "goShare": 0.2
+ },
+ "buff|mem<=10|career": {
+  "n": 3,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 1,
+  "s05mae": 1,
+  "cover": null,
+  "goShare": 0
+ },
+ "buff|mem<=10|tool": {
+  "n": 13,
+  "pEj": 0.077,
+  "otherMean": 0.154,
+  "s05bias": -0.231,
+  "s05mae": 0.231,
+  "cover": 0,
+  "goShare": 0.692
+ },
+ "buff|mem>60|career": {
+  "n": 24,
+  "pEj": 0.167,
+  "otherMean": 0.042,
+  "s05bias": 0.917,
+  "s05mae": 1,
+  "cover": 0.75,
+  "goShare": 0.375
+ },
+ "buff|mem>60|tool": {
+  "n": 10,
+  "pEj": 0.5,
+  "otherMean": 0,
+  "s05bias": 0.5,
+  "s05mae": 0.5,
+  "cover": 1,
+  "goShare": 0.4
+ },
+ "buff|never|career": {
+  "n": 90,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 1.022,
+  "s05mae": 1.022,
+  "cover": null,
+  "goShare": 0.578
+ },
+ "buff|seen|career": {
+  "n": 5,
+  "pEj": 0,
+  "otherMean": 0.2,
+  "s05bias": 0.8,
+  "s05mae": 0.8,
+  "cover": 1,
+  "goShare": 0.2
+ },
+ "buff|seen|tool": {
+  "n": 30,
+  "pEj": 0.033,
+  "otherMean": 0.033,
+  "s05bias": -0.033,
+  "s05mae": 0.1,
+  "cover": 0,
+  "goShare": 0.467
+ },
+ "camp|mem10-30|career": {
+  "n": 34,
+  "pEj": 0.324,
+  "otherMean": 0.059,
+  "s05bias": 0.618,
+  "s05mae": 0.618,
+  "cover": 1,
+  "goShare": 0.5
+ },
+ "camp|mem10-30|tool": {
+  "n": 355,
+  "pEj": 0.062,
+  "otherMean": 0.099,
+  "s05bias": 0.834,
+  "s05mae": 0.879,
+  "cover": 0.857,
+  "goShare": 0.386
+ },
+ "camp|mem30-60|career": {
+  "n": 49,
+  "pEj": 0.347,
+  "otherMean": 0.143,
+  "s05bias": 0.51,
+  "s05mae": 0.592,
+  "cover": 0.909,
+  "goShare": 0.49
+ },
+ "camp|mem30-60|tool": {
+  "n": 508,
+  "pEj": 0.037,
+  "otherMean": 0.055,
+  "s05bias": 0.906,
+  "s05mae": 0.913,
+  "cover": 0.978,
+  "goShare": 0.299
+ },
+ "camp|mem<=10|career": {
+  "n": 15,
+  "pEj": 0.067,
+  "otherMean": 0,
+  "s05bias": 0.067,
+  "s05mae": 0.2,
+  "cover": 0,
+  "goShare": 0.267
+ },
+ "camp|mem<=10|tool": {
+  "n": 200,
+  "pEj": 0.01,
+  "otherMean": 0.055,
+  "s05bias": -0.065,
+  "s05mae": 0.065,
+  "cover": 0,
+  "goShare": 0.275
+ },
+ "camp|mem>60|career": {
+  "n": 53,
+  "pEj": 0.208,
+  "otherMean": 0.113,
+  "s05bias": 0.679,
+  "s05mae": 0.679,
+  "cover": 1,
+  "goShare": 0.434
+ },
+ "camp|mem>60|tool": {
+  "n": 624,
+  "pEj": 0.099,
+  "otherMean": 0.04,
+  "s05bias": 0.861,
+  "s05mae": 0.867,
+  "cover": 0.976,
+  "goShare": 0.329
+ },
+ "camp|never|tool": {
+  "n": 7,
+  "pEj": 0.143,
+  "otherMean": 0,
+  "s05bias": 0.857,
+  "s05mae": 0.857,
+  "cover": 1,
+  "goShare": 0.286
+ },
+ "camp|seen|career": {
+  "n": 17,
+  "pEj": 0,
+  "otherMean": 0.059,
+  "s05bias": -0.059,
+  "s05mae": 0.059,
+  "cover": 0,
+  "goShare": 0.235
+ },
+ "camp|seen|tool": {
+  "n": 354,
+  "pEj": 0,
+  "otherMean": 0.04,
+  "s05bias": -0.04,
+  "s05mae": 0.04,
+  "cover": 0,
+  "goShare": 0.395
+ }
+}

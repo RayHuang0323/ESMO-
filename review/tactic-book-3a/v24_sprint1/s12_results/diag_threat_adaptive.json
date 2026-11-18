@@ -1,0 +1,137 @@
+{
+ "buff|mem30-60|tool": {
+  "n": 2,
+  "pEj": 0,
+  "otherMean": 1,
+  "s05bias": 0,
+  "s05mae": 0,
+  "cover": 1,
+  "goShare": 0.5
+ },
+ "buff|mem<=10|career": {
+  "n": 1,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 0,
+  "s05mae": 0,
+  "cover": null,
+  "goShare": 1
+ },
+ "buff|mem<=10|tool": {
+  "n": 24,
+  "pEj": 0.125,
+  "otherMean": 0.292,
+  "s05bias": 0.167,
+  "s05mae": 0.5,
+  "cover": 0.429,
+  "goShare": 0.583
+ },
+ "buff|seen|career": {
+  "n": 1,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 0,
+  "s05mae": 0,
+  "cover": null,
+  "goShare": 1
+ },
+ "buff|seen|tool": {
+  "n": 42,
+  "pEj": 0.214,
+  "otherMean": 0.143,
+  "s05bias": -0.024,
+  "s05mae": 0.119,
+  "cover": 0.7,
+  "goShare": 0.452
+ },
+ "camp|mem10-30|career": {
+  "n": 19,
+  "pEj": 0.263,
+  "otherMean": 0.158,
+  "s05bias": -0.368,
+  "s05mae": 0.474,
+  "cover": 0,
+  "goShare": 0.526
+ },
+ "camp|mem10-30|tool": {
+  "n": 459,
+  "pEj": 0.037,
+  "otherMean": 0.092,
+  "s05bias": -0.105,
+  "s05mae": 0.148,
+  "cover": 0.019,
+  "goShare": 0.353
+ },
+ "camp|mem30-60|career": {
+  "n": 12,
+  "pEj": 0.333,
+  "otherMean": 0,
+  "s05bias": 0.667,
+  "s05mae": 0.667,
+  "cover": 1,
+  "goShare": 0.583
+ },
+ "camp|mem30-60|tool": {
+  "n": 579,
+  "pEj": 0.017,
+  "otherMean": 0.059,
+  "s05bias": 0.922,
+  "s05mae": 0.929,
+  "cover": 0.977,
+  "goShare": 0.332
+ },
+ "camp|mem<=10|career": {
+  "n": 2,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 0,
+  "s05mae": 0,
+  "cover": null,
+  "goShare": 0.5
+ },
+ "camp|mem<=10|tool": {
+  "n": 82,
+  "pEj": 0.012,
+  "otherMean": 0.073,
+  "s05bias": -0.085,
+  "s05mae": 0.085,
+  "cover": 0,
+  "goShare": 0.415
+ },
+ "camp|mem>60|career": {
+  "n": 2,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 1,
+  "s05mae": 1,
+  "cover": null,
+  "goShare": 1
+ },
+ "camp|mem>60|tool": {
+  "n": 420,
+  "pEj": 0.052,
+  "otherMean": 0.069,
+  "s05bias": 0.879,
+  "s05mae": 0.893,
+  "cover": 0.938,
+  "goShare": 0.302
+ },
+ "camp|seen|career": {
+  "n": 1,
+  "pEj": 0,
+  "otherMean": 0,
+  "s05bias": 0,
+  "s05mae": 0,
+  "cover": null,
+  "goShare": 1
+ },
+ "camp|seen|tool": {
+  "n": 179,
+  "pEj": 0,
+  "otherMean": 0.034,
+  "s05bias": -0.034,
+  "s05mae": 0.034,
+  "cover": 0,
+  "goShare": 0.324
+ }
+}
