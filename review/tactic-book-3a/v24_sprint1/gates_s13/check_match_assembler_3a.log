@@ -1,0 +1,273 @@
+$ node tools/check_match_assembler_3a.mjs
+✅ A0 已登錄 ruleset 的 assemblyOrder：career／balanceTool＝live，challenge＝challengeV20
+✅ G live-m4-3 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-m4-3 (a) configure 序列與引數雜湊＝golden（10 呼叫）
+✅ G live-m4-3 (b) digest＋streamHash＝golden　1498.5:blue:25:18:43965:39296
+✅ G live-m4-3 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-draft-3 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-draft-3 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G challenge-draft-3 (b) digest＋streamHash＝golden　1308.5:blue:12:7:37313:33967
+✅ G challenge-draft-3 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-nodraft-3 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-nodraft-3 (a) configure 序列與引數雜湊＝golden（2 呼叫）
+✅ G challenge-nodraft-3 (b) digest＋streamHash＝golden　1219.5:blue:7:4:33984:30873
+✅ G challenge-nodraft-3 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-standard-3 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-standard-3 (b) digest＋streamHash＝golden　1046.5:blue:18:2:33324:25517
+✅ G runner-standard-3 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-off-3 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G runner-off-3 (b) digest＋streamHash＝golden　1341.0:blue:10:6:37696:34204
+✅ G runner-off-3 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-m8-7 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-m8-7 (a) configure 序列與引數雜湊＝golden（10 呼叫）
+✅ G live-m8-7 (b) digest＋streamHash＝golden　1979.0:blue:60:38:64244:55166
+✅ G live-m8-7 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-draft-7 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-draft-7 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G challenge-draft-7 (b) digest＋streamHash＝golden　1060.5:red:1:7:25633:29817
+✅ G challenge-draft-7 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-nodraft-7 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-nodraft-7 (a) configure 序列與引數雜湊＝golden（2 呼叫）
+✅ G challenge-nodraft-7 (b) digest＋streamHash＝golden　879.5:red:1:6:20698:25476
+✅ G challenge-nodraft-7 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-standard-7 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-standard-7 (b) digest＋streamHash＝golden　971.5:blue:7:3:27176:23018
+✅ G runner-standard-7 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-off-7 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G runner-off-7 (b) digest＋streamHash＝golden　1398.5:blue:14:11:39544:37080
+✅ G runner-off-7 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-m4-11 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-m4-11 (a) configure 序列與引數雜湊＝golden（10 呼叫）
+✅ G live-m4-11 (b) digest＋streamHash＝golden　1164.0:red:9:16:30134:34681
+✅ G live-m4-11 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-draft-11 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-draft-11 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G challenge-draft-11 (b) digest＋streamHash＝golden　1350.5:red:6:11:34809:37862
+✅ G challenge-draft-11 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-nodraft-11 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-nodraft-11 (a) configure 序列與引數雜湊＝golden（2 呼叫）
+✅ G challenge-nodraft-11 (b) digest＋streamHash＝golden　1026.5:red:5:4:26274:27929
+✅ G challenge-nodraft-11 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-standard-11 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-standard-11 (b) digest＋streamHash＝golden　904.5:blue:12:10:27278:24475
+✅ G runner-standard-11 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-off-11 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G runner-off-11 (b) digest＋streamHash＝golden　1411.5:blue:10:9:38176:37241
+✅ G runner-off-11 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-m4-19 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-m4-19 (a) configure 序列與引數雜湊＝golden（10 呼叫）
+✅ G live-m4-19 (b) digest＋streamHash＝golden　1130.0:blue:22:7:35587:27460
+✅ G live-m4-19 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-draft-19 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-draft-19 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G challenge-draft-19 (b) digest＋streamHash＝golden　1054.0:red:9:0:30705:25741
+✅ G challenge-draft-19 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-nodraft-19 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-nodraft-19 (a) configure 序列與引數雜湊＝golden（2 呼叫）
+✅ G challenge-nodraft-19 (b) digest＋streamHash＝golden　1101.0:blue:9:1:33023:26769
+✅ G challenge-nodraft-19 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-standard-19 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-standard-19 (b) digest＋streamHash＝golden　1354.0:red:16:15:38189:38264
+✅ G runner-standard-19 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-off-19 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G runner-off-19 (b) digest＋streamHash＝golden　1286.0:red:3:2:31517:34307
+✅ G runner-off-19 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-m8-23 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-m8-23 (a) configure 序列與引數雜湊＝golden（10 呼叫）
+✅ G live-m8-23 (b) digest＋streamHash＝golden　1015.5:red:2:12:23297:30380
+✅ G live-m8-23 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-draft-23 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-draft-23 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G challenge-draft-23 (b) digest＋streamHash＝golden　1321.5:blue:7:8:35215:35366
+✅ G challenge-draft-23 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-nodraft-23 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-nodraft-23 (a) configure 序列與引數雜湊＝golden（2 呼叫）
+✅ G challenge-nodraft-23 (b) digest＋streamHash＝golden　1131.0:blue:10:4:32932:28805
+✅ G challenge-nodraft-23 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-standard-23 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-standard-23 (b) digest＋streamHash＝golden　1249.0:red:13:17:32302:36973
+✅ G runner-standard-23 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-off-23 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G runner-off-23 (b) digest＋streamHash＝golden　1202.5:blue:11:3:34354:29395
+✅ G runner-off-23 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-m6-29 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-m6-29 (a) configure 序列與引數雜湊＝golden（10 呼叫）
+✅ G live-m6-29 (b) digest＋streamHash＝golden　763.0:red:4:9:19595:24602
+✅ G live-m6-29 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-draft-29 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-draft-29 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G challenge-draft-29 (b) digest＋streamHash＝golden　1220.5:blue:14:5:36098:30632
+✅ G challenge-draft-29 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G challenge-nodraft-29 輸入重建：matchSeed＝golden ctor.seed
+✅ G challenge-nodraft-29 (a) configure 序列與引數雜湊＝golden（2 呼叫）
+✅ G challenge-nodraft-29 (b) digest＋streamHash＝golden　1354.5:blue:8:10:38146:35979
+✅ G challenge-nodraft-29 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-standard-29 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-standard-29 (b) digest＋streamHash＝golden　859.5:red:3:7:21031:25955
+✅ G runner-standard-29 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-off-29 (a) configure 序列與引數雜湊＝golden（5 呼叫）
+✅ G runner-off-29 (b) digest＋streamHash＝golden　1318.0:red:3:7:31947:36599
+✅ G runner-off-29 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-early-3 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-early-3 (b) digest＋streamHash＝golden　1073.5:blue:16:6:32726:27174
+✅ G runner-early-3 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-early-7 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-early-7 (b) digest＋streamHash＝golden　847.0:blue:5:2:24798:19805
+✅ G runner-early-7 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-early-10 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-early-10 (b) digest＋streamHash＝golden　808.0:blue:4:2:23383:21092
+✅ G runner-early-10 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-early-14 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-early-14 (b) digest＋streamHash＝golden　851.5:red:11:6:25919:24353
+✅ G runner-early-14 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-counter-6 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-counter-6 (b) digest＋streamHash＝golden　1440.0:blue:20:23:41016:41444
+✅ G runner-counter-6 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G runner-counter-15 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G runner-counter-15 (b) digest＋streamHash＝golden　1221.0:blue:14:11:34368:33436
+✅ G runner-counter-15 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-notactic-13 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-notactic-13 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G live-notactic-13 (b) digest＋streamHash＝golden　851.5:blue:4:3:23544:22448
+✅ G live-notactic-13 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-noplayers-17 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　17d8d5fd vs 17d8d5fd
+✅ G live-noplayers-17 (a) configure 序列與引數雜湊＝golden（9 呼叫）
+✅ G live-noplayers-17 (b) digest＋streamHash＝golden　961.0:blue:7:6:27650:23830
+✅ G live-noplayers-17 (c) setup 未被改動（雜湊、內容、深度凍結）
+✅ G live-noroster-21 輸入重建：loadout 雜湊＝golden ctor.loadoutHash　c796276d vs c796276d
+✅ G live-noroster-21 (a) configure 序列與引數雜湊＝golden（3 呼叫）
+✅ G live-noroster-21 (b) digest＋streamHash＝golden　1132.0:red:6:6:29441:31423
+✅ G live-noroster-21 (c) setup 未被改動（雜湊、內容、深度凍結）
+  逐位元重現：live 9/9、challenge 12/12、runner 18/18
+✅ A1 walker 有檢定力：heroCombatArchetypes.js 的圖確實含 heroDatabase.js（正對照）
+✅ A1 組裝器 import 圖不含 heroDatabase.js／heroImages.js（15 個模組）
+✅ A1b 組裝器不 import LogicEngine／React／zustand（引擎由 deps 注入）
+✅ A2 未知的 production buildStrategy ⇒ build_strategy_unknown（不默默改成 standard）
+✅ A2b 大小寫不同也拒絕（正規化屬於 Task 4 builder）
+✅ A3 未知天賦 id ⇒ talent_unknown（逐席位）
+✅ A3b 別的英雄的天賦（b1 選了 b2 英雄的天賦）⇒ talent_unknown　tieshixin ← tielian:battle-form
+✅ A3c 該席位英雄自己的天賦 ⇒ 接受；null ⇒ 交給 AI
+✅ A3d 有天賦選擇但沒有 roster ⇒ talent_without_roster
+✅ A4 占位 binding（藍方）⇒ tactic_binding_rejected@tactic.blue*（resolver 拒絕，零 configure）
+✅ A4b 占位 binding（紅方）⇒ tactic_binding_rejected@tactic.red*
+✅ A4c 錯誤訊息帶 resolver 的原因碼
+✅ A4d 有藍方戰術但沒有紅方 ⇒ tactic_red_missing（不隱含補 std）
+✅ A5 缺 deps.LogicEngine ⇒ deps_missing
+✅ A5b 有 roster 但缺 heroLookup ⇒ deps_missing
+✅ A5c 技能層生效但缺 heroAdapters.toEngineHeroSkills ⇒ deps_missing
+✅ A5d 查不到的英雄 ⇒ hero_unknown
+✅ A5e playerSlots 不是引擎席位形狀（缺 id）⇒ player_slot_invalid
+✅ A6 tool 的未知 itemsStrategies ⇒ build_strategy_unknown
+✅ A6b tool.incomeK 但裝備層未生效 ⇒ income_k_without_items
+✅ A6c challengeV20 順序不支援 layout／技能／裝備（v20 Challenge 沒有這些層）⇒ assembly_order_layer_unsupported
+✅ A7 tool.ruleOverrides 寫進這一場的 engine.rules；incomeK 寫進 engine.items　towerHp=1234 incomeK=1.25
+✅ A7b ruleOverrides 只影響這個實例（不改共享規則表）
+✅ A9 缺 deps.engineAdapters.toEnginePlayerMods（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineHeroMods（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineHeroPassives（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineHeroPowerCurve（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineSpells（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineTactic（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.resolveTactic（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.resolveTactic（tool）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineTacticIdentity（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.matchItemsConfig（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.MOBA_TACTIC_VERSION（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.STANDARD_OPP_TACTIC（career）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineItems（tool）⇒ deps_missing，零 configure 呼叫
+✅ A9 缺 deps.engineAdapters.toEngineHeroMods（tool）⇒ deps_missing，零 configure 呼叫
+✅ A9b 沒有 engineAdapters 區塊的手拼 deps ⇒ deps_missing（組裝器沒有私下的預設）
+✅ A9c 層沒生效就不要求它的 adapter：tool 缺 toEnginePlayerMods／matchItemsConfig 仍可組裝
+✅ A9d 注入的每個引擎側 adapter 都被呼叫到（career＋tool 兩條路徑合計）　{"resolveTactic":4,"toEngineTactic":4,"toEngineTacticIdentity":4,"toEnginePlayerMods":1,"toEngineHeroMods":2,"toEngineHeroPassives":2,"toEngineHeroPowerCurve":2,"toEngineSpells":2,"matchItemsConfig":1,"toEngineItems":1}
+✅ A9e-a STANDARD_OPP_TACTIC 未注入 ＋ 兩方都是 legacy ⇒ 照 v20 組裝成功，configure 序列＋引數雜湊＋短跑 digest／streamHash 與有 STD 時逐位元相同（v20 只在有一方是 std 時才需要 STD）
+✅ A9e-b STD 未注入 ＋ 一方是 std ⇒ 錯誤結果（deps_missing 點名 deps.engineAdapters.STANDARD_OPP_TACTIC）、零 configure、沒有引擎、沒有例外
+✅ A9e-c 其餘每個必要的戰術 adapter 缺席（resolveTactic／toEngineTactic／toEngineTacticIdentity（identity 層開）／MOBA_TACTIC_VERSION）⇒ deps_missing 錯誤結果、零 configure、不丟例外——從不默默略過
+✅ A9e-d tool 規則集、identity 層關閉、deps 沒有 toEngineTacticIdentity（舊樹）⇒ 組裝成功，configureMatch 恰好一次且 identity 為 null、blue／red 旋鈕仍在；層開著卻缺 adapter ⇒ deps_missing　[["blue","red","identity","meta"]]
+✅ A9e-e 注入的 resolveTactic 回 ok 卻缺 config／knobs／identity ⇒ tactic_rejected（resolver_bad_shape）錯誤結果、零 configure，不是 8 次 configure 後的 TypeError
+✅ A9e-h 注入的 resolveTactic 結果帶丟例外的 getter／已撤銷 Proxy／丟例外的 config／identity／errors ⇒ 錯誤結果（tactic_*）、零 configure、沒有引擎、不丟例外（結果只在護欄內讀一次成純資料）
+✅ A9e-i ok 必須嚴格等於 true："yes"、1 ⇒ tactic_rejected，零 configure
+✅ A9e-j 組裝器本身不要求 config.tacticId（v20 也沒有）：resolver 回 ok 的缺 tacticId 設定照常組裝，replayConfig 略過 tacticId
+✅ A9e-f 投影回傳的共用物件不被凍結（resolver 只凍結自己擁有的副本）；兩次連續組裝的 configure 序列與引數雜湊相同且＝基準
+✅ A9e-g std 分支把注入的 STANDARD_OPP_TACTIC 物件本身（不是副本）交給投影，與 v20 相同
+✅ A10 tool 規則集：引擎缺 configureObjectiveLayout／HeroPassives／HeroPowerCurve ⇒ 略過（ok、configured 不含這三個）　configureHeroes,configureHeroSkills,configureArchetypes,configureSpells,configureMatch,configureItems
+✅ A10b production 規則集：同樣缺方法 ⇒ 照原樣失敗（丟 TypeError，不被容忍）　engine[method] is not a function
+✅ A10c 容忍清單恰為 v20 runner 的三個護欄（configureObjectiveLayout／HeroPassives／HeroPowerCurve）
+✅ A10d tool 規則集：引擎缺 configureHeroes ⇒ 丟 TypeError（不默默組出半套引擎）　engine[method] is not a function
+✅ A10d tool 規則集：引擎缺 configureHeroSkills ⇒ 丟 TypeError（不默默組出半套引擎）　engine[method] is not a function
+✅ A10d tool 規則集：引擎缺 configureArchetypes ⇒ 丟 TypeError（不默默組出半套引擎）　engine[method] is not a function
+✅ A10d tool 規則集：引擎缺 configureSpells ⇒ 丟 TypeError（不默默組出半套引擎）　engine[method] is not a function
+✅ A10d tool 規則集：引擎缺 configureMatch ⇒ 丟 TypeError（不默默組出半套引擎）　engine[method] is not a function
+✅ A10d tool 規則集：引擎缺 configureItems ⇒ 丟 TypeError（不默默組出半套引擎）　engine[method] is not a function
+✅ A12 tool：空 players 的選擇物件原樣交給 toEngineHeroSkills（v20 runner 不收斂成 null）
+✅ A12b production：空 players 的選擇 ⇒ null（useLocalServer:176）
+✅ A12c tool：selectBattleTalents 回 null ⇒ 交 null
+✅ A11 matchAssembler.js 沒有 import 任何 adapter 模組、沒有裸呼叫任何 adapter、沒有 import 任何 adapter 名稱　{"badImports":[],"bareCalls":[],"importedNames":[],"imports":["./items/buildPolicy.js","../../platform/contracts/matchSetup.js","../../platform/contracts/matchRuleset.js","../../platform/contracts/squadSnapshot.js"]}
+✅ A11b 掃描器有檢定力：對含 adapter import＋裸呼叫的樣本必須各自命中
+✅ A11c 掃描器不被註解／A. 前綴騙：註解裡的 import／呼叫與 A.toEngineItems( 都不算違規
+✅ A8 applied.objectiveLayout／buildStrategy／tacticMeta 與 v20 Live 相同
+✅ A8b applied.talentSelection 的來源＝golden live.talentSources
+✅ A8c applied.replayConfig＝{ tacticId, tacticName, battleTalentIds }（同 useLocalServer beginReplayCapture.config）
+✅ A8d 無藍方戰術 ⇒ tacticMeta null、replayConfig 無 tacticId
+✅ A9 live-m4-3 前提：打亂後 setup 內的鍵順序確實不同，但雜湊相同　roster r2,r1,b5,b4,b3,b2,b1,r5,r4,r3
+✅ A9 live-m4-3 打亂鍵順序 ⇒ 呼叫序列＋引數雜湊＋digest＋streamHash 仍＝golden　1498.5:blue:25:18:43965:39296/c70edf50 vs 1498.5:blue:25:18:43965:39296/c70edf50
+✅ A9 live-m4-3 交給 adapter 的天賦選擇依正規席位順序（applied.talentSelection.players 的鍵序；無天賦的案為空真）
+✅ A9 live-m8-23 前提：打亂後 setup 內的鍵順序確實不同，但雜湊相同　roster r2,r1,b5,b4,b3,b2,b1,r5,r4,r3
+✅ A9 live-m8-23 打亂鍵順序 ⇒ 呼叫序列＋引數雜湊＋digest＋streamHash 仍＝golden　1015.5:red:2:12:23297:30380/5a44b903 vs 1015.5:red:2:12:23297:30380/5a44b903
+✅ A9 live-m8-23 交給 adapter 的天賦選擇依正規席位順序（applied.talentSelection.players 的鍵序；無天賦的案為空真）
+✅ A9 runner-standard-3 前提：打亂後 setup 內的鍵順序確實不同，但雜湊相同　roster b4,r3,b3,r2,b2,r1,b1,r5,b5,r4
+✅ A9 runner-standard-3 打亂鍵順序 ⇒ 呼叫序列＋引數雜湊＋digest＋streamHash 仍＝golden　1046.5:blue:18:2:33324:25517/15709282 vs 1046.5:blue:18:2:33324:25517/15709282
+✅ A9 runner-standard-3 交給 adapter 的天賦選擇依正規席位順序（applied.talentSelection.players 的鍵序；無天賦的案為空真）
+✅ A9 runner-early-10 前提：打亂後 setup 內的鍵順序確實不同，但雜湊相同　roster b4,r3,b3,r2,b2,r1,b1,r5,b5,r4
+✅ A9 runner-early-10 打亂鍵順序 ⇒ 呼叫序列＋引數雜湊＋digest＋streamHash 仍＝golden　808.0:blue:4:2:23383:21092/3bb44887 vs 808.0:blue:4:2:23383:21092/3bb44887
+✅ A9 runner-early-10 交給 adapter 的天賦選擇依正規席位順序（applied.talentSelection.players 的鍵序；無天賦的案為空真）
+✅ A9 runner-counter-15 前提：打亂後 setup 內的鍵順序確實不同，但雜湊相同　roster b4,r3,b3,r2,b2,r1,b1,r5,b5,r4
+✅ A9 runner-counter-15 打亂鍵順序 ⇒ 呼叫序列＋引數雜湊＋digest＋streamHash 仍＝golden　1221.0:blue:14:11:34368:33436/1853a47b vs 1221.0:blue:14:11:34368:33436/1853a47b
+✅ A9 runner-counter-15 交給 adapter 的天賦選擇依正規席位順序（applied.talentSelection.players 的鍵序；無天賦的案為空真）
+✅ A9 challenge-draft-7 前提：打亂後 setup 內的鍵順序確實不同，但雜湊相同　roster r2,r1,b5,b4,b3,b2,b1,r5,r4,r3
+✅ A9 challenge-draft-7 打亂鍵順序 ⇒ 呼叫序列＋引數雜湊＋digest＋streamHash 仍＝golden　1060.5:red:1:7:25633:29817/458a844f vs 1060.5:red:1:7:25633:29817/458a844f
+✅ A9 challenge-draft-7 交給 adapter 的天賦選擇依正規席位順序（applied.talentSelection.players 的鍵序；無天賦的案為空真）
+✅ A9b 未知席位 id ⇒ seat_unknown（不默默略過）
+
+Match Assembler 3a：227/227 PASS
+
+  1/39 live-m4-3 6s
+  2/39 challenge-draft-3 10s
+  3/39 challenge-nodraft-3 13s
+  4/39 runner-standard-3 16s
+  5/39 runner-off-3 20s
+  6/39 live-m8-7 25s
+  7/39 challenge-draft-7 28s
+  8/39 challenge-nodraft-7 30s
+  9/39 runner-standard-7 33s
+  10/39 runner-off-7 36s
+  11/39 live-m4-11 40s
+  12/39 challenge-draft-11 43s
+  13/39 challenge-nodraft-11 46s
+  14/39 runner-standard-11 49s
+  15/39 runner-off-11 52s
+  16/39 live-m4-19 55s
+  17/39 challenge-draft-19 58s
+  18/39 challenge-nodraft-19 61s
+  19/39 runner-standard-19 64s
+  20/39 runner-off-19 68s
+  21/39 live-m8-23 70s
+  22/39 challenge-draft-23 74s
+  23/39 challenge-nodraft-23 77s
+  24/39 runner-standard-23 80s
+  25/39 runner-off-23 83s
+  26/39 live-m6-29 85s
+  27/39 challenge-draft-29 88s
+  28/39 challenge-nodraft-29 91s
+  29/39 runner-standard-29 94s
+  30/39 runner-off-29 97s
+  31/39 runner-early-3 100s
+  32/39 runner-early-7 102s
+  33/39 runner-early-10 104s
+  34/39 runner-early-14 107s
+  35/39 runner-counter-6 110s
+  36/39 runner-counter-15 114s
+  37/39 live-notactic-13 117s
+  38/39 live-noplayers-17 119s
+  39/39 live-noroster-21 122s
+
+[142s] [exit 0]

@@ -1,0 +1,12 @@
+$ node tools/check_v24_diag_sprint.mjs
+✅ ① 影子＋仲裁觀測器被動（整場雜湊相同且＝Sprint 0 值）　{"selfcheck":"shadow_and_arbitration_are_passive","tool":"shadow_tactic_exec_v24_diag","plain":"c314a2613fccd44a","shadowed":"c314a2613fccd44a","ok":true,"expected":"c314a2613fccd44a","matchesSprint0":true}
+✅ ② 診斷版的評估欄位與 Sprint 0.5 影子逐值相同（Seed 98401 inv）　evals=242 diff=0 invasionsSame=true newFields=true arbErrors=0
+✅ ③ taskCommitPush 覆寫機制中性（plain＝off＝off＋觀測器；on 不同）　{"selfcheck":"override_harness_is_neutral","seed":93001,"path":"career","plain":"81d1252b31a72ac0","off":"81d1252b31a72ac0","offObserved":"81d1252b31a72ac0","on":"89d760379f9be658","ok":true}
+✅ ④ 共用決策重算 Sprint 0.5 驗證結果（每場出發評估數、紅藍對稱，四種傾向逐值）　matches=200
+✅ ⑤ 決策規則與邊無關（原始碼不讀邊與座標；紅藍對調後決策逐筆相同）　identifierHits=[] mirrorChecked=193600 mirrorDiff=0
+✅ ⑥ v23 凍結完好而且 src 沒有未提交的改動　check_v23_freeze: PASS 3/3  srcClean=true
+
+check_v24_diag_sprint：6/6 PASS  (47.0 s)
+
+
+[47s] [exit 0]

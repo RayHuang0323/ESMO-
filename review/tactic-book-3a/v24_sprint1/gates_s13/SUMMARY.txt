@@ -1,0 +1,28 @@
+RED  check_career_golden_v21              exit=1 sprint1.2 exit=1 failing lines now=2 before=2 newFailures=0 goneFailures=0  | Career Golden v21：3/5 FAIL
+RED  check_challenge_golden_v21           exit=1 sprint1.2 exit=1 failing lines now=1 before=1 newFailures=0 goneFailures=0  | Challenge Golden v21：5/6 FAIL
+PASS check_jungle_camp_v22                jungleCamp v22 Gate：41/41 PASS
+PASS check_layer_isolation_v21            PASS 30/30
+PASS check_layer_isolation_v24            check_layer_isolation_v24：8/8 PASS  (170.1 s)
+PASS check_live_setup_3a                    R done
+PASS check_match_assembler_3a               39/39 live-noroster-21 122s
+RED  check_match_golden_v21a              exit=1 sprint1.2 exit=1 failing lines now=40 before=40 newFailures=0 goneFailures=0  |   109/109 bind-red:both-bot_duo_vs_top_split:s19 286s
+PASS check_match_ruleset_3a               Match Ruleset 3a：60/60 PASS
+PASS check_match_setup_3a                   A1 balanceTool.v20 seed 29 ok
+PASS check_match_setup_contract_3a        Match Setup 契約 3a：85/85 PASS
+PASS check_nav_safety_v23                 check_nav_safety_v23：25/25 PASS
+PASS check_safe_route_v23                 safeRoute v23 Gate：33/33 PASS
+PASS check_simulation_version_gate        simulationVersion Gate：106/106 PASS
+PASS check_stage1_split_3aB               Stage-1 Split 3a-B：75/75 PASS
+PASS check_tactic_exec_v24                check_tactic_exec_v24：19/19 PASS  (210.9 s)
+PASS check_tactical_directive_3c          Tactical Directive 3c：61/61 PASS
+PASS check_tactical_director_3c           Tactical Director 3c：97/97 PASS
+PASS check_task_arbitration_obs_v1        check_task_arbitration_obs_v1：6/6 PASS  (10.1 s)
+PASS check_tower_edge_fix_v23             check_tower_edge_fix_v23：20/20 PASS
+PASS check_tower_edge_v23                 towerEdge v23 Gate：29/29 PASS
+PASS check_v23_freeze                     PASS 3/3
+PASS check_v24_diag_sprint                check_v24_diag_sprint：6/6 PASS  (47.0 s)
+PASS npm_run_build                        - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+PASS regress                              結束率 15/15 | 平均時長 20.8分 | 平均擊殺 14.0 | 0殺場 0 | 撤退鎖死 1 | 平均hot 63% | 平均破塔 15.4/12
+PASS regress2                             節奏門檻 8/8 通過
+
+23/26 exit 0; red: check_career_golden_v21.log, check_challenge_golden_v21.log, check_match_golden_v21a.log

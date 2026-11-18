@@ -16,7 +16,7 @@ import { toEngineSpells } from "../../src/battle/moba/mobaHeroLoadout.js";
 import { toEngineItems } from "../../src/battle/moba/items/itemsEngineAdapter.js";
 import { toEngineTactic, toEngineTacticIdentity, STANDARD_OPP_TACTIC, MOBA_TACTIC_VERSION } from "../../src/platform/contracts/MobaTacticConfig.js";
 import DATA from "./preview_force_setup_v24.json";
-import { streamHashFnv } from "./preview_force_hash_v24.js";
+import { streamHashFnv, streamTrace } from "./preview_force_hash_v24.js";
 
 const KNOWN = ["adaptive.v1.2", "adaptive.v1.3"];
 function assemble(variant) {
@@ -36,6 +36,6 @@ export function forceMatch(prepared) {
   const q = new URLSearchParams(window.location.search), seed = Number(q.get("stalemateSeed"));
   if (seed !== DATA.seed) return prepared;
   const variant = KNOWN.includes(q.get("te")) ? q.get("te") : "adaptive.v1.3", r = assemble(variant);
-  window.__esmoPreviewForce = { seed, variant, engine: r.engine, expected: DATA.expected[variant], headless: () => streamHashFnv(assemble(variant).engine, 3000) };
+  window.__esmoPreviewForce = { seed, variant, engine: r.engine, expected: DATA.expected[variant], headless: () => streamHashFnv(assemble(variant).engine, 3000), trace: (rawTick) => streamTrace(assemble(variant).engine, 3000, rawTick) };
   return { ...prepared, engine: r.engine, applied: { ...prepared.applied, objectiveLayout: r.applied?.objectiveLayout ?? prepared.applied?.objectiveLayout } };
 }

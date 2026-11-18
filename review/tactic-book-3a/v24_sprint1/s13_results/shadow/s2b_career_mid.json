@@ -1,0 +1,848 @@
+{
+ "tool": "measure_s2_opportunity_v24",
+ "params": {
+  "version": "v1",
+  "everySec": 5,
+  "mergeGap": 10,
+  "hpMin": 0.6,
+  "foeNear": 12,
+  "etaMax": 25,
+  "detour": 1.17,
+  "reachR": 14,
+  "racePad": 3,
+  "rateMin": 1,
+  "value": {
+   "buff": 90,
+   "camp": 60
+  },
+  "clear": {
+   "buff": 12,
+   "camp": 8
+  }
+ },
+ "seeds": [
+  120201,
+  120203,
+  120205,
+  120207,
+  120209,
+  120211,
+  120213,
+  120215,
+  120217,
+  120219,
+  120221,
+  120223,
+  120225,
+  120227,
+  120229
+ ],
+ "arms": [
+  "s11",
+  "s12"
+ ],
+ "path": "career",
+ "cfg": "inv",
+ "summary": {
+  "s11": {
+   "sides": 30,
+   "oppPerSide": 0.53,
+   "sidesWithoutOpp": 0.733,
+   "utilisationAnyTarget": 0,
+   "utilisationSameTarget": 0,
+   "startsPerSide": 0.7,
+   "precision": 0
+  },
+  "s12": {
+   "sides": 30,
+   "oppPerSide": 0.73,
+   "sidesWithoutOpp": 0.733,
+   "utilisationAnyTarget": 0,
+   "utilisationSameTarget": 0,
+   "startsPerSide": 0.2,
+   "precision": 0
+  }
+ },
+ "rows": [
+  {
+   "seed": 120201,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1030,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 1,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120201,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 932,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120203,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1378.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 3,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120203,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1409,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 1,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120205,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1262,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 1,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120205,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1262,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 3,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120207,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 998.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120207,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 998.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120209,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1319.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 4,
+     "buffEpisodes": 3,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120209,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1319.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 4,
+     "buffEpisodes": 3,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120211,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1231.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 2,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120211,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 894,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120213,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 866.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120213,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 900,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120215,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1320,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 1,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120215,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1319.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 4,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120217,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1053.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120217,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1053.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120219,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 931,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 1,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120219,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 931,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 1,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120221,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1230,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 1,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 2,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120221,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1231,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 1,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120223,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1230.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 3,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120223,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1230.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120225,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1173.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 2,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 4,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120225,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1469,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 5,
+     "buffEpisodes": 2,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 3,
+     "buffEpisodes": 1,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120227,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1265,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 4,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120227,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1265,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120229,
+   "arm": "s11",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1220.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 1,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  },
+  {
+   "seed": 120229,
+   "arm": "s12",
+   "path": "career",
+   "cfg": "mid",
+   "duration": 1308.5,
+   "over": true,
+   "sides": {
+    "blue": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    },
+    "red": {
+     "episodes": 0,
+     "buffEpisodes": 0,
+     "takenAny": 0,
+     "takenSame": 0,
+     "starts": 0,
+     "startsInOpportunity": 0
+    }
+   }
+  }
+ ]
+}

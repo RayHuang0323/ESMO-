@@ -1,0 +1,774 @@
+{
+ "E1": {
+  "verdict": "PASS",
+  "matches": 390,
+  "unfinished": []
+ },
+ "E4": {
+  "verdict": "PASS",
+  "matches": 390,
+  "atLeast40min": [],
+  "atLeast35min": []
+ },
+ "E2": {
+  "verdict": "INCONCLUSIVE",
+  "s13": {
+   "tool": {
+    "finished": 169,
+    "injected": 169,
+    "rate": 1,
+    "ci95": [
+     0.978,
+     1
+    ]
+   },
+   "career": {
+    "finished": 53,
+    "injected": 53,
+    "rate": 1,
+    "ci95": [
+     0.932,
+     1
+    ]
+   }
+  },
+  "s12": {
+   "tool": {
+    "finished": 166,
+    "injected": 169,
+    "rate": 0.982,
+    "ci95": [
+     0.949,
+     0.994
+    ]
+   },
+   "career": {
+    "finished": 53,
+    "injected": 53,
+    "rate": 1,
+    "ci95": [
+     0.932,
+     1
+    ]
+   }
+  }
+ },
+ "E3": {
+  "verdict": "PASS",
+  "noWaveHits": 0,
+  "nexusHitTicks": 3751,
+  "matches": 222
+ },
+ "E5": {
+  "verdict": "PASS",
+  "notLatched": 387,
+  "identical": 387,
+  "different": [],
+  "latched": [
+   {
+    "key": "career|career|low|130255",
+    "onAt": {
+     "blue": 1367,
+     "red": 1577
+    },
+    "duration": 1608.5,
+    "s12Duration": 1460,
+    "winner": "red",
+    "s12Winner": "red"
+   },
+   {
+    "key": "career|career|mid|130203",
+    "onAt": {
+     "blue": null,
+     "red": 1492
+    },
+    "duration": 1519,
+    "s12Duration": 1521,
+    "winner": "blue",
+    "s12Winner": "blue"
+   },
+   {
+    "key": "career|career|mid|130223",
+    "onAt": {
+     "blue": 1341.5,
+     "red": null
+    },
+    "duration": 1375.5,
+    "s12Duration": 1413,
+    "winner": "red",
+    "s12Winner": "red"
+   }
+  ]
+ },
+ "E6": {
+  "verdict": "PASS",
+  "pairs": 390,
+  "meanDiffMin": 0.005,
+  "ci95": [
+   -0.005,
+   0.019
+  ]
+ },
+ "E7": {
+  "verdict": "INCONCLUSIVE",
+  "finished": 169,
+  "blueWins": 86,
+  "rate": 0.509,
+  "ci95": [
+   0.434,
+   0.583
+  ],
+  "byCfg": {
+   "inv": {
+    "finished": 54,
+    "blueWins": 23,
+    "rate": 0.426,
+    "ci95": [
+     0.303,
+     0.558
+    ]
+   },
+   "AB": {
+    "finished": 59,
+    "blueWins": 29,
+    "rate": 0.492,
+    "ci95": [
+     0.368,
+     0.616
+    ]
+   },
+   "BA": {
+    "finished": 56,
+    "blueWins": 34,
+    "rate": 0.607,
+    "ci95": [
+     0.476,
+     0.724
+    ]
+   }
+  }
+ },
+ "report": {
+  "off": {
+   "tool": {
+    "n": 300,
+    "notOver": 0,
+    "meanMin": 17.966,
+    "p50": 17.542,
+    "p90": 22.083,
+    "p99": 25.458,
+    "max": 26.825,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.48,
+    "towersLostPerSide": 6.613,
+    "deathsPerSide": 3.772,
+    "towerDeathsPerSide": 0.402,
+    "campsPerSide": 8.36,
+    "goldEndPerSide": 23431
+   },
+   "career": {
+    "n": 90,
+    "notOver": 0,
+    "meanMin": 17.784,
+    "p50": 17.525,
+    "p90": 22.308,
+    "p99": 28.008,
+    "max": 28.008,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.489,
+    "towersLostPerSide": 6.767,
+    "deathsPerSide": 10.544,
+    "towerDeathsPerSide": 0.511,
+    "campsPerSide": 22.383,
+    "goldEndPerSide": 27430
+   },
+   "tool_inv": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.928,
+    "p50": 17.083,
+    "p90": 22.983,
+    "p99": 26.825,
+    "max": 26.825,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.4,
+    "towersLostPerSide": 6.5,
+    "deathsPerSide": 3.89,
+    "towerDeathsPerSide": 0.36,
+    "campsPerSide": 8.475,
+    "goldEndPerSide": 23401
+   },
+   "tool_AB": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 18.22,
+    "p50": 18.058,
+    "p90": 22.058,
+    "p99": 24.308,
+    "max": 24.308,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.54,
+    "towersLostPerSide": 6.74,
+    "deathsPerSide": 3.905,
+    "towerDeathsPerSide": 0.46,
+    "campsPerSide": 8.195,
+    "goldEndPerSide": 23792
+   },
+   "tool_BA": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.749,
+    "p50": 16.725,
+    "p90": 21.808,
+    "p99": 25.792,
+    "max": 25.792,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.5,
+    "towersLostPerSide": 6.6,
+    "deathsPerSide": 3.52,
+    "towerDeathsPerSide": 0.385,
+    "campsPerSide": 8.41,
+    "goldEndPerSide": 23099
+   },
+   "career_low": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 17.928,
+    "p50": 17.858,
+    "p90": 21.283,
+    "p99": 23.042,
+    "max": 23.042,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.3,
+    "towersLostPerSide": 6.867,
+    "deathsPerSide": 10.017,
+    "towerDeathsPerSide": 0.6,
+    "campsPerSide": 22.517,
+    "goldEndPerSide": 27474
+   },
+   "career_mid": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 17.293,
+    "p50": 17.075,
+    "p90": 22.033,
+    "p99": 23.308,
+    "max": 23.308,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.5,
+    "towersLostPerSide": 6.517,
+    "deathsPerSide": 9.867,
+    "towerDeathsPerSide": 0.45,
+    "campsPerSide": 22.1,
+    "goldEndPerSide": 26714
+   },
+   "career_high": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 18.13,
+    "p50": 17.633,
+    "p90": 22.533,
+    "p99": 28.008,
+    "max": 28.008,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.667,
+    "towersLostPerSide": 6.917,
+    "deathsPerSide": 11.75,
+    "towerDeathsPerSide": 0.483,
+    "campsPerSide": 22.533,
+    "goldEndPerSide": 28100
+   }
+  },
+  "s12": {
+   "tool": {
+    "n": 300,
+    "notOver": 0,
+    "meanMin": 17.651,
+    "p50": 17.117,
+    "p90": 21.6,
+    "p99": 25.017,
+    "max": 27.525,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.507,
+    "towersLostPerSide": 6.478,
+    "deathsPerSide": 3.71,
+    "towerDeathsPerSide": 0.348,
+    "campsPerSide": 7.598,
+    "goldEndPerSide": 23022
+   },
+   "career": {
+    "n": 90,
+    "notOver": 0,
+    "meanMin": 17.711,
+    "p50": 17.1,
+    "p90": 21.525,
+    "p99": 25.35,
+    "max": 25.35,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.5,
+    "towersLostPerSide": 6.906,
+    "deathsPerSide": 10.678,
+    "towerDeathsPerSide": 0.517,
+    "campsPerSide": 22.35,
+    "goldEndPerSide": 27492
+   },
+   "tool_inv": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.794,
+    "p50": 17.542,
+    "p90": 21.992,
+    "p99": 27.525,
+    "max": 27.525,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.53,
+    "towersLostPerSide": 6.45,
+    "deathsPerSide": 3.97,
+    "towerDeathsPerSide": 0.425,
+    "campsPerSide": 7.7,
+    "goldEndPerSide": 23263
+   },
+   "tool_AB": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.557,
+    "p50": 16.708,
+    "p90": 21.525,
+    "p99": 25.033,
+    "max": 25.033,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.54,
+    "towersLostPerSide": 6.44,
+    "deathsPerSide": 3.495,
+    "towerDeathsPerSide": 0.31,
+    "campsPerSide": 7.375,
+    "goldEndPerSide": 22814
+   },
+   "tool_BA": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.602,
+    "p50": 17.192,
+    "p90": 21.542,
+    "p99": 25.017,
+    "max": 25.017,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.45,
+    "towersLostPerSide": 6.545,
+    "deathsPerSide": 3.665,
+    "towerDeathsPerSide": 0.31,
+    "campsPerSide": 7.72,
+    "goldEndPerSide": 22989
+   },
+   "career_low": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 17.509,
+    "p50": 16.908,
+    "p90": 21.008,
+    "p99": 24.333,
+    "max": 24.333,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.367,
+    "towersLostPerSide": 6.817,
+    "deathsPerSide": 9.85,
+    "towerDeathsPerSide": 0.65,
+    "campsPerSide": 22.55,
+    "goldEndPerSide": 27128
+   },
+   "career_mid": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 18.372,
+    "p50": 18.9,
+    "p90": 22.042,
+    "p99": 25.35,
+    "max": 25.35,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.467,
+    "towersLostPerSide": 7.1,
+    "deathsPerSide": 11.917,
+    "towerDeathsPerSide": 0.517,
+    "campsPerSide": 22.517,
+    "goldEndPerSide": 28667
+   },
+   "career_high": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 17.253,
+    "p50": 17.1,
+    "p90": 21.492,
+    "p99": 22.025,
+    "max": 22.025,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.667,
+    "towersLostPerSide": 6.8,
+    "deathsPerSide": 10.267,
+    "towerDeathsPerSide": 0.383,
+    "campsPerSide": 21.983,
+    "goldEndPerSide": 26682
+   }
+  },
+  "adaptive": {
+   "tool": {
+    "n": 300,
+    "notOver": 0,
+    "meanMin": 17.651,
+    "p50": 17.117,
+    "p90": 21.6,
+    "p99": 25.017,
+    "max": 27.525,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.507,
+    "towersLostPerSide": 6.478,
+    "deathsPerSide": 3.71,
+    "towerDeathsPerSide": 0.348,
+    "campsPerSide": 7.598,
+    "goldEndPerSide": 23022
+   },
+   "career": {
+    "n": 90,
+    "notOver": 0,
+    "meanMin": 17.731,
+    "p50": 17.1,
+    "p90": 21.525,
+    "p99": 26.808,
+    "max": 26.808,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.5,
+    "towersLostPerSide": 6.906,
+    "deathsPerSide": 10.656,
+    "towerDeathsPerSide": 0.517,
+    "campsPerSide": 22.356,
+    "goldEndPerSide": 27513
+   },
+   "tool_inv": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.794,
+    "p50": 17.542,
+    "p90": 21.992,
+    "p99": 27.525,
+    "max": 27.525,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.53,
+    "towersLostPerSide": 6.45,
+    "deathsPerSide": 3.97,
+    "towerDeathsPerSide": 0.425,
+    "campsPerSide": 7.7,
+    "goldEndPerSide": 23263
+   },
+   "tool_AB": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.557,
+    "p50": 16.708,
+    "p90": 21.525,
+    "p99": 25.033,
+    "max": 25.033,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.54,
+    "towersLostPerSide": 6.44,
+    "deathsPerSide": 3.495,
+    "towerDeathsPerSide": 0.31,
+    "campsPerSide": 7.375,
+    "goldEndPerSide": 22814
+   },
+   "tool_BA": {
+    "n": 100,
+    "notOver": 0,
+    "meanMin": 17.602,
+    "p50": 17.192,
+    "p90": 21.542,
+    "p99": 25.017,
+    "max": 25.017,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.45,
+    "towersLostPerSide": 6.545,
+    "deathsPerSide": 3.665,
+    "towerDeathsPerSide": 0.31,
+    "campsPerSide": 7.72,
+    "goldEndPerSide": 22989
+   },
+   "career_low": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 17.591,
+    "p50": 16.908,
+    "p90": 21.008,
+    "p99": 26.808,
+    "max": 26.808,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.367,
+    "towersLostPerSide": 6.833,
+    "deathsPerSide": 9.9,
+    "towerDeathsPerSide": 0.65,
+    "campsPerSide": 22.6,
+    "goldEndPerSide": 27254
+   },
+   "career_mid": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 18.35,
+    "p50": 18.9,
+    "p90": 22.042,
+    "p99": 25.317,
+    "max": 25.317,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.467,
+    "towersLostPerSide": 7.083,
+    "deathsPerSide": 11.8,
+    "towerDeathsPerSide": 0.517,
+    "campsPerSide": 22.483,
+    "goldEndPerSide": 28603
+   },
+   "career_high": {
+    "n": 30,
+    "notOver": 0,
+    "meanMin": 17.253,
+    "p50": 17.1,
+    "p90": 21.492,
+    "p99": 22.025,
+    "max": 22.025,
+    "atLeast30": 0,
+    "atLeast35": 0,
+    "blueWin": 0.667,
+    "towersLostPerSide": 6.8,
+    "deathsPerSide": 10.267,
+    "towerDeathsPerSide": 0.383,
+    "campsPerSide": 21.983,
+    "goldEndPerSide": 26682
+   }
+  }
+ },
+ "stressReport": {
+  "s12_inv": {
+   "finished": 53,
+   "injected": 54,
+   "rate": 0.981,
+   "ci95": [
+    0.902,
+    0.997
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.758,
+    "p50": 6.333,
+    "p90": 17.808,
+    "max": 25.808
+   },
+   "blueWinRate": 0.396,
+   "noWaveHits": 0
+  },
+  "s12_AB": {
+   "finished": 57,
+   "injected": 59,
+   "rate": 0.966,
+   "ci95": [
+    0.885,
+    0.991
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.758,
+    "p50": 7.308,
+    "p90": 22.317,
+    "max": 32.808
+   },
+   "blueWinRate": 0.386,
+   "noWaveHits": 0
+  },
+  "s12_BA": {
+   "finished": 56,
+   "injected": 56,
+   "rate": 1,
+   "ci95": [
+    0.936,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.4,
+    "p50": 3.85,
+    "p90": 18.3,
+    "max": 33.283
+   },
+   "blueWinRate": 0.571,
+   "noWaveHits": 0
+  },
+  "s12_low": {
+   "finished": 19,
+   "injected": 19,
+   "rate": 1,
+   "ci95": [
+    0.832,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.442,
+    "p50": 5.9,
+    "p90": 9.325,
+    "max": 16.292
+   },
+   "blueWinRate": 0.368,
+   "noWaveHits": 0
+  },
+  "s12_mid": {
+   "finished": 18,
+   "injected": 18,
+   "rate": 1,
+   "ci95": [
+    0.824,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.842,
+    "p50": 7.342,
+    "p90": 13.325,
+    "max": 19.333
+   },
+   "blueWinRate": 0.333,
+   "noWaveHits": 0
+  },
+  "s12_high": {
+   "finished": 16,
+   "injected": 16,
+   "rate": 1,
+   "ci95": [
+    0.806,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.567,
+    "p50": 5.817,
+    "p90": 16.325,
+    "max": 23.017
+   },
+   "blueWinRate": 0.625,
+   "noWaveHits": 0
+  },
+  "s13_inv": {
+   "finished": 54,
+   "injected": 54,
+   "rate": 1,
+   "ci95": [
+    0.934,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.758,
+    "p50": 4.842,
+    "p90": 6.475,
+    "max": 10.042
+   },
+   "blueWinRate": 0.426,
+   "noWaveHits": 0
+  },
+  "s13_AB": {
+   "finished": 59,
+   "injected": 59,
+   "rate": 1,
+   "ci95": [
+    0.939,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.758,
+    "p50": 5.308,
+    "p90": 6.967,
+    "max": 10.292
+   },
+   "blueWinRate": 0.492,
+   "noWaveHits": 0
+  },
+  "s13_BA": {
+   "finished": 56,
+   "injected": 56,
+   "rate": 1,
+   "ci95": [
+    0.936,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.4,
+    "p50": 3.85,
+    "p90": 6.8,
+    "max": 8.533
+   },
+   "blueWinRate": 0.607,
+   "noWaveHits": 0
+  },
+  "s13_low": {
+   "finished": 19,
+   "injected": 19,
+   "rate": 1,
+   "ci95": [
+    0.832,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.442,
+    "p50": 4.867,
+    "p90": 6.825,
+    "max": 6.833
+   },
+   "blueWinRate": 0.368,
+   "noWaveHits": 0
+  },
+  "s13_mid": {
+   "finished": 18,
+   "injected": 18,
+   "rate": 1,
+   "ci95": [
+    0.824,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.842,
+    "p50": 4.867,
+    "p90": 6.05,
+    "max": 6.308
+   },
+   "blueWinRate": 0.222,
+   "noWaveHits": 0
+  },
+  "s13_high": {
+   "finished": 16,
+   "injected": 16,
+   "rate": 1,
+   "ci95": [
+    0.806,
+    1
+   ],
+   "minutesAfterInjection": {
+    "p10": 0.567,
+    "p50": 4.867,
+    "p90": 6.567,
+    "max": 6.817
+   },
+   "blueWinRate": 0.688,
+   "noWaveHits": 0
+  }
+ },
+ "stressNotInjected": 336
+}

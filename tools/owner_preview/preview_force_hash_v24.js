@@ -11,3 +11,19 @@ export function streamHashFnv(e, capSec = 3000) {
   feed(`END|${e.winner ?? "none"}|${e.t}`);
   return { ticks, over: !!e.over, winner: e.winner ?? null, endT: e.t, hash: (a >>> 0).toString(16).padStart(8, "0") + (b >>> 0).toString(16).padStart(8, "0") };
 }
+
+//  Diagnostic: cumulative hash per field class, sampled every 10 ticks, plus the raw player state at one chosen tick. Used to locate where two runtimes first differ.
+export function streamTrace(e, capSec = 3000, rawTick = -1) {
+  const mk = () => ({ a: 0x811c9dc5 });
+  const H = { time: mk(), pos: mk(), hp: mk(), dead: mk(), state: mk(), gold: mk() };
+  const feed = (h, s) => { for (let i = 0; i < s.length; i++) h.a = Math.imul(h.a ^ s.charCodeAt(i), 0x01000193); };
+  const points = []; let ticks = 0, raw = null;
+  while (!e.over && e.t < capSec) {
+    e.tick(0.5); ticks++;
+    feed(H.time, String(e.t));
+    for (const p of e.players) { feed(H.pos, `${p.pos.x},${p.pos.y};`); feed(H.hp, `${p.hp};`); feed(H.dead, p.dead ? "1" : "0"); feed(H.state, `${p.state ?? ""};`); feed(H.gold, `${p.gold ?? ""};`); }
+    if (ticks === rawTick) raw = e.players.map((p) => ({ id: p.id, x: p.pos.x, y: p.pos.y, hp: p.hp, dead: !!p.dead, state: p.state ?? null, gold: p.gold ?? null }));
+    if (ticks % 10 === 0) points.push([ticks, ...Object.values(H).map((h) => h.a >>> 0)]);
+  }
+  return { ticks, fields: Object.keys(H), points, raw };
+}

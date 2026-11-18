@@ -1,0 +1,56 @@
+==== view v13 ====
+PASS	S1 有入侵意圖的每一邊都有評估紀錄	690/690
+FAIL	S2 有意圖的邊×場中，至少一次帶隊者到營地 ≥ 0.8	320/690 = 0.464
+PASS	S3 有入侵出發時，對方至少觸發一次回防 ≥ 0.9	421/421 = 1
+PASS	S4 入侵期間有英雄接觸的對局比例 > 0	115/390 = 0.295
+PASS	S5 安全：被塔擊殺配對差上界 ≤ +0.3、陣亡配對差上界 ≤ +1.0	被塔擊殺 0.427→0.387 Δ-0.04 [-0.106,0.026]；陣亡 5.335→5.313 Δ-0.022 [-0.434,0.391]
+PASS	S6 野怪收益：（自家營＋敵方營）配對差下界 ≥ −1.0	Δ-0.592 [-0.87,-0.315]（自家營 Δ-0.645、敵方營 Δ0.053）
+REPORT	S7 被拆的塔（只報）	6.649→6.577 Δ-0.072 [-0.325,0.181]
+INCONCLUSIVE	S8 入侵方勝率配對差（只報；區間跨出 ±0.05 ⇒ INCONCLUSIVE）	n=290 Δ0.021 [-0.06,0.101]
+INCONCLUSIVE	S10a 8b 藍方勝率 DiD（±0.08）	seeds=100 off 0.52 → adaptive 0.495；DiD -0.025 [-0.138,0.088]
+PASS	S10b 8b 藍方金錢差 DiD（±800）	DiD -17.387 [-473.712,438.938]
+FAIL	S11 威脅模型 s05：|偏差| ≤ 0.5、誤差 ≤ 0.75、涵蓋 ≥ 0.6	n=1790 偏差 0.43 誤差 0.559 涵蓋 0.548（s05reach 偏差 1.569）
+==== view s12 ====
+PASS	S1 有入侵意圖的每一邊都有評估紀錄	690/690
+FAIL	S2 有意圖的邊×場中，至少一次帶隊者到營地 ≥ 0.8	319/690 = 0.462
+PASS	S3 有入侵出發時，對方至少觸發一次回防 ≥ 0.9	420/420 = 1
+PASS	S4 入侵期間有英雄接觸的對局比例 > 0	115/390 = 0.295
+PASS	S5 安全：被塔擊殺配對差上界 ≤ +0.3、陣亡配對差上界 ≤ +1.0	被塔擊殺 0.427→0.387 Δ-0.04 [-0.106,0.026]；陣亡 5.335→5.318 Δ-0.017 [-0.428,0.395]
+PASS	S6 野怪收益：（自家營＋敵方營）配對差下界 ≥ −1.0	Δ-0.594 [-0.87,-0.317]（自家營 Δ-0.645、敵方營 Δ0.051）
+REPORT	S7 被拆的塔（只報）	6.649→6.577 Δ-0.072 [-0.325,0.181]
+INCONCLUSIVE	S8 入侵方勝率配對差（只報；區間跨出 ±0.05 ⇒ INCONCLUSIVE）	n=290 Δ0.021 [-0.06,0.101]
+INCONCLUSIVE	S10a 8b 藍方勝率 DiD（±0.08）	seeds=100 off 0.52 → adaptive 0.495；DiD -0.025 [-0.138,0.088]
+PASS	S10b 8b 藍方金錢差 DiD（±800）	DiD -17.387 [-473.712,438.938]
+FAIL	S11 威脅模型 s05：|偏差| ≤ 0.5、誤差 ≤ 0.75、涵蓋 ≥ 0.6	n=1789 偏差 0.429 誤差 0.559 涵蓋 0.548（s05reach 偏差 1.569）
+==== compare (all arms, main batches) ====
+== s12  S2 319/690=0.462  starts/side 0.965  arrival/starts 0.637  steal 0.583  duo 0.056 (629/37)  partnerArr 0.457
+   deaths Δ-0.017 [-0.428,0.394]  towerDeaths Δ-0.04 [-0.106,0.026]  camps Δ-0.594 [-0.87,-0.317] (own Δ-0.645, enemy Δ0.051)  dur Δ-0.259min  gold Δ-299.907
+   ends {"stolen":388,"retreat_threat":98,"objective_call":50,"retreat_hp":30,"lost_race":21,"stuck":18,"retreat":17,"outnumbered":13,"partner_lost":5,"killed":3}
+   declined {"busy":58786,"own_farm":42444,"too_far":21302,"cooldown":11434,"no_target":4140,"hp":2631,"in_progress":2123,"objective_soon":1402,"objective_intent":768,"no_party":546,"objective_window":279,"threat":7,"no_exit":3}
+   defend {"triggersPerSide":8.122,"startsPerSide":3.828,"arrivedPerSide":0.983}  earlyRetreats 146  restart {"n":53,"min":112.5,"p50":259.5}
+== adaptive  S2 320/690=0.464  starts/side 0.967  arrival/starts 0.637  steal 0.583  duo 0.055 (630/37)  partnerArr 0.457
+   deaths Δ-0.022 [-0.434,0.39]  towerDeaths Δ-0.04 [-0.106,0.026]  camps Δ-0.592 [-0.87,-0.315] (own Δ-0.645, enemy Δ0.053)  dur Δ-0.255min  gold Δ-295.157
+   ends {"stolen":389,"retreat_threat":98,"objective_call":50,"retreat_hp":30,"lost_race":21,"stuck":18,"retreat":17,"outnumbered":13,"partner_lost":5,"killed":3}
+   declined {"busy":58798,"own_farm":42446,"too_far":21305,"cooldown":11435,"no_target":4140,"hp":2631,"in_progress":2126,"objective_soon":1402,"objective_intent":768,"no_party":546,"objective_window":279,"threat":7,"no_exit":3}
+   defend {"triggersPerSide":8.124,"startsPerSide":3.832,"arrivedPerSide":0.985}  earlyRetreats 146  restart {"n":53,"min":112.5,"p50":259.5}
+==== compare (postures: pc=conservative pa=auto pg=aggressive pl=allin; tool inv, same seeds) ====
+== pc  S2 10/60=0.167  starts/side 0.283  arrival/starts 0.647  steal 0.588  duo 0 (17/0)  partnerArr null
+   deaths Δ-0.35 [-1.714,1.014]  towerDeaths Δ0 [-0.219,0.219]  camps Δ0.083 [-0.744,0.911] (own Δ0.2, enemy Δ-0.117)  dur Δ-0.61min  gold Δ-865.613
+   ends {"stolen":10,"retreat_threat":5}
+   declined {"too_far":5825,"busy":5150,"hp":497,"cooldown":430,"no_target":360,"own_farm":233,"in_progress":47,"objective_soon":33,"objective_intent":12,"no_party":9,"objective_window":9}
+   defend {"triggersPerSide":8.55,"startsPerSide":4.1,"arrivedPerSide":1.233}  earlyRetreats 5  restart null
+== pg  S2 17/60=0.283  starts/side 0.517  arrival/starts 0.613  steal 0.613  duo 0.129 (27/4)  partnerArr 0
+   deaths Δ-0.483 [-1.845,0.878]  towerDeaths Δ-0.017 [-0.238,0.204]  camps Δ-0.217 [-0.977,0.543] (own Δ-0.2, enemy Δ-0.017)  dur Δ-0.676min  gold Δ-964.957
+   ends {"stolen":19,"retreat_threat":3,"retreat":2,"objective_call":2,"partner_lost":1,"outnumbered":1,"retreat_hp":1}
+   declined {"own_farm":5315,"busy":5225,"too_far":613,"cooldown":362,"no_target":360,"objective_soon":229,"no_party":111,"hp":111,"objective_intent":109,"in_progress":90,"objective_window":24}
+   defend {"triggersPerSide":8.483,"startsPerSide":3.983,"arrivedPerSide":1.1}  earlyRetreats 6  restart {"n":1,"min":205,"p50":205}
+== pl  S2 18/60=0.3  starts/side 0.55  arrival/starts 0.606  steal 0.606  duo 0.091 (30/3)  partnerArr 0
+   deaths Δ-0.117 [-1.791,1.557]  towerDeaths Δ0 [-0.213,0.213]  camps Δ-0.033 [-0.829,0.763] (own Δ-0.033, enemy Δ0)  dur Δ-0.474min  gold Δ-641.967
+   ends {"stolen":20,"retreat":4,"retreat_threat":4,"objective_call":2,"outnumbered":1}
+   declined {"own_farm":5575,"busy":5228,"cooldown":547,"no_target":360,"too_far":351,"objective_soon":225,"no_party":123,"objective_intent":108,"in_progress":99,"hp":48,"objective_window":29}
+   defend {"triggersPerSide":8.467,"startsPerSide":4.017,"arrivedPerSide":1.1}  earlyRetreats 5  restart {"n":2,"min":205,"p50":511.5}
+== pa  S2 27/60=0.45  starts/side 0.8  arrival/starts 0.625  steal 0.563  duo 0.021 (47/1)  partnerArr 0
+   deaths Δ-0.433 [-1.767,0.9]  towerDeaths Δ0.017 [-0.194,0.228]  camps Δ-0.217 [-1.078,0.645] (own Δ-0.367, enemy Δ0.15)  dur Δ-0.829min  gold Δ-1140.83
+   ends {"stolen":27,"retreat_threat":12,"objective_call":4,"retreat_hp":2,"lost_race":1,"outnumbered":1}
+   declined {"busy":4990,"own_farm":4078,"too_far":1500,"cooldown":834,"no_target":360,"hp":242,"in_progress":138,"objective_soon":134,"objective_intent":80,"no_party":48,"objective_window":14}
+   defend {"triggersPerSide":8.5,"startsPerSide":4,"arrivedPerSide":1.167}  earlyRetreats 15  restart {"n":2,"min":145.5,"p50":389}

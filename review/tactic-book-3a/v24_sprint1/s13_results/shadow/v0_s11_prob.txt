@@ -1,0 +1,18 @@
+records: train 919, holdout 923, career 48, s11-policy 2161; draft thresholds {"bssMin":0.05,"eceMax":0.05,"maxGapMax":0.1,"hrmMax":0.2}
+
+— Candidate model (trained on tool seeds 120001-120099, adaptive.v1.2) —
+holdout tool 120101-120199                   n=  923 base=0.099 Brier=0.088 BSS=0.007 [-0.015, 0.029] ECE=0.026 [0.018, 0.047] maxGap=0.045 | highRiskMiss=1.000 (n=1) [1.000, 1.000] | P(>=2 event) BSS=-0.501
+transfer to career path                      n=   48 base=0.250 Brier=0.211 BSS=-0.128 [-0.413, 0.016] ECE=0.162 [0.112, 0.356] maxGap=0.000 | highRiskMiss=n/a (n=0) [n/a, n/a] | P(>=2 event) BSS=-0.032
+policy shift: applied to adaptive.v1.1 records n= 2161 base=0.103 Brier=0.093 BSS=-0.005 [-0.016, 0.007] ECE=0.033 [0.020, 0.043] maxGap=0.100 | highRiskMiss=0.667 (n=3) [0.000, 1.000] | P(>=2 event) BSS=-1.186
+
+— Reference predictors on the same holdout —
+constant base rate                           n=  923 base=0.099 Brier=0.089 BSS=-0.000 [-0.006, -0.000] ECE=0.036 [0.015, 0.040] maxGap=0.079 | highRiskMiss=1.000 (n=1) [1.000, 1.000] | P(>=2 event) BSS=-0.582
+integer s12 as probability (pred>=1)         n=  923 base=0.099 Brier=0.555 BSS=-5.242 [-6.860, -4.117] ECE=0.548 [0.505, 0.586] maxGap=0.935 | highRiskMiss=1.000 (n=1) [1.000, 1.000] | P(>=2 event) BSS=-47.763
+integer s05-reach as probability             n=  923 base=0.099 Brier=0.836 BSS=-8.411 [-10.675, -6.761] ECE=0.828 [0.802, 0.851] maxGap=0.978 | highRiskMiss=0.000 (n=1) [0.000, 0.000] | P(>=2 event) BSS=-76.653
+
+— Detection power of the draft thresholds (share of bootstrap resamples that would PASS) —
+  candidate model                          pass rate 0.000
+  constant base rate (no skill)            pass rate 0.000
+  under-confident model (risk halved)      pass rate 0.000
+  over-confident model (risk x1.8)         pass rate 0.000
+  integer s12                              pass rate 0.000
