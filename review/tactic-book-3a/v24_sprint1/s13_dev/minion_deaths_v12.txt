@@ -1,0 +1,40 @@
+seed 120159 inv adaptive: over=false winner=null end=50.0m allLaneTowersDown=25.1m firstWaveAtNexus b/r=never/never
+hero-time after phase start: rejectedAtNexus 2% | siege-state without own wave nearby 29% | within 10u of own wave 17% | other 53%
+  death depth <0.50      n=  411  minion/structure 50%  hero:圍攻 27%  hero:圍攻主堡 19%  hero:避塔 2%  hero:跟兵線 1%  hero:撤退 0%
+  death depth 0.50-0.70  n=  759  minion/structure 84%  hero:圍攻主堡 8%  hero:圍攻 8%  hero:避塔 1%
+  death depth 0.70-0.85  n=  185  minion/structure 76%  hero:圍攻 12%  hero:圍攻主堡 11%  hero:避塔 1%
+  death depth 0.85-0.95  n=   13  minion/structure 54%  hero:圍攻主堡 46%
+  death depth >=0.95     n=    0  
+
+seed 120159 inv s11: over=true winner=blue end=20.5m allLaneTowersDown=- firstWaveAtNexus b/r=never/never
+hero-time after phase start: rejectedAtNexus 0% | siege-state without own wave nearby 0% | within 10u of own wave 0% | other 0%
+  death depth <0.50      n=    0  
+  death depth 0.50-0.70  n=    0  
+  death depth 0.70-0.85  n=    0  
+  death depth 0.85-0.95  n=    0  
+  death depth >=0.95     n=    0  
+
+seed 120159 inv off: over=true winner=blue end=17.4m allLaneTowersDown=- firstWaveAtNexus b/r=never/never
+hero-time after phase start: rejectedAtNexus 0% | siege-state without own wave nearby 0% | within 10u of own wave 0% | other 0%
+  death depth <0.50      n=    0  
+  death depth 0.50-0.70  n=    0  
+  death depth 0.70-0.85  n=    0  
+  death depth 0.85-0.95  n=    0  
+  death depth >=0.95     n=    0  
+
+seed 120161 inv adaptive: over=true winner=red end=21.6m allLaneTowersDown=- firstWaveAtNexus b/r=never/never
+hero-time after phase start: rejectedAtNexus 0% | siege-state without own wave nearby 0% | within 10u of own wave 0% | other 0%
+  death depth <0.50      n=    0  
+  death depth 0.50-0.70  n=    0  
+  death depth 0.70-0.85  n=    0  
+  death depth 0.85-0.95  n=    0  
+  death depth >=0.95     n=    0  
+
+seed 120163 inv adaptive: over=true winner=blue end=17.8m allLaneTowersDown=- firstWaveAtNexus b/r=never/never
+hero-time after phase start: rejectedAtNexus 0% | siege-state without own wave nearby 0% | within 10u of own wave 0% | other 0%
+  death depth <0.50      n=    0  
+  death depth 0.50-0.70  n=    0  
+  death depth 0.70-0.85  n=    0  
+  death depth 0.85-0.95  n=    0  
+  death depth >=0.95     n=    0  
+

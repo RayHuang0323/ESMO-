@@ -1,0 +1,91 @@
+t=21m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 121
+   b wave(avg#@maxDepth) t:9.6@0.58 m:7.2@0.47 b:11.7@0.57 | heroMinionDmg 0 | nearOwnWave 8% pastMid 0% | 對線 20% 避塔 15% 攻門牙塔 15% 打野 11% 回城 9%
+   r wave(avg#@maxDepth) t:14.1@0.76 m:11.1@0.66 b:13.4@0.67 | heroMinionDmg 654 | nearOwnWave 8% pastMid 1% | 避塔 15% 圍攻主堡 15% 打野 14% 回城中 11% 對線 10%
+t=22m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.7@0.61 m:8.4@0.48 b:14.1@0.61 | heroMinionDmg 2658 | nearOwnWave 8% pastMid 0% | 圍攻 34% 團戰! 19% 避塔 14% 撤退 7% 回城中 7%
+   r wave(avg#@maxDepth) t:13.3@0.68 m:8.6@0.66 b:14.0@0.68 | heroMinionDmg 1263 | nearOwnWave 19% pastMid 0% | 圍攻 35% 避塔 17% 圍攻主堡 15% 撤退 14% 回城中 8%
+t=23m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:14.1@0.78 m:3.9@0.38 b:14.2@0.78 | heroMinionDmg 3679 | nearOwnWave 0% pastMid 0% | 攻門牙塔 26% 打野 16% 團戰! 13% 避塔 10% 推進 7%
+   r wave(avg#@maxDepth) t:11.5@0.75 m:8.7@0.79 b:13.4@0.77 | heroMinionDmg 5085 | nearOwnWave 16% pastMid 6% | 圍攻 62% 避塔 21% 回城 7% 回城中 5% 撤退 4%
+t=24m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.7@0.93 m:6.7@0.54 b:12.2@0.84 | heroMinionDmg 3402 | nearOwnWave 14% pastMid 0% | 圍攻 35% 團戰! 18% 撤退 16% 回城中 14% 回城 9%
+   r wave(avg#@maxDepth) t:10.4@0.66 m:8.5@0.75 b:12.0@0.67 | heroMinionDmg 767 | nearOwnWave 9% pastMid 0% | 圍攻主堡 21% 打野 18% 避塔 17% 團戰! 14% 對線 8%
+t=25m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.6@0.76 m:7.5@0.49 b:14.3@0.76 | heroMinionDmg 0 | nearOwnWave 7% pastMid 0% | 團戰! 29% 圍攻 14% 避塔 13% 打野 10% 圍攻主堡 8%
+   r wave(avg#@maxDepth) t:13.3@0.66 m:10.8@0.60 b:13.5@0.67 | heroMinionDmg 1236 | nearOwnWave 11% pastMid 6% | 圍攻主堡 35% 避塔 21% 圍攻 9% 對線 8% 團戰! 7%
+t=26m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:14.0@0.76 m:5.2@0.39 b:13.9@0.78 | heroMinionDmg 4078 | nearOwnWave 2% pastMid 0% | 避塔 22% 打野 18% 圍攻主堡 15% 撤退 11% 圍攻 9%
+   r wave(avg#@maxDepth) t:11.2@0.67 m:8.9@0.84 b:11.1@0.58 | heroMinionDmg 4087 | nearOwnWave 2% pastMid 2% | 避塔 30% 圍攻 23% 回城 14% 跟兵線 11% 圍攻主堡 10%
+t=27m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.7@0.76 m:9.2@0.58 b:13.1@0.84 | heroMinionDmg 6241 | nearOwnWave 11% pastMid 0% | 圍攻主堡 28% 團戰! 18% 打野 13% 避塔 11% 回城中 11%
+   r wave(avg#@maxDepth) t:13.8@0.67 m:12.2@0.84 b:13.0@0.61 | heroMinionDmg 6419 | nearOwnWave 16% pastMid 2% | 圍攻 35% 團戰! 20% 避塔 13% 撤退 8% 回城中 8%
+t=28m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.5@0.68 m:4.8@0.73 b:12.6@0.76 | heroMinionDmg 9155 | nearOwnWave 3% pastMid 0% | 圍攻主堡 21% 避塔 19% 圍攻 18% 打野 15% 團戰! 14%
+   r wave(avg#@maxDepth) t:13.2@0.76 m:9.8@0.84 b:13.3@0.83 | heroMinionDmg 5657 | nearOwnWave 12% pastMid 4% | 圍攻 33% 避塔 25% 撤退 14% 回城 11% 回城中 9%
+t=29m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:14.4@0.76 m:9.8@0.71 b:13.8@0.76 | heroMinionDmg 4929 | nearOwnWave 16% pastMid 0% | 圍攻主堡 41% 打野 16% 避塔 12% 撤退 11% 回城中 8%
+   r wave(avg#@maxDepth) t:13.1@0.67 m:9.3@0.68 b:13.3@0.67 | heroMinionDmg 5432 | nearOwnWave 23% pastMid 0% | 圍攻 31% 圍攻主堡 20% 避塔 19% 回城中 6% 打野 5%
+t=30m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:11.4@0.76 m:13.6@0.81 b:13.4@0.76 | heroMinionDmg 8015 | nearOwnWave 13% pastMid 7% | 圍攻 30% 避塔 28% 撤退 16% 回城中 12% 圍攻主堡 9%
+   r wave(avg#@maxDepth) t:13.1@0.75 m:5.2@0.62 b:13.3@0.66 | heroMinionDmg 4532 | nearOwnWave 3% pastMid 0% | 圍攻主堡 24% 團戰! 16% 打野 15% 避塔 10% 撤退 9%
+t=31m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.9@0.67 m:6.5@0.84 b:11.1@0.67 | heroMinionDmg 0 | nearOwnWave 17% pastMid 5% | 撤退 38% 圍攻主堡 16% 回城中 15% 回城 10% 避塔 6%
+   r wave(avg#@maxDepth) t:13.1@0.76 m:9.3@0.58 b:13.2@0.75 | heroMinionDmg 9694 | nearOwnWave 5% pastMid 0% | 圍攻 35% 避塔 23% 團戰! 14% 撤退 7% 跟兵線 7%
+t=32m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.9@0.75 m:9.0@0.81 b:13.1@0.76 | heroMinionDmg 5252 | nearOwnWave 12% pastMid 0% | 避塔 30% 圍攻 26% 團戰! 25% 撤退 8% 回城 4%
+   r wave(avg#@maxDepth) t:12.5@0.67 m:12.5@0.74 b:12.6@0.77 | heroMinionDmg 3103 | nearOwnWave 18% pastMid 5% | 圍攻主堡 25% 團戰! 20% 避塔 15% 撤退 14% 回城中 8%
+t=33m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.3@0.75 m:9.9@0.61 b:14.0@0.75 | heroMinionDmg 7765 | nearOwnWave 22% pastMid 0% | 避塔 29% 圍攻 28% 回城中 14% 回城 10% 撤退 8%
+   r wave(avg#@maxDepth) t:14.4@0.75 m:13.1@0.72 b:13.2@0.67 | heroMinionDmg 4052 | nearOwnWave 20% pastMid 3% | 圍攻主堡 28% 避塔 25% 打野 15% 回城中 10% 團戰! 7%
+t=34m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.1@0.58 m:13.3@0.81 b:12.5@0.67 | heroMinionDmg 12786 | nearOwnWave 15% pastMid 7% | 圍攻主堡 34% 避塔 29% 打野 14% 撤退 9% 回城 5%
+   r wave(avg#@maxDepth) t:13.1@0.84 m:5.2@0.70 b:13.8@0.75 | heroMinionDmg 10593 | nearOwnWave 4% pastMid 0% | 團戰! 26% 圍攻 22% 避塔 21% 圍攻主堡 15% 回城 6%
+t=35m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.6@0.66 m:7.5@0.85 b:11.3@0.50 | heroMinionDmg 1262 | nearOwnWave 12% pastMid 2% | 避塔 26% 圍攻 17% 撤退 17% 圍攻主堡 11% 入侵 10%
+   r wave(avg#@maxDepth) t:12.9@0.68 m:8.3@0.58 b:13.8@0.77 | heroMinionDmg 6863 | nearOwnWave 10% pastMid 0% | 避塔 35% 圍攻 23% 打野 16% 回城 7% 回城中 7%
+t=36m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:14.3@0.75 m:11.0@0.66 b:13.5@0.66 | heroMinionDmg 11493 | nearOwnWave 18% pastMid 1% | 圍攻 29% 避塔 19% 圍攻主堡 18% 撤退 13% 打野 8%
+   r wave(avg#@maxDepth) t:13.6@0.75 m:7.8@0.61 b:12.4@0.75 | heroMinionDmg 9352 | nearOwnWave 26% pastMid 1% | 圍攻 54% 避塔 29% 圍攻主堡 4% 打野 4% 回城中 3%
+t=37m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.9@0.84 m:5.0@0.85 b:13.5@0.76 | heroMinionDmg 4061 | nearOwnWave 9% pastMid 0% | 圍攻主堡 23% 打野 20% 避塔 19% 追擊 13% 團戰! 11%
+   r wave(avg#@maxDepth) t:12.5@0.76 m:13.7@0.85 b:13.6@0.61 | heroMinionDmg 8711 | nearOwnWave 13% pastMid 7% | 圍攻 39% 撤退 25% 避塔 11% 回城中 10% 團戰! 6%
+t=38m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.4@0.59 m:12.4@0.81 b:11.9@0.67 | heroMinionDmg 9336 | nearOwnWave 10% pastMid 0% | 團戰! 30% 圍攻主堡 25% 回城中 14% 撤退 10% 避塔 7%
+   r wave(avg#@maxDepth) t:14.2@0.75 m:8.7@0.62 b:14.2@0.76 | heroMinionDmg 0 | nearOwnWave 8% pastMid 0% | 團戰! 50% 回城中 13% 圍攻主堡 13% 回城 11% 避塔 7%
+t=39m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:14.0@0.75 m:13.3@0.82 b:13.3@0.75 | heroMinionDmg 10394 | nearOwnWave 17% pastMid 7% | 圍攻 30% 避塔 25% 圍攻主堡 19% 團戰! 18% 回城 5%
+   r wave(avg#@maxDepth) t:12.3@0.75 m:8.4@0.60 b:11.6@0.76 | heroMinionDmg 5768 | nearOwnWave 10% pastMid 0% | 圍攻主堡 29% 團戰! 22% 打野 15% 入侵 13% 避塔 12%
+t=40m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.1@0.84 m:9.6@0.86 b:13.0@0.75 | heroMinionDmg 3325 | nearOwnWave 25% pastMid 7% | 避塔 34% 圍攻 26% 圍攻主堡 18% 回城中 11% 撤退 6%
+   r wave(avg#@maxDepth) t:13.2@0.58 m:8.9@0.71 b:13.1@0.67 | heroMinionDmg 15732 | nearOwnWave 21% pastMid 0% | 圍攻 47% 避塔 30% 圍攻主堡 8% 回城中 4% 打野 4%
+t=41m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.8@0.68 m:11.6@0.69 b:12.3@0.67 | heroMinionDmg 16173 | nearOwnWave 21% pastMid 4% | 避塔 42% 圍攻 26% 圍攻主堡 24% 跟兵線 4% 打野 2%
+   r wave(avg#@maxDepth) t:13.9@0.76 m:8.9@0.69 b:14.3@0.76 | heroMinionDmg 2210 | nearOwnWave 21% pastMid 0% | 圍攻 45% 避塔 21% 圍攻主堡 10% 撤退 8% 回城中 8%
+t=42m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.3@0.67 m:12.0@0.85 b:13.2@0.67 | heroMinionDmg 6772 | nearOwnWave 24% pastMid 0% | 避塔 33% 圍攻主堡 32% 圍攻 30% 打野 3% 回防 2%
+   r wave(avg#@maxDepth) t:11.9@0.76 m:8.9@0.64 b:11.7@0.76 | heroMinionDmg 8309 | nearOwnWave 25% pastMid 4% | 避塔 48% 圍攻 35% 圍攻主堡 9% 打野 5% 回防 2%
+t=43m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.2@0.68 m:14.4@0.91 b:13.7@0.77 | heroMinionDmg 14817 | nearOwnWave 24% pastMid 12% | 避塔 39% 圍攻 28% 打野 11% 圍攻主堡 8% 撤退 4%
+   r wave(avg#@maxDepth) t:13.4@0.61 m:5.5@0.55 b:13.1@0.67 | heroMinionDmg 8196 | nearOwnWave 17% pastMid 0% | 避塔 38% 圍攻主堡 21% 打野 16% 圍攻 6% 回城 4%
+t=44m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:11.8@0.68 m:7.6@0.67 b:11.9@0.67 | heroMinionDmg 0 | nearOwnWave 11% pastMid 0% | 圍攻主堡 26% 避塔 23% 入侵 17% 打野 14% 團戰! 12%
+   r wave(avg#@maxDepth) t:13.8@0.76 m:9.0@0.58 b:13.8@0.76 | heroMinionDmg 15312 | nearOwnWave 10% pastMid 0% | 圍攻 49% 避塔 24% 圍攻主堡 7% 打野 6% 回城中 4%
+t=45m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.9@0.67 m:12.8@0.81 b:13.6@0.67 | heroMinionDmg 22440 | nearOwnWave 19% pastMid 5% | 圍攻主堡 39% 避塔 26% 圍攻 10% 回城中 6% 團戰! 6%
+   r wave(avg#@maxDepth) t:11.4@0.75 m:8.1@0.64 b:12.1@0.76 | heroMinionDmg 10930 | nearOwnWave 19% pastMid 0% | 避塔 25% 圍攻 16% 撤退 13% 圍攻主堡 11% 打野 8%
+t=46m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.0@0.76 m:9.6@0.85 b:13.3@0.77 | heroMinionDmg 8361 | nearOwnWave 14% pastMid 0% | 避塔 27% 圍攻主堡 23% 打野 21% 入侵 13% 圍攻 4%
+   r wave(avg#@maxDepth) t:13.3@0.61 m:11.5@0.75 b:13.1@0.67 | heroMinionDmg 10506 | nearOwnWave 16% pastMid 2% | 圍攻 52% 避塔 26% 回城中 8% 回城 8% 撤退 3%
+t=47m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.0@0.78 m:9.0@0.74 b:11.3@0.67 | heroMinionDmg 6239 | nearOwnWave 10% pastMid 0% | 圍攻 40% 避塔 18% 撤退 17% 圍攻主堡 8% 回城中 6%
+   r wave(avg#@maxDepth) t:13.9@0.76 m:12.6@0.77 b:13.8@0.77 | heroMinionDmg 11832 | nearOwnWave 18% pastMid 1% | 圍攻 32% 避塔 21% 圍攻主堡 20% 打野 14% 跟兵線 4%
+t=48m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.9@0.84 m:8.5@0.58 b:13.3@0.67 | heroMinionDmg 14227 | nearOwnWave 3% pastMid 0% | 避塔 34% 圍攻 21% 圍攻主堡 18% 團戰! 12% 回城 6%
+   r wave(avg#@maxDepth) t:11.8@0.67 m:7.8@0.59 b:12.4@0.76 | heroMinionDmg 0 | nearOwnWave 12% pastMid 0% | 團戰! 50% 避塔 23% 圍攻主堡 12% 回城 4% 回城中 4%
+t=49m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.9@0.76 m:14.9@0.82 b:13.9@0.75 | heroMinionDmg 21565 | nearOwnWave 12% pastMid 0% | 圍攻 47% 避塔 23% 團戰! 8% 回城中 7% 回城 6%
+   r wave(avg#@maxDepth) t:13.3@0.61 m:6.4@0.48 b:12.2@0.67 | heroMinionDmg 9071 | nearOwnWave 7% pastMid 0% | 避塔 27% 團戰! 24% 圍攻主堡 18% 撤退 9% 回城 7%
+t=50m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:12.2@0.68 m:9.8@0.85 b:12.3@0.76 | heroMinionDmg 0 | nearOwnWave 11% pastMid 0% | 圍攻 46% 團戰! 21% 避塔 15% 打野 8% 跟兵線 5%
+   r wave(avg#@maxDepth) t:13.7@0.76 m:9.3@0.58 b:13.1@0.67 | heroMinionDmg 17891 | nearOwnWave 14% pastMid 0% | 圍攻主堡 50% 打野 26% 避塔 8% 團戰! 6% 跟兵線 5%
+END over=false winner=null t=50.0m allTowersDownAt=25.1m waveAtEnemyNexus total b/r 0/0 of 3601

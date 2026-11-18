@@ -1,0 +1,20 @@
+inv/s12: injected 63/100  finished 59/63 (93.7%)  minutes after injection p10=0.5 p50=7.3 p90=24.3 max=29.8  blueWin 23/59=39.0% [27.6, 51.7]  gateViolations 0  deathsAfterInject p50=23
+   inject@14m: finished 24/25, p50 4.4m, blue 6/24
+   inject@16m: finished 16/17, p50 9.8m, blue 10/16
+   inject@18m: finished 12/13, p50 7.8m, blue 5/12
+   inject@20m: finished 7/8, p50 2.9m, blue 2/7
+inv/s13: injected 63/100  finished 63/63 (100.0%)  minutes after injection p10=0.5 p50=5.3 p90=6.9 max=11.0  blueWin 29/63=46.0% [34.3, 58.2]  gateViolations 0  deathsAfterInject p50=11
+   inject@14m: finished 25/25, p50 4.4m, blue 11/25
+   inject@16m: finished 17/17, p50 5.9m, blue 8/17
+   inject@18m: finished 13/13, p50 4.8m, blue 8/13
+   inject@20m: finished 8/8, p50 5.3m, blue 2/8
+AB/s13: injected 65/100  finished 65/65 (100.0%)  minutes after injection p10=0.5 p50=4.8 p90=7.0 max=8.8  blueWin 28/65=43.1% [31.8, 55.2]  gateViolations 0  deathsAfterInject p50=11
+   inject@14m: finished 25/25, p50 4.4m, blue 10/25
+   inject@16m: finished 19/19, p50 4.9m, blue 10/19
+   inject@18m: finished 13/13, p50 4.8m, blue 4/13
+   inject@20m: finished 8/8, p50 2.9m, blue 4/8
+BA/s13: injected 60/100  finished 60/60 (100.0%)  minutes after injection p10=0.5 p50=4.9 p90=7.3 max=8.5  blueWin 35/60=58.3% [45.7, 69.9]  gateViolations 0  deathsAfterInject p50=9
+   inject@14m: finished 25/25, p50 4.4m, blue 14/25
+   inject@16m: finished 18/18, p50 5.3m, blue 10/18
+   inject@18m: finished 8/8, p50 4.9m, blue 5/8
+   inject@20m: finished 9/9, p50 4.4m, blue 6/9

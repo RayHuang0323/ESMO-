@@ -44,7 +44,8 @@ function build(seed, cfg, arm) {
     if (arm === "off") process.env.ESMO_BALANCE_TACTICEXEC = "off";
     if (arm === "s1" && S1_VIA === "env") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1";
     if (arm === "s11" && S1_VIA === "env") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1.1";
-    try { const e = configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v24").e; return S1_VIA === "flip" && arm === "s1" ? flipToS1(e) : S1_VIA === "flip" && arm === "s11" ? flipToS11(e) : e; }
+    if (arm === "s12" && S1_VIA === "env") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1.2";
+    try { const e = configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v24").e; return S1_VIA === "flip" && arm === "s1" ? flipToS1(e) : S1_VIA === "flip" && arm === "s11" ? flipToS11(e) : S1_VIA === "flip" && arm === "s12" ? flipToS12(e) : e; }
     finally { delete process.env.ESMO_BALANCE_TACTICEXEC; }
   }
   const flags = { ...C.G.featureFlags, mobaTacticalDirectorV21: true, mobaJungleV22: true, mobaSafeRouteV23: true, mobaTacticExecV24: arm !== "off" };
@@ -55,21 +56,28 @@ function build(seed, cfg, arm) {
   const opts = { seed, roster: C.appRoster(C.Runner.mirroredRoster(seed, C.M)), buildStrategy: "standard", opponentId: team.id, sessionId: `te24-${seed}`, mode: "moba", tacticPlanBinding: bindingOf("v2.jungle_invasion") };
   const out = prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
   if (!out.ok) throw new Error(`rejected ${seed}`);
-  return arm === "s1" ? flipToS1(out.engine) : arm === "s11" ? flipToS11(out.engine) : out.engine;
+  return arm === "s1" ? flipToS1(out.engine) : arm === "s11" ? flipToS11(out.engine) : arm === "s12" ? flipToS12(out.engine) : out.engine;
 }
 //  Sprint 1.2（2026-11-18）：v24 規則集是 adaptive.v1.2。舊候選在生涯路徑（正式規則集鎖層）用「第一個 tick 之前切換」重現：
 //  s1＝v11、v12 都關；s11＝只關 v12（createTacticExecState 多建的 v12 欄位不會被讀）。check_tactic_exec_v24 T7 釘住兩者的整場雜湊。
-const fresh12 = (e, who) => { if (!e.tacExec || e._tacExecVariant !== "adaptive.v1.2" || e.t !== 0) throw new Error(`${who}: expected a fresh adaptive.v1.2 engine`); };
+//  Sprint 1.3（2026-11-19）：v24 規則集是 adaptive.v1.3；s12＝只關 v13（check_tactic_exec_v24 T7 釘住 v1.2 的整場雜湊）。
+const fresh12 = (e, who) => { if (!e.tacExec || e._tacExecVariant !== "adaptive.v1.3" || e.t !== 0) throw new Error(`${who}: expected a fresh adaptive.v1.3 engine`); };
 /** 原 Sprint 1：同一個模組、v11／v12 關掉（第一個 tick 之前）。 */
 function flipToS1(e) {
   fresh12(e, "flipToS1");
-  e._tacExecVariant = "adaptive.v1"; e.tacExec.v11 = false; e.tacExec.v12 = false;
+  e._tacExecVariant = "adaptive.v1"; e.tacExec.v11 = false; e.tacExec.v12 = false; e.tacExec.v13 = false;
   return e;
 }
 /** 原 Sprint 1.1：只關 v12。 */
 function flipToS11(e) {
   fresh12(e, "flipToS11");
-  e._tacExecVariant = "adaptive.v1.1"; e.tacExec.v12 = false;
+  e._tacExecVariant = "adaptive.v1.1"; e.tacExec.v12 = false; e.tacExec.v13 = false;
+  return e;
+}
+/** 原 Sprint 1.2：只關 v13。 */
+function flipToS12(e) {
+  fresh12(e, "flipToS12");
+  e._tacExecVariant = "adaptive.v1.2"; e.tacExec.v13 = false;
   return e;
 }
 
@@ -144,7 +152,8 @@ function runMatch(seed, cfg, arm) {
   const te = e.tacExec ? tacticExecSummary(e.tacExec) : null;
   const events = e.tacExec ? e.tacExec.log.filter((r) => r.kind !== "invade" || r.d === "go") : [];
   return { seed, path: PATH, tier: PATH === "career" ? TIER : null, cfg, arm, winner: e.winner ?? null, duration: +e.t.toFixed(1), over: !!e.over,
-    hash: h.digest("hex").slice(0, 16), goldEnd, gold900, towersLost, stats: st, invObs: e.invObs ?? null, exec: e.exec ?? null, te, events, threat };
+    hash: h.digest("hex").slice(0, 16), goldEnd, gold900, towersLost, stats: st, invObs: e.invObs ?? null, exec: e.exec ?? null, te, events, threat,
+    endgame: e.tacExec?.eg ? { blue: e.tacExec.eg.blue.onAt, red: e.tacExec.eg.red.onAt } : null };
 }
 
 if (!seeds.length || !OUT) { console.error("need --seeds and --out"); process.exit(2); }

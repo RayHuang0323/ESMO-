@@ -164,9 +164,11 @@ const newObs = () => ({
 
 /** configureMatch 時建立。 */
 export function createTacticExecState(E) {
-  const v12 = E._tacExecVariant === "adaptive.v1.2";
+  const v13 = E._tacExecVariant === "adaptive.v1.3";
+  const v12 = E._tacExecVariant === "adaptive.v1.2" || v13;
   const st = { log: [], hist: [], obs: { blue: newObs(), red: newObs() }, side: {}, v11: E._tacExecVariant === "adaptive.v1.1" || v12 };
   if (v12) st.v12 = true;
+  if (v13) st.v13 = true;
   for (const S of ["blue", "red"]) {
     const K = E.director?.knobs(S) ?? null;
     const posture = postureOf(K);
@@ -180,6 +182,43 @@ export function createTacticExecState(E) {
     }
   }
   return st;
+}
+
+/**
+ * Sprint 1.3 終局護線（adaptive.v1.3）。只回答「這一隊現在該護送哪一路」；移動與清兵都走引擎既有的路徑。
+ * 成立條件（每邊各自判定）：敵方主堡已經暴露（某一路的前線建築就是主堡），而且連續 stallSec 秒沒有任何己方兵線抵達主堡。
+ * 成立後這一邊一直保持護線（兵線到主堡時回傳 null，照常打主堡）。沒成立 ⇒ 一律回傳 null ⇒ 對局逐 tick 不變。
+ * stallSec 240＝8 波兵；開發 Seed 上的勝方最長等待 P99 是 210 秒（review/tactic-book-3a/v24_sprint1/S13_PROGRESS.md）。
+ * 選路：已暴露的路裡，己方兵線走得最深的一路，每 laneHoldSec 秒才重選一次。同分時的檢查順序紅藍互為鏡像（藍：中上下；紅：中下上），不讀亂數。
+ */
+export const ENDGAME_V13 = Object.freeze({ stallSec: 240, laneHoldSec: 20, order: Object.freeze(["mid", "top", "bot"]), orderRed: Object.freeze(["mid", "bot", "top"]) });
+const exposedLanes13 = (E, S) => (S === "blue" ? ENDGAME_V13.order : ENDGAME_V13.orderRed).filter((ln) => E.frontStructure(S, ln)?.lane === "nexus");
+/** 每 tick、每邊：更新「主堡暴露後多久沒有兵線抵達」的計時。 */
+export function endgameTick13(E, X) {
+  if (!X?.v13) return;
+  const eg = (X.eg ??= { blue: { since: null, on: false, onAt: null, lane: null, until: -Infinity }, red: { since: null, on: false, onAt: null, lane: null, until: -Infinity } });
+  for (const S of ["blue", "red"]) {
+    const g = eg[S];
+    if (g.on) continue;
+    if (g.since == null) { if (exposedLanes13(E, S).length) g.since = E.t; else continue; }
+    if (E._hasWaveAtStructure(S, E.towers[`${otherSide(S)}_nexus`])) g.since = E.t;
+    else if (E.t - g.since >= ENDGAME_V13.stallSec) { g.on = true; g.onAt = E.t; }
+  }
+}
+export function endgameEscortLane(E, X, S) {
+  const g = X?.eg?.[S];
+  if (!g?.on || E._hasWaveAtStructure(S, E.towers[`${otherSide(S)}_nexus`])) return null;
+  if (E.t >= g.until) {
+    const key = S === "blue" ? "bm" : "rm", lanes = exposedLanes13(E, S);
+    let best = lanes[0] ?? null, bestDepth = -1;
+    for (const ln of lanes) {
+      let d = -1;
+      for (const m of E.lanes[ln][key]) if (m.hp > 0) d = Math.max(d, S === "blue" ? m.t : 1 - m.t);
+      if (d > bestDepth) { bestDepth = d; best = ln; }
+    }
+    g.lane = best; g.until = E.t + ENDGAME_V13.laneHoldSec;
+  }
+  return g.lane;
 }
 
 const LOG_MAX = 4000;

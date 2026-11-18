@@ -1,0 +1,8 @@
+   r wave(avg#@maxDepth) t:10.4@0.66 m:8.5@0.75 b:12.0@0.67 | heroMinionDmg 767 | nearOwnWave 9% pastMid 0% | 圍攻主堡 21% 打野 18% 避塔 17% 團戰! 14% 對線 8%
+t=25m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:13.6@0.76 m:9.1@0.53 b:11.8@0.67 | heroMinionDmg 0 | nearOwnWave 3% pastMid 0% | 圍攻 31% 團戰! 24% 避塔 17% 圍攻主堡 10% 跟兵線 6%
+   r wave(avg#@maxDepth) t:13.3@0.66 m:10.1@0.60 b:14.1@0.67 | heroMinionDmg 8835 | nearOwnWave 31% pastMid 20% | 圍攻主堡 70% 團戰! 14% 對線 6% 打野 4% 回防 3%
+t=26m nexus B/R 7200/7200  waveAtEnemyNexus b/r 0/0 of 120
+   b wave(avg#@maxDepth) t:14.0@0.78 m:11.5@0.73 b:4.7@0.32 | heroMinionDmg 7405 | nearOwnWave 5% pastMid 1% | 圍攻 50% 避塔 10% 回城中 9% 回城 8% 圍攻主堡 7%
+   r wave(avg#@maxDepth) t:9.2@0.67 m:5.9@0.43 b:14.5@0.93 | heroMinionDmg 18198 | nearOwnWave 26% pastMid 26% | 圍攻主堡 63% 團戰! 20% 跟兵線 5% 對線 3% 追擊 3%
+END over=true winner=red t=26.5m allTowersDownAt=- waveAtEnemyNexus total b/r 0/3 of 538

@@ -100,11 +100,12 @@ export const taskCommitOf = (r) => r?.layers?.taskCommit ?? DEFAULT_TASK_COMMIT;
 //                    入侵途中依看得見的資訊動態撤退、出發前比較自家野區機會成本。v24 規則集用這個值；adaptive.v1 保留給工具重現 Sprint 1。
 //   · "adaptive.v1.2"＝v24 Sprint 1.2（Owner 2026-11-18 核准）：adaptive.v1.1 全部行為＋機會成本不歸零（我方時間價值）、敵方營存活信念（我方視野＋公開重生）、
 //                    積極／全力的 2 人下限只在預估有敵人時、威脅模型依情報新鮮度重新校準。v24 規則集用這個值；v1、v1.1 保留給工具重現。
-export const TACTIC_EXECS = Object.freeze(["off", "adaptive.v1", "adaptive.v1.1", "adaptive.v1.2"]);
+//   · "adaptive.v1.3"＝v24 Sprint 1.3（Owner 2026-11-19 核准）：adaptive.v1.2 全部行為＋終局護線（雙方都只剩主堡時，要去主堡的英雄改去護送己方兵線）。v24 規則集用這個值；v1、v1.1、v1.2 保留給工具重現。
+export const TACTIC_EXECS = Object.freeze(["off", "adaptive.v1", "adaptive.v1.1", "adaptive.v1.2", "adaptive.v1.3"]);
 export const DEFAULT_TACTIC_EXEC = "off";
 /** 讀取 ruleset 的 tacticExec 層；缺少 ≡ "off"。 */
 export const tacticExecOf = (r) => r?.layers?.tacticExec ?? DEFAULT_TACTIC_EXEC;
-export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24", "adaptive.v1.1": "mobaTacticExecV24", "adaptive.v1.2": "mobaTacticExecV24" });
+export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24", "adaptive.v1.1": "mobaTacticExecV24", "adaptive.v1.2": "mobaTacticExecV24", "adaptive.v1.3": "mobaTacticExecV24" });
 //  正式旗標 mobaTacticExecV24（預設 OFF；只在 mobaTacticalDirectorV21＋mobaJungleV22＋mobaSafeRouteV23 也開時有意義：career.v24＝career.v23＋v24 的層）。
 export const TASK_ARBITRATION_RELEASE_FLAG = Object.freeze({ v1: "mobaTacticExecV24" });
 export const TASK_COMMIT_RELEASE_FLAG = Object.freeze({ v19push: "mobaTacticExecV24" });
@@ -167,9 +168,10 @@ const V23_RULESETS = Object.freeze({
 //  交付點 B（Sprint 1）：再加 tacticExec "adaptive.v1"。工具規則集可用 ESMO_BALANCE_TACTICEXEC=off 覆寫回 A 的行為（＝v23）。
 //  Sprint 1.1（2026-11-17）：tacticExec 改成 "adaptive.v1.1"。工具規則集可用 ESMO_BALANCE_TACTICEXEC=adaptive.v1 重現 Sprint 1。
 //  Sprint 1.2（2026-11-18）：tacticExec 改成 "adaptive.v1.2"；ESMO_BALANCE_TACTICEXEC=adaptive.v1.1 重現 Sprint 1.1。
+//  Sprint 1.3（2026-11-19）：tacticExec 改成 "adaptive.v1.3"；ESMO_BALANCE_TACTICEXEC=adaptive.v1.2 重現 Sprint 1.2。
 const v24Of = (base, extraRequirements = []) => R({
   ...base, rulesetId: base.rulesetId.replace(".v23", ".v24"), simVersion: "moba-sim.v24",
-  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1.2" },
+  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1.3" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
 export const MATCH_RULESETS = Object.freeze({

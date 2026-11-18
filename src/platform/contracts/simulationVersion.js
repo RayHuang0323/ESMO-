@@ -710,9 +710,11 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  上一個值 78d1fb305ba1f72a＝交付點 A（commit 77780df3）。
   //  上一個值 5950a5b11782df9e＝交付點 B（v24 Sprint 1，commit e9d86b32）：tacticExec "adaptive.v1"（自適應入侵、價值優先目標、冷卻與仲裁、1～2 人編隊、回防觸發、任務鎖定）。
   //  上一個值 a0a1c2d1356c7f39＝v24 Sprint 1.1（commit 218e74e8～4c1da80a）：v24 規則集用 tacticExec "adaptive.v1.1"（人數優勢編隊、動態撤退、野區期望值經濟）。
-  //  目前值＝v24 Sprint 1.2（Owner 2026-11-18 核准）：v24 規則集改用 "adaptive.v1.2"（機會成本不歸零、敵方營存活信念、傾向人數下限只在有預估敵人時、威脅模型 s12）；
+  //  上一個值 149c80dd8ebe175a＝v24 Sprint 1.2（commit 29218c8d～8ae1f5f6；Owner 2026-11-18 核准）：v24 規則集改用 "adaptive.v1.2"（機會成本不歸零、敵方營存活信念、傾向人數下限只在有預估敵人時、威脅模型 s12）；
   //  "adaptive.v1"、"adaptive.v1.1" 原樣保留（check_tactic_exec_v24 T7 釘住兩者的整場雜湊）。證據 review/tactic-book-3a/v24_sprint1/S12_*。
-  "moba-sim.v24": "149c80dd8ebe175a",
+  //  目前值＝v24 Sprint 1.3（Owner 2026-11-19 核准）：v24 規則集改用 "adaptive.v1.3"（終局護線：主堡暴露後連續 240 秒沒有己方兵線抵達 ⇒ 要去主堡的英雄改去護送兵線）。
+  //  主堡的兵線硬閘門不變；"adaptive.v1"、"adaptive.v1.1"、"adaptive.v1.2" 原樣保留（check_tactic_exec_v24 T7 釘住三者的整場雜湊）。證據 review/tactic-book-3a/v24_sprint1/S13_*。
+  "moba-sim.v24": "9727c0b4ae8beb3d",
 });
 
 export const isKnownSimulationVersion = (v) =>

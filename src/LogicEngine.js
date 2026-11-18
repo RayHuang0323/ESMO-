@@ -50,7 +50,7 @@ import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './
 //  Phase 3a-C2：戰術資料（knobs／Tactical Identity／戰術階段）的唯一讀取入口（static 模式＝設定值原樣回傳）。
 import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.js";
 import { createTaskArbitrationLedger, movedTarget as arbMovedV24 } from "./battle/moba/tactics/taskArbitrationLedger.js";
-import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, invadeLead as tacInvadeLeadV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24 } from "./battle/moba/tactics/tacticExecV24.js";
+import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, invadeLead as tacInvadeLeadV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24, endgameEscortLane as tacEndgameLaneV24, endgameTick13 as tacEndgameTickV24 } from "./battle/moba/tactics/tacticExecV24.js";
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -426,7 +426,8 @@ export class LogicEngine {
     //  需要 invasion "v2" 的執行生命週期；缺少這個鍵 ⇒ 舊行為逐位元不變。
     //  Sprint 1.1：tacticExec "adaptive.v1.1"＝同一個模組的修正版（編隊、動態撤退、野區機會成本）；"adaptive.v1" 原樣保留（工具重現 Sprint 1）。
     //  Sprint 1.2：再加 "adaptive.v1.2"（經濟、敵方營信念、傾向人數下限、威脅校準；都在 tacticExecV24.js）。
-    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2") && invasion === "v2";
+    //  Sprint 1.3：再加 "adaptive.v1.3"（終局護線；模組同上）。
+    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2" || tacticExec === "adaptive.v1.3") && invasion === "v2";
     this._tacExecVariant = this._tacExecV24 ? tacticExec : null;
     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
@@ -6960,6 +6961,7 @@ export class LogicEngine {
     if (ARB) ARB.beginTick();
     //  v24 Sprint 1：英雄移動之前，用同一份凍結位置做記憶更新、回防觸發與入侵評估（與陣列順序無關）。
     if (this._tacExecV24 && this.tacticOn) tacticExecTick(this, this.tacExec, alive);
+    if (this._tacExecV24 && this.tacExec?.v13) tacEndgameTickV24(this, this.tacExec);   // Sprint 1.3：終局護線的計時（與戰術開關無關）
     for (const p of this.players) {
       if (p.dead) {
         if (R.explainableCombatDecisions) {
@@ -7590,6 +7592,16 @@ export class LogicEngine {
         if (!laneDefault || engaged || T.lane !== effLane || this.t >= T.until || dist(p.pos, T.pos) <= 1.5) p._taskV19 = null;
         else { if (AT && arbMovedV24(tgt, T.pos)) AT.rw.push("rewrite:task_commit"); tgt = T.pos; st = T.st; p.fsm = T.fsm; p.intent = T.intent; }
       }
+      //  v24 Sprint 1.3（adaptive.v1.3）終局護線：主堡暴露後連續 8 波沒有己方兵線抵達 ⇒ 本來要走去主堡的人改去護送兵線。
+      //  狀態字串不變（仍是圍攻意圖 ⇒ 會全力清兵）；主堡的兵線硬閘門、塔區安全規則都照舊。
+      let escortV24 = false;
+      if (this._tacExecV24 && this.tacExec?.v13 && !p.retreating && (st === "圍攻主堡" || (st === "圍攻" && this._siegeTargetV19(p, st)?.lane === "nexus"))) {
+        const egLane = tacEndgameLaneV24(this, this.tacExec, p.side);
+        if (egLane) {
+          tgt = posOnLane(egLane, this._laneWaveHoldT(p, egLane, 1) ?? (p.side === "blue" ? 0.4 : 0.6));
+          escortV24 = true; p.intent = "護送兵線進基地";
+        }
+      }
       //  ── M1.7 ②：塔區退出。允許有計畫的越塔，禁止「站到殘血為止」──────────
       if (R.decisionV17 && !p.retreating) {
         //  這一路的前線建築＝我的推進目標；它若正好是把我罩住的那座塔，就是圍攻。
@@ -7630,7 +7642,7 @@ export class LogicEngine {
       //  合法停留只有下面這幾種；其餘一律取得下一個有效任務。
       //  v24 Sprint 1 任務鎖定（仲裁步驟 B 的第一條）：入侵（打野與隊友）與回防進行中，發呆再任務不得改掉目標
       //  （步驟 A 量到入侵被發呆再任務覆寫 1,107 tick；入侵在入口等野怪出生是合法停留）。
-      const lockedV24 = this._tacExecV24 && (st === "入侵" || (st === "回防" && !!p._defV24));
+      const lockedV24 = this._tacExecV24 && (st === "入侵" || (st === "回防" && !!p._defV24) || escortV24);
       if (R.decisionV17 && tgt && !p.retreating && !lockedV24) {
         //  「抵達」不能只看 0.9：打建築是**站在攻擊距離上**輸出（4–8 單位），
         //  用 0.9 判定的話，站在建築前面的人永遠不算抵達 ⇒ 永遠不會再任務。

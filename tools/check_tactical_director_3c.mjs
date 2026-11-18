@@ -94,7 +94,8 @@ ck("S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在�
   ENGINE_CODE.includes("phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
   //  v24 Sprint 1.1（2026-11-18）：tacticExec 多一個值 "adaptive.v1.1"（同樣只變成引擎自己的旗標，不經過 Director）。
   //  v24 Sprint 1.2（2026-11-18）：再多 "adaptive.v1.2"（同樣只是引擎旗標）。
-  && ENGINE_CODE.includes('this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2") && invasion === "v2";')
+  //  v24 Sprint 1.3（2026-11-19）：再多 "adaptive.v1.3"（同樣只是引擎旗標）。
+  && ENGINE_CODE.includes('this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2" || tacticExec === "adaptive.v1.3") && invasion === "v2";')
   && ENGINE_CODE.includes("this._tacExecVariant = this._tacExecV24 ? tacticExec : null;") && !/directorArgs\.tacticExec/.test(ENGINE_CODE)
   && ENGINE_CODE.includes('this._arbV24 = taskArbitration === "v1";') && ENGINE_CODE.includes('this._commitPushV24 = taskCommit === "v19push";')
   && !/directorArgs\.(taskArbitration|taskCommit)/.test(ENGINE_CODE)
