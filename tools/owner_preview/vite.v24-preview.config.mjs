@@ -15,22 +15,32 @@
 import { mergeConfig } from "vite";
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import base from "../../vite.config.js";
 
 const FLAG_FILE = /\/src\/featureFlags\.js(\?.*)?$/;
+//  Sprint 1.3：只在這個預覽接上僵局 Seed 的測試掛鉤（網址帶 ?stalemateSeed=120159 才生效，見 preview_force_match_v24.js）。src 不改。
+const LIVE_FILE = /\/src\/useLocalServer\.js(\?.*)?$/;
+const LIVE_CALL = "const prepared = prepareLiveMatch(liveInputs);";
+const FORCE_MODULE = join(dirname(fileURLToPath(import.meta.url)), "preview_force_match_v24.js").replace(/\\/g, "/");
 const FLIPS = ["mobaTacticalDirectorV21", "mobaJungleV22", "mobaSafeRouteV23", "mobaTacticExecV24"];
 const PORT = 5644;
 const OUTSIDE = join(tmpdir(), "esmo-v21-owner-preview");
 const EMPTY_ENV_DIR = join(OUTSIDE, "empty-env");
 mkdirSync(EMPTY_ENV_DIR, { recursive: true });
 
-const BANNER = `<div data-owner-preview="v24" style="position:fixed;left:6px;bottom:6px;z-index:2147483647;pointer-events:none;font:700 10px/1.3 system-ui,sans-serif;color:#111;background:#7dd3fc;border-radius:4px;padding:2px 6px;opacity:.85">OWNER PREVIEW · moba-sim.v24 Sprint 1.2（經濟不歸零＋敵方營信念＋威脅校準）候選 未核准發布 · 本機隔離 5644</div>`;
+const BANNER = `<div data-owner-preview="v24" style="position:fixed;left:6px;bottom:6px;z-index:2147483647;pointer-events:none;font:700 10px/1.3 system-ui,sans-serif;color:#111;background:#7dd3fc;border-radius:4px;padding:2px 6px;opacity:.85">OWNER PREVIEW · moba-sim.v24 Sprint 1.3（終局護線）候選 未核准發布 · 本機隔離 5644</div>`;
 
 const v24FlagPreview = {
   name: "esmo-owner-preview-v24-flag",
   enforce: "pre",
   transform(code, id) {
+    if (LIVE_FILE.test(id.replace(/\\/g, "/"))) {
+      const hits = code.split(LIVE_CALL).length - 1;
+      if (hits !== 1) throw new Error(`[owner-preview-v24] expected exactly one "${LIVE_CALL}" in useLocalServer.js, found ${hits}; preview refuses to start`);
+      return { code: `import { forceMatch as __esmoForceMatch } from ${JSON.stringify(FORCE_MODULE)};\n` + code.replace(LIVE_CALL, "const prepared = __esmoForceMatch(prepareLiveMatch(liveInputs));"), map: null };
+    }
     if (!FLAG_FILE.test(id.replace(/\\/g, "/"))) return null;
     let out = code;
     for (const f of FLIPS) {
