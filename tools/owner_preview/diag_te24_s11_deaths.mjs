@@ -25,6 +25,9 @@ const TEMPLATES = { inv: ["v2.jungle_invasion", "v2.jungle_invasion"], AB: ["v2.
 function build(seed, cfg, arm) {
   const [tb, tr] = TEMPLATES[cfg];
   if (arm === "off") process.env.ESMO_BALANCE_TACTICEXEC = "off";
+  //  Sprint 1.2（2026-11-18）：s11 ⇒ adaptive.v1.1、s1 ⇒ adaptive.v1（同 measure_tactic_exec_v24 的工具路徑做法）；adaptive ⇒ 規則集預設（v1.2）
+  if (arm === "s11") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1.1";
+  if (arm === "s1") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1";
   try { return configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v24").e; }
   finally { delete process.env.ESMO_BALANCE_TACTICEXEC; }
 }
