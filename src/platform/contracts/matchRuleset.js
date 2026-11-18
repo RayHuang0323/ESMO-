@@ -98,11 +98,13 @@ export const taskCommitOf = (r) => r?.layers?.taskCommit ?? DEFAULT_TASK_COMMIT;
 //                    看得見才觸發的回防、任務鎖定與放棄原因紀錄（battle/moba/tactics/tacticExecV24.js）。需要 invasion "v2"。
 //   · "adaptive.v1.1"＝v24 Sprint 1.1（Owner 2026-11-17 核准）：adaptive.v1 全部行為＋人數優勢編隊（預估 1 名敵人優先 2 人、隊友要真的趕得上）、
 //                    入侵途中依看得見的資訊動態撤退、出發前比較自家野區機會成本。v24 規則集用這個值；adaptive.v1 保留給工具重現 Sprint 1。
-export const TACTIC_EXECS = Object.freeze(["off", "adaptive.v1", "adaptive.v1.1"]);
+//   · "adaptive.v1.2"＝v24 Sprint 1.2（Owner 2026-11-18 核准）：adaptive.v1.1 全部行為＋機會成本不歸零（我方時間價值）、敵方營存活信念（我方視野＋公開重生）、
+//                    積極／全力的 2 人下限只在預估有敵人時、威脅模型依情報新鮮度重新校準。v24 規則集用這個值；v1、v1.1 保留給工具重現。
+export const TACTIC_EXECS = Object.freeze(["off", "adaptive.v1", "adaptive.v1.1", "adaptive.v1.2"]);
 export const DEFAULT_TACTIC_EXEC = "off";
 /** 讀取 ruleset 的 tacticExec 層；缺少 ≡ "off"。 */
 export const tacticExecOf = (r) => r?.layers?.tacticExec ?? DEFAULT_TACTIC_EXEC;
-export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24", "adaptive.v1.1": "mobaTacticExecV24" });
+export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24", "adaptive.v1.1": "mobaTacticExecV24", "adaptive.v1.2": "mobaTacticExecV24" });
 //  正式旗標 mobaTacticExecV24（預設 OFF；只在 mobaTacticalDirectorV21＋mobaJungleV22＋mobaSafeRouteV23 也開時有意義：career.v24＝career.v23＋v24 的層）。
 export const TASK_ARBITRATION_RELEASE_FLAG = Object.freeze({ v1: "mobaTacticExecV24" });
 export const TASK_COMMIT_RELEASE_FLAG = Object.freeze({ v19push: "mobaTacticExecV24" });
@@ -164,9 +166,10 @@ const V23_RULESETS = Object.freeze({
 //  交付點 A（基礎版本，commit 77780df3）：taskArbitration "v1"（只寫紀錄）＋taskCommit "v19"（＝現狀）⇒ v24 的對局與 v23 逐 tick 相同。
 //  交付點 B（Sprint 1）：再加 tacticExec "adaptive.v1"。工具規則集可用 ESMO_BALANCE_TACTICEXEC=off 覆寫回 A 的行為（＝v23）。
 //  Sprint 1.1（2026-11-17）：tacticExec 改成 "adaptive.v1.1"。工具規則集可用 ESMO_BALANCE_TACTICEXEC=adaptive.v1 重現 Sprint 1。
+//  Sprint 1.2（2026-11-18）：tacticExec 改成 "adaptive.v1.2"；ESMO_BALANCE_TACTICEXEC=adaptive.v1.1 重現 Sprint 1.1。
 const v24Of = (base, extraRequirements = []) => R({
   ...base, rulesetId: base.rulesetId.replace(".v23", ".v24"), simVersion: "moba-sim.v24",
-  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1.1" },
+  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1.2" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
 export const MATCH_RULESETS = Object.freeze({

@@ -43,7 +43,8 @@ function build(seed, cfg, arm) {
     const [tb, tr] = TEMPLATES[cfg];
     if (arm === "off") process.env.ESMO_BALANCE_TACTICEXEC = "off";
     if (arm === "s1" && S1_VIA === "env") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1";
-    try { const e = configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v24").e; return arm === "s1" && S1_VIA === "flip" ? flipToS1(e) : e; }
+    if (arm === "s11" && S1_VIA === "env") process.env.ESMO_BALANCE_TACTICEXEC = "adaptive.v1.1";
+    try { const e = configure(seed, "standard", M, 1, null, { blue: { kind: "binding", binding: bindingOf(tb) }, red: { kind: "binding", binding: bindingOf(tr) } }, "balanceTool.v24").e; return S1_VIA === "flip" && arm === "s1" ? flipToS1(e) : S1_VIA === "flip" && arm === "s11" ? flipToS11(e) : e; }
     finally { delete process.env.ESMO_BALANCE_TACTICEXEC; }
   }
   const flags = { ...C.G.featureFlags, mobaTacticalDirectorV21: true, mobaJungleV22: true, mobaSafeRouteV23: true, mobaTacticExecV24: arm !== "off" };
@@ -54,12 +55,21 @@ function build(seed, cfg, arm) {
   const opts = { seed, roster: C.appRoster(C.Runner.mirroredRoster(seed, C.M)), buildStrategy: "standard", opponentId: team.id, sessionId: `te24-${seed}`, mode: "moba", tacticPlanBinding: bindingOf("v2.jungle_invasion") };
   const out = prepareLiveMatch({ opts, seed, seedSource: "session", ruleset, flags, profile: { players, lineup: C.G.inputs.lineup }, heroProgress: { loadout: C.G.inputs.defaultLoadout }, opponentTeam: C.aiTeamById(team.id) });
   if (!out.ok) throw new Error(`rejected ${seed}`);
-  return arm === "s1" ? flipToS1(out.engine) : out.engine;
+  return arm === "s1" ? flipToS1(out.engine) : arm === "s11" ? flipToS11(out.engine) : out.engine;
 }
-/** 原 Sprint 1：同一個模組、v11 關掉（第一個 tick 之前）。 */
+//  Sprint 1.2（2026-11-18）：v24 規則集是 adaptive.v1.2。舊候選在生涯路徑（正式規則集鎖層）用「第一個 tick 之前切換」重現：
+//  s1＝v11、v12 都關；s11＝只關 v12（createTacticExecState 多建的 v12 欄位不會被讀）。check_tactic_exec_v24 T7 釘住兩者的整場雜湊。
+const fresh12 = (e, who) => { if (!e.tacExec || e._tacExecVariant !== "adaptive.v1.2" || e.t !== 0) throw new Error(`${who}: expected a fresh adaptive.v1.2 engine`); };
+/** 原 Sprint 1：同一個模組、v11／v12 關掉（第一個 tick 之前）。 */
 function flipToS1(e) {
-  if (!e.tacExec || e._tacExecVariant !== "adaptive.v1.1" || e.t !== 0) throw new Error("flipToS1: expected a fresh adaptive.v1.1 engine");
-  e._tacExecVariant = "adaptive.v1"; e.tacExec.v11 = false;
+  fresh12(e, "flipToS1");
+  e._tacExecVariant = "adaptive.v1"; e.tacExec.v11 = false; e.tacExec.v12 = false;
+  return e;
+}
+/** 原 Sprint 1.1：只關 v12。 */
+function flipToS11(e) {
+  fresh12(e, "flipToS11");
+  e._tacExecVariant = "adaptive.v1.1"; e.tacExec.v12 = false;
   return e;
 }
 
@@ -116,12 +126,16 @@ function runMatch(seed, cfg, arm) {
       const r = log[logIdx];
       if (r.kind !== "invade" || !r.target || r.threat == null) continue;
       const c = camps().find((x) => x.id === r.target);
-      if (c) pending.push({ t: r.t, side: r.side, pos: { x: c.pos.x, y: c.pos.y }, pred: r.threat, predReach: r.threatReach, d: r.d, mask: 0, invading: false });
+      //  Sprint 1.2：另記目標類型、敵方打野情報（種類、記憶秒數）、實際到場的角色位元（附加在第 6 欄之後；分析器只讀前 6 欄）。
+      const ej = e.players.find((q) => q.side !== r.side && q.role === "jungle");
+      const mem = ej ? e.tacExec.side[r.side].foeMem.get(ej.id) : null;
+      if (c) pending.push({ t: r.t, side: r.side, pos: { x: c.pos.x, y: c.pos.y }, pred: r.threat, predReach: r.threatReach, d: r.d, mask: 0, invading: false,
+        type: c.type === "buff" ? 1 : 0, ejKind: r.ej ?? null, ejAge: mem ? Math.round((r.t - mem.t) * 10) / 10 : -1, ejDead: ej?.dead ? 1 : 0, seenNear: r.seenNear ?? null, pmask: r.tmask ?? null });
     }
     for (let i = pending.length - 1; i >= 0; i--) {
       const o = pending[i];
       if (e.t > o.t && e.t <= o.t + 15) for (const q of e.players) if (!q.dead && q.side !== o.side && dist(q.pos, o.pos) <= 14) o.mask |= 1 << ["top", "jungle", "mid", "adc", "sup"].indexOf(q.role);
-      if (e.t >= o.t + 15) { let n = 0, m = o.mask; while (m) { n += m & 1; m >>>= 1; } threat.push([o.t, o.side === "blue" ? 0 : 1, o.pred, o.predReach, n, o.d === "go" ? 1 : 0]); pending.splice(i, 1); }
+      if (e.t >= o.t + 15) { let n = 0, m = o.mask; while (m) { n += m & 1; m >>>= 1; } threat.push([o.t, o.side === "blue" ? 0 : 1, o.pred, o.predReach, n, o.d === "go" ? 1 : 0, o.type, o.ejKind, o.ejAge, o.mask, o.ejDead, o.seenNear, o.pmask]); pending.splice(i, 1); }
     }
   }
   const goldEnd = { blue: e.players.filter((p) => p.side === "blue").reduce((s, p) => s + (p.gold ?? 0), 0), red: e.players.filter((p) => p.side === "red").reduce((s, p) => s + (p.gold ?? 0), 0) };

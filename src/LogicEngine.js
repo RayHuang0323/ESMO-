@@ -425,7 +425,8 @@ export class LogicEngine {
     //  v24 Sprint 1：tacticExec "adaptive.v1" ⇒ 入侵不再開局擲骰決定（亂數照樣抽，序列不變），改成整場評估（battle/moba/tactics/tacticExecV24.js）。
     //  需要 invasion "v2" 的執行生命週期；缺少這個鍵 ⇒ 舊行為逐位元不變。
     //  Sprint 1.1：tacticExec "adaptive.v1.1"＝同一個模組的修正版（編隊、動態撤退、野區機會成本）；"adaptive.v1" 原樣保留（工具重現 Sprint 1）。
-    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1") && invasion === "v2";
+    //  Sprint 1.2：再加 "adaptive.v1.2"（經濟、敵方營信念、傾向人數下限、威脅校準；都在 tacticExecV24.js）。
+    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2") && invasion === "v2";
     this._tacExecVariant = this._tacExecV24 ? tacticExec : null;
     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。

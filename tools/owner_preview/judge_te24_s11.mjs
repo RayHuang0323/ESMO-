@@ -5,6 +5,8 @@
 //    view "v11" = off + adaptive (Sprint 1.1, the acceptance view)    view "s1" = off + s1 renamed to adaptive (report only)
 //  plus compare_te24_s11 on all arms (main batches) and on the posture report batches.
 //  --dir=<validation folder with batches/ and posture/>   writes <dir>/views/*, <dir>/analysis_*.json, <dir>/judgement_*.json, <dir>/compare_*.json
+//  Sprint 1.2（2026-11-18）：--views=<name>:<arm>,...（每個視圖＝off ＋ 那一臂改名成 adaptive）。預設 v11:adaptive,s1:s1（＝Sprint 1.1 的做法）；
+//    Sprint 1.2 用 --views=v12:adaptive,s11:s11。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +17,8 @@ const DIR = arg("dir");
 const run = (args) => { const r = spawnSync(process.execPath, args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 }); if (r.status !== 0) { console.error(r.stderr); process.exit(1); } return r.stdout; };
 const B = path.join(DIR, "batches");
 const files = fs.readdirSync(B).filter((x) => x.endsWith(".json")).sort();
-for (const [view, keep] of [["v11", { off: "off", adaptive: "adaptive" }], ["s1", { off: "off", s1: "adaptive" }]]) {
+const VIEWS = (arg("views") ?? "v11:adaptive,s1:s1").split(",").map((x) => { const [v, a] = x.split(":"); return [v, { off: "off", [a]: "adaptive" }]; });
+for (const [view, keep] of VIEWS) {
   const vd = path.join(DIR, "views", view);
   fs.mkdirSync(vd, { recursive: true });
   for (const f of files) {

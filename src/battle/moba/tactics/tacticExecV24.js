@@ -113,6 +113,40 @@ export const TACTIC_EXEC_V24_1 = Object.freeze({
 });
 const C1 = TACTIC_EXEC_V24_1;
 
+/**
+ *  Sprint 1.2（tacticExec "adaptive.v1.2"，Owner 2026-11-18 核准）的追加參數。adaptive.v1／v1.1 不讀這裡任何一格（兩版都原樣重現）。
+ *  根因（Sprint 1.1 驗證資料，Seeds 110001–110599 已用過，只做診斷）：
+ *   · 自家營全清、往返期間也不重生 ⇒ v1.1 機會成本＝0 ⇒ 期望值 0.15 的 2 人 Buff 也出發（生涯 70 次，到時營地已被清 88～100%）
+ *   · 生涯對方打野清營很勤（營地存活比例 0.43～0.47、重生後中位數 35 秒被清；工具路徑 0.81～0.97、68～172 秒）⇒ 「沒看過的一般營當作活著」在生涯落空
+ *   · 積極／全力的 sizeMin 2 碰上 2 人成功率 0.35 ⇒ 期望值永遠不夠 ⇒ 每邊每場 0.03 次
+ *   · 威脅模型 s05 把「沒看見的敵方打野」一律算 1 人 ⇒ 目標多半是一般營時高估（偏差 0.59）
+ */
+export const TACTIC_EXEC_V24_2 = Object.freeze({
+  //  ① 時間價值：我方打野這場對局的實際產出（我方自家營被我方清掉的座數 ÷ 首次出生後經過的秒數；自己隊伍的資訊），加先驗 λ0 × T0。
+  //     往返期間自家有營可打的那一段用 max(lossPerSec, λ)，沒有營可打的那一段用 λ（其他有效行動的機會成本）⇒ 不會歸零。
+  //     λ0＝v23 臂每邊每場清自家營 10.95 座 ÷ 約 1,170 秒（Sprint 1.1 驗證資料，已用過）≈ 0.009；T0＝300 秒。
+  lambda0: 0.009, lambdaT0: 300,
+  //  ② 敵方營存活信念：我方每次「開始看見」一座我們以為活著的敵方營，記一筆它當下活或死（是我方自己清掉的不算）。
+  //     依「最後一次確認活著（或公開重生時間）到現在」分 fresh（< freshSec）與 stale 兩格，各自用 Beta(α, β) 的平均當作到場時還活著的機率。
+  //     先驗見 belPrior（在已用過的 Seeds 上選）。只用我方視野與公開的重生計時；不讀看不見的營地狀態。
+  freshSec: 40,
+  //  先驗＝兩條路徑合計的真實存活率（已用過的 Seeds 110001–110011、110201–110211，每 10 秒取樣、只在離線診斷讀真值）：
+  //  fresh（< 40 秒）工具 0.99、生涯 0.85 ⇒ 0.9；stale 工具 0.87～0.97、生涯 0.38～0.41 ⇒ 0.65；權重 4（對局內觀測很快蓋過）。
+  belPrior: Object.freeze({ fresh: Object.freeze([3.6, 0.4]), stale: Object.freeze([2.6, 1.4]) }),
+  //  successP 是在工具路徑量的（那時營地到場時還活著：一般營 96.4%、Buff 88%）⇒ 換成「活著的前提下」的成功率＝successP ÷ aliveRef，再乘存活信念。
+  aliveRef: Object.freeze({ camp: 0.964, buff: 0.88 }),
+  //  ③ 傾向的人數下限（sizeMin）只在預估有敵人（威脅 ≥ 1）時要求；預估 0 人時與其他傾向同樣可以單人（安全條件不變）。
+  //  ④ 威脅模型 "s12"：敵方打野「沒看見而且最後一次看見已超過 ejStaleSec 秒」才算 1 人；從沒看過、或 10～30 秒內看過 ⇒ 不算
+  //     （看得見、或 10 秒內的記憶照 s05）。在已用過的 Seeds 上（1,640 筆）選的：偏差 0.41、誤差 0.52、涵蓋 0.85；只看 v1.1 臂 0.40／0.47／0.66。
+  //     依目標類型分開量時一般營旁打野到場只有 3～11%，但整數預測加上涵蓋 ≥ 0.6 的限制下，最好的規則只取決於新鮮度（見 S12_PROGRESS.md）。
+  ejStaleSec: 30,
+  //  econK（v1.2）：期望收益（已乘存活信念、含時間價值成本）≥ econK × 成本。與 v1.1 同一條規則選（最接近「每邊每場約 1 次」、不是禁止）：
+  //  已用過的 Seeds（工具 110001–110059 ×3 配置、生涯 110201–110219 ×3 素質）：1.0 ⇒ 工具 0.43／生涯 0.07；**0.9 ⇒ 1.12／0.20（合計 0.89）**；0.8 ⇒ 2.10／0.53。
+  //  0.8 的 S2 較高（工具 0.87）但出發是目標的兩倍，而且是看到結果才知道 ⇒ 不改選，列入產品取捨。之後不再調。
+  econK: 0.9,
+});
+const C2 = TACTIC_EXEC_V24_2;
+
 /** 傾向：Sprint 1 由戰術書既有的入侵傾向決定（玩家自選傾向屬 Sprint 3）。 */
 export function postureOf(knobs) {
   const ic = knobs?.invadeChance ?? 0;
@@ -130,13 +164,20 @@ const newObs = () => ({
 
 /** configureMatch 時建立。 */
 export function createTacticExecState(E) {
-  const st = { log: [], hist: [], obs: { blue: newObs(), red: newObs() }, side: {}, v11: E._tacExecVariant === "adaptive.v1.1" };
+  const v12 = E._tacExecVariant === "adaptive.v1.2";
+  const st = { log: [], hist: [], obs: { blue: newObs(), red: newObs() }, side: {}, v11: E._tacExecVariant === "adaptive.v1.1" || v12 };
+  if (v12) st.v12 = true;
   for (const S of ["blue", "red"]) {
     const K = E.director?.knobs(S) ?? null;
     const posture = postureOf(K);
     st.obs[S].posture = posture;
     st.side[S] = { posture, nextEval: 0, nextDefend: 0, cooldownUntil: -Infinity, defendCooldownUntil: -Infinity,
       foeMem: new Map(), campMem: new Map(), campDmg: new Map(), active: null };
+    if (v12) {
+      st.side[S].bel = new Map(); st.side[S].ownAlive = new Map(); st.side[S].ownClears = 0;
+      st.side[S].belObs = { fresh: [...C2.belPrior.fresh], stale: [...C2.belPrior.stale] };
+      st.obs[S].belief = { observed: 0, foundDead: 0 };
+    }
   }
   return st;
 }
@@ -179,7 +220,54 @@ export function tacticExecObserve(E, X, alive) {
       if (c.side === S || !campVisible(E, S, c, alive)) continue;
       sd.campMem.set(c.id, { alive: c.alive, hp: c.alive ? campHpFrac(c) : 0, respawnAt: c.alive ? -Infinity : (c.respawnAt ?? E.t + (c.respawn ?? 90)), t: E.t });
     }
+    if (X.v12) observeBelief12(E, X, S, alive);
   }
+}
+
+/**
+ * Sprint 1.2 敵方營存活信念與我方時間價值（每 tick、每邊）。只讀：我方自家營（自己隊伍的資訊）、我方看得見的敵方營、公開的重生計時。
+ *  · 自家營由活轉死而且是我方清的 ⇒ ownClears＋1（時間價值 λ 的分子）
+ *  · 敵方營：B.since＝我們相信它從何時起一直活著（從沒看過 ⇒ 首次出生時間；看見活著 ⇒ 現在；看見死了 ⇒ 改記 B.until＝公開的重生時間，到時改成 since）
+ *  · 一段「開始看見」而我們以為它活著 ⇒ 一筆觀測：活 ⇒ α＋1，死（不是我方清的）⇒ β＋1；依 now − since 分 fresh／stale
+ */
+function observeBelief12(E, X, S, alive) {
+  const sd = X.side[S], O = X.obs[S].belief, first = E.rules.campFirstSpawn ?? 30;
+  for (const c of E.neutrals?.camps ?? []) {
+    if (c.side === S) {
+      const was = sd.ownAlive.get(c.id) ?? false;
+      if (was && !c.alive && c.killerTeam === S) sd.ownClears++;
+      sd.ownAlive.set(c.id, !!c.alive);
+      continue;
+    }
+    const B = sd.bel.get(c.id) ?? { since: first, until: null, vis: false };
+    const vis = campVisible(E, S, c, alive);
+    if (B.since == null && B.until != null && E.t >= B.until) { B.since = B.until; B.until = null; }
+    if (vis && !B.vis && B.since != null && E.t >= B.since && !(!c.alive && c.killerTeam === S)) {
+      const k = E.t - B.since < C2.freshSec ? "fresh" : "stale";
+      sd.belObs[k][c.alive ? 0 : 1]++;
+      O.observed++; if (!c.alive) O.foundDead++;
+    }
+    if (vis) {
+      if (c.alive) { B.since = E.t; B.until = null; }
+      else { B.since = null; B.until = c.respawnAt ?? E.t + (c.respawn ?? 90); }
+    }
+    B.vis = vis;
+    sd.bel.set(c.id, B);
+  }
+}
+/** 到場時（現在＋eta）這座敵方營還活著的信念。 */
+function pAlive12(E, X, S, c, eta) {
+  const sd = X.side[S], B = sd.bel.get(c.id) ?? { since: E.rules.campFirstSpawn ?? 30, until: null };
+  const since = B.since ?? B.until;
+  if (since == null) return 0;
+  const k = E.t + eta - since < C2.freshSec ? "fresh" : "stale";
+  const [a, b] = sd.belObs[k];
+  return a / (a + b);
+}
+/** 我方打野的時間價值（座／秒）：我方清自家營的實際速度＋先驗。 */
+function lambdaTime12(E, X, S) {
+  const sd = X.side[S], el = Math.max(0, E.t - (E.rules.campFirstSpawn ?? 30));
+  return (sd.ownClears + C2.lambda0 * C2.lambdaT0) / (el + C2.lambdaT0);
 }
 function posAgo(X, id, t) {
   const want = t - C.approachLookback;
@@ -276,19 +364,24 @@ function threatOf(E, X, S, target, alive, eta) {
   const JG = bitOf("jungle");
   //  敵方打野先驗：沒有反證就當作在他自己的野區
   const ej = E.players.find((q) => q.side === foe && q.role === "jungle");
-  let ejBit = 0, ejKind = "none";
+  let ejBit = 0, ejKind = "none", ejBit12 = 0, ejAge = -1;
   if (ej && !ej.dead) {
-    if (seen(E, S, ej, alive)) { ejBit = eta(ej.pos) <= C.ejNearEta ? JG : 0; ejKind = "seen"; }
+    if (seen(E, S, ej, alive)) { ejBit = eta(ej.pos) <= C.ejNearEta ? JG : 0; ejKind = "seen"; ejBit12 = ejBit; ejAge = 0; }
     else {
       const m = X.side[S].foeMem.get(ej.id);
       const fresh = !!m && E.t - m.t <= C.ejMemFresh;
       ejBit = fresh && eta(m.pos) - (E.t - m.t) > C.ejNearEta ? 0 : JG;
       ejKind = fresh ? "memory" : "prior";
+      ejAge = m ? E.t - m.t : -1;
+      //  s12（Sprint 1.2）：10 秒內的記憶照 s05；更舊的記憶只有超過 ejStaleSec 才算；從沒看過不算
+      ejBit12 = fresh ? ejBit : m && E.t - m.t >= C2.ejStaleSec ? JG : 0;
     }
   }
   const s05 = (nowOrAppr & ~JG) | ejBit;
   const s05reach = s05 | (reach & ~JG);
-  return { s05: popcount(s05), s05reach: popcount(s05reach), seenNear: popcount(nowOrAppr), mask: s05, maskReach: s05reach, ejKind };
+  const s12 = (nowOrAppr & ~JG) | ejBit12;
+  return { s05: popcount(s05), s05reach: popcount(s05reach), seenNear: popcount(nowOrAppr), mask: s05, maskReach: s05reach, ejKind,
+    s12: popcount(s12), mask12: s12, ejAge };
 }
 
 /** 匯出給 gate（8a 規則對稱、資訊公平的行為測試）；引擎只經 tacticExecTick 呼叫。 */
@@ -331,7 +424,7 @@ export function evaluateInvade(E, X, S, alive) {
     if (len == null) { inc(why, "unreachable"); continue; }
     const etaPath = len / moveSpeed;
     if (etaPath > P.etaMax + (X.v11 && cand.type !== "buff" ? C1.campEtaExtra : 0)) { inc(why, "too_far"); continue; }
-    if (X.v11) { const ev = econ11(E, X, S, alive, { ...cand, etaJ: etaPath }, eta); if (!ev.ok) { inc(why, "own_farm"); rec.econFail ??= { target: cand.c.id, type: cand.type, ...ev.rec }; continue; } cand.econ = ev; }
+    if (X.v11) { const ev = (X.v12 ? econ12 : econ11)(E, X, S, alive, { ...cand, etaJ: etaPath }, eta); if (!ev.ok) { inc(why, "own_farm"); rec.econFail ??= { target: cand.c.id, type: cand.type, ...ev.rec }; continue; } cand.econ = ev; }
     best = { ...cand, etaJ: etaPath };
     break;
   }
@@ -401,6 +494,36 @@ function econ11(E, X, S, alive, cand, eta) {
 }
 
 /**
+ * Sprint 1.2 野區經濟：
+ *  · 機會成本＝自家營平均價值 ×（max(lossPerSec, λ) × 自家有營可打的往返秒數 ＋ λ × 其餘往返秒數）；λ＝我方打野的時間價值（lambdaTime12）。
+ *    「自家有營可打」＝從現在起最早一座自家營可打（活著＝0，否則公開的重生剩餘秒數）之後的那段往返時間 ⇒ 下一次重生落在往返期間就照比例計入。
+ *  · 期望收益＝價值 × min(0.95, successP ÷ aliveRef) × 到場時還活著的信念（pAlive12）×（1＋denyShare）；2 人用 successP2。
+ */
+function econ12(E, X, S, alive, cand, eta) {
+  const r4 = (x) => Math.round(x * 10000) / 10000;
+  const own = (E.neutrals?.camps ?? []).filter((c) => c.side === S);
+  let back = Infinity, availFrom = Infinity;
+  for (const c of own) {
+    back = Math.min(back, eta(cand.c.pos, c.pos));
+    availFrom = Math.min(availFrom, c.alive ? 0 : Number.isFinite(c.respawnAt) ? Math.max(0, c.respawnAt - E.t) : Infinity);
+  }
+  if (!Number.isFinite(back)) back = 0;
+  const trip = cand.etaJ + C.clearSec[cand.type] * Math.max(0.2, cand.hp ?? 1) + back;
+  const overlap = Number.isFinite(availFrom) ? Math.max(0, Math.min(trip, trip - availFrom)) : 0;
+  const lam = lambdaTime12(E, X, S), lamFarm = Math.max(C1.lossPerSec, lam);
+  const ownValue = own.length ? own.reduce((sum, c) => sum + C.value[typeOf(c)], 0) / own.length : 0;
+  const cost = ownValue * (lamFarm * overlap + lam * (trip - overlap));
+  const th = threatOf(E, X, S, cand.c, alive, (pos) => eta(pos, cand.c.pos));
+  const cond0 = th.s05 === 0 && th.seenNear === 0 ? "clear" : th.s05 === 1 && th.mask === bitOf("jungle") && th.ejKind === "prior" && th.seenNear === 0 ? "prior" : "contested";
+  const cond = cond0 === "prior" && E.t < C1.earlyPriorSec ? "prior_early" : cond0;
+  const pA = pAlive12(E, X, S, cand.c, cand.etaJ);
+  const gv = (tbl) => C.value[cand.type] * Math.min(0.95, tbl[cand.type][cond] / C2.aliveRef[cand.type]) * pA * (1 + C1.denyShare);
+  const ev = gv(C1.successP), ev2 = gv(C1.successP2);
+  const k = X.tune?.econK ?? C2.econK;
+  return { ok: ev >= k * cost, duoOk: ev2 >= k * cost, rec: { trip: r4(trip), ev: r4(ev), ev2: r4(ev2), cost: r4(cost), cond, pAlive: r4(pA), lambda: r4(lam), overlap: r4(overlap) } };
+}
+
+/**
  * Sprint 1.1 出發前的後半段（只在 adaptive.v1.1）：
  *  ① 野區經濟已在目標篩選時做完（econ11：期望收益 vs 往返機會成本；不合格的目標跳過，換下一個近的）。
  *  ② 威脅（同 s05）；保守型看得見威脅一律不去。
@@ -413,12 +536,16 @@ function evaluateParty11(E, X, S, alive, { jg, best, P, rec, decline, eta, moveS
   const r4 = (x) => Math.round(x * 10000) / 10000;
   Object.assign(rec, best.econ.rec);
   const th = threatOf(E, X, S, best.c, alive, (pos) => eta(pos, best.c.pos));
-  Object.assign(rec, { threat: th.s05, threatReach: th.s05reach, seenNear: th.seenNear, ej: th.ejKind });
+  //  v1.2：記錄與編隊用的威脅改成 s12（威脅校準 S11 讀的就是這一欄）；s05 另記一欄。「唯一的威脅是打野先驗」仍以 s05 的位元判斷（情報種類）。
+  Object.assign(rec, { threat: X.v12 ? th.s12 : th.s05, threatReach: th.s05reach, seenNear: th.seenNear, ej: th.ejKind },
+    X.v12 ? { threat05: th.s05, tmask: th.mask12, ejAge: th.ejAge < 0 ? -1 : Math.round(th.ejAge * 10) / 10 } : {});
   if (P.noSeenThreat && th.seenNear > 0) return decline("threat_seen");
-  const T = th.s05, JG = bitOf("jungle");
+  const T = X.v12 ? th.s12 : th.s05, JG = bitOf("jungle");
   const quiet = th.seenNear === 0 && th.s05reach === th.s05;
-  const priorOnly = T === 1 && th.mask === JG && th.ejKind === "prior";
-  const soloOk = P.sizeMin <= 1 && quiet && (T === 0 || (priorOnly && C1.soloPriorTypes.includes(best.type)));
+  const priorOnly = th.s05 === 1 && th.mask === JG && th.ejKind === "prior";
+  //  v1.2：傾向的人數下限只在預估有敵人時要求（預估 0 人 ⇒ 下限 1）
+  const sizeMin = X.v12 && T === 0 ? 1 : P.sizeMin;
+  const soloOk = sizeMin <= 1 && quiet && (T === 0 || (priorOnly && C1.soloPriorTypes.includes(best.type)));
   const need = T === 0 ? 1 : P1.needAdvantage ? T + 1 : Math.max(1, T + P.marginMin);
   let partner = null;
   const why2 = {};
@@ -603,7 +730,9 @@ export function retreatCheck11(E, X, p, alive) {
 function soloNow11(E, X, S, camp, alive) {
   const moveSpeed = Math.max(1e-6, E.rules.moveSpeed ?? 5.6);
   const th = threatOf(E, X, S, camp, alive, (pos) => (dist(pos, camp.pos) * C.detour) / moveSpeed);
-  return th.seenNear === 0 && th.s05reach === th.s05 && (th.s05 === 0 || (th.s05 === 1 && th.mask === bitOf("jungle") && th.ejKind === "prior" && C1.soloPriorTypes.includes(typeOf(camp))));
+  const T = X.v12 ? th.s12 : th.s05;
+  if (X.v12 && T > 0 && (C.postures[X.side[S].posture]?.sizeMin ?? 1) > 1) return false;   // v1.2：有預估敵人時，2 人下限的傾向不改單人
+  return th.seenNear === 0 && th.s05reach === th.s05 && (T === 0 || (th.s05 === 1 && th.mask === bitOf("jungle") && th.ejKind === "prior" && C1.soloPriorTypes.includes(typeOf(camp))));
 }
 
 /**

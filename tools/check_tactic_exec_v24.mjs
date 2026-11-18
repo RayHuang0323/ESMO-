@@ -13,6 +13,9 @@
 //  Sprint 1.1（2026-11-18）：v24 規則集改成 "adaptive.v1.1"。T2／T3／T4 對兩個版本都跑（"adaptive.v1" 用 ESMO_BALANCE_TACTICEXEC 覆寫）；另加：
 //   T7 原 Sprint 1 可重現：adaptive.v1（工具路徑用覆寫、生涯路徑在第一個 tick 前把 v11 關掉）整場串流雜湊＝從 e9d86b32 匯出版錄下的值
 //   T8 動態撤退（retreatCheck11）：入侵進行中的每個 tick，鏡像引擎的結果逐筆相同（8a），看不見的敵人移走後也相同（資訊公平）
+//  Sprint 1.2（2026-11-18）：v24 規則集改成 "adaptive.v1.2"。T2／T3／T4／T8 對 v1、v1.1、v1.2 都跑（舊版用 ESMO_BALANCE_TACTICEXEC 覆寫）；另加：
+//   T7 再釘 Sprint 1.1（adaptive.v1.1）的整場雜湊（4c1da80a 上錄的；生涯路徑在第一個 tick 前關掉 v12）
+//   T9 敵方營存活信念的資訊公平：把「這一邊看不見」的敵方營活／死狀態整個翻轉，v1.2 的入侵決策逐筆不變（信念只來自我方視野與公開重生計時）
 //  用法：node tools/check_tactic_exec_v24.mjs
 // ============================================================================
 import fs from "node:fs";
@@ -35,7 +38,7 @@ const DECLINE = ["in_progress", "cooldown", "no_leader", "busy", "hp", "unreacha
 const INV_ENDS = ["hp", "outnumbered", "retreat", "no_target", "lost_race", "stolen", "killed", "window", "objective_call", "ended",
   "retreat_hp", "retreat_threat", "partner_lost", "partner_lag", "stuck"];
 const PARTNER_ENDS = ["retreat", "hp", "objective_call", "outnumbered", "lane_emergency", "killed", "leader_ended", "released", ...INV_ENDS.map((x) => `leader_${x}`)];
-const VARIANTS = [["adaptive.v1", "adaptive.v1"], ["adaptive.v1.1", null]];   // [名稱, ESMO_BALANCE_TACTICEXEC 覆寫]
+const VARIANTS = [["adaptive.v1", "adaptive.v1"], ["adaptive.v1.1", "adaptive.v1.1"], ["adaptive.v1.2", null]];   // [名稱, ESMO_BALANCE_TACTICEXEC 覆寫]
 const buildV = (env, ...a) => { if (env) process.env.ESMO_BALANCE_TACTICEXEC = env; try { return P.build(...a); } finally { delete process.env.ESMO_BALANCE_TACTICEXEC; } };
 const DEF_DECLINE = ["no_one_free", "outnumbered"];
 const DEF_ENDS = ["retreat", "hp", "objective_call", "window", "no_camp", "cleared", "outnumbered", "killed"];
@@ -80,13 +83,16 @@ function mirrorEngine(E1) {
 function mirrorX(X) {
   const side = (sd) => ({ ...sd, cooldownUntil: -Infinity, active: null,
     foeMem: new Map([...sd.foeMem].map(([id, m]) => [swId(id), { ...m, pos: rot(m.pos) }])),
-    campMem: new Map([...sd.campMem].map(([id, m]) => [swCamp(id), m])) });
-  return { v11: X.v11, log: [], obs: { blue: freshObs(X).red, red: freshObs(X).blue },
+    campMem: new Map([...sd.campMem].map(([id, m]) => [swCamp(id), m])),
+    //  v1.2：敵方營存活信念與自家營紀錄（鍵是營地 id ⇒ 一起對調）；觀測次數與我方清營數原樣
+    ...(sd.bel ? { bel: new Map([...sd.bel].map(([id, b]) => [swCamp(id), { ...b }])), ownAlive: new Map([...sd.ownAlive].map(([id, a]) => [swCamp(id), a])),
+      belObs: { fresh: [...sd.belObs.fresh], stale: [...sd.belObs.stale] } } : {}) });
+  return { v11: X.v11, ...(X.v12 ? { v12: true } : {}), log: [], obs: { blue: freshObs(X).red, red: freshObs(X).blue },
     hist: X.hist.map((s) => ({ t: s.t, pos: new Map([...s.pos].map(([id, p]) => [swId(id), rot(p)])) })),
     side: { blue: side(X.side.red), red: side(X.side.blue) } };
 }
 //  比對用：冷卻與「進行中」在兩邊同樣解除，讓評估走完整條路徑（目標、物件、編隊、威脅）；只在測試裡，不改引擎狀態。
-const copyX = (X) => ({ v11: X.v11, log: [], obs: freshObs(X), hist: X.hist, side: { blue: { ...X.side.blue, cooldownUntil: -Infinity, active: null }, red: { ...X.side.red, cooldownUntil: -Infinity, active: null } } });
+const copyX = (X) => ({ v11: X.v11, ...(X.v12 ? { v12: true } : {}), log: [], obs: freshObs(X), hist: X.hist, side: { blue: { ...X.side.blue, cooldownUntil: -Infinity, active: null }, red: { ...X.side.red, cooldownUntil: -Infinity, active: null } } });
 const norm = (r, map) => r && ({ d: r.d, n: r.n ?? null, target: r.target ? map.camp(r.target) : null, members: r.members ? r.members.map(map.id) : null,
   threat: r.threat ?? null, threatReach: r.threatReach ?? null, seenNear: r.seenNear ?? null, busy: r.busy ?? null, why: r.why ?? null, eta: r.etaJ ?? null,
   cond: r.cond ?? null, soloOk: r.soloOk ?? null, need: r.need ?? null, party: r.party ?? null, ej: r.ej ?? null });
@@ -110,7 +116,7 @@ for (const [VNAME, VENV] of VARIANTS) {
 const t2kinds = {}; let t2n = 0, t2bad = 0, t2ex = null, etaMax = 0, t3n = 0, t3bad = 0, t3ex = null, t3moved = 0, skipped = 0;
 for (const [tb, tr, seed] of [["v2.jungle_invasion", "v2.jungle_invasion", 11], ["v2.jungle_invasion", "classic.m7", 13], ["classic.m7", "v2.jungle_invasion", 17]]) {
   const e = buildV(VENV, "balanceTool.v24", tb, tr, seed, null);
-  if ((e.tacExec?.v11 ?? null) !== (VNAME === "adaptive.v1.1")) throw new Error(`variant mismatch ${VNAME}`);
+  if (e._tacExecVariant !== VNAME || !!e.tacExec?.v11 !== (VNAME !== "adaptive.v1") || !!e.tacExec?.v12 !== (VNAME === "adaptive.v1.2")) throw new Error(`variant mismatch ${VNAME}`);
   while (!e.over && e.t < 900) {
     e.tick(0.5);
     if (Math.round(e.t * 2) % 20 !== 3) continue;                 // 每 10 秒取一個時點（偏開引擎自己的 5 秒評估點）
@@ -168,7 +174,7 @@ for (const [V] of VARIANTS) {
     }
     for (const r of X.log) if (r.kind === "invade" && !(r.d === "go" || DECLINE.includes(String(r.d).replace("declined:", "")))) bad.push(`log:${r.d}`);
   }
-  ck("T4 原因碼都在登記清單內；有入侵意圖的對局都有評估紀錄（兩個版本）", bad.length === 0 && evalMatches === 4, `matches=${n} withEvals=${evalMatches} bad=${J([...new Set(bad)])}`);
+  ck("T4 原因碼都在登記清單內；有入侵意圖的對局都有評估紀錄（三個版本）", bad.length === 0 && evalMatches === 6, `matches=${n} withEvals=${evalMatches} bad=${J([...new Set(bad)])}`);
 }
 // ── T5 ──
 {
@@ -185,9 +191,11 @@ for (const [V] of VARIANTS) {
   ck("T6 層關閉時完全不啟動（沒有 tacExec、沒有隊友／回防欄位）", e.tacExec === undefined && e._tacExecV24 === false && leak === 0, `tacExec=${typeof e.tacExec} flag=${e._tacExecV24} leakTicks=${leak}`);
 }
 
-// ── T8 資料：v1.1、雙方入侵模板、6 場到 1500 秒；入侵進行中的每個 tick（retreatCheck11 不讀塔，建築被拆的時點照樣比）──
-for (const seed of [11, 13, 17, 31, 37, 41]) {
-  const e = P.build("balanceTool.v24", "v2.jungle_invasion", "v2.jungle_invasion", seed, null);
+// ── T8 資料：v1.1 與 v1.2、雙方入侵模板、6 場到 1500 秒；入侵進行中的每個 tick（retreatCheck11 不讀塔，建築被拆的時點照樣比）──
+const t8by = {};
+for (const [VNAME, VENV] of VARIANTS.slice(1)) for (const seed of [11, 13, 17, 31, 37, 41]) {
+  const e = buildV(VENV, "balanceTool.v24", "v2.jungle_invasion", "v2.jungle_invasion", seed, null);
+  t8by[VNAME] ??= 0;
   while (!e.over && e.t < 1500) {
     e.tick(0.5);
     //  T8：v1.1 進行中的入侵（帶隊者還活著、還沒結束）⇒ 每個 tick 比對 retreatCheck11（只用複本，不改引擎狀態）
@@ -201,7 +209,7 @@ for (const seed of [11, 13, 17, 31, 37, 41]) {
       X2.side[sw(S)].active = activeCopy(A, SW);
       const r1 = TE.retreatCheck11(e, X1, L, alive);
       const r2 = TE.retreatCheck11(E2, X2, E2.players.find((q) => q.id === swId(L.id)), alive2);
-      t8n++; t8kinds[r1 ?? "continue"] = (t8kinds[r1 ?? "continue"] ?? 0) + 1;
+      t8n++; t8by[VNAME]++; t8kinds[r1 ?? "continue"] = (t8kinds[r1 ?? "continue"] ?? 0) + 1;
       if (r1 !== r2) { t8bad++; t8ex ??= { seed, t: e.t, S, r1, r2 }; }
       const m = moveUnseen(e, S, alive);
       if (m) {
@@ -220,17 +228,50 @@ for (const seed of [11, 13, 17, 31, 37, 41]) {
   for (const c of [["balanceTool.v24", "v2.jungle_invasion", "v2.jungle_invasion", 11, null], ["balanceTool.v24", "v2.jungle_invasion", "classic.m7", 13, null]])
     got[P.caseKey(c)] = P.streamHash(buildV("adaptive.v1", ...c)).hash;
   const cc = ["career.v24", "v2.jungle_invasion", null, 93001, "mid"], ec = P.build(...cc);
-  if (ec._tacExecVariant !== "adaptive.v1.1" || ec.t !== 0) throw new Error("career.v24 should resolve to adaptive.v1.1");
-  ec._tacExecVariant = "adaptive.v1"; ec.tacExec.v11 = false;
+  if (ec._tacExecVariant !== "adaptive.v1.2" || ec.t !== 0) throw new Error("career.v24 should resolve to adaptive.v1.2");
+  ec._tacExecVariant = "adaptive.v1"; ec.tacExec.v11 = false; ec.tacExec.v12 = false;
   got[P.caseKey(cc)] = P.streamHash(ec).hash;
-  const v11 = P.streamHash(P.build("balanceTool.v24", "v2.jungle_invasion", "v2.jungle_invasion", 11, null)).hash;
-  ck("T7 原 Sprint 1（adaptive.v1）整場串流雜湊＝e9d86b32 錄下的值（工具覆寫 2 場＋生涯第一個 tick 前切換 1 場）；v1.1 確實不同",
-    Object.keys(PIN).every((k) => got[k] === PIN[k]) && v11 !== PIN["balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-"], J(got));
+  //  Sprint 1.1（adaptive.v1.1）：4c1da80a 上（當時 v24 規則集＝adaptive.v1.1）錄的
+  const PIN11 = { "balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-": "b50bed51160c5a8c6b1c", "balanceTool.v24|v2.jungle_invasion|classic.m7|13|-": "21ae0bc6af7aa39ccfd1",
+    "career.v24|v2.jungle_invasion|-|93001|mid": "e69e7200a53787d71c5c" };
+  const got11 = {};
+  for (const c of [["balanceTool.v24", "v2.jungle_invasion", "v2.jungle_invasion", 11, null], ["balanceTool.v24", "v2.jungle_invasion", "classic.m7", 13, null]])
+    got11[P.caseKey(c)] = P.streamHash(buildV("adaptive.v1.1", ...c)).hash;
+  const e11 = P.build(...cc); e11._tacExecVariant = "adaptive.v1.1"; e11.tacExec.v12 = false;
+  got11[P.caseKey(cc)] = P.streamHash(e11).hash;
+  const v12 = P.streamHash(P.build("balanceTool.v24", "v2.jungle_invasion", "v2.jungle_invasion", 11, null)).hash;
+  ck("T7 舊候選可重現：adaptive.v1＝e9d86b32 錄的值、adaptive.v1.1＝4c1da80a 錄的值（工具覆寫各 2 場＋生涯第一個 tick 前切換各 1 場）；v1.2 確實不同",
+    Object.keys(PIN).every((k) => got[k] === PIN[k]) && Object.keys(PIN11).every((k) => got11[k] === PIN11[k])
+    && v12 !== PIN["balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-"] && v12 !== PIN11["balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-"], J({ v1: got, v11: got11, v12 }));
+}
+// ── T9 ──（v1.2：看不見的敵方營狀態翻轉，決策不變）
+{
+  let n = 0, bad = 0, ex = null, flipped = 0;
+  for (const [tb, tr, seed] of [["v2.jungle_invasion", "v2.jungle_invasion", 11], ["v2.jungle_invasion", "classic.m7", 13], ["v2.jungle_invasion", "v2.jungle_invasion", 31]]) {
+    const e = P.build("balanceTool.v24", tb, tr, seed, null);
+    while (!e.over && e.t < 1200) {
+      e.tick(0.5);
+      if (Math.round(e.t * 2) % 20 !== 7) continue;
+      const alive = e.players.filter((p) => !p.dead);
+      for (const S of ["blue", "red"]) {
+        if (!e.tacExec.side[S].posture) continue;
+        const vis = (c) => alive.some((a) => a.side === S && Math.hypot(a.pos.x - c.pos.x, a.pos.y - c.pos.y) <= 16);
+        const camps = e.neutrals.camps.map((c) => (c.side !== S && !vis(c) ? (flipped++, { ...c, alive: !c.alive, respawnAt: c.alive ? e.t + 37 : -Infinity, hp: c.alive ? 0 : c.maxHp }) : c));
+        const E3 = Object.create(e);
+        Object.defineProperty(E3, "neutrals", { value: { ...e.neutrals, camps } });
+        const X1 = copyX(e.tacExec), X3 = copyX(e.tacExec);
+        TE.evaluateInvade(e, X1, S, alive); TE.evaluateInvade(E3, X3, S, alive);
+        const a = J({ ...X1.log.at(-1), t: null }), b = J({ ...X3.log.at(-1), t: null });
+        n++; if (a !== b) { bad++; ex ??= { seed, t: e.t, S, a: a.slice(0, 300), b: b.slice(0, 300) }; }
+      }
+    }
+  }
+  ck("T9 敵方營存活信念的資訊公平（adaptive.v1.2）：看不見的敵方營活／死翻轉後，入侵決策逐筆不變", n >= 60 && bad === 0, `compared=${n} campsFlipped=${flipped} diff=${bad}${ex ? " e.g. " + J(ex) : ""}`);
 }
 // ── T8 ──
-ck("T8 動態撤退（adaptive.v1.1）：入侵進行中逐 tick，鏡像結果相同（8a）、看不見的敵人移走後相同（資訊公平）",
+ck("T8 動態撤退（adaptive.v1.1、v1.2）：入侵進行中逐 tick，鏡像結果相同（8a）、看不見的敵人移走後相同（資訊公平）",
   t8n >= 40 && t8bad === 0 && t8fn >= 20 && t8fbad === 0,
-  `mirror compared=${t8n} kinds=${J(t8kinds)} diff=${t8bad}${t8ex ? " e.g. " + J(t8ex) : ""}；fairness compared=${t8fn} diff=${t8fbad}${t8fex ? " e.g. " + J(t8fex) : ""}`);
+  `perVariant=${J(t8by)} mirror compared=${t8n} kinds=${J(t8kinds)} diff=${t8bad}${t8ex ? " e.g. " + J(t8ex) : ""}；fairness compared=${t8fn} diff=${t8fbad}${t8fex ? " e.g. " + J(t8fex) : ""}`);
 
 const pass = results.filter((r) => r.ok).length;
 console.log(`\ncheck_tactic_exec_v24：${pass}/${results.length} ${pass === results.length ? "PASS" : "FAIL"}  (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
