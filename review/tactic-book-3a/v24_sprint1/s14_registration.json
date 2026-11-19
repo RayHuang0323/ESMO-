@@ -1,0 +1,22 @@
+{
+  "id": "v24-s13-acceptance-closure",
+  "baselineCommit": "541721dd3360b639c14c15b175a0b6a760d0507a",
+  "fingerprints": { "moba-sim.v24": "9727c0b4ae8beb3d", "moba-sim.v23": "69237cce78edf2be" },
+  "stress": {
+    "dir": "C:/Users/ifikn/esmo-measure/v24-s14/stress",
+    "toolSeeds": { "from": 140001, "step": 2, "cap": 240, "targetPairsPerConfig": 67, "configs": ["inv", "AB", "BA"] },
+    "careerSeeds": { "from": 141001, "step": 2, "cap": 160, "targetPairsPerTier": 42, "tiers": ["low", "mid", "high"] },
+    "previousRound": { "dir": "C:/Users/ifikn/esmo-measure/v24-s13-val-130001/stress", "toolInjected": 169, "careerInjected": 53 }
+  },
+  "natural": {
+    "dir": "C:/Users/ifikn/esmo-measure/v24-s14/natural",
+    "s11Train": { "from": 142001, "step": 2, "seeds": 100, "configs": ["inv", "AB", "BA"] },
+    "holdoutTool": { "from": 142201, "step": 2, "seeds": 360, "configs": ["inv", "AB", "BA"] },
+    "career": { "from": 143001, "step": 2, "seeds": 100, "tiers": ["low", "mid", "high"] }
+  },
+  "s2Contract": {
+    "version": "s2.v2",
+    "groups": { "tool": "holdout_tool", "career": "career" },
+    "expectedMatches": { "tool": 1080, "career": 300 }
+  }
+}
