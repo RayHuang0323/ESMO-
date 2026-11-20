@@ -1,0 +1,7 @@
+✅ P1 入侵診斷工具不擾動對局：已用過的 Seeds 整場雜湊＝S14 記錄值；決策當下的經濟複本與引擎數值逐筆相同　[{"seed":143001,"hash":"ba4bc5e33792238c98e5","want":"ba4bc5e33792238c98e5","same":true,"evals":160,"checked":34,"mismatch":0},{"seed":142201,"hash":"429b01041969e39ff4e2","want":"429b01041969e39ff4e2","same":true,"evals":500,"checked":169,"mismatch":0}]
+✅ P2 工具路徑預設沒有英雄技能／被動／成長曲線（ESMO_BALANCE_SKILLS=on 才有）；生涯一律有（Preflight A 的根因）　{"default":{"tool":{"skills":false,"passives":false,"curve":false,"stats":false},"career":{"skills":true,"passives":true,"curve":true,"stats":true}},"skillsOn":{"tool":{"skills":true,"passives":true,"curve":true,"stats":false},"career":{"skills":true,"passives":true,"curve":true,"stats":true}}}
+✅ P3 地圖幾何旋轉重合；終局護線真實狀態鏡射（暴露、兵線、計時、選路、護送站位）逐 tick 一致；結果＝已記錄的壓力列　{"exit":0,"compared":{"front":4248,"wave":1416,"timer":1416,"lane":1416,"hold":19674},"mismatches":{"front":0,"wave":0,"timer":0,"lane":0,"hold":0},"outcome":"1/1","geometry":{"lane":8.038873388460929e-14,"tower":1.4210854715202004e-14,"camp":0},"err":""}
+✅ P4 E7 佈局分層用引擎同一個 objectiveLayoutForSeed；已知 Seed 的佈局固定（142201＝SWAPPED、143001＝STANDARD）　{"140001":"STANDARD","142201":"SWAPPED","143001":"STANDARD"}
+✅ P5 src/ 與 feed38c1 相同（含工作樹）；v24 指紋 9727c0b4ae8beb3d、v23 69237cce78edf2be 不變；src/ 沒有 import 診斷工具　{"srcSame":true,"fp":{"v24":"9727c0b4ae8beb3d","v23":"69237cce78edf2be"},"offenders":[]}
+
+5/5 PASS（28 秒）

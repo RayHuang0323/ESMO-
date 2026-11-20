@@ -1,0 +1,95 @@
+{
+ "base": "http://127.0.0.1:5644/ESMO-/",
+ "cases": {
+  "career": {
+   "url": "http://127.0.0.1:5644/ESMO-/",
+   "startedAt": "2026-11-20T20:25:52.613Z",
+   "toBattle": true,
+   "banner": "OWNER PREVIEW · moba-sim.v24 Sprint 1.3（終局護線）候選 未核准發布 · 本機隔離 5644",
+   "speed4": "true",
+   "engineBeforeQuick": null,
+   "quickFinish": "true",
+   "endScreen": true,
+   "quickFinishSec": 6,
+   "engineAtEnd": null,
+   "endText": "DEFEAT 黑曜守望 獲勝 · 20:20 · 14:21 · 🐉4 👑1",
+   "continueVisible": true,
+   "continueClicked": "true",
+   "leftBattle": true,
+   "afterContinue": "ESMO MODERN ESPORTS MANAGEMENT WEEK 2 TEAM COMMAND CENTER 收件匣 2 🦭 1 GSEAL 德國海豹 這是你的戰隊總部。掌握本週節奏，先處理最重要的決策，再把隊伍送上舞台。 第 2 週 12.8萬 支持者 8 天營運 OPERATING FUNDS $128.0",
+   "stored": [
+    "rulesetId=career.v24",
+    "simVersion=moba-sim.v24",
+    "tacticExec=adaptive.v1.3"
+   ],
+   "pageErrors": []
+  },
+  "quick": {
+   "url": "http://127.0.0.1:5644/ESMO-/?stalemateSeed=120159",
+   "startedAt": "2026-11-20T20:27:37.853Z",
+   "toBattle": true,
+   "banner": "OWNER PREVIEW · moba-sim.v24 Sprint 1.3（終局護線）候選 未核准發布 · 本機隔離 5644",
+   "engineAtStart": {
+    "variant": "adaptive.v1.3",
+    "t": 0.5,
+    "over": false,
+    "winner": null,
+    "nexus": {
+     "blue": 7200,
+     "red": 7200
+    }
+   },
+   "expected": {
+    "ticks": 3177,
+    "over": true,
+    "winner": "red",
+    "endT": 1588.5,
+    "hash": "3777ea7385e93785"
+   },
+   "headlessReplay": {
+    "ticks": 3177,
+    "over": true,
+    "winner": "red",
+    "endT": 1588.5,
+    "hash": "9a9668e4f1d6943a"
+   },
+   "sameMatchAsNode": false,
+   "speed4": "true",
+   "engineBeforeQuick": {
+    "variant": "adaptive.v1.3",
+    "t": 241.5,
+    "over": false,
+    "winner": null,
+    "nexus": {
+     "blue": 7200,
+     "red": 7200
+    }
+   },
+   "quickFinish": "true",
+   "endScreen": true,
+   "quickFinishSec": 7,
+   "engineAtEnd": {
+    "variant": "adaptive.v1.3",
+    "t": 1588.5,
+    "over": true,
+    "winner": "red",
+    "nexus": {
+     "blue": -2385,
+     "red": 7200
+    }
+   },
+   "endMatchesNode": true,
+   "endText": "DEFEAT 黑曜守望 獲勝 · 26:28 · 16:17 · 🐉1 👑2",
+   "continueVisible": true,
+   "continueClicked": "true",
+   "leftBattle": true,
+   "afterContinue": "ESMO MODERN ESPORTS MANAGEMENT WEEK 2 TEAM COMMAND CENTER 收件匣 2 🦭 1 GSEAL 德國海豹 這是你的戰隊總部。掌握本週節奏，先處理最重要的決策，再把隊伍送上舞台。 第 2 週 12.8萬 支持者 8 天營運 OPERATING FUNDS $128.0",
+   "stored": [
+    "rulesetId=career.v24",
+    "simVersion=moba-sim.v24",
+    "tacticExec=adaptive.v1.3"
+   ],
+   "pageErrors": []
+  }
+ }
+}

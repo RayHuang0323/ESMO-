@@ -1,0 +1,382 @@
+{
+ "registration": "review/tactic-book-3a/v24_calibration/S16_REGISTRATION.md",
+ "natural": {
+  "tool": {
+   "matches": {
+    "v13": 150,
+    "off": 150,
+    "expected": 150
+   },
+   "envVerified": true,
+   "mode": "REGISTERED",
+   "S2A": {
+    "starts": 83,
+    "arrived": 32,
+    "value": 0.386,
+    "ci": [
+     0.292,
+     0.493
+    ],
+    "ciRaw": [
+     0.29213483146067415,
+     0.4927536231884058
+    ],
+    "verdict": "FAIL"
+   },
+   "S2C": {
+    "sides": 300,
+    "c1": 0.277,
+    "c2": 0.227,
+    "c1Ci": [
+     0.217,
+     0.343
+    ],
+    "c2Ci": [
+     0.18,
+     0.277
+    ],
+    "verdict": "FAIL"
+   },
+   "S5": {
+    "towerDeaths": {
+     "mean": 0.027,
+     "sd": 0.91,
+     "n": 300,
+     "ci": [
+      -0.077,
+      0.13
+     ]
+    },
+    "deaths": {
+     "mean": -0.143,
+     "sd": 8.931,
+     "n": 300,
+     "ci": [
+      -1.158,
+      0.871
+     ]
+    },
+    "verdict": "PASS"
+   },
+   "S6": {
+    "n": 300,
+    "mean": 0.3,
+    "ci": [
+     -0.315,
+     0.915
+    ],
+    "ciRaw": [
+     -0.3154726637122353,
+     0.9154726637122352
+    ],
+    "verdict": "PASS"
+   }
+  },
+  "tool_talents": {
+   "matches": {
+    "v13": 50,
+    "off": 50,
+    "expected": 50
+   },
+   "envVerified": true,
+   "mode": "REGISTERED",
+   "S2A": {
+    "starts": 28,
+    "arrived": 14,
+    "value": 0.5,
+    "ci": [
+     0.286,
+     0.686
+    ],
+    "ciRaw": [
+     0.2857142857142857,
+     0.6857142857142857
+    ],
+    "verdict": "INCONCLUSIVE"
+   },
+   "S2C": {
+    "sides": 100,
+    "c1": 0.28,
+    "c2": 0.25,
+    "c1Ci": [
+     0.17,
+     0.41
+    ],
+    "c2Ci": [
+     0.16,
+     0.35
+    ],
+    "verdict": "FAIL"
+   },
+   "S5": {
+    "towerDeaths": {
+     "mean": 0.05,
+     "sd": 0.88,
+     "n": 100,
+     "ci": [
+      -0.125,
+      0.225
+     ]
+    },
+    "deaths": {
+     "mean": -1.04,
+     "sd": 10.119,
+     "n": 100,
+     "ci": [
+      -3.048,
+      0.968
+     ]
+    },
+    "verdict": "PASS"
+   },
+   "S6": {
+    "n": 100,
+    "mean": 0.48,
+    "ci": [
+     -0.536,
+     1.496
+    ],
+    "ciRaw": [
+     -0.536149592105096,
+     1.496149592105096
+    ],
+    "verdict": "PASS"
+   }
+  },
+  "career": {
+   "matches": {
+    "v13": 240,
+    "off": 240,
+    "expected": 240
+   },
+   "envVerified": true,
+   "mode": "REGISTERED",
+   "S2A": {
+    "starts": 60,
+    "arrived": 29,
+    "value": 0.483,
+    "ci": [
+     0.357,
+     0.608
+    ],
+    "ciRaw": [
+     0.35714285714285715,
+     0.6078431372549019
+    ],
+    "verdict": "FAIL"
+   },
+   "S2C": {
+    "sides": 240,
+    "c1": 0.25,
+    "c2": 0.217,
+    "c1Ci": [
+     0.188,
+     0.317
+    ],
+    "c2Ci": [
+     0.163,
+     0.271
+    ],
+    "verdict": "FAIL"
+   },
+   "S5": {
+    "towerDeaths": {
+     "mean": 0.046,
+     "sd": 0.94,
+     "n": 480,
+     "ci": [
+      -0.038,
+      0.13
+     ]
+    },
+    "deaths": {
+     "mean": 0.635,
+     "sd": 7.313,
+     "n": 480,
+     "ci": [
+      -0.02,
+      1.291
+     ]
+    },
+    "verdict": "FAIL"
+   },
+   "S6": {
+    "n": 480,
+    "mean": 0.15,
+    "ci": [
+     -0.299,
+     0.599
+    ],
+    "ciRaw": [
+     -0.29932302902474206,
+     0.599323029024742
+    ],
+    "verdict": "PASS"
+   }
+  }
+ },
+ "stress": {
+  "seedsWalked": 75,
+  "effectiveSeeds": 75,
+  "target": 75,
+  "envVerified": true,
+  "mode": "REGISTERED",
+  "E7": {
+   "finished": 300,
+   "blueWins": 147,
+   "rate": 0.49,
+   "ci95": [
+    0.434,
+    0.546
+   ],
+   "ciRaw": [
+    0.43391603364256914,
+    0.5463368349573855
+   ],
+   "verdict": "PASS"
+  },
+  "E2tool": {
+   "finished": 300,
+   "injected": 300,
+   "ci95": [
+    0.987,
+    1
+   ],
+   "ciRaw": [
+    0.9873565700022643,
+    0.9999999999999999
+   ],
+   "verdict": "PASS"
+  },
+  "E3": {
+   "nexusHitTicks": 5558,
+   "noWaveHits": 0,
+   "verdict": "PASS"
+  },
+  "reportOnly": {
+   "byCell": {
+    "v13": {
+     "AB|STANDARD": {
+      "finished": 75,
+      "blue": 46,
+      "rate": 0.613,
+      "ci95": [
+       0.5,
+       0.715
+      ]
+     },
+     "AB|SWAPPED": {
+      "finished": 75,
+      "blue": 33,
+      "rate": 0.44,
+      "ci95": [
+       0.333,
+       0.553
+      ]
+     },
+     "BA|STANDARD": {
+      "finished": 75,
+      "blue": 34,
+      "rate": 0.453,
+      "ci95": [
+       0.346,
+       0.566
+      ]
+     },
+     "BA|SWAPPED": {
+      "finished": 75,
+      "blue": 34,
+      "rate": 0.453,
+      "ci95": [
+       0.346,
+       0.566
+      ]
+     }
+    },
+    "v12": {
+     "AB|STANDARD": {
+      "finished": 75,
+      "blue": 50,
+      "rate": 0.667,
+      "ci95": [
+       0.554,
+       0.763
+      ]
+     },
+     "AB|SWAPPED": {
+      "finished": 74,
+      "blue": 38,
+      "rate": 0.514,
+      "ci95": [
+       0.402,
+       0.624
+      ]
+     },
+     "BA|STANDARD": {
+      "finished": 74,
+      "blue": 35,
+      "rate": 0.473,
+      "ci95": [
+       0.363,
+       0.585
+      ]
+     },
+     "BA|SWAPPED": {
+      "finished": 75,
+      "blue": 32,
+      "rate": 0.427,
+      "ci95": [
+       0.321,
+       0.539
+      ]
+     }
+    }
+   },
+   "layoutEffect": {
+    "pairs": 150,
+    "standardMinusSwapped": {
+     "mean": 0.087,
+     "sd": 0.685,
+     "n": 150,
+     "ci": [
+      -0.024,
+      0.197
+     ]
+    }
+   },
+   "sideEffect": {
+    "all": -0.01,
+    "STANDARD": 0.033,
+    "SWAPPED": -0.053
+   },
+   "templateEffect": {
+    "all": 0.037,
+    "STANDARD": 0.08,
+    "SWAPPED": -0.007
+   },
+   "version": {
+    "bothFinished": 298,
+    "v12Blue": 0.52,
+    "v13Blue": 0.49,
+    "flipsToBlue": 51,
+    "flipsToRed": 60,
+    "mcnemarZ": -0.854,
+    "unfinishedV12": 2,
+    "unfinishedV13": 0
+   },
+   "v12": {
+    "finished": 298,
+    "injected": 300,
+    "blueRate": {
+     "finished": 298,
+     "blue": 155,
+     "rate": 0.52,
+     "ci95": [
+      0.464,
+      0.576
+     ]
+    }
+   }
+  }
+ }
+}
