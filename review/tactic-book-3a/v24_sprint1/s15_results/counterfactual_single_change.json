@@ -1,0 +1,200 @@
+{
+ "career_high": {
+  "actualStarts": 8,
+  "base": {
+   "startsPerSide": 0.5,
+   "atLeastOne": 0.433,
+   "chosenTargetTrulyAlive": 0.867,
+   "starts": 15
+  },
+  "lam0NonOverlap": {
+   "startsPerSide": 2,
+   "atLeastOne": 0.967,
+   "chosenTargetTrulyAlive": 0.367,
+   "starts": 60
+  },
+  "lamTool008": {
+   "startsPerSide": 2.533,
+   "atLeastOne": 0.967,
+   "chosenTargetTrulyAlive": 0.434,
+   "starts": 76
+  },
+  "econK08_globalRef": {
+   "startsPerSide": 1.433,
+   "atLeastOne": 0.767,
+   "chosenTargetTrulyAlive": 0.837,
+   "starts": 43
+  },
+  "pAtruth_illegalRef": {
+   "startsPerSide": 3.033,
+   "atLeastOne": 0.967,
+   "chosenTargetTrulyAlive": 1,
+   "starts": 91
+  }
+ },
+ "career_low": {
+  "actualStarts": 13,
+  "base": {
+   "startsPerSide": 0.533,
+   "atLeastOne": 0.4,
+   "chosenTargetTrulyAlive": 0.875,
+   "starts": 16
+  },
+  "lam0NonOverlap": {
+   "startsPerSide": 2.167,
+   "atLeastOne": 1,
+   "chosenTargetTrulyAlive": 0.462,
+   "starts": 65
+  },
+  "lamTool008": {
+   "startsPerSide": 2.8,
+   "atLeastOne": 1,
+   "chosenTargetTrulyAlive": 0.464,
+   "starts": 84
+  },
+  "econK08_globalRef": {
+   "startsPerSide": 1.1,
+   "atLeastOne": 0.567,
+   "chosenTargetTrulyAlive": 0.788,
+   "starts": 33
+  },
+  "pAtruth_illegalRef": {
+   "startsPerSide": 3.333,
+   "atLeastOne": 0.967,
+   "chosenTargetTrulyAlive": 1,
+   "starts": 100
+  }
+ },
+ "career_mid": {
+  "actualStarts": 2,
+  "base": {
+   "startsPerSide": 0.4,
+   "atLeastOne": 0.333,
+   "chosenTargetTrulyAlive": 1,
+   "starts": 12
+  },
+  "lam0NonOverlap": {
+   "startsPerSide": 2.1,
+   "atLeastOne": 0.933,
+   "chosenTargetTrulyAlive": 0.508,
+   "starts": 63
+  },
+  "lamTool008": {
+   "startsPerSide": 2.7,
+   "atLeastOne": 0.967,
+   "chosenTargetTrulyAlive": 0.556,
+   "starts": 81
+  },
+  "econK08_globalRef": {
+   "startsPerSide": 1.067,
+   "atLeastOne": 0.633,
+   "chosenTargetTrulyAlive": 0.781,
+   "starts": 32
+  },
+  "pAtruth_illegalRef": {
+   "startsPerSide": 3.033,
+   "atLeastOne": 0.9,
+   "chosenTargetTrulyAlive": 1,
+   "starts": 91
+  }
+ },
+ "tool_AB": {
+  "actualStarts": 82,
+  "base": {
+   "startsPerSide": 2.183,
+   "atLeastOne": 0.85,
+   "chosenTargetTrulyAlive": 0.992,
+   "starts": 131
+  },
+  "lam0NonOverlap": {
+   "startsPerSide": 2.217,
+   "atLeastOne": 0.85,
+   "chosenTargetTrulyAlive": 0.992,
+   "starts": 133
+  },
+  "lamTool008": {
+   "startsPerSide": 2.233,
+   "atLeastOne": 0.85,
+   "chosenTargetTrulyAlive": 0.993,
+   "starts": 134
+  },
+  "econK08_globalRef": {
+   "startsPerSide": 3.617,
+   "atLeastOne": 0.983,
+   "chosenTargetTrulyAlive": 0.972,
+   "starts": 217
+  },
+  "pAtruth_illegalRef": {
+   "startsPerSide": 4.267,
+   "atLeastOne": 1,
+   "chosenTargetTrulyAlive": 1,
+   "starts": 256
+  }
+ },
+ "tool_BA": {
+  "actualStarts": 63,
+  "base": {
+   "startsPerSide": 1.9,
+   "atLeastOne": 0.85,
+   "chosenTargetTrulyAlive": 0.965,
+   "starts": 114
+  },
+  "lam0NonOverlap": {
+   "startsPerSide": 1.967,
+   "atLeastOne": 0.883,
+   "chosenTargetTrulyAlive": 0.966,
+   "starts": 118
+  },
+  "lamTool008": {
+   "startsPerSide": 1.967,
+   "atLeastOne": 0.883,
+   "chosenTargetTrulyAlive": 0.966,
+   "starts": 118
+  },
+  "econK08_globalRef": {
+   "startsPerSide": 3.4,
+   "atLeastOne": 0.983,
+   "chosenTargetTrulyAlive": 0.946,
+   "starts": 204
+  },
+  "pAtruth_illegalRef": {
+   "startsPerSide": 4.267,
+   "atLeastOne": 1,
+   "chosenTargetTrulyAlive": 1,
+   "starts": 256
+  }
+ },
+ "tool_inv": {
+  "actualStarts": 61,
+  "base": {
+   "startsPerSide": 1.683,
+   "atLeastOne": 0.817,
+   "chosenTargetTrulyAlive": 0.97,
+   "starts": 101
+  },
+  "lam0NonOverlap": {
+   "startsPerSide": 1.733,
+   "atLeastOne": 0.833,
+   "chosenTargetTrulyAlive": 0.981,
+   "starts": 104
+  },
+  "lamTool008": {
+   "startsPerSide": 1.767,
+   "atLeastOne": 0.85,
+   "chosenTargetTrulyAlive": 0.981,
+   "starts": 106
+  },
+  "econK08_globalRef": {
+   "startsPerSide": 3.317,
+   "atLeastOne": 0.95,
+   "chosenTargetTrulyAlive": 0.955,
+   "starts": 199
+  },
+  "pAtruth_illegalRef": {
+   "startsPerSide": 4.217,
+   "atLeastOne": 1,
+   "chosenTargetTrulyAlive": 1,
+   "starts": 253
+  }
+ }
+}

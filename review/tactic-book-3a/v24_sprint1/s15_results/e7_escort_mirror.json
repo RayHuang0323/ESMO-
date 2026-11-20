@@ -1,0 +1,134 @@
+{
+ "note": "deterministic mirror test on used stress seeds (140001 round); read-only",
+ "geometry": {
+  "W": 330,
+  "laneMaxErr": 8.038873388460929e-14,
+  "laneLength": {
+   "top": 309.36658292746466,
+   "mid": 226.27416997969522,
+   "bot": 309.3665829274647
+  },
+  "towerMaxErr": 1.4210854715202004e-14,
+  "towerMissing": 0,
+  "campMaxErr": 0,
+  "pits": {
+   "dragon": {
+    "x": 199,
+    "y": 197.5217391304
+   },
+   "baron": {
+    "x": 131,
+    "y": 132.4782608696
+   }
+  },
+  "pitsRotateOntoEachOther": 0,
+  "note": "the two objective pits are different objectives (dragon vs baron); a 180-degree rotation maps one pit onto the other, so the map is rule-symmetric but objective-asymmetric by layout"
+ },
+ "mirror": {
+  "matches": 45,
+  "outcomeSame": 45,
+  "outcomeDiff": [],
+  "ticks": 30744,
+  "front": [
+   184464,
+   0
+  ],
+  "wave": [
+   61488,
+   0
+  ],
+  "timer": [
+   61488,
+   0
+  ],
+  "lane": [
+   61488,
+   0
+  ],
+  "hold": [
+   792195,
+   0
+  ],
+  "holdMaxErr": 1.1102230246251565e-16,
+  "examples": [],
+  "shadowOnAtVsEngine": {
+   "same": 89,
+   "diff": 1,
+   "diffs": [
+    {
+     "seed": 140063,
+     "S": "blue",
+     "shadow": 1440.5,
+     "engine": 1436.5
+    }
+   ]
+  },
+  "escortHeroTicks": {
+   "blue": 26265,
+   "red": 27131
+  },
+  "laneChosen": {
+   "blue": {
+    "bot": 1943,
+    "top": 4377,
+    "mid": 2759
+   },
+   "red": {
+    "mid": 2882,
+    "top": 2790,
+    "bot": 3431
+   }
+  },
+  "escortOn": {
+   "both": 45,
+   "sameTick": 44,
+   "onlyBlue": 0,
+   "onlyRed": 0,
+   "none": 0
+  }
+ },
+ "summary": {
+  "matches": 45,
+  "outcomeSameAsRecorded": "45/45",
+  "ticks": 30744,
+  "compared": {
+   "front": 184464,
+   "wave": 61488,
+   "timer": 61488,
+   "lane": 61488,
+   "hold": 792195
+  },
+  "mismatches": {
+   "front": 0,
+   "wave": 0,
+   "timer": 0,
+   "lane": 0,
+   "hold": 0
+  },
+  "holdMaxErr": 1.1102230246251565e-16,
+  "geometry": {
+   "W": 330,
+   "laneMaxErr": 8.038873388460929e-14,
+   "laneLength": {
+    "top": 309.36658292746466,
+    "mid": 226.27416997969522,
+    "bot": 309.3665829274647
+   },
+   "towerMaxErr": 1.4210854715202004e-14,
+   "towerMissing": 0,
+   "campMaxErr": 0,
+   "pits": {
+    "dragon": {
+     "x": 199,
+     "y": 197.5217391304
+    },
+    "baron": {
+     "x": 131,
+     "y": 132.4782608696
+    }
+   },
+   "pitsRotateOntoEachOther": 0,
+   "note": "the two objective pits are different objectives (dragon vs baron); a 180-degree rotation maps one pit onto the other, so the map is rule-symmetric but objective-asymmetric by layout"
+  }
+ }
+}

@@ -1,0 +1,2170 @@
+{
+ "summary": {
+  "cfg": "inv",
+  "seeds": 67,
+  "normalMatchesRecorded": 67,
+  "bothInjectedFinished": 67,
+  "blueWins": {
+   "normal": 41,
+   "reversed": 34
+  },
+  "transitions": {
+   "bb": 24,
+   "br": 17,
+   "rb": 10,
+   "rr": 16
+  },
+  "mcnemarZ": -1.347,
+  "firstWaveBlue": {
+   "normal": 41,
+   "reversed": 35
+  },
+  "reversedNotInjected": 0
+ },
+ "rows": [
+  {
+   "seed": 140001,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1194,
+    "firstWaveAt": {
+     "blue": 1189.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -630.1317208583209
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1261,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1257.5
+    },
+    "nexusHp": {
+     "blue": -2.5455850199898578,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140003,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1194,
+    "firstWaveAt": {
+     "blue": 1189.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -630.1317208583209
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1163.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1158.5
+    },
+    "nexusHp": {
+     "blue": -422.21145021239306,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140007,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1518,
+    "firstWaveAt": {
+     "blue": 1516.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -987.5846433658176
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1341,
+    "firstWaveAt": {
+     "blue": 1338.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -523.6594348138433
+    }
+   }
+  },
+  {
+   "seed": 140011,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1369.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1368.5
+    },
+    "nexusHp": {
+     "blue": -4021.8655930047485,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1191,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1188.5
+    },
+    "nexusHp": {
+     "blue": -16.53004932533827,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140017,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 891,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 867.5
+    },
+    "nexusHp": {
+     "blue": -72.8357298850566,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 891,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 867.5
+    },
+    "nexusHp": {
+     "blue": -72.8357298850566,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140019,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1399,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1396.5
+    },
+    "nexusHp": {
+     "blue": -1912.4196975574719,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1321.5,
+    "firstWaveAt": {
+     "blue": 1319.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1797.0323598200903
+    }
+   }
+  },
+  {
+   "seed": 140021,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1110,
+    "firstWaveAt": {
+     "blue": 1102.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -474.24393153423193
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1110,
+    "firstWaveAt": {
+     "blue": 1102.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -474.24393153423193
+    }
+   }
+  },
+  {
+   "seed": 140025,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 873.5,
+    "firstWaveAt": {
+     "blue": 845.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -27.616724137930902
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 873.5,
+    "firstWaveAt": {
+     "blue": 845.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -27.616724137930902
+    }
+   }
+  },
+  {
+   "seed": 140027,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1280.5,
+    "firstWaveAt": {
+     "blue": 1278.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -707.4289302848574
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1311.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1308.5
+    },
+    "nexusHp": {
+     "blue": -1035.5954454022994,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140029,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1412,
+    "firstWaveAt": {
+     "blue": 1409.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1093.4653561594212
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1252,
+    "firstWaveAt": {
+     "blue": 1248.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -546.7526967766114
+    }
+   }
+  },
+  {
+   "seed": 140033,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 847.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 840.5
+    },
+    "nexusHp": {
+     "blue": -22.367787356320967,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 847.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 840.5
+    },
+    "nexusHp": {
+     "blue": -22.367787356320967,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140041,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1134,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1128.5
+    },
+    "nexusHp": {
+     "blue": -126.98495845827085,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1059,
+    "firstWaveAt": {
+     "blue": 1050.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -370.04372235757097
+    }
+   }
+  },
+  {
+   "seed": 140043,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1012,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1007.5
+    },
+    "nexusHp": {
+     "blue": -669.7514844402804,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1012,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1007.5
+    },
+    "nexusHp": {
+     "blue": -381.14220967766164,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140049,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1101.5,
+    "firstWaveAt": {
+     "blue": 1097.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -612.3256452211403
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1102.5,
+    "firstWaveAt": {
+     "blue": 978.5,
+     "red": 1098.5
+    },
+    "nexusHp": {
+     "blue": -722.8962359195399,
+     "red": 2890.903821839079
+    }
+   }
+  },
+  {
+   "seed": 140057,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1160.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1156.5
+    },
+    "nexusHp": {
+     "blue": -636.5278442966021,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1203,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1199.5
+    },
+    "nexusHp": {
+     "blue": -1910.0448242128923,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140059,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1252,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1248.5
+    },
+    "nexusHp": {
+     "blue": -6781.417876186906,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1370,
+    "firstWaveAt": {
+     "blue": 1368.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -541.7764113630687
+    }
+   }
+  },
+  {
+   "seed": 140063,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1461.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1459.5
+    },
+    "nexusHp": {
+     "blue": -1727.001015898301,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1459.5,
+    "firstWaveAt": {
+     "blue": 1457.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -2829.840450655923
+    }
+   }
+  },
+  {
+   "seed": 140065,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 882,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 867.5
+    },
+    "nexusHp": {
+     "blue": -106.90536781609433,
+     "red": 5084.674928160919
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 881.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 867.5
+    },
+    "nexusHp": {
+     "blue": -235.9663793103474,
+     "red": 5084.674928160919
+    }
+   }
+  },
+  {
+   "seed": 140067,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1106,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1099.5
+    },
+    "nexusHp": {
+     "blue": -305.86121267491205,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1102.5,
+    "firstWaveAt": {
+     "blue": 1099.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -988.096583333333
+    }
+   }
+  },
+  {
+   "seed": 140069,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1250.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1247.5
+    },
+    "nexusHp": {
+     "blue": -328.9881087268859,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1250.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1247.5
+    },
+    "nexusHp": {
+     "blue": -328.9881087268859,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140073,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 931,
+    "firstWaveAt": {
+     "blue": 867.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -2.3288127811096615
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 931,
+    "firstWaveAt": {
+     "blue": 867.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -2.3288127811096615
+    }
+   }
+  },
+  {
+   "seed": 140081,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1191.5,
+    "firstWaveAt": {
+     "blue": 1189.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1371.7328571651676
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1194,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1189.5
+    },
+    "nexusHp": {
+     "blue": -630.1317208583209,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140085,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1519,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1518.5
+    },
+    "nexusHp": {
+     "blue": -1835.6335132746117,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1280.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1278.5
+    },
+    "nexusHp": {
+     "blue": -707.4289302848574,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140089,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1043,
+    "firstWaveAt": {
+     "blue": 1037.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -214.200976393053
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1131,
+    "firstWaveAt": {
+     "blue": 1126.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -2743.159474731384
+    }
+   }
+  },
+  {
+   "seed": 140091,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1292,
+    "firstWaveAt": {
+     "blue": 1288.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -583.3838684157931
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1252,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1248.5
+    },
+    "nexusHp": {
+     "blue": -546.7526967766114,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140097,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1159.5,
+    "firstWaveAt": {
+     "blue": 1156.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -2269.729373188407
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1191,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1188.5
+    },
+    "nexusHp": {
+     "blue": -16.53004932533827,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140099,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 960.5,
+    "firstWaveAt": {
+     "blue": 960.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -237.56003946776343
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 960.5,
+    "firstWaveAt": {
+     "blue": 960.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -237.56003946776343
+    }
+   }
+  },
+  {
+   "seed": 140101,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1370,
+    "firstWaveAt": {
+     "blue": 1368.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -541.7764113630687
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1311.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1308.5
+    },
+    "nexusHp": {
+     "blue": -1035.5954454022994,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140105,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1106,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1099.5
+    },
+    "nexusHp": {
+     "blue": -305.86121267491205,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1020.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1008.5
+    },
+    "nexusHp": {
+     "blue": -129.1835647801119,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140107,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1106,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1099.5
+    },
+    "nexusHp": {
+     "blue": -305.86121267491205,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1282.5,
+    "firstWaveAt": {
+     "blue": 1279.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -311.66077148925524
+    }
+   }
+  },
+  {
+   "seed": 140111,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1204,
+    "firstWaveAt": {
+     "blue": 1200.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -127.47248688155798
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1204,
+    "firstWaveAt": {
+     "blue": 1200.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -127.47248688155798
+    }
+   }
+  },
+  {
+   "seed": 140113,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1106,
+    "firstWaveAt": {
+     "blue": 1099.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -305.86121267491205
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1279.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1276.5
+    },
+    "nexusHp": {
+     "blue": -718.7738033858072,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140117,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1430.5,
+    "firstWaveAt": {
+     "blue": 1428.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1050.4189475574708
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1459.5,
+    "firstWaveAt": {
+     "blue": 1457.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -2829.840450655923
+    }
+   }
+  },
+  {
+   "seed": 140121,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1076,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1068.5
+    },
+    "nexusHp": {
+     "blue": -180.27893678160848,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1014.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1008.5
+    },
+    "nexusHp": {
+     "blue": -147.99130032483788,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140123,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1369,
+    "firstWaveAt": {
+     "blue": 1099.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -60.2888855384806
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1321.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1319.5
+    },
+    "nexusHp": {
+     "blue": -1797.0323598200903,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140125,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1372,
+    "firstWaveAt": {
+     "blue": 1369.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1246.3548939592706
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1370,
+    "firstWaveAt": {
+     "blue": 1368.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -541.7764113630687
+    }
+   }
+  },
+  {
+   "seed": 140127,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1560,
+    "firstWaveAt": {
+     "blue": 1557.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1796.7579687031484
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1520,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1518.5
+    },
+    "nexusHp": {
+     "blue": -1023.7358973638184,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140129,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 864,
+    "firstWaveAt": {
+     "blue": 840.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -40.76913793103421
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 864,
+    "firstWaveAt": {
+     "blue": 840.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -40.76913793103421
+    }
+   }
+  },
+  {
+   "seed": 140131,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1321.5,
+    "firstWaveAt": {
+     "blue": 1320.5,
+     "red": 1319.5
+    },
+    "nexusHp": {
+     "blue": -1797.0323598200903,
+     "red": 3549.2550509120447
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1282.5,
+    "firstWaveAt": {
+     "blue": 1279.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -311.66077148925524
+    }
+   }
+  },
+  {
+   "seed": 140133,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1341,
+    "firstWaveAt": {
+     "blue": 1338.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -523.6594348138433
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1590.5,
+    "firstWaveAt": {
+     "blue": 1589.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1561.1570343765625
+    }
+   }
+  },
+  {
+   "seed": 140137,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1222.5,
+    "firstWaveAt": {
+     "blue": 1218.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -646.283855416042
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1106,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1099.5
+    },
+    "nexusHp": {
+     "blue": -305.86121267491205,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140145,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1290,
+    "firstWaveAt": {
+     "blue": 840.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -826.0491515179899
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 885.5,
+    "firstWaveAt": {
+     "blue": 840.5,
+     "red": 875
+    },
+    "nexusHp": {
+     "blue": 4767.052652298851,
+     "red": -806.8229022988503
+    }
+   }
+  },
+  {
+   "seed": 140149,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1441.5,
+    "firstWaveAt": {
+     "blue": 1439.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1287.5574876624187
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1399.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1246.5
+    },
+    "nexusHp": {
+     "blue": -1939.1146546726627,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140151,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1430.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1428.5
+    },
+    "nexusHp": {
+     "blue": -1050.4189475574708,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1458.5,
+    "firstWaveAt": {
+     "blue": 1456.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -36.64902733633244
+    }
+   }
+  },
+  {
+   "seed": 140153,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1232,
+    "firstWaveAt": {
+     "blue": 1229.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1200.504764767617
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1280.5,
+    "firstWaveAt": {
+     "blue": 1277.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -483.76802242628696
+    }
+   }
+  },
+  {
+   "seed": 140161,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1221,
+    "firstWaveAt": {
+     "blue": 1217.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -793.7440337643677
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1076,
+    "firstWaveAt": {
+     "blue": 1068.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -180.27893678160848
+    }
+   }
+  },
+  {
+   "seed": 140163,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1280.5,
+    "firstWaveAt": {
+     "blue": 1278.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -707.4289302848574
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1191,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1188.5
+    },
+    "nexusHp": {
+     "blue": -16.53004932533827,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140169,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1282.5,
+    "firstWaveAt": {
+     "blue": 1279.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -311.66077148925524
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1106,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1099.5
+    },
+    "nexusHp": {
+     "blue": -305.86121267491205,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140175,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1460,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1458.5
+    },
+    "nexusHp": {
+     "blue": -2629.180281677912,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1402,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1396.5
+    },
+    "nexusHp": {
+     "blue": -110.39091891554278,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140177,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1134,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1128.5
+    },
+    "nexusHp": {
+     "blue": -126.98495845827085,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1201,
+    "firstWaveAt": {
+     "blue": 1197.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -535.198459520239
+    }
+   }
+  },
+  {
+   "seed": 140181,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1372,
+    "firstWaveAt": {
+     "blue": 1369.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1246.3548939592706
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1311.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1308.5
+    },
+    "nexusHp": {
+     "blue": -1035.5954454022994,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140185,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 853,
+    "firstWaveAt": {
+     "blue": 840.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -31.339655172412954
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 853,
+    "firstWaveAt": {
+     "blue": 840.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -31.339655172412954
+    }
+   }
+  },
+  {
+   "seed": 140187,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1190,
+    "firstWaveAt": {
+     "blue": 1189.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1815.5422609632687
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1280.5,
+    "firstWaveAt": {
+     "blue": 1278.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -707.4289302848574
+    }
+   }
+  },
+  {
+   "seed": 140189,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1429,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1428.5
+    },
+    "nexusHp": {
+     "blue": -46.238816872813004,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1339,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1336.5
+    },
+    "nexusHp": {
+     "blue": -488.7104696714132,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140191,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1201.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1200.5
+    },
+    "nexusHp": {
+     "blue": -549.8538058470758,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1201.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1200.5
+    },
+    "nexusHp": {
+     "blue": -549.8538058470758,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140193,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1102.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1098.5
+    },
+    "nexusHp": {
+     "blue": -722.8962359195399,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1102.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1098.5
+    },
+    "nexusHp": {
+     "blue": -722.8962359195399,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140197,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1082,
+    "firstWaveAt": {
+     "blue": 1080.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -87.8222521864052
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1082,
+    "firstWaveAt": {
+     "blue": 1080.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -87.8222521864052
+    }
+   }
+  },
+  {
+   "seed": 140201,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1323,
+    "firstWaveAt": {
+     "blue": 1317.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -6463.619106321838
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1247.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1246.5
+    },
+    "nexusHp": {
+     "blue": -1228.0272770489769,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140203,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 991,
+    "firstWaveAt": {
+     "blue": 987.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -267.97043531984
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 991,
+    "firstWaveAt": {
+     "blue": 987.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -267.97043531984
+    }
+   }
+  },
+  {
+   "seed": 140209,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1102.5,
+    "firstWaveAt": {
+     "blue": 1098.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -722.8962359195399
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1132,
+    "firstWaveAt": {
+     "blue": 1126.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -568.1701074462767
+    }
+   }
+  },
+  {
+   "seed": 140211,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1251.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1248.5
+    },
+    "nexusHp": {
+     "blue": -5796.58776474263,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1324.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1317.5
+    },
+    "nexusHp": {
+     "blue": -101.56203648175688,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140213,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1368.5,
+    "firstWaveAt": {
+     "blue": 1366.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1286.5757762743635
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1461.5,
+    "firstWaveAt": {
+     "blue": 1459.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1727.001015898301
+    }
+   }
+  },
+  {
+   "seed": 140217,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1076,
+    "firstWaveAt": {
+     "blue": 1068.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -180.27893678160848
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1014.5,
+    "firstWaveAt": {
+     "blue": 1008.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -147.99130032483788
+    }
+   }
+  },
+  {
+   "seed": 140221,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1081.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1080.5
+    },
+    "nexusHp": {
+     "blue": -762.6594022676154,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1081.5,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1080.5
+    },
+    "nexusHp": {
+     "blue": -762.6594022676154,
+     "red": 7200
+    }
+   }
+  },
+  {
+   "seed": 140225,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1191,
+    "firstWaveAt": {
+     "blue": 1188.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -16.53004932533827
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1131,
+    "firstWaveAt": {
+     "blue": 1126.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -791.4725541916534
+    }
+   }
+  },
+  {
+   "seed": 140233,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1102.5,
+    "firstWaveAt": {
+     "blue": 1098.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -722.8962359195399
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1134,
+    "firstWaveAt": {
+     "blue": 1128.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -126.98495845827085
+    }
+   }
+  },
+  {
+   "seed": 140237,
+   "refSame": true,
+   "a": {
+    "injected": true,
+    "over": true,
+    "winner": "red",
+    "end": 1370,
+    "firstWaveAt": {
+     "blue": null,
+     "red": 1366.5
+    },
+    "nexusHp": {
+     "blue": -5127.751894365318,
+     "red": 7200
+    }
+   },
+   "b": {
+    "injected": true,
+    "over": true,
+    "winner": "blue",
+    "end": 1411,
+    "firstWaveAt": {
+     "blue": 1409.5,
+     "red": null
+    },
+    "nexusHp": {
+     "blue": 7200,
+     "red": -1463.0755549662676
+    }
+   }
+  }
+ ]
+}

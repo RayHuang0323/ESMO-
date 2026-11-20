@@ -1,0 +1,12 @@
+[#...................] 1/11 posture low conservative exit=0 elapsed=1min 2026-11-20T18:04:05+08:00
+[###.................] 2/11 posture low aggressive exit=0 elapsed=2min 2026-11-20T18:05:31+08:00
+[#####...............] 3/11 posture low allin exit=0 elapsed=4min 2026-11-20T18:07:06+08:00
+[#######.............] 4/11 posture mid conservative exit=0 elapsed=5min 2026-11-20T18:08:19+08:00
+[#########...........] 5/11 posture mid aggressive exit=0 elapsed=6min 2026-11-20T18:09:51+08:00
+[##########..........] 6/11 posture mid allin exit=0 elapsed=8min 2026-11-20T18:11:13+08:00
+[############........] 7/11 posture high conservative exit=0 elapsed=9min 2026-11-20T18:12:26+08:00
+[##############......] 8/11 posture high aggressive exit=0 elapsed=10min 2026-11-20T18:13:50+08:00
+[################....] 9/11 posture high allin exit=0 elapsed=12min 2026-11-20T18:15:06+08:00
+[##################..] 10/11 e7 escort mirror exit=0 elapsed=15min 2026-11-20T18:18:25+08:00
+[####################] 11/11 e7 order inv exit=0 elapsed=24min 2026-11-20T18:27:35+08:00
+[queue-done]

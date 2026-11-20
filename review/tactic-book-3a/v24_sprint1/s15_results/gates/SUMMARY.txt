@@ -1,0 +1,11 @@
+[##..................] 1/7 check_s2_contract_v24 exit=0 47s total=0min
+[#####...............] 2/7 check_simulation_version_gate exit=0 2s total=0min
+[########............] 3/7 check_tactic_exec_v24 exit=0 305s total=5min
+[###########.........] 4/7 check_layer_isolation_v24 exit=0 340s total=11min
+[##############......] 5/7 regress exit=0 65s total=12min
+[#################...] 6/7 regress2 exit=0 70s total=13min
+[####################] 7/7 build exit=0 36s total=14min
+[gates-done]
+（另外先單獨跑）check_s15_preflight_v24 exit=0 29s：5/5 PASS
+
+結果：check_s15_preflight_v24 5/5、check_s2_contract_v24 55/55、check_simulation_version_gate 106/106、check_tactic_exec_v24 19/19、check_layer_isolation_v24 8/8、regress 結束率 15/15、regress2 節奏門檻 8/8、npm run build（built in 31.47s）

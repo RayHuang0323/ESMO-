@@ -1,0 +1,386 @@
+{
+ "tool_inv": {
+  "matches": 20,
+  "hashSameAsS14": 20,
+  "sideMatches": 40,
+  "startsPerSide": 1.05,
+  "arrivedPerStart": 0.667,
+  "decisions": {
+   "declined:busy": 0.399,
+   "declined:own_farm": 0.319,
+   "declined:too_far": 0.116,
+   "declined:cooldown": 0.082,
+   "declined:no_target": 0.029,
+   "declined:in_progress": 0.017,
+   "declined:hp": 0.015,
+   "declined:objective_intent": 0.007,
+   "declined:objective_soon": 0.006,
+   "go": 0.005,
+   "declined:no_party": 0.004,
+   "declined:objective_window": 0.001,
+   "declined:threat": 0
+  },
+  "busyTop": {
+   "fsm:OBJECTIVE": 0.475,
+   "retreat": 0.297,
+   "dead": 0.062,
+   "state:抓人": 0.051,
+   "recall": 0.029,
+   "state:避塔": 0.019,
+   "executing": 0.015,
+   "fsm:ENGAGE": 0.013,
+   "state:脫戰": 0.012,
+   "state:支援": 0.009,
+   "fsm:CHASE": 0.009,
+   "state:團戰!": 0.004,
+   "fsm:RETURN": 0.002,
+   "gank": 0.001,
+   "state:拉扯": 0.001,
+   "state:強開": 0
+  },
+  "funnel": {
+   "pastGate": 0.487,
+   "anyBelievedGivenPast": 0.941,
+   "anyInCapGivenPast": 0.739,
+   "anyRouteGivenPast": 0.708,
+   "anyEconGivenRoute": 0.082,
+   "goPerPast": 0.01
+  },
+  "pastGateLocation": {
+   "dOwnCampMed": 2.775,
+   "dEnemyCampMed": 80.277,
+   "etaBelievedMed": 16.766,
+   "etaBelievedP25": 16.193,
+   "shareOwnCampWithin15": 0.739
+  },
+  "tooFar": {
+   "n": 979,
+   "dOwnCampMed": 17.568,
+   "dEnemyCampMed": 104.32,
+   "etaBelievedMed": 21.796,
+   "etaTrueMed": 22.039,
+   "believedAliveMean": 2.993,
+   "trueAliveMean": 2.787,
+   "stateTop": {
+    "FARM|打野": 0.894,
+    "LANE|游走": 0.074,
+    "LANE|推進": 0.029,
+    "LANE|回防": 0.003,
+    "LANE|跟兵線": 0.001
+   }
+  },
+  "beliefVsTruth": {
+   "believedAliveTrulyDead": 1025,
+   "believedDeadTrulyAlive": 0,
+   "agree": 11269,
+   "believedAliveTrulyDeadShare": 0.083
+  },
+  "econ": {
+   "candidates": 5906,
+   "passShare": 0.046,
+   "byType": {
+    "buff": {
+     "n": 2530,
+     "pass": 0.008
+    },
+    "camp": {
+     "n": 3376,
+     "pass": 0.074
+    }
+   },
+   "cond": {
+    "camp|prior": 0.252,
+    "camp|prior_early": 0.244,
+    "buff|prior": 0.179,
+    "buff|prior_early": 0.176,
+    "buff|contested": 0.07,
+    "camp|contested": 0.06,
+    "camp|clear": 0.016,
+    "buff|clear": 0.003
+   },
+   "evMean": 0.228,
+   "costMean": 0.596,
+   "pAMean": 0.706,
+   "lamMean": 0.008,
+   "succMean": 0.322,
+   "ratioMed": 0.277,
+   "ratioP90": 0.945,
+   "tripMean": 44.232,
+   "overlapShareMean": 0.996
+  },
+  "econReplicaCheck": {
+   "failRecordsMatch": "2790/2790",
+   "goRecordsMatch": "42/42"
+  },
+  "afterStart": {
+   "ends": {
+    "stolen": 0.667,
+    "retreat_threat": 0.119,
+    "objective_call": 0.071,
+    "stuck": 0.048,
+    "retreat_hp": 0.048,
+    "outnumbered": 0.024
+   },
+   "duoStarts": 0,
+   "partnerEnds": {},
+   "partnerArrived": 0
+  }
+ },
+ "tool_inv_pskills": {
+  "matches": 20,
+  "hashSameAsS14": 0,
+  "sideMatches": 40,
+  "startsPerSide": 0.175,
+  "arrivedPerStart": 0.286,
+  "decisions": {
+   "declined:busy": 0.42,
+   "declined:too_far": 0.332,
+   "declined:own_farm": 0.168,
+   "declined:no_target": 0.029,
+   "declined:hp": 0.029,
+   "declined:cooldown": 0.016,
+   "declined:objective_soon": 0.002,
+   "declined:in_progress": 0.001,
+   "go": 0.001,
+   "declined:no_exit": 0.001,
+   "declined:objective_intent": 0.001,
+   "declined:no_party": 0,
+   "declined:objective_window": 0
+  },
+  "busyTop": {
+   "fsm:OBJECTIVE": 0.4,
+   "retreat": 0.342,
+   "dead": 0.127,
+   "fsm:ENGAGE": 0.028,
+   "state:避塔": 0.027,
+   "state:抓人": 0.022,
+   "executing": 0.011,
+   "fsm:CHASE": 0.011,
+   "recall": 0.01,
+   "state:脫戰": 0.009,
+   "state:支援": 0.007,
+   "fsm:RETURN": 0.002,
+   "state:換血": 0.001,
+   "state:團戰!": 0.001,
+   "gank": 0.001,
+   "state:追擊": 0,
+   "state:拉扯": 0
+  },
+  "funnel": {
+   "pastGate": 0.534,
+   "anyBelievedGivenPast": 0.946,
+   "anyInCapGivenPast": 0.403,
+   "anyRouteGivenPast": 0.352,
+   "anyEconGivenRoute": 0.026,
+   "goPerPast": 0.002
+  },
+  "pastGateLocation": {
+   "dOwnCampMed": 20.247,
+   "dEnemyCampMed": 86.555,
+   "etaBelievedMed": 18.047,
+   "etaBelievedP25": 16.47,
+   "shareOwnCampWithin15": 0.445
+  },
+  "tooFar": {
+   "n": 2757,
+   "dOwnCampMed": 18.781,
+   "dEnemyCampMed": 101.569,
+   "etaBelievedMed": 21.226,
+   "etaTrueMed": 24.173,
+   "believedAliveMean": 2.966,
+   "trueAliveMean": 1.251,
+   "stateTop": {
+    "FARM|打野": 0.76,
+    "LANE|游走": 0.235,
+    "LANE|回防": 0.004,
+    "LANE|攻門牙塔": 0,
+    "LANE|推進": 0
+   }
+  },
+  "beliefVsTruth": {
+   "believedAliveTrulyDead": 7300,
+   "believedDeadTrulyAlive": 0,
+   "agree": 6002,
+   "believedAliveTrulyDeadShare": 0.549
+  },
+  "econ": {
+   "candidates": 2938,
+   "passShare": 0.014,
+   "byType": {
+    "buff": {
+     "n": 1284,
+     "pass": 0.004
+    },
+    "camp": {
+     "n": 1654,
+     "pass": 0.022
+    }
+   },
+   "cond": {
+    "camp|prior": 0.271,
+    "buff|prior": 0.213,
+    "camp|prior_early": 0.189,
+    "buff|prior_early": 0.136,
+    "camp|contested": 0.091,
+    "buff|contested": 0.08,
+    "camp|clear": 0.013,
+    "buff|clear": 0.008
+   },
+   "evMean": 0.227,
+   "costMean": 0.674,
+   "pAMean": 0.681,
+   "lamMean": 0.019,
+   "succMean": 0.341,
+   "ratioMed": 0.249,
+   "ratioP90": 0.744,
+   "tripMean": 43.725,
+   "overlapShareMean": 0.737
+  },
+  "econReplicaCheck": {
+   "failRecordsMatch": "1411/1411",
+   "goRecordsMatch": "7/7"
+  },
+  "afterStart": {
+   "ends": {
+    "retreat_hp": 0.286,
+    "lost_race": 0.286,
+    "stolen": 0.143,
+    "retreat_threat": 0.143,
+    "partner_lost": 0.143
+   },
+   "duoStarts": 2,
+   "partnerEnds": {
+    "leader_ended": 1,
+    "retreat": 1
+   },
+   "partnerArrived": 0
+  }
+ },
+ "tool_inv_pskillstalents": {
+  "matches": 20,
+  "hashSameAsS14": 0,
+  "sideMatches": 40,
+  "startsPerSide": 0.225,
+  "arrivedPerStart": 0.111,
+  "decisions": {
+   "declined:busy": 0.429,
+   "declined:too_far": 0.322,
+   "declined:own_farm": 0.174,
+   "declined:no_target": 0.029,
+   "declined:hp": 0.022,
+   "declined:cooldown": 0.017,
+   "declined:in_progress": 0.002,
+   "declined:objective_soon": 0.002,
+   "go": 0.001,
+   "declined:objective_intent": 0.001,
+   "declined:no_party": 0,
+   "declined:unreachable": 0,
+   "declined:objective_window": 0
+  },
+  "busyTop": {
+   "fsm:OBJECTIVE": 0.378,
+   "retreat": 0.345,
+   "dead": 0.136,
+   "state:抓人": 0.03,
+   "state:避塔": 0.028,
+   "fsm:ENGAGE": 0.022,
+   "state:脫戰": 0.014,
+   "recall": 0.013,
+   "executing": 0.013,
+   "fsm:CHASE": 0.008,
+   "state:支援": 0.006,
+   "state:團戰!": 0.003,
+   "fsm:RETURN": 0.003,
+   "state:拉扯": 0.001,
+   "state:換血": 0.001
+  },
+  "funnel": {
+   "pastGate": 0.53,
+   "anyBelievedGivenPast": 0.946,
+   "anyInCapGivenPast": 0.417,
+   "anyRouteGivenPast": 0.365,
+   "anyEconGivenRoute": 0.028,
+   "goPerPast": 0.002
+  },
+  "pastGateLocation": {
+   "dOwnCampMed": 20.315,
+   "dEnemyCampMed": 86.325,
+   "etaBelievedMed": 18.008,
+   "etaBelievedP25": 16.431,
+   "shareOwnCampWithin15": 0.449
+  },
+  "tooFar": {
+   "n": 2691,
+   "dOwnCampMed": 18.052,
+   "dEnemyCampMed": 101.588,
+   "etaBelievedMed": 21.276,
+   "etaTrueMed": 24.439,
+   "believedAliveMean": 2.96,
+   "trueAliveMean": 1.268,
+   "stateTop": {
+    "FARM|打野": 0.769,
+    "LANE|游走": 0.221,
+    "LANE|回防": 0.008,
+    "LANE|推進": 0.001,
+    "LANE|攻門牙塔": 0.001
+   }
+  },
+  "beliefVsTruth": {
+   "believedAliveTrulyDead": 7171,
+   "believedDeadTrulyAlive": 0,
+   "agree": 6104,
+   "believedAliveTrulyDeadShare": 0.54
+  },
+  "econ": {
+   "candidates": 3083,
+   "passShare": 0.018,
+   "byType": {
+    "buff": {
+     "n": 1313,
+     "pass": 0.006
+    },
+    "camp": {
+     "n": 1770,
+     "pass": 0.027
+    }
+   },
+   "cond": {
+    "camp|prior": 0.288,
+    "buff|prior": 0.204,
+    "camp|prior_early": 0.195,
+    "buff|prior_early": 0.14,
+    "buff|contested": 0.074,
+    "camp|contested": 0.07,
+    "camp|clear": 0.02,
+    "buff|clear": 0.008
+   },
+   "evMean": 0.233,
+   "costMean": 0.667,
+   "pAMean": 0.68,
+   "lamMean": 0.018,
+   "succMean": 0.353,
+   "ratioMed": 0.25,
+   "ratioP90": 0.77,
+   "tripMean": 43.972,
+   "overlapShareMean": 0.73
+  },
+  "econReplicaCheck": {
+   "failRecordsMatch": "1471/1471",
+   "goRecordsMatch": "9/9"
+  },
+  "afterStart": {
+   "ends": {
+    "retreat_threat": 0.333,
+    "lost_race": 0.222,
+    "stuck": 0.111,
+    "retreat": 0.111,
+    "stolen": 0.111
+   },
+   "duoStarts": 3,
+   "partnerEnds": {
+    "leader_ended": 3
+   },
+   "partnerArrived": 0
+  }
+ }
+}

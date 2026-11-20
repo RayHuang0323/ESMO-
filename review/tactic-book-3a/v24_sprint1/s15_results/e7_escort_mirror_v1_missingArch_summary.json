@@ -1,0 +1,169 @@
+{
+ "note": "first run of the mirror test; the mirror view lacked the combat archetype table (engage range), so the hold-point comparison is invalid; rerun after the fix is e7_escort_mirror.json",
+ "summary": {
+  "matches": 45,
+  "outcomeSameAsRecorded": "45/45",
+  "ticks": 30744,
+  "compared": {
+   "front": 184464,
+   "wave": 61488,
+   "timer": 61488,
+   "lane": 61488,
+   "hold": 792195
+  },
+  "mismatches": {
+   "front": 0,
+   "wave": 0,
+   "timer": 0,
+   "lane": 0,
+   "hold": 610138
+  },
+  "holdMaxErr": 0.008838834764831882,
+  "geometry": {
+   "W": 330,
+   "laneMaxErr": 8.038873388460929e-14,
+   "laneLength": {
+    "top": 309.36658292746466,
+    "mid": 226.27416997969522,
+    "bot": 309.3665829274647
+   },
+   "towerMaxErr": 1.4210854715202004e-14,
+   "towerMissing": 0,
+   "campMaxErr": 0,
+   "pits": {
+    "dragon": {
+     "x": 199,
+     "y": 197.5217391304
+    },
+    "baron": {
+     "x": 131,
+     "y": 132.4782608696
+    }
+   },
+   "pitsRotateOntoEachOther": 0,
+   "note": "the two objective pits are different objectives (dragon vs baron); a 180-degree rotation maps one pit onto the other, so the map is rule-symmetric but objective-asymmetric by layout"
+  }
+ },
+ "examples": [
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b1",
+   "ln": "mid",
+   "ha": 0.49231301916127274,
+   "hb": 0.5113165139056551
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b1",
+   "ln": "bot",
+   "ha": 0.7688677708006277,
+   "hb": 0.23436464037493362
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b2",
+   "ln": "mid",
+   "ha": 0.49231301916127274,
+   "hb": 0.5113165139056551
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b2",
+   "ln": "bot",
+   "ha": 0.7688677708006277,
+   "hb": 0.23436464037493362
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b3",
+   "ln": "mid",
+   "ha": 0.4883962239644878,
+   "hb": 0.5113165139056551
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b3",
+   "ln": "bot",
+   "ha": 0.7654252528986549,
+   "hb": 0.23436464037493362
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b4",
+   "ln": "mid",
+   "ha": 0.48779960261786165,
+   "hb": 0.5113165139056551
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b4",
+   "ln": "bot",
+   "ha": 0.764988877389954,
+   "hb": 0.23436464037493362
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b5",
+   "ln": "mid",
+   "ha": 0.489014942398026,
+   "hb": 0.5113165139056551
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "blue",
+   "id": "b5",
+   "ln": "bot",
+   "ha": 0.7658777904632335,
+   "hb": 0.23436464037493362
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "red",
+   "id": "r1",
+   "ln": "mid",
+   "ha": 0.5076869808387333,
+   "hb": 0.4886834860943387
+  },
+  {
+   "kind": "hold",
+   "seed": 140001,
+   "t": 840.5,
+   "S": "red",
+   "id": "r1",
+   "ln": "bot",
+   "ha": 0.7795347276799807,
+   "hb": 0.21723286114445797
+  }
+ ]
+}

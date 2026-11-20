@@ -1,0 +1,797 @@
+{
+ "note": "read-only; the effective-pair rule is the one the registered judge used (both arms injected)",
+ "rounds": [
+  "C:/Users/ifikn/esmo-measure/v24-s13-val-130001/stress",
+  "C:/Users/ifikn/esmo-measure/v24-s14/stress"
+ ],
+ "pairs": 370,
+ "version": {
+  "all": {
+   "bb": 135,
+   "br": 42,
+   "rb": 56,
+   "rr": 125,
+   "v12Unfinished_v13Blue": 5,
+   "v12Unfinished_v13Red": 7,
+   "v13Unfinished": 0,
+   "bothFinished": 358,
+   "v12Blue": {
+    "k": 177,
+    "n": 358,
+    "rate": 0.494,
+    "ci95": [
+     0.443,
+     0.546
+    ]
+   },
+   "v13BlueSamePairs": {
+    "k": 191,
+    "n": 358,
+    "rate": 0.534,
+    "ci95": [
+     0.482,
+     0.585
+    ]
+   },
+   "flipsToBlue": 56,
+   "flipsToRed": 42,
+   "mcnemarZ": 1.414
+  },
+  "inv": {
+   "bb": 44,
+   "br": 12,
+   "rb": 19,
+   "rr": 43,
+   "v12Unfinished_v13Blue": 1,
+   "v12Unfinished_v13Red": 2,
+   "v13Unfinished": 0,
+   "bothFinished": 118,
+   "v12Blue": {
+    "k": 56,
+    "n": 118,
+    "rate": 0.475,
+    "ci95": [
+     0.387,
+     0.564
+    ]
+   },
+   "v13BlueSamePairs": {
+    "k": 63,
+    "n": 118,
+    "rate": 0.534,
+    "ci95": [
+     0.444,
+     0.621
+    ]
+   },
+   "flipsToBlue": 19,
+   "flipsToRed": 12,
+   "mcnemarZ": 1.257
+  },
+  "AB": {
+   "bb": 43,
+   "br": 17,
+   "rb": 22,
+   "rr": 40,
+   "v12Unfinished_v13Blue": 2,
+   "v12Unfinished_v13Red": 2,
+   "v13Unfinished": 0,
+   "bothFinished": 122,
+   "v12Blue": {
+    "k": 60,
+    "n": 122,
+    "rate": 0.492,
+    "ci95": [
+     0.405,
+     0.579
+    ]
+   },
+   "v13BlueSamePairs": {
+    "k": 65,
+    "n": 122,
+    "rate": 0.533,
+    "ci95": [
+     0.445,
+     0.619
+    ]
+   },
+   "flipsToBlue": 22,
+   "flipsToRed": 17,
+   "mcnemarZ": 0.801
+  },
+  "BA": {
+   "bb": 48,
+   "br": 13,
+   "rb": 15,
+   "rr": 42,
+   "v12Unfinished_v13Blue": 2,
+   "v12Unfinished_v13Red": 3,
+   "v13Unfinished": 0,
+   "bothFinished": 118,
+   "v12Blue": {
+    "k": 61,
+    "n": 118,
+    "rate": 0.517,
+    "ci95": [
+     0.428,
+     0.605
+    ]
+   },
+   "v13BlueSamePairs": {
+    "k": 63,
+    "n": 118,
+    "rate": 0.534,
+    "ci95": [
+     0.444,
+     0.621
+    ]
+   },
+   "flipsToBlue": 15,
+   "flipsToRed": 13,
+   "mcnemarZ": 0.378
+  },
+  "byRound": [
+   {
+    "bb": 58,
+    "br": 17,
+    "rb": 27,
+    "rr": 64,
+    "v12Unfinished_v13Blue": 1,
+    "v12Unfinished_v13Red": 2,
+    "v13Unfinished": 0,
+    "bothFinished": 166,
+    "v12Blue": {
+     "k": 75,
+     "n": 166,
+     "rate": 0.452,
+     "ci95": [
+      0.378,
+      0.528
+     ]
+    },
+    "v13BlueSamePairs": {
+     "k": 85,
+     "n": 166,
+     "rate": 0.512,
+     "ci95": [
+      0.437,
+      0.587
+     ]
+    },
+    "flipsToBlue": 27,
+    "flipsToRed": 17,
+    "mcnemarZ": 1.508
+   },
+   {
+    "bb": 77,
+    "br": 25,
+    "rb": 29,
+    "rr": 61,
+    "v12Unfinished_v13Blue": 4,
+    "v12Unfinished_v13Red": 5,
+    "v13Unfinished": 0,
+    "bothFinished": 192,
+    "v12Blue": {
+     "k": 102,
+     "n": 192,
+     "rate": 0.531,
+     "ci95": [
+      0.461,
+      0.601
+     ]
+    },
+    "v13BlueSamePairs": {
+     "k": 106,
+     "n": 192,
+     "rate": 0.552,
+     "ci95": [
+      0.481,
+      0.621
+     ]
+    },
+    "flipsToBlue": 29,
+    "flipsToRed": 25,
+    "mcnemarZ": 0.544
+   }
+  ]
+ },
+ "absolute": {
+  "e7Population": {
+   "k": 196,
+   "n": 370,
+   "rate": 0.53,
+   "ci95": [
+    0.479,
+    0.58
+   ]
+  },
+  "byCfg": {
+   "inv": {
+    "k": 64,
+    "n": 121,
+    "rate": 0.529,
+    "ci95": [
+     0.44,
+     0.616
+    ]
+   },
+   "AB": {
+    "k": 67,
+    "n": 126,
+    "rate": 0.532,
+    "ci95": [
+     0.445,
+     0.617
+    ]
+   },
+   "BA": {
+    "k": 65,
+    "n": 123,
+    "rate": 0.528,
+    "ci95": [
+     0.441,
+     0.614
+    ]
+   }
+  },
+  "byLayout": {
+   "STANDARD": {
+    "k": 103,
+    "n": 166,
+    "rate": 0.62,
+    "ci95": [
+     0.545,
+     0.691
+    ]
+   },
+   "SWAPPED": {
+    "k": 93,
+    "n": 204,
+    "rate": 0.456,
+    "ci95": [
+     0.389,
+     0.524
+    ]
+   }
+  },
+  "byCfgLayout": {
+   "inv|STANDARD": {
+    "k": 31,
+    "n": 51,
+    "rate": 0.608,
+    "ci95": [
+     0.471,
+     0.73
+    ]
+   },
+   "inv|SWAPPED": {
+    "k": 33,
+    "n": 70,
+    "rate": 0.471,
+    "ci95": [
+     0.359,
+     0.587
+    ]
+   },
+   "AB|STANDARD": {
+    "k": 40,
+    "n": 63,
+    "rate": 0.635,
+    "ci95": [
+     0.511,
+     0.743
+    ]
+   },
+   "AB|SWAPPED": {
+    "k": 27,
+    "n": 63,
+    "rate": 0.429,
+    "ci95": [
+     0.314,
+     0.551
+    ]
+   },
+   "BA|STANDARD": {
+    "k": 32,
+    "n": 52,
+    "rate": 0.615,
+    "ci95": [
+     0.48,
+     0.735
+    ]
+   },
+   "BA|SWAPPED": {
+    "k": 33,
+    "n": 71,
+    "rate": 0.465,
+    "ci95": [
+     0.354,
+     0.58
+    ]
+   }
+  },
+  "byCfgRound": {
+   "inv|round0": {
+    "k": 23,
+    "n": 54,
+    "rate": 0.426,
+    "ci95": [
+     0.303,
+     0.558
+    ]
+   },
+   "inv|round1": {
+    "k": 41,
+    "n": 67,
+    "rate": 0.612,
+    "ci95": [
+     0.492,
+     0.72
+    ]
+   },
+   "AB|round0": {
+    "k": 29,
+    "n": 59,
+    "rate": 0.492,
+    "ci95": [
+     0.368,
+     0.616
+    ]
+   },
+   "AB|round1": {
+    "k": 38,
+    "n": 67,
+    "rate": 0.567,
+    "ci95": [
+     0.448,
+     0.679
+    ]
+   },
+   "BA|round0": {
+    "k": 34,
+    "n": 56,
+    "rate": 0.607,
+    "ci95": [
+     0.476,
+     0.724
+    ]
+   },
+   "BA|round1": {
+    "k": 31,
+    "n": 67,
+    "rate": 0.463,
+    "ci95": [
+     0.349,
+     0.581
+    ]
+   }
+  },
+  "v12FinishedBlue": {
+   "k": 177,
+   "n": 358,
+   "rate": 0.494,
+   "ci95": [
+    0.443,
+    0.546
+   ]
+  }
+ },
+ "swap": {
+  "pairs": 84,
+  "blueAB": 0.583,
+  "blueBA": 0.524,
+  "sideEffect": 0.054,
+  "invasionTemplateEffect": 0.03,
+  "sideWinsBoth": 27,
+  "sideLosesBoth": 18,
+  "templateConsistent": 39
+ },
+ "timing": {
+  "note": "firstWaveAt exists only in the 140001 round; escortOn exists in both",
+  "rowsWithWave": 201,
+  "all": {
+   "n": 201,
+   "escortBoth": 127,
+   "escortSameTick": 118,
+   "escortBlueFirst": 4,
+   "escortRedFirst": 5,
+   "escortOnlyBlue": 1,
+   "escortOnlyRed": 2,
+   "escortNone": 71,
+   "waveBlueFirst": 112,
+   "waveRedFirst": 85,
+   "waveSameTick": 4,
+   "waveNone": 0,
+   "winnerIsFirstWave": 193,
+   "winnerNotFirstWave": 4,
+   "blueWinsBlueFirst": 109,
+   "blueFirst": 112,
+   "redWinsRedFirst": 84,
+   "redFirst": 85,
+   "firstWaveBlueShare": {
+    "k": 112,
+    "n": 197,
+    "rate": 0.569,
+    "ci95": [
+     0.499,
+     0.636
+    ]
+   },
+   "convertBlue": {
+    "k": 109,
+    "n": 112,
+    "rate": 0.973,
+    "ci95": [
+     0.924,
+     0.991
+    ]
+   },
+   "convertRed": {
+    "k": 84,
+    "n": 85,
+    "rate": 0.988,
+    "ci95": [
+     0.936,
+     0.998
+    ]
+   }
+  },
+  "inv": {
+   "n": 67,
+   "escortBoth": 43,
+   "escortSameTick": 40,
+   "escortBlueFirst": 1,
+   "escortRedFirst": 2,
+   "escortOnlyBlue": 0,
+   "escortOnlyRed": 0,
+   "escortNone": 24,
+   "waveBlueFirst": 41,
+   "waveRedFirst": 26,
+   "waveSameTick": 0,
+   "waveNone": 0,
+   "winnerIsFirstWave": 67,
+   "winnerNotFirstWave": 0,
+   "blueWinsBlueFirst": 41,
+   "blueFirst": 41,
+   "redWinsRedFirst": 26,
+   "redFirst": 26,
+   "firstWaveBlueShare": {
+    "k": 41,
+    "n": 67,
+    "rate": 0.612,
+    "ci95": [
+     0.492,
+     0.72
+    ]
+   },
+   "convertBlue": {
+    "k": 41,
+    "n": 41,
+    "rate": 1,
+    "ci95": [
+     0.914,
+     1
+    ]
+   },
+   "convertRed": {
+    "k": 26,
+    "n": 26,
+    "rate": 1,
+    "ci95": [
+     0.871,
+     1
+    ]
+   }
+  },
+  "AB": {
+   "n": 67,
+   "escortBoth": 41,
+   "escortSameTick": 39,
+   "escortBlueFirst": 1,
+   "escortRedFirst": 1,
+   "escortOnlyBlue": 0,
+   "escortOnlyRed": 2,
+   "escortNone": 24,
+   "waveBlueFirst": 38,
+   "waveRedFirst": 27,
+   "waveSameTick": 2,
+   "waveNone": 0,
+   "winnerIsFirstWave": 63,
+   "winnerNotFirstWave": 2,
+   "blueWinsBlueFirst": 37,
+   "blueFirst": 38,
+   "redWinsRedFirst": 26,
+   "redFirst": 27,
+   "firstWaveBlueShare": {
+    "k": 38,
+    "n": 65,
+    "rate": 0.585,
+    "ci95": [
+     0.463,
+     0.696
+    ]
+   },
+   "convertBlue": {
+    "k": 37,
+    "n": 38,
+    "rate": 0.974,
+    "ci95": [
+     0.865,
+     0.995
+    ]
+   },
+   "convertRed": {
+    "k": 26,
+    "n": 27,
+    "rate": 0.963,
+    "ci95": [
+     0.817,
+     0.993
+    ]
+   }
+  },
+  "BA": {
+   "n": 67,
+   "escortBoth": 43,
+   "escortSameTick": 39,
+   "escortBlueFirst": 2,
+   "escortRedFirst": 2,
+   "escortOnlyBlue": 1,
+   "escortOnlyRed": 0,
+   "escortNone": 23,
+   "waveBlueFirst": 33,
+   "waveRedFirst": 32,
+   "waveSameTick": 2,
+   "waveNone": 0,
+   "winnerIsFirstWave": 63,
+   "winnerNotFirstWave": 2,
+   "blueWinsBlueFirst": 31,
+   "blueFirst": 33,
+   "redWinsRedFirst": 32,
+   "redFirst": 32,
+   "firstWaveBlueShare": {
+    "k": 33,
+    "n": 65,
+    "rate": 0.508,
+    "ci95": [
+     0.389,
+     0.625
+    ]
+   },
+   "convertBlue": {
+    "k": 31,
+    "n": 33,
+    "rate": 0.939,
+    "ci95": [
+     0.804,
+     0.983
+    ]
+   },
+   "convertRed": {
+    "k": 32,
+    "n": 32,
+    "rate": 1,
+    "ci95": [
+     0.893,
+     1
+    ]
+   }
+  },
+  "escortByRound": [
+   {
+    "n": 169,
+    "escortBoth": 99,
+    "escortSameTick": 86,
+    "escortBlueFirst": 8,
+    "escortRedFirst": 5,
+    "escortOnlyBlue": 5,
+    "escortOnlyRed": 2,
+    "escortNone": 63,
+    "waveBlueFirst": 0,
+    "waveRedFirst": 0,
+    "waveSameTick": 0,
+    "waveNone": 169,
+    "winnerIsFirstWave": 0,
+    "winnerNotFirstWave": 0,
+    "blueWinsBlueFirst": 0,
+    "blueFirst": 0,
+    "redWinsRedFirst": 0,
+    "redFirst": 0,
+    "firstWaveBlueShare": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "ci95": [
+      null,
+      null
+     ]
+    },
+    "convertBlue": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "ci95": [
+      null,
+      null
+     ]
+    },
+    "convertRed": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "ci95": [
+      null,
+      null
+     ]
+    }
+   },
+   {
+    "n": 201,
+    "escortBoth": 127,
+    "escortSameTick": 118,
+    "escortBlueFirst": 4,
+    "escortRedFirst": 5,
+    "escortOnlyBlue": 1,
+    "escortOnlyRed": 2,
+    "escortNone": 71,
+    "waveBlueFirst": 112,
+    "waveRedFirst": 85,
+    "waveSameTick": 4,
+    "waveNone": 0,
+    "winnerIsFirstWave": 193,
+    "winnerNotFirstWave": 4,
+    "blueWinsBlueFirst": 109,
+    "blueFirst": 112,
+    "redWinsRedFirst": 84,
+    "redFirst": 85,
+    "firstWaveBlueShare": {
+     "k": 112,
+     "n": 197,
+     "rate": 0.569,
+     "ci95": [
+      0.499,
+      0.636
+     ]
+    },
+    "convertBlue": {
+     "k": 109,
+     "n": 112,
+     "rate": 0.973,
+     "ci95": [
+      0.924,
+      0.991
+     ]
+    },
+    "convertRed": {
+     "k": 84,
+     "n": 85,
+     "rate": 0.988,
+     "ci95": [
+      0.936,
+      0.998
+     ]
+    }
+   }
+  ]
+ },
+ "escortSplit": {
+  "all": {
+   "escortOn": {
+    "k": 127,
+    "n": 236,
+    "rate": 0.538,
+    "ci95": [
+     0.474,
+     0.601
+    ]
+   },
+   "escortOff": {
+    "k": 69,
+    "n": 134,
+    "rate": 0.515,
+    "ci95": [
+     0.431,
+     0.598
+    ]
+   }
+  },
+  "inv": {
+   "escortOn": {
+    "k": 46,
+    "n": 83,
+    "rate": 0.554,
+    "ci95": [
+     0.447,
+     0.656
+    ]
+   },
+   "escortOff": {
+    "k": 18,
+    "n": 38,
+    "rate": 0.474,
+    "ci95": [
+     0.325,
+     0.627
+    ]
+   }
+  },
+  "AB": {
+   "escortOn": {
+    "k": 46,
+    "n": 82,
+    "rate": 0.561,
+    "ci95": [
+     0.453,
+     0.663
+    ]
+   },
+   "escortOff": {
+    "k": 21,
+    "n": 44,
+    "rate": 0.477,
+    "ci95": [
+     0.338,
+     0.621
+    ]
+   }
+  },
+  "BA": {
+   "escortOn": {
+    "k": 35,
+    "n": 71,
+    "rate": 0.493,
+    "ci95": [
+     0.38,
+     0.607
+    ]
+   },
+   "escortOff": {
+    "k": 30,
+    "n": 52,
+    "rate": 0.577,
+    "ci95": [
+     0.442,
+     0.701
+    ]
+   }
+  }
+ },
+ "injectTime": {
+  "840": {
+   "k": 85,
+   "n": 153,
+   "rate": 0.556,
+   "ci95": [
+    0.476,
+    0.632
+   ]
+  },
+  "960": {
+   "k": 46,
+   "n": 100,
+   "rate": 0.46,
+   "ci95": [
+    0.366,
+    0.557
+   ]
+  },
+  "1080": {
+   "k": 37,
+   "n": 68,
+   "rate": 0.544,
+   "ci95": [
+    0.427,
+    0.657
+   ]
+  },
+  "1200": {
+   "k": 28,
+   "n": 49,
+   "rate": 0.571,
+   "ci95": [
+    0.433,
+    0.7
+   ]
+  }
+ }
+}
