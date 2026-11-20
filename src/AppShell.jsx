@@ -436,7 +436,7 @@ export default function AppShell() {
            賽事中心導航都搬到賽事中心的 CS 分頁，這裡不再需要 `onRecap` / `onHub`。 */}
       {screen === "csPrep" && (() => {
         const backToHub = () => { setCsPrepFromHub(false); setHubInitialMode("cs"); setScreen("competition"); };
-        return <CsPrepScreen onNext={() => { setCsPrepFromHub(false); enterCsAfterPrep(); }} onBack={csPrepFromHub ? backToHub : home} onReturnToHub={csPrepFromHub ? backToHub : null} />;
+        return <CsPrepScreen onReport={(result)=>{writeCsCoachingLocation({mode:'report',matchId:result.matchId});setCsSettlementReceipt(null);setCsResult(result);setScreen('csResult');}} onNext={() => { setCsPrepFromHub(false); enterCsAfterPrep(); }} onBack={csPrepFromHub ? backToHub : home} onReturnToHub={csPrepFromHub ? backToHub : null} />;
       })()}
       {/*  CS Season M4-B2：CS 賽季成績單。換季 CTA 在該頁最後。
            UI-3：唯一入口是賽事中心的 CS 分頁 ⇒ 返回就回到那裡。 */}

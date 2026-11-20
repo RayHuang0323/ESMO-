@@ -269,6 +269,8 @@ try {
       await chrome.evaluate(`const b=[...document.querySelectorAll('button')].find(b=>b.innerText.includes('查看賽後戰報'));b.click();return true;`);
       await waitFor(chrome,`document.querySelector('[data-testid="cs-professional-report"]')`,45000,'true simulation result report');
       ck(`${format} real report has original map name`,await chrome.evaluate(`return ['Confluence Station','Dune Terminal','Foundry Circuit'].some(n=>document.body.innerText.includes(n))`));
+      ck(`${format} normal postmatch exposes coaching tab`,await chrome.evaluate(`const b=document.querySelector('[data-testid="cs-report-tab-coaching"]');if(!b)return false;b.click();return true;`));
+      await waitFor(chrome,`document.querySelector('[data-testid="cs-coaching-panel"]')`,10000,'normal postmatch coaching panel');
       const after=await readSaved(chrome),history=after.csHistory||[],last=history[0];
       ck(`${scenario} actual history identity`,last?.sceneVersion===config.sceneVersion&&last?.mapIdentity?.mapKey===config.mapKey);
       ck(`${scenario} true result creates settlement transaction`,Object.keys(after.processedMatchTransactions||{}).length>Object.keys(launched.processedMatchTransactions||{}).length);

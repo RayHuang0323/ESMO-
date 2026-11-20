@@ -1635,7 +1635,11 @@ function simulateFps(mapKey,tacticT,tacticCT,seed=42,roster,tacticalLayoutInput=
             // Rebuilding its full spawn route at 26/70 seconds sent the actor
             // backwards through already traversed waypoints.
             const keepRoleRoute=sceneVersion!=="legacy"&&["entry","lurk","execute","rush-entry","split-mid","route-control","pick-angle","regroup","utility-stage","hold-a","hold-b","information","information-peek"].includes(plan.kind)&&!p._coordinatorKind&&p._routePlan?.routeSignature===signature&&p._routePlan?.kind===plan.kind;
-            if(keepRoleRoute)p._routePlan={...p._routePlan,phase:currentPhase,objective:plan.objective};
+            // A recovered C4 already has a site route. Rejoining a phase must
+            // not send its carrier back through the authored opening lane.
+            const keepBombRoute=sceneVersion!=="legacy"&&!planted&&p.side==="t"&&p.hasBomb&&p.attackStage?.canAdvance&&p.fakeStage!=="approach"&&p._routePlan?.kind==="site-execute"&&p.route?.length&&dist(p.route.at(-1),N[target==="a"?"aSite":"bSite"])<10;
+            if(keepBombRoute)p._routePlan={...p._routePlan,phase:currentPhase};
+            else if(keepRoleRoute)p._routePlan={...p._routePlan,phase:currentPhase,objective:plan.objective};
             else assignRoute(p,plan.points,{...plan,roundSec:sec,routeRebuildReason:"phase-transition",routeSignature:signature});
           }
           p._tacticalPhase=currentPhase;p.tacticalPhase=currentPhase;

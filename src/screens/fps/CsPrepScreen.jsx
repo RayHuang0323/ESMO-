@@ -99,7 +99,7 @@ function CsBenchSheet({ seat, players, lineup, onClose }) {
 //  標成「暫用入口…完整的 CS 賽事頁上線之後應該被它取代，而不是兩個入口並存」，
 //  這裡執行的就是那句話。本檔回歸單場 CS 賽前責任：陣容、戰力、歷史。
 
-export default function CsPrepScreen({ onNext, onBack, onReturnToHub = null }) {
+export default function CsPrepScreen({ onNext, onBack, onReturnToHub = null, onReport = null }) {
   //  hotfix/cs-loading-rest-ux：一進 CS 賽前就開始下載 rigged 角色（9.2 MB），
   //  和選陣容／選圖／戰術並行；Loading 畫面再等它就緒才進 Battle。重複呼叫不會重複下載。
   useEffect(() => { preloadFpsCharacterAssets(); preloadFpsMajorMapImages(); }, []);
@@ -187,6 +187,7 @@ export default function CsPrepScreen({ onNext, onBack, onReturnToHub = null }) {
                       {h.archived === ARCHIVED_SUMMARY && <div data-testid="cs-history-archived" style={{ color: "#93a4c3", fontSize: 8 }}>{ARCHIVED_SUMMARY_TEXT}</div>}
                     </div>
                     <span style={{ color: GC.gold, fontSize: 10, whiteSpace: "nowrap" }}>+${Math.round((h.rewards?.money ?? 0) / 10000)}萬</span>
+                    {onReport && <button data-testid="cs-history-open-report" data-match-id={h.matchId} onClick={()=>onReport(h)} style={{minHeight:44,flexShrink:0,border:`1px solid ${GC.line}`,borderRadius:8,background:GC.card2,color:GC.gold,padding:'6px 10px',cursor:'pointer'}}>戰報</button>}
                   </div>
                 );
               })}

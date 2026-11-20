@@ -16,8 +16,15 @@ try{result=await runGate({name:'CS real report coaching training next battle',ex
  const wait=async(expr,ms,label)=>{const end=Date.now()+ms;while(Date.now()<end){if(await chrome.evaluate(`return Boolean(${expr});`))return;await sleep(200);}throw new HarnessError(label+' timeout');};
  const native=selector=>clickFpsDNative({chrome,sleep,selector}),read=()=>chrome.evaluate(`return JSON.parse(localStorage.getItem('esmo.profile.v1'));`),shape=s=>({players:s.players.map(p=>({id:p.id,stats:p.stats,training:p.training,growthLog:p.growthLog})),tx:s.processedMatchTransactions,history:(s.csHistory||[]).map(r=>r.matchId)});
  const screenshot=async name=>{const shot=await chrome.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,name),Buffer.from(shot.data,'base64'),{flag:'wx'});};
- await chrome.navigate(APP);await chrome.evaluate(`localStorage.setItem('esmo.profile.v1',${JSON.stringify(JSON.stringify(save))});return true;`);await chrome.navigate(APP+'?csCoach=report&csMatchId='+encodeURIComponent(report.matchId));
+ await chrome.navigate(APP);await chrome.evaluate(`localStorage.setItem('esmo.profile.v1',${JSON.stringify(JSON.stringify(save))});return true;`);await chrome.navigate(APP);
+ await wait(`document.querySelector('[data-testid="home-mode-cs"]')`,30000,'normal dashboard');
+ await native('[data-testid="home-mode-cs"]');
+ await wait(`document.querySelector('[data-testid="prep-start-practice"]')`,30000,'normal CS prep');
+ await chrome.evaluate(`[...document.querySelectorAll('button')].find(b=>b.innerText.includes('歷史')).click();return true;`);
+ await wait(`document.querySelector('[data-testid="cs-history-open-report"]')`,10000,'normal CS history');
+ await native('[data-testid="cs-history-open-report"][data-match-id="'+report.matchId+'"]');
  await wait(`document.querySelector('[data-testid="cs-professional-report"]')`,30000,'real saved report');
+ ck('首頁CS歷史可開啟真戰報，無須手動開發網址',await chrome.evaluate(`return new URL(location.href).searchParams.get('csMatchId')===${JSON.stringify(report.matchId)};`));
  const before=await read(),playerBefore=before.players.find(p=>p.id===card.playerId),preview=calculateCourse(playerBefore,card.course.id);
  evidence.before={player:playerBefore,day:before.meta.days};fs.writeFileSync(path.join(out,'before-training.save.json'),JSON.stringify(before),{flag:'wx'});
  ck('真戰報比分與五個分頁存在',await chrome.evaluate(`return ['overview','team','player','round','coaching'].every(k=>document.querySelector('[data-testid="cs-report-tab-'+k+'"]'))&&document.body.innerText.includes(${JSON.stringify(report.teamName)});`));
