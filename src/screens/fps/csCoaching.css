@@ -24,3 +24,8 @@
 .cs-coaching-empty { padding:22px; border:1px solid var(--line); border-radius:8px; }
 @keyframes cs-coach-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .cs-coaching-card { animation:none; } }
+
+.cs-coaching-person { flex-wrap:wrap; min-width:0; }
+.cs-coaching-person strong { min-width:0; overflow-wrap:anywhere; }
+.cs-coaching-person>span { flex-shrink:0; }
+.cs-coaching-card summary { min-height:44px; }

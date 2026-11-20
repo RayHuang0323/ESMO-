@@ -1,4 +1,5 @@
-import React,{useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
+import {useIsMobile} from '../../ui/useViewport.js';
 import {GC,FONT,MONO} from '../../ui/theme.js';
 import {csMapByKey} from '../../battle/fps/csPrepData.js';
 import {FPS_ROLE_JOBS} from '../../battle/fps/fpsRoleDuty.js';
@@ -23,6 +24,14 @@ function Compare({a,b,label,unit=''}){return <div className="cs-report-compare">
 
 export default function CsProfessionalReport({result:r,receipt,recorded,onDone,coachingPlayers=[],coachingHistory=[],onTrainingRequest,trainingBlockedReason}){
  const [tab,setTab]=useState('overview'),[team,setTeam]=useState('all'),[sort,setSort]=useState('rating'),[selected,setSelected]=useState(null),[round,setRound]=useState(1);
+ const mobile=useIsMobile(),tabsRef=useRef(null);
+ useEffect(()=>{
+  const nav=tabsRef.current,active=nav?.querySelector('[aria-pressed="true"]');
+  if(!mobile||!active)return;
+  const bounds=nav.getBoundingClientRect(),button=active.getBoundingClientRect();
+  if(button.left<bounds.left)nav.scrollLeft-=bounds.left-button.left;
+  else if(button.right>bounds.right)nav.scrollLeft+=button.right-bounds.right;
+ },[tab,mobile]);
  const data=r.analytics?.version===1?r.analytics:null;
  const players=useMemo(()=>data?.players||[...(r.players||[]).map(p=>({...p,id:`us-${p.playerId||p.playerName}`,name:p.playerName,teamId:'us'})),...(r.opponents||[]).map(p=>({...p,id:`enemy-${p.playerId||p.playerName}`,name:p.playerName,teamId:'enemy'}))],[r,data]);
  const visible=[...players].filter(p=>team==='all'||p.teamId===team).sort((a,b)=>(b[sort]??-1)-(a[sort]??-1)||b.kills-a.kills);
@@ -37,7 +46,7 @@ export default function CsProfessionalReport({result:r,receipt,recorded,onDone,c
    <section className="cs-report-score" aria-label="最終比分"><div><strong>{names[0]}</strong><span>{win?'勝方':'我方'}</span></div><b>{r.ourScore}<em>:</em>{r.enemyScore}</b><div><strong>{names[1]}</strong><span>{win?'對手':'勝方'}</span></div></section>
    <div className="cs-report-round-ribbon" aria-label="逐局勝負">{strip.map(rd=><button key={rd.round} className={rd.winner==='us'?'us':'enemy'} onClick={()=>{setRound(rd.round);setTab('round');}} title={`R${rd.round} ${rd.winner==='us'?names[0]:names[1]} · ${why[rd.how]||rd.how}`}><span>{rd.round}</span><b>{({elim:'×',bomb:'▣',defuse:'◇',time:'◷'})[rd.how]||'·'}</b></button>)}</div>
    <RewardReceiptPanel receipt={receipt} accent={GC.gold} summaryOnly/>
-   <nav className="cs-report-tabs" aria-label="戰報分析">{tabs.map(([key,label])=><button data-testid={`cs-report-tab-${key}`} key={key} onClick={()=>setTab(key)} aria-pressed={tab===key}>{label}</button>)}</nav>
+   <nav ref={tabsRef} className="cs-report-tabs" data-mobile={mobile} aria-label={mobile?'戰報分析，可左右滑動':'戰報分析'}>{tabs.map(([key,label])=><button data-testid={`cs-report-tab-${key}`} key={key} onClick={()=>setTab(key)} aria-pressed={tab===key}>{label}</button>)}</nav>
    {sourceNote&&<p role="status">{sourceNote}</p>}
    {tab==='overview'&&<>
     <div className="cs-report-kpis"><Metric kind="name" label="本隊 MVP" value={mvp?.playerName||'—'} note={`ESMO 評分 ${fmt(mvp?.rating,2)}`}/><Metric label="首殺對決" value={data?`${us?.openingKills} : ${enemy?.openingKills}`:'—'} note="每回合第一次擊殺"/><Metric label="道具傷害" value={fmt(us?.utilityDamage)} note="敵方實際扣血"/><Metric label="安包／拆包" value={data?`${us?.plants} / ${us?.defuses}`:'—'} note="本隊完成次數"/></div>

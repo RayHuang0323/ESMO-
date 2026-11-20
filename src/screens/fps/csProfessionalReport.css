@@ -98,3 +98,11 @@
   .cs-report-table-scroll { border:1px solid var(--line); border-radius:6px; }
   .cs-pro-report th:first-child,.cs-pro-report td:first-child { position:sticky; left:0; z-index:1; background:var(--card); }
 }
+
+/* Narrow navigation stays one row; only this strip scrolls, not the page.
+   Device classification comes from useViewport, matching battle UI. */
+.cs-report-tabs[data-mobile=true] { display:flex; flex-wrap:nowrap; overflow-x:auto; max-width:100%; gap:6px; padding:4px 2px 8px; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:var(--us) var(--card2); }
+.cs-report-tabs[data-mobile=true] button { flex:0 0 auto; min-width:88px; min-height:44px; padding:10px 14px; white-space:nowrap; }
+.cs-report-tabs[data-mobile=true] button[aria-pressed=true] { background:var(--card); box-shadow:inset 0 -2px 0 var(--us); }
+.cs-pro-report [data-testid=reward-receipt-summary] { min-width:0; overflow-wrap:anywhere; }
+.cs-pro-report [data-testid=reward-receipt-summary]>div:first-child { flex-wrap:wrap; gap:6px; }

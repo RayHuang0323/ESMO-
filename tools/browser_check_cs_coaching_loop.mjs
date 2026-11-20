@@ -33,6 +33,22 @@ try{result=await runGate({name:'CS real report coaching training next battle',ex
  ck('建議顯示真實選手課程體力成本與資料來源',await chrome.evaluate(`const p=document.querySelector('[data-testid="cs-coaching-panel"]');return p.innerText.includes(${JSON.stringify(card.playerName)})&&p.innerText.includes(${JSON.stringify(card.course.name)})&&p.innerText.includes('體力')&&p.innerText.includes('$0.0萬')&&p.querySelectorAll('[data-player-id]').length<=3;`));
  await screenshot('coaching-desktop.png');
  for(const width of [320,360,430,390]){await chrome.send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});ck(width+'px培養建議無水平溢出且新操作至少44px',await chrome.evaluate(`const b=document.querySelector('[data-testid="cs-coaching-go-training"]').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth+1&&b.height>=44;`));}
+ for(const width of [320,390,430]){
+  await chrome.send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});await sleep(250);
+  ck(width+'px五分頁同列且只在導覽內橫向滑動',await chrome.evaluate(`const nav=document.querySelector('.cs-report-tabs'),buttons=[...nav.children],ys=buttons.map(b=>b.getBoundingClientRect().top);return nav.dataset.mobile==='true'&&Math.max(...ys)-Math.min(...ys)<1&&buttons.every(b=>b.getBoundingClientRect().height>=44)&&nav.scrollWidth>nav.clientWidth&&document.documentElement.scrollWidth<=innerWidth+1;`));
+  ck(width+'px獎勵資訊完整且沒有超出戰報',await chrome.evaluate(`const p=document.querySelector('[data-testid="reward-receipt-summary"]'),r=p?.getBoundingClientRect();return !!r&&r.left>=0&&r.right<=innerWidth&&p.innerText.includes('獎金')&&p.innerText.includes('選手 XP');`));
+  ck(width+'px長選手名稱可換行且不撐開卡片',await chrome.evaluate(`const name=document.querySelector('.cs-coaching-person strong'),old=name.textContent;name.textContent='ExtremelyLongPlayerName_測試長選手名稱_012345678901234567890';const card=name.closest('.cs-coaching-card'),ok=document.documentElement.scrollWidth<=innerWidth+1&&name.getBoundingClientRect().right<=card.getBoundingClientRect().right;name.textContent=old;return ok;`));
+  await screenshot('report-tabs-'+width+'.png');
+ }
+ await chrome.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+ await chrome.evaluate(`const nav=document.querySelector('.cs-report-tabs');nav.scrollIntoView({block:'center'});nav.scrollLeft=0;return true;`);await sleep(150);
+ const strip=await chrome.evaluate(`const r=document.querySelector('.cs-report-tabs').getBoundingClientRect();return {x:r.right-25,y:r.top+22};`);
+ await chrome.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:strip.x,y:strip.y}]});
+ for(let i=1;i<=5;i++)await chrome.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:strip.x-i*35,y:strip.y}]});
+ await chrome.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await sleep(300);
+ ck('原生觸控滑動可揭露培養分頁',await chrome.evaluate(`return document.querySelector('.cs-report-tabs').scrollLeft>0;`));
+ await native('[data-testid="cs-report-tab-overview"]');await native('[data-testid="cs-report-tab-coaching"]');
+ ck('選中分頁會保持可見且唯一選取狀態',await chrome.evaluate(`const nav=document.querySelector('.cs-report-tabs'),a=nav.querySelector('[aria-pressed="true"]'),r=a.getBoundingClientRect(),n=nav.getBoundingClientRect();return nav.querySelectorAll('[aria-pressed="true"]').length===1&&a.dataset.testid==='cs-report-tab-coaching'&&r.left>=n.left-1&&r.right<=n.right+1;`));
  await screenshot('coaching-390.png');
  await chrome.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  ck('減少動態時保留資訊並停止卡片進場',await chrome.evaluate(`return getComputedStyle(document.querySelector('.cs-coaching-card')).animationName==='none'&&document.querySelector('[data-testid="cs-coaching-gains"]').innerText.includes('→');`));await chrome.send('Emulation.setEmulatedMedia',{features:[]});
@@ -44,7 +60,8 @@ try{result=await runGate({name:'CS real report coaching training next battle',ex
  ck('預選重新整理仍待玩家確認',!(await read()).players.find(p=>p.id===card.playerId).training);
  ck('390pxTraining確認無水平溢出',await chrome.evaluate(`return document.documentElement.scrollWidth<=innerWidth+1;`));
  // Two clicks exercise the real existing action's duplicate scheduling guard.
- await chrome.evaluate(`const b=document.querySelector('[data-testid="cs-training-confirm"]');b.click();b.click();return true;`);
+ const clicks=await chrome.evaluate(`const read=()=>{const s=JSON.parse(localStorage.getItem('esmo.profile.v1'));return {money:s.money,players:s.players,history:s.csHistory,tx:s.processedMatchTransactions};};const b=document.querySelector('[data-testid="cs-training-confirm"]');b.click();const once=read();b.click();return {once,twice:read()};`);
+ ck('重複確認不重扣費用體力或改寫正式戰績',hash(clicks.once)===hash(clicks.twice));
  await wait(`document.querySelector('[data-testid="cs-training-active"]')`,10000,'legitimate scheduled course');
  const scheduled=await read(),scheduledPlayer=scheduled.players.find(p=>p.id===card.playerId),days=scheduledPlayer.training.totalDays;
  ck('重複確認只安排一次且未提前成長',scheduledPlayer.training.courseId===card.course.id&&hash(scheduledPlayer.stats)===hash(playerBefore.stats)&&hash(scheduledPlayer.growthLog)===hash(playerBefore.growthLog));
