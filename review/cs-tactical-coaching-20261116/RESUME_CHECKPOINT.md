@@ -86,3 +86,36 @@ Production preview http://127.0.0.1:5192/ESMO-/ 。5190／5191舊預覽保留。
 既有證據位置：C:\Users\ifikn\esmo-measure\cs-tactical-coaching-20261116（fairness-r1、dune-timeout-trace.json、final-coachingloop、既有收據與 OWNER_REVIEW.md）；自然賽季案例位於 C:\Users\ifikn\esmo-measure\cs-competitive-quality-20261116。不得重建大型 Replay／Heap／Profile，不刪除原始 FAIL。
 
 本次暫停係配合 Owner 休眠；Dune 根因／修正、正常入口及本輪整合驗收尚未完成。等待 Owner 恢復後續跑。
+
+## 2026-11-20 CS Tactical Fairness v2／Owner Review
+
+產品候選：7bc1ce1504df116fc0ca2d07c7203fc513589dfd，分支 feature/cs-professional-expansion-20261116。Dune seed61001 真事件證明：拾回C4後的 site-execute 路線於下一幀被 phase-transition 覆寫為戰術開場路線。最小修正只在未下包、可進點、非假打接近且仍指向同一目標的T持包者保留路線游標；Legacy、碰撞、射擊、傷害、情報與Replay格式不動。修前PRODUCT_FAIL 3次覆寫，修後0次；獨立重跑結果一致。
+
+正常玩家入口補齊：首頁→CS→歷史→戰報→培養建議→原Training確認。不需手動開發網址；既有analytics／calculateCourse／growthLog仍為唯一來源，不從戰報直接加能力或發獎。完整操作31/31、歷史四寬度／恢復7/7；合法走位78→79.1、地圖意識82.25→83.2、體力62→50，下一場真Worker消費新能力，合法成長固定條件比較保持決定性。
+
+32場有限Before/After對照：三圖原生武器24場，加Dune統一P250／護甲／無投擲物8場；同actor／stats70／戰術／seed與起始方交換。兩配對seed下Dune原生CT 71/95→61/98（74.7%→62.2%），逾時32→13；P250 CT 75/108→56/86（69.4%→65.1%），逾時47→17。Confluence CT49/91→46/118（53.8%→39.0%），Foundry50/100→47/99（50.0%→47.5%）。回合相關，只有兩seed配對，不能視為母體公平性認證；Dune剩餘CT優勢與Confluence修後方向均保留待查，不補償勝率。
+
+完整證據與新SHA Gate位於 C:\Users\ifikn\esmo-measure\cs-tactical-fairness-v2-20261120；細項見 review/cs-tactical-coaching-20261116/RESUME_CHECKPOINT.md 本日追加章。原始PRODUCT_FAIL／工具FAIL收據保留，不覆寫歷史。正式預設池不變，Claude／MOBA、共享Store／Progress／SaveSlim契約、34 WIP與舊Replay不動；未Push／Deploy／新增Worktree。真Android／低RAM／熱降頻NOT_RUN、CPU4×FAIL及2118MiB風險保留。停止Owner Review，不自動擴樣本或開始下一Sprint。
+
+### 本輪實際驗證與限制
+
+- 產品SHA四項Release Gate與assert PASS：cs-tactical-v2-core／pool／coaching／history，target=actual=7bc1ce1504df。完整stdout／stderr／每一子行程exit保留於上述外部證據根。
+- 新核心：build PASS；C4 objective route PASS eligible128 violations0（兩次獨立結果逐值一致）；advice17／Training×Competition13／map identity6／original pool12／series46／save bundle86 PASS。
+- BP-9 P0-B 20季112/112，P0-A原子結算1464/1464，核心runner本次5/5：progress25、regress、regress2、presentation29b2、cs_major_shader_warmup。沒有將runner其餘151個NOT_RUN列為PASS。
+- 正式Browser81/81：Foundry BO1 13:1、Confluence13:10、Dune11:13；BO3 Dune9:13／Foundry12:16，自然0:2結束，唯一fixture outcome。三圖BO1／BO3選圖去重、對手快照、正常賽後培養分頁、舊Replay匯入返回、戰鬥與結算reload／發獎冪等通過。本輪BO3決勝第三圖未發生，不強制勝負補案例。
+- 舊三圖Replay全保存幀／rawResult／metadata逐值無損往返PASS，不重跑舊Replay引擎。
+- 培養Browser31/31、獨立歷史入口7/7；Seelöwe合法成長、存檔恢復、重複確認、下一場Worker及同條件模擬差異PASS。課程本身$0.0萬，日曆推進仍有原俱樂部開支；不新增第二套計算。
+- 原始失敗保留：c4-objective-before PRODUCT_FAIL（3次覆寫）位於舊tactical-coaching證據根；新根pairs.stderr.log為未找到default戰術的工具錯誤（修fallback取值，不改seed）；gate-coaching.stdout.log為錯誤fixture路徑；gate-core.stdout.log為唯一輸出保護拒絕既有c4-final.json。後兩者Release Gate確實FAIL，修外部執行腳本後於新目錄重跑，不改產品或放寬斷言。
+- 真Android／低RAM／熱降頻及本輪SaveSlim Browser UI NOT_RUN；Node完整BP-9／SaveSlim已通過。CPU4×既有FAIL與2118MiB峰值風險保留。競技公平性仍OPEN，不能全面啟用新池。
+
+### Owner操作與續跑
+
+production preview：http://127.0.0.1:5192/ESMO-/ ，本輪PID87476；首頁→CS→歷史→戰報→培養建議→前往訓練→明確確認。原創正式池仍由既有賽事測試選項opt-in，正式預設不動。cloudflared不在PATH，不安裝，不提供無效手機區網地址；未建立HTTPS tunnel。
+
+如需重現已封季的培養案例，可於獨立瀏覽器設定檔使用既有備份匯入介面讀取 C:\Users\ifikn\esmo-measure\cs-tactical-coaching-20261116\owner-coaching.backup.json；不要覆寫Owner原存檔。自然Major／新季驗收入口備份沿用 cs-competitive-quality-20261116 的 owner-natural-major.backup.json／owner-league-start.backup.json。不要手動輸入csCoach開發網址才找建議。
+
+Claude現役工作區 D:\OneDrive\文件\GitHub\ESMO\.sprints\moba-v21-sprint0，feature/moba-tower-edge-v23；本輪結束觀察HEAD910792acc6fb33d11bd1faefecf15c9cea59ac8d且乾淨。任務期間由feed38c1自然前進；本輪沒有修改該工作區。main重新resolve仍7cf1cebc10915f096a256885388ecd8a7052e5f3。
+
+下一步僅列Owner Review：①分開Dune植包前與CT回防／拆包時間成本、Confluence修後方向；②增加角色／等武器的獨立配對seed，仍維持固定有限預算，不補償勝率；③真Android／低RAM與CPU4×風險實測，以及既有analytics訓練後三場追蹤的純呈現提案。
+
+本節文件提交後另以精確文件Checkpoint執行新Gate：確認src／tools／public／依賴等相對產品SHA完全不變，並實際重跑C4／Training／identity檢查。完整四項產品收據釘住7bc1ce15，文件Checkpoint不是另一個產品版本；最後SHA與收據以本輪最終回報為準。停止Owner Review，僅保留預覽，不啟動下一Sprint。

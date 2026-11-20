@@ -38,3 +38,9 @@
 新增獨立「培養建議」頁保留原四頁，以同一csCoachingAdvice供UI及工具，收斂同layout／版本／角色樣本、同名拒絕；原真fixture的2項建議收斂為1項。僅預選Training，由玩家確認安排；calculator／成長／存檔均沿既有權威。UI位置用URL提示，不新增持久化追蹤schema；進行中session阻擋新入口。已驗真成長→刷新→下一場Worker消費、四種手機寬度與reduced-motion，未經真機實測。
 
 同seed合法成長前後實戰已有可重現差異，但兩場都落敗，不以此宣稱課程保證勝率；三場自動追蹤與對手／武器條件完整分組仍未實作。詳review/cs-tactical-coaching-20261116/RESUME_CHECKPOINT.md與本輪新SHA收據。
+
+## 2026-11-20 CS Tactical Fairness v2／Owner Review
+
+產品7bc1ce1504df：修正拾回C4後進點路線被phase-transition覆寫，保留同目標合法路線游標；不改傷害、命中、情報、碰撞、Replay格式與正式預設池。補首頁CS歷史→真戰報→培養建議→既有Training入口。32場有限配對顯示Dune延誤下降，但剩餘CT優勢與Confluence修後方向未認證。Browser正式池81/81、培養31/31、歷史7/7、BP-9 Slim112/112／原子結算1464/1464、核心5/5與三圖Replay無損往返PASS；產品四項SHA Gate及assert PASS。原始PRODUCT_FAIL與工具FAIL保留，不跨SHA套用舊收據。
+
+詳 review/cs-tactical-coaching-20261116/RESUME_CHECKPOINT.md 本日追加章，含Before/After、精確樣本、子行程收據與Owner步驟。TD-CS-QUAL-02仍OPEN；TD-CS-QUAL-04正常玩家入口已補齊，持久三場追蹤未實作。共享Store／Progress／MOBA、原34WIP與歷史證據不動。Claude現役HEAD觀察910792ac，main仍7cf1cebc；未Push／Deploy／新增Worktree。production preview5192保持；無HTTPS tunnel、真Android／低RAM／CPU4×及2118MiB風險保留。完成文件Checkpoint後停止Owner Review。
