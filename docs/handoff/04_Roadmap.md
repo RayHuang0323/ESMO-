@@ -3079,3 +3079,12 @@ CS24個與MOBA17個src差異沒有共同路徑；唯一共同追蹤檔tools/veri
 
 
 收尾補記（2026-11-20 12:49:32 UTC）：Claude HEAD仍910792ac，現役未提交工具由6增至7，新增pin_v13_baseline_v24.mjs；完整最新收據claude-final-status.json。整合仍BLOCKED，沒有合併或產品Gate，不把初查6檔當成最終數量。
+
+
+## 2026-11-21 CS × MOBA正式本機整合候選（Owner Review）
+
+Claude交接0b577dab（成果47914b16）與CS e0bd5614來源乾淨，11支工具已提交，前輪來源未提交BLOCKED已解決但原紀錄保留。既有Codex工作區分支integration/cs-moba-20261121正常合併為7b5199cb，兩邊完整parent保留、0衝突；產品00ab310906ae5c89c262c4f451b00d18c1b45b00。verify同時保留MOBA provenance／resume／dry-run／trust-legacy-state與CS14/14；未改MOBA或CS戰鬥平衡／旗標。
+
+S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存；只將全src相等假設改為73支MOBA語意與所有非明確24個CS路徑的保護，仍用原基準，12項正反例PASS，不改門檻／指紋。適配後55/55、5/5、6/6，v23 69237cce78edf2be／v24 9727c0b4ae8beb3d不變。整合MOBA runner14/14、正常MOBA Browser9/9、CS正式三圖BO1／BO3 81/81、培養閉環與MOBA並行47/47、額外有界並行縮放14/14、BP-9原子1464/1464、SaveSlim20季112/112、舊三圖Replay與production build及七項新SHA Gate／assert全部PASS。
+
+完整來源／處置／收據／截圖與限制：review/cs-moba-integration-20261121/INTEGRATION_RESULT.md；原始資料 C:\Users\ifikn\esmo-measure\cs-moba-integration-20261121。整合production preview http://127.0.0.1:5194/ESMO-/ 。四個正式MOBA旗標false、Sprint2／A～D未實作、CS池opt-in／正式預設不變。320px並行補證PASS但原偶發FAIL不抹除；Android／低RAM／CPU4×FAIL／2118MiB及既有公平性風險維持。桌機技術候選可Owner Review，正式發布仍須Owner核准與新main／正式站驗收；不Push／Deploy／force／新增Worktree／清理原WIP。保存文件Checkpoint後停止。
