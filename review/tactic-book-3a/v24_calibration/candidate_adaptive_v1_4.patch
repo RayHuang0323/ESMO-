@@ -1,0 +1,163 @@
+diff --git a/src/LogicEngine.js b/src/LogicEngine.js
+index f48369de..8d5304c7 100644
+--- a/src/LogicEngine.js
++++ b/src/LogicEngine.js
+@@ -427,7 +427,8 @@ export class LogicEngine {
+     //  Sprint 1.1：tacticExec "adaptive.v1.1"＝同一個模組的修正版（編隊、動態撤退、野區機會成本）；"adaptive.v1" 原樣保留（工具重現 Sprint 1）。
+     //  Sprint 1.2：再加 "adaptive.v1.2"（經濟、敵方營信念、傾向人數下限、威脅校準；都在 tacticExecV24.js）。
+     //  Sprint 1.3：再加 "adaptive.v1.3"（終局護線；模組同上）。
+-    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2" || tacticExec === "adaptive.v1.3") && invasion === "v2";
++    //  Calibration Sprint：再加 "adaptive.v1.4"（入侵經濟在真實戰鬥下重新校準；模組同上）。
++    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2" || tacticExec === "adaptive.v1.3" || tacticExec === "adaptive.v1.4") && invasion === "v2";
+     this._tacExecVariant = this._tacExecV24 ? tacticExec : null;
+     //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
+     //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
+diff --git a/src/battle/moba/tactics/tacticExecV24.js b/src/battle/moba/tactics/tacticExecV24.js
+index 57c19f01..fe734025 100644
+--- a/src/battle/moba/tactics/tacticExecV24.js
++++ b/src/battle/moba/tactics/tacticExecV24.js
+@@ -147,6 +147,88 @@ export const TACTIC_EXEC_V24_2 = Object.freeze({
+ });
+ const C2 = TACTIC_EXEC_V24_2;
+ 
++const deepFreeze = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deepFreeze(v); return Object.freeze(o); };
++/**
++ *  v24 Calibration Sprint（tacticExec "adaptive.v1.4"，Owner 2026-11-20 核准「真實戰鬥入侵校準」）的追加參數。adaptive.v1～v1.3 不讀這裡任何一格。
++ *  根因（Sprint 2 Preflight，review/tactic-book-3a/v24_sprint1/S15_PREFLIGHT_RESULTS.md）：v1.1／v1.2 的經濟參數是在「沒有英雄技能」的工具路徑上量的
++ *  （打野清 Buff 150～198 秒）；真實戰鬥（Career-Parity）下打野清營快 3.4 倍、相信活著的敵方營一半已死。
++ *  全部數字都在「已用過」的 Seeds、Career-Parity 環境上量（review/tactic-book-3a/v24_calibration/）；之後不再調，獨立驗證在事先登記的新 Seeds 上做。
++ *  四個元件可以個別關掉（X.tune.v14off＝["time","belief","deny","success"] 的子集；只有量測工具的消融臂會設，引擎從不設）。
++ */
++export const TACTIC_EXEC_V24_4 = Object.freeze({
++  //  ① 時間價值：往返期間「自家營都還沒重生」的那段，成本改用 lambdaOther（＝v1.2 的先驗 λ0：其他有效行動），
++  //     不再用我方清營速度 λ。λ 是「有營可打時」的產出，那段時間本來就打不到營（Preflight §2.7）。有營可打的那段照舊 max(lossPerSec, λ)。
++  lambdaOther: 0.009,
++  //  ② 敵方營存活信念：到場時還活著的機率，查表（合法資訊的分類 × 敵方打野狀態；cal_fit_belief_v24.mjs 擬合）。取代 v1.2 的兩格 Beta 先驗。
++  ejRecentSec: 30,
++  //  擬合：已用過的 Seeds（工具 142201–142259 ×3 配置、生涯 143001–143059 ×3 素質；v13 臂＋econK 0.3 探索臂）232,236 筆；樣本外（有天賦分層）AUC 0.741、BSS 0.178、ECE 0.021；
++  //  v1.2 的信念在同一份樣本外資料上 AUC 約 0.54、BSS −0.15。每格往同類型同分類的邊際收斂（虛擬樣本 20）。
++  belief: deepFreeze({"buff":{"seen":{"dead":0.967, "recent":0.91, "old":0.8, "never":0.893}, "memAlive:<20":{"dead":0.956, "recent":0.774, "old":0.606, "never":0.757}, "memAlive:<45":{"dead":0.784, "recent":0.635, "old":0.358, "never":0.499}, "memAlive:<90":{"dead":0.623, "recent":0.516, "old":0.269, "never":0.382}, "memAlive:90+":{"dead":0.717, "recent":0.578, "old":0.305, "never":0.452}, "respawn:<20":{"dead":0.907, "recent":0.918, "old":0.769, "never":0.832}, "respawn:<40":{"dead":0.899, "recent":0.701, "old":0.369, "never":0.557}, "respawn:40+":{"dead":0.708, "recent":0.574, "old":0.296, "never":0.446}, "prior:<150":{"dead":0.325, "recent":0.263, "old":0.045, "never":0.079}, "prior:<300":{"dead":0.557, "recent":0.617, "old":0.126, "never":0.07}, "prior:<600":{"dead":0.63, "recent":0.548, "old":0.213, "never":0.376}, "prior:<900":{"dead":0.676, "recent":0.546, "old":0.299, "never":0.418}, "prior:900+":{"dead":0.639, "recent":0.548, "old":0.384, "never":0.476}}, "camp":{"seen":{"dead":0.98, "recent":0.926, "old":0.915, "never":0.924}, "memAlive:<20":{"dead":0.979, "recent":0.863, "old":0.775, "never":0.844}, "memAlive:<45":{"dead":0.853, "recent":0.775, "old":0.592, "never":0.694}, "memAlive:<90":{"dead":0.74, "recent":0.673, "old":0.473, "never":0.585}, "memAlive:90+":{"dead":0.735, "recent":0.673, "old":0.468, "never":0.579}, "respawn:<20":{"dead":0.952, "recent":0.982, "old":0.916, "never":0.913}, "respawn:<40":{"dead":0.941, "recent":0.901, "old":0.67, "never":0.782}, "respawn:40+":{"dead":0.722, "recent":0.703, "old":0.526, "never":0.623}, "prior:<150":{"dead":0.052, "recent":0.289, "old":0.33, "never":0.294}, "prior:<300":{"dead":0.602, "recent":0.545, "old":0.248, "never":0.217}, "prior:<600":{"dead":0.716, "recent":0.617, "old":0.348, "never":0.488}, "prior:<900":{"dead":0.711, "recent":0.604, "old":0.409, "never":0.507}, "prior:900+":{"dead":0.716, "recent":0.642, "old":0.545, "never":0.606}}}),
++  //  ③ 拒絕收益：對方本來會清到的比例＝Career-Parity 下對方清自家營 ÷ 理論上限（3 座 × 每 90 秒）。v1.1 的 0.34 是在無技能環境量的。
++  //  工具 inv／AB／BA 0.674／0.686／0.650、生涯 低／中／高 0.614／0.634／0.650（v13 臂各 30 場）⇒ 合併 0.658。
++  denyShare: 0.66,
++  //  ④ 成功率（到場時活著的前提下）：依目標 × 情況；2 人另一張表。取代 successP ÷ aliveRef。
++  //  到場時活著的前提下 60 秒內搶到的比例（v13 臂＋econK 0.3 探索臂，514 次出發中 298 次到場時目標活著）。格內少於 10 次 ⇒ 沿用 v1.2 的值（successP ÷ aliveRef），不用邊際填。
++  //  有資料的格：單人 Buff clear 8/14、單人營 clear 12/18、單人營 prior 57/117；2 人 Buff clear 6/11、Buff contested 5/19、營 prior 27/104、營 contested 4/10。
++  successP: deepFreeze({"buff":{"clear":0.543, "prior":0.125, "prior_early":0.125, "contested":0.261}, "camp":{"clear":0.617, "prior":0.488, "prior_early":0.135, "contested":0.301}}),
++  successP2: deepFreeze({"buff":{"clear":0.473, "prior":0.125, "prior_early":0.125, "contested":0.296}, "camp":{"clear":0.29, "prior":0.261, "prior_early":0.135, "contested":0.346}}),
++});
++const C4 = TACTIC_EXEC_V24_4;
++
++/** 到場時這座敵方營還活著的信念（v1.4）。只讀：我方視野、我方記憶、公開的重生時間、敵方打野的存亡與我方最後看到他的時間。 */
++function beliefClass14(E, X, S, c, etaArr, alive) {
++  if (campVisible(E, S, c, alive)) return "seen";
++  const m = X.side[S].campMem.get(c.id);
++  if (m && m.alive) { const a = E.t - m.t; return a < 20 ? "memAlive:<20" : a < 45 ? "memAlive:<45" : a < 90 ? "memAlive:<90" : "memAlive:90+"; }
++  if (m && !m.alive && Number.isFinite(m.respawnAt)) { const a = E.t + etaArr - m.respawnAt; return a < 20 ? "respawn:<20" : a < 40 ? "respawn:<40" : "respawn:40+"; }
++  const t = E.t;
++  return t < 150 ? "prior:<150" : t < 300 ? "prior:<300" : t < 600 ? "prior:<600" : t < 900 ? "prior:<900" : "prior:900+";
++}
++function ejStatus14(E, X, S, alive) {
++  const ej = E.players.find((q) => q.side === otherSide(S) && q.role === "jungle");
++  if (!ej) return "never";
++  if (ej.dead) return "dead";
++  if (seen(E, S, ej, alive)) return "recent";
++  const m = X.side[S].foeMem.get(ej.id);
++  return !m ? "never" : E.t - m.t <= C4.ejRecentSec ? "recent" : "old";
++}
++function belief14(E, X, S, c, etaArr, alive) {
++  return C4.belief[typeOf(c)][beliefClass14(E, X, S, c, etaArr, alive)][ejStatus14(E, X, S, alive)];
++}
++
++/**
++ * v1.4 野區經濟：與 econ12 同一條式子，四個元件換成真實戰鬥下的量測值（各自可關掉做消融）：
++ *  成本＝自家營平均價值 ×（max(lossPerSec, λ) × 有營可打的往返秒數 ＋ lambdaOther × 其餘往返秒數）
++ *  期望收益＝價值 × 成功率（到場時活著的前提下）× 到場時還活著的信念 ×（1＋denyShare）
++ */
++function econ14(E, X, S, alive, cand, eta) {
++  const r4 = (x) => Math.round(x * 10000) / 10000;
++  const offs = X.tune?.v14off ?? null, on = (k) => !(offs && offs.includes(k));
++  const own = (E.neutrals?.camps ?? []).filter((c) => c.side === S);
++  let back = Infinity, availFrom = Infinity;
++  for (const c of own) {
++    back = Math.min(back, eta(cand.c.pos, c.pos));
++    availFrom = Math.min(availFrom, c.alive ? 0 : Number.isFinite(c.respawnAt) ? Math.max(0, c.respawnAt - E.t) : Infinity);
++  }
++  if (!Number.isFinite(back)) back = 0;
++  const trip = cand.etaJ + C.clearSec[cand.type] * Math.max(0.2, cand.hp ?? 1) + back;
++  const overlap = Number.isFinite(availFrom) ? Math.max(0, Math.min(trip, trip - availFrom)) : 0;
++  const lam = lambdaTime12(E, X, S), lamFarm = Math.max(C1.lossPerSec, lam);
++  const ownValue = own.length ? own.reduce((sum, c) => sum + C.value[typeOf(c)], 0) / own.length : 0;
++  const cost = ownValue * (lamFarm * overlap + (on("time") ? C4.lambdaOther : lam) * (trip - overlap));
++  const th = threatOf(E, X, S, cand.c, alive, (pos) => eta(pos, cand.c.pos));
++  const cond0 = th.s05 === 0 && th.seenNear === 0 ? "clear" : th.s05 === 1 && th.mask === bitOf("jungle") && th.ejKind === "prior" && th.seenNear === 0 ? "prior" : "contested";
++  const cond = cond0 === "prior" && E.t < C1.earlyPriorSec ? "prior_early" : cond0;
++  const pA = on("belief") ? belief14(E, X, S, cand.c, cand.etaJ, alive) : pAlive12(E, X, S, cand.c, cand.etaJ);
++  const succ = (tbl12, tbl14) => (on("success") ? tbl14[cand.type][cond] : Math.min(0.95, tbl12[cand.type][cond] / C2.aliveRef[cand.type]));
++  const deny = on("deny") ? C4.denyShare : C1.denyShare;
++  const ev = C.value[cand.type] * succ(C1.successP, C4.successP) * pA * (1 + deny);
++  const ev2 = C.value[cand.type] * succ(C1.successP2, C4.successP2) * pA * (1 + deny);
++  const k = X.tune?.econK ?? C2.econK;
++  return { ok: ev >= k * cost, duoOk: ev2 >= k * cost, rec: { trip: r4(trip), ev: r4(ev), ev2: r4(ev2), cost: r4(cost), cond, pAlive: r4(pA), lambda: r4(lam), overlap: r4(overlap) } };
++}
++
++
+ /** 傾向：Sprint 1 由戰術書既有的入侵傾向決定（玩家自選傾向屬 Sprint 3）。 */
+ export function postureOf(knobs) {
+   const ic = knobs?.invadeChance ?? 0;
+@@ -164,11 +246,13 @@ const newObs = () => ({
+ 
+ /** configureMatch 時建立。 */
+ export function createTacticExecState(E) {
+-  const v13 = E._tacExecVariant === "adaptive.v1.3";
++  const v14 = E._tacExecVariant === "adaptive.v1.4";
++  const v13 = E._tacExecVariant === "adaptive.v1.3" || v14;
+   const v12 = E._tacExecVariant === "adaptive.v1.2" || v13;
+   const st = { log: [], hist: [], obs: { blue: newObs(), red: newObs() }, side: {}, v11: E._tacExecVariant === "adaptive.v1.1" || v12 };
+   if (v12) st.v12 = true;
+   if (v13) st.v13 = true;
++  if (v14) st.v14 = true;
+   for (const S of ["blue", "red"]) {
+     const K = E.director?.knobs(S) ?? null;
+     const posture = postureOf(K);
+@@ -463,7 +547,7 @@ export function evaluateInvade(E, X, S, alive) {
+     if (len == null) { inc(why, "unreachable"); continue; }
+     const etaPath = len / moveSpeed;
+     if (etaPath > P.etaMax + (X.v11 && cand.type !== "buff" ? C1.campEtaExtra : 0)) { inc(why, "too_far"); continue; }
+-    if (X.v11) { const ev = (X.v12 ? econ12 : econ11)(E, X, S, alive, { ...cand, etaJ: etaPath }, eta); if (!ev.ok) { inc(why, "own_farm"); rec.econFail ??= { target: cand.c.id, type: cand.type, ...ev.rec }; continue; } cand.econ = ev; }
++    if (X.v11) { const ev = (X.v14 ? econ14 : X.v12 ? econ12 : econ11)(E, X, S, alive, { ...cand, etaJ: etaPath }, eta); if (!ev.ok) { inc(why, "own_farm"); rec.econFail ??= { target: cand.c.id, type: cand.type, ...ev.rec }; continue; } cand.econ = ev; }
+     best = { ...cand, etaJ: etaPath };
+     break;
+   }
+diff --git a/src/platform/contracts/matchRuleset.js b/src/platform/contracts/matchRuleset.js
+index dffd79a3..78acd2dd 100644
+--- a/src/platform/contracts/matchRuleset.js
++++ b/src/platform/contracts/matchRuleset.js
+@@ -101,11 +101,13 @@ export const taskCommitOf = (r) => r?.layers?.taskCommit ?? DEFAULT_TASK_COMMIT;
+ //   · "adaptive.v1.2"＝v24 Sprint 1.2（Owner 2026-11-18 核准）：adaptive.v1.1 全部行為＋機會成本不歸零（我方時間價值）、敵方營存活信念（我方視野＋公開重生）、
+ //                    積極／全力的 2 人下限只在預估有敵人時、威脅模型依情報新鮮度重新校準。v24 規則集用這個值；v1、v1.1 保留給工具重現。
+ //   · "adaptive.v1.3"＝v24 Sprint 1.3（Owner 2026-11-19 核准）：adaptive.v1.2 全部行為＋終局護線（雙方都只剩主堡時，要去主堡的英雄改去護送己方兵線）。v24 規則集用這個值；v1、v1.1、v1.2 保留給工具重現。
+-export const TACTIC_EXECS = Object.freeze(["off", "adaptive.v1", "adaptive.v1.1", "adaptive.v1.2", "adaptive.v1.3"]);
++//   · "adaptive.v1.4"＝v24 Calibration Sprint（Owner 2026-11-20 核准「真實戰鬥入侵校準」）：adaptive.v1.3 全部行為＋入侵經濟在 Career-Parity（英雄技能開啟）下重新校準
++//                    （沒有自家營可打時段的時間價值、合法情報的敵方營存活信念表、拒絕收益、到場時活著前提下的成功率）。v24 規則集用這個值；v1～v1.3 保留給工具重現。
++export const TACTIC_EXECS = Object.freeze(["off", "adaptive.v1", "adaptive.v1.1", "adaptive.v1.2", "adaptive.v1.3", "adaptive.v1.4"]);
+ export const DEFAULT_TACTIC_EXEC = "off";
+ /** 讀取 ruleset 的 tacticExec 層；缺少 ≡ "off"。 */
+ export const tacticExecOf = (r) => r?.layers?.tacticExec ?? DEFAULT_TACTIC_EXEC;
+-export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24", "adaptive.v1.1": "mobaTacticExecV24", "adaptive.v1.2": "mobaTacticExecV24", "adaptive.v1.3": "mobaTacticExecV24" });
++export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24", "adaptive.v1.1": "mobaTacticExecV24", "adaptive.v1.2": "mobaTacticExecV24", "adaptive.v1.3": "mobaTacticExecV24", "adaptive.v1.4": "mobaTacticExecV24" });
+ //  正式旗標 mobaTacticExecV24（預設 OFF；只在 mobaTacticalDirectorV21＋mobaJungleV22＋mobaSafeRouteV23 也開時有意義：career.v24＝career.v23＋v24 的層）。
+ export const TASK_ARBITRATION_RELEASE_FLAG = Object.freeze({ v1: "mobaTacticExecV24" });
+ export const TASK_COMMIT_RELEASE_FLAG = Object.freeze({ v19push: "mobaTacticExecV24" });
+@@ -169,9 +171,10 @@ const V23_RULESETS = Object.freeze({
+ //  Sprint 1.1（2026-11-17）：tacticExec 改成 "adaptive.v1.1"。工具規則集可用 ESMO_BALANCE_TACTICEXEC=adaptive.v1 重現 Sprint 1。
+ //  Sprint 1.2（2026-11-18）：tacticExec 改成 "adaptive.v1.2"；ESMO_BALANCE_TACTICEXEC=adaptive.v1.1 重現 Sprint 1.1。
+ //  Sprint 1.3（2026-11-19）：tacticExec 改成 "adaptive.v1.3"；ESMO_BALANCE_TACTICEXEC=adaptive.v1.2 重現 Sprint 1.2。
++//  Calibration Sprint（2026-11-20）：tacticExec 改成 "adaptive.v1.4"；ESMO_BALANCE_TACTICEXEC=adaptive.v1.3 重現 Sprint 1.3。
+ const v24Of = (base, extraRequirements = []) => R({
+   ...base, rulesetId: base.rulesetId.replace(".v23", ".v24"), simVersion: "moba-sim.v24",
+-  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1.3" },
++  layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1.4" },
+   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
+ });
+ export const MATCH_RULESETS = Object.freeze({
