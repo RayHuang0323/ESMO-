@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {evaluateMobaIntegrationScope as evaluate,inspectMobaIntegrationScope,CS_INTEGRATION_SOURCE_PATHS as cs} from './lib/mobaIntegrationScope.mjs';
+let pass=0;const ck=(name,fn)=>{fn();pass++;console.log('PASS '+name);};
+ck('無差異通過',()=>assert(evaluate({changedPaths:[]}).ok));
+ck('明確24檔CS面可整合且不與語意清單重疊',()=>{assert.equal(cs.length,24);assert(evaluate({changedPaths:cs}).ok);});
+for(const p of ['src/LogicEngine.js','src/featureFlags.js','src/platform/contracts/simulationVersion.js','src/platform/contracts/matchRuleset.js','src/battle/fps/unreviewed.js'])ck('拒絕非核准變更 '+p,()=>assert(!evaluate({changedPaths:[p]}).ok));
+ck('CS面若進入語意權威亦拒絕，不能以白名單遮掉',()=>assert(!evaluate({changedPaths:[cs[0]],semanticPaths:[cs[0]]}).ok));
+ck('任何dirty src拒絕',()=>assert(!evaluate({changedPaths:[],dirtyPaths:['?? src/new.js']}).ok));
+for(const sha of ['541721dd','feed38c1','910792ac'])ck('保留原始基準 '+sha,()=>{const result=inspectMobaIntegrationScope(sha);assert(result.ok,JSON.stringify(result));});
+console.log(`MOBA_INTEGRATION_SCOPE RESULT=PASS assertions=${pass}`);

@@ -11,6 +11,7 @@
 //  C6 v24／v23 指紋不變；src/ 沒有 import 量測工具
 // ============================================================================
 import fs from "node:fs";
+import {inspectMobaIntegrationScope} from './lib/mobaIntegrationScope.mjs';
 import path from "node:path";
 import { execSync, spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -49,13 +50,13 @@ const LIB = J(pathToFileURL(path.join(ROOT, "tools/owner_preview/lib_parity_env_
 }
 // ── C3 ──
 {
-  const srcSame = git("diff", "--name-only", "910792ac", "--", "src").trim() === "" && git("status", "--porcelain", "--", "src").trim() === "";
+  const scope=inspectMobaIntegrationScope('910792ac',ROOT),srcSame=scope.ok;
   const { MATCH_RULESETS, TACTIC_EXECS } = await imp("src/platform/contracts/matchRuleset.js");
   const patch = "review/tactic-book-3a/v24_calibration/candidate_adaptive_v1_4.patch";
   let applies = false; try { execSync(`git apply --check "${patch}"`, { cwd: ROOT, stdio: "ignore" }); applies = true; } catch { applies = false; }
-  ck("C3 候選 adaptive.v1.4 沒有併入：src/ 與 910792ac 相同、v24 規則集仍是 adaptive.v1.3、合法值清單沒有 v1.4；補丁仍能套用到目前的 src（只檢查，不套用）",
+  ck("C3 候選v1.4沒有併入：MOBA保護範圍與910792ac相同、明確CS面可整合且src乾淨；規則仍v1.3且無v1.4；補丁仍可套用（不套用）",
     srcSame && MATCH_RULESETS["career.v24"].layers.tacticExec === "adaptive.v1.3" && MATCH_RULESETS["balanceTool.v24"].layers.tacticExec === "adaptive.v1.3" && !TACTIC_EXECS.includes("adaptive.v1.4") && applies,
-    J({ srcSame, career: MATCH_RULESETS["career.v24"].layers.tacticExec, tool: MATCH_RULESETS["balanceTool.v24"].layers.tacticExec, patchApplies: applies }));
+    J({ srcSame, scope, career: MATCH_RULESETS["career.v24"].layers.tacticExec, tool: MATCH_RULESETS["balanceTool.v24"].layers.tacticExec, patchApplies: applies }));
 }
 // ── C4 ──
 {
