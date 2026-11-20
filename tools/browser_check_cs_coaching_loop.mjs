@@ -60,7 +60,7 @@ try{result=await runGate({name:'CS real report coaching training next battle',ex
  ck('預選重新整理仍待玩家確認',!(await read()).players.find(p=>p.id===card.playerId).training);
  ck('390pxTraining確認無水平溢出',await chrome.evaluate(`return document.documentElement.scrollWidth<=innerWidth+1;`));
  // Two clicks exercise the real existing action's duplicate scheduling guard.
- const clicks=await chrome.evaluate(`const read=()=>{const s=JSON.parse(localStorage.getItem('esmo.profile.v1'));return {money:s.money,players:s.players,history:s.csHistory,tx:s.processedMatchTransactions};};const b=document.querySelector('[data-testid="cs-training-confirm"]');b.click();const once=read();b.click();return {once,twice:read()};`);
+ const clicks=await chrome.evaluate(`const read=()=>{const s=JSON.parse(localStorage.getItem('esmo.profile.v1'));return s;};const b=document.querySelector('[data-testid="cs-training-confirm"]');b.click();const once=read();b.click();return {once,twice:read()};`);
  ck('重複確認不重扣費用體力或改寫正式戰績',hash(clicks.once)===hash(clicks.twice));
  await wait(`document.querySelector('[data-testid="cs-training-active"]')`,10000,'legitimate scheduled course');
  const scheduled=await read(),scheduledPlayer=scheduled.players.find(p=>p.id===card.playerId),days=scheduledPlayer.training.totalDays;
