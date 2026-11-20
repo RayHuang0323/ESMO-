@@ -28,9 +28,12 @@ export default function CsProfessionalReport({result:r,receipt,recorded,onDone,c
  useEffect(()=>{
   const nav=tabsRef.current,active=nav?.querySelector('[aria-pressed="true"]');
   if(!mobile||!active)return;
-  const bounds=nav.getBoundingClientRect(),button=active.getBoundingClientRect();
-  if(button.left<bounds.left)nav.scrollLeft-=bounds.left-button.left;
-  else if(button.right>bounds.right)nav.scrollLeft+=button.right-bounds.right;
+  const reveal=()=>{const bounds=nav.getBoundingClientRect(),button=active.getBoundingClientRect();
+   if(button.left<bounds.left)nav.scrollLeft-=bounds.left-button.left;
+   else if(button.right>bounds.right)nav.scrollLeft+=button.right-bounds.right;
+  };
+  reveal();const observer=new ResizeObserver(reveal);observer.observe(nav);
+  return ()=>observer.disconnect();
  },[tab,mobile]);
  const data=r.analytics?.version===1?r.analytics:null;
  const players=useMemo(()=>data?.players||[...(r.players||[]).map(p=>({...p,id:`us-${p.playerId||p.playerName}`,name:p.playerName,teamId:'us'})),...(r.opponents||[]).map(p=>({...p,id:`enemy-${p.playerId||p.playerName}`,name:p.playerName,teamId:'enemy'}))],[r,data]);
