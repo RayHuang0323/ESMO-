@@ -1,0 +1,68 @@
+{
+ "s11_train": {
+  "n": 300,
+  "unfinished": 0,
+  "meanMin": 17.67,
+  "p50": 17.07,
+  "p90": 22.01,
+  "p99": 25.49,
+  "max": 28.01,
+  "atLeast35": 0,
+  "atLeast40": 0,
+  "blueWin": 0.53
+ },
+ "holdout_tool": {
+  "n": 1080,
+  "unfinished": 0,
+  "meanMin": 17.7,
+  "p50": 17.07,
+  "p90": 21.56,
+  "p99": 25.48,
+  "max": 28.8,
+  "atLeast35": 0,
+  "atLeast40": 0,
+  "blueWin": 0.511
+ },
+ "career": {
+  "n": 300,
+  "unfinished": 0,
+  "meanMin": 17.66,
+  "p50": 17.35,
+  "p90": 21.54,
+  "p99": 25.85,
+  "max": 27.32,
+  "atLeast35": 0,
+  "atLeast40": 0,
+  "blueWin": 0.593
+ },
+ "starts_tool": {
+  "n": 3086,
+  "inOpp": 74,
+  "allSixFlags": 58,
+  "captured": 0.638,
+  "leaderDied": 0.058,
+  "flagRates": {
+   "o1": 0.988,
+   "o2": 0.987,
+   "o3": 1,
+   "o4": 0.019,
+   "o5": 1,
+   "o6": 1
+  }
+ },
+ "starts_career": {
+  "n": 80,
+  "inOpp": 10,
+  "allSixFlags": 8,
+  "captured": 0.512,
+  "leaderDied": 0.2,
+  "flagRates": {
+   "o1": 0.912,
+   "o2": 0.988,
+   "o3": 1,
+   "o4": 0.1,
+   "o5": 1,
+   "o6": 1
+  }
+ }
+}

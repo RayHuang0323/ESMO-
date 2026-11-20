@@ -1,0 +1,1 @@
+No interruptions: stress/interruptions.jsonl and natural/interruptions.jsonl were never created (no resume, no failed child, no STOP file). stderr logs of both runs are 0 bytes.

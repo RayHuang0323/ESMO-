@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { bootCI, judgeA, judgeC, judgePath, S2_CONTRACT_V2, sideUnits, statA, validateOracle } from "./owner_preview/s2_contract_v2.mjs";
 import { conservative, verdictE2, verdictE7, wilson } from "./owner_preview/closure_verdicts_v24.mjs";
 import { effectivePairs } from "./owner_preview/closure_stress_v24.mjs";
+import { judge as judgeStress } from "./owner_preview/judge_closure_stress_v24.mjs";
 import { s11Decision } from "./owner_preview/judge_s11_feasibility_v24.mjs";
 import { createLegalTracker, featuresFromView, legalView, observeLegal } from "./owner_preview/lib_s11_legal_features_v24.mjs";
 import { runInstrumented } from "./owner_preview/lib_closure_natural_v24.mjs";
@@ -91,6 +92,10 @@ ck("T9i 有效樣本湊滿目標就停", JSON.stringify(a) === "[1,5,7]");
 ck("T9j 納入哪些 Seed 與注入後的結果無關", JSON.stringify(a) === JSON.stringify(b));
 threw = false; try { effectivePairs(cell, [{ seed: 99, injected: true }], [{ seed: 1, injected: true }]); } catch { threw = true; }
 ck("T9k Seed 順序不對直接拒絕", threw);
+//  T9l：判定必須用未四捨五入的區間（196／370 的上界是 0.580021，四捨五入成 0.58 會誤判 PASS）
+const fx = [...Array.from({ length: 370 }, (_, i) => ({ path: "tool", cfg: "inv", over: true, winner: i < 196 ? "blue" : "red", noWaveHits: 0, nexusHits: 1 })), ...Array.from({ length: 179 }, () => ({ path: "career", cfg: "mid", over: true, winner: "red", noWaveHits: 0, nexusHits: 1 }))];
+const jx = judgeStress(fx);
+ck("T9l 邊界上的區間不因四捨五入誤判", jx.E7.verdict === "INCONCLUSIVE" && jx.E2.verdict === "PASS", JSON.stringify({ e7: jx.E7.ciRaw, v: jx.E7.verdict }));
 
 // T10、T11：需要實際跑對局（只用上一輪用過的 Seeds）
 const P = await import("./owner_preview/pin_v20_v23_stream.mjs");

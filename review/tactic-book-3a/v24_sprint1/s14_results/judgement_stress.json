@@ -1,0 +1,813 @@
+{
+ "design": "cumulative = previous round (130001..) + this round (140001..); final verdict is the more conservative of cumulative and this-round-only",
+ "sample": {
+  "cells": {
+   "tool_inv": {
+    "target": 67,
+    "effective": 67,
+    "seedsWalked": 119,
+    "lastSeed": 140237
+   },
+   "tool_AB": {
+    "target": 67,
+    "effective": 67,
+    "seedsWalked": 111,
+    "lastSeed": 140221
+   },
+   "tool_BA": {
+    "target": 67,
+    "effective": 67,
+    "seedsWalked": 108,
+    "lastSeed": 140215
+   },
+   "career_low": {
+    "target": 42,
+    "effective": 42,
+    "seedsWalked": 78,
+    "lastSeed": 141155
+   },
+   "career_mid": {
+    "target": 42,
+    "effective": 42,
+    "seedsWalked": 58,
+    "lastSeed": 141115
+   },
+   "career_high": {
+    "target": 42,
+    "effective": 42,
+    "seedsWalked": 80,
+    "lastSeed": 141159
+   }
+  },
+  "previousRound": {
+   "tool": 169,
+   "career": 53
+  }
+ },
+ "thisRoundOnly": {
+  "E2": {
+   "verdict": "PASS",
+   "tool": {
+    "finished": 201,
+    "injected": 201,
+    "rate": 1,
+    "ci95": [
+     0.981,
+     1
+    ],
+    "ciRaw": [
+     0.9812459969068782,
+     0.9999999999999999
+    ]
+   },
+   "career": {
+    "finished": 126,
+    "injected": 126,
+    "rate": 1,
+    "ci95": [
+     0.97,
+     1
+    ],
+    "ciRaw": [
+     0.9704131803674632,
+     1
+    ]
+   }
+  },
+  "E3": {
+   "verdict": "PASS",
+   "noWaveHits": 0,
+   "nexusHitTicks": 4375,
+   "matches": 327
+  },
+  "E7": {
+   "verdict": "INCONCLUSIVE",
+   "finished": 201,
+   "blueWins": 110,
+   "rate": 0.547,
+   "ci95": [
+    0.478,
+    0.615
+   ],
+   "ciRaw": [
+    0.4782055101074435,
+    0.6145490866150972
+   ],
+   "byCfg": {
+    "inv": {
+     "finished": 67,
+     "blueWins": 41,
+     "rate": 0.612,
+     "ci95": [
+      0.492,
+      0.72
+     ]
+    },
+    "AB": {
+     "finished": 67,
+     "blueWins": 38,
+     "rate": 0.567,
+     "ci95": [
+      0.448,
+      0.679
+     ]
+    },
+    "BA": {
+     "finished": 67,
+     "blueWins": 31,
+     "rate": 0.463,
+     "ci95": [
+      0.349,
+      0.581
+     ]
+    }
+   }
+  }
+ },
+ "cumulative": {
+  "E2": {
+   "verdict": "PASS",
+   "tool": {
+    "finished": 370,
+    "injected": 370,
+    "rate": 1,
+    "ci95": [
+     0.99,
+     1
+    ],
+    "ciRaw": [
+     0.9897239900535413,
+     0.9999999999999998
+    ]
+   },
+   "career": {
+    "finished": 179,
+    "injected": 179,
+    "rate": 1,
+    "ci95": [
+     0.979,
+     1
+    ],
+    "ciRaw": [
+     0.9789894641044491,
+     1.0000000000000002
+    ]
+   }
+  },
+  "E3": {
+   "verdict": "PASS",
+   "noWaveHits": 0,
+   "nexusHitTicks": 8126,
+   "matches": 549
+  },
+  "E7": {
+   "verdict": "INCONCLUSIVE",
+   "finished": 370,
+   "blueWins": 196,
+   "rate": 0.53,
+   "ci95": [
+    0.479,
+    0.58
+   ],
+   "ciRaw": [
+    0.4788276527650697,
+    0.5800208006975733
+   ],
+   "byCfg": {
+    "inv": {
+     "finished": 121,
+     "blueWins": 64,
+     "rate": 0.529,
+     "ci95": [
+      0.44,
+      0.616
+     ]
+    },
+    "AB": {
+     "finished": 126,
+     "blueWins": 67,
+     "rate": 0.532,
+     "ci95": [
+      0.445,
+      0.617
+     ]
+    },
+    "BA": {
+     "finished": 123,
+     "blueWins": 65,
+     "rate": 0.528,
+     "ci95": [
+      0.441,
+      0.614
+     ]
+    }
+   }
+  }
+ },
+ "final": {
+  "E2": "PASS",
+  "E3": "PASS",
+  "E7": "INCONCLUSIVE"
+ },
+ "paired": {
+  "tool": {
+   "pairs": 201,
+   "v12": {
+    "finished": 192,
+    "of": 201,
+    "afterInjectMin": {
+     "p50": 5.85,
+     "p90": 20.792,
+     "max": 36
+    },
+    "firstWaveAtNexusMin": {
+     "n": 194,
+     "p50": 5.275,
+     "p90": 17.308
+    },
+    "deathsPerMatch": 41.98,
+    "deathsAfterInjectPerMatch": 37.428,
+    "matchMin": 24.824,
+    "blueWinOfFinished": 0.531
+   },
+   "v13": {
+    "finished": 201,
+    "of": 201,
+    "afterInjectMin": {
+     "p50": 4.833,
+     "p90": 6.817,
+     "max": 8.508
+    },
+    "firstWaveAtNexusMin": {
+     "n": 201,
+     "p50": 4.775,
+     "p90": 6.492
+    },
+    "deathsPerMatch": 14,
+    "deathsAfterInjectPerMatch": 9.448,
+    "matchMin": 20.237,
+    "blueWinOfFinished": 0.547
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -4.587,
+     "ci95": [
+      -5.716,
+      -3.515
+     ]
+    },
+    "matchMin": {
+     "mean": -4.587,
+     "ci95": [
+      -5.716,
+      -3.515
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -27.98,
+     "ci95": [
+      -34.841,
+      -21.472
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -27.98,
+     "ci95": [
+      -34.841,
+      -21.472
+     ]
+    }
+   },
+   "winnerChanged": 54
+  },
+  "career": {
+   "pairs": 126,
+   "v12": {
+    "finished": 126,
+    "of": 126,
+    "afterInjectMin": {
+     "p50": 6.342,
+     "p90": 14.317,
+     "max": 27.008
+    },
+    "firstWaveAtNexusMin": {
+     "n": 126,
+     "p50": 5.367,
+     "p90": 13.308
+    },
+    "deathsPerMatch": 50.19,
+    "deathsAfterInjectPerMatch": 34.373,
+    "matchMin": 23.254,
+    "blueWinOfFinished": 0.373
+   },
+   "v13": {
+    "finished": 126,
+    "of": 126,
+    "afterInjectMin": {
+     "p50": 4.833,
+     "p90": 6.483,
+     "max": 8
+    },
+    "firstWaveAtNexusMin": {
+     "n": 126,
+     "p50": 4.325,
+     "p90": 6.458
+    },
+    "deathsPerMatch": 30.167,
+    "deathsAfterInjectPerMatch": 14.349,
+    "matchMin": 20.274,
+    "blueWinOfFinished": 0.508
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -2.98,
+     "ci95": [
+      -3.797,
+      -2.217
+     ]
+    },
+    "matchMin": {
+     "mean": -2.98,
+     "ci95": [
+      -3.797,
+      -2.217
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -20.024,
+     "ci95": [
+      -25.188,
+      -15.274
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -20.024,
+     "ci95": [
+      -25.188,
+      -15.274
+     ]
+    }
+   },
+   "winnerChanged": 29
+  },
+  "tool_inv": {
+   "pairs": 67,
+   "v12": {
+    "finished": 65,
+    "of": 67,
+    "afterInjectMin": {
+     "p50": 5.325,
+     "p90": 18.808,
+     "max": 34
+    },
+    "firstWaveAtNexusMin": {
+     "n": 66,
+     "p50": 4.808,
+     "p90": 15.275
+    },
+    "deathsPerMatch": 36.119,
+    "deathsAfterInjectPerMatch": 31.537,
+    "matchMin": 23.65,
+    "blueWinOfFinished": 0.538
+   },
+   "v13": {
+    "finished": 67,
+    "of": 67,
+    "afterInjectMin": {
+     "p50": 4.808,
+     "p90": 6.817,
+     "max": 8.05
+    },
+    "firstWaveAtNexusMin": {
+     "n": 67,
+     "p50": 4.325,
+     "p90": 6.308
+    },
+    "deathsPerMatch": 14.075,
+    "deathsAfterInjectPerMatch": 9.493,
+    "matchMin": 20.113,
+    "blueWinOfFinished": 0.612
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -3.538,
+     "ci95": [
+      -5.218,
+      -2.129
+     ]
+    },
+    "matchMin": {
+     "mean": -3.538,
+     "ci95": [
+      -5.218,
+      -2.129
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -22.045,
+     "ci95": [
+      -32.03,
+      -13.642
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -22.045,
+     "ci95": [
+      -32.03,
+      -13.642
+     ]
+    }
+   },
+   "winnerChanged": 13
+  },
+  "tool_AB": {
+   "pairs": 67,
+   "v12": {
+    "finished": 65,
+    "of": 67,
+    "afterInjectMin": {
+     "p50": 5.842,
+     "p90": 22.808,
+     "max": 36
+    },
+    "firstWaveAtNexusMin": {
+     "n": 66,
+     "p50": 5.275,
+     "p90": 21.308
+    },
+    "deathsPerMatch": 41.896,
+    "deathsAfterInjectPerMatch": 37.418,
+    "matchMin": 25.063,
+    "blueWinOfFinished": 0.585
+   },
+   "v13": {
+    "finished": 67,
+    "of": 67,
+    "afterInjectMin": {
+     "p50": 4.825,
+     "p90": 6.492,
+     "max": 8.325
+    },
+    "firstWaveAtNexusMin": {
+     "n": 67,
+     "p50": 4.325,
+     "p90": 6.458
+    },
+    "deathsPerMatch": 13.955,
+    "deathsAfterInjectPerMatch": 9.478,
+    "matchMin": 20.252,
+    "blueWinOfFinished": 0.567
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -4.811,
+     "ci95": [
+      -6.787,
+      -3.055
+     ]
+    },
+    "matchMin": {
+     "mean": -4.811,
+     "ci95": [
+      -6.787,
+      -3.055
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -27.94,
+     "ci95": [
+      -39.552,
+      -17.597
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -27.94,
+     "ci95": [
+      -39.552,
+      -17.597
+     ]
+    }
+   },
+   "winnerChanged": 21
+  },
+  "tool_BA": {
+   "pairs": 67,
+   "v12": {
+    "finished": 62,
+    "of": 67,
+    "afterInjectMin": {
+     "p50": 6.867,
+     "p90": 27.808,
+     "max": 36
+    },
+    "firstWaveAtNexusMin": {
+     "n": 62,
+     "p50": 5.792,
+     "p90": 16.808
+    },
+    "deathsPerMatch": 47.925,
+    "deathsAfterInjectPerMatch": 43.328,
+    "matchMin": 25.758,
+    "blueWinOfFinished": 0.468
+   },
+   "v13": {
+    "finished": 67,
+    "of": 67,
+    "afterInjectMin": {
+     "p50": 4.867,
+     "p90": 7.325,
+     "max": 8.508
+    },
+    "firstWaveAtNexusMin": {
+     "n": 67,
+     "p50": 4.792,
+     "p90": 7.308
+    },
+    "deathsPerMatch": 13.97,
+    "deathsAfterInjectPerMatch": 9.373,
+    "matchMin": 20.347,
+    "blueWinOfFinished": 0.463
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -5.412,
+     "ci95": [
+      -7.404,
+      -3.603
+     ]
+    },
+    "matchMin": {
+     "mean": -5.412,
+     "ci95": [
+      -7.404,
+      -3.603
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -33.955,
+     "ci95": [
+      -46.806,
+      -22.343
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -33.955,
+     "ci95": [
+      -46.806,
+      -22.343
+     ]
+    }
+   },
+   "winnerChanged": 20
+  },
+  "career_low": {
+   "pairs": 42,
+   "v12": {
+    "finished": 42,
+    "of": 42,
+    "afterInjectMin": {
+     "p50": 7.3,
+     "p90": 11.833,
+     "max": 22.325
+    },
+    "firstWaveAtNexusMin": {
+     "n": 42,
+     "p50": 5.275,
+     "p90": 11.308
+    },
+    "deathsPerMatch": 46.524,
+    "deathsAfterInjectPerMatch": 31.476,
+    "matchMin": 22.82,
+    "blueWinOfFinished": 0.214
+   },
+   "v13": {
+    "finished": 42,
+    "of": 42,
+    "afterInjectMin": {
+     "p50": 4.85,
+     "p90": 6.058,
+     "max": 7.042
+    },
+    "firstWaveAtNexusMin": {
+     "n": 42,
+     "p50": 4.808,
+     "p90": 5.992
+    },
+    "deathsPerMatch": 30.333,
+    "deathsAfterInjectPerMatch": 15.286,
+    "matchMin": 20.342,
+    "blueWinOfFinished": 0.333
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -2.478,
+     "ci95": [
+      -3.668,
+      -1.44
+     ]
+    },
+    "matchMin": {
+     "mean": -2.478,
+     "ci95": [
+      -3.668,
+      -1.44
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -16.19,
+     "ci95": [
+      -22.976,
+      -10.262
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -16.19,
+     "ci95": [
+      -22.976,
+      -10.262
+     ]
+    }
+   },
+   "winnerChanged": 9
+  },
+  "career_mid": {
+   "pairs": 42,
+   "v12": {
+    "finished": 42,
+    "of": 42,
+    "afterInjectMin": {
+     "p50": 6.867,
+     "p90": 14.783,
+     "max": 22.792
+    },
+    "firstWaveAtNexusMin": {
+     "n": 42,
+     "p50": 4.808,
+     "p90": 14.008
+    },
+    "deathsPerMatch": 54.167,
+    "deathsAfterInjectPerMatch": 37.19,
+    "matchMin": 23.852,
+    "blueWinOfFinished": 0.357
+   },
+   "v13": {
+    "finished": 42,
+    "of": 42,
+    "afterInjectMin": {
+     "p50": 4.375,
+     "p90": 5.992,
+     "max": 6.817
+    },
+    "firstWaveAtNexusMin": {
+     "n": 42,
+     "p50": 4.325,
+     "p90": 5.958
+    },
+    "deathsPerMatch": 30.714,
+    "deathsAfterInjectPerMatch": 13.738,
+    "matchMin": 20.31,
+    "blueWinOfFinished": 0.595
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -3.542,
+     "ci95": [
+      -5.117,
+      -2.124
+     ]
+    },
+    "matchMin": {
+     "mean": -3.542,
+     "ci95": [
+      -5.117,
+      -2.124
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -23.452,
+     "ci95": [
+      -33.786,
+      -14.238
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -23.452,
+     "ci95": [
+      -33.786,
+      -14.238
+     ]
+    }
+   },
+   "winnerChanged": 10
+  },
+  "career_high": {
+   "pairs": 42,
+   "v12": {
+    "finished": 42,
+    "of": 42,
+    "afterInjectMin": {
+     "p50": 6.342,
+     "p90": 14.317,
+     "max": 27.008
+    },
+    "firstWaveAtNexusMin": {
+     "n": 42,
+     "p50": 6.308,
+     "p90": 13.325
+    },
+    "deathsPerMatch": 49.881,
+    "deathsAfterInjectPerMatch": 34.452,
+    "matchMin": 23.09,
+    "blueWinOfFinished": 0.548
+   },
+   "v13": {
+    "finished": 42,
+    "of": 42,
+    "afterInjectMin": {
+     "p50": 4.433,
+     "p90": 6.867,
+     "max": 8
+    },
+    "firstWaveAtNexusMin": {
+     "n": 42,
+     "p50": 4.325,
+     "p90": 6.825
+    },
+    "deathsPerMatch": 29.452,
+    "deathsAfterInjectPerMatch": 14.024,
+    "matchMin": 20.17,
+    "blueWinOfFinished": 0.595
+   },
+   "paired_v13_minus_v12": {
+    "afterInjectMin_censoredAtCap": {
+     "mean": -2.92,
+     "ci95": [
+      -4.378,
+      -1.666
+     ]
+    },
+    "matchMin": {
+     "mean": -2.92,
+     "ci95": [
+      -4.378,
+      -1.666
+     ]
+    },
+    "deathsPerMatch": {
+     "mean": -20.429,
+     "ci95": [
+      -30.905,
+      -11.881
+     ]
+    },
+    "deathsAfterInject": {
+     "mean": -20.429,
+     "ci95": [
+      -30.905,
+      -11.881
+     ]
+    }
+   },
+   "winnerChanged": 10
+  }
+ },
+ "naturalExistingData": {
+  "note": "read from the finished 1,260-match validation (seeds 130001..); nothing was re-run",
+  "tool": {
+   "matches": 300,
+   "identicalHash": 300,
+   "durationMin": {
+    "mean": 0,
+    "ci95": [
+     0,
+     0
+    ]
+   },
+   "deathsPerMatch": {
+    "mean": 0,
+    "ci95": [
+     0,
+     0
+    ]
+   }
+  },
+  "career": {
+   "matches": 90,
+   "identicalHash": 87,
+   "durationMin": {
+    "mean": 0.02,
+    "ci95": [
+     -0.021,
+     0.083
+    ]
+   },
+   "deathsPerMatch": {
+    "mean": -0.044,
+    "ci95": [
+     -0.189,
+     0.078
+    ]
+   }
+  }
+ }
+}

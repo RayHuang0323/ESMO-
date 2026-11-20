@@ -1,0 +1,57 @@
+PASS T1a 出發 59 次即使全部到場也是 INCONCLUSIVE
+PASS T1b 出發 60 次、下界 0.65 是 PASS
+PASS T1c 下界 0.649、上界高於 0.65 是 INCONCLUSIVE
+PASS T1d 上界低於 0.65 是 FAIL
+PASS T2a 0.6 次、0.5 比例是 PASS
+PASS T2b 1.5 次是 PASS
+PASS T2c 0.59 次是 FAIL
+PASS T2d 1.51 次是 FAIL
+PASS T2e 比例 0.49 是 FAIL
+PASS T2f 沒有資料是 INCONCLUSIVE
+PASS T3a 沒出發的邊留在分母
+PASS T3b 沒有入侵意圖的邊不計入
+PASS T3c 到場數不超過出發數
+PASS T4a 工具與生涯混在一起直接拒絕
+PASS T4b 判定結果沒有合併欄位
+PASS T5a 回看舊資料不給 PASS／FAIL
+PASS T5b 登記過的資料才判定
+PASS T5c 區間以 Seed 為叢集
+PASS T6a 舊判定工具與舊結果沒有變更
+PASS T6b 舊 S2 仍是 FAIL（0.464）
+PASS T7a 機會內出發少於 30 次是 INCONCLUSIVE
+PASS T7b 明顯較好是 VALID
+PASS T7c 明顯較差是 INVALID
+PASS T8a 全部成立是 CREDIBLE
+PASS T8b 樣本外沒有改善是 STOP
+PASS T8c 技巧不足是 STOP
+PASS T8d 高風險漏判超線是 STOP
+PASS T8e 校準超線是 STOP
+PASS T8f 被攔截樣本不足是 INCONCLUSIVE_SAMPLE
+PASS T9a 上一輪的 E2（生涯 53／53）維持 INCONCLUSIVE
+PASS T9b 工具 200／200、生涯 125／125 才是 PASS
+PASS T9c 生涯 124／124 不夠
+PASS T9d 完賽率明顯低於 97% 是 FAIL
+PASS T9e 上一輪的 E7（86／169）維持 INCONCLUSIVE
+PASS T9f 藍方 100／200 是 PASS
+PASS T9g 藍方 140／200 是 FAIL
+PASS T9h 兩個結論不同時取保守
+PASS T9i 有效樣本湊滿目標就停
+PASS T9j 納入哪些 Seed 與注入後的結果無關
+PASS T9k Seed 順序不對直接拒絕
+PASS T9l 邊界上的區間不因四捨五入誤判
+PASS T10 掛上量測後整場雜湊相同（工具 inv）
+PASS T10 掛上量測後整場雜湊相同（生涯 中素質）
+PASS T11a 判定器與上一輪 v1 的紀錄相同
+PASS T11b 壓力工具與上一輪紀錄相同（tool_inv_s13）
+PASS T11b 壓力工具與上一輪紀錄相同（career_low_s12）
+PASS T12a 找到同時有看得見與看不見敵人的時刻
+PASS T12b 移動後那名敵人仍然看不見
+PASS T12c 移動看不見的敵人，合法視圖完全不變
+PASS T12d 移動看不見的敵人，特徵完全不變
+PASS T12e 移動看得見的敵人，合法視圖會變（正向對照）
+PASS T13a src/ 沒有引用量測工具
+PASS T13b src/ 與上一輪結果 commit 相同
+PASS T13c v24 與 v23 指紋不變
+PASS T13d 契約版本與門檻
+
+55/55 passed

@@ -8,6 +8,7 @@
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { effectivePairs, STRESS_CELLS } from "./closure_stress_v24.mjs";
 import { conservative, verdictE2, verdictE7, wilson } from "./closure_verdicts_v24.mjs";
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
@@ -16,11 +17,13 @@ const jsonl = (f) => (fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim().split
 const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
 const q = (a, p) => { const v = a.slice().sort((x, y) => x - y); return v.length ? v[Math.min(v.length - 1, Math.floor(p * v.length))] : NaN; };
 const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
-const comp = (l) => { const k = l.filter((r) => r.over).length; return { finished: k, injected: l.length, rate: r3(k / l.length), ci95: wilson(k, l.length).map(r3) }; };
-function judge(s13) {
-  const tool = comp(s13.filter((r) => r.path === "tool")), career = comp(s13.filter((r) => r.path === "career")), fin = s13.filter((r) => r.path === "tool" && r.over), blue = fin.filter((r) => r.winner === "blue").length, c7 = wilson(blue, fin.length).map(r3);
+//  判定一律用未四捨五入的區間（ciRaw）；ci95 只給人看。
+//  ⚠ 2026-11-19 修正：第一版先把區間四捨五入到小數 3 位再比門檻，累計 E7 的上界 0.580021 被捨成 0.58，誤判成 PASS（最終結論取保守，本來就是 INCONCLUSIVE）。
+const comp = (l) => { const k = l.filter((r) => r.over).length, ci = wilson(k, l.length); return { finished: k, injected: l.length, rate: r3(k / l.length), ci95: ci.map(r3), ciRaw: ci }; };
+export function judge(s13) {
+  const tool = comp(s13.filter((r) => r.path === "tool")), career = comp(s13.filter((r) => r.path === "career")), fin = s13.filter((r) => r.path === "tool" && r.over), blue = fin.filter((r) => r.winner === "blue").length, c7raw = wilson(blue, fin.length);
   const byCfg = Object.fromEntries(["inv", "AB", "BA"].map((c) => { const x = fin.filter((r) => r.cfg === c), b = x.filter((r) => r.winner === "blue").length; return [c, { finished: x.length, blueWins: b, rate: r3(b / x.length), ci95: wilson(b, x.length).map(r3) }]; }));
-  return { E2: { verdict: verdictE2(tool, career), tool, career }, E3: { verdict: s13.reduce((a, r) => a + (r.noWaveHits ?? 0), 0) === 0 ? "PASS" : "FAIL", noWaveHits: s13.reduce((a, r) => a + (r.noWaveHits ?? 0), 0), nexusHitTicks: s13.reduce((a, r) => a + (r.nexusHits ?? 0), 0), matches: s13.length }, E7: { verdict: verdictE7(c7), finished: fin.length, blueWins: blue, rate: r3(blue / fin.length), ci95: c7, byCfg } };
+  return { E2: { verdict: verdictE2({ ci95: tool.ciRaw }, { ci95: career.ciRaw }), tool, career }, E3: { verdict: s13.reduce((a, r) => a + (r.noWaveHits ?? 0), 0) === 0 ? "PASS" : "FAIL", noWaveHits: s13.reduce((a, r) => a + (r.noWaveHits ?? 0), 0), nexusHitTicks: s13.reduce((a, r) => a + (r.nexusHits ?? 0), 0), matches: s13.length }, E7: { verdict: verdictE7(c7raw), finished: fin.length, blueWins: blue, rate: r3(blue / fin.length), ci95: c7raw.map(r3), ciRaw: c7raw, byCfg } };
 }
 function bootPaired(pairs, f, B = 4000) {
   const groups = new Map(); for (const p of pairs) { const k = String(p.seed); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f(p)); }
@@ -36,6 +39,8 @@ function pairedReport(pairs) {
   const d = (f) => ({ mean: r3(mean(pairs.map(f))), ci95: bootPaired(pairs, f) });
   return { pairs: pairs.length, v12: side("s12"), v13: side("s13"), paired_v13_minus_v12: { afterInjectMin_censoredAtCap: d((p) => censored(p.s13) - censored(p.s12)), matchMin: d((p) => (p.s13.end - p.s12.end) / 60), deathsPerMatch: d((p) => totalDeaths(p.s13.deaths) - totalDeaths(p.s12.deaths)), deathsAfterInject: d((p) => totalDeaths(p.s13.deathsAfter) - totalDeaths(p.s12.deathsAfter)) }, winnerChanged: pairs.filter((p) => p.s13.over && p.s12.over && p.s13.winner !== p.s12.winner).length };
 }
+const isMain = process.argv[1] && fileURLToPath(import.meta.url).toLowerCase() === process.argv[1].replace(/\//g, "\\").toLowerCase();
+if (isMain) {
 const J = { design: "cumulative = previous round (130001..) + this round (140001..); final verdict is the more conservative of cumulative and this-round-only" };
 const oldS13 = fs.readdirSync(OLD).filter((f) => f.endsWith("_s13.jsonl")).flatMap((f) => jsonl(path.join(OLD, f))).filter((r) => r.injected);
 const cells = STRESS_CELLS.map((c) => ({ c, pairs: effectivePairs(c, jsonl(path.join(DIR, `${c.name}_s12.jsonl`)), jsonl(path.join(DIR, `${c.name}_s13.jsonl`))) }));
@@ -52,3 +57,4 @@ if (BATCHES && fs.existsSync(BATCHES)) {
 if (OUT) fs.writeFileSync(OUT, JSON.stringify(J, null, 1));
 for (const scope of ["thisRoundOnly", "cumulative"]) { const s = J[scope]; console.log(`${scope}: E2 ${s.E2.verdict} tool ${s.E2.tool.finished}/${s.E2.tool.injected} ${JSON.stringify(s.E2.tool.ci95)} career ${s.E2.career.finished}/${s.E2.career.injected} ${JSON.stringify(s.E2.career.ci95)} | E3 ${s.E3.verdict} ${s.E3.noWaveHits}/${s.E3.nexusHitTicks} | E7 ${s.E7.verdict} ${s.E7.blueWins}/${s.E7.finished}=${s.E7.rate} ${JSON.stringify(s.E7.ci95)}`); }
 console.log(`final: ${JSON.stringify(J.final)}`);
+}
