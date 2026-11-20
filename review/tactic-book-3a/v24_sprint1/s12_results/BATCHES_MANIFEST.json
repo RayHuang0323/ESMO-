@@ -1,0 +1,539 @@
+{
+ "generated": "2026-11-18T06:31:11.657Z",
+ "registration": "29218c8d",
+ "note": "fresh seeds 120001-120599 odd; arms off(v23)/s11(adaptive.v1.1)/adaptive(adaptive.v1.2); posture = report-only arms pc/pg/pl; run interrupted twice by memory-pressure reaping (after tool_1 start, after tool_7) and resumed per registration: completed batches skipped, unfinished batch rerun from its start",
+ "dirs": {
+  "batches": [
+   {
+    "file": "career_high_1.json",
+    "bytes": 108534,
+    "sha256": "9155a9ac2e840a06aebe6f5544273d7e94b3f6456df12381ad22fcab32665030",
+    "seeds": [
+     120201,
+     120203,
+     120205,
+     120207,
+     120209,
+     120211,
+     120213,
+     120215,
+     120217,
+     120219
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_high_2.json",
+    "bytes": 101604,
+    "sha256": "2841adc1f6ac5953d7ce84e4b6428d0316916e4b945f9467dee91bf10e8d9980",
+    "seeds": [
+     120221,
+     120223,
+     120225,
+     120227,
+     120229,
+     120231,
+     120233,
+     120235,
+     120237,
+     120239
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_high_3.json",
+    "bytes": 104218,
+    "sha256": "2f803421b872a03b7ad469e6ecabefd0d745e439756c818cb201b80707748ebb",
+    "seeds": [
+     120241,
+     120243,
+     120245,
+     120247,
+     120249,
+     120251,
+     120253,
+     120255,
+     120257,
+     120259
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_low_1.json",
+    "bytes": 96407,
+    "sha256": "1f13ceedeaefe642eef0bec93fbf2473a44ead5497d8fae17347694b7ecac46f",
+    "seeds": [
+     120201,
+     120203,
+     120205,
+     120207,
+     120209,
+     120211,
+     120213,
+     120215,
+     120217,
+     120219
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_low_2.json",
+    "bytes": 94439,
+    "sha256": "49ddd134a599f2dea842ee2f6cbf5e2046fe117a21bc04dbacc1ec7a36a9b4b3",
+    "seeds": [
+     120221,
+     120223,
+     120225,
+     120227,
+     120229,
+     120231,
+     120233,
+     120235,
+     120237,
+     120239
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_low_3.json",
+    "bytes": 107923,
+    "sha256": "320f97d73400ac735cc0a2d7698cff708a79721e21ee3ef5d611a922a64c3c96",
+    "seeds": [
+     120241,
+     120243,
+     120245,
+     120247,
+     120249,
+     120251,
+     120253,
+     120255,
+     120257,
+     120259
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_mid_1.json",
+    "bytes": 98289,
+    "sha256": "d874b6f62b634bb143fae62cb69c290a0e334715502b07e390de34d661027d9a",
+    "seeds": [
+     120201,
+     120203,
+     120205,
+     120207,
+     120209,
+     120211,
+     120213,
+     120215,
+     120217,
+     120219
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_mid_2.json",
+    "bytes": 111586,
+    "sha256": "95142a3e06bc878693474e72ec8ee9835a1f4b25d46fca666dcc33da0ad27e4b",
+    "seeds": [
+     120221,
+     120223,
+     120225,
+     120227,
+     120229,
+     120231,
+     120233,
+     120235,
+     120237,
+     120239
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "career_mid_3.json",
+    "bytes": 103377,
+    "sha256": "6706b8154509b1e26f29cfc9f6bf6f9e203ba12104a939a629d3337d0ae9b3ff",
+    "seeds": [
+     120241,
+     120243,
+     120245,
+     120247,
+     120249,
+     120251,
+     120253,
+     120255,
+     120257,
+     120259
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "tool_1.json",
+    "bytes": 446018,
+    "sha256": "14ad194fa7d2fdc154619ebdcaecb1288ad86caa7756a32fcc934adaa987db82",
+    "seeds": [
+     120001,
+     120003,
+     120005,
+     120007,
+     120009,
+     120011,
+     120013,
+     120015,
+     120017,
+     120019
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_10.json",
+    "bytes": 425623,
+    "sha256": "2a354a2c81504c0a64088cdbef4145010730ba68707ad5f5d3ff16ada79a18fa",
+    "seeds": [
+     120181,
+     120183,
+     120185,
+     120187,
+     120189,
+     120191,
+     120193,
+     120195,
+     120197,
+     120199
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_2.json",
+    "bytes": 459977,
+    "sha256": "d03ec48358f073fecc9de583c8a33c4b09349906418ffaffba77aebfb7dd22e1",
+    "seeds": [
+     120021,
+     120023,
+     120025,
+     120027,
+     120029,
+     120031,
+     120033,
+     120035,
+     120037,
+     120039
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_3.json",
+    "bytes": 441664,
+    "sha256": "8b6b5390fa55141854523e373be8a3504d1ac894862911209e217c09a4431601",
+    "seeds": [
+     120041,
+     120043,
+     120045,
+     120047,
+     120049,
+     120051,
+     120053,
+     120055,
+     120057,
+     120059
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_4.json",
+    "bytes": 476586,
+    "sha256": "b986ffc37d116180a31079b81703588f757a0eef57cc33cc5496d89843bceefd",
+    "seeds": [
+     120061,
+     120063,
+     120065,
+     120067,
+     120069,
+     120071,
+     120073,
+     120075,
+     120077,
+     120079
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_5.json",
+    "bytes": 457413,
+    "sha256": "93ff2fd3826b60b66a2c520a9f49a82ce958976c274da66991c55444cd922304",
+    "seeds": [
+     120081,
+     120083,
+     120085,
+     120087,
+     120089,
+     120091,
+     120093,
+     120095,
+     120097,
+     120099
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_6.json",
+    "bytes": 460160,
+    "sha256": "1313996306108cd43315f6021906bc3b5eb5e4fb68375a273d162b9cc1af01f5",
+    "seeds": [
+     120101,
+     120103,
+     120105,
+     120107,
+     120109,
+     120111,
+     120113,
+     120115,
+     120117,
+     120119
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_7.json",
+    "bytes": 425447,
+    "sha256": "cd66ab2ed26adfd327b507dd829408c26ffbe69047f770edfe94dd3afdecd7c5",
+    "seeds": [
+     120121,
+     120123,
+     120125,
+     120127,
+     120129,
+     120131,
+     120133,
+     120135,
+     120137,
+     120139
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_8.json",
+    "bytes": 513543,
+    "sha256": "0a4ba1c01333c05810ce0ae49184e6a3d3d3c9c4c414c9f42adad8443904f643",
+    "seeds": [
+     120141,
+     120143,
+     120145,
+     120147,
+     120149,
+     120151,
+     120153,
+     120155,
+     120157,
+     120159
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   },
+   {
+    "file": "tool_9.json",
+    "bytes": 445905,
+    "sha256": "d35b541f77c209b3714af4bdd08111cbeaef6fc3f194af7a93c77496058e6424",
+    "seeds": [
+     120161,
+     120163,
+     120165,
+     120167,
+     120169,
+     120171,
+     120173,
+     120175,
+     120177,
+     120179
+    ],
+    "arms": [
+     "off",
+     "s11",
+     "adaptive"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 90
+   }
+  ],
+  "posture": [
+   {
+    "file": "posture_1.json",
+    "bytes": 166425,
+    "sha256": "c7b23907f23792959978b07081c978a34ac85b31e6ba3b6aca38e04db9b39817",
+    "seeds": [
+     120001,
+     120003,
+     120005,
+     120007,
+     120009,
+     120011,
+     120013,
+     120015,
+     120017,
+     120019
+    ],
+    "arms": [
+     "pc",
+     "pg",
+     "pl"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "posture_2.json",
+    "bytes": 195681,
+    "sha256": "200d6afdeff78a00b5871b59a016e9ed219b780cdffe3655d77e408eeef1975d",
+    "seeds": [
+     120021,
+     120023,
+     120025,
+     120027,
+     120029,
+     120031,
+     120033,
+     120035,
+     120037,
+     120039
+    ],
+    "arms": [
+     "pc",
+     "pg",
+     "pl"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   },
+   {
+    "file": "posture_3.json",
+    "bytes": 147923,
+    "sha256": "88afac450cf747bf5231c3b621974bc20cf27fd0c0dab5a073d2aa9263967dc8",
+    "seeds": [
+     120041,
+     120043,
+     120045,
+     120047,
+     120049,
+     120051,
+     120053,
+     120055,
+     120057,
+     120059
+    ],
+    "arms": [
+     "pc",
+     "pg",
+     "pl"
+    ],
+    "gitHead": "29218c8d",
+    "rows": 30
+   }
+  ]
+ }
+}

@@ -1,0 +1,3 @@
+Sprint 2 Preflight（2026-11-20）：所有重跑都在已用過的 Seeds、嚴格單線。
+入侵診斷 18 段、技能確認 2 段、傾向臂 9 段、E7 鏡射 2 次（第一次的鏡像視圖漏了戰鬥原型表，修正後重跑）、處理順序 1 段：全部 exit 0，stderr 0 bytes。
+沒有中斷、沒有續跑、沒有剔除。逐筆原始資料（約 120 MB）留在 C:/Users/ifikn/esmo-measure/v24-s15-diag/。

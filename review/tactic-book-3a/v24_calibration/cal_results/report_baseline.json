@@ -1,0 +1,150 @@
+{
+ "tool|v13": {
+  "sideMatches": 180,
+  "starts": 52,
+  "C1": 0.289,
+  "C1ci": [
+   0.2,
+   0.378
+  ],
+  "C2": 0.256,
+  "S2A": 0.481,
+  "S2Aci": [
+   0.367,
+   0.609
+  ],
+  "captured": 0.481,
+  "leaderDied": 0.077,
+  "vsOff": {
+   "n": 180,
+   "deaths": 0.133,
+   "deathsCi": [
+    -1.139,
+    1.406
+   ],
+   "towerDeaths": -0.011,
+   "towerCi": [
+    -0.156,
+    0.139
+   ],
+   "camps": 0.689,
+   "campsCi": [
+    -0.561,
+    1.906
+   ],
+   "own": 1.244,
+   "enemy": -0.556
+  }
+ },
+ "career|v13": {
+  "sideMatches": 90,
+  "starts": 23,
+  "C1": 0.256,
+  "C1ci": [
+   0.156,
+   0.367
+  ],
+  "C2": 0.222,
+  "S2A": 0.739,
+  "S2Aci": [
+   0.5,
+   0.933
+  ],
+  "captured": 0.565,
+  "leaderDied": 0.174,
+  "vsOff": {
+   "n": 90,
+   "deaths": -1.056,
+   "deathsCi": [
+    -2.944,
+    0.711
+   ],
+   "towerDeaths": 0.067,
+   "towerCi": [
+    -0.133,
+    0.278
+   ],
+   "camps": -0.633,
+   "campsCi": [
+    -1.678,
+    0.422
+   ],
+   "own": -0.444,
+   "enemy": -0.189
+  }
+ },
+ "tool|k03": {
+  "sideMatches": 60,
+  "starts": 179,
+  "C1": 2.983,
+  "C1ci": [
+   2.65,
+   3.3
+  ],
+  "C2": 1,
+  "S2A": 0.263,
+  "S2Aci": [
+   0.187,
+   0.344
+  ],
+  "captured": 0.235,
+  "leaderDied": 0.073,
+  "vsOff": {
+   "n": 60,
+   "deaths": -0.467,
+   "deathsCi": [
+    -2.767,
+    1.533
+   ],
+   "towerDeaths": -0.017,
+   "towerCi": [
+    -0.217,
+    0.183
+   ],
+   "camps": -0.617,
+   "campsCi": [
+    -2.4,
+    1.15
+   ],
+   "own": -0.583,
+   "enemy": -0.033
+  }
+ },
+ "career|k03": {
+  "sideMatches": 90,
+  "starts": 260,
+  "C1": 2.889,
+  "C1ci": [
+   2.611,
+   3.167
+  ],
+  "C2": 1,
+  "S2A": 0.238,
+  "S2Aci": [
+   0.19,
+   0.285
+  ],
+  "captured": 0.188,
+  "leaderDied": 0.154,
+  "vsOff": {
+   "n": 90,
+   "deaths": -1.044,
+   "deathsCi": [
+    -3.133,
+    0.911
+   ],
+   "towerDeaths": -0.067,
+   "towerCi": [
+    -0.267,
+    0.133
+   ],
+   "camps": -1.844,
+   "campsCi": [
+    -3.044,
+    -0.622
+   ],
+   "own": -2.044,
+   "enemy": 0.2
+  }
+ }
+}

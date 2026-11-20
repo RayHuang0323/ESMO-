@@ -1,0 +1,64 @@
+✅ D1 版本字串
+✅ D2 涵蓋 m1–m8＋std（9 套）
+✅ D3 m1：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m1：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m1：static directive 通過驗證，值與投影逐項相同
+✅ D3 m2：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m2：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m2：static directive 通過驗證，值與投影逐項相同
+✅ D3 m3：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m3：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m3：static directive 通過驗證，值與投影逐項相同
+✅ D3 m4：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m4：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m4：static directive 通過驗證，值與投影逐項相同
+✅ D3 m5：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m5：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m5：static directive 通過驗證，值與投影逐項相同
+✅ D3 m6：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m6：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m6：static directive 通過驗證，值與投影逐項相同
+✅ D3 m7：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m7：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m7：static directive 通過驗證，值與投影逐項相同
+✅ D3 m8：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 m8：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 m8：static directive 通過驗證，值與投影逐項相同
+✅ D3 std：knobs 欄位集合＝toEngineTactic 的欄位
+✅ D4 std：identity 欄位集合＝toEngineTacticIdentity 的欄位
+✅ D5 std：static directive 通過驗證，值與投影逐項相同
+✅ D6 匯出的欄位清單＝投影欄位
+✅ D7 identity 可為 null
+✅ D7b 兩個 side、三個 phase 都收
+✅ N0 基準樣本通過（反例只差一處）
+✅ N 缺 knob 欄位 ⇒ 拒絕　knobs 缺欄位 joinFight
+✅ N 多餘 knob 欄位 ⇒ 拒絕　knobs 多餘欄位 extra
+✅ N knob 型別錯（數字給字串） ⇒ 拒絕　knobs.joinFight 型別不合法
+✅ N knob 型別錯（NaN） ⇒ 拒絕　knobs.retreatAt 型別不合法
+✅ N knob 型別錯（布林給數字） ⇒ 拒絕　knobs.invadeWithMid 型別不合法
+✅ N laneOffset 內容非數字 ⇒ 拒絕　knobs.laneOffset 型別不合法
+✅ N 缺 identity 欄位 ⇒ 拒絕　identity 缺欄位 engageBias
+✅ N 多餘 identity 欄位 ⇒ 拒絕　identity 多餘欄位 extra
+✅ N identity 型別錯 ⇒ 拒絕　identity.phaseEngage 型別不合法
+✅ N 未知 side ⇒ 拒絕　side
+✅ N 未知 phase ⇒ 拒絕　phase
+✅ N phase 為字串 ⇒ 拒絕　phase
+✅ N schema 錯 ⇒ 拒絕　schema
+✅ N 頂層多餘欄位 ⇒ 拒絕　多餘欄位 mode
+✅ N 缺 identity（undefined ≠ null） ⇒ 拒絕　identity 不是純物件
+✅ N knobs 非物件 ⇒ 拒絕　knobs 不是純物件
+✅ N 非純物件（null）⇒ 拒絕
+✅ N 非純物件（陣列）⇒ 拒絕
+✅ N 非純物件（字串）⇒ 拒絕
+✅ N 非純物件（undefined）⇒ 拒絕
+✅ N 非純物件（class 實例）⇒ 拒絕
+✅ N staticDirective 收到無效輸入 ⇒ 丟錯
+✅ F1 staticDirective 不改輸入
+✅ F2 輸出深凍結
+✅ F3 輸出與輸入脫鉤（之後改輸入不影響 directive）
+✅ F4 嘗試改輸出無效
+✅ B1 src 內 import tacticalDirective 的恰好只有 battle/moba/tactics/tacticalDirector.js（C2 接線點；多一個、少一個都紅）　src\battle\moba\tactics\tacticalDirector.js
+✅ B2 不在 SIMULATION_SEMANTICS_FILES（只供 directive() 契約視圖，不在引擎熱路徑上 ⇒ C2 不改指紋）
+
+Tactical Directive 3c：61/61 PASS
+EXIT 0

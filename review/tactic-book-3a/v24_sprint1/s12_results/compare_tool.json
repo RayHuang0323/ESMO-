@@ -1,0 +1,307 @@
+{
+ "files": [
+  "tool_1.json",
+  "tool_10.json",
+  "tool_2.json",
+  "tool_3.json",
+  "tool_4.json",
+  "tool_5.json",
+  "tool_6.json",
+  "tool_7.json",
+  "tool_8.json",
+  "tool_9.json"
+ ],
+ "pairs": 300,
+ "arms": {
+  "s11": {
+   "exec": {
+    "matches": 300,
+    "S2": {
+     "ok": 387,
+     "n": 600,
+     "rate": 0.645
+    },
+    "startsPerSide": 1.258,
+    "arrivalOverStarts": 0.751,
+    "stealRate": 0.703,
+    "party": {
+     "solo": 742,
+     "duo": 13,
+     "duoShare": 0.017
+    },
+    "partnerArrival": 0.385,
+    "defend": {
+     "triggersPerSide": 9.547,
+     "startsPerSide": 4.355,
+     "arrivedPerSide": 1.128
+    },
+    "declined": {
+     "busy": 51209,
+     "own_farm": 36804,
+     "too_far": 14718,
+     "cooldown": 13452,
+     "no_target": 3600,
+     "in_progress": 2709,
+     "hp": 2202,
+     "objective_soon": 1471,
+     "objective_intent": 620,
+     "no_party": 619,
+     "objective_window": 253,
+     "no_exit": 4
+    },
+    "ends": {
+     "stolen": 531,
+     "retreat_threat": 75,
+     "objective_call": 47,
+     "lost_race": 28,
+     "retreat_hp": 21,
+     "stuck": 12,
+     "outnumbered": 11,
+     "retreat": 11,
+     "partner_lost": 3,
+     "killed": 1
+    },
+    "s2NoArrival": {
+     "noArrival": 213,
+     "noStart": 145,
+     "abortedEnRoute": 56,
+     "targetFailed": 12,
+     "enRouteReasons": {
+      "outnumbered": 6,
+      "retreat_hp": 5,
+      "stuck": 6,
+      "retreat_threat": 26,
+      "objective_call": 9,
+      "retreat": 5,
+      "partner_lost": 1
+     }
+    },
+    "earlyRetreats": 110,
+    "restartAfterRetreatSec": {
+     "n": 39,
+     "min": 107.5,
+     "p50": 322.5
+    }
+   },
+   "vsOff": {
+    "levels": {
+     "off": {
+      "deaths": 3.563,
+      "ownCamp": 7.9,
+      "enemyCamp": 0.66
+     },
+     "s11": {
+      "deaths": 3.818,
+      "ownCamp": 6.495,
+      "enemyCamp": 1.008
+     }
+    },
+    "diff": {
+     "deaths": {
+      "mean": 0.255,
+      "ci": [
+       -0.127,
+       0.637
+      ],
+      "n": 600
+     },
+     "towerDeaths": {
+      "mean": 0,
+      "ci": [
+       -0.069,
+       0.069
+      ],
+      "n": 600
+     },
+     "ownCamp": {
+      "mean": -1.405,
+      "ci": [
+       -1.678,
+       -1.132
+      ],
+      "n": 600
+     },
+     "enemyCamp": {
+      "mean": 0.348,
+      "ci": [
+       0.261,
+       0.436
+      ],
+      "n": 600
+     },
+     "camps": {
+      "mean": -1.057,
+      "ci": [
+       -1.335,
+       -0.778
+      ],
+      "n": 600
+     },
+     "duration": {
+      "mean": 0.123,
+      "ci": [
+       -0.349,
+       0.595
+      ],
+      "n": 300
+     },
+     "gold": {
+      "mean": 232.645,
+      "ci": [
+       -263.544,
+       728.834
+      ],
+      "n": 600
+     }
+    }
+   }
+  },
+  "adaptive": {
+   "exec": {
+    "matches": 300,
+    "S2": {
+     "ok": 321,
+     "n": 600,
+     "rate": 0.535
+    },
+    "startsPerSide": 1.1,
+    "arrivalOverStarts": 0.671,
+    "stealRate": 0.63,
+    "party": {
+     "solo": 629,
+     "duo": 31,
+     "duoShare": 0.047
+    },
+    "partnerArrival": 0.516,
+    "defend": {
+     "triggersPerSide": 9.45,
+     "startsPerSide": 4.36,
+     "arrivedPerSide": 1.055
+    },
+    "declined": {
+     "busy": 53106,
+     "own_farm": 39911,
+     "too_far": 15361,
+     "cooldown": 11275,
+     "no_target": 3600,
+     "hp": 2252,
+     "in_progress": 2125,
+     "objective_soon": 1294,
+     "objective_intent": 790,
+     "no_party": 570,
+     "objective_window": 267,
+     "no_exit": 8,
+     "threat": 7
+    },
+    "ends": {
+     "stolen": 416,
+     "retreat_threat": 74,
+     "objective_call": 54,
+     "outnumbered": 21,
+     "retreat_hp": 20,
+     "retreat": 17,
+     "stuck": 13,
+     "lost_race": 7,
+     "killed": 5,
+     "partner_lost": 5,
+     "partner_lag": 1
+    },
+    "s2NoArrival": {
+     "noArrival": 279,
+     "noStart": 198,
+     "abortedEnRoute": 78,
+     "targetFailed": 3,
+     "enRouteReasons": {
+      "outnumbered": 8,
+      "retreat": 11,
+      "partner_lag": 1,
+      "retreat_hp": 7,
+      "stuck": 6,
+      "retreat_threat": 26,
+      "objective_call": 15,
+      "killed": 2,
+      "partner_lost": 3
+     }
+    },
+    "earlyRetreats": 121,
+    "restartAfterRetreatSec": {
+     "n": 57,
+     "min": 87.5,
+     "p50": 271.5
+    }
+   },
+   "vsOff": {
+    "levels": {
+     "off": {
+      "deaths": 3.563,
+      "ownCamp": 7.9,
+      "enemyCamp": 0.66
+     },
+     "adaptive": {
+      "deaths": 4.465,
+      "ownCamp": 6.975,
+      "enemyCamp": 0.812
+     }
+    },
+    "diff": {
+     "deaths": {
+      "mean": 0.902,
+      "ci": [
+       0.342,
+       1.461
+      ],
+      "n": 600
+     },
+     "towerDeaths": {
+      "mean": 0.012,
+      "ci": [
+       -0.058,
+       0.081
+      ],
+      "n": 600
+     },
+     "ownCamp": {
+      "mean": -0.925,
+      "ci": [
+       -1.198,
+       -0.652
+      ],
+      "n": 600
+     },
+     "enemyCamp": {
+      "mean": 0.152,
+      "ci": [
+       0.068,
+       0.235
+      ],
+      "n": 600
+     },
+     "camps": {
+      "mean": -0.773,
+      "ci": [
+       -1.052,
+       -0.495
+      ],
+      "n": 600
+     },
+     "duration": {
+      "mean": 0.511,
+      "ci": [
+       -0.007,
+       1.029
+      ],
+      "n": 300
+     },
+     "gold": {
+      "mean": 875.76,
+      "ci": [
+       297.521,
+       1454
+      ],
+      "n": 600
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,66 @@
+{
+ "label": "ab-d3d11-warp-webgl",
+ "url": "http://127.0.0.1:5642/ESMO-/",
+ "env": {
+  "dpr": 1.5,
+  "inner": [
+   1266,
+   626
+  ],
+  "canvas": [
+   1899,
+   939
+  ],
+  "screen": [
+   1280,
+   720
+  ],
+  "cores": 12,
+  "mem": 16,
+  "gl": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+ },
+ "segments": [
+  {
+   "quality": "high",
+   "qualityClicked": "true",
+   "rate": 2,
+   "realSec": 30.6,
+   "canvas": [
+    1899,
+    939
+   ],
+   "frame": {
+    "frames": 165,
+    "fps": 5.5,
+    "p50": 182.6,
+    "p95": 216.7,
+    "p99": 249.9,
+    "max": 334.7,
+    "over50": 165,
+    "over100": 165,
+    "over200": 30
+   },
+   "mainBusyPct": 100,
+   "scriptPct": 13.8,
+   "longTasks": {
+    "n": 166,
+    "totalMs": 28924,
+    "max": 322
+   },
+   "simIntervals": {
+    "250": {
+     "n": 69,
+     "durMean": 4.1,
+     "durP95": 8.4,
+     "durMax": 10.7,
+     "lateP50": 157.5,
+     "lateP95": 332.2,
+     "lateMax": 399.7
+    }
+   },
+   "gameSec": 36,
+   "gamePerReal": 1.18,
+   "heapMB": 46
+  }
+ ]
+}

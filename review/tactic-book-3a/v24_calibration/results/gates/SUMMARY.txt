@@ -1,0 +1,10 @@
+[##..................] 1/9 check_cal_parity_v24 exit=0 55s total=0min
+[####................] 2/9 check_s15_preflight_v24 exit=0 28s total=1min
+[######..............] 3/9 check_s2_contract_v24 exit=0 42s total=2min
+[########............] 4/9 check_simulation_version_gate exit=0 2s total=2min
+[###########.........] 5/9 check_tactic_exec_v24 exit=0 228s total=5min
+[#############.......] 6/9 check_layer_isolation_v24 exit=0 171s total=8min
+[###############.....] 7/9 regress exit=0 43s total=9min
+[#################...] 8/9 regress2 exit=0 52s total=10min
+[####################] 9/9 build exit=0 26s total=10min
+[gates-done]

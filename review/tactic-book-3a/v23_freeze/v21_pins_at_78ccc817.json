@@ -1,0 +1,89 @@
+{
+ "tool": "pin_v21_stream",
+ "simVersion": "moba-sim.v21",
+ "currentFingerprint": "620196ccea5a8249",
+ "v21Fingerprint": "620196ccea5a8249",
+ "rows": [
+  {
+   "rs": "balanceTool.v21",
+   "blue": "v2.standard_macro",
+   "red": "v2.standard_macro",
+   "seed": 11,
+   "ticks": 2508,
+   "winner": "blue",
+   "hash": "086f9aafe0a2b069"
+  },
+  {
+   "rs": "balanceTool.v21",
+   "blue": "v2.standard_macro",
+   "red": "v2.standard_macro",
+   "seed": 13,
+   "ticks": 1816,
+   "winner": "red",
+   "hash": "ec0ddbffa4d37c59"
+  },
+  {
+   "rs": "balanceTool.v21",
+   "blue": "classic.m7",
+   "red": "v2.standard_macro",
+   "seed": 11,
+   "ticks": 1997,
+   "winner": "red",
+   "hash": "50ae78f04c98c9ae"
+  },
+  {
+   "rs": "balanceTool.v21",
+   "blue": "v2.standard_macro",
+   "red": "classic.m5",
+   "seed": 13,
+   "ticks": 2619,
+   "winner": "red",
+   "hash": "baab52c9a3ac33f0"
+  },
+  {
+   "rs": "balanceTool.v21",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.jungle_invasion",
+   "seed": 11,
+   "ticks": 2935,
+   "winner": "blue",
+   "hash": "d32bf85c63a8527c"
+  },
+  {
+   "rs": "balanceTool.v21",
+   "blue": "classic.m1",
+   "red": "classic.m3",
+   "seed": 17,
+   "ticks": 1763,
+   "winner": "red",
+   "hash": "e44ab310eb5ab600"
+  },
+  {
+   "rs": "career.v21",
+   "blue": "v2.standard_macro",
+   "red": null,
+   "seed": 11,
+   "ticks": 2587,
+   "winner": "red",
+   "hash": "8bbe3ea955d9bb96"
+  },
+  {
+   "rs": "career.v21",
+   "blue": "v2.jungle_invasion",
+   "red": null,
+   "seed": 13,
+   "ticks": 1870,
+   "winner": "blue",
+   "hash": "de8bc10a81b799ca"
+  },
+  {
+   "rs": "career.v21",
+   "blue": "classic.m7",
+   "red": null,
+   "seed": 17,
+   "ticks": 2163,
+   "winner": "blue",
+   "hash": "d171f0e768a30622"
+  }
+ ]
+}

@@ -1,0 +1,58 @@
+reproduction vs validation rows: same 180, different 0
+
+==== intent sides: deaths per side-match, paired diff arm - off (n side-matches)
+-- s11 (n=80; duration diff +0.36 [-0.47, 1.19] min)
+   all                  level  4.58   diff +0.68 [-0.35, 1.70]
+   jungler              level  1.30   diff +0.41 [0.06, 0.77]
+   during_invade        level  0.00   diff +0.00 [0.00, 0.00]
+   after_invade_30s     level  0.14   diff +0.14 [0.05, 0.22]
+   after_invade_90s     level  0.10   diff +0.10 [0.03, 0.17]
+   defending            level  0.03   diff +0.03 [-0.01, 0.06]
+   after_defend_30s     level  0.15   diff +0.15 [0.06, 0.24]
+   other                level  4.16   diff +0.26 [-0.71, 1.24]
+   jg:during+after30    level  0.14   diff +0.14 [0.05, 0.22]
+   enemy_jungle         level  0.41   diff +0.15 [-0.02, 0.32]
+-- adaptive (n=80; duration diff -0.43 [-1.27, 0.42] min)
+   all                  level  3.71   diff -0.19 [-1.20, 0.82]
+   jungler              level  0.95   diff +0.06 [-0.29, 0.41]
+   during_invade        level  0.01   diff +0.01 [-0.01, 0.04]
+   after_invade_30s     level  0.07   diff +0.07 [0.02, 0.13]
+   after_invade_90s     level  0.10   diff +0.10 [0.03, 0.17]
+   defending            level  0.00   diff +0.00 [0.00, 0.00]
+   after_defend_30s     level  0.06   diff +0.06 [0.01, 0.12]
+   other                level  3.46   diff -0.44 [-1.42, 0.55]
+   jg:during+after30    level  0.09   diff +0.09 [0.03, 0.15]
+   enemy_jungle         level  0.31   diff +0.05 [-0.10, 0.20]
+
+==== nonIntent sides: deaths per side-match, paired diff arm - off (n side-matches)
+-- s11 (n=40; duration diff -0.04 [-1.31, 1.23] min)
+   all                  level  3.15   diff -0.17 [-1.44, 1.09]
+   jungler              level  0.70   diff -0.07 [-0.46, 0.31]
+   during_invade        level  0.00   diff +0.00 [0.00, 0.00]
+   after_invade_30s     level  0.00   diff +0.00 [0.00, 0.00]
+   after_invade_90s     level  0.10   diff +0.07 [-0.03, 0.18]
+   defending            level  0.00   diff +0.00 [0.00, 0.00]
+   after_defend_30s     level  0.23   diff +0.23 [-0.04, 0.49]
+   other                level  2.83   diff -0.47 [-1.73, 0.78]
+   jg:during+after30    level  0.00   diff +0.00 [0.00, 0.00]
+   enemy_jungle         level  0.28   diff +0.03 [-0.20, 0.25]
+-- adaptive (n=40; duration diff -0.10 [-1.31, 1.12] min)
+   all                  level  3.80   diff +0.47 [-0.83, 1.78]
+   jungler              level  1.07   diff +0.30 [-0.15, 0.75]
+   during_invade        level  0.03   diff +0.03 [-0.02, 0.07]
+   after_invade_30s     level  0.10   diff +0.10 [0.01, 0.19]
+   after_invade_90s     level  0.10   diff +0.07 [-0.03, 0.18]
+   defending            level  0.03   diff +0.03 [-0.02, 0.07]
+   after_defend_30s     level  0.05   diff +0.05 [-0.02, 0.12]
+   other                level  3.50   diff +0.20 [-1.06, 1.46]
+   jg:during+after30    level  0.13   diff +0.13 [0.02, 0.23]
+   enemy_jungle         level  0.30   diff +0.05 [-0.17, 0.27]
+
+==== jungler seconds per intent side-match (mean): invading / recall / dead / ownJungle
+   off       invading 22  recall 106  dead 27  ownJungle 444
+   s11       invading 27  recall 98  dead 39  ownJungle 434
+   adaptive  invading 18  recall 91  dead 26  ownJungle 442
+
+s11: deaths during / within 30 s of an invade end: 11 with hp record, mean hp at end 0.84; by end reason {"stuck":1,"objective_call":1,"retreat_threat":3,"outnumbered":1,"retreat_hp":1,"stolen":4}
+
+adaptive: deaths during / within 30 s of an invade end: 12 with hp record, mean hp at end 0.65; by end reason {"stolen":5,"retreat":1,"retreat_hp":2,"killed":1,"retreat_threat":1,"objective_call":1,"outnumbered":1}

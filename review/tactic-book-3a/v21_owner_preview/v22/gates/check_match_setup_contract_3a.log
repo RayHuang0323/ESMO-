@@ -1,0 +1,87 @@
+✅ S1 career setup 建立成功
+✅ S1b ruleset 以解析後物件凍結進 setup（含 layers）
+✅ S1c 只給 rulesetId 也行
+✅ S1d 未知 rulesetId ⇒ unknown_ruleset
+✅ S2 production 拒絕 ruleOverrides（頂層與 tool 區塊）
+✅ S2 production 拒絕 incomeK（頂層與 tool 區塊）
+✅ S2 production 拒絕 itemsStrategies（頂層與 tool 區塊）
+✅ S2 production 拒絕 forcedLayout（頂層與 tool 區塊）
+✅ S2b production 拒絕空 tool 區塊
+✅ S2c challenge（production）同樣拒絕 tool
+✅ S2d tool ruleset 接受 tool 區塊
+✅ S2e tool ruleset 無 tool 區塊 ⇒ 全 null 的 tool
+✅ S2f tool 區塊未知鍵 / 壞值被拒
+✅ S3 鍵順序不同 ⇒ 雜湊相同　c13972d18e587f3a
+✅ S3 改 seed ⇒ 雜湊不同
+✅ S3 改 loadout ⇒ 雜湊不同
+✅ S3 改 playerSlots ⇒ 雜湊不同
+✅ S3 改 roster ⇒ 雜湊不同
+✅ S3 改 talentSelections ⇒ 雜湊不同
+✅ S3 改 buildStrategy ⇒ 雜湊不同
+✅ S3 改 tacticBlue ⇒ 雜湊不同
+✅ S3 改 tacticRed ⇒ 雜湊不同
+✅ S3b meta 不影響雜湊
+✅ S3b2 seedSource 只差一項 ⇒ 雜湊相同，且記錄在 meta
+✅ S3b3 頂層 seedSource 已不再接受 ⇒ unknown_field；缺 meta.seedSource ⇒ seed_source_invalid
+✅ S3c 呈現層欄位出現在頂層 ⇒ unknown_field
+✅ S3d meta 內的呈現欄位被丟棄
+✅ S3e 旗標不同的兩份 career.v20 ⇒ rulesetId 相同但雜湊不同
+✅ S3f 層關閉時帶該層輸入 ⇒ layer_off_input_present
+✅ S3g 旗標不能強制開層（ruleset 超出登錄值）
+✅ S4 bySeed 且未給 ⇒ 由 seed 推導（同 resolveObjectiveLayout）
+✅ S4b bySeed 明確指定等於推導值時接受（衝突值見 L7）
+✅ S4c standard ruleset ⇒ 固定 STANDARD（不管 seed）
+✅ S4d standard ruleset 要求 SWAPPED ⇒ conflict
+✅ S4e tool.forcedLayout 覆蓋 seed 推導
+✅ S4f 非法 layout 值被拒
+✅ S5 legacy 變體數值原樣保存
+✅ S5b 雜湊涵蓋 legacy 變體數值
+✅ S5c binding 形狀可接受；std 可接受
+✅ S5d 未知 kind ⇒ tactic_kind_unknown
+✅ S5e legacy 缺 config／缺 tacticId／缺任一投影群組（macro／objectives／lanePlan／economy）⇒ tactic_invalid
+✅ S5e2 legacy 缺 version／舊 version ⇒ 接受（v20 投影不讀 version），config 原樣保存
+✅ S5f std 帶多餘欄位 ⇒ tactic_invalid
+✅ S5g 呼叫端事後改 variantCfg 不影響已建立的 setup（複製）
+✅ S6 setup 深度凍結
+✅ S6b 嘗試竄改丟錯（strict）
+✅ S6c 輸入物件不被凍結／改動
+✅ D1 roster 拒絕英雄物件（多餘欄位）
+✅ D2 roster 缺席位 ⇒ roster_invalid
+✅ D3 非純資料（函式 / class / NaN / undefined 巢狀）被拒
+✅ H1 FNV-1a 64 已知向量（空字串 / a / foobar）
+✅ H2 UTF-8 位元組（非 UTF-16 碼元）：中文字串向量由獨立實作比對
+✅ H3 setup 雜湊為 stableStringify（去 meta）的 FNV-1a 64
+✅ D4 matchSetup.js 不 import heroDatabase
+✅ D5 matchSetup.js 無 React/zustand/localStorage/Date/Math.random
+✅ D6 matchSetup.js 在 SIMULATION_SEMANTICS_FILES（清單非空且含它；Live／Challenge builder 也在）
+✅ P1 career 可無 playerSlots（golden live-noplayers）；空 slots 正規化為 null
+✅ P2 career 給 red slots ⇒ mismatch
+✅ P3 challenge 需雙方 slots
+✅ P3b challenge 可整組沒有 playerSlots（v20：任一方快照沒宣告 playerStats ⇒ 整個略過 configurePlayers）；effectiveLayers.players 兩邊都 false；只給一邊仍 mismatch
+✅ P4 tool ruleset（none）給 slots ⇒ mismatch
+✅ G1 golden 39 案全部可成 setup（live 9 / challenge 12 / runner 18）
+✅ G2 effectiveLayers 與 39 案 golden features 逐項一致（layout / players / heroMods / skills / passives / curve / archetypes / spells / items / match；talents applied ⊆ effective）
+✅ G2b battleTalents effective 與 golden applied 在 39 案中完全相等（目前無「選擇器空手」案）
+✅ G2c 設定層鏡像：live-noroster 只有 layout+players+match；runner-off 有 heroMods/archetypes/spells 但無技能／天賦／裝備；challenge-nodraft 只有 players+match
+✅ G2d live-notactic 無 match；live-noplayers 無 players；effectiveLayers 為凍結物件
+✅ G3 39 案雜湊兩兩相異（同 seed 的 live/challenge/runner 也不同）
+✅ G3b effectiveLayers 納入雜湊：只差 buildStrategy（items 有無）⇒ 雜湊不同且 items 旗標翻轉
+✅ G3c tool items：{blue:early} 補 red=standard；全空 ⇒ null（裝備關）
+✅ L1 challenge.v20 + objectiveLayout:'bySeed' ⇒ production_layer_mismatch
+✅ L2 career.v20 + objectiveLayout:'explicit' ⇒ production_layer_mismatch
+✅ L3 production playerStatSides / redTactic 改值 ⇒ mismatch
+✅ L3b production assemblyOrder 改值 ⇒ mismatch（challenge 不能改走 live 順序，career 不能改走 challengeV20）
+✅ L3c tool 可自選 assemblyOrder（仍受 validateRuleset 列舉）：challengeV20 接受、未知值拒絕
+✅ L4 production 未知／缺少 layer 鍵、非布林值 ⇒ mismatch
+✅ L5 production 布林層不能打開（challenge items:true）
+✅ L6 production 布林層可關閉（career items:false 仍成立）
+✅ L7 career bySeed：與 seed 推導衝突的 explicit ⇒ objective_layout_conflict
+✅ L8 career bySeed：與推導一致的 explicit 仍接受（恢復路徑），結果相同雜湊
+✅ L9 tool 規則集：explicit 與 forcedLayout 不同 ⇒ conflict；forcedLayout 不同 ⇒ 雜湊不同
+✅ L10 tool 規則集的布林層也不能超出登錄值
+✅ N1 空物件 ⇒ null：loadout / talentSelections / roster / tool.ruleOverrides / 空 playerSlots，雜湊與省略相同
+✅ N2 challenge 的空 playerSlots 對（blue／red 皆空）＝沒有素質：ok、正規化為 null，雜湊與省略相同
+✅ E1 失敗回傳 { ok:false, setup:null, errors[{code,field,message}] }
+✅ E2 非物件輸入
+
+Match Setup 契約 3a：85/85 PASS

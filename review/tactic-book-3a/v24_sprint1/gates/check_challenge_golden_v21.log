@@ -1,0 +1,12 @@
+$ node tools/check_challenge_golden_v21.mjs
+✅ P0 fixture 存在、schema esmo.challenge-golden.v21、12 案　12 案
+✅ P 出處釘死：fixture 的 gitHead／fingerprint＝本檔 PINNED_*（重錄必須看得見地改這兩個常數）　1d64ecd62a3a1ab362a7a9973a1c46ca4011a23a/0578fa882d74b205 vs 1d64ecd62a3a1ab362a7a9973a1c46ca4011a23a/0578fa882d74b205
+❌ P2 fixture 的指紋＝目前登記的 moba-sim.v21 指紋（語意變了就必須重錄並重新釘死）　0578fa882d74b205 vs 620196ccea5a8249
+✅ R 12 案經真實 runChallenge 重跑，setup 雜湊與整份結果逐位元相同（32 秒）
+✅ S setup：全部 challenge.v21／core.v1／teamRelative、裝備與天賦不生效；有選角的案技能生效、沒有的不生效；STANDARD 與 SWAPPED 都有　SWAPPED,STANDARD
+✅ V 版本相容：v20 挑戰在 v21 下、v21 挑戰在 v20（旗標回滾）下都被明確拒絕並附中文原因，不靜默換規則重算　這場使用 moba-sim.v20 的模擬語意，目前是 moba-sim.v21，不可重播 ｜ 這場使用 moba-sim.v21 的模擬語意，目前是 moba-sim.v20，不可重播
+
+Challenge Golden v21：5/6 FAIL
+
+
+[32s] [exit 1]

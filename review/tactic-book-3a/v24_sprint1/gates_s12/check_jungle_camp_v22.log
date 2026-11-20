@@ -1,0 +1,47 @@
+$ node tools/check_jungle_camp_v22.mjs
+✅ J1 career.v20 沒有 jungleCamp／invasion 鍵（setup 雜湊與比賽結果逐位元不變）
+✅ J1 challenge.v20 沒有 jungleCamp／invasion 鍵（setup 雜湊與比賽結果逐位元不變）
+✅ J1 balanceTool.v20 沒有 jungleCamp／invasion 鍵（setup 雜湊與比賽結果逐位元不變）
+✅ J1 career.v21 沒有 jungleCamp／invasion 鍵（setup 雜湊與比賽結果逐位元不變）
+✅ J1 balanceTool.v21 沒有 jungleCamp／invasion 鍵（setup 雜湊與比賽結果逐位元不變）
+✅ J1 challenge.v21 沒有 jungleCamp／invasion 鍵（setup 雜湊與比賽結果逐位元不變）
+✅ J2 career.v22＝career.v21 逐欄相同，只多 jungleCamp／invasion "v2"、新的 id 與 simVersion v22、一個旗標　{"extra":["mobaJungleV22"]}
+✅ J3 career.v22 通過 validateRuleset（正式規則集的旗標要求都列了）　[]
+✅ J2 balanceTool.v22＝balanceTool.v21 逐欄相同，只多 jungleCamp／invasion "v2"、新的 id 與 simVersion v22　{"extra":[]}
+✅ J3 balanceTool.v22 通過 validateRuleset（正式規則集的旗標要求都列了）　[]
+✅ J4 mobaJungleV22 預設關閉；mobaTacticalDirectorV21、mobaChallengeV21 也還是關閉（不開任何正式旗標）
+✅ J5 旗標解析：只開導演→career.v21；導演＋jungle→career.v22；只開 jungle→career.v20（jungle 單獨沒有作用）；都關→career.v20
+✅ J6 Challenge 不受影響：不論 jungle 旗標，challenge 解析結果與沒有這個旗標時相同
+✅ J7 未知的 jungleCamp／invasion 值被 validateRuleset 拒絕（負向對照）
+✅ J8 正式規則集少列 mobaJungleV22 ⇒ validateRuleset 拒絕（RS-1；兩個層各自被擋；負向對照）
+✅ J9 引擎宣告 SUPPORTS_JUNGLE_CAMP 與 SUPPORTS_INVASION（組裝器的能力檢查依據）
+✅ N1 career.v21 的引擎 _jungleCampV2／_invasionV2 都是 false 且沒有 invObs；career.v22 兩個都是 true 且有 invObs（旗標只經規則集層進引擎）
+✅ G1 v2 站位：離成員 ≤ 2.0（在傷害距離 3.5 內）、比成員更靠近出生點、離出生點 < leash 7.5　最遠離出生點 2.88
+✅ G2 legacy 站位：回傳的就是成員座標（舊行為逐字不變）
+✅ B0 負向對照：legacy（career.v21）確實重現 Bug：6 場兩座 Buff 營的回滿次數合計 ≥ 60（v22 的對應數字見 B1）　legacy 180
+✅ B1 v22 camp_blue_buff：6 場都在 75 秒內清完、單場回滿 ≤ 5 次　clear [52,53,48,49,52,53] resets [0,0,0,0,0,0]
+✅ B1 v22 camp_red_buff：6 場都在 75 秒內清完、單場回滿 ≤ 5 次　clear [51.5,54,48.5,48,52.5,52.5] resets [0,0,0,0,0,0]
+✅ B1 v22 藍紅對稱：兩座 Buff 營清完時間的中位數差 ≤ 6 秒（legacy 差約 56 秒）　藍 52 紅 52.5
+✅ B1 v22 回滿總次數 ≤ legacy 的 1/5　v22 0 legacy 180
+✅ B2 v22 營地清完後會重生（200 秒內，Buff 營重生 90 秒 ⇒ 6 場藍方 Buff 營都再次出現）　[135.5,134,130,134,134,134]
+✅ B2 v22 打野接續農野：6 場裡藍方另外兩座營地都在 180 秒內清完　[[83,63.5],[87,67.5],[79.5,59.5],[75,55.5],[86,65],[86.5,67]]
+✅ B2 v22 打野仍會 Gank：600 秒內抓人次數合計 ≥ legacy 的 70%，且至少 5/6 場有藍方抓人（legacy 作對照）　v22 [3,0,3,3,4,3]（合計 16）legacy [2,2,1,2,0,2]（合計 9）
+✅ I1 基本情況：目標是敵方 Buff 營、移動目標是營地成員內側的站位、入侵還沒結束
+✅ I2 失敗條件 hp：血量 < 55% ⇒ 放棄（回傳 null，原因 hp）
+✅ I3 失敗條件 outnumbered：身邊 14 內有 2 個敵方英雄 ⇒ 放棄
+✅ I3b 只有 1 個敵方英雄在身邊 ⇒ 不放棄（單挑可以打，繼續入侵）
+✅ I4 失敗條件 no_target：敵方營地都死了、最近一座 40 秒內不會出生 ⇒ 放棄
+✅ I4b 營地還沒出生但 40 秒內會出生 ⇒ 不放棄，往入口走去等（開局第 0 秒就是這個情況）
+✅ I5 搶到：目標營被我方清掉 ⇒ 結束（stolen）並記為搶到；被對方清掉 ⇒ lost_race
+✅ I6 入侵者陣亡 ⇒ 記為 killed（擊殺處理的呼叫點：_invadeEndV2(foe, 'killed')）
+✅ I7 結束後不再入侵：同一個英雄再被呼叫只回傳 null，原因不會被覆蓋、次數不重複記
+✅ I8 負向對照：legacy（career.v21）沒有入侵觀測、擲中的入侵幾乎不會打到敵方野怪（≤ 20%）　legacy 擲中 5 場，打到野怪 0 場
+✅ I9 v22 擲中入侵的場次裡 ≥ 80% 走到敵方野怪旁並打到它　擲中 5 場，走到並打到 5
+✅ I10 v22 搶得到、也會失敗：至少 1 場搶到敵方營地，而且失敗條件（hp／outnumbered／lost_race／killed／retreat）至少出現過 1 次　[{"hp":1,"window":1},{"hp":1,"window":1},{"stolen":1,"window":1},{"stolen":1,"window":1},{"stolen":1,"window":1}]
+✅ I11 v22 入侵不是必成：擲中入侵的場次裡，搶到的 ≤ 90%（防止「入侵＝必搶到」）　搶到 3/5
+✅ I12 紅藍對稱（雙方都用入侵模板）：兩邊都至少有 4 場入侵、搶到率的差 ≤ 0.30　藍 6 場搶到率 0.83；紅 9 場搶到率 0.78
+
+jungleCamp v22 Gate：41/41 PASS
+
+
+[37s] [exit 0]

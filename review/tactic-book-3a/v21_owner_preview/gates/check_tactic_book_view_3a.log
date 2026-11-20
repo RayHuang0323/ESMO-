@@ -1,0 +1,27 @@
+✅ V1 標籤齊全：每個 live 維度、每個 live 選擇都有中文名，群組都存在；標籤表 Registry live 以外的鍵恰好是畫面快捷（強邊前＋中期）與尚未 live 的勝利條件　quick.strongSide
+✅ V1b 指標標籤齊全：六軸、五席位、每個任務
+✅ V2 模板列涵蓋全部 21 個模板，各出現一次；經典八套都帶 legacyTacticId　經典8 前期節奏3 中期控圖3 分推牽制2 團戰決勝2 穩健運營2 標準1
+✅ V3 21 個模板：畫出的維度（共 211）＝tacticBookOptions 提供 ≥ 2 個選擇的維度；沒有 design 維度、沒有量測排除的選擇；每個非預設選項（共 356）點下去都解析得出不同的引擎設定
+✅ V4 withChoice：選非預設 ⇒ 寫進 choices；再選回模板預設 ⇒ 移除（跟著模板）；不影響其他維度
+✅ V5 經典模板、沒有額外選擇：畫面顯示與送出的設定＝v20 的戰術物件（逐欄相同），binding 是標準形
+✅ V6 帶變體（3 個）：設定＝v20 的 applyVariant 結果；變體用在別的模板 ⇒ ok:false（畫面會退回沒有變體）
+✅ V7 指標只是轉述：輪廓、席位適性、配合度、矛盾提示與指標模組逐值相同
+✅ V8 互相打架的選擇 ⇒ 畫面拿得到矛盾提示（文案來自規則表）
+✅ V10 offeredChoicesOnly：量測排除的選擇（中路進攻、打野節奏快）與複驗撤下的選擇（謹慎；前期 scaling＝Owner 暫緩）被拿掉並列出，仍提供的（入侵、輔助遊走）保留　{"choices":{"jungle":{"focus":"invade"},"seats":{"b5":{"mission":"roam"}}},"dropped":[{"dimension":"jungle.tempo","choice":"fast"},{"dimension":"lanes.mid.stance","choice":"aggressive"},{"dimension":"phases.early.stance","choice":"scaling"},{"dimension":"risk.tolerance","choice":"cautious"}]}
+✅ V10b 過濾之後：計畫裡的每個選擇都在畫面上顯示為已選（沒有「送出去但看不到」的選擇）　["jungle.focus=invade","seats.b5.mission=roam"]
+✅ V10e n=400 複驗核准的時期姿態（前期主動、後期 scaling）留在計畫裡，不被拿掉　{"choices":{"phases":{"early":{"stance":"aggressive"},"late":{"stance":"scaling"}}},"dropped":[]}
+✅ V10c 掃過 21 個模板 × 每個 live 選擇：過濾後不是「留下且看得到」就是「被拿掉且有紀錄」，沒有第三種
+✅ V10d 壞輸入（未知模板、null、design 鍵）不丟例外
+✅ V9 不合法的輸入（未知模板、design 選擇、兩路帶線）⇒ ok:false 附錯誤，不丟例外
+✅ W1 三個元件不自己列維度／選項，也不 import Registry、對照表或 resolver（收到什麼畫什麼）
+✅ W2 元件的 testid 一律 tb- 開頭
+✅ W3 專業模式按鈕存在且停用（不是可點但無效的選項）
+✅ W4 TacticScreen：選項與指標來自 tacticBookView；送出時第四個參數是 binding；換模板會清掉選擇與變體
+✅ W5 TacticScreen：存／刪戰術書只呼叫 store 的公開動作（它們自己存檔）
+✅ V11' 每時期維度（10 個）：static 下不畫；core.v1 下畫出的（共 171）＝tacticBookOptions(core.v1)；每個非預設選項（共 286）點下去以每時期方針解析得出該時期自己的方針，且 static 下會被 offeredChoicesOnly 拿掉；TacticScreen 以開局同一個函式決定模式與模板修正表並傳給兩個呼叫點
+✅ V11b 快捷「強邊（前＋中期）」：core.v1 才有、選項＝兩格交集；點上路 ⇒ 前／中期 focusLane 都是 top 且快捷顯示選中；點不指定 ⇒ 兩格清掉　{"q":["none","top","mid","bot"],"picked":{"phases":{"early":{"focusLane":"top"},"mid":{"focusLane":"top"}}},"value":"top","cleared":{}}
+✅ V12 存檔的戰術書不會因旗標關閉而被刪改：帶每時期選擇的計畫存檔／重新讀取後原樣保留（結構驗證與規則集無關）；static 下畫面只是拿掉本場用不到的選擇，就算玩家再按一次存檔也是**另一筆**（計畫雜湊不同），原本那筆不被覆蓋；載入戰術書只讀不寫　{"reloaded":1,"dropped":2,"resaved":2}
+✅ V13' 總開關：career.v20／DEV 的 balanceTool.v20（static）⇒ 開局成功、不使用 binding（std 計畫 ⇒ 標準運營（同一個戰術，不算替換）、每個選擇列為本場拿掉）；career.v21 ⇒ 原樣；傳入的 binding 物件沒被改　{"v20":"std","dev":"std","v21":"{\"phases\":{\"mid\":{\"grouping\":\"group\"}},\"risk\":{\"tolerance\":\"bold\"}}"}
+✅ W6 AppShell：戰術頁交出的 binding 進 state 與本場設定（重新整理後接得回來），再交給 GameView
+
+Tactic Book View 3a：25/25 PASS

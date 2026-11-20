@@ -89,7 +89,28 @@ ck("S2 Director 只建立一次（configureMatch 內）；this.director 只在�
   && ENGINE_CODE.includes("if (phases) { directorArgs.phases = phases; directorArgs.clock = () => this.t; }")
   && /configureMatch\(\{[^)]*\} = \{\}\) \{[\s\S]*?this\.director = createTacticalDirector\(/.test(ENGINE_CODE.slice(ENGINE_CODE.indexOf("configureMatch({"), ENGINE_CODE.indexOf("_joinChance(K, hot"))));
 ck("S2d C3-1 laneFrame：configureMatch 收 laneFrame（預設 null）且只在收到時原樣轉交 Director（轉換只在 Director 做）",
-  ENGINE_CODE.includes("phases = null, laneFrame = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
+  //  moba-sim.v24 候選（2026-11-15）：引數多 taskArbitration、taskCommit（各自只變成引擎自己的旗標，不經過 Director；見下方 v24 那幾行）。
+  //  v24 Sprint 1（2026-11-17）：再多 tacticExec（同樣只變成引擎自己的旗標，不經過 Director）。
+  ENGINE_CODE.includes("phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {") && ENGINE_CODE.includes("if (laneFrame !== null) directorArgs.laneFrame = laneFrame;")
+  //  v24 Sprint 1.1（2026-11-18）：tacticExec 多一個值 "adaptive.v1.1"（同樣只變成引擎自己的旗標，不經過 Director）。
+  //  v24 Sprint 1.2（2026-11-18）：再多 "adaptive.v1.2"（同樣只是引擎旗標）。
+  //  v24 Sprint 1.3（2026-11-19）：再多 "adaptive.v1.3"（同樣只是引擎旗標）。
+  && ENGINE_CODE.includes('this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2" || tacticExec === "adaptive.v1.3") && invasion === "v2";')
+  && ENGINE_CODE.includes("this._tacExecVariant = this._tacExecV24 ? tacticExec : null;") && !/directorArgs\.tacticExec/.test(ENGINE_CODE)
+  && ENGINE_CODE.includes('this._arbV24 = taskArbitration === "v1";') && ENGINE_CODE.includes('this._commitPushV24 = taskCommit === "v19push";')
+  && !/directorArgs\.(taskArbitration|taskCommit)/.test(ENGINE_CODE)
+  //  moba-sim.v22 候選：jungleCamp、invasion 各自只被轉成引擎自己的一個旗標，不經過 Director（Director 與每時期方針無關）。
+  && ENGINE_CODE.includes('this._jungleCampV2 = jungleCamp === "v2";') && ENGINE_CODE.includes('this._invasionV2 = invasion === "v2";')
+  //  moba-sim.v23 候選：safeRoute 同樣只變成引擎自己的一個旗標，不經過 Director。
+  //  2026-11-13 塔邊等待小修：多一個 "v3"（＝v2＋塔邊等待重新決策），同樣只變成引擎自己的旗標。
+  //  2026-11-13 導航與移動安全：再多一個 "v4"（＝v3＋_navSafetyV23），同樣只變成引擎自己的旗標。
+  //  2026-11-14：再多一個 "v5"（＝v4＋_quietPocketV23）。
+  && ENGINE_CODE.includes('this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._edgeRedecideV23 = safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._navSafetyV23 = safeRoute === "v4" || safeRoute === "v5";')
+  && ENGINE_CODE.includes('this._quietPocketV23 = safeRoute === "v5";')
+  && !/directorArgs\.(jungleCamp|invasion|safeRoute)/.test(ENGINE_CODE)
   && (ENGINE_CODE.match(/\blaneFrame\b/g) ?? []).length === 4);
 ck("S2b _tidOf／_tidPhase 是一行委派給 Director",
   ENGINE_CODE.includes("_tidOf(side) { return this.director ? this.director.identity(side) : null; }")

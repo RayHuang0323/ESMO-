@@ -1,0 +1,381 @@
+{
+ "contract": {
+  "version": "s2.v2",
+  "A": {
+   "lowerMin": 0.65,
+   "minStarts": 60
+  },
+  "C": {
+   "c1Min": 0.6,
+   "c1Max": 1.5,
+   "c2Min": 0.5
+  },
+  "boot": {
+   "B": 4000,
+   "seed": 20261119
+  }
+ },
+ "retrospective": {
+  "source": "C:/Users/ifikn/esmo-measure/v24-s13-val-130001/batches",
+  "arm": "adaptive",
+  "note": "reference only; old S2 FAIL stands",
+  "tool": {
+   "mode": "RETROSPECTIVE",
+   "matches": 300,
+   "A": {
+    "starts": 650,
+    "arrived": 419,
+    "value": 0.645,
+    "ci": [
+     0.608,
+     0.681
+    ],
+    "verdict": "NOT_JUDGED"
+   },
+   "C": {
+    "sides": 600,
+    "c1": 1.083,
+    "c2": 0.677,
+    "c1Ci": [
+     0.995,
+     1.175
+    ],
+    "c2Ci": [
+     0.635,
+     0.718
+    ],
+    "verdict": "NOT_JUDGED"
+   }
+  },
+  "career": {
+   "mode": "RETROSPECTIVE",
+   "matches": 90,
+   "A": {
+    "starts": 17,
+    "arrived": 6,
+    "value": 0.353,
+    "ci": [
+     0.143,
+     0.636
+    ],
+    "verdict": "NOT_JUDGED"
+   },
+   "C": {
+    "sides": 90,
+    "c1": 0.189,
+    "c2": 0.167,
+    "c1Ci": [
+     0.089,
+     0.3
+    ],
+    "c2Ci": [
+     0.089,
+     0.256
+    ],
+    "verdict": "NOT_JUDGED"
+   }
+  }
+ },
+ "registered": {
+  "tool": {
+   "group": "holdout_tool",
+   "expectedMatches": 1080,
+   "mode": "REGISTERED",
+   "matches": 1080,
+   "A": {
+    "starts": 2388,
+    "arrived": 1613,
+    "value": 0.675,
+    "ci": [
+     0.656,
+     0.694
+    ],
+    "verdict": "PASS"
+   },
+   "C": {
+    "sides": 2160,
+    "c1": 1.106,
+    "c2": 0.671,
+    "c1Ci": [
+     1.057,
+     1.154
+    ],
+    "c2Ci": [
+     0.649,
+     0.694
+    ],
+    "verdict": "PASS"
+   },
+   "byConfig": {
+    "AB": {
+     "mode": "RETROSPECTIVE",
+     "matches": 360,
+     "A": {
+      "starts": 858,
+      "arrived": 591,
+      "value": 0.689,
+      "ci": [
+       0.657,
+       0.72
+      ],
+      "verdict": "NOT_JUDGED"
+     },
+     "C": {
+      "sides": 720,
+      "c1": 1.192,
+      "c2": 0.7,
+      "c1Ci": [
+       1.111,
+       1.276
+      ],
+      "c2Ci": [
+       0.664,
+       0.735
+      ],
+      "verdict": "NOT_JUDGED"
+     }
+    },
+    "BA": {
+     "mode": "RETROSPECTIVE",
+     "matches": 360,
+     "A": {
+      "starts": 789,
+      "arrived": 543,
+      "value": 0.688,
+      "ci": [
+       0.655,
+       0.721
+      ],
+      "verdict": "NOT_JUDGED"
+     },
+     "C": {
+      "sides": 720,
+      "c1": 1.096,
+      "c2": 0.669,
+      "c1Ci": [
+       1.011,
+       1.182
+      ],
+      "c2Ci": [
+       0.632,
+       0.708
+      ],
+      "verdict": "NOT_JUDGED"
+     }
+    },
+    "inv": {
+     "mode": "RETROSPECTIVE",
+     "matches": 360,
+     "A": {
+      "starts": 741,
+      "arrived": 479,
+      "value": 0.646,
+      "ci": [
+       0.612,
+       0.679
+      ],
+      "verdict": "NOT_JUDGED"
+     },
+     "C": {
+      "sides": 720,
+      "c1": 1.029,
+      "c2": 0.644,
+      "c1Ci": [
+       0.951,
+       1.111
+      ],
+      "c2Ci": [
+       0.607,
+       0.683
+      ],
+      "verdict": "NOT_JUDGED"
+     }
+    }
+   },
+   "s2bReportOnly": {
+    "sides": 2160,
+    "episodesPerSide": 0.382,
+    "sidesWithoutOpportunity": 0.749,
+    "utilisationSameTarget": 0.067,
+    "utilisationAnyTarget": 0.097,
+    "precision": 0.023,
+    "startsPerSide": 1.106,
+    "oracleValidation": {
+     "verdict": "INCONCLUSIVE",
+     "starts": 2388,
+     "positive": 55,
+     "point": {
+      "capture": 0.218,
+      "gold": 20.597,
+      "death": 0.011
+     },
+     "ci": {
+      "capture": [
+       0.112,
+       0.31
+      ],
+      "gold": [
+       2.435,
+       40.177
+      ],
+      "death": [
+       -0.05,
+       0.087
+      ]
+     }
+    }
+   },
+   "unfinishedMatches": 0
+  },
+  "career": {
+   "group": "career",
+   "expectedMatches": 300,
+   "mode": "REGISTERED",
+   "matches": 300,
+   "A": {
+    "starts": 80,
+    "arrived": 42,
+    "value": 0.525,
+    "ci": [
+     0.41,
+     0.644
+    ],
+    "verdict": "FAIL"
+   },
+   "C": {
+    "sides": 300,
+    "c1": 0.267,
+    "c2": 0.237,
+    "c1Ci": [
+     0.203,
+     0.333
+    ],
+    "c2Ci": [
+     0.183,
+     0.29
+    ],
+    "verdict": "FAIL"
+   },
+   "byConfig": {
+    "high": {
+     "mode": "RETROSPECTIVE",
+     "matches": 100,
+     "A": {
+      "starts": 31,
+      "arrived": 16,
+      "value": 0.516,
+      "ci": [
+       0.333,
+       0.696
+      ],
+      "verdict": "NOT_JUDGED"
+     },
+     "C": {
+      "sides": 100,
+      "c1": 0.31,
+      "c2": 0.28,
+      "c1Ci": [
+       0.21,
+       0.42
+      ],
+      "c2Ci": [
+       0.19,
+       0.37
+      ],
+      "verdict": "NOT_JUDGED"
+     }
+    },
+    "low": {
+     "mode": "RETROSPECTIVE",
+     "matches": 100,
+     "A": {
+      "starts": 28,
+      "arrived": 20,
+      "value": 0.714,
+      "ci": [
+       0.522,
+       0.889
+      ],
+      "verdict": "NOT_JUDGED"
+     },
+     "C": {
+      "sides": 100,
+      "c1": 0.28,
+      "c2": 0.25,
+      "c1Ci": [
+       0.19,
+       0.38
+      ],
+      "c2Ci": [
+       0.17,
+       0.34
+      ],
+      "verdict": "NOT_JUDGED"
+     }
+    },
+    "mid": {
+     "mode": "RETROSPECTIVE",
+     "matches": 100,
+     "A": {
+      "starts": 21,
+      "arrived": 6,
+      "value": 0.286,
+      "ci": [
+       0.095,
+       0.5
+      ],
+      "verdict": "NOT_JUDGED"
+     },
+     "C": {
+      "sides": 100,
+      "c1": 0.21,
+      "c2": 0.18,
+      "c1Ci": [
+       0.12,
+       0.31
+      ],
+      "c2Ci": [
+       0.11,
+       0.26
+      ],
+      "verdict": "NOT_JUDGED"
+     }
+    }
+   },
+   "s2bReportOnly": {
+    "sides": 300,
+    "episodesPerSide": 0.497,
+    "sidesWithoutOpportunity": 0.707,
+    "utilisationSameTarget": 0.067,
+    "utilisationAnyTarget": 0.114,
+    "precision": 0.125,
+    "startsPerSide": 0.267,
+    "oracleValidation": {
+     "verdict": "INCONCLUSIVE",
+     "starts": 80,
+     "positive": 10,
+     "point": {
+      "capture": 0.443,
+      "gold": 15.451,
+      "death": -0.114
+     },
+     "ci": {
+      "capture": [
+       0.172,
+       0.653
+      ],
+      "gold": [
+       -94.491,
+       148.686
+      ],
+      "death": [
+       -0.292,
+       0.133
+      ]
+     }
+    }
+   },
+   "unfinishedMatches": 0
+  }
+ }
+}

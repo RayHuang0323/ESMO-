@@ -1,0 +1,21 @@
+✅ T1 決定性：同一個 Seed 兩次整場雜湊相同　9f7b4627b2314cb4990b / 9f7b4627b2314cb4990b
+✅ T2 驗收 8a（adaptive.v1）：紅藍狀態互換（旋轉 180°＋紅藍／路／id 對調），入侵決策逐筆相同　compared=340 kinds={"declined:no_target":18,"go":12,"declined:too_far":40,"declined:busy":171,"declined:no_intel":80,"declined:hp":13,"declined:objective_intent":4,"declined:objective_window":1,"declined:objective_soon":1} diff=0 skippedTowerDown=98 maxEtaDiff=0.000s
+✅ T3 資訊公平（adaptive.v1）：看不見的敵人移走之後，決策逐筆不變　compared=339 unseenMoved=1247 diff=0
+✅ T2 驗收 8a（adaptive.v1.1）：紅藍狀態互換（旋轉 180°＋紅藍／路／id 對調），入侵決策逐筆相同　compared=316 kinds={"declined:no_target":18,"declined:own_farm":141,"declined:too_far":42,"declined:busy":106,"go":2,"declined:objective_soon":2,"declined:hp":3,"declined:no_party":1,"declined:objective_intent":1} diff=0 skippedTowerDown=110 maxEtaDiff=0.000s
+✅ T3 資訊公平（adaptive.v1.1）：看不見的敵人移走之後，決策逐筆不變　compared=316 unseenMoved=1196 diff=0
+✅ T2 驗收 8a（adaptive.v1.2）：紅藍狀態互換（旋轉 180°＋紅藍／路／id 對調），入侵決策逐筆相同　compared=316 kinds={"declined:no_target":18,"declined:own_farm":148,"declined:too_far":42,"declined:busy":105,"declined:hp":3} diff=0 skippedTowerDown=111 maxEtaDiff=0.000s
+✅ T3 資訊公平（adaptive.v1.2）：看不見的敵人移走之後，決策逐筆不變　compared=316 unseenMoved=1196 diff=0
+✅ T2 驗收 8a（adaptive.v1.3）：紅藍狀態互換（旋轉 180°＋紅藍／路／id 對調），入侵決策逐筆相同　compared=316 kinds={"declined:no_target":18,"declined:own_farm":148,"declined:too_far":42,"declined:busy":105,"declined:hp":3} diff=0 skippedTowerDown=111 maxEtaDiff=0.000s
+✅ T3 資訊公平（adaptive.v1.3）：看不見的敵人移走之後，決策逐筆不變　compared=316 unseenMoved=1196 diff=0
+✅ T4 原因碼都在登記清單內；有入侵意圖的對局都有評估紀錄（4 個版本）　matches=12 withEvals=8 bad=[]
+✅ T5 模組不讀亂數與時鐘　[]
+✅ T6 層關閉時完全不啟動（沒有 tacExec、沒有隊友／回防欄位）　tacExec=undefined flag=false leakTicks=0
+✅ T7 舊候選可重現：adaptive.v1＝e9d86b32、adaptive.v1.1＝4c1da80a、adaptive.v1.2＝8ae1f5f6 錄的值（工具覆寫＋生涯第一個 tick 前切換；含 Seed 120159 僵局）；v1.2 與更早的版本確實不同　{"v1":{"balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-":"7b079375c5949795fe9e","balanceTool.v24|v2.jungle_invasion|classic.m7|13|-":"5ccc36dd00f15d8bf46f","career.v24|v2.jungle_invasion|-|93001|mid":"b4f2f929b3d336a84b70"},"v11":{"balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-":"b50bed51160c5a8c6b1c","balanceTool.v24|v2.jungle_invasion|classic.m7|13|-":"21ae0bc6af7aa39ccfd1","career.v24|v2.jungle_invasion|-|93001|mid":"e69e7200a53787d71c5c"},"v12":{"balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-":"9f7b4627b2314cb4990b","balanceTool.v24|v2.jungle_invasion|classic.m7|13|-":"02e8fa0c48f2ee0adfad","balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|120159|-":"8fab147f208dff05ecbe","career.v24|v2.jungle_invasion|-|93001|mid":"e69e7200a53787d71c5c"}}
+✅ T10a 僵局 Seed 120159：adaptive.v1.3 在 30 分鐘內結束、有勝方、護線確實啟動，主堡每一次掉血都有兵線在場　{"over":true,"winner":"red","t":1588.5,"onAt":[null,1437],"nexusHitTicks":3,"noWave":0}
+✅ T10b 沒觸發護線的對局：adaptive.v1.3 與 adaptive.v1.2 整場雜湊相同（工具 2 場＋生涯 1 場）　[{"key":"balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-","same":true,"latched":false},{"key":"balanceTool.v24|v2.jungle_invasion|classic.m7|13|-","same":true,"latched":false},{"key":"career.v24|v2.jungle_invasion|-|93001|mid","same":true,"latched":false}]
+✅ T10c 計時規則：主堡沒暴露不計時、滿 240 秒才啟動、兵線抵達就重新計時　[true,true,true,true]
+✅ T10d 紅藍鏡像：400 個局面（一半是同分）藍方選路＝紅方在鏡像局面的選路　{"compared":400,"withTies":200,"diff":0}
+✅ T9 敵方營存活信念的資訊公平（adaptive.v1.2）：看不見的敵方營活／死翻轉後，入侵決策逐筆不變　compared=590 campsFlipped=1727 diff=0
+✅ T8 動態撤退（adaptive.v1.1、v1.2）：入侵進行中逐 tick，鏡像結果相同（8a）、看不見的敵人移走後相同（資訊公平）　perVariant={"adaptive.v1.1":436,"adaptive.v1.2":327,"adaptive.v1.3":327} mirror compared=1090 kinds={"continue":1089,"retreat_threat":1} diff=0；fairness compared=1090 diff=0
+
+check_tactic_exec_v24：19/19 PASS  (225.0 s)

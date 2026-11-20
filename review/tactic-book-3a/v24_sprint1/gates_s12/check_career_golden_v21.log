@@ -1,0 +1,11 @@
+$ node tools/check_career_golden_v21.mjs
+✅ P0 fixture 存在、schema esmo.career-golden.v21、24 案
+✅ P 出處釘死（重錄必須看得見地改 PINNED_*）　649805336ea80ea0ac9a31a58dd153df13cc0270/0578fa882d74b205
+❌ P2 fixture 指紋＝目前登記的 moba-sim.v21 指紋
+❌ R 24 案重跑：setup／phases／終局 snapshot 雜湊、勝方、時長逐位元相同　phase-stance:s11: setupHash | phase-stance:s23: setupHash | phase-stance:s29: setupHash | phase-grouping:s11: setupHash | phase-grouping:s23: setupHash | phase-grouping:s29: setupHash | phase-objective:s11: setupHash | phase-objective:s23: setupHash | phase-objective:s29: setupHash | strong-early-mid:s11: setupHash | strong-early-mid:s23: setupHash | strong-early-mid:s29: setupHash | quick-strong-bot:s11: setupHash | quick-strong-bot:s23: setupHash | quick-strong-bot:s29: setupHash | win-snowball:s11: setupHash | win-snowball:s23: setupHash | win-snowball:s29: setupHash | snowball-plus-player:s11: setupHash | snowball-plus-player:s23: setupHash | snowball-plus-player:s29: setupHash | strong-plus-aggressive:s11: setupHash | strong-plus-aggressive:s23: setupHash | strong-plus-aggressive:s29: setupHash
+✅ S 每一案 career.v21／core.v1／teamRelative、紅方是 AI 教練 binding、藍方的選擇沒有被拿掉；兩種配置都有
+
+Career Golden v21：3/5 FAIL
+
+
+[69s] [exit 1]

@@ -108,6 +108,25 @@ export const FEATURE_FLAGS = Object.freeze({
    * 正式站既有的挑戰照常可重播。只有 Owner 能決定打開（第二階段）。
    */
   mobaChallengeV21: false,
+
+  /**
+   * moba-sim.v22 候選（Owner 2026-11-11）：打野營地站位修正（Buff 營脫戰反覆回滿 Bug）。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21 也開時生效**（career.v22＝career.v21＋jungleCamp "v2"）；Challenge 不受影響。
+   * 只有 Owner 能決定打開。
+   */
+  mobaJungleV22: false,
+  /**
+   * moba-sim.v23 候選（Owner 2026-11-12）：路線安全（入侵後撤退繞向敵塔送死）。移動目標的直線穿過敵塔射程時先繞行。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21 與 mobaJungleV22 都開時生效**（career.v23＝career.v22＋safeRoute "v1"）。
+   * 只有 Owner 能決定打開。
+   */
+  mobaSafeRouteV23: false,
+  /**
+   * moba-sim.v24 候選（Owner 2026-11-15 核准開版；未核准發布）：任務仲裁紀錄進引擎，以及之後的自適應戰術執行。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21、mobaJungleV22、mobaSafeRouteV23 都開時生效**（career.v24＝career.v23＋v24 的層）。
+   * 只有 Owner 能決定打開。
+   */
+  mobaTacticExecV24: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */

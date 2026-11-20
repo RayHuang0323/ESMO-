@@ -1,0 +1,244 @@
+{
+ "belief": {
+  "buff": {
+   "seen": {
+    "dead": 0.967,
+    "recent": 0.91,
+    "old": 0.8,
+    "never": 0.893
+   },
+   "memAlive:<20": {
+    "dead": 0.956,
+    "recent": 0.774,
+    "old": 0.606,
+    "never": 0.757
+   },
+   "memAlive:<45": {
+    "dead": 0.784,
+    "recent": 0.635,
+    "old": 0.358,
+    "never": 0.499
+   },
+   "memAlive:<90": {
+    "dead": 0.623,
+    "recent": 0.516,
+    "old": 0.269,
+    "never": 0.382
+   },
+   "memAlive:90+": {
+    "dead": 0.717,
+    "recent": 0.578,
+    "old": 0.305,
+    "never": 0.452
+   },
+   "respawn:<20": {
+    "dead": 0.907,
+    "recent": 0.918,
+    "old": 0.769,
+    "never": 0.832
+   },
+   "respawn:<40": {
+    "dead": 0.899,
+    "recent": 0.701,
+    "old": 0.369,
+    "never": 0.557
+   },
+   "respawn:40+": {
+    "dead": 0.708,
+    "recent": 0.574,
+    "old": 0.296,
+    "never": 0.446
+   },
+   "prior:<150": {
+    "dead": 0.325,
+    "recent": 0.263,
+    "old": 0.045,
+    "never": 0.079
+   },
+   "prior:<300": {
+    "dead": 0.557,
+    "recent": 0.617,
+    "old": 0.126,
+    "never": 0.07
+   },
+   "prior:<600": {
+    "dead": 0.63,
+    "recent": 0.548,
+    "old": 0.213,
+    "never": 0.376
+   },
+   "prior:<900": {
+    "dead": 0.676,
+    "recent": 0.546,
+    "old": 0.299,
+    "never": 0.418
+   },
+   "prior:900+": {
+    "dead": 0.639,
+    "recent": 0.548,
+    "old": 0.384,
+    "never": 0.476
+   }
+  },
+  "camp": {
+   "seen": {
+    "dead": 0.98,
+    "recent": 0.926,
+    "old": 0.915,
+    "never": 0.924
+   },
+   "memAlive:<20": {
+    "dead": 0.979,
+    "recent": 0.863,
+    "old": 0.775,
+    "never": 0.844
+   },
+   "memAlive:<45": {
+    "dead": 0.853,
+    "recent": 0.775,
+    "old": 0.592,
+    "never": 0.694
+   },
+   "memAlive:<90": {
+    "dead": 0.74,
+    "recent": 0.673,
+    "old": 0.473,
+    "never": 0.585
+   },
+   "memAlive:90+": {
+    "dead": 0.735,
+    "recent": 0.673,
+    "old": 0.468,
+    "never": 0.579
+   },
+   "respawn:<20": {
+    "dead": 0.952,
+    "recent": 0.982,
+    "old": 0.916,
+    "never": 0.913
+   },
+   "respawn:<40": {
+    "dead": 0.941,
+    "recent": 0.901,
+    "old": 0.67,
+    "never": 0.782
+   },
+   "respawn:40+": {
+    "dead": 0.722,
+    "recent": 0.703,
+    "old": 0.526,
+    "never": 0.623
+   },
+   "prior:<150": {
+    "dead": 0.052,
+    "recent": 0.289,
+    "old": 0.33,
+    "never": 0.294
+   },
+   "prior:<300": {
+    "dead": 0.602,
+    "recent": 0.545,
+    "old": 0.248,
+    "never": 0.217
+   },
+   "prior:<600": {
+    "dead": 0.716,
+    "recent": 0.617,
+    "old": 0.348,
+    "never": 0.488
+   },
+   "prior:<900": {
+    "dead": 0.711,
+    "recent": 0.604,
+    "old": 0.409,
+    "never": 0.507
+   },
+   "prior:900+": {
+    "dead": 0.716,
+    "recent": 0.642,
+    "old": 0.545,
+    "never": 0.606
+   }
+  }
+ },
+ "successP": {
+  "buff": {
+   "clear": 0.543,
+   "prior": 0.125,
+   "prior_early": 0.125,
+   "contested": 0.261
+  },
+  "camp": {
+   "clear": 0.617,
+   "prior": 0.488,
+   "prior_early": 0.135,
+   "contested": 0.301
+  }
+ },
+ "successP2": {
+  "buff": {
+   "clear": 0.473,
+   "prior": 0.125,
+   "prior_early": 0.125,
+   "contested": 0.296
+  },
+  "camp": {
+   "clear": 0.29,
+   "prior": 0.261,
+   "prior_early": 0.135,
+   "contested": 0.346
+  }
+ },
+ "sources": {
+  "1": {
+   "buff": {
+    "clear": "fit 8/14",
+    "prior": "v1.2 (0/1)",
+    "prior_early": "v1.2 (0/0)",
+    "contested": "v1.2 (0/0)"
+   },
+   "camp": {
+    "clear": "fit 12/18",
+    "prior": "fit 57/117",
+    "prior_early": "v1.2 (0/0)",
+    "contested": "v1.2 (0/0)"
+   }
+  },
+  "2": {
+   "buff": {
+    "clear": "fit 6/11",
+    "prior": "v1.2 (1/3)",
+    "prior_early": "v1.2 (0/0)",
+    "contested": "fit 5/19"
+   },
+   "camp": {
+    "clear": "v1.2 (0/1)",
+    "prior": "fit 27/104",
+    "prior_early": "v1.2 (0/0)",
+    "contested": "fit 4/10"
+   }
+  }
+ },
+ "beliefFit": {
+  "fitRows": 232236,
+  "K": 20,
+  "testTalents": {
+   "table14": {
+    "n": 33206,
+    "base": 0.457,
+    "brier": 0.204,
+    "bss": 0.178,
+    "auc": 0.741,
+    "ece": 0.021
+   },
+   "v13approx": {
+    "n": 33206,
+    "base": 0.457,
+    "brier": 0.285,
+    "bss": -0.148,
+    "auc": 0.544,
+    "ece": 0.21
+   }
+  }
+ }
+}

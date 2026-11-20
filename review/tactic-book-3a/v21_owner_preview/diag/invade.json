@@ -1,0 +1,2414 @@
+{
+ "tool": "diag_invade_v21",
+ "seeds": [
+  11,
+  13,
+  17,
+  19,
+  23,
+  29,
+  31,
+  37,
+  41,
+  43,
+  47,
+  53,
+  59,
+  61,
+  67,
+  71,
+  73,
+  79,
+  83,
+  89
+ ],
+ "horizonSec": 90,
+ "graceSec": 15,
+ "geometry": {
+  "fountainBlue": {
+   "x": 69,
+   "y": 265
+  },
+  "invasionPointBlue": {
+   "x": 161,
+   "y": 133
+  },
+  "straightLineFountainToPoint": 160.9,
+  "invasionPointTowardRed": 20.4,
+  "redRooms": [
+   {
+    "id": "red_wolves",
+    "x": 229,
+    "y": 151,
+    "rad": 13.4,
+    "towardRed": 54.4
+   },
+   {
+    "id": "red_tri_top",
+    "x": 231,
+    "y": 183,
+    "rad": 10,
+    "towardRed": 32.6
+   },
+   {
+    "id": "red_buff",
+    "x": 167,
+    "y": 125,
+    "rad": 15.6,
+    "towardRed": 30.3
+   },
+   {
+    "id": "red_krug",
+    "x": 179,
+    "y": 100,
+    "rad": 12.8,
+    "towardRed": 56.6
+   },
+   {
+    "id": "red_tri_bot",
+    "x": 144,
+    "y": 102,
+    "rad": 10,
+    "towardRed": 31
+   }
+  ]
+ },
+ "summary": {
+  "v21.jungle_invasion": {
+   "n": 20,
+   "invadeChance": 0.7,
+   "window": 35,
+   "NOT_TRIGGERED": 7,
+   "TRIGGERED_NOT_ARRIVED": 0,
+   "INVADED": 13,
+   "invadeAttemptsSum": 13,
+   "invadeKillsSum": 0,
+   "enemyCampDamagedMatches": 0,
+   "jungler": {
+    "avgInvadeStateSecs": 32.4,
+    "crossedRiver": 13,
+    "reachedPoint": 13,
+    "avgDistAtWindowEnd": 4.4,
+    "avgMaxTowardRed": 20.4,
+    "avgRetreatSecsInWindow": 0
+   }
+  },
+  "v21.m7": {
+   "n": 20,
+   "invadeChance": 0.8,
+   "window": 35,
+   "NOT_TRIGGERED": 6,
+   "TRIGGERED_NOT_ARRIVED": 0,
+   "INVADED": 14,
+   "invadeAttemptsSum": 14,
+   "invadeKillsSum": 0,
+   "enemyCampDamagedMatches": 0,
+   "jungler": {
+    "avgInvadeStateSecs": 32.4,
+    "crossedRiver": 14,
+    "reachedPoint": 14,
+    "avgDistAtWindowEnd": 4.3,
+    "avgMaxTowardRed": 20.4,
+    "avgRetreatSecsInWindow": 0
+   }
+  },
+  "v20.m7": {
+   "n": 20,
+   "invadeChance": 0.8,
+   "window": 35,
+   "NOT_TRIGGERED": 6,
+   "TRIGGERED_NOT_ARRIVED": 0,
+   "INVADED": 14,
+   "invadeAttemptsSum": 14,
+   "invadeKillsSum": 0,
+   "enemyCampDamagedMatches": 0,
+   "jungler": {
+    "avgInvadeStateSecs": 32.4,
+    "crossedRiver": 14,
+    "reachedPoint": 14,
+    "avgDistAtWindowEnd": 4.3,
+    "avgMaxTowardRed": 20.4,
+    "avgRetreatSecsInWindow": 0
+   }
+  }
+ },
+ "rows": [
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 31.5,
+     "crossAt": 27.5,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 31.5,
+      "推進": 0.5,
+      "打野": 3
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "推進": 1.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62.3,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.3,
+     "distAtWindowEnd": 5,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -61.7,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -65.2,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62.6,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62.4,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -61.9,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -64.9,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 31.5,
+     "crossAt": 27.5,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 6.4,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 31.5,
+      "推進": 0.5,
+      "打野": 3
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "推進": 1.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "推進": 1.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -64.9,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32,
+     "crossAt": 28.5,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20,
+     "distAtWindowEnd": 3.4,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32,
+      "打野": 3
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32,
+     "crossAt": 28,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32,
+      "推進": 2.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 33,
+     "crossAt": 30,
+     "roomAt": 31,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "打野": 2
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "打野": 2
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 71,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -54.6,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -63.5,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 73,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 79,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -66.3,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 83,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.jungle_invasion",
+   "seed": 89,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.7,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 31.5,
+     "crossAt": 27.5,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 31.5,
+      "推進": 0.5,
+      "打野": 3
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -59.9,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -60.7,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62.1,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 31.5,
+     "crossAt": 27.5,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 6.4,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 31.5,
+      "推進": 0.5,
+      "打野": 3
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -62.3,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32,
+     "crossAt": 28.5,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20,
+     "distAtWindowEnd": 3.4,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32,
+      "打野": 3
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 33,
+     "crossAt": 30,
+     "roomAt": 31,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "打野": 2
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "打野": 2
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 71,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -51.2,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 73,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 79,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -61.3,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 83,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v21.m7",
+   "seed": 89,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": false,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 11,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 13,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 31.5,
+     "crossAt": 27.5,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 31.5,
+      "推進": 0.5,
+      "打野": 3
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "推進": 1.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 17,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 19,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.3,
+     "distAtWindowEnd": 5,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 23,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -66.3,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -59.8,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 29,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -63,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -58.1,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 31,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -75.5,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -61.4,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 37,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 31.5,
+     "crossAt": 27.5,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 6.4,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 31.5,
+      "推進": 0.5,
+      "打野": 3
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "推進": 1.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 41,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 43,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "推進": 1.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 47,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -75.5,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -60.4,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 53,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32,
+     "crossAt": 28.5,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20,
+     "distAtWindowEnd": 3.4,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32,
+      "打野": 3
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32,
+     "crossAt": 28,
+     "roomAt": 28.5,
+     "room": "red_buff",
+     "pointAt": 28.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32,
+      "推進": 2.5,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 59,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 33,
+     "crossAt": 30,
+     "roomAt": 31,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "打野": 2
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 61,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 33,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 33,
+      "打野": 2
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 67,
+   "opponent": "翡翠龍騎",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 71,
+   "opponent": "烈焰鳳凰",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -67.9,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -58.9,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 73,
+   "opponent": "雷霆戰熊",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 79,
+   "opponent": "寒冰守衛",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 0,
+   "verdict": "NOT_TRIGGERED",
+   "invadeAttempts": 0,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -73.8,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 0,
+     "crossAt": null,
+     "roomAt": null,
+     "room": null,
+     "pointAt": null,
+     "maxTowardRed": -63,
+     "distAtWindowEnd": null,
+     "retreatSecs": 0,
+     "statesInWindow": {}
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 83,
+   "opponent": "白銀之鷹",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29.5,
+     "roomAt": 30.5,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 4.9,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  },
+  {
+   "arm": "v20.m7",
+   "seed": 89,
+   "opponent": "黑曜劍士",
+   "invadeChance": 0.8,
+   "withMid": true,
+   "window": 35,
+   "verdict": "INVADED",
+   "invadeAttempts": 1,
+   "invadeKills": 0,
+   "enemyCampDmgByBlueInWindow": 0,
+   "actors": {
+    "b2": {
+     "role": "jungle",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 30,
+     "room": "red_buff",
+     "pointAt": 30,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 5.6,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "打野": 2.5
+     }
+    },
+    "b3": {
+     "role": "mid",
+     "invadeStateSecs": 32.5,
+     "crossAt": 29,
+     "roomAt": 29.5,
+     "room": "red_buff",
+     "pointAt": 29.5,
+     "maxTowardRed": 20.4,
+     "distAtWindowEnd": 2.8,
+     "retreatSecs": 0,
+     "statesInWindow": {
+      "入侵": 32.5,
+      "推進": 2,
+      "對線": 0.5
+     }
+    }
+   }
+  }
+ ]
+}

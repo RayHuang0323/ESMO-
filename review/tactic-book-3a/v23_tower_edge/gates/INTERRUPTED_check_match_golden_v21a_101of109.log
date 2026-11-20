@@ -1,0 +1,123 @@
+✅ P0 runner 載入的引擎類別＝src/LogicEngine.js 的同一個類別（探針三條路徑量到同一棵樹）
+✅ P1 fixture.gitHead＝本檔釘死的字面常數　0e3c0224
+✅ P2 fixture.fingerprint＝本檔釘死的字面常數　29140fe0cb5a4c86
+✅ F1 schema＝match_golden_v21a.v1　match_golden_v21a.v1
+✅ F2 案例數：v20 39（live 9、challenge 12、runner 18）＋模板 42＋提供的選擇 16＋紅方 binding 12＝109　v20 39、template 42、choice 16
+✅ F3 21 個模板（含 std）各有 2 個 seed 的案例
+✅ F4 fixture 內存的提供清單與其 binding-choice 案自洽（8 個非本來選擇，每個 2 個 seed；不比對戰術書現況）　jungle.focus=farm jungle.focus=invade lanes.mid.stance=split seats.b5.mission=roam seats.b5.mission=protect teamfight.posture=passive teamfight.posture=aggressive objectives.tower=high
+✅ F5 binding 案都是 live 路徑、紅方＝標準對手；每案有 bindingHash
+✅ F6 每案都有 digest／streamHash／resultHash／configure 序列
+✅ F8 紅方 binding 案（runner 路徑，紅方帶 splitLane/protectRole）的 streamHash 都與同 seed 紅方 std 的對照案（v20:runner-standard-<seed>）不同＝真的讀到了
+✅ F7 v20 fixture 沒變（案例數與 gitHead 同錄製時）
+✅ N0 原樣比對＝0 差異
+✅ N1 竄改一案的 streamHash ⇒ 報出該案　v20:live-m8-7: streamHash 7eb01497 -> 00000000
+✅ N2 竄改 resultHash 與 digest ⇒ 兩案都報出
+✅ N3 少一案（fixture 有、現在沒跑到）⇒ 報 missing　missing case (in fixture, not produced now): bind-template:classic.m6:s11
+✅ N4 多一案 ⇒ 報 extra　extra case (produced now, not in fixture): extra:case
+✅ N5 configure 引數雜湊不同 ⇒ 報 calls 差異　v20:live-m8-23: configure calls differ at #0
+✅ N6 案例順序改變 ⇒ 報 order
+✅ N8 fixture.gitHead 與釘死值不同 ⇒ provenance 檢查報出
+✅ N9 fixture.fingerprint 與釘死值不同 ⇒ provenance 檢查報出
+✅ N7 案例輸入（params）改變 ⇒ 報出
+✅ K0 修正表：schema、指向這份 fixture（gitHead／指紋相同）、恰好 12 案且全部是 Challenge 案、三欄、舊 resultHash＝fixture、標明是事後核准
+  1/109 v20:live-m4-3 7s
+  2/109 v20:challenge-draft-3 12s
+  3/109 v20:challenge-nodraft-3 17s
+  4/109 v20:runner-standard-3 22s
+  5/109 v20:runner-off-3 26s
+  6/109 v20:live-m8-7 34s
+  7/109 v20:challenge-draft-7 37s
+  8/109 v20:challenge-nodraft-7 39s
+  9/109 v20:runner-standard-7 43s
+  10/109 v20:runner-off-7 48s
+  11/109 v20:live-m4-11 53s
+  12/109 v20:challenge-draft-11 58s
+  13/109 v20:challenge-nodraft-11 62s
+  14/109 v20:runner-standard-11 65s
+  15/109 v20:runner-off-11 70s
+  16/109 v20:live-m4-19 74s
+  17/109 v20:challenge-draft-19 77s
+  18/109 v20:challenge-nodraft-19 80s
+  19/109 v20:runner-standard-19 85s
+  20/109 v20:runner-off-19 89s
+  21/109 v20:live-m8-23 94s
+  22/109 v20:challenge-draft-23 100s
+  23/109 v20:challenge-nodraft-23 104s
+  24/109 v20:runner-standard-23 109s
+  25/109 v20:runner-off-23 113s
+  26/109 v20:live-m6-29 116s
+  27/109 v20:challenge-draft-29 120s
+  28/109 v20:challenge-nodraft-29 124s
+  29/109 v20:runner-standard-29 127s
+  30/109 v20:runner-off-29 132s
+  31/109 v20:runner-early-3 136s
+  32/109 v20:runner-early-7 139s
+  33/109 v20:runner-early-10 142s
+  34/109 v20:runner-early-14 145s
+  35/109 v20:runner-counter-6 150s
+  36/109 v20:runner-counter-15 155s
+  37/109 v20:live-notactic-13 159s
+  38/109 v20:live-noplayers-17 163s
+  39/109 v20:live-noroster-21 167s
+  40/109 bind-template:classic.m1:s3 173s
+  41/109 bind-template:classic.m1:s19 176s
+  42/109 bind-template:classic.m2:s7 180s
+  43/109 bind-template:classic.m2:s23 184s
+  44/109 bind-template:classic.m3:s11 188s
+  45/109 bind-template:classic.m3:s29 193s
+  46/109 bind-template:classic.m4:s19 197s
+  47/109 bind-template:classic.m4:s3 203s
+  48/109 bind-template:classic.m5:s23 211s
+  49/109 bind-template:classic.m5:s7 214s
+  50/109 bind-template:classic.m6:s29 217s
+  51/109 bind-template:classic.m6:s11 219s
+  52/109 bind-template:classic.m7:s3 223s
+  53/109 bind-template:classic.m7:s19 226s
+  54/109 bind-template:classic.m8:s7 230s
+  55/109 bind-template:classic.m8:s23 235s
+  56/109 bind-template:std:s11 241s
+  57/109 bind-template:std:s29 244s
+  58/109 bind-template:v2.three_lane_pressure:s19 248s
+  59/109 bind-template:v2.three_lane_pressure:s3 251s
+  60/109 bind-template:v2.jungle_invasion:s23 254s
+  61/109 bind-template:v2.jungle_invasion:s7 259s
+  62/109 bind-template:v2.bot_duo_pressure:s29 263s
+  63/109 bind-template:v2.bot_duo_pressure:s11 267s
+  64/109 bind-template:v2.mid_jungle_sync:s3 270s
+  65/109 bind-template:v2.mid_jungle_sync:s19 274s
+  66/109 bind-template:v2.support_roamer:s7 277s
+  67/109 bind-template:v2.support_roamer:s23 280s
+  68/109 bind-template:v2.dragon_pit_macro:s11 284s
+  69/109 bind-template:v2.dragon_pit_macro:s29 287s
+  70/109 bind-template:v2.top_solo_split:s19 291s
+  71/109 bind-template:v2.top_solo_split:s3 293s
+  72/109 bind-template:v2.mid_solo_split:s23 296s
+  73/109 bind-template:v2.mid_solo_split:s7 299s
+  74/109 bind-template:v2.hard_engage_stack:s29 302s
+  75/109 bind-template:v2.hard_engage_stack:s11 306s
+  76/109 bind-template:v2.protect_core_scaling:s3 308s
+  77/109 bind-template:v2.protect_core_scaling:s19 311s
+  78/109 bind-template:v2.standard_macro:s7 315s
+  79/109 bind-template:v2.standard_macro:s23 317s
+  80/109 bind-template:v2.defensive_hold:s11 321s
+  81/109 bind-template:v2.defensive_hold:s29 324s
+  82/109 bind-choice:jungle.focus=farm:s3 327s
+  83/109 bind-choice:jungle.focus=farm:s19 330s
+  84/109 bind-choice:jungle.focus=invade:s7 334s
+  85/109 bind-choice:jungle.focus=invade:s23 336s
+  86/109 bind-choice:lanes.mid.stance=split:s11 341s
+  87/109 bind-choice:lanes.mid.stance=split:s29 344s
+  88/109 bind-choice:seats.b5.mission=roam:s19 347s
+  89/109 bind-choice:seats.b5.mission=roam:s3 350s
+  90/109 bind-choice:seats.b5.mission=protect:s23 352s
+  91/109 bind-choice:seats.b5.mission=protect:s7 356s
+  92/109 bind-choice:teamfight.posture=passive:s29 358s
+  93/109 bind-choice:teamfight.posture=passive:s11 362s
+  94/109 bind-choice:teamfight.posture=aggressive:s3 365s
+  95/109 bind-choice:teamfight.posture=aggressive:s19 368s
+  96/109 bind-choice:objectives.tower=high:s7 374s
+  97/109 bind-choice:objectives.tower=high:s23 377s
+  98/109 bind-red:red-top_solo_split:s7 379s
+  99/109 bind-red:red-top_solo_split:s23 382s
+  100/109 bind-red:red-mid_solo_split:s11 385s
+  101/109 bind-red:red-mid_solo_split:s29 4296s

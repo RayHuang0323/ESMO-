@@ -1,0 +1,28 @@
+{
+ "url": "http://127.0.0.1:5643/ESMO-/",
+ "steps": {
+  "toBattle": true,
+  "banner": "OWNER PREVIEW · v21＋v22＋v23（路線安全＋塔邊決策）候選 未核准發布 · 本機隔離",
+  "speed4": "true",
+  "hud": "▾\n🦭\n德國海豹\n1\n3:56\n0\n黑曜守望\n🔥\n$0.8萬\n擊殺 · 比賽時間 · 擊殺\n$0.7萬",
+  "quickFinish": "true",
+  "endScreen": true,
+  "endText": "VICTORY 德國海豹 獲勝 · 25:58 · 38:26 · 🐉3 👑2",
+  "continue": "false",
+  "afterContinue": " | 重生 60s 藍 Buff 重生 53s 重生 62s Q · 猛衝斬 Q · 聖光束縛 Q · 旋律連射 ▾ 🦭 德國海豹 38 25:58 26 黑曜守望 🔥 $5.0萬 擊殺 · 比賽時間 · 擊殺 $4.4萬 Dragon Dr"
+ },
+ "stored": [
+  {
+   "k": "esmo.profile.v1",
+   "size": 164335,
+   "seen": {
+    "rulesetId=career.v23": 1,
+    "simVersion=moba-sim.v23": 1,
+    "jungleCamp=v2": 1,
+    "invasion=v2": 1,
+    "safeRoute=v2": 1
+   }
+  }
+ ],
+ "pageErrors": []
+}

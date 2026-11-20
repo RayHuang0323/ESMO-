@@ -1,0 +1,30 @@
+{
+ "gitHead": "8ae1f5f676b297734fd8248a3a1da3f100290a41",
+ "variant": "adaptive.v1.2",
+ "rows": [
+  {
+   "key": "balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-",
+   "ticks": 1772,
+   "winner": "blue",
+   "hash": "9f7b4627b2314cb4990b"
+  },
+  {
+   "key": "balanceTool.v24|v2.jungle_invasion|classic.m7|13|-",
+   "ticks": 2587,
+   "winner": "red",
+   "hash": "02e8fa0c48f2ee0adfad"
+  },
+  {
+   "key": "career.v24|v2.jungle_invasion|-|93001|mid",
+   "ticks": 1722,
+   "winner": "blue",
+   "hash": "e69e7200a53787d71c5c"
+  },
+  {
+   "key": "balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|120159|-",
+   "ticks": 6000,
+   "winner": null,
+   "hash": "8fab147f208dff05ecbe"
+  }
+ ]
+}

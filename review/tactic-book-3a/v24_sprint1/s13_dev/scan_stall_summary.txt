@@ -1,0 +1,27 @@
+matches 300  notOver 1  sides exposed 338/600
+stallMax seconds: p50=0 p75=15 p90=88.5 p95=150 p99=766 max=1803.5
+winners only: n=299 p50=0 p90=62 p95=111 p99=210 max=766
+threshold  30s: sides  64 (18.9% of exposed), matches  59/300 (19.7%)
+threshold  45s: sides  51 (15.1% of exposed), matches  46/300 (15.3%)
+threshold  60s: sides  44 (13.0% of exposed), matches  40/300 (13.3%)
+threshold  90s: sides  33 (9.8% of exposed), matches  29/300 (9.7%)
+threshold 120s: sides  23 (6.8% of exposed), matches  20/300 (6.7%)
+threshold 150s: sides  17 (5.0% of exposed), matches  15/300 (5.0%)
+threshold 180s: sides   9 (2.7% of exposed), matches   7/300 (2.3%)
+threshold 240s: sides   6 (1.8% of exposed), matches   4/300 (1.3%)
+threshold 300s: sides   5 (1.5% of exposed), matches   3/300 (1.0%)
+longest stalls:
+  inv 120159 red stallMax=1803.5s tExpose=19.9m end=50.0m over=false won=false firstWave=never
+  inv 120159 blue stallMax=1642s tExpose=22.6m end=50.0m over=false won=false firstWave=never
+  AB 120097 red stallMax=812s tExpose=22.8m end=36.3m over=true won=false firstWave=never
+  AB 120097 blue stallMax=766s tExpose=23.5m end=36.3m over=true won=true firstWave=36.3m
+  AB 120035 blue stallMax=364s tExpose=19.5m end=25.5m over=true won=false firstWave=never
+  BA 120149 blue stallMax=296s tExpose=18.0m end=23.0m over=true won=true firstWave=23.0m
+  inv 120061 red stallMax=230s tExpose=17.7m end=21.5m over=true won=false firstWave=never
+  inv 120141 blue stallMax=210s tExpose=22.3m end=25.8m over=true won=true firstWave=22.3m
+  AB 120043 blue stallMax=202.5s tExpose=17.1m end=20.5m over=true won=true firstWave=20.5m
+  inv 120003 red stallMax=176s tExpose=14.5m end=17.5m over=true won=true firstWave=17.5m
+  AB 120137 red stallMax=172s tExpose=17.7m end=20.6m over=true won=false firstWave=never
+  BA 120135 red stallMax=172s tExpose=21.6m end=24.5m over=true won=true firstWave=24.5m
+  inv 120101 blue stallMax=165s tExpose=21.8m end=24.5m over=true won=false firstWave=never
+  BA 120007 red stallMax=161.5s tExpose=19.3m end=22.0m over=true won=true firstWave=22.0m

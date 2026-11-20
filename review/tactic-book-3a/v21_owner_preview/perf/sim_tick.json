@@ -1,0 +1,40 @@
+{
+ "node": "v24.18.0",
+ "seeds": [
+  11,
+  13,
+  17,
+  19,
+  23
+ ],
+ "result": {
+  "career.v20": {
+   "matches": 5,
+   "ticks": 12671,
+   "simMinutes": 105.6,
+   "totalMs": 18994,
+   "meanMs": 1.499,
+   "p50": 1.18,
+   "p95": 3.366,
+   "p99": 5.518,
+   "max": 81.26,
+   "over8ms": 27,
+   "over16ms": 4,
+   "msPerSimSecond": 2.998
+  },
+  "career.v21": {
+   "matches": 5,
+   "ticks": 12088,
+   "simMinutes": 100.7,
+   "totalMs": 16796,
+   "meanMs": 1.389,
+   "p50": 1.094,
+   "p95": 3.257,
+   "p99": 5.264,
+   "max": 35.85,
+   "over8ms": 16,
+   "over16ms": 3,
+   "msPerSimSecond": 2.779
+  }
+ }
+}

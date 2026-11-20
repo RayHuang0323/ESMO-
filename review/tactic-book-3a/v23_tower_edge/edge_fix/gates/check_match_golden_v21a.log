@@ -1,0 +1,252 @@
+✅ P0 runner 載入的引擎類別＝src/LogicEngine.js 的同一個類別（探針三條路徑量到同一棵樹）
+✅ P1 fixture.gitHead＝本檔釘死的字面常數　0e3c0224
+✅ P2 fixture.fingerprint＝本檔釘死的字面常數　29140fe0cb5a4c86
+✅ F1 schema＝match_golden_v21a.v1　match_golden_v21a.v1
+✅ F2 案例數：v20 39（live 9、challenge 12、runner 18）＋模板 42＋提供的選擇 16＋紅方 binding 12＝109　v20 39、template 42、choice 16
+✅ F3 21 個模板（含 std）各有 2 個 seed 的案例
+✅ F4 fixture 內存的提供清單與其 binding-choice 案自洽（8 個非本來選擇，每個 2 個 seed；不比對戰術書現況）　jungle.focus=farm jungle.focus=invade lanes.mid.stance=split seats.b5.mission=roam seats.b5.mission=protect teamfight.posture=passive teamfight.posture=aggressive objectives.tower=high
+✅ F5 binding 案都是 live 路徑、紅方＝標準對手；每案有 bindingHash
+✅ F6 每案都有 digest／streamHash／resultHash／configure 序列
+✅ F8 紅方 binding 案（runner 路徑，紅方帶 splitLane/protectRole）的 streamHash 都與同 seed 紅方 std 的對照案（v20:runner-standard-<seed>）不同＝真的讀到了
+✅ F7 v20 fixture 沒變（案例數與 gitHead 同錄製時）
+✅ N0 原樣比對＝0 差異
+✅ N1 竄改一案的 streamHash ⇒ 報出該案　v20:live-m8-7: streamHash 7eb01497 -> 00000000
+✅ N2 竄改 resultHash 與 digest ⇒ 兩案都報出
+✅ N3 少一案（fixture 有、現在沒跑到）⇒ 報 missing　missing case (in fixture, not produced now): bind-template:classic.m6:s11
+✅ N4 多一案 ⇒ 報 extra　extra case (produced now, not in fixture): extra:case
+✅ N5 configure 引數雜湊不同 ⇒ 報 calls 差異　v20:live-m8-23: configure calls differ at #0
+✅ N6 案例順序改變 ⇒ 報 order
+✅ N8 fixture.gitHead 與釘死值不同 ⇒ provenance 檢查報出
+✅ N9 fixture.fingerprint 與釘死值不同 ⇒ provenance 檢查報出
+✅ N7 案例輸入（params）改變 ⇒ 報出
+✅ K0 修正表：schema、指向這份 fixture（gitHead／指紋相同）、恰好 12 案且全部是 Challenge 案、三欄、舊 resultHash＝fixture、標明是事後核准
+  1/109 v20:live-m4-3 5s
+  2/109 v20:challenge-draft-3 8s
+  3/109 v20:challenge-nodraft-3 11s
+  4/109 v20:runner-standard-3 14s
+  5/109 v20:runner-off-3 18s
+  6/109 v20:live-m8-7 22s
+  7/109 v20:challenge-draft-7 25s
+  8/109 v20:challenge-nodraft-7 27s
+  9/109 v20:runner-standard-7 29s
+  10/109 v20:runner-off-7 32s
+  11/109 v20:live-m4-11 36s
+  12/109 v20:challenge-draft-11 39s
+  13/109 v20:challenge-nodraft-11 41s
+  14/109 v20:runner-standard-11 43s
+  15/109 v20:runner-off-11 47s
+  16/109 v20:live-m4-19 50s
+  17/109 v20:challenge-draft-19 52s
+  18/109 v20:challenge-nodraft-19 54s
+  19/109 v20:runner-standard-19 58s
+  20/109 v20:runner-off-19 60s
+  21/109 v20:live-m8-23 63s
+  22/109 v20:challenge-draft-23 66s
+  23/109 v20:challenge-nodraft-23 68s
+  24/109 v20:runner-standard-23 72s
+  25/109 v20:runner-off-23 74s
+  26/109 v20:live-m6-29 76s
+  27/109 v20:challenge-draft-29 78s
+  28/109 v20:challenge-nodraft-29 81s
+  29/109 v20:runner-standard-29 84s
+  30/109 v20:runner-off-29 86s
+  31/109 v20:runner-early-3 89s
+  32/109 v20:runner-early-7 91s
+  33/109 v20:runner-early-10 93s
+  34/109 v20:runner-early-14 95s
+  35/109 v20:runner-counter-6 99s
+  36/109 v20:runner-counter-15 102s
+  37/109 v20:live-notactic-13 104s
+  38/109 v20:live-noplayers-17 107s
+  39/109 v20:live-noroster-21 109s
+  40/109 bind-template:classic.m1:s3 113s
+  41/109 bind-template:classic.m1:s19 115s
+  42/109 bind-template:classic.m2:s7 118s
+  43/109 bind-template:classic.m2:s23 121s
+  44/109 bind-template:classic.m3:s11 123s
+  45/109 bind-template:classic.m3:s29 126s
+  46/109 bind-template:classic.m4:s19 129s
+  47/109 bind-template:classic.m4:s3 133s
+  48/109 bind-template:classic.m5:s23 138s
+  49/109 bind-template:classic.m5:s7 140s
+  50/109 bind-template:classic.m6:s29 142s
+  51/109 bind-template:classic.m6:s11 144s
+  52/109 bind-template:classic.m7:s3 147s
+  53/109 bind-template:classic.m7:s19 149s
+  54/109 bind-template:classic.m8:s7 152s
+  55/109 bind-template:classic.m8:s23 156s
+  56/109 bind-template:std:s11 160s
+  57/109 bind-template:std:s29 162s
+  58/109 bind-template:v2.three_lane_pressure:s19 166s
+  59/109 bind-template:v2.three_lane_pressure:s3 168s
+  60/109 bind-template:v2.jungle_invasion:s23 170s
+  61/109 bind-template:v2.jungle_invasion:s7 174s
+  62/109 bind-template:v2.bot_duo_pressure:s29 176s
+  63/109 bind-template:v2.bot_duo_pressure:s11 180s
+  64/109 bind-template:v2.mid_jungle_sync:s3 182s
+  65/109 bind-template:v2.mid_jungle_sync:s19 185s
+  66/109 bind-template:v2.support_roamer:s7 188s
+  67/109 bind-template:v2.support_roamer:s23 191s
+  68/109 bind-template:v2.dragon_pit_macro:s11 194s
+  69/109 bind-template:v2.dragon_pit_macro:s29 197s
+  70/109 bind-template:v2.top_solo_split:s19 200s
+  71/109 bind-template:v2.top_solo_split:s3 202s
+  72/109 bind-template:v2.mid_solo_split:s23 205s
+  73/109 bind-template:v2.mid_solo_split:s7 208s
+  74/109 bind-template:v2.hard_engage_stack:s29 210s
+  75/109 bind-template:v2.hard_engage_stack:s11 214s
+  76/109 bind-template:v2.protect_core_scaling:s3 216s
+  77/109 bind-template:v2.protect_core_scaling:s19 219s
+  78/109 bind-template:v2.standard_macro:s7 222s
+  79/109 bind-template:v2.standard_macro:s23 225s
+  80/109 bind-template:v2.defensive_hold:s11 228s
+  81/109 bind-template:v2.defensive_hold:s29 231s
+  82/109 bind-choice:jungle.focus=farm:s3 233s
+  83/109 bind-choice:jungle.focus=farm:s19 236s
+  84/109 bind-choice:jungle.focus=invade:s7 239s
+  85/109 bind-choice:jungle.focus=invade:s23 242s
+  86/109 bind-choice:lanes.mid.stance=split:s11 245s
+  87/109 bind-choice:lanes.mid.stance=split:s29 248s
+  88/109 bind-choice:seats.b5.mission=roam:s19 251s
+  89/109 bind-choice:seats.b5.mission=roam:s3 253s
+  90/109 bind-choice:seats.b5.mission=protect:s23 255s
+  91/109 bind-choice:seats.b5.mission=protect:s7 259s
+  92/109 bind-choice:teamfight.posture=passive:s29 261s
+  93/109 bind-choice:teamfight.posture=passive:s11 265s
+  94/109 bind-choice:teamfight.posture=aggressive:s3 267s
+  95/109 bind-choice:teamfight.posture=aggressive:s19 270s
+  96/109 bind-choice:objectives.tower=high:s7 273s
+  97/109 bind-choice:objectives.tower=high:s23 276s
+  98/109 bind-red:red-top_solo_split:s7 278s
+  99/109 bind-red:red-top_solo_split:s23 280s
+  100/109 bind-red:red-mid_solo_split:s11 282s
+  101/109 bind-red:red-mid_solo_split:s29 285s
+  102/109 bind-red:red-protect_core_scaling:s19 288s
+  103/109 bind-red:red-protect_core_scaling:s3 291s
+  104/109 bind-red:red-mid_jungle_sync:s23 294s
+  105/109 bind-red:red-mid_jungle_sync:s7 296s
+  106/109 bind-red:red-std_mid.split:s29 300s
+  107/109 bind-red:red-std_mid.split:s11 302s
+  108/109 bind-red:both-bot_duo_vs_top_split:s3 305s
+  109/109 bind-red:both-bot_duo_vs_top_split:s19 307s
+✅ C0 案例清單＝fixture（沒有缺、沒有多、順序相同）
+✅ C v20:live-m4-3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:challenge-draft-3　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:challenge-nodraft-3　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:runner-standard-3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-off-3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-m8-7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:challenge-draft-7　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:challenge-nodraft-7　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:runner-standard-7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-off-7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-m4-11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:challenge-draft-11　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:challenge-nodraft-11　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:runner-standard-11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-off-11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-m4-19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:challenge-draft-19　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:challenge-nodraft-19　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:runner-standard-19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-off-19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-m8-23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:challenge-draft-23　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:challenge-nodraft-23　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:runner-standard-23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-off-23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-m6-29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:challenge-draft-29　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:challenge-nodraft-29　digest＋streamHash＋resultHash＋configure 序列＝fixture（resultHash 依版本事實修正表：只差三個身分欄位）
+✅ C v20:runner-standard-29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-off-29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-early-3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-early-7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-early-10　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-early-14　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-counter-6　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:runner-counter-15　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-notactic-13　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-noplayers-17　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C v20:live-noroster-21　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m1:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m1:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m2:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m2:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m3:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m3:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m4:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m4:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m5:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m5:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m6:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m6:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m7:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m7:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m8:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:classic.m8:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:std:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-template:std:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+❌ C bind-template:v2.three_lane_pressure:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.three_lane_pressure:s19: digest 1222.5:blue:33:4:42740:28328 -> 1219.0:blue:22:10:37381:31333; streamHash 20545148 -> 49baa434; resultHash 1d77b52d -> aac0b32d; configure calls differ at #8
+❌ C bind-template:v2.three_lane_pressure:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.three_lane_pressure:s3: digest 1340.5:red:11:20:33452:39444 -> 892.0:red:7:6:23674:25538; streamHash 2dc7af62 -> ff574f1a; resultHash cd068089 -> 0cef3214; configure calls differ at #8
+❌ C bind-template:v2.jungle_invasion:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.jungle_invasion:s23: digest 1355.0:blue:21:17:38744:35919 -> 932.5:red:8:10:24997:27347; streamHash ecdb59fd -> 7906e169; resultHash d304585f -> 5825423d; configure calls differ at #8
+❌ C bind-template:v2.jungle_invasion:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.jungle_invasion:s7: digest 985.0:blue:9:5:27849:24880 -> 1325.0:red:17:15:34893:36041; streamHash 2483897e -> 1a711400; resultHash 6c4536aa -> 8f7c2456; configure calls differ at #8
+❌ C bind-template:v2.bot_duo_pressure:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.bot_duo_pressure:s29: digest 932.0:red:2:15:22069:30123 -> 1048.0:red:6:19:25065:33497; streamHash e99175d -> 1dc1ee0; resultHash f864affc -> 72a42e84; configure calls differ at #8
+❌ C bind-template:v2.bot_duo_pressure:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.bot_duo_pressure:s11: digest 863.5:red:3:9:21587:26601 -> 1578.5:red:22:31:42832:48321; streamHash 758a97d3 -> 898af023; resultHash 3ec71c83 -> 1909a64a; configure calls differ at #8
+❌ C bind-template:v2.mid_jungle_sync:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_jungle_sync:s3: digest 1293.0:red:14:17:34703:37270 -> 892.0:red:7:6:23674:25538; streamHash cf3d5b42 -> ff574f1a; resultHash 02ff29f6 -> 0cef3214; configure calls differ at #8
+❌ C bind-template:v2.mid_jungle_sync:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_jungle_sync:s19: digest 904.5:red:3:4:21802:24430 -> 1219.0:blue:22:10:37381:31333; streamHash e1780b9c -> 49baa434; resultHash 9203ea11 -> aac0b32d; configure calls differ at #8
+❌ C bind-template:v2.support_roamer:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.support_roamer:s7: digest 910.0:red:5:7:22490:26186 -> 1325.0:red:17:15:34893:36041; streamHash 4da79efd -> 1a711400; resultHash c17676bc -> 8f7c2456; configure calls differ at #8
+❌ C bind-template:v2.support_roamer:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.support_roamer:s23: digest 1003.0:blue:7:7:27984:25616 -> 932.5:red:8:10:24997:27347; streamHash 3354a75 -> 7906e169; resultHash 0ccf9983 -> 5825423d; configure calls differ at #8
+❌ C bind-template:v2.dragon_pit_macro:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.dragon_pit_macro:s11: digest 1409.5:blue:28:14:44108:37260 -> 1578.5:red:22:31:42832:48321; streamHash eafd66cc -> 898af023; resultHash 9e4b03f2 -> 1909a64a; configure calls differ at #8
+❌ C bind-template:v2.dragon_pit_macro:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.dragon_pit_macro:s29: digest 876.0:red:3:8:20204:26255 -> 1048.0:red:6:19:25065:33497; streamHash 4c957f9a -> 1dc1ee0; resultHash fd923a0a -> 72a42e84; configure calls differ at #8
+❌ C bind-template:v2.top_solo_split:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.top_solo_split:s19: digest 859.0:blue:5:5:22646:24025 -> 1219.0:blue:22:10:37381:31333; streamHash f8859c96 -> 49baa434; resultHash 012f86b2 -> aac0b32d; configure calls differ at #8
+❌ C bind-template:v2.top_solo_split:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.top_solo_split:s3: digest 1196.5:red:5:17:27743:37194 -> 892.0:red:7:6:23674:25538; streamHash 3cffc33f -> ff574f1a; resultHash bf162dcd -> 0cef3214; configure calls differ at #8
+❌ C bind-template:v2.mid_solo_split:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_solo_split:s23: digest 879.0:red:7:7:25003:23942 -> 932.5:red:8:10:24997:27347; streamHash 8e81d954 -> 7906e169; resultHash bb6158c7 -> 5825423d; configure calls differ at #8
+❌ C bind-template:v2.mid_solo_split:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.mid_solo_split:s7: digest 866.0:red:9:5:22583:23936 -> 1325.0:red:17:15:34893:36041; streamHash 646b83eb -> 1a711400; resultHash 332932d8 -> 8f7c2456; configure calls differ at #8
+❌ C bind-template:v2.hard_engage_stack:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.hard_engage_stack:s29: digest 994.5:red:2:11:23391:29637 -> 1048.0:red:6:19:25065:33497; streamHash d8e27945 -> 1dc1ee0; resultHash 78772264 -> 72a42e84; configure calls differ at #8
+❌ C bind-template:v2.hard_engage_stack:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.hard_engage_stack:s11: digest 1375.0:red:16:23:35336:40667 -> 1578.5:red:22:31:42832:48321; streamHash 5b9a88d0 -> 898af023; resultHash 6b46286e -> 1909a64a; configure calls differ at #8
+❌ C bind-template:v2.protect_core_scaling:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.protect_core_scaling:s3: digest 809.5:red:2:3:19400:22536 -> 892.0:red:7:6:23674:25538; streamHash 76773f3e -> ff574f1a; resultHash 5f72f8ef -> 0cef3214; configure calls differ at #8
+❌ C bind-template:v2.protect_core_scaling:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.protect_core_scaling:s19: digest 996.5:blue:12:8:28985:26702 -> 1219.0:blue:22:10:37381:31333; streamHash ae48ee47 -> 49baa434; resultHash e2fbdced -> aac0b32d; configure calls differ at #8
+❌ C bind-template:v2.standard_macro:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.standard_macro:s7: digest 917.0:red:10:2:25380:23800 -> 1325.0:red:17:15:34893:36041; streamHash a723af8 -> 1a711400; resultHash 554c7ba6 -> 8f7c2456; configure calls differ at #8
+❌ C bind-template:v2.standard_macro:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.standard_macro:s23: digest 985.0:blue:12:2:30061:22677 -> 932.5:red:8:10:24997:27347; streamHash 8aa9e4e8 -> 7906e169; resultHash 626107c8 -> 5825423d; configure calls differ at #8
+❌ C bind-template:v2.defensive_hold:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.defensive_hold:s11: digest 1462.5:blue:22:17:42553:40437 -> 1578.5:red:22:31:42832:48321; streamHash b59b9403 -> 898af023; resultHash 018ef58d -> 1909a64a; configure calls differ at #8
+❌ C bind-template:v2.defensive_hold:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-template:v2.defensive_hold:s29: digest 907.5:red:0:16:22093:29708 -> 1048.0:red:6:19:25065:33497; streamHash 7b5e818b -> 1dc1ee0; resultHash 15a27469 -> 72a42e84; configure calls differ at #8
+❌ C bind-choice:jungle.focus=farm:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=farm:s3: configure calls differ at #8
+❌ C bind-choice:jungle.focus=farm:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=farm:s19: digest 904.0:red:11:2:26129:24035 -> 1219.0:blue:22:10:37381:31333; streamHash fcb7073d -> 49baa434; resultHash fe5de597 -> aac0b32d; configure calls differ at #8
+❌ C bind-choice:jungle.focus=invade:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=invade:s7: configure calls differ at #8
+❌ C bind-choice:jungle.focus=invade:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:jungle.focus=invade:s23: configure calls differ at #8
+❌ C bind-choice:lanes.mid.stance=split:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:lanes.mid.stance=split:s11: digest 892.5:blue:4:7:24645:24927 -> 1578.5:red:22:31:42832:48321; streamHash d7a07f5c -> 898af023; resultHash 2d90c994 -> 1909a64a; configure calls differ at #8
+❌ C bind-choice:lanes.mid.stance=split:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:lanes.mid.stance=split:s29: digest 942.5:red:2:14:21460:30248 -> 1048.0:red:6:19:25065:33497; streamHash fda1bcb2 -> 1dc1ee0; resultHash 8e1d3db1 -> 72a42e84; configure calls differ at #8
+❌ C bind-choice:seats.b5.mission=roam:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=roam:s19: configure calls differ at #8
+❌ C bind-choice:seats.b5.mission=roam:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=roam:s3: digest 818.0:red:3:3:20639:22752 -> 892.0:red:7:6:23674:25538; streamHash 4cbb6c75 -> ff574f1a; resultHash e7b720b2 -> 0cef3214; configure calls differ at #8
+❌ C bind-choice:seats.b5.mission=protect:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=protect:s23: digest 932.5:red:8:11:24922:27699 -> 932.5:red:8:10:24997:27347; streamHash 6fabc230 -> 7906e169; resultHash a3f4ddce -> 5825423d; configure calls differ at #8
+❌ C bind-choice:seats.b5.mission=protect:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:seats.b5.mission=protect:s7: configure calls differ at #8
+❌ C bind-choice:teamfight.posture=passive:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=passive:s29: digest 997.5:blue:3:10:24324:28438 -> 1048.0:red:6:19:25065:33497; streamHash 807af700 -> 1dc1ee0; resultHash 67aeeb1f -> 72a42e84; configure calls differ at #8
+❌ C bind-choice:teamfight.posture=passive:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=passive:s11: digest 1389.5:red:10:27:34766:42495 -> 1578.5:red:22:31:42832:48321; streamHash 3a1dfbf1 -> 898af023; resultHash 5df4871e -> 1909a64a; configure calls differ at #8
+❌ C bind-choice:teamfight.posture=aggressive:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=aggressive:s3: digest 1139.5:red:7:15:28754:34308 -> 892.0:red:7:6:23674:25538; streamHash 8f488b9b -> ff574f1a; resultHash e828f329 -> 0cef3214; configure calls differ at #8
+❌ C bind-choice:teamfight.posture=aggressive:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:teamfight.posture=aggressive:s19: digest 1014.0:red:11:12:26736:30103 -> 1219.0:blue:22:10:37381:31333; streamHash 913459be -> 49baa434; resultHash 2f9864df -> aac0b32d; configure calls differ at #8
+❌ C bind-choice:objectives.tower=high:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:objectives.tower=high:s7: digest 1439.5:blue:14:21:36900:40369 -> 1325.0:red:17:15:34893:36041; streamHash 7eea3494 -> 1a711400; resultHash 9120cae3 -> 8f7c2456; configure calls differ at #8
+❌ C bind-choice:objectives.tower=high:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture　bind-choice:objectives.tower=high:s23: digest 824.0:blue:0:7:21031:23984 -> 932.5:red:8:10:24997:27347; streamHash d4361602 -> 7906e169; resultHash 4a852919 -> 5825423d; configure calls differ at #8
+✅ C bind-red:red-top_solo_split:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-top_solo_split:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-mid_solo_split:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-mid_solo_split:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-protect_core_scaling:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-protect_core_scaling:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-mid_jungle_sync:s23　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-mid_jungle_sync:s7　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-std_mid.split:s29　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:red-std_mid.split:s11　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:both-bot_duo_vs_top_split:s3　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ C bind-red:both-bot_duo_vs_top_split:s19　digest＋streamHash＋resultHash＋configure 序列＝fixture
+✅ K1 修正表的 12 案全部成立（三欄＝新值、resultHash＝新值、換回舊值＝原 fixture）
+✅ K2 反向：竄改表的新值 ⇒ 抓到
+✅ K3 反向：竄改表的舊值 ⇒ 舊值重建對不上原 fixture ⇒ 抓到
+✅ K4 反向：結果多差一個表外欄位（時長 +1）⇒ 抓到
+✅ K5 反向：表多列一個非 Challenge 案 ⇒ K0 的結構規則不成立，而且走 correctionProblems 也不會被原諒（沒有挑戰結果）
+ℹ F4i（資訊，不計入通過數）戰術書目前提供清單 ≠ 錄製時（正當變動不算紅；要把新選項納入基準需刻意重錄並改 PINNED_*）：現在 phases.early.stance=aggressive phases.early.stance=defensive phases.mid.stance=defensive phases.late.stance=defensive phases.late.stance=scaling jungle.focus=farm jungle.focus=invade lanes.mid.stance=split seats.b5.mission=roam seats.b5.mission=protect teamfight.posture=passive teamfight.posture=aggressive objectives.tower=high
+ℹ 錄製時：moba-sim.v21 ／ 指紋 29140fe0cb5a4c86 ／ gitHead 0e3c0224
+ℹ 目前：moba-sim.v23 ／ 指紋 2a974b68ebf2c8f1（與錄製時不同——C2 改到語意檔時預期如此，不計入判定）
+
+Match Golden v21-A：97/137 FAIL
+EXIT 1

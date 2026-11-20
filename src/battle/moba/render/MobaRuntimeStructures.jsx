@@ -10,6 +10,13 @@
 //     ⇒ **不會**出現兩套塔。這條由 tools/check_moba_runtime_map_h1.mjs 把關。
 //
 //  ⚠ 本檔不 import LogicEngine、不 tick、不寫 store。
+//
+//  【Lag P0（2026-11-11）：塔身／塔冠／血條改成 InstancedMesh】
+//   量測（tools/owner_preview/perf_draw_sources.mjs）：20 座結構每幀固定約 118 個 draw call，而且全部 frustumCulled=false。
+//   塔身、塔冠、血條底、血條填色都是「同幾何＋同材質」的重複物件 ⇒ 依材質分組成 InstancedMesh（最多 10 個 draw call）。
+//   · 每個實例的矩陣與原本逐物件的 position／rotation／scale **同一組算式**（見 useFrame）；材質物件沒有換。
+//   · 地環**刻意不合批**：它是半透明、會與英雄腳下的陰影／地面特效重疊，合批會改變半透明排序。
+//   · 每座結構的 <group userData.structureId> 仍在（診斷工具靠它找塔的位置）；受擊晶片與拆塔碎片也還是獨立物件（平常隱藏）。
 // ============================================================================
 import React, { useMemo, useRef, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -47,6 +54,8 @@ const TOWER = Object.freeze({
   padY: layer("tower_pad", 0.94),      // 塔基頂面
 });
 const BAR = Object.freeze({ w: 6.4 * S, h: 0.5 * S });
+/** 合批的組別（＝ inst.current 的 key；一組一個 draw call）。 */
+const INSTANCED = Object.freeze(["shaftBlue", "shaftRed", "shaftDead", "crownBlue", "crownRed", "nexusCrownBlue", "nexusCrownRed", "barBg", "barBlue", "barRed"]);
 
 /**
  * 地環原本掛在 y = 0.2×1.7 = 0.34，但塔基頂面在 0.94、坑環在 0.86
@@ -65,6 +74,12 @@ const RING_Y = Object.freeze({
 export default function MobaRuntimeStructures({ structures = [], objectives = [], towerAnchors, frameRef = null }) {
   const reducedMotion = useReducedBattleMotion();
   const nodes = useRef(new Map());
+  //  InstancedMesh 的參照（key 見 INSTANCED）與每幀重用的暫存物件。
+  const inst = useRef({});
+  const tmp = useMemo(() => ({
+    m: new THREE.Matrix4(), p: new THREE.Vector3(), q: new THREE.Quaternion(), s: new THREE.Vector3(),
+    e: new THREE.Euler(), ident: new THREE.Quaternion(), off: new THREE.Vector3(), n: {},
+  }), []);
   //  H.2-flicker：掛載計數。閃爍的其中一個可能根因是「元件在對戰途中被反覆卸載重掛」
   //  （每次重掛都會有幾幀沒有東西可畫）。這裡如實記錄，讓 verifier 用數字判斷，
   //  而不是靠猜。⚠ 純觀測，不影響任何呈現。
@@ -128,49 +143,76 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
     Object.values(mats).forEach((m) => m.dispose());
   }, [geo, mats]);
 
+  //  每座結構的呈現錨點（與下方 JSX 的 anchorOf 同一來源），給每幀的實例矩陣用。
+  const anchors = useMemo(() => {
+    const out = new Map();
+    for (const s of structures) {
+      const a = towerAnchors?.get(s.id);
+      const w = a ? simToWorld(a, 0) : s.world;
+      out.set(s.id, { x: w.x, z: w.z, isNexus: s.type === "nexus" });
+    }
+    return out;
+  }, [structures, towerAnchors]);
+  const cap = Math.max(1, structures.length);
+  //  ref callback 必須是穩定的函式（每次 render 換新函式會讓 React 先以 null 再以物件重呼叫一次）。
+  const instRefs = useMemo(() => Object.fromEntries(INSTANCED.map((key) => [key, (im) => {
+    if (im) { im.count = 0; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); inst.current[key] = im; }
+    else delete inst.current[key];
+  }])), []);
+
   //  塔冠：活著時發光並隨血量高低微微下沉；被摧毀後藏起冠、留下殘骸環
   useFrame(({ clock, camera }) => {
     const t = clock.getElapsedTime();
     const live = frameRef?.current ?? null;
+    const { m, p, q, s: sc, e, ident, off, n: used } = tmp;
+    for (const k of INSTANCED) used[k] = 0;
+    //  把 tmp.m 寫進某一組的下一個實例（超過容量就略過；容量＝結構數，正常不會發生）。
+    const put = (key) => {
+      const im = inst.current[key];
+      if (im && used[key] < im.instanceMatrix.count) im.setMatrixAt(used[key]++, m);
+    };
     for (const s of (live?.structures ?? structures)) {
       const n = nodes.current.get(s.id);
       if (!n) continue;
-      n.crown.visible = s.alive;
+      const a = anchors.get(s.id) ?? { x: s.world?.x ?? 0, z: s.world?.z ?? 0, isNexus: s.type === "nexus" };
+      const blue = s.team === "blue";
       n.ring.visible = true;
       n.ring.material = s.alive
-        ? (s.team === "blue" ? mats.ringBlue : mats.ringRed)
+        ? (blue ? mats.ringBlue : mats.ringRed)
         : mats.objDead;
       //  塔身：活著是完整量體；被摧毀後塌成殘骸樁（不隱藏 ⇒ 看得出「這裡曾經有一座塔」）
-      if (n.shaft) {
+      if (!a.isNexus) {
         const dead = !s.alive;
-        n.shaft.material = dead ? mats.shaftDead
-          : (s.team === "blue" ? mats.shaftBlue : mats.shaftRed);
         const k = dead ? 0.3 : 1;
-        n.shaft.scale.y = k;
-        n.shaft.position.y = TOWER.padY + (TOWER.shaftH * k) / 2;
+        m.compose(p.set(a.x, TOWER.padY + (TOWER.shaftH * k) / 2, a.z), ident, sc.set(1, k, 1));
+        put(dead ? "shaftDead" : (blue ? "shaftBlue" : "shaftRed"));
       }
       if (s.alive) {
         const damage = (s.damageDelta ?? 0) > 0 ? Math.max(0, 1 - (s.damageProgress ?? 0)) : 0;
-        n.crown.position.x = Math.sin(t * 55 + n.phase) * damage * 0.32 * S;
-        n.crown.position.z = Math.cos(t * 49 + n.phase) * damage * 0.22 * S;
         const shot = live?.effects?.find(fx => fx.sourceId === s.id && fx.style === 'tower' && fx.phase === 'cast');
         const charge = shot ? Math.sin(Math.PI * (shot.phaseProgress ?? 0)) : 0;
-        n.crown.position.y = n.baseY + (reducedMotion ? 0 : charge * .35 * S);
-        n.crown.rotation.y = reducedMotion ? n.phase : (live?.ts ?? 0) * .3 + n.phase;
         //  血量低 ⇒ 冠變暗（不換材質，只調 emissiveIntensity 的共用值不行 ⇒ 用 scale 表達）
-        const k = 0.55 + 0.45 * (s.displayHpRatio ?? s.hpRatio);
-        n.crown.scale.setScalar(k * (1 + (reducedMotion ? 0 : charge * .16)));
+        const k = (0.55 + 0.45 * (s.displayHpRatio ?? s.hpRatio)) * (1 + (reducedMotion ? 0 : charge * .16));
+        p.set(
+          a.x + Math.sin(t * 55 + n.phase) * damage * 0.32 * S,
+          n.baseY + (reducedMotion ? 0 : charge * .35 * S),
+          a.z + Math.cos(t * 49 + n.phase) * damage * 0.22 * S,
+        );
+        q.setFromEuler(e.set(0, reducedMotion ? n.phase : (live?.ts ?? 0) * .3 + n.phase, 0));
+        m.compose(p, q, sc.set(k, k, k));
+        put(a.isNexus ? (blue ? "nexusCrownBlue" : "nexusCrownRed") : (blue ? "crownBlue" : "crownRed"));
+        //  血條：billboard（朝向相機），黑底＋實際 HP 填色；填色往相機方向墊 0.06 並靠左縮放。
+        const hp = Math.max(0.001, Math.min(1, s.displayHpRatio ?? s.hpRatio ?? 0));
+        const by = n.baseY + 3.0 * S;
+        m.compose(p.set(a.x, by, a.z), camera.quaternion, sc.set(BAR.w * 1.08, BAR.h * 1.55, 1));
+        put("barBg");
+        off.set(-(BAR.w / 2) * (1 - hp), 0, 0.06 * S).applyQuaternion(camera.quaternion);
+        m.compose(p.set(a.x + off.x, by + off.y, a.z + off.z), camera.quaternion, sc.set(BAR.w * hp, BAR.h, 1));
+        put(blue ? "barBlue" : "barRed");
       }
       if (n.wasAlive === undefined) n.wasAlive = s.alive;
       if (n.wasAlive && !s.alive) n.destroyAt = t;
       n.wasAlive = s.alive;
-      if (n.barGroup && n.barFill) {
-        n.barGroup.visible = s.alive;
-        n.barGroup.quaternion.copy(camera.quaternion);
-        const hp = Math.max(0.001, Math.min(1, s.displayHpRatio ?? s.hpRatio ?? 0));
-        n.barFill.scale.set(BAR.w * hp, BAR.h, 1);
-        n.barFill.position.x = -(BAR.w / 2) * (1 - hp);
-      }
       if (n.damage) {
         const active = s.alive && (s.damageDelta ?? 0) > 0 && (s.damageProgress ?? 1) < 1;
         n.damage.visible = active;
@@ -194,6 +236,12 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
         }
       }
     }
+    for (const k of INSTANCED) {
+      const im = inst.current[k];
+      if (!im) continue;
+      im.count = used[k];
+      im.instanceMatrix.needsUpdate = true;
+    }
   });
 
   const anchorOf = (s) => {
@@ -211,38 +259,9 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
         const baseY = (isNexus ? 11.5 : 7.2) * S;
         return (
           <group key={s.id} position={[w.x, 0, w.z]} userData={{ structureId: s.id, type: s.type }}>
-            {/* 塔身：只有防禦塔要補；主堡量體由地圖的 base 圖層畫，補了會重疊 */}
-            {!isNexus && (
-              <mesh
-                ref={(m) => {
-                  if (!m) return;
-                  const prev = nodes.current.get(s.id) ?? {};
-                  nodes.current.set(s.id, { ...prev, shaft: m, baseY, phase: (s.id.length % 7) * 0.9 });
-                }}
-                geometry={geo.shaft}
-                material={s.team === "blue" ? mats.shaftBlue : mats.shaftRed}
-                position={[0, TOWER.padY + TOWER.shaftH / 2, 0]}
-                frustumCulled={false}
-                userData={{ part: "tower-shaft" }}
-              />
-            )}
-            {/*  ⚠ 手機版問題標記 #3：crown/ring 的 visible 與 material 每幀由 useFrame
-                直接改（見上方），不是走 React re-render。跟 MobaRuntimeHeroes 同一個
-                「動態 mesh 沒關 frustumCulled」病灶，地圖靜態量體已關、這裡漏了。 */}
             <mesh
               ref={(m) => {
                 if (!m) { nodes.current.delete(s.id); return; }
-                const prev = nodes.current.get(s.id) ?? {};
-                nodes.current.set(s.id, { ...prev, crown: m, baseY, phase: (s.id.length % 7) * 0.9 });
-              }}
-              geometry={isNexus ? geo.nexusCrown : geo.crown}
-              material={s.team === "blue" ? mats.crownBlue : mats.crownRed}
-              position={[0, baseY, 0]}
-              frustumCulled={false}
-            />
-            <mesh
-              ref={(m) => {
-                if (!m) return;
                 const prev = nodes.current.get(s.id) ?? {};
                 nodes.current.set(s.id, { ...prev, ring: m, baseY, phase: (s.id.length % 7) * 0.9 });
               }}
@@ -253,29 +272,6 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
               scale={isNexus ? 1.7 : 1}
               frustumCulled={false}
             />
-            {/* 所有可攻擊結構都使用與英雄相同的黑底／實際 HP 填色 billboard。 */}
-            <group
-              ref={(g) => {
-                if (!g) return;
-                const prev = nodes.current.get(s.id) ?? {};
-                nodes.current.set(s.id, { ...prev, barGroup: g, baseY, phase: (s.id.length % 7) * 0.9 });
-              }}
-              position={[0, baseY + 3.0 * S, 0]}
-            >
-              <mesh geometry={geo.bar} material={mats.barBg}
-                scale={[BAR.w * 1.08, BAR.h * 1.55, 1]} renderOrder={48}
-                frustumCulled={false} userData={{ part: "structure-hp-bg" }} />
-              <mesh
-                ref={(m) => {
-                  if (!m) return;
-                  const prev = nodes.current.get(s.id) ?? {};
-                  nodes.current.set(s.id, { ...prev, barFill: m, baseY, phase: (s.id.length % 7) * 0.9 });
-                }}
-                geometry={geo.bar} material={s.team === "blue" ? mats.barBlue : mats.barRed}
-                position={[0, 0, 0.06 * S]} scale={[BAR.w, BAR.h, 1]} renderOrder={49}
-                frustumCulled={false} userData={{ part: "structure-hp-fill" }}
-              />
-            </group>
             {/* 局部受擊晶片與拆塔碎裂只反映 prev→snapshot 轉場，不改任何結構狀態。 */}
             <mesh
               ref={(m) => {
@@ -307,6 +303,20 @@ export default function MobaRuntimeStructures({ structures = [], objectives = []
           </group>
         );
       })}
+
+      {/*  Lag P0：塔身／塔冠／血條的合批（矩陣每幀由 useFrame 寫入；count 由存活狀態決定）。
+           塔身：只有防禦塔要補；主堡量體由地圖的 base 圖層畫，補了會重疊。
+           所有可攻擊結構都使用與英雄相同的黑底／實際 HP 填色 billboard。 */}
+      <instancedMesh key={`shaftBlue-${cap}`} ref={instRefs.shaftBlue} args={[geo.shaft, mats.shaftBlue, cap]} frustumCulled={false} userData={{ part: "tower-shaft" }} />
+      <instancedMesh key={`shaftRed-${cap}`} ref={instRefs.shaftRed} args={[geo.shaft, mats.shaftRed, cap]} frustumCulled={false} userData={{ part: "tower-shaft" }} />
+      <instancedMesh key={`shaftDead-${cap}`} ref={instRefs.shaftDead} args={[geo.shaft, mats.shaftDead, cap]} frustumCulled={false} userData={{ part: "tower-shaft" }} />
+      <instancedMesh key={`crownBlue-${cap}`} ref={instRefs.crownBlue} args={[geo.crown, mats.crownBlue, cap]} frustumCulled={false} userData={{ part: "tower-crown" }} />
+      <instancedMesh key={`crownRed-${cap}`} ref={instRefs.crownRed} args={[geo.crown, mats.crownRed, cap]} frustumCulled={false} userData={{ part: "tower-crown" }} />
+      <instancedMesh key={`nexusCrownBlue-${cap}`} ref={instRefs.nexusCrownBlue} args={[geo.nexusCrown, mats.crownBlue, cap]} frustumCulled={false} userData={{ part: "tower-crown" }} />
+      <instancedMesh key={`nexusCrownRed-${cap}`} ref={instRefs.nexusCrownRed} args={[geo.nexusCrown, mats.crownRed, cap]} frustumCulled={false} userData={{ part: "tower-crown" }} />
+      <instancedMesh key={`barBg-${cap}`} ref={instRefs.barBg} args={[geo.bar, mats.barBg, cap]} renderOrder={48} frustumCulled={false} userData={{ part: "structure-hp-bg" }} />
+      <instancedMesh key={`barBlue-${cap}`} ref={instRefs.barBlue} args={[geo.bar, mats.barBlue, cap]} renderOrder={49} frustumCulled={false} userData={{ part: "structure-hp-fill" }} />
+      <instancedMesh key={`barRed-${cap}`} ref={instRefs.barRed} args={[geo.bar, mats.barRed, cap]} renderOrder={49} frustumCulled={false} userData={{ part: "structure-hp-fill" }} />
 
       {/*  feature/moba-spectacle-vision：營地／大型目標底下原本有一圈**常駐**的存活狀態環
            （objective-ring，存活金色、陣亡灰色）。存活與重生已由野怪本體與名牌「重生 Ns」表達，

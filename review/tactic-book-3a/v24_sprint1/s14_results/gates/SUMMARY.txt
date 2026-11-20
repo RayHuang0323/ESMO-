@@ -1,0 +1,7 @@
+check_s2_contract_v24 exit=0 42s | 55/55 passed
+check_simulation_version_gate exit=0 2s | simulationVersion Gate：106/106 PASS
+check_tactic_exec_v24 exit=0 318s | check_tactic_exec_v24：19/19 PASS  (315.8 s)
+check_layer_isolation_v24 exit=0 220s | check_layer_isolation_v24：8/8 PASS  (215.9 s)
+regress exit=0 63s | 結束率 15/15 | 平均時長 20.8分 | 平均擊殺 14.0 | 0殺場 0 | 撤退鎖死 1 | 平均hot 63% | 平均破塔 15.4/12
+regress2 exit=0 64s | 節奏門檻 8/8 通過
+npm_run_build exit=0 32s | built in 28.54s

@@ -28,7 +28,7 @@ import {
 //    mobaNavigation（由地圖 wallItems 柵格化的距離場 + 動態結構圓）。
 //    `gameData.WALLS` 只剩 legacy 畫面在用，不再是碰撞來源。
 import {
-  HERO_RADIUS, moveTowards, projectToWalkable, findPath, recenterToCorridor, lineWalkable, structureList,
+  HERO_RADIUS, moveTowards, projectToWalkable, findPath, recenterToCorridor, lineWalkable, structureList, isWalkable,
 } from "./battle/moba/nav/mobaNavigation.js";
 //  H.2：塔位的單一真實來源（由地圖呈現座標推回 lane t），取代 posOnLane(lane, TOWER_T)。
 import {
@@ -49,6 +49,8 @@ import { curveKAt, phaseIndexOf } from './battle/moba/heroPowerCurve.js';
 import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './platform/contracts/objectiveLayout.js';
 //  Phase 3a-C2：戰術資料（knobs／Tactical Identity／戰術階段）的唯一讀取入口（static 模式＝設定值原樣回傳）。
 import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.js";
+import { createTaskArbitrationLedger, movedTarget as arbMovedV24 } from "./battle/moba/tactics/taskArbitrationLedger.js";
+import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, invadeLead as tacInvadeLeadV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24, endgameEscortLane as tacEndgameLaneV24, endgameTick13 as tacEndgameTickV24 } from "./battle/moba/tactics/tacticExecV24.js";
 
 const MAP_EDGE_PAD = 3;
 //  H.2 導航調參：近場預判距離與重算路徑的冷卻（tick）。
@@ -87,7 +89,52 @@ const OBJ_SKILL_ULT = new Set([
   "split-projectile", "silence-target", "execute-strike", "multi-strike",
 ]);
 
+//  jungleCamp "v2" 的站位內縮距離：要小於打野對營地成員的傷害距離（3.5，campHits 的 dist 條件）。
+const CAMP_STAND_INSET = 2.0;
+//  invasion "v2" 的參數（moba-sim.v22 候選）。只在規則集帶 invasion 層時使用；全部是常數、沒有擲骰。
+//   windowSec     入侵窗：從開局算起（舊式 35 秒只夠走到入口）。野怪第 30 秒才出生，所以要留時間走過去、打、搶。
+//   abortHp       入侵者血量低於這個比例就放棄（高於一般撤退門檻：入侵是賭一把，不是拚命）
+//   abortFoes     身邊 nearRadius 內的敵方英雄 ≥ 這個數 ⇒ 被圍，放棄
+//   waitSpawnSec  沒有可打的敵方營地時，只要有一座在這麼多秒內會出生 ⇒ 往入口走、站著等；否則放棄。
+//                 40 秒＝涵蓋開局的走位：野怪第 30 秒才出生，而入侵者第 0 秒就出發（第一版只設 12 秒，開局第一刻就判「沒目標」，15/15 次入侵都立刻結束）。
+const INVASION_V2 = Object.freeze({ windowSec: 90, abortHp: 0.55, abortFoes: 2, nearRadius: 14, waitSpawnSec: 40 });
+//  safeRoute 層 v1（moba-sim.v23 候選；Owner 2026-11-12：入侵後撤退繞向敵塔送死）的常數：
+//   危險半徑＝敵塔射程＋towerSafePad（與 M1.7 塔區退出同一個餘裕）；繞行點放在危險半徑外 detourExtra。
+//   「目的地本身就在危險半徑內」＝有意進塔（圍攻／推線／越塔）⇒ 交給既有的塔區規則，不繞。
+const SAFE_ROUTE_V1 = Object.freeze({ detourExtra: 1.5 });
+//  safeRoute v2（v23 塔邊決策）：避塔後的承諾秒數（同一座塔擋下的任務，承諾期內不再派回去，除非進塔有理由）。
+//  4 秒＝涵蓋決策層一次重判（decisionEvalPeriod）加上 v19 塔區承諾上限 3.5 秒。
+const TOWER_EDGE_V23 = Object.freeze({ commitSec: 4 });
+//  safeRoute v3（v23 塔邊等待小修，Owner 2026-11-13）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
+//  v2 的等待只要決策層對那座塔還有退的理由就無限延長（複驗 160 場生涯 31 次 ≥ 20 秒，3/9 段在等待中被消耗到 22–40% 血）。
+//   hurtDrop／hurtRecentSec  這段等待中從最高血量掉了 hurtDrop 以上，而且最近 hurtRecentSec 秒內還在受傷 ⇒ 持續受傷
+//   threatRadius             這個半徑內敵方英雄多於己方（不含自己）⇒ 敵方威脅
+//   recoverEtaSec            安全時，以脫戰回復速率（含脫戰延遲）估計回到進塔血量門檻的秒數；超過就不原地等，改撤退
+//   waveSoonDist             己方最前面的小兵離那座塔不到「射程＋這個距離」⇒ 兵線即將抵達，值得等（同 waitWaveRange 28）
+//   maxWaitSec               「回血等待」與「等兵線」共同的上限（後備，不是主要出口）；到期依血量撤退或退回己方兵線
+//  safeRoute v4（v23 導航與移動安全）：撤退被危險圓包住時挑路線的成本＝路線格數＋exposureK × 落在被放行那座塔射程內的格數。
+//  只比射程內格數會選到「少挨 1 格、卻多繞 55 格深入敵方野區」的路線（藍方上路一、二塔之間的口袋實測）；4＝射程內一格當成五格。
+const NAV_SAFETY_V23 = Object.freeze({ exposureK: 4, tryDisks: 3 });
+const TOWER_EDGE_REDECIDE_V23 = Object.freeze({ hurtDrop: 0.08, hurtRecentSec: 1.5, threatRadius: 10, recoverEtaSec: 8, waveSoonDist: 28, maxWaitSec: 12 });
+/** 線段 a→b 是否穿過圓 c（{x, y, r}）。safeRoute v1 用。 */
+function segHitsDisk(a, b, c) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  const u = L2 > 0 ? Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / L2)) : 0;
+  return Math.hypot(a.x + dx * u - c.x, a.y + dy * u - c.y) < c.r;
+}
+
 export class LogicEngine {
+  //  jungleCamp 層（moba-sim.v22 候選）：這個引擎的 configureMatch 認得 `jungleCamp`；組裝器以此做能力檢查。
+  static SUPPORTS_JUNGLE_CAMP = true;
+  //  invasion 層（moba-sim.v22 候選）：configureMatch 認得 `invasion`；組裝器以此做能力檢查。
+  static SUPPORTS_INVASION = true;
+  //  safeRoute 層（moba-sim.v23 候選）：configureMatch 認得 `safeRoute`；組裝器以此做能力檢查。
+  static SUPPORTS_SAFE_ROUTE = true;
+  //  moba-sim.v24 候選：configureMatch 認得 `taskArbitration`（任務仲裁紀錄）與 `taskCommit`（推進是否承諾）；組裝器以此做能力檢查。
+  static SUPPORTS_TASK_ARBITRATION = true;
+  static SUPPORTS_TASK_COMMIT = true;
+  //  v24 Sprint 1：configureMatch 認得 `tacticExec`（自適應戰術執行 TacticalExecution.v1）。
+  static SUPPORTS_TACTIC_EXEC = true;
   //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
   //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
   static SUPPORTS_LANE_FRAME = true;
@@ -367,9 +414,48 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
-  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null } = {}) {
+  configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
+    //  moba-sim.v24 候選：taskArbitration "v1" ⇒ 引擎每 tick 替每名存活英雄記一筆仲裁紀錄（this.arbLedger；只寫，不影響任何決定）。
+    //  taskCommit "v19push" ⇒ v19 再任務承諾也承諾「推進」（預設 "v19"＝現狀）。缺少這兩個鍵 ⇒ 舊行為逐位元不變。
+    this._arbV24 = taskArbitration === "v1";
+    this._commitPushV24 = taskCommit === "v19push";
+    if (this._arbV24) this.arbLedger = createTaskArbitrationLedger();
+    //  v24 Sprint 1：tacticExec "adaptive.v1" ⇒ 入侵不再開局擲骰決定（亂數照樣抽，序列不變），改成整場評估（battle/moba/tactics/tacticExecV24.js）。
+    //  需要 invasion "v2" 的執行生命週期；缺少這個鍵 ⇒ 舊行為逐位元不變。
+    //  Sprint 1.1：tacticExec "adaptive.v1.1"＝同一個模組的修正版（編隊、動態撤退、野區機會成本）；"adaptive.v1" 原樣保留（工具重現 Sprint 1）。
+    //  Sprint 1.2：再加 "adaptive.v1.2"（經濟、敵方營信念、傾向人數下限、威脅校準；都在 tacticExecV24.js）。
+    //  Sprint 1.3：再加 "adaptive.v1.3"（終局護線；模組同上）。
+    this._tacExecV24 = (tacticExec === "adaptive.v1" || tacticExec === "adaptive.v1.1" || tacticExec === "adaptive.v1.2" || tacticExec === "adaptive.v1.3") && invasion === "v2";
+    this._tacExecVariant = this._tacExecV24 ? tacticExec : null;
+    //  safeRoute 層（moba-sim.v23 候選）：缺少 ⇒ 舊行為逐位元不變。"v1" ⇒ 移動目標的直線路線穿過敵塔射程時先繞行（_safeWaypointV23）。
+    //  "v2"（塔邊決策，同一個 v23 候選）＝v1 全部行為＋避塔有真正可走的射程外出口、不被站位層改寫成原地（_towerExitV23）。
+    //  "v3"（2026-11-13 Owner 核准的塔邊等待小修；同一個 v23 候選）＝v2 全部行為＋塔邊等待依情境重新決策（_towerEdgeRedecideV23）。
+    //  "v2" 保留且逐位元不變（新行為全部只看 _edgeRedecideV23）。
+    //  "v4"（2026-11-13 導航與移動安全，同一個 v23 候選）＝v3 全部行為＋_navSafetyV23：
+    //   ① 導航鏡射補上門牙塔（mobaNavigation.mirrorAlive；紅方半場的投影／尋路不再用錯的門牙塔存亡狀態）
+    //   ② 塔內徑向退出不把撤退的人推進「四周都是危險圓」的死路 ③ 撤退被危險圓包住時走射程內最短的路線穿出去（_retreatCrossV23）。
+    //  "v1"／"v2"／"v3" 保留且逐位元不變（新行為全部只看 _navSafetyV23）。
+    //  "v5"（2026-11-14，同一個 v23 候選）＝v4 全部行為＋_quietPocketV23：v4 的獨立驗證（Seeds 97001–97079）量到生涯被塔擊殺 +25.5%
+    //  （登記判準 N3 不通過，照實保留）——v3 把人推進口袋之後，附近沒有敵人時其實會在射程外回城；v4 一律要他穿塔回家，殘血時被塔打死。
+    //   v5：口袋安靜（recall 啟動距離內沒有敵方英雄）⇒ 照 v3 退到射程外、原地等回城；只有受威脅時才照 v4 穿出去。
+    //  "v4" 保留且逐位元不變（新行為只看 _quietPocketV23）。
+    this._safeRouteV23 = safeRoute === "v1" || safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";
+    this._towerEdgeV23 = safeRoute === "v2" || safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";
+    this._edgeRedecideV23 = safeRoute === "v3" || safeRoute === "v4" || safeRoute === "v5";
+    this._navSafetyV23 = safeRoute === "v4" || safeRoute === "v5";
+    this._quietPocketV23 = safeRoute === "v5";
+    if (this._safeRouteV23) this.routeObs = { blue: { pathPlans: 0, radialExits: 0, blockedFallback: 0 }, red: { pathPlans: 0, radialExits: 0, blockedFallback: 0 } };
+    if (this._towerEdgeV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { edgeExits: 0, edgeExitRotated: 0, edgeExitNone: 0, edgeHolds: 0, edgeReleases: 0, blockedRelaxed: 0, blockedHold: 0 });
+    if (this._navSafetyV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { radialSkipped: 0, blockedCross: 0 });
+    if (this._quietPocketV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { pocketExit: 0, pocketHold: 0 });
+    if (this._edgeRedecideV23) for (const sd of ["blue", "red"]) Object.assign(this.routeObs[sd], { edgeWaitRecover: 0, edgeWaitWave: 0, edgeRegroupHurt: 0, edgeRegroupThreat: 0, edgeRegroupNoWave: 0, edgeRegroupCap: 0, edgeRegroupHp: 0, edgeRetreatHurt: 0, edgeRetreatThreat: 0, edgeRetreatSlow: 0 });
+    //  invasion 層（moba-sim.v22 候選）：同 jungleCamp——缺少 ⇒ 舊行為逐位元不變。"v2" ⇒ 擲中入侵的打野真的去打敵方野怪（_invadeStepV2），有失敗條件。
+    this._invasionV2 = invasion === "v2";
+    //  jungleCamp 層（moba-sim.v22 候選）：組裝器只在 ruleset 帶 jungleCamp 層時傳這個鍵；缺少 ⇒ 舊行為逐位元不變。
+    //  "v2" ⇒ 打野打營地時站在成員朝營地中心的內側（_campStandTarget），不再被營地的 leash 重置打斷（Buff 營反覆回滿血）。
+    this._jungleCampV2 = jungleCamp === "v2";
     this.tacticMeta = meta;
     const kBlue = blue ?? this._neutralKnobs(), kRed = red ?? this._neutralKnobs();
     //  Tactical Identity v1（moba-sim.v17）：同一份戰術契約的決策投影（toEngineTacticIdentity）。
@@ -393,6 +479,10 @@ export class LogicEngine {
     const E = () => ({ invadeAttempts: 0, invadeKills: 0, topGanks: 0, midGanks: 0, botGanks: 0, gankKills: 0,
       dragonContests: 0, baronContests: 0, groupedFights: 0, splitPushActions: 0, towerPushes: 0, supportRoams: 0 });
     this.exec = { blue: E(), red: E() };
+    //  invasion "v2" 的觀測（只在這個層存在；不放進 exec：那個物件的形狀被 replay 契約與既有驗證器讀取）。
+    //   starts 開始入侵的人次；reached 走到敵方野怪旁（≤ 3.5，打得到）；campDmg 對敵方野怪造成的傷害；steals 搶到（目標營被我方清掉）；
+    //   contactSecs 入侵期間身邊 nearRadius 內有敵方英雄的秒數；ends 每種結束原因的次數：hp／outnumbered／retreat／no_target／lost_race／stolen／killed／window。
+    if (this._invasionV2) { const O = () => ({ starts: 0, reached: 0, campDmg: 0, steals: 0, contactSecs: 0, afterArrivalSecs: 0, ends: {} }); this.invObs = { blue: O(), red: O() }; }
     //  Combat Decision C：遊走決策的**純觀測**計數。
     //  ⚠ 刻意不放進 `exec`：那個物件的形狀被 replay 契約與既有驗證器讀取，
     //    加欄位會擴散到不相干的斷言。這裡是獨立命名空間，只在 playerStatsOn 時遞增。
@@ -422,9 +512,10 @@ export class LogicEngine {
       //   無能力層 ⇒ 原值。無論如何 rng2 都抽一次 ⇒ 序列不變。
       const jg = this._modById(side[0] + "2");
       const invadeChance = jg ? clamp(K.invadeChance + jg.invadeAdj, 0, 1) : K.invadeChance;
-      if (this.rng2() < invadeChance) { st.invadeUntil = this.rules.invasionWindow ?? 50; this.exec[side].invadeAttempts++; }
+      if (this.rng2() < invadeChance && !this._tacExecV24) { st.invadeUntil = this._invasionV2 ? INVASION_V2.windowSec : (this.rules.invasionWindow ?? 50); this.exec[side].invadeAttempts++; }
       this._tac[side] = st;
     }
+    if (this._tacExecV24) this.tacExec = createTacticExecState(this);
   }
   /**
    * 團戰參與率：依 hot 是否為龍/巴龍坑取對應 knob（原固定 0.6）。
@@ -1292,14 +1383,370 @@ export class LogicEngine {
    * ⇒ 站在中心永遠打不到，只能靠懲戒（射程 6.5）收掉；懲戒一收斂，清野就崩（實測 5 分鐘擊殺 10.2 → 4.0 隻）。
    * 決定性：最近的存活成員，同距離以 id 排序。
    */
-  _campStandTarget(p, camp) {
+  _campStandTarget(p, camp, forceInset = false) {
     let best = null, bestD = Infinity;
     for (const m of camp.members ?? []) {
       if (!m.alive || m.hp <= 0) continue;
       const d = dist(p.pos, m.pos);
       if (d < bestD || (d === bestD && String(m.id) < String(best?.id))) { best = m; bestD = d; }
     }
-    return best ? { x: best.pos.x, y: best.pos.y } : null;
+    if (!best) return null;
+    //  jungleCamp "v2"：站在**成員朝營地出生點的內側**，離成員 CAMP_STAND_INSET（< 傷害距離 3.5）。
+    //  舊式站在成員座標上，英雄會被推到成員的外側：Buff 營跟班離中心約 4.9，英雄從外側打 ⇒ 離出生點 > campLeashRange（7.5）
+    //  ⇒ 營地判定目標離開、回營、**回滿血並清掉傷害歸屬**（最後一隻 8→84 無限循環）。內側站位的離出生點距離恆 < 成員離中心的距離。
+    if (this._jungleCampV2 === true || forceInset === true) {
+      const hx = camp.homePos.x - best.pos.x, hy = camp.homePos.y - best.pos.y, hd = Math.hypot(hx, hy);
+      const k = hd > 1e-6 ? Math.min(CAMP_STAND_INSET, hd) / hd : 0;
+      return { x: best.pos.x + hx * k, y: best.pos.y + hy * k };
+    }
+    return { x: best.pos.x, y: best.pos.y };
+  }
+
+  /**
+   * 野區入侵 v2 的每 tick 決策（moba-sim.v22 候選）。回傳 { tgt, st }＝這個英雄這一刻的移動目標；回傳 null ⇒ 入侵結束（呼叫端回到一般行為）。
+   * 不擲骰、不讀 rng；失敗條件見 INVASION_V2 的說明。打野以外（中路，invadeWithMid）只到入口支援，並共用同一組失敗條件。
+   */
+  _invadeStepV2(p, S, alive) {
+    const side = p.side, O = this.invObs[side];
+    let I = p._invV2;
+    if (!I) { I = p._invV2 = { done: false, camp: null, dmg0: 0, dmgMax: 0, arrivedAt: null, contact: 0, lastT: this.t }; O.starts++; }
+    if (I.done) return null;
+    const dtv = this.t - I.lastT; I.lastT = this.t;
+    const foes = alive.filter((q) => q.side !== side && !q.dead && dist(q.pos, p.pos) < INVASION_V2.nearRadius);
+    if (foes.length) I.contact += dtv;
+    //  v24 Sprint 1：自適應入侵把依傾向的中止門檻帶在 I.abortHp（設計 §3.4）；舊的開局入侵沒有這個欄位 ⇒ 原式。
+    if (p.hp < p.maxHp * (I.abortHp ?? INVASION_V2.abortHp)) return this._invadeEndV2(p, "hp");
+    if (foes.length >= INVASION_V2.abortFoes) return this._invadeEndV2(p, "outnumbered");
+    if (p.role !== "jungle") return { tgt: INVASION_POINT[side], st: "入侵" };
+    const foeSide = side === "blue" ? "red" : "blue";
+    const camps = (this.neutrals?.camps ?? []).filter((c) => c.side === foeSide);
+    let camp = I.camp ? camps.find((c) => c.id === I.camp) ?? null : null;
+    if (camp && !camp.alive) return this._invadeEndV2(p, camp.killerTeam === side ? "stolen" : "lost_race");
+    if (!camp) {
+      const up = camps.filter((c) => c.alive);
+      camp = up.find((c) => c.type === "buff") ?? up.slice().sort((a, b) => dist(p.pos, a.pos) - dist(p.pos, b.pos) || String(a.id).localeCompare(String(b.id)))[0] ?? null;
+      if (!camp) {
+        const soon = camps.some((c) => Number.isFinite(c.respawnAt) && c.respawnAt - this.t <= INVASION_V2.waitSpawnSec);
+        return soon ? { tgt: INVASION_POINT[side], st: "入侵" } : this._invadeEndV2(p, "no_target");
+      }
+      I.camp = camp.id; I.dmg0 = camp.dmgBy[side]; I.dmgMax = I.dmg0;
+    }
+    I.dmgMax = Math.max(I.dmgMax, camp.dmgBy[side]);
+    const near = (camp.members ?? []).filter((m) => m.alive && m.hp > 0).reduce((b, m) => Math.min(b, dist(p.pos, m.pos)), Infinity);
+    if (I.arrivedAt === null && near <= 3.5) { I.arrivedAt = this.t; O.reached++; }
+    const stand = this._campStandTarget(p, camp, true);
+    return stand ? { tgt: stand, st: "入侵" } : { tgt: INVASION_POINT[side], st: "入侵" };
+  }
+  _invadeEndV2(p, reason) {
+    const O = this.invObs?.[p.side], I = p._invV2;
+    if (!O || !I || I.done) return null;
+    I.done = true; I.reason = reason;
+    O.ends[reason] = (O.ends[reason] ?? 0) + 1;
+    if (reason === "stolen") O.steals++;
+    O.campDmg += Math.max(0, I.dmgMax - I.dmg0);
+    O.contactSecs += I.contact;
+    if (I.arrivedAt !== null) O.afterArrivalSecs += this.t - I.arrivedAt;
+    return null;
+  }
+
+  /**
+   * safeRoute v1（moba-sim.v23 候選）：把「這一刻的移動目標」換成不穿過敵塔射程的下一個路點。
+   *
+   * 根因（2026-11-12 逐 tick 追蹤，tool seed 17 紅方打野）：導航（_navMove）只避牆、只算距離，不知道塔；
+   * M1.7 的塔區規則只處理「目標點／目前位置在射程內」，而且**撤退中整段跳過**。
+   * ⇒ 入侵結束後回自家野區、或撤退回泉水，直線剛好擦過敵塔 ⇒ 吃塔、在射程邊緣來回、最後撤退穿過射程被塔收頭。
+   *
+   * 規則（決定性、不讀 rng、不改任何傷害／血量／門檻）：
+   *  · 危險圓＝敵塔射程＋towerSafePad（與 M1.7 塔區退出同一個餘裕）。
+   *  · 目的地在某座敵塔的危險圓內 ⇒ 有意進塔（圍攻、推線、越塔）⇒ 那座塔不處理（交給既有塔區規則）。
+   *  · 己方小兵正在扛塔、而我不是塔的威脅目標，且我不在撤退 ⇒ 那座塔不處理（推線的正常路過）。
+   *  · 已在某個危險圓內、而且還朝塔心方向走 ⇒ 先沿「塔 → 我」徑向退出（最短離開射程）。
+   *  · 在外面、直線穿過危險圓 ⇒ 用既有的 A*（findPath）多傳「危險圓不可走」求一條路，跟著走；
+   *    路徑快取到目的地移動 > 6 或 2 秒後重算。求不到路 ⇒ 維持原目標（＝舊行為，記在 routeObs.blockedFallback）。
+   *  · 直線不再穿過危險圓 ⇒ 直接回到原目的地。
+   *  第一版只在塔旁放一個繞行點：中路塔夾在牆與河岸之間，兩側繞行點都在牆裡 ⇒ 退回舊行為（實測 10 場塔殺沒有下降），所以改成尋路。
+   */
+  _safeWaypointV23(p, tgt) {
+    if (!tgt) return tgt;
+    const R = this.rules, pad = R.towerSafePad ?? 2.5, O = this.routeObs?.[p.side];
+    const alive = this._aliveStructs;
+    const disks = [];
+    let inside = null;
+    for (const tw of Object.values(this.towers)) {
+      if (tw.hp <= 0 || tw.side === p.side) continue;
+      const rad = this.towerRange(tw) + pad;
+      if (dist(tgt, tw.pos) <= rad) continue;                       // 目的地就在塔下＝有意進塔
+      if (!p.retreating && this._towerMinionsInRange(tw) > 0 && !((p.towerThreatUntil ?? 0) > this.t)) continue;
+      const dIn = dist(p.pos, tw.pos);
+      if (dIn < rad) {
+        //  已在圓內：直線本來就在離開（與「塔 → 我」同向）⇒ 不處理；否則記下（取最近的一座）。
+        if ((tgt.x - p.pos.x) * (p.pos.x - tw.pos.x) + (tgt.y - p.pos.y) * (p.pos.y - tw.pos.y) < 0 && (!inside || dIn < inside.d)) inside = { tw, rad, d: dIn };
+        continue;                                                   // 起點在圓內的那座不放進尋路的禁區（否則起點不可走）
+      }
+      disks.push({ x: tw.pos.x, y: tw.pos.y, r: rad });
+    }
+    const crosses = (a, b) => disks.some((c) => segHitsDisk(a, b, c));
+    if (inside) {
+      const { tw, rad, d } = inside;
+      const k = (rad + SAFE_ROUTE_V1.detourExtra) / (d || 1);
+      const out = { x: clampMapX(tw.pos.x + (p.pos.x - tw.pos.x) * k), y: clampMapY(tw.pos.y + (p.pos.y - tw.pos.y) * k) };
+      //  safeRoute v4：撤退中，徑向出口那一側若回不了家（出了圓就被危險圓包住，例如敵方一、二塔之間）⇒ 不用它，
+      //  改走下面的尋路（這座塔不在禁區內 ⇒ 直接穿過它、避開其他塔）。正在照「穿出去」的路線走時也不再往回推。
+      let skip = this._navSafetyV23 && p.retreating && (this._crossActiveV23(p, tgt) || !this._exitLeadsHomeV23(p, tw, out, tgt, disks, rad, alive));
+      //  safeRoute v5：出口那一側回不了家，但那裡安靜 ⇒ 照 v3 退出去（在射程外回城比殘血穿塔安全）。正在照穿出路線走時不回頭。
+      if (skip && this._quietPocketV23 && !this._crossActiveV23(p, tgt) && !this._pocketThreatV23(p, out)) { skip = false; if (O) O.pocketExit++; }
+      if (skip) { if (O) O.radialSkipped++; }
+      else if (isWalkable(out.x, out.y, HERO_RADIUS, alive) && !disks.some((c) => Math.hypot(out.x - c.x, out.y - c.y) < c.r)) { if (O) O.radialExits++; return out; }
+    }
+    if (!disks.length || !crosses(p.pos, tgt)) { p._srPath = null; return tgt; }
+    let S = p._srPath;
+    //  safeRoute v5：正在口袋裡等（S.hold）時一受威脅就立刻重算（改成穿出去），不等 2 秒的快取到期。
+    if (!S || Math.hypot(S.gx - tgt.x, S.gy - tgt.y) > 6 || this.t >= S.until || (S.hold && this._pocketThreatV23(p, p.pos))) {
+      const path = findPath(p.pos, tgt, HERO_RADIUS, alive, disks);
+      if (O) O.pathPlans++;
+      if ((!path || !path.length) && this._towerEdgeV23) return this._safeRouteBlockedV23(p, tgt, disks, alive);
+      if (!path || !path.length) { p._srPath = null; if (O) O.blockedFallback++; return tgt; }
+      S = p._srPath = { gx: tgt.x, gy: tgt.y, path, until: this.t + 2 };
+    }
+    if (S.stop) return this._stopShortV23(p, tgt, disks);
+    if (S.hold) return { x: p.pos.x, y: p.pos.y };
+    while (S.path.length > 1 && dist(p.pos, S.path[0]) < 1.5) S.path.shift();
+    //  往前看：取最遠一個「直線可走、且不穿過危險圓」的路點（格點折線很碎，逐格走會在轉角磨）。
+    let w = S.path[0];
+    for (let i = Math.min(S.path.length - 1, 12); i > 0; i--) {
+      const q = S.path[i];
+      if (!crosses(p.pos, q) && lineWalkable(p.pos, q, HERO_RADIUS, alive)) { w = q; break; }
+    }
+    return w;
+  }
+
+  /**
+   * safeRoute v2（moba-sim.v23 候選「塔邊決策」）：避塔時的射程外出口。
+   * 舊式（M1.7／決策層 FALLBACK）＝沿「塔 → 我」徑向取射程＋餘裕的一點，不檢查走不走得到：
+   *  · 那一點常落在牆裡；_navMove 會把目標推回通道中心，推回的點可能又在射程內 ⇒ 站在塔下挨打。
+   * 新式（決定性、不讀 rng）：從徑向開始左右各 15° 輪流試到 ±120°，取第一個
+   *  「推回通道後仍在危險半徑外、可走、不在別座敵塔的危險半徑內、從目前位置直線走得到」的點。
+   * 全部不成立 ⇒ 回 null，呼叫端改回泉水（再由 _safeWaypointV23 尋一條避開敵塔的路）。
+   */
+  _towerExitV23(p, tw) {
+    const R = this.rules, alive = this._aliveStructs, pad = R.towerSafePad ?? 2.5, O = this.routeObs?.[p.side];
+    const rad = this.towerRange(tw) + pad;
+    const others = [];
+    for (const t of Object.values(this.towers)) {
+      if (t === tw || t.hp <= 0 || t.side === p.side) continue;
+      others.push({ x: t.pos.x, y: t.pos.y, r: this.towerRange(t) + pad });
+    }
+    const a0 = Math.atan2(p.pos.y - tw.pos.y, p.pos.x - tw.pos.x);
+    for (let i = 0; i <= 16; i++) {
+      const k = i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2);
+      const a = a0 + k * (Math.PI / 12);
+      const c = { x: clampMapX(tw.pos.x + Math.cos(a) * rad), y: clampMapY(tw.pos.y + Math.sin(a) * rad) };
+      const g = recenterToCorridor(c.x, c.y, HERO_RADIUS, alive);
+      if (dist(g, tw.pos) < rad - 0.5) continue;
+      if (!isWalkable(g.x, g.y, HERO_RADIUS, alive)) continue;
+      if (others.some((o) => Math.hypot(g.x - o.x, g.y - o.y) < o.r)) continue;
+      if (!lineWalkable(p.pos, g, HERO_RADIUS, alive)) continue;
+      if (O) { O.edgeExits++; if (k !== 0) O.edgeExitRotated++; }
+      return g;
+    }
+    if (O) O.edgeExitNone++;
+    return null;
+  }
+  /**
+   * safeRoute v2：帶危險圓求不到路時（v1 ＝退回原目標，直線穿過敵塔）。
+   *  ① 禁區縮回純射程（不含 towerSafePad）再求一次：目的地剛好在危險半徑外、被格點／投影推進禁區的情況大多因此有路。
+   *  ② 仍然沒有：不在撤退 ⇒ 沿直線走到第一個危險圓外就停（不穿塔；之後由再任務換事做）；
+   *     撤退中 ⇒ 照舊走原目標（停在原地多半更危險；次數記在 routeObs.blockedFallback）。
+   *  結果快取 2 秒（與成功路徑同一個重算條件），不每 tick 重跑 A*。
+   */
+  _safeRouteBlockedV23(p, tgt, disks, alive) {
+    const O = this.routeObs?.[p.side], pad = this.rules.towerSafePad ?? 2.5;
+    const tight = disks.map((c) => ({ x: c.x, y: c.y, r: c.r - pad }));
+    const path = findPath(p.pos, tgt, HERO_RADIUS, alive, tight);
+    if (O) O.pathPlans++;
+    if (path && path.length) {
+      if (O) O.blockedRelaxed++;
+      p._srPath = { gx: tgt.x, gy: tgt.y, path, until: this.t + 2 };
+      while (p._srPath.path.length > 1 && dist(p.pos, p._srPath.path[0]) < 1.5) p._srPath.path.shift();
+      return p._srPath.path[0];
+    }
+    if (p.retreating && this._quietPocketV23 && !this._pocketThreatV23(p, p.pos)) {
+      //  safeRoute v5：被危險圓包住，但這裡安靜 ⇒ 留在射程外原地等（既有的回城引導在冷卻結束後會接手）；結果快取 2 秒，受威脅時立刻重算。
+      if (O) O.pocketHold++;
+      p._srPath = { gx: tgt.x, gy: tgt.y, path: [], hold: true, until: this.t + 2 };
+      return { x: p.pos.x, y: p.pos.y };
+    }
+    if (p.retreating && this._navSafetyV23) {
+      //  safeRoute v4：撤退被危險圓包住 ⇒ 不再直線回家（會穿過沿途每一座塔），改走「只穿過一座塔、在它射程內走最短」的路線。
+      const cross = this._retreatCrossV23(p, tgt, tight, alive);
+      if (cross) {
+        if (O) O.blockedCross++;
+        p._srPath = { gx: tgt.x, gy: tgt.y, path: cross, cross: true, until: this.t + 2 };
+        while (p._srPath.path.length > 1 && dist(p.pos, p._srPath.path[0]) < 1.5) p._srPath.path.shift();
+        return p._srPath.path[0];
+      }
+    }
+    if (p.retreating) { p._srPath = null; if (O) O.blockedFallback++; return tgt; }
+    if (O) O.blockedHold++;
+    p._srPath = { gx: tgt.x, gy: tgt.y, path: [], stop: true, until: this.t + 2 };
+    return this._stopShortV23(p, tgt, disks);
+  }
+  /**
+   * safeRoute v5：pos 這一點對 p 來說有沒有敵方英雄威脅。
+   * 與既有回城引導的啟動條件同一個距離（recallSafeDist × 1.4）、同一種讀法（存活的敵方英雄）⇒「安靜」＝這裡站得住、回城起得來。
+   * 規則集沒有回城引導 ⇒ 一律當成有威脅（＝v4 行為）。
+   */
+  _pocketThreatV23(p, pos) {
+    const R = this.rules;
+    if (!R.recallChannel) return true;
+    const r = R.recallSafeDist * 1.4;
+    for (const q of this.players) if (!q.dead && q.side !== p.side && dist(q.pos, pos) < r) return true;
+    return false;
+  }
+  /** safeRoute v4：這名英雄是否正照著「穿出去」的路線走（同一個目的地、還沒到重算時間）。 */
+  _crossActiveV23(p, tgt) {
+    const S = p._srPath;
+    return !!(S && S.cross && this.t < S.until && Math.hypot(S.gx - tgt.x, S.gy - tgt.y) <= 6);
+  }
+  /**
+   * safeRoute v4：徑向出口 out（在塔 tw 的危險圓外）之後回得了家嗎？
+   * ＝從 out 到目的地，把這座塔與其他敵塔都當禁區（純射程，不含餘裕）仍求得到路。結果依「人＋塔」快取 2 秒。
+   */
+  _exitLeadsHomeV23(p, tw, out, tgt, disks, rad, alive) {
+    const C = p._exitHomeV23;
+    if (C && C.tw === tw && this.t < C.until) return C.ok;
+    const pad = this.rules.towerSafePad ?? 2.5;
+    const all = disks.map((c) => ({ x: c.x, y: c.y, r: c.r - pad }));
+    all.push({ x: tw.pos.x, y: tw.pos.y, r: rad - pad });
+    const path = findPath(out, tgt, HERO_RADIUS, alive, all);
+    const ok = !!(path && path.length);
+    p._exitHomeV23 = { tw, ok, until: this.t + 2 };
+    return ok;
+  }
+  /**
+   * safeRoute v4：撤退被危險圓包住時的路線。離我最近的 3 個危險圓各試一次「只放行這一座」，
+   * 取成本（路線格數＋NAV_SAFETY_V23.exposureK × 落在那座塔射程內的格數）最小的一條（相同 ⇒ 先試到的，也就是較近的那座）。
+   * 都求不到 ⇒ null（呼叫端照舊走原目標）。決定性、不讀 rng。
+   */
+  _retreatCrossV23(p, tgt, tight, alive) {
+    const order = tight.map((c, i) => ({ i, d: Math.hypot(p.pos.x - c.x, p.pos.y - c.y) - c.r })).sort((a, b) => a.d - b.d || a.i - b.i).slice(0, NAV_SAFETY_V23.tryDisks);
+    let best = null;
+    for (const { i } of order) {
+      const c = tight[i];
+      const path = findPath(p.pos, tgt, HERO_RADIUS, alive, tight.filter((_, j) => j !== i));
+      if (!path || !path.length) continue;
+      let exposed = 0;
+      for (const q of path) if (Math.hypot(q.x - c.x, q.y - c.y) < c.r) exposed++;
+      const cost = path.length + NAV_SAFETY_V23.exposureK * exposed;
+      if (!best || cost < best.cost) best = { path, cost };
+    }
+    return best ? best.path : null;
+  }
+  /** safeRoute v2：沿「我 → 目標」直線，走到第一個危險圓之外 0.5 就停（已在邊上 ⇒ 原地）。 */
+  _stopShortV23(p, tgt, disks) {
+    const L = dist(p.pos, tgt) || 1, ux = (tgt.x - p.pos.x) / L, uy = (tgt.y - p.pos.y) / L;
+    let s = 0;
+    while (s + 1 <= L) {
+      const q = { x: p.pos.x + ux * (s + 1), y: p.pos.y + uy * (s + 1) };
+      if (disks.some((c) => Math.hypot(q.x - c.x, q.y - c.y) < c.r + 0.5)) break;
+      s += 1;
+    }
+    return { x: p.pos.x + ux * s, y: p.pos.y + uy * s };
+  }
+  /** safeRoute v2：避塔（決策層 FALLBACK 或移動層 M1.7）＝取出口＋記下塔邊承諾（TOWER_EDGE_V23.commitSec 秒）。回傳移動目標。 */
+  _towerEdgeAvoidV23(p, tw) {
+    const exit = this._towerExitV23(p, tw);
+    p._edgeV23 = { tw, exit, until: this.t + TOWER_EDGE_V23.commitSec };
+    return exit ?? BASE[p.side];
+  }
+  /**
+   * safeRoute v2：塔邊承諾。剛因這座塔避塔的人，承諾期內新任務的目標若又落在這座塔的危險半徑（射程＋towerSafePad）內，
+   * 先用同一個塔區判定（_towerZoneV17：有兵線、拆得動的圍攻、驗證過的強殺）看「現在進塔有沒有理由」：
+   *  有 ⇒ 解除承諾、照常進塔（合理推塔／越塔不被一律禁止）；沒有 ⇒ 停在出口等，不把同一個危險任務每 tick 重派回去。
+   * 判定點＝目標往塔心方向、射程內 0.5 的那一點（目標若本來就在射程內就用目標本身）。
+   * 舊式：任務目標落在「射程外、但決策層塔區風險半徑（射程＋2）內」不會被攔 ⇒ 走到出口 → 原任務拉回 → 決策層又避塔（v23 實測重派 212 次／20 場）。
+   */
+  _towerEdgeHoldV23(p, st, effLane, tgt, alive) {
+    const E = p._edgeV23, tw = E.tw, rng = this.towerRange(tw), O = this.routeObs?.[p.side];
+    if (this.t >= E.until || tw.hp <= 0) { p._edgeV23 = null; return tgt; }
+    if (!tgt || dist(tgt, tw.pos) >= rng + (this.rules.towerSafePad ?? 2.5)) return tgt;
+    const d0 = dist(tgt, tw.pos) || 1, k = Math.min(d0, rng - 0.5) / d0;
+    const at = { x: tw.pos.x + (tgt.x - tw.pos.x) * k, y: tw.pos.y + (tgt.y - tw.pos.y) * k };
+    const zoneObjective = this._siegeTargetV19(p, st) ?? this.frontStructure(p.side, effLane, p.pos);
+    const z = this._towerZoneV17(p, alive, zoneObjective, at);
+    //  兩層都同意才解除：移動層（M1.7）允許進塔，而且決策層對同一座塔沒有退的理由（否則一進風險半徑決策層就 FALLBACK，又是一次來回）。
+    const fbWhy = p._fbV23?.tw === tw && p._fbV23.why;
+    if ((!z.inZone || z.allow) && !fbWhy) { p._edgeV23 = null; if (O) O.edgeReleases++; return tgt; }
+    if (!E.exit) return tgt;
+    //  理由還在 ⇒ 承諾延長（否則承諾一到期，原任務又把人拉回風險半徑，決策層再避塔：約每 4.5 秒一次的慢速來回）。
+    E.until = this.t + TOWER_EDGE_V23.commitSec;
+    //  safeRoute v3：理由還在時不再一律原地等，依情境重新決策（見 _towerEdgeRedecideV23）。回傳 null ⇒ 照 v2 在出口等。
+    if (this._edgeRedecideV23) { const r = this._towerEdgeRedecideV23(p, E, tw, rng, alive, O); if (r) return r; }
+    p.intent = "塔邊等待時機"; if (O) O.edgeHolds++;
+    return E.exit;
+  }
+  /**
+   * safeRoute v3（v23 塔邊等待小修）：塔邊等待時，決策層對那座塔仍有退的理由 ⇒ 依情境決定「繼續等」「退回己方兵線」或「撤退」。
+   * 進塔的出口（兵線抵達、血量回到門檻、塔倒、任務不再指向塔下）全部沿用 v2 的判定，在呼叫本函式之前已處理。
+   *  ① 持續受傷或敵方威脅：血量低於回場門檻 ⇒ 撤退（交給既有撤退／退守／回城生命週期）；否則 ⇒ 退回己方兵線（離開被消耗的位置）。
+   *  ② 安全、血量不足：估計脫戰回復到門檻的秒數 ≤ recoverEtaSec ⇒ 原地回血等待；否則 ⇒ 低於回場門檻就撤退，不然退回己方兵線。
+   *  ③ 安全、血量足夠（理由是沒有兵線、敵方有人守塔）：己方兵線即將抵達 ⇒ 等；否則 ⇒ 退回己方兵線。
+   *  ②③ 的等待共用上限 maxWaitSec（後備）。退回兵線後，承諾照常延長，直到 v2 的放行條件成立（兵線到塔下、理由消失）或撤退。
+   * 撤退不在這裡直接改 retreating：記下時間，下一 tick 在既有撤退判定之後套用（這一 tick 的移動速度與目標不受影響）。
+   * 回傳 null ⇒ 照 v2 在出口等（呼叫端寫 intent 與 edgeHolds）；否則回傳移動目標。
+   */
+  _towerEdgeRedecideV23(p, E, tw, rng, alive, O) {
+    const K = TOWER_EDGE_REDECIDE_V23, hpF = p.hp / p.maxHp;
+    const H = (E.h ??= { t0: this.t, peak: hpF, mode: "wait" });
+    if (hpF > H.peak) H.peak = hpF;
+    const hpNeed = p._fbV23?.hpNeed ?? 0, retAt = p._retAtV23 ?? 0.6;
+    let foes = 0, allies = 0;
+    for (const q of alive) {
+      if (q === p || q.dead || dist(q.pos, p.pos) > K.threatRadius) continue;
+      if (q.side === p.side) allies++; else foes++;
+    }
+    const hurt = H.peak - hpF >= K.hurtDrop && this.t - (p.lastDamagedAt ?? -Infinity) <= K.hurtRecentSec;
+    const threat = foes > 0 && foes > allies;
+    const retreat = (why) => { p._edgeV23 = null; p._edgeRetreatV23 = this.t; p.intent = "塔邊受壓，撤退"; if (O) O[why]++; return E.exit; };
+    const regroup = (why) => { if (H.mode !== "regroup") { H.mode = "regroup"; if (O) O[why]++; } };
+    if (hurt || threat) {
+      if (hpF < retAt) return retreat(hurt ? "edgeRetreatHurt" : "edgeRetreatThreat");
+      regroup(hurt ? "edgeRegroupHurt" : "edgeRegroupThreat");
+    } else if (H.mode === "wait") {
+      const waited = this.t - H.t0;
+      if (hpF < hpNeed) {
+        const RG = this.rules.regen, rate = RG ? RG.outOfCombatPctPerSec : 0.02;
+        const delay = RG ? Math.max(0, RG.outOfCombatDelaySec - (this.t - (p.lastDamagedAt ?? -Infinity))) : 0;
+        if (waited <= K.maxWaitSec && delay + (hpNeed - hpF) / rate <= K.recoverEtaSec) { if (O) O.edgeWaitRecover++; return null; }
+        if (hpF < retAt) return retreat("edgeRetreatSlow");
+        regroup("edgeRegroupHp");
+      } else if (waited <= K.maxWaitSec && this._ownWaveSoonV23(p, tw, rng + K.waveSoonDist)) { if (O) O.edgeWaitWave++; return null; }
+      else regroup(waited > K.maxWaitSec ? "edgeRegroupCap" : "edgeRegroupNoWave");
+    }
+    if (H.mode !== "regroup") return null;
+    p.intent = "退回己方兵線";
+    return this._edgeRegroupPosV23(p, tw, rng + (this.rules.towerSafePad ?? 2.5)) ?? E.exit;
+  }
+  /** safeRoute v3：這座塔那一路的己方最前面小兵；沒有 ⇒ null。 */
+  _ownLeadMinionV23(p, tw) {
+    const arr = this.lanes[tw.lane]?.[p.side === "blue" ? "bm" : "rm"];
+    if (!arr || !arr.length) return null;
+    return posOnLane(tw.lane, p.side === "blue" ? Math.max(...arr.map((m) => m.t)) : Math.min(...arr.map((m) => m.t)));
+  }
+  /** safeRoute v3：己方兵線是否即將抵達這座塔（最前面的小兵離塔 ≤ within）。 */
+  _ownWaveSoonV23(p, tw, within) {
+    const lead = this._ownLeadMinionV23(p, tw);
+    return !!lead && dist(lead, tw.pos) <= within;
+  }
+  /**
+   * safeRoute v3：退回己方兵線的位置＝這一路己方最前面的小兵；它已經在危險半徑內（兵線正在進塔）⇒ null（呼叫端改在出口等）。
+   * 這一路沒有己方小兵 ⇒ 己方這一路的前線塔（等下一波）；也沒有 ⇒ null。
+   */
+  _edgeRegroupPosV23(p, tw, danger) {
+    const lead = this._ownLeadMinionV23(p, tw);
+    if (lead) return dist(lead, tw.pos) < danger ? null : lead;
+    const own = this.lanes[tw.lane] ? this.frontTower(p.side === "blue" ? "red" : "blue", tw.lane) : null;
+    return own ? { x: own.pos.x, y: own.pos.y } : null;
   }
 
   _applyHeroSkillControl(target, kind, duration) {
@@ -3057,6 +3504,12 @@ export class LogicEngine {
     const towerFallback = inTowerRisk &&
       ((!hasWave && towerDefenders > 0 && alliesN === 1) ||
        (!hasWave && towerDefenders > alliesN) || hpRatio < fallbackHp);
+    //  safeRoute v2（v23 塔邊決策）：只記錄「撇開距離，這座塔現在有沒有讓我退的理由」，給塔邊承諾用（_towerEdgeHoldV23）。
+    //  不改任何決策；層不存在 ⇒ 不寫。
+    if (this._towerEdgeV23) p._fbV23 = enemyTower ? { tw: enemyTower,
+      why: (!hasWave && towerDefenders > 0 && alliesN === 1) || (!hasWave && towerDefenders > alliesN) || hpRatio < fallbackHp } : null;
+    //  safeRoute v3：另記這座塔的進塔血量門檻，給塔邊等待估計「回血要等多久」（_towerEdgeRedecideV23）。
+    if (this._edgeRedecideV23 && p._fbV23) p._fbV23.hpNeed = fallbackHp;
     const cachedTargetAlive = !p.decisionTargetId ||
       alive.some((q) => q.id === p.decisionTargetId && !q.dead);
     const immediateContact = target && (!p.decisionTargetId || p.decisionAction === "LANE");
@@ -5025,6 +5478,7 @@ export class LogicEngine {
       const S2 = this._tac[p.side];
       if (p.role === "jungle" && this.t < S2.gankUntil) this.exec[p.side].gankKills++;
       if (this.t < (S2.invadeUntil || 0) && (p.role === "jungle" || p.role === "mid")) this.exec[p.side].invadeKills++;
+      if (this._invasionV2 && foe._invV2 && !foe._invV2.done) this._invadeEndV2(foe, "killed");   // 入侵者陣亡 ⇒ 失敗原因：killed
     }
   }
 
@@ -5798,6 +6252,8 @@ export class LogicEngine {
     for (const [id, tw] of Object.entries(this.towers)) {
       if (tw.hp > 0) this._aliveStructs.add(id);
     }
+    //  safeRoute v4：導航鏡射時連門牙塔一起鏡射（見 mobaNavigation.mirrorAlive）。只是集合上的一個標記；層不存在 ⇒ 不寫。
+    if (this._navSafetyV23) this._aliveStructs.navMirrorV2 = true;
     // S29B1（v3）：lateAccelT 之後額外增陡（sudden death，雙方對稱）⇒ 無戰術平局
     //   不再拖出 30 分鐘長尾。v1/v2 無此欄位 ⇒ 第二項恆為 0，行為不變。
     const lateFactor = 1 + Math.max(0, this.t - 360) / 600 +
@@ -6500,6 +6956,12 @@ export class LogicEngine {
       //  v20 ③：呼叫在全員決策凍結後才發出與回應（與陣列順序無關）。
       if (R.teamCallV20) this._teamCallsV20(alive, decisionPlans);
     }
+    //  moba-sim.v24 taskArbitration "v1"：仲裁紀錄（只寫）。層不存在 ⇒ ARB＝null，下面每一處紀錄都不執行。
+    const ARB = this._arbV24 ? this.arbLedger : null;
+    if (ARB) ARB.beginTick();
+    //  v24 Sprint 1：英雄移動之前，用同一份凍結位置做記憶更新、回防觸發與入侵評估（與陣列順序無關）。
+    if (this._tacExecV24 && this.tacticOn) tacticExecTick(this, this.tacExec, alive);
+    if (this._tacExecV24 && this.tacExec?.v13) tacEndgameTickV24(this, this.tacExec);   // Sprint 1.3：終局護線的計時（與戰術開關無關）
     for (const p of this.players) {
       if (p.dead) {
         if (R.explainableCombatDecisions) {
@@ -6633,7 +7095,16 @@ export class LogicEngine {
       // 低血量／人數劣勢的局部評估可比固定 25% 門檻更早觸發撤退；
       // 一旦進入既有 retreating 流程，回城、受擊中斷與回血遲滯仍沿用原機制。
       if (localDecision?.action === "RETREAT") p.retreating = true;
+      //  safeRoute v3：塔邊等待在上一 tick 判定撤退（_towerEdgeRedecideV23）⇒ 在既有撤退判定之後進入撤退；回場門檻記下來給下一次判定。
+      if (this._edgeRedecideV23) {
+        p._retAtV23 = returnAtEff;
+        if (p._edgeRetreatV23 != null) {
+          if (this.t - p._edgeRetreatV23 <= 1 && !p.retreating) { p.retreating = true; p.retreatEvalT = this.t + (R.retreatReevalPeriod ?? 0); }
+          p._edgeRetreatV23 = null;
+        }
+      }
       let tgt, st, effLane = p.lane, stOv = null;
+      const AT = ARB ? ARB.turn(p) : null;
       if (R.decisionV17) { p.intent = null; p.idleReason = null; p.dbgTower = null; }
       // S24：帶線分推 —— 指定分推路的選手在會戰熱點出現時仍留線推進（黏性決策，6 秒重評一次）
       let skipFight = false;
@@ -6647,8 +7118,31 @@ export class LogicEngine {
       }
       // S24：開局野區入侵（configureMatch 時擲骰；打野＋跟進中路在前 50 秒壓入敵方野區）
       let tacTgt = null;
-      if (K && !p.retreating && this.t < (S.invadeUntil || 0) && (p.role === "jungle" || (K.invadeWithMid && p.role === "mid"))) {
-        tacTgt = INVASION_POINT[p.side]; stOv = "入侵";
+      //  v24 Sprint 1：只有評估後真的出發的打野走這條（隊友另外由 partnerStep 帶，不再固定是中路）。
+      const invWho = this._tacExecV24 ? (p.role === "jungle" && !!p._invV2 && !p._invV2.done) : (p.role === "jungle" || (K?.invadeWithMid && p.role === "mid"));
+      if (K && !p.retreating && this.t < (S.invadeUntil || 0) && invWho) {
+        if (this._invasionV2) {
+          //  v2：打野去打敵方野怪、中路到入口支援；有失敗條件。回傳 null ⇒ 這個英雄的入侵結束，回到一般行為（農自家野區、Gank）。
+          //  v24：本隊物件窗打開 ⇒ 入侵讓位（objective_call）。
+          //  v24 Sprint 1.1：中止條件另看看得見的敵人與隊友（adaptive.v1 只看物件窗）；等隊友（invadeLead）只在 adaptive.v1.1 生效。
+          const g = this._tacExecV24 ? tacInvadeGuardV24(this, p, this.tacExec, alive) : null;
+          let inv = g ? this._invadeEndV2(p, g) : this._invadeStepV2(p, S, alive);
+          if (inv && this._tacExecV24) inv = tacInvadeLeadV24(this, this.tacExec, p, inv, alive);
+          if (inv) { tacTgt = inv.tgt; stOv = inv.st; }
+        } else {
+          tacTgt = INVASION_POINT[p.side]; stOv = "入侵";
+        }
+      } else if (this._invasionV2 && K && p._invV2 && !p._invV2.done && (p.role === "jungle" || p.role === "mid")) {
+        //  第一個條件不成立而入侵還沒結束：不是一般撤退接手了（retreat），就是入侵窗到了（window）。
+        this._invadeEndV2(p, p.retreating ? "retreat" : "window");
+        if (AT && p.retreating) AT.sup.push("invade");
+      }
+      //  v24 Sprint 1：入侵隊友與回防者（與入侵同一個優先序：撤退、以及本隊物件窗會讓它們結束）。
+      let tacExecKind = null;
+      if (this._tacExecV24 && K && !tacTgt && (p._tacPartnerV24 || p._defV24)) {
+        const isDef = !p._tacPartnerV24;
+        const r = isDef ? tacDefendStepV24(this, this.tacExec, p, alive) : tacPartnerStepV24(this, this.tacExec, p, alive);
+        if (r) { tacTgt = r.tgt; stOv = r.st; tacExecKind = isDef ? "defend" : "invade"; }
       }
       // S24：打野 Gank 節奏機（依 tempo 週期、依權重挑路；到點後 9 秒壓該路前線）
       if (K && !tacTgt && p.role === "jungle" && !p.retreating) {
@@ -6731,6 +7225,8 @@ export class LogicEngine {
         ? alive.find((q) => q.id === localDecision.targetId && !q.dead) ?? null
         : null;
       if (p.retreating) {
+        //  原因：血量門檻（retreatReason）＞局部決策撤退＞其他（塔邊等待重新決策、或撤退遲滯延續）。
+        if (AT) { AT.w = "retreat"; AT.reason = p.retreatReason != null ? "hp_low" : localDecision?.action === "RETREAT" ? "local_retreat" : this._edgeRedecideV23 ? "edge_retreat" : "hp_low"; }
         //  ── Retreat Hold（兩段式撤退）──────────────────────────────────
         //  舊行為只有一個撤退終點＝泉水 ⇒ 每次撤退都是整趟離場：
         //  補到 94% 血、再從離敵塔 172 單位的地方走回來，首次推塔要 47.5 秒，
@@ -6800,12 +7296,13 @@ export class LogicEngine {
         }
         }
       }
-      else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; }
-      else if (chaseFoe) { tgt = { x: chaseFoe.pos.x, y: chaseFoe.pos.y }; st = "追擊"; p.fsm = "CHASE"; }
+      else if (tacTgt) { tgt = tacTgt; st = stOv; if (R.engagementFsm) p.fsm = "ROAM"; if (AT) { AT.w = tacExecKind === "defend" ? "defend" : "invade"; AT.reason = tacExecKind === "defend" ? "defend_window" : "invade_window"; } }
+      else if (chaseFoe) { tgt = { x: chaseFoe.pos.x, y: chaseFoe.pos.y }; st = "追擊"; p.fsm = "CHASE"; if (AT) { AT.w = "chase"; AT.reason = "chase_hold"; } }
       // S29B1（v3）：脫戰——團戰解散後短暫退到自家前線塔，不立即找下一場架
       else if (R.engagementFsm && p.fsm === "DISENGAGE" && this.t < p.fsmUntil) {
         const ownTw = this.frontTower(p.side === "blue" ? "red" : "blue", p.lane);
         tgt = ownTw ? ownTw.pos : BASE[p.side]; st = "脫戰";
+        if (AT) { AT.w = "disengage"; AT.reason = "disengage"; }
       }
       // Milestone D-fix2：沒有兵線或人數不夠時不單人硬闖敵塔。這只改移動目標；
       // 塔傷、塔仇恨、碰撞與正式 tower single source 均不變。
@@ -6816,19 +7313,22 @@ export class LogicEngine {
           const dd = dist(p.pos, tw.pos);
           if (dd < threatDist) { threatDist = dd; threatTower = tw; }
         }
-        if (threatTower) {
+        if (threatTower && this._towerEdgeV23) tgt = this._towerEdgeAvoidV23(p, threatTower);
+        else if (threatTower) {
           const safeDist = (R.towerSafetyV1 ? this.towerRange(threatTower) : (R.towerAggroRange ?? 8)) + 2.5;
           const ux = (p.pos.x - threatTower.pos.x) / (threatDist || 1);
           const uy = (p.pos.y - threatTower.pos.y) / (threatDist || 1);
           tgt = { x: threatTower.pos.x + ux * safeDist, y: threatTower.pos.y + uy * safeDist };
         } else tgt = BASE[p.side];
         st = "避塔"; p.fsm = "SETUP";
+        if (AT) { AT.w = "tower_fallback"; AT.reason = "tower_fallback"; }
       }
       // S29B1（v3）：團隊目標窗（龍/巴龍）——窗開著才集結；打野/輔助必去、其他人吃 knob
       else if (R.engagementFsm && this.neutrals && !skipFight && this.fsm3[p.side].objGo &&
                this._objJoinV3(p, this.fsm3[p.side].objKey, K, M)) {
         tgt = R.objIdleFixV1 && this.heroSkillsOn ? this._objectiveStandSpot(p, this.fsm3[p.side].objKey) : this._pitOf(this.fsm3[p.side].objKey);
         st = "團戰!"; p.fsm = "OBJECTIVE";
+        if (AT) { AT.w = "objective_window"; AT.reason = "objective_window"; }
       }
       // ── Milestone F：主動權窗 · 攻城 ──────────────────────────────────
       //  剛打贏一波、附近沒有可打的龍／巴龍 ⇒ 把人數優勢換成塔，而不是各自走回線上。
@@ -6836,6 +7336,7 @@ export class LogicEngine {
       else if (R.engagementFsm && !skipFight && this._initiativeSiegeV3(p)) {
         const tw = this.towers[this.fsm3[p.side].initTarget];
         tgt = tw.pos; st = "圍攻"; p.fsm = "OBJECTIVE";
+        if (AT) { AT.w = "initiative_siege"; AT.reason = "initiative_siege"; }
       }
       //  v20 ③：回應了隊友的集火／殘血呼叫 ⇒ 前往目標（只追看得見的目標；目標死亡或呼叫過期即結束）。
       else if (R.teamCallV20 && !skipFight && this.t >= p.reengageAt && (() => {
@@ -6847,6 +7348,7 @@ export class LogicEngine {
         const tq = alive.find((q) => q.id === p.callV20.targetId);
         tgt = { x: tq.pos.x, y: tq.pos.y }; st = "支援"; p.fsm = "SETUP";
         p.intent = p.callV20.type === "lowhp" ? "回應殘血呼叫" : "回應集火呼叫";
+        if (AT) { AT.w = "team_call"; AT.reason = p.callV20.type === "lowhp" ? "call_lowhp" : "call_focus"; }
       }
       // S28：團戰/目標集結門檻 += joinAdj（勇氣/戰術/配合/溝通/反應＋隊伍領導平均）
       //   或 objAdj（龍/巴龍坑：視野/戰術/專注/溝通＋隊伍領導平均）。
@@ -6858,6 +7360,7 @@ export class LogicEngine {
         : (p.role === "jungle" || p.role === "sup" || (K ? this.rng2() < this._joinChance(K, hot, M) : this.rng() < this._joinChance(null, hot, M))))) {
         //  Combat Decision B：`_joinV3` 已做完投入決策（decline 不會走到這裡）。
         //    commit = 進場｜hold = 在 standoff 待命等隊友
+        if (AT) { AT.w = "fight_join"; AT.reason = "fight_join"; }
         if (p._tfGate === "hold") {
           const dHot = dist(p.pos, hot);
           const standoff = R.syncStandoffR ?? 15;
@@ -6893,6 +7396,7 @@ export class LogicEngine {
                localDecision?.action === "SUPPORT" && localTarget) {
         tgt = { x: localTarget.pos.x, y: localTarget.pos.y };
         st = "支援"; p.fsm = "SETUP";
+        if (AT) { AT.w = "local"; AT.reason = "local_engage"; }
       }
       else if (!skipFight && localTarget &&
                ((localDecision?.action === "ENGAGE" && dist(p.pos, localTarget.pos) <= 6.5) ||
@@ -6903,6 +7407,7 @@ export class LogicEngine {
         //  Milestone H：**站位**＝席位基準距離 × 英雄定位倍率。
         //    坦克／戰士貼得更近、射手／法師站得更遠；倍率限幅 0.7–1.25，
         //    不改移速、不改攻擊距離判定、不改傷害。
+        if (AT) { AT.w = "local"; AT.reason = "local_engage"; }
         const engageDistance = (p.role === "top" ? 2.6 : p.role === "jungle" ? 2.2 :
           p.role === "mid" ? 5.0 : p.role === "adc" ? 5.8 : 5.2)
           * (this._heroMod(p)?.engageDistK ?? 1);
@@ -7056,10 +7561,23 @@ export class LogicEngine {
       //  只跳過**這一種**覆寫：一旦有交戰目標（被打、gank、團戰、撤退、戰術指令都會設 decisionTargetId
       //  或改變 fsm），站位層照舊接手 ⇒ 不會變成「永遠先打小兵」。打野、輔助不套用（不搶線）。
       //  ⚠ 與 v10–v13 同一個慣例：只在 hero skills 開啟時生效 ⇒ skill-off（含 Challenge）串流與 v14 逐位元相同。
+      //  v24 仲裁紀錄：第一段到這裡結束。記下標籤與「前提也成立」的低優先任務（只讀決策當下已有的值）。
+      if (AT) {
+        AT.label = st; AT.tgt0 = tgt;
+        if (R.engagementFsm && this.neutrals && this.fsm3[p.side].objGo) AT.sup.push("objective_window");
+        if (hot) AT.sup.push("fight_join");
+        const GS = this.tacticOn ? S : this.fsm3[p.side];
+        if (p.role === "jungle" && GS && this.t < (GS.gankUntil ?? 0)) AT.sup.push("default:gank");
+        if (p.role === "sup" && this.tacticOn && S && this.t < (S.roamUntil ?? 0)) AT.sup.push("default:roam");
+      }
       const waveAnchor = R.laneWaveAnchorV15 && this.heroSkillsOn && p._waveAnchorT === this.t && p.fsm === "LANE"
         && !p.decisionTargetId && !p.retreating && p.role !== "jungle" && p.role !== "sup";
       if (waveAnchor) { if (R.stableFormation) { p._archFoe = null; p._hold = false; } }
+      //  safeRoute v2（v23 塔邊決策）：決策層的避塔（FALLBACK）不交給站位層。站位層的「站定輸出」會把目標改寫成腳下
+      //  ⇒ 避塔的人站在塔下挨打（v23 實測原地挨打 46 次中 34 次是這個）。同撤退／回城的豁免，並清掉站定狀態。
+      else if (this._towerEdgeV23 && st === "避塔") { p._hold = false; p.dbgHold = false; }
       else tgt = this._archPosition(p, tgt, alive);
+      if (AT && arbMovedV24(AT.tgt0, tgt)) AT.rw.push("rewrite:formation");
       //  ── Tactical AI Phase 1（v19）P0-1：再任務承諾 ─────────────────────────────
       //  M1.7 的發呆再任務（`_nextTaskV17`）只在「抵達」那一 tick 改寫目標；下一 tick 對線分支又把目標
       //  拉回兵線站位點 ⇒ 往前一步、往後一步（實測 v18 決策目標乒乓 3.95 次／英雄分鐘，七成是「推進」）。
@@ -7072,7 +7590,17 @@ export class LogicEngine {
           this._foeMinionWithin(p, this._engageRange(p) + 1) ||
           alive.some((q) => q.side !== p.side && !q.dead && dist(p.pos, q.pos) <= this._engageRange(p));
         if (!laneDefault || engaged || T.lane !== effLane || this.t >= T.until || dist(p.pos, T.pos) <= 1.5) p._taskV19 = null;
-        else { tgt = T.pos; st = T.st; p.fsm = T.fsm; p.intent = T.intent; }
+        else { if (AT && arbMovedV24(tgt, T.pos)) AT.rw.push("rewrite:task_commit"); tgt = T.pos; st = T.st; p.fsm = T.fsm; p.intent = T.intent; }
+      }
+      //  v24 Sprint 1.3（adaptive.v1.3）終局護線：主堡暴露後連續 8 波沒有己方兵線抵達 ⇒ 本來要走去主堡的人改去護送兵線。
+      //  狀態字串不變（仍是圍攻意圖 ⇒ 會全力清兵）；主堡的兵線硬閘門、塔區安全規則都照舊。
+      let escortV24 = false;
+      if (this._tacExecV24 && this.tacExec?.v13 && !p.retreating && (st === "圍攻主堡" || (st === "圍攻" && this._siegeTargetV19(p, st)?.lane === "nexus"))) {
+        const egLane = tacEndgameLaneV24(this, this.tacExec, p.side);
+        if (egLane) {
+          tgt = posOnLane(egLane, this._laneWaveHoldT(p, egLane, 1) ?? (p.side === "blue" ? 0.4 : 0.6));
+          escortV24 = true; p.intent = "護送兵線進基地";
+        }
       }
       //  ── M1.7 ②：塔區退出。允許有計畫的越塔，禁止「站到殘血為止」──────────
       if (R.decisionV17 && !p.retreating) {
@@ -7092,12 +7620,13 @@ export class LogicEngine {
           ? { allow: tz.allow, siege: !!tz.sieging, wave: !!tz.hasWave, hp: !!tz.hpOk, shots: p.towerHits ?? 0, kill: !!tz.kill }
           : null;
         if (tz.inZone && !tz.allow) {
+          if (AT) AT.rw.push("rewrite:tower_zone");
           //  退到塔射程外緣＋餘裕的方向（沿「塔 → 我」的射線，不是瞬移、不是強制位移：
           //  只是把移動目標換掉，走路仍然由既有 nav 決定）
           const tw = tz.tower;
           const d = dist(p.pos, tw.pos) || 1;
           const safe = this.towerRange(tw) + (R.towerSafePad ?? 2.5);
-          tgt = {
+          tgt = this._towerEdgeV23 ? this._towerEdgeAvoidV23(p, tw) : {
             x: clampMapX(tw.pos.x + (p.pos.x - tw.pos.x) / d * safe),
             y: clampMapY(tw.pos.y + (p.pos.y - tw.pos.y) / d * safe),
           };
@@ -7111,7 +7640,10 @@ export class LogicEngine {
       //  的成因是「已抵達目標點就站著等」——決策層給的是一個**位置**，
       //  站到了就沒有下一個任務。連續發呆平均 19.4 秒、最長 125.5 秒。
       //  合法停留只有下面這幾種；其餘一律取得下一個有效任務。
-      if (R.decisionV17 && tgt && !p.retreating) {
+      //  v24 Sprint 1 任務鎖定（仲裁步驟 B 的第一條）：入侵（打野與隊友）與回防進行中，發呆再任務不得改掉目標
+      //  （步驟 A 量到入侵被發呆再任務覆寫 1,107 tick；入侵在入口等野怪出生是合法停留）。
+      const lockedV24 = this._tacExecV24 && (st === "入侵" || (st === "回防" && !!p._defV24) || escortV24);
+      if (R.decisionV17 && tgt && !p.retreating && !lockedV24) {
         //  「抵達」不能只看 0.9：打建築是**站在攻擊距離上**輸出（4–8 單位），
         //  用 0.9 判定的話，站在建築前面的人永遠不算抵達 ⇒ 永遠不會再任務。
         //  這正是把 M1.5 的兵線閘門變成死局的那一步：門牙塔／主堡沒有己方兵線
@@ -7131,9 +7663,10 @@ export class LogicEngine {
           if (!p.idleReason) {
             const next = this._nextTaskV17(p, effLane, alive);
             if (next) {
+              if (AT) AT.rw.push("rewrite:idle_retask");
               tgt = next.pos; st = next.st; p.fsm = next.fsm; p.intent = next.intent;
               //  v19：承諾這個任務（見上方「再任務承諾」）。
-              if (R.taskCommitV19 && (next.st !== "推進" || R.taskCommitPush !== false)) p._taskV19 = { pos: { x: next.pos.x, y: next.pos.y }, st: next.st, fsm: next.fsm,
+              if (R.taskCommitV19 && (next.st !== "推進" || R.taskCommitPush !== false || this._commitPushV24 === true)) p._taskV19 = { pos: { x: next.pos.x, y: next.pos.y }, st: next.st, fsm: next.fsm,
                 intent: next.intent, lane: effLane,
                 until: this.t + clamp((R.taskCommitSec ?? 4) + this._riskV19(p) * (R.taskCommitRiskK ?? -6),
                   R.taskCommitMin ?? 2, R.taskCommitMax ?? 6) };
@@ -7141,7 +7674,17 @@ export class LogicEngine {
           }
         } else p.idleReason = null;
       }
-      tgt = this._heroTauntTarget(p, tgt);
+      //  safeRoute v1（moba-sim.v23 候選）：移動前把目標換成不穿過敵塔射程的路點。層不存在 ⇒ 不呼叫（舊行為逐位元不變）。
+      //  放在嘲諷之前：被嘲諷時的強制目標不受影響。
+      //  safeRoute v2（v23 塔邊決策）：塔邊承諾放在**所有**任務改寫（決策、站位、再任務承諾、M1.7、發呆再任務）之後——
+      //  放在 M1.7 區塊裡會被後面的發呆再任務蓋掉（停在出口＝「已抵達」⇒ 立刻派推進／打野回塔下）。
+      if (this._towerEdgeV23 && p._edgeV23 && st !== "避塔" && !p.retreating && R.decisionV17) {
+        const t0 = tgt; tgt = this._towerEdgeHoldV23(p, st, effLane, tgt, alive);
+        if (AT && arbMovedV24(t0, tgt)) AT.rw.push("rewrite:edge_hold");
+      }
+      if (this._safeRouteV23) { const t0 = tgt; tgt = this._safeWaypointV23(p, tgt); if (AT && arbMovedV24(t0, tgt)) AT.rw.push("rewrite:safe_route"); }
+      { const t0 = tgt; tgt = this._heroTauntTarget(p, tgt); if (AT && arbMovedV24(t0, tgt)) AT.rw.push("rewrite:taunt"); }
+      if (AT) ARB.close(AT, this.t);
       const d = dist(p.pos, tgt),
         spd = ((st === "團戰!" || st === "追擊" || st === "接戰" || st === "拉扯") ? R.fightSpeed : R.moveSpeed) *
           (R.engagementFsm && p.retreating ? R.retreatSpeedMult : 1) *

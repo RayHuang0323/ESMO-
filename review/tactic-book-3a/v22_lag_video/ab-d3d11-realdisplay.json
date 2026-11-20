@@ -1,0 +1,66 @@
+{
+ "label": "ab-d3d11",
+ "url": "http://127.0.0.1:5642/ESMO-/",
+ "env": {
+  "dpr": 1.5,
+  "inner": [
+   1280,
+   720
+  ],
+  "canvas": [
+   240,
+   240
+  ],
+  "screen": [
+   1280,
+   720
+  ],
+  "cores": 12,
+  "mem": 16,
+  "gl": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+ },
+ "segments": [
+  {
+   "quality": "high",
+   "qualityClicked": "true",
+   "rate": 2,
+   "realSec": 30,
+   "canvas": [
+    1920,
+    1080
+   ],
+   "frame": {
+    "frames": 1702,
+    "fps": 56.7,
+    "p50": 16.7,
+    "p95": 17.1,
+    "p99": 33.5,
+    "max": 116.5,
+    "over50": 5,
+    "over100": 1,
+    "over200": 0
+   },
+   "mainBusyPct": 65.4,
+   "scriptPct": 53.2,
+   "longTasks": {
+    "n": 3,
+    "totalMs": 246,
+    "max": 127
+   },
+   "simIntervals": {
+    "250": {
+     "n": 120,
+     "durMean": 4.9,
+     "durP95": 11.3,
+     "durMax": 12.8,
+     "lateP50": -0.1,
+     "lateP95": 12.4,
+     "lateMax": 25.7
+    }
+   },
+   "gameSec": 60,
+   "gamePerReal": 2,
+   "heapMB": 62
+  }
+ ]
+}

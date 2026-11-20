@@ -1,0 +1,5 @@
+{"order":["conservative","auto","aggressive","allin"],"propensities":{
+"conservative":{"threat":"prior","jHpMin":0.8,"memberHpMin":0.7,"etaMax":14,"marginMin":1,"sizeMin":1,"sizeMax":2,"laneCostMax":0,"partyEtaSlack":6},
+"auto":{"threat":"prior","jHpMin":0.65,"memberHpMin":0.55,"etaMax":17,"marginMin":0,"sizeMin":1,"sizeMax":3,"laneCostMax":0,"partyEtaSlack":6},
+"aggressive":{"threat":"prior","jHpMin":0.5,"memberHpMin":0.5,"etaMax":22.5,"marginMin":0,"sizeMin":2,"sizeMax":3,"laneCostMax":1,"partyEtaSlack":6},
+"allin":{"threat":"prior","jHpMin":0.4,"memberHpMin":0.4,"etaMax":28,"marginMin":-1,"sizeMin":3,"sizeMax":4,"laneCostMax":2,"partyEtaSlack":8}}}

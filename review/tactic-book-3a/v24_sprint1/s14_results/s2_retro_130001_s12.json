@@ -1,0 +1,79 @@
+{
+ "contract": {
+  "version": "s2.v2",
+  "A": {
+   "lowerMin": 0.65,
+   "minStarts": 60
+  },
+  "C": {
+   "c1Min": 0.6,
+   "c1Max": 1.5,
+   "c2Min": 0.5
+  },
+  "boot": {
+   "B": 4000,
+   "seed": 20261119
+  }
+ },
+ "retrospective": {
+  "source": "C:/Users/ifikn/esmo-measure/v24-s13-val-130001/batches",
+  "arm": "s12",
+  "note": "reference only; old S2 FAIL stands",
+  "tool": {
+   "mode": "RETROSPECTIVE",
+   "matches": 300,
+   "A": {
+    "starts": 650,
+    "arrived": 419,
+    "value": 0.645,
+    "ci": [
+     0.608,
+     0.681
+    ],
+    "verdict": "NOT_JUDGED"
+   },
+   "C": {
+    "sides": 600,
+    "c1": 1.083,
+    "c2": 0.677,
+    "c1Ci": [
+     0.995,
+     1.175
+    ],
+    "c2Ci": [
+     0.635,
+     0.718
+    ],
+    "verdict": "NOT_JUDGED"
+   }
+  },
+  "career": {
+   "mode": "RETROSPECTIVE",
+   "matches": 90,
+   "A": {
+    "starts": 16,
+    "arrived": 5,
+    "value": 0.313,
+    "ci": [
+     0.105,
+     0.583
+    ],
+    "verdict": "NOT_JUDGED"
+   },
+   "C": {
+    "sides": 90,
+    "c1": 0.178,
+    "c2": 0.156,
+    "c1Ci": [
+     0.078,
+     0.289
+    ],
+    "c2Ci": [
+     0.067,
+     0.244
+    ],
+    "verdict": "NOT_JUDGED"
+   }
+  }
+ }
+}

@@ -1,0 +1,35 @@
+$ node tools/check_tower_edge_v23.mjs
+✅ E1 safeRoute 合法值＝legacy／v1～v5；career.v23、balanceTool.v23 用 v5（導航與移動安全之後）；v1、v2 版的同一規則集仍通過 validateRuleset
+✅ E2 v1：塔邊決策旗標 false、整場 0 次出口計算、routeObs 沒有新欄位；v2：旗標 true　{"calls1":0,"edge2":true,"redecide2":false}
+✅ E3 balanceTool.v20 v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"73badd362041a8a9","want":"73badd362041a8a9"}
+✅ E3 balanceTool.v20 classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"594f765123b96931","want":"594f765123b96931"}
+✅ E3 balanceTool.v22 v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"3d5946f21282f435","want":"3d5946f21282f435"}
+✅ E3 balanceTool.v22 classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"3efc3bc5ddb6afee","want":"3efc3bc5ddb6afee"}
+✅ E3 balanceTool.v23（safeRoute v1） v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"6c8d53424206db0e","want":"6c8d53424206db0e"}
+✅ E3 balanceTool.v23（safeRoute v1） classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"0ef6e58c005d8030","want":"0ef6e58c005d8030"}
+✅ E3 balanceTool.v23（safeRoute v2） v2.jungle_invasion seed 11：10 分鐘逐 tick 雜湊＝改動前　{"got":"825664b7105d0aa7","want":"825664b7105d0aa7"}
+✅ E3 balanceTool.v23（safeRoute v2） classic.m7 seed 13：10 分鐘逐 tick 雜湊＝改動前　{"got":"6e649c69855673fa","want":"6e649c69855673fa"}
+✅ U1 出口幾何：射程內 12 個方向的可走點（紅藍各自的敵塔）⇒ 出口在危險半徑外、可走、直線走得到、不在別座敵塔的危險半徑內　{"tried":254,"good":250,"none":4,"bad":[]}
+✅ U2 紅藍鏡射：鏡像位置對鏡像塔 ⇒ 出口互為鏡像（最大誤差 < 1.0）　{"pairs":125,"worst":0}
+✅ U3 承諾期內、目標在危險半徑內、進塔沒有理由 ⇒ 停在出口，而且承諾延長　{"h1":{"x":242.72314767969715,"y":85.41070296395117}}
+✅ U4 塔區判定允許、決策層也沒有退的理由 ⇒ 解除承諾、照原目標（合理推塔／越塔不被禁止）
+✅ U5 塔區判定允許、但決策層對同一座塔仍有退的理由 ⇒ 不解除（兩層都同意才放行）
+✅ U6 承諾到期 ⇒ 解除、照原目標
+✅ U7 目標在危險半徑外 ⇒ 不改、承諾保留
+✅ U8 求不到路、不在撤退 ⇒ 沿直線停在危險圓外（不穿塔），且比原地更靠近目的地　{"s1":{"x":85.86180628670104,"y":265.13819371329896},"d":23}
+✅ U9 求不到路、撤退中 ⇒ 照舊走原目標（次數記在 routeObs.blockedFallback）
+✅ B1 原地挨打（避塔中、沒移動、被塔打中）：v2 ≤ v1 的 10%（前提 v1 ≥ 20）　{"v1":46,"v2":0}
+✅ B2 同一座塔擋下後 8 秒內又被同一座塔打中：v2 ≤ v1 的 30%（前提 v1 ≥ 100）　{"v1":432,"v2":64}
+✅ B3 塔邊乒乓（扣掉己方小兵扛塔的推線進出）：v2 ≤ v1 的 75%　{"v1":48,"v2":29,"v1All":96,"v2All":77}
+✅ B4 藍紅各自都改善（原地挨打＋同塔再打中）　[[271,22],[207,42]]
+✅ B5 被塔擊殺沒有回升：v2 ≤ v1＋1　{"v1":2,"v2":0}
+✅ B6 總陣亡沒有變多：v2 ≤ v1 × 1.1　{"v1":12,"v2":9}
+✅ B7 不過度保守：推掉的塔 v2 ≥ v1 × 0.9、Gank 出發 v2 ≥ v1 × 0.9　{"towers":[23,27],"gank":[160,185]}
+✅ B8 不卡在塔邊：連續停在出口 ≥ 20 秒的次數 ≤ 每場 0.5 次　{"longHold":4,"matches":20}
+✅ B9 決定性：v2 同一個 Seed 重跑，逐 tick 雜湊相同　["825664b7105d0aa7","825664b7105d0aa7"]
+✅ P1 模擬每 tick 成本：v2 ≤ v1 的 1.5 倍　{"v1":1.502,"v2":1.447}
+
+towerEdge v23 Gate：29/29 PASS
+
+
+[96s] [exit 0]

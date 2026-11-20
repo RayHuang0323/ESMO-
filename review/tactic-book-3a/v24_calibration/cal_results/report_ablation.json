@@ -1,0 +1,520 @@
+{
+ "tool|v13": {
+  "sideMatches": 120,
+  "starts": 32,
+  "C1": 0.267,
+  "C1ci": [
+   0.158,
+   0.375
+  ],
+  "C2": 0.225,
+  "S2A": 0.406,
+  "S2Aci": [
+   0.24,
+   0.567
+  ],
+  "captured": 0.375,
+  "leaderDied": 0.094,
+  "vsOff": {
+   "n": 120,
+   "deaths": -0.425,
+   "deathsCi": [
+    -1.692,
+    0.733
+   ],
+   "towerDeaths": -0.033,
+   "towerCi": [
+    -0.2,
+    0.125
+   ],
+   "camps": 0.292,
+   "campsCi": [
+    -1.317,
+    1.925
+   ],
+   "own": 0.908,
+   "enemy": -0.617
+  }
+ },
+ "career|v13": {
+  "sideMatches": 60,
+  "starts": 17,
+  "C1": 0.283,
+  "C1ci": [
+   0.15,
+   0.433
+  ],
+  "C2": 0.233,
+  "S2A": 0.706,
+  "S2Aci": [
+   0.385,
+   0.941
+  ],
+  "captured": 0.471,
+  "leaderDied": 0.176,
+  "vsOff": {
+   "n": 60,
+   "deaths": -0.467,
+   "deathsCi": [
+    -2.35,
+    1.483
+   ],
+   "towerDeaths": 0.117,
+   "towerCi": [
+    -0.1,
+    0.383
+   ],
+   "camps": -0.967,
+   "campsCi": [
+    -2.067,
+    0.233
+   ],
+   "own": -0.767,
+   "enemy": -0.2
+  }
+ },
+ "tool|v14time": {
+  "sideMatches": 120,
+  "starts": 101,
+  "C1": 0.842,
+  "C1ci": [
+   0.667,
+   1.05
+  ],
+  "C2": 0.608,
+  "S2A": 0.139,
+  "S2Aci": [
+   0.056,
+   0.244
+  ],
+  "captured": 0.139,
+  "leaderDied": 0.198,
+  "vsOff": {
+   "n": 120,
+   "deaths": -0.267,
+   "deathsCi": [
+    -1.483,
+    0.833
+   ],
+   "towerDeaths": -0.017,
+   "towerCi": [
+    -0.183,
+    0.15
+   ],
+   "camps": 0.3,
+   "campsCi": [
+    -1.092,
+    1.775
+   ],
+   "own": 0.867,
+   "enemy": -0.567
+  }
+ },
+ "career|v14time": {
+  "sideMatches": 60,
+  "starts": 53,
+  "C1": 0.883,
+  "C1ci": [
+   0.7,
+   1.05
+  ],
+  "C2": 0.617,
+  "S2A": 0.302,
+  "S2Aci": [
+   0.135,
+   0.467
+  ],
+  "captured": 0.245,
+  "leaderDied": 0.132,
+  "vsOff": {
+   "n": 60,
+   "deaths": -0.3,
+   "deathsCi": [
+    -2.15,
+    1.467
+   ],
+   "towerDeaths": 0.183,
+   "towerCi": [
+    -0.05,
+    0.45
+   ],
+   "camps": -0.883,
+   "campsCi": [
+    -1.95,
+    0.267
+   ],
+   "own": -0.783,
+   "enemy": -0.1
+  }
+ },
+ "tool|v14deny": {
+  "sideMatches": 120,
+  "starts": 98,
+  "C1": 0.817,
+  "C1ci": [
+   0.6,
+   1.067
+  ],
+  "C2": 0.508,
+  "S2A": 0.378,
+  "S2Aci": [
+   0.287,
+   0.455
+  ],
+  "captured": 0.337,
+  "leaderDied": 0.153,
+  "vsOff": {
+   "n": 120,
+   "deaths": 0.292,
+   "deathsCi": [
+    -1.208,
+    1.758
+   ],
+   "towerDeaths": 0.017,
+   "towerCi": [
+    -0.142,
+    0.167
+   ],
+   "camps": 0.192,
+   "campsCi": [
+    -1.342,
+    1.758
+   ],
+   "own": 0.683,
+   "enemy": -0.492
+  }
+ },
+ "career|v14deny": {
+  "sideMatches": 60,
+  "starts": 48,
+  "C1": 0.8,
+  "C1ci": [
+   0.55,
+   1.05
+  ],
+  "C2": 0.517,
+  "S2A": 0.375,
+  "S2Aci": [
+   0.222,
+   0.533
+  ],
+  "captured": 0.292,
+  "leaderDied": 0.104,
+  "vsOff": {
+   "n": 60,
+   "deaths": -1.283,
+   "deathsCi": [
+    -2.783,
+    0.333
+   ],
+   "towerDeaths": 0.067,
+   "towerCi": [
+    -0.15,
+    0.35
+   ],
+   "camps": -1.417,
+   "campsCi": [
+    -2.6,
+    -0.2
+   ],
+   "own": -1.3,
+   "enemy": -0.117
+  }
+ },
+ "tool|v14belief": {
+  "sideMatches": 120,
+  "starts": 17,
+  "C1": 0.142,
+  "C1ci": [
+   0.075,
+   0.208
+  ],
+  "C2": 0.142,
+  "S2A": 0.588,
+  "S2Aci": [
+   0.313,
+   0.833
+  ],
+  "captured": 0.529,
+  "leaderDied": 0.118,
+  "vsOff": {
+   "n": 120,
+   "deaths": -0.292,
+   "deathsCi": [
+    -1.692,
+    1.058
+   ],
+   "towerDeaths": 0,
+   "towerCi": [
+    -0.167,
+    0.158
+   ],
+   "camps": 0.325,
+   "campsCi": [
+    -1.367,
+    2.008
+   ],
+   "own": 0.958,
+   "enemy": -0.633
+  }
+ },
+ "career|v14belief": {
+  "sideMatches": 60,
+  "starts": 13,
+  "C1": 0.217,
+  "C1ci": [
+   0.1,
+   0.333
+  ],
+  "C2": 0.2,
+  "S2A": 0.692,
+  "S2Aci": [
+   0.375,
+   1
+  ],
+  "captured": 0.462,
+  "leaderDied": 0.231,
+  "vsOff": {
+   "n": 60,
+   "deaths": -0.233,
+   "deathsCi": [
+    -2.3,
+    2
+   ],
+   "towerDeaths": 0.1,
+   "towerCi": [
+    -0.117,
+    0.367
+   ],
+   "camps": -1.067,
+   "campsCi": [
+    -2.283,
+    0.283
+   ],
+   "own": -0.833,
+   "enemy": -0.233
+  }
+ },
+ "tool|v14succ": {
+  "sideMatches": 120,
+  "starts": 8,
+  "C1": 0.067,
+  "C1ci": [
+   0.025,
+   0.108
+  ],
+  "C2": 0.067,
+  "S2A": 0.625,
+  "S2Aci": [
+   0.429,
+   1
+  ],
+  "captured": 0.625,
+  "leaderDied": 0.375,
+  "vsOff": {
+   "n": 120,
+   "deaths": 0.067,
+   "deathsCi": [
+    -1.425,
+    1.55
+   ],
+   "towerDeaths": 0.042,
+   "towerCi": [
+    -0.125,
+    0.192
+   ],
+   "camps": 0.375,
+   "campsCi": [
+    -1.325,
+    2.042
+   ],
+   "own": 1.05,
+   "enemy": -0.675
+  }
+ },
+ "career|v14succ": {
+  "sideMatches": 60,
+  "starts": 6,
+  "C1": 0.1,
+  "C1ci": [
+   0.033,
+   0.183
+  ],
+  "C2": 0.1,
+  "S2A": 0.667,
+  "S2Aci": [
+   0.6,
+   1
+  ],
+  "captured": 0.667,
+  "leaderDied": 0.167,
+  "vsOff": {
+   "n": 60,
+   "deaths": -0.167,
+   "deathsCi": [
+    -2.25,
+    2.083
+   ],
+   "towerDeaths": 0.133,
+   "towerCi": [
+    -0.083,
+    0.4
+   ],
+   "camps": -0.917,
+   "campsCi": [
+    -2.017,
+    0.35
+   ],
+   "own": -0.65,
+   "enemy": -0.267
+  }
+ },
+ "tool|v14noSucc": {
+  "sideMatches": 120,
+  "starts": 77,
+  "C1": 0.642,
+  "C1ci": [
+   0.5,
+   0.783
+  ],
+  "C2": 0.55,
+  "S2A": 0.221,
+  "S2Aci": [
+   0.139,
+   0.308
+  ],
+  "captured": 0.221,
+  "leaderDied": 0.208,
+  "vsOff": {
+   "n": 120,
+   "deaths": -0.175,
+   "deathsCi": [
+    -1.45,
+    1.133
+   ],
+   "towerDeaths": 0.033,
+   "towerCi": [
+    -0.125,
+    0.192
+   ],
+   "camps": -0.025,
+   "campsCi": [
+    -1.525,
+    1.467
+   ],
+   "own": 0.592,
+   "enemy": -0.617
+  }
+ },
+ "career|v14noSucc": {
+  "sideMatches": 60,
+  "starts": 39,
+  "C1": 0.65,
+  "C1ci": [
+   0.4,
+   0.917
+  ],
+  "C2": 0.467,
+  "S2A": 0.359,
+  "S2Aci": [
+   0.19,
+   0.5
+  ],
+  "captured": 0.308,
+  "leaderDied": 0.205,
+  "vsOff": {
+   "n": 60,
+   "deaths": -0.067,
+   "deathsCi": [
+    -1.8,
+    1.667
+   ],
+   "towerDeaths": 0.15,
+   "towerCi": [
+    -0.1,
+    0.433
+   ],
+   "camps": -1.083,
+   "campsCi": [
+    -2.2,
+    0.033
+   ],
+   "own": -0.967,
+   "enemy": -0.117
+  }
+ },
+ "tool|v14": {
+  "sideMatches": 120,
+  "starts": 23,
+  "C1": 0.192,
+  "C1ci": [
+   0.133,
+   0.258
+  ],
+  "C2": 0.175,
+  "S2A": 0.304,
+  "S2Aci": [
+   0.1,
+   0.481
+  ],
+  "captured": 0.261,
+  "leaderDied": 0.174,
+  "vsOff": {
+   "n": 120,
+   "deaths": 0.142,
+   "deathsCi": [
+    -1.292,
+    1.492
+   ],
+   "towerDeaths": 0.033,
+   "towerCi": [
+    -0.133,
+    0.192
+   ],
+   "camps": 0.417,
+   "campsCi": [
+    -1.3,
+    2.067
+   ],
+   "own": 1.125,
+   "enemy": -0.708
+  }
+ },
+ "career|v14": {
+  "sideMatches": 60,
+  "starts": 16,
+  "C1": 0.267,
+  "C1ci": [
+   0.15,
+   0.383
+  ],
+  "C2": 0.25,
+  "S2A": 0.438,
+  "S2Aci": [
+   0.176,
+   0.706
+  ],
+  "captured": 0.438,
+  "leaderDied": 0.313,
+  "vsOff": {
+   "n": 60,
+   "deaths": -0.233,
+   "deathsCi": [
+    -2.233,
+    1.783
+   ],
+   "towerDeaths": 0.15,
+   "towerCi": [
+    -0.083,
+    0.417
+   ],
+   "camps": -0.817,
+   "campsCi": [
+    -2.017,
+    0.55
+   ],
+   "own": -0.6,
+   "enemy": -0.217
+  }
+ }
+}

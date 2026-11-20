@@ -1,0 +1,1507 @@
+{
+ "generatedAt": "2026-11-14T00:31:42.969Z",
+ "rows": 200,
+ "verdicts": [
+  {
+   "id": "F1 career:mid 生涯藍方勝率 v5 − v3：未重現",
+   "mark": "ℹ",
+   "detail": {
+    "n": 80,
+    "blueWins": {
+     "v3": 53,
+     "v5": 54
+    },
+    "paired": {
+     "n": 80,
+     "mean": 0.0125,
+     "ci95": [
+      -0.0849,
+      0.1099
+     ]
+    },
+    "flipsRedToBlue": 8,
+    "flipsBlueToRed": 7,
+    "verdict": "未重現"
+   }
+  },
+  {
+   "id": "F1 career:high 生涯藍方勝率 v5 − v3：未重現",
+   "mark": "ℹ",
+   "detail": {
+    "n": 40,
+    "blueWins": {
+     "v3": 29,
+     "v5": 29
+    },
+    "paired": {
+     "n": 40,
+     "mean": 0,
+     "ci95": [
+      -0.1034,
+      0.1034
+     ]
+    },
+    "flipsRedToBlue": 2,
+    "flipsBlueToRed": 2,
+    "verdict": "未重現"
+   }
+  },
+  {
+   "id": "F1 career:pooled 生涯藍方勝率 v5 − v3：未重現",
+   "mark": "ℹ",
+   "detail": {
+    "n": 120,
+    "blueWins": {
+     "v3": 82,
+     "v5": 83
+    },
+    "paired": {
+     "n": 120,
+     "mean": 0.0083,
+     "ci95": [
+      -0.0646,
+      0.0813
+     ]
+    },
+    "flipsRedToBlue": 10,
+    "flipsBlueToRed": 9,
+    "verdict": "未重現"
+   }
+  },
+  {
+   "id": "F2 sym 來源：無法歸因",
+   "mark": "ℹ",
+   "detail": {
+    "n": 80,
+    "blueWins": {
+     "v3": 46,
+     "v3m": 42,
+     "v5x": 45,
+     "v5": 44
+    },
+    "mirror": {
+     "n": 80,
+     "mean": -0.0313,
+     "ci95": [
+      -0.0826,
+      0.0201
+     ]
+    },
+    "retreat": {
+     "n": 80,
+     "mean": 0.0063,
+     "ci95": [
+      -0.0514,
+      0.0639
+     ]
+    },
+    "attribution": "無法歸因"
+   }
+  },
+  {
+   "id": "F2 career:mid 來源：無法歸因",
+   "mark": "ℹ",
+   "detail": {
+    "n": 80,
+    "blueWins": {
+     "v3": 53,
+     "v3m": 51,
+     "v5x": 50,
+     "v5": 54
+    },
+    "mirror": {
+     "n": 80,
+     "mean": 0.0125,
+     "ci95": [
+      -0.0345,
+      0.0595
+     ]
+    },
+    "retreat": {
+     "n": 80,
+     "mean": 0,
+     "ci95": [
+      -0.0889,
+      0.0889
+     ]
+    },
+    "attribution": "無法歸因"
+   }
+  },
+  {
+   "id": "F3 對稱組每臂藍勝率（Wilson 95%）與 v5 − v3 配對差",
+   "mark": "ℹ",
+   "detail": {
+    "rates": {
+     "v3": {
+      "k": 46,
+      "n": 80,
+      "rate": 0.575,
+      "ci95": [
+       0.4657,
+       0.6774
+      ]
+     },
+     "v3m": {
+      "k": 42,
+      "n": 80,
+      "rate": 0.525,
+      "ci95": [
+       0.417,
+       0.6308
+      ]
+     },
+     "v5x": {
+      "k": 45,
+      "n": 80,
+      "rate": 0.5625,
+      "ci95": [
+       0.4534,
+       0.6659
+      ]
+     },
+     "v5": {
+      "k": 44,
+      "n": 80,
+      "rate": 0.55,
+      "ci95": [
+       0.4412,
+       0.6542
+      ]
+     }
+    },
+    "pairedV5minusV3": {
+     "n": 80,
+     "mean": -0.025,
+     "ci95": [
+      -0.112,
+      0.062
+     ]
+    }
+   }
+  },
+  {
+   "id": "✅ B1 不成立",
+   "mark": "✅",
+   "detail": {
+    "v5WilsonExcludes050": false,
+    "v5FartherThanV3": false,
+    "pairedExcludes0": false,
+    "v3": {
+     "k": 46,
+     "n": 80,
+     "rate": 0.575,
+     "ci95": [
+      0.4657,
+      0.6774
+     ]
+    },
+    "v5": {
+     "k": 44,
+     "n": 80,
+     "rate": 0.55,
+     "ci95": [
+      0.4412,
+      0.6542
+     ]
+    },
+    "paired": {
+     "n": 80,
+     "mean": -0.025,
+     "ci95": [
+      -0.112,
+      0.062
+     ]
+    }
+   }
+  },
+  {
+   "id": "✅ B2 不成立",
+   "mark": "✅",
+   "detail": {
+    "v3": 0,
+    "v3m": 0,
+    "v5x": 0,
+    "v5": 0
+   }
+  },
+  {
+   "id": "F4a career:mid 依地圖配置分組的 F1",
+   "mark": "ℹ",
+   "detail": {
+    "STANDARD": {
+     "n": 38,
+     "blueWins": {
+      "v3": 26,
+      "v5": 25
+     },
+     "d": {
+      "n": 38,
+      "mean": -0.0263,
+      "ci95": [
+       -0.1895,
+       0.1368
+      ]
+     },
+     "rb": 4,
+     "br": 5
+    },
+    "SWAPPED": {
+     "n": 42,
+     "blueWins": {
+      "v3": 27,
+      "v5": 29
+     },
+     "d": {
+      "n": 42,
+      "mean": 0.0476,
+      "ci95": [
+       -0.0707,
+       0.166
+      ]
+     },
+     "rb": 4,
+     "br": 2
+    }
+   }
+  },
+  {
+   "id": "F4a sym 依地圖配置分組的每臂藍勝率",
+   "mark": "ℹ",
+   "detail": {
+    "STANDARD": {
+     "v3": {
+      "k": 23,
+      "n": 38,
+      "rate": 0.6053,
+      "ci95": [
+       0.4472,
+       0.744
+      ]
+     },
+     "v3m": {
+      "k": 22,
+      "n": 38,
+      "rate": 0.5789,
+      "ci95": [
+       0.4219,
+       0.7215
+      ]
+     },
+     "v5x": {
+      "k": 22,
+      "n": 38,
+      "rate": 0.5789,
+      "ci95": [
+       0.4219,
+       0.7215
+      ]
+     },
+     "v5": {
+      "k": 23,
+      "n": 38,
+      "rate": 0.6053,
+      "ci95": [
+       0.4472,
+       0.744
+      ]
+     }
+    },
+    "SWAPPED": {
+     "v3": {
+      "k": 23,
+      "n": 42,
+      "rate": 0.5476,
+      "ci95": [
+       0.3995,
+       0.6878
+      ]
+     },
+     "v3m": {
+      "k": 20,
+      "n": 42,
+      "rate": 0.4762,
+      "ci95": [
+       0.3336,
+       0.6228
+      ]
+     },
+     "v5x": {
+      "k": 23,
+      "n": 42,
+      "rate": 0.5476,
+      "ci95": [
+       0.3995,
+       0.6878
+      ]
+     },
+     "v5": {
+      "k": 21,
+      "n": 42,
+      "rate": 0.5,
+      "ci95": [
+       0.3553,
+       0.6447
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "F4b sym 依 v3 臂門牙塔不對稱秒數 > 0／= 0 的勝負翻轉",
+   "mark": "ℹ",
+   "detail": {
+    "asymPositive": {
+     "seeds": 80,
+     "blueWins": {
+      "v3": 46,
+      "v5": 44
+     },
+     "flipsRedToBlue": 5,
+     "flipsBlueToRed": 7
+    },
+    "asymZero": {
+     "seeds": 0,
+     "blueWins": {
+      "v3": 0,
+      "v5": 0
+     },
+     "flipsRedToBlue": 0,
+     "flipsBlueToRed": 0
+    },
+    "meanAsym": {
+     "v3": {
+      "asymBlueDown": 65.32,
+      "asymRedDown": 44.05
+     },
+     "v3m": {
+      "asymBlueDown": 63.59,
+      "asymRedDown": 44.08
+     },
+     "v5x": {
+      "asymBlueDown": 41.32,
+      "asymRedDown": 42.36
+     },
+     "v5": {
+      "asymBlueDown": 47.52,
+      "asymRedDown": 41.71
+     }
+    }
+   }
+  },
+  {
+   "id": "F4c/F4d sym 各臂推掉的塔、敵方基地內沒有移動的比例、基地陣亡",
+   "mark": "ℹ",
+   "detail": {
+    "v3": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 209,
+       "mid": 124,
+       "bot": 62,
+       "nexus": 90
+      },
+      "red": {
+       "top": 75,
+       "mid": 123,
+       "bot": 211,
+       "nexus": 104
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 4053,
+       "still": 1042,
+       "stillRatio": 0.2571
+      },
+      "red": {
+       "ticks": 3995,
+       "still": 1067,
+       "stillRatio": 0.2671
+      }
+     },
+     "baseDeaths": {
+      "blue": 9,
+      "red": 9
+     }
+    },
+    "v3m": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 209,
+       "mid": 127,
+       "bot": 64,
+       "nexus": 93
+      },
+      "red": {
+       "top": 77,
+       "mid": 124,
+       "bot": 212,
+       "nexus": 102
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3461,
+       "still": 907,
+       "stillRatio": 0.2621
+      },
+      "red": {
+       "ticks": 3774,
+       "still": 988,
+       "stillRatio": 0.2618
+      }
+     },
+     "baseDeaths": {
+      "blue": 10,
+      "red": 13
+     }
+    },
+    "v5x": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 204,
+       "mid": 127,
+       "bot": 63,
+       "nexus": 87
+      },
+      "red": {
+       "top": 80,
+       "mid": 124,
+       "bot": 217,
+       "nexus": 111
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3975,
+       "still": 1086,
+       "stillRatio": 0.2732
+      },
+      "red": {
+       "ticks": 3808,
+       "still": 1010,
+       "stillRatio": 0.2652
+      }
+     },
+     "baseDeaths": {
+      "blue": 6,
+      "red": 7
+     }
+    },
+    "v5": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 204,
+       "mid": 125,
+       "bot": 60,
+       "nexus": 89
+      },
+      "red": {
+       "top": 79,
+       "mid": 122,
+       "bot": 217,
+       "nexus": 107
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3098,
+       "still": 828,
+       "stillRatio": 0.2673
+      },
+      "red": {
+       "ticks": 3486,
+       "still": 922,
+       "stillRatio": 0.2645
+      }
+     },
+     "baseDeaths": {
+      "blue": 6,
+      "red": 7
+     }
+    }
+   }
+  },
+  {
+   "id": "F4b career:mid 依 v3 臂門牙塔不對稱秒數 > 0／= 0 的勝負翻轉",
+   "mark": "ℹ",
+   "detail": {
+    "asymPositive": {
+     "seeds": 80,
+     "blueWins": {
+      "v3": 53,
+      "v5": 54
+     },
+     "flipsRedToBlue": 8,
+     "flipsBlueToRed": 7
+    },
+    "asymZero": {
+     "seeds": 0,
+     "blueWins": {
+      "v3": 0,
+      "v5": 0
+     },
+     "flipsRedToBlue": 0,
+     "flipsBlueToRed": 0
+    },
+    "meanAsym": {
+     "v3": {
+      "asymBlueDown": 46.68,
+      "asymRedDown": 88.73
+     },
+     "v3m": {
+      "asymBlueDown": 47.19,
+      "asymRedDown": 97.31
+     },
+     "v5x": {
+      "asymBlueDown": 46.05,
+      "asymRedDown": 56.31
+     },
+     "v5": {
+      "asymBlueDown": 45.65,
+      "asymRedDown": 61.91
+     }
+    }
+   }
+  },
+  {
+   "id": "F4c/F4d career:mid 各臂推掉的塔、敵方基地內沒有移動的比例、基地陣亡",
+   "mark": "ℹ",
+   "detail": {
+    "v3": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 202,
+       "mid": 135,
+       "bot": 72,
+       "nexus": 79
+      },
+      "red": {
+       "top": 74,
+       "mid": 149,
+       "bot": 212,
+       "nexus": 113
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 4469,
+       "still": 1176,
+       "stillRatio": 0.2631
+      },
+      "red": {
+       "ticks": 3019,
+       "still": 851,
+       "stillRatio": 0.2819
+      }
+     },
+     "baseDeaths": {
+      "blue": 35,
+      "red": 11
+     }
+    },
+    "v3m": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 200,
+       "mid": 134,
+       "bot": 75,
+       "nexus": 82
+      },
+      "red": {
+       "top": 73,
+       "mid": 154,
+       "bot": 211,
+       "nexus": 113
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 5126,
+       "still": 1391,
+       "stillRatio": 0.2714
+      },
+      "red": {
+       "ticks": 3150,
+       "still": 873,
+       "stillRatio": 0.2771
+      }
+     },
+     "baseDeaths": {
+      "blue": 26,
+      "red": 17
+     }
+    },
+    "v5x": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 196,
+       "mid": 146,
+       "bot": 67,
+       "nexus": 89
+      },
+      "red": {
+       "top": 75,
+       "mid": 145,
+       "bot": 212,
+       "nexus": 113
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3734,
+       "still": 999,
+       "stillRatio": 0.2675
+      },
+      "red": {
+       "ticks": 3573,
+       "still": 1092,
+       "stillRatio": 0.3056
+      }
+     },
+     "baseDeaths": {
+      "blue": 25,
+      "red": 11
+     }
+    },
+    "v5": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 195,
+       "mid": 149,
+       "bot": 66,
+       "nexus": 90
+      },
+      "red": {
+       "top": 76,
+       "mid": 150,
+       "bot": 213,
+       "nexus": 115
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 4060,
+       "still": 1102,
+       "stillRatio": 0.2714
+      },
+      "red": {
+       "ticks": 3562,
+       "still": 1102,
+       "stillRatio": 0.3094
+      }
+     },
+     "baseDeaths": {
+      "blue": 24,
+      "red": 11
+     }
+    }
+   }
+  },
+  {
+   "id": "F5 sym 決定性與完成",
+   "mark": "ℹ",
+   "detail": {
+    "n": 80,
+    "unfinished": {
+     "v3": 0,
+     "v3m": 0,
+     "v5x": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v3m": [],
+     "v5x": [],
+     "v5": []
+    },
+    "identical": 4,
+    "tickMs": {
+     "v3": 1.806,
+     "v3m": 1.863,
+     "v5x": 1.855,
+     "v5": 1.761
+    }
+   }
+  },
+  {
+   "id": "F5 career:mid 決定性與完成",
+   "mark": "ℹ",
+   "detail": {
+    "n": 80,
+    "unfinished": {
+     "v3": 0,
+     "v3m": 0,
+     "v5x": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v3m": [],
+     "v5x": [],
+     "v5": []
+    },
+    "identical": 7,
+    "tickMs": {
+     "v3": 1.887,
+     "v3m": 1.901,
+     "v5x": 1.885,
+     "v5": 1.792
+    }
+   }
+  },
+  {
+   "id": "F5 career:high 決定性與完成",
+   "mark": "ℹ",
+   "detail": {
+    "n": 40,
+    "unfinished": {
+     "v3": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v5": []
+    },
+    "identical": 3,
+    "tickMs": {
+     "v3": 1.836,
+     "v5": 1.753
+    }
+   }
+  },
+  {
+   "id": "F5 career:pooled 決定性與完成",
+   "mark": "ℹ",
+   "detail": {
+    "n": 120,
+    "unfinished": {
+     "v3": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v5": []
+    },
+    "identical": 10,
+    "tickMs": {
+     "v3": 1.87,
+     "v5": 1.779
+    }
+   }
+  }
+ ],
+ "groups": {
+  "career:mid": {
+   "F1": {
+    "n": 80,
+    "blueWins": {
+     "v3": 53,
+     "v5": 54
+    },
+    "paired": {
+     "n": 80,
+     "mean": 0.0125,
+     "ci95": [
+      -0.0849,
+      0.1099
+     ]
+    },
+    "flipsRedToBlue": 8,
+    "flipsBlueToRed": 7,
+    "verdict": "未重現"
+   },
+   "F2": {
+    "n": 80,
+    "blueWins": {
+     "v3": 53,
+     "v3m": 51,
+     "v5x": 50,
+     "v5": 54
+    },
+    "mirror": {
+     "n": 80,
+     "mean": 0.0125,
+     "ci95": [
+      -0.0345,
+      0.0595
+     ]
+    },
+    "retreat": {
+     "n": 80,
+     "mean": 0,
+     "ci95": [
+      -0.0889,
+      0.0889
+     ]
+    },
+    "attribution": "無法歸因"
+   },
+   "F4a": {
+    "STANDARD": {
+     "n": 38,
+     "blueWins": {
+      "v3": 26,
+      "v5": 25
+     },
+     "paired": {
+      "n": 38,
+      "mean": -0.0263,
+      "ci95": [
+       -0.1895,
+       0.1368
+      ]
+     },
+     "flipsRedToBlue": 4,
+     "flipsBlueToRed": 5,
+     "verdict": "未重現"
+    },
+    "SWAPPED": {
+     "n": 42,
+     "blueWins": {
+      "v3": 27,
+      "v5": 29
+     },
+     "paired": {
+      "n": 42,
+      "mean": 0.0476,
+      "ci95": [
+       -0.0707,
+       0.166
+      ]
+     },
+     "flipsRedToBlue": 4,
+     "flipsBlueToRed": 2,
+     "verdict": "未重現"
+    }
+   },
+   "F4b": {
+    "asymPositive": {
+     "seeds": 80,
+     "blueWins": {
+      "v3": 53,
+      "v5": 54
+     },
+     "flipsRedToBlue": 8,
+     "flipsBlueToRed": 7
+    },
+    "asymZero": {
+     "seeds": 0,
+     "blueWins": {
+      "v3": 0,
+      "v5": 0
+     },
+     "flipsRedToBlue": 0,
+     "flipsBlueToRed": 0
+    },
+    "meanAsym": {
+     "v3": {
+      "asymBlueDown": 46.68,
+      "asymRedDown": 88.73
+     },
+     "v3m": {
+      "asymBlueDown": 47.19,
+      "asymRedDown": 97.31
+     },
+     "v5x": {
+      "asymBlueDown": 46.05,
+      "asymRedDown": 56.31
+     },
+     "v5": {
+      "asymBlueDown": 45.65,
+      "asymRedDown": 61.91
+     }
+    }
+   },
+   "F4cd": {
+    "v3": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 202,
+       "mid": 135,
+       "bot": 72,
+       "nexus": 79
+      },
+      "red": {
+       "top": 74,
+       "mid": 149,
+       "bot": 212,
+       "nexus": 113
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 4469,
+       "still": 1176,
+       "stillRatio": 0.2631
+      },
+      "red": {
+       "ticks": 3019,
+       "still": 851,
+       "stillRatio": 0.2819
+      }
+     },
+     "baseDeaths": {
+      "blue": 35,
+      "red": 11
+     }
+    },
+    "v3m": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 200,
+       "mid": 134,
+       "bot": 75,
+       "nexus": 82
+      },
+      "red": {
+       "top": 73,
+       "mid": 154,
+       "bot": 211,
+       "nexus": 113
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 5126,
+       "still": 1391,
+       "stillRatio": 0.2714
+      },
+      "red": {
+       "ticks": 3150,
+       "still": 873,
+       "stillRatio": 0.2771
+      }
+     },
+     "baseDeaths": {
+      "blue": 26,
+      "red": 17
+     }
+    },
+    "v5x": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 196,
+       "mid": 146,
+       "bot": 67,
+       "nexus": 89
+      },
+      "red": {
+       "top": 75,
+       "mid": 145,
+       "bot": 212,
+       "nexus": 113
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3734,
+       "still": 999,
+       "stillRatio": 0.2675
+      },
+      "red": {
+       "ticks": 3573,
+       "still": 1092,
+       "stillRatio": 0.3056
+      }
+     },
+     "baseDeaths": {
+      "blue": 25,
+      "red": 11
+     }
+    },
+    "v5": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 195,
+       "mid": 149,
+       "bot": 66,
+       "nexus": 90
+      },
+      "red": {
+       "top": 76,
+       "mid": 150,
+       "bot": 213,
+       "nexus": 115
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 4060,
+       "still": 1102,
+       "stillRatio": 0.2714
+      },
+      "red": {
+       "ticks": 3562,
+       "still": 1102,
+       "stillRatio": 0.3094
+      }
+     },
+     "baseDeaths": {
+      "blue": 24,
+      "red": 11
+     }
+    }
+   },
+   "F5": {
+    "n": 80,
+    "unfinished": {
+     "v3": 0,
+     "v3m": 0,
+     "v5x": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v3m": [],
+     "v5x": [],
+     "v5": []
+    },
+    "identical": 7,
+    "tickMs": {
+     "v3": 1.887,
+     "v3m": 1.901,
+     "v5x": 1.885,
+     "v5": 1.792
+    }
+   }
+  },
+  "career:high": {
+   "F1": {
+    "n": 40,
+    "blueWins": {
+     "v3": 29,
+     "v5": 29
+    },
+    "paired": {
+     "n": 40,
+     "mean": 0,
+     "ci95": [
+      -0.1034,
+      0.1034
+     ]
+    },
+    "flipsRedToBlue": 2,
+    "flipsBlueToRed": 2,
+    "verdict": "未重現"
+   },
+   "F5": {
+    "n": 40,
+    "unfinished": {
+     "v3": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v5": []
+    },
+    "identical": 3,
+    "tickMs": {
+     "v3": 1.836,
+     "v5": 1.753
+    }
+   }
+  },
+  "career:pooled": {
+   "F1": {
+    "n": 120,
+    "blueWins": {
+     "v3": 82,
+     "v5": 83
+    },
+    "paired": {
+     "n": 120,
+     "mean": 0.0083,
+     "ci95": [
+      -0.0646,
+      0.0813
+     ]
+    },
+    "flipsRedToBlue": 10,
+    "flipsBlueToRed": 9,
+    "verdict": "未重現"
+   },
+   "F5": {
+    "n": 120,
+    "unfinished": {
+     "v3": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v5": []
+    },
+    "identical": 10,
+    "tickMs": {
+     "v3": 1.87,
+     "v5": 1.779
+    }
+   }
+  },
+  "sym": {
+   "F2": {
+    "n": 80,
+    "blueWins": {
+     "v3": 46,
+     "v3m": 42,
+     "v5x": 45,
+     "v5": 44
+    },
+    "mirror": {
+     "n": 80,
+     "mean": -0.0313,
+     "ci95": [
+      -0.0826,
+      0.0201
+     ]
+    },
+    "retreat": {
+     "n": 80,
+     "mean": 0.0063,
+     "ci95": [
+      -0.0514,
+      0.0639
+     ]
+    },
+    "attribution": "無法歸因"
+   },
+   "F3": {
+    "rates": {
+     "v3": {
+      "k": 46,
+      "n": 80,
+      "rate": 0.575,
+      "ci95": [
+       0.4657,
+       0.6774
+      ]
+     },
+     "v3m": {
+      "k": 42,
+      "n": 80,
+      "rate": 0.525,
+      "ci95": [
+       0.417,
+       0.6308
+      ]
+     },
+     "v5x": {
+      "k": 45,
+      "n": 80,
+      "rate": 0.5625,
+      "ci95": [
+       0.4534,
+       0.6659
+      ]
+     },
+     "v5": {
+      "k": 44,
+      "n": 80,
+      "rate": 0.55,
+      "ci95": [
+       0.4412,
+       0.6542
+      ]
+     }
+    },
+    "pairedV5minusV3": {
+     "n": 80,
+     "mean": -0.025,
+     "ci95": [
+      -0.112,
+      0.062
+     ]
+    }
+   },
+   "F4a": {
+    "STANDARD": {
+     "v3": {
+      "k": 23,
+      "n": 38,
+      "rate": 0.6053,
+      "ci95": [
+       0.4472,
+       0.744
+      ]
+     },
+     "v3m": {
+      "k": 22,
+      "n": 38,
+      "rate": 0.5789,
+      "ci95": [
+       0.4219,
+       0.7215
+      ]
+     },
+     "v5x": {
+      "k": 22,
+      "n": 38,
+      "rate": 0.5789,
+      "ci95": [
+       0.4219,
+       0.7215
+      ]
+     },
+     "v5": {
+      "k": 23,
+      "n": 38,
+      "rate": 0.6053,
+      "ci95": [
+       0.4472,
+       0.744
+      ]
+     }
+    },
+    "SWAPPED": {
+     "v3": {
+      "k": 23,
+      "n": 42,
+      "rate": 0.5476,
+      "ci95": [
+       0.3995,
+       0.6878
+      ]
+     },
+     "v3m": {
+      "k": 20,
+      "n": 42,
+      "rate": 0.4762,
+      "ci95": [
+       0.3336,
+       0.6228
+      ]
+     },
+     "v5x": {
+      "k": 23,
+      "n": 42,
+      "rate": 0.5476,
+      "ci95": [
+       0.3995,
+       0.6878
+      ]
+     },
+     "v5": {
+      "k": 21,
+      "n": 42,
+      "rate": 0.5,
+      "ci95": [
+       0.3553,
+       0.6447
+      ]
+     }
+    }
+   },
+   "F4b": {
+    "asymPositive": {
+     "seeds": 80,
+     "blueWins": {
+      "v3": 46,
+      "v5": 44
+     },
+     "flipsRedToBlue": 5,
+     "flipsBlueToRed": 7
+    },
+    "asymZero": {
+     "seeds": 0,
+     "blueWins": {
+      "v3": 0,
+      "v5": 0
+     },
+     "flipsRedToBlue": 0,
+     "flipsBlueToRed": 0
+    },
+    "meanAsym": {
+     "v3": {
+      "asymBlueDown": 65.32,
+      "asymRedDown": 44.05
+     },
+     "v3m": {
+      "asymBlueDown": 63.59,
+      "asymRedDown": 44.08
+     },
+     "v5x": {
+      "asymBlueDown": 41.32,
+      "asymRedDown": 42.36
+     },
+     "v5": {
+      "asymBlueDown": 47.52,
+      "asymRedDown": 41.71
+     }
+    }
+   },
+   "F4cd": {
+    "v3": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 209,
+       "mid": 124,
+       "bot": 62,
+       "nexus": 90
+      },
+      "red": {
+       "top": 75,
+       "mid": 123,
+       "bot": 211,
+       "nexus": 104
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 4053,
+       "still": 1042,
+       "stillRatio": 0.2571
+      },
+      "red": {
+       "ticks": 3995,
+       "still": 1067,
+       "stillRatio": 0.2671
+      }
+     },
+     "baseDeaths": {
+      "blue": 9,
+      "red": 9
+     }
+    },
+    "v3m": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 209,
+       "mid": 127,
+       "bot": 64,
+       "nexus": 93
+      },
+      "red": {
+       "top": 77,
+       "mid": 124,
+       "bot": 212,
+       "nexus": 102
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3461,
+       "still": 907,
+       "stillRatio": 0.2621
+      },
+      "red": {
+       "ticks": 3774,
+       "still": 988,
+       "stillRatio": 0.2618
+      }
+     },
+     "baseDeaths": {
+      "blue": 10,
+      "red": 13
+     }
+    },
+    "v5x": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 204,
+       "mid": 127,
+       "bot": 63,
+       "nexus": 87
+      },
+      "red": {
+       "top": 80,
+       "mid": 124,
+       "bot": 217,
+       "nexus": 111
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3975,
+       "still": 1086,
+       "stillRatio": 0.2732
+      },
+      "red": {
+       "ticks": 3808,
+       "still": 1010,
+       "stillRatio": 0.2652
+      }
+     },
+     "baseDeaths": {
+      "blue": 6,
+      "red": 7
+     }
+    },
+    "v5": {
+     "n": 80,
+     "towersLost": {
+      "blue": {
+       "top": 204,
+       "mid": 125,
+       "bot": 60,
+       "nexus": 89
+      },
+      "red": {
+       "top": 79,
+       "mid": 122,
+       "bot": 217,
+       "nexus": 107
+      }
+     },
+     "siege": {
+      "blue": {
+       "ticks": 3098,
+       "still": 828,
+       "stillRatio": 0.2673
+      },
+      "red": {
+       "ticks": 3486,
+       "still": 922,
+       "stillRatio": 0.2645
+      }
+     },
+     "baseDeaths": {
+      "blue": 6,
+      "red": 7
+     }
+    }
+   },
+   "F5": {
+    "n": 80,
+    "unfinished": {
+     "v3": 0,
+     "v3m": 0,
+     "v5x": 0,
+     "v5": 0
+    },
+    "unfinishedSeeds": {
+     "v3": [],
+     "v3m": [],
+     "v5x": [],
+     "v5": []
+    },
+    "identical": 4,
+    "tickMs": {
+     "v3": 1.806,
+     "v3m": 1.863,
+     "v5x": 1.855,
+     "v5": 1.761
+    }
+   }
+  }
+ },
+ "blocking": {
+  "B1": false,
+  "B2": false
+ }
+}

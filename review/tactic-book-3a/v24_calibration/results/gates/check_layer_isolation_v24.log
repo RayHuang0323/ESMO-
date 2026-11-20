@@ -1,0 +1,10 @@
+✅ I1 v20～v23 的 48 場整場逐 tick 雜湊＝改動前的基準（00382eda）　same=48/48
+✅ I3 v20～v23 對局裡 v24 的程式不啟動（沒有仲裁帳、承諾推進旗標關）　engines=48 leaked=0
+✅ I2 v24（仲裁紀錄 v1＋承諾 v19，tacticExec 覆寫成 off）與同輸入的 v23 整場逐 tick 相同（工具 6）　same=6/6 ledgers=6
+✅ I4a 仲裁帳：每名存活英雄每 tick 恰好一筆，值都在契約清單內　ticks=1805 badTicks=0 badEnum=0
+✅ I4b 第一段贏的任務：引擎內的帳與引擎外的步驟 A 觀測器逐筆一致　compared=17883 agree=17883 confusion={}
+✅ I5 規則集：v20～v23 沒有 v24 的層；v24＝v23 逐欄＋恰好三個新鍵（v1／v19／adaptive.v1.3）；旗標全關 ⇒ career.v20、只開 v24 ⇒ 仍 career.v20　leaked=[] career={"extra":["taskArbitration","taskCommit","tacticExec"],"same":true,"sim":"moba-sim.v24","layers":["v1","v19","adaptive.v1.3"]} tool={"extra":["taskArbitration","taskCommit","tacticExec"],"same":true,"sim":"moba-sim.v24","layers":["v1","v19","adaptive.v1.3"]} resolve off/3/4/onlyV24=career.v20/career.v23/career.v24/career.v20 flagsOff=true valid=true
+✅ I6 v23 凍結清單的語意檔只改了刻意的 3 支；補進清單的 21 支依賴檔內容＝凍結時的內容；tacticalDirective.js 不變　changed=[] gapChanged=[] listed=21/21 directiveSame=true
+✅ I7 taskCommit v19push：工具覆寫後對局真的改變；正式規則集被鎖在 v19　v19=cc9f7e5c1878ecba76bb v19push=2ef307e4676b43eff88e productionPinned=true
+
+check_layer_isolation_v24：8/8 PASS  (168.4 s)

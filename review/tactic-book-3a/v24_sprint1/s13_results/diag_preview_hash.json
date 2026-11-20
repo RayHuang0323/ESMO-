@@ -1,0 +1,25 @@
+{
+ "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+ "ticks": {
+  "node": 3177,
+  "page": 3177
+ },
+ "firstDifferentCheckpoint": {
+  "time": null,
+  "pos": 630,
+  "hp": null,
+  "dead": null,
+  "state": null,
+  "gold": null
+ },
+ "identicalAllFields": false,
+ "rawDiffs": [
+  {
+   "tick": 627,
+   "id": "b1",
+   "field": "x",
+   "node": 174.11848472517192,
+   "page": 174.11848472517195
+  }
+ ]
+}

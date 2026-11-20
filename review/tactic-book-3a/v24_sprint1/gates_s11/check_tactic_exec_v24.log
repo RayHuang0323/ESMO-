@@ -1,0 +1,16 @@
+$ node tools/check_tactic_exec_v24.mjs
+✅ T1 決定性：同一個 Seed 兩次整場雜湊相同　b50bed51160c5a8c6b1c / b50bed51160c5a8c6b1c
+✅ T2 驗收 8a（adaptive.v1）：紅藍狀態互換（旋轉 180°＋紅藍／路／id 對調），入侵決策逐筆相同　compared=340 kinds={"declined:no_target":18,"go":12,"declined:too_far":40,"declined:busy":171,"declined:no_intel":80,"declined:hp":13,"declined:objective_intent":4,"declined:objective_window":1,"declined:objective_soon":1} diff=0 skippedTowerDown=98 maxEtaDiff=0.000s
+✅ T3 資訊公平（adaptive.v1）：看不見的敵人移走之後，決策逐筆不變　compared=339 unseenMoved=1247 diff=0
+✅ T2 驗收 8a（adaptive.v1.1）：紅藍狀態互換（旋轉 180°＋紅藍／路／id 對調），入侵決策逐筆相同　compared=316 kinds={"declined:no_target":18,"declined:own_farm":141,"declined:too_far":42,"declined:busy":106,"go":2,"declined:objective_soon":2,"declined:hp":3,"declined:no_party":1,"declined:objective_intent":1} diff=0 skippedTowerDown=110 maxEtaDiff=0.000s
+✅ T3 資訊公平（adaptive.v1.1）：看不見的敵人移走之後，決策逐筆不變　compared=316 unseenMoved=1196 diff=0
+✅ T4 原因碼都在登記清單內；有入侵意圖的對局都有評估紀錄（兩個版本）　matches=6 withEvals=4 bad=[]
+✅ T5 模組不讀亂數與時鐘　[]
+✅ T6 層關閉時完全不啟動（沒有 tacExec、沒有隊友／回防欄位）　tacExec=undefined flag=false leakTicks=0
+✅ T7 原 Sprint 1（adaptive.v1）整場串流雜湊＝e9d86b32 錄下的值（工具覆寫 2 場＋生涯第一個 tick 前切換 1 場）；v1.1 確實不同　{"balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-":"7b079375c5949795fe9e","balanceTool.v24|v2.jungle_invasion|classic.m7|13|-":"5ccc36dd00f15d8bf46f","career.v24|v2.jungle_invasion|-|93001|mid":"b4f2f929b3d336a84b70"}
+✅ T8 動態撤退（adaptive.v1.1）：入侵進行中逐 tick，鏡像結果相同（8a）、看不見的敵人移走後相同（資訊公平）　mirror compared=436 kinds={"continue":435,"retreat_threat":1} diff=0；fairness compared=436 diff=0
+
+check_tactic_exec_v24：10/10 PASS  (78.4 s)
+
+
+[81s] [exit 0]

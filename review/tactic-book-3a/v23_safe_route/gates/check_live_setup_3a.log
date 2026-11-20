@@ -1,0 +1,139 @@
+✅ G0 golden 有 9 個 live 案（含 no-tactic／no-players／no-roster）
+✅ G live-m4-3 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-m4-3 configure 序列＋引數雜湊＝golden（10 呼叫）
+✅ G live-m4-3 digest＋streamHash＝golden　1498.5:blue:25:18:43965:39296
+✅ G live-m4-3 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"SWAPPED","b":"early","srcs":{"b1":"player","b2":"player","b3":"player","b4":"player","b5":"player","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"},"opp":"std"}
+✅ G live-m4-3 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-m4-3 ok
+✅ G live-m8-7 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-m8-7 configure 序列＋引數雜湊＝golden（10 呼叫）
+✅ G live-m8-7 digest＋streamHash＝golden　1979.0:blue:60:38:64244:55166
+✅ G live-m8-7 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"STANDARD","b":"standard","srcs":{"b1":"ai","b2":"ai","b3":"ai","b4":"ai","b5":"ai","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"},"opp":"m7"}
+✅ G live-m8-7 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-m8-7 ok
+✅ G live-m4-11 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-m4-11 configure 序列＋引數雜湊＝golden（10 呼叫）
+✅ G live-m4-11 digest＋streamHash＝golden　1164.0:red:9:16:30134:34681
+✅ G live-m4-11 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"STANDARD","b":"survival","srcs":{"b1":"player","b2":"player","b3":"player","b4":"player","b5":"player","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"},"opp":"m8"}
+✅ G live-m4-11 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-m4-11 ok
+✅ G live-m4-19 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-m4-19 configure 序列＋引數雜湊＝golden（10 呼叫）
+✅ G live-m4-19 digest＋streamHash＝golden　1130.0:blue:22:7:35587:27460
+✅ G live-m4-19 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"STANDARD","b":"early","srcs":{"b1":"ai","b2":"ai","b3":"ai","b4":"ai","b5":"ai","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"},"opp":"std"}
+✅ G live-m4-19 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-m4-19 ok
+✅ G live-m8-23 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-m8-23 configure 序列＋引數雜湊＝golden（10 呼叫）
+✅ G live-m8-23 digest＋streamHash＝golden　1015.5:red:2:12:23297:30380
+✅ G live-m8-23 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"STANDARD","b":"standard","srcs":{"b1":"player","b2":"player","b3":"player","b4":"player","b5":"player","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"},"opp":"m4"}
+✅ G live-m8-23 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-m8-23 ok
+✅ G live-m6-29 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-m6-29 configure 序列＋引數雜湊＝golden（10 呼叫）
+✅ G live-m6-29 digest＋streamHash＝golden　763.0:red:4:9:19595:24602
+✅ G live-m6-29 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"SWAPPED","b":"survival","srcs":{"b1":"ai","b2":"ai","b3":"ai","b4":"ai","b5":"ai","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"},"opp":"m3"}
+✅ G live-m6-29 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-m6-29 ok
+✅ G live-notactic-13 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-notactic-13 configure 序列＋引數雜湊＝golden（9 呼叫）
+✅ G live-notactic-13 digest＋streamHash＝golden　851.5:blue:4:3:23544:22448
+✅ G live-notactic-13 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"STANDARD","b":"survival","srcs":{"b1":"player","b2":"player","b3":"player","b4":"player","b5":"player","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"}}
+✅ G live-notactic-13 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-notactic-13 ok
+✅ G live-noplayers-17 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-noplayers-17 configure 序列＋引數雜湊＝golden（9 呼叫）
+✅ G live-noplayers-17 digest＋streamHash＝golden　961.0:blue:7:6:27650:23830
+✅ G live-noplayers-17 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"STANDARD","b":"early","srcs":{"b1":"player","b2":"player","b3":"player","b4":"player","b5":"player","r1":"ai","r2":"ai","r3":"ai","r4":"ai","r5":"ai"},"opp":"m7"}
+✅ G live-noplayers-17 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-noplayers-17 ok
+✅ G live-noroster-21 建構子 seed／疲勞後 loadout＝golden ctor
+✅ G live-noroster-21 configure 序列＋引數雜湊＝golden（3 呼叫）
+✅ G live-noroster-21 digest＋streamHash＝golden　1132.0:red:6:6:29441:31423
+✅ G live-noroster-21 applied（layout／出裝／天賦來源／對手戰術）＝golden live　{"l":"SWAPPED","b":null,"srcs":null,"opp":"m7"}
+✅ G live-noroster-21 setup：兩方戰術都是 legacy 輸入；meta 帶 sessionId／mode／opponentId／seedSource
+  G live-noroster-21 ok
+✅ G 9/9 golden live 案經 Live builder＋共用 deps 逐位元重現　9/9
+✅ V app-roster-m3-ai configure 序列＋引數雜湊＝v20 hook 複本（10 呼叫）
+✅ V app-roster-m3-ai digest＋streamHash＝v20 hook 複本　867.0:blue:7:3:25318:22799/abdc7a74 vs 867.0:blue:7:3:25318:22799/abdc7a74
+✅ V app-roster-m3-ai applied：layout／出裝／replayConfig＝v20（replay 不變）　{"a":"scaling","v20":"scaling","rc":{"tacticId":"m3","tacticName":"強開團","battleTalentIds":{"b1":"ironclad:breach-horn","b2":"duskblade:battle-form","b3":"bingshuang:ice-shard","b4":"leiting:storm-crest","b5":"dadi:faultline","r1":"cinderfist:molten-guard","r2":"chichuan:warflame","r3":"lieyan:counter-form","r4":"yanfeng:counter-form","r5":"stoneguard:counter-form"}}}
+  V app-roster-m3-ai ok
+✅ V variant-tactic configure 序列＋引數雜湊＝v20 hook 複本（10 呼叫）
+✅ V variant-tactic digest＋streamHash＝v20 hook 複本　918.0:blue:9:6:26869:25307/5f49cfd vs 918.0:blue:9:6:26869:25307/5f49cfd
+✅ V variant-tactic applied：layout／出裝／replayConfig＝v20（replay 不變）　{"a":"early","v20":"early","rc":{"tacticId":"m1","tacticName":"速推流","battleTalentIds":{"b1":"ironclad:breach-horn","b2":"duskblade:battle-form","b3":"bingshuang:ice-shard","b4":"leiting:storm-crest","b5":"dadi:faultline","r1":"cinderfist:molten-guard","r2":"chichuan:warflame","r3":"lieyan:counter-form","r4":"yanfeng:counter-form","r5":"stoneguard:counter-form"}}}
+  V variant-tactic ok
+✅ V talents-invalid-and-foreign configure 序列＋引數雜湊＝v20 hook 複本（10 呼叫）
+✅ V talents-invalid-and-foreign digest＋streamHash＝v20 hook 複本　1073.5:blue:17:5:33300:26471/a368c14 vs 1073.5:blue:17:5:33300:26471/a368c14
+✅ V talents-invalid-and-foreign applied：layout／出裝／replayConfig＝v20（replay 不變）　{"a":"survival","v20":"survival","rc":{"tacticId":"m6","tacticName":"全圖游走","battleTalentIds":{"b1":"ironclad:breach-horn","b2":"duskblade:battle-form","b3":"bingshuang:frost-domain","b4":"leiting:storm-crest","b5":"dadi:faultline","r1":"cinderfist:molten-guard","r2":"chichuan:warflame","r3":"lieyan:counter-form","r4":"yanfeng:counter-form","r5":"stoneguard:counter-form"}}}
+  V talents-invalid-and-foreign ok
+✅ V strategy-invalid-aggressive configure 序列＋引數雜湊＝v20 hook 複本（10 呼叫）
+✅ V strategy-invalid-aggressive digest＋streamHash＝v20 hook 複本　938.5:red:12:3:28014:24197/3c5ee6ca vs 938.5:red:12:3:28014:24197/3c5ee6ca
+✅ V strategy-invalid-aggressive applied：layout／出裝／replayConfig＝v20（replay 不變）　{"a":"standard","v20":"standard","rc":{"tacticId":"m1","tacticName":"速推流","battleTalentIds":{"b1":"ironclad:breach-horn","b2":"duskblade:battle-form","b3":"bingshuang:ice-shard","b4":"leiting:storm-crest","b5":"dadi:faultline","r1":"cinderfist:molten-guard","r2":"chichuan:warflame","r3":"lieyan:counter-form","r4":"yanfeng:counter-form","r5":"stoneguard:counter-form"}}}
+  V strategy-invalid-aggressive ok
+✅ V strategy-missing configure 序列＋引數雜湊＝v20 hook 複本（10 呼叫）
+✅ V strategy-missing digest＋streamHash＝v20 hook 複本　1322.0:red:29:11:41283:34519/e45c482f vs 1322.0:red:29:11:41283:34519/e45c482f
+✅ V strategy-missing applied：layout／出裝／replayConfig＝v20（replay 不變）　{"a":"standard","v20":"standard","rc":{"tacticId":"m2","tacticName":"四一分推","battleTalentIds":{"b1":"ironclad:breach-horn","b2":"duskblade:battle-form","b3":"bingshuang:ice-shard","b4":"leiting:storm-crest","b5":"dadi:faultline","r1":"cinderfist:molten-guard","r2":"chichuan:warflame","r3":"lieyan:counter-form","r4":"yanfeng:counter-form","r5":"stoneguard:counter-form"}}}
+  V strategy-missing ok
+✅ V flags-off configure 序列＋引數雜湊＝v20 hook 複本（6 呼叫）
+✅ V flags-off digest＋streamHash＝v20 hook 複本　1464.0:blue:11:15:40553:40043/8f15d22c vs 1464.0:blue:11:15:40553:40043/8f15d22c
+✅ V flags-off applied：layout／出裝／replayConfig＝v20（replay 不變）　{"a":null,"v20":null,"rc":{"tacticId":"m7","tacticName":"前期壓制"}}
+  V flags-off ok
+✅ V local-seed configure 序列＋引數雜湊＝v20 hook 複本（10 呼叫）
+✅ V local-seed digest＋streamHash＝v20 hook 複本　1262.5:blue:25:10:41387:32164/d825238d vs 1262.5:blue:25:10:41387:32164/d825238d
+✅ V local-seed applied：layout／出裝／replayConfig＝v20（replay 不變）　{"a":"counter","v20":"counter","rc":{"tacticId":"m5","tacticName":"下路強攻","battleTalentIds":{"b1":"ironclad:breach-horn","b2":"duskblade:battle-form","b3":"bingshuang:ice-shard","b4":"leiting:storm-crest","b5":"dadi:faultline","r1":"cinderfist:molten-guard","r2":"chichuan:warflame","r3":"lieyan:counter-form","r4":"yanfeng:counter-form","r5":"stoneguard:counter-form"}}}
+  V local-seed ok
+✅ V2 裝備層開＋沒選策略 ⇒ builder 正規化成 "standard"，組裝器真的呼叫 configureItems
+✅ V3 天賦：非法 id／別隻英雄的天賦 ⇒ null（交給 AI，與 v20 相同），非席位鍵與非字串丟掉　{"b1":null,"b2":null,"b3":"bingshuang:frost-domain","r1":null}
+✅ V4 旗標關閉：關閉層的輸入（天賦選擇、出裝策略）被濾掉，setup 仍建立成功
+✅ V5 沒有 session seed ⇒ seedSource local、seed＝(fallback & 0xffff) | 1（時鐘只在 hook 讀）
+✅ V6 builder 的 seed 正規化＝v20 hook 複本：8 個 session 原始值（偶數／>32 位／負數／小數）＋5 個時鐘原始值；結果一律是奇數整數　{"sessionBad":[],"localBad":[]}
+✅ R0 前提：樣本變體真的改了數值欄位（不是 base 戰術原樣）　m1_measured_siege: {"macro.riskTolerance":0.45,"objectives.towerPriority":0.75}
+✅ R1 persistedLiveConfigOf：同 sessionId 才取回；別的場次 ⇒ null
+✅ R2 舊存檔沒有 ruleset ⇒ 依目前旗標解析（＝v20 每次開局讀旗標）
+✅ R3 恢復的 setup：藍方 legacy 戰術＝落盤的變體物件（數值保留）、layout SWAPPED 保留
+✅ R4 恢復與新開局是同一份 setup（雜湊相同）
+✅ R5 追趕到 300 s 後繼續 ⇒ 整場 digest＋streamHash＝一口氣跑完　300s 962.5:blue:8:9:27134:27315/c5e427da vs 962.5:blue:8:9:27134:27315/c5e427da
+✅ R6 恢復路徑＝v20 hook 複本（同一份存檔輸入）：呼叫＋整場結果逐位元相同
+✅ R7 本機 seed＋存檔 layout 與 seed 衝突 ⇒ 改用 seed 推導並記在 notes（session seed 時則拒絕）　["objectiveLayout SWAPPED dropped: it disagrees with the local fallback seed 513"]
+✅ R7b session seed＋與 seed 不符的 layout（竄改的存檔）⇒ objective_layout_conflict（不默默改）
+✅ R8 legacy 戰術缺 version＋變體數值：接受、config 原樣保存、恢復（追趕 300 s）＝v20 hook 複本逐位元（呼叫＋digest＋streamHash）　962.5:blue:8:9:27134:27315/c5e427da vs 962.5:blue:8:9:27134:27315/c5e427da
+✅ R8 legacy 戰術舊 version＋變體數值：接受、config 原樣保存、恢復（追趕 300 s）＝v20 hook 複本逐位元（呼叫＋digest＋streamHash）　962.5:blue:8:9:27134:27315/c5e427da vs 962.5:blue:8:9:27134:27315/c5e427da
+  R done
+✅ L1 恢復沿用落盤的 ruleset（目前旗標全開也不重讀）
+✅ L2 落盤 ruleset 的裝備層關 ⇒ 出裝輸入被濾掉、組裝器不呼叫 configureItems
+✅ L3 正式 build（allowTool false）落盤的是 tool ruleset ⇒ 不採用，改依旗標
+✅ L3b DEV（allowTool true）可沿用落盤的 tool ruleset
+✅ L4 竄改的落盤 ruleset（改釘死層／多出未知層／不是物件）⇒ 不採用，改依旗標
+✅ L5 開局（沒有落盤值）⇒ 依旗標，且等於 resolveRulesetForMode(career)
+✅ D1 正式 build（allowTool false）：8 種旗標 × 4 種 DEV 開關 ⇒ 規則集逐字＝resolveRulesetForMode（開關完全無效）　leak=0
+✅ D2 DEV 但旗標已開（開關不改變任何層）⇒ 仍是正式規則集
+✅ D3 DEV＋旗標關＋開關 ⇒ kind:"tool" 規則集（技能／裝備開、天賦跟旗標關）
+✅ D4 所有正式規則集的內容都不含 DEV 開關字樣
+✅ D5 DEV tool 規則集可建立、可組裝；出裝改由 tool.itemsStrategies（我方所選、對手 standard）
+   D6 量測：DEV tool 規則集 vs v20 DEV 路徑 ⇒ 整場結果相同（僅 DEV，正式站不可達）
+✅ E1 正常輸入 ⇒ { ok:true, engine, applied, setup, setupHash }
+✅ E2 查不到的英雄 ⇒ { ok:false, stage:assembleMatch, hero_unknown }，不建引擎、零 configure、不丟例外　[{"code":"hero_unknown","field":"roster.r5.heroId","message":"heroLookup has no hero \"no_such_hero\""}]
+✅ E3 非有限數值（loadout 倍率 Infinity）⇒ { ok:false, stage:MatchSetup }，不建引擎、不丟例外　[{"code":"not_plain_data","field":"input.loadout.b1.powerMult","message":"setup inputs must be plain JSON data (no objects with prototypes, undefined, NaN, functions)"},{"code":"loadout_invalid","field":"loadout","message":"loadout must be { seat: { numeric fields } } with seats b1-b5/r1-r5"}]
+✅ E4 legacy 戰術缺 macro 群組（v20 會在投影丟 TypeError）⇒ { ok:false, tactic_invalid }　[{"code":"tactic_invalid","field":"tactic.blue","message":"legacy tactic needs a config object with a tacticId and macro/objectives/lanePlan/economy groups"}]
+✅ E5 builder／組裝過程丟出的例外也轉成 { ok:false, stage:exception }（不外洩例外）　[{"code":"assembly_exception","field":"$","message":"boom"}]
+✅ E6 未知出裝策略／天賦 id 在 Live 不是錯誤：照 v20 正規化（standard／交給 AI），仍 ok（§V 已證與 v20 逐位元相同）
+✅ F1 applied.depsFingerprint 存在、穩定；sharedMatchAssemblerDeps() 是同一份（memoized）且＝重新 build 的　4eeec6164bf2fb64
+✅ F2 換掉任何一個 adapter／契約常數／heroLookup／引擎 ⇒ depsFingerprint 都不同（彼此也不同）　{"toEngineArchetypes 換成別的函式":"aaee5e914b15a034","COMBAT_ARCHETYPE_CONTRACT_VERSION 換值":"2a7f63c20814bb67","toEngineHeroSkills 換成別的函式":"0d6289c85833624f","selectBattleTalents 換成別的函式":"19f30f0291aacc91","heroLookup 換成別的函式":"6e6e54541a9f6cda","引擎換成子類別":"91519f3028ad54c3","引擎換成子類別＋標記":"7421ae45194cdc80","非共用 builder（手拼 deps，T3 測試形狀＋T6 引擎側 adapter）":"47b18807c9622ed2","matchItemsConfig 換成別的函式":"8e2f275f0f1b52ff","toEngineTactic 換成別的函式":"bbb8db575b5ce97e","toEnginePlayerMods 換成別的函式":"14b0b7444059a2be"}
+✅ F3 共用 deps 的 manifest 是凍結的、帶各 adapter 模組的契約常數與引擎標記
+✅ S0 呼叫點掃描器有檢定力（5 個違規樣本抓到、4 個合法樣本放行，含 core builder 的兩種形狀；註解不算）　[["bad-inline.js",1],["bad-noimport.js",1],["bad-omitted.js",1],["ok-call.js",0],["ok-ident.js",0],["ok-core.js",0],["bad-core-inline.js",1],["bad-core-noimport.js",1],["ok-comment.js",0]]
+✅ S1 src/（排除 src/debug/**）每個 assembleMatch( 呼叫都從共用 deps builder（Live＝matchAssemblerDeps.js、Challenge＝matchAssemblerDepsCore.js）取 deps；Live hook 與 Challenge runner 都在其中（2 個檔）　src/platform/challenge/challengeRunner.js,src/useLocalServer.js
+✅ S2 liveMatchSetup.js 是純函式：不讀 store／window／location／時鐘／亂數／import.meta
+✅ S3 useLocalServer：DEV 網址開關只在 import.meta.env.DEV 的條件式裡讀（正式 build 由 Vite 折疊掉）　reads=2
+✅ S4 useLocalServer：不再讀 featureEnabled（旗標只在開局時經 resolveRulesetForMode 讀一次）；不再自己 new LogicEngine／configure*
+✅ S5 useLocalServer：ruleset＋matchSetupHash 寫進本場設定（activeMatch.config）
+✅ S6 useLocalServer：對等掛點只在 ?shot= 時掛（同 __ESMO_COMBAT_FEEDBACK 模式）
+✅ S12 seed：hook 交原始值（session seed 或 Date.now()），正規化只在 liveMatchSetup.normalizeLiveSeed
+✅ S13 ?shot= 開局：掛對等鉤子的程式在 try/catch 內，catch 之後無條件 launch()；import 失敗的分支也 launch()
+✅ S7 四個對等鉤子（MATCH_SETUP_HASH／MATCH_SETUP／LIVE_SETUP_INPUTS／ENGINE_STREAM_HASH）的指派全部在 ?shot= 區塊內（對照樣本抓得到區塊外的指派）　assigns=4 outside=0
+✅ S8 src/ 沒有任何檔案 import tools/；hook 不靜態 import 串流雜湊，只在 ?shot= 區塊內動態 import　dynamic=1
+✅ S9 串流雜湊單一實作：matchGolden.mjs 轉出 src/battle/moba/debug/engineStreamHash.js 的同一組函式（自己沒有第二份）
+✅ S10 hook 沒有 throw；失敗 ⇒ setAssemblyError＋回傳 { ok:false, errors }；GameView 以 battle-assembly-error 顯示並提供返回
+✅ S14 錯誤卡：不叫玩家返回重進；有場次時有「放棄本場」（abandonMatchSession），並寫明賽程比賽要重新出賽或棄權
+✅ S11 正式 build：主 bundle（index.html 的進入點＋index-*.js，共 2 個）不含串流雜湊模組，它在獨立的動態 chunk　main=index-CLa19cGY.js,index-DXrKDBuF.js holders=engineStreamHash-CmcvWk0G.js
+
+Live Setup 3a：119/119 PASS

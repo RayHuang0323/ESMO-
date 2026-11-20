@@ -1,0 +1,46 @@
+✅ Desktop｜P0 正式流程進入 MOBA 戰鬥（diag）
+✅ Desktop｜C0 鏡頭／迷霧按鈕存在
+✅ Desktop｜P1 1× 對戰在跑（十名英雄、時間前進）　0.7 → 3.0
+✅ Desktop｜P2 2× 對戰在跑（十名英雄、時間前進）　3.5 → 7.8
+✅ Desktop｜P4 4× 對戰在跑（十名英雄、時間前進）　8.5 → 13.5
+✅ Desktop｜V1 具名技能真的畫到　named 568
+✅ Desktop｜V2 實戰中技能家族層真的畫出來（≥ 1 種；出現哪幾種依選角而定）　{"sky":0,"lightning":0,"slam":26,"burst":0,"trail":103}
+✅ Desktop｜S1 英雄身上出現 ≥ 3 種不同狀態造型、≥ 2 個類別　{"onset:hero-haste":22,"buff:streaks":492,"onset:shield":7,"shield:bubble":104,"onset:shield-break":5,"onset:hero-slow":2,"debuff:frost":16,"onset:ignite":1,"debuff:flames":19,"onset:haste":1,"onset:guard":3,"shield:plates":17,"onset:root":1,"control:spikes":6,"onset:mark":2,"debuff:icon":22,"onset:silence":2,"control:icon":13}
+✅ Desktop｜N1 野怪與營地底下沒有環形幾何　{"neutralRings":0,"objectiveRings":0}
+❌ Desktop｜J1 英雄會對野怪／龍／巴龍施放技能　objectiveSkillFx max 0
+✅ Desktop｜F1 迷霧開：有我方視野來源、迷霧中的敵方英雄被隱藏過　sources 60／hidden max 5
+✅ Desktop｜C1 導播節拍會變（≥ 2 種），且兩次換鏡間隔 ≥ 1.4 秒　beats roam,fight,skirmish／min gap 3170ms
+✅ Desktop｜F2 迷霧關：沒有 fog、沒有隱藏英雄　null
+✅ Desktop｜C2 近戰 > 標準 > 全景（正交 zoom）　close 6.04／tactical 4.04／wide 2.43
+✅ Desktop｜X0 戰鬥畫面無橫向 overflow
+✅ Desktop｜R0 比賽結束 ⇒ 結果頁
+✅ Desktop｜R1 Replay 開啟且有迷霧／鏡頭按鈕
+✅ Desktop｜R2 Replay 迷霧可切換（開有 fog、關為全圖）　on 17／off null
+✅ Desktop｜R3 Replay 鏡頭可切換　auto → tactical
+✅ 390｜P0 正式流程進入 MOBA 戰鬥（diag）
+✅ 390｜C0 鏡頭／迷霧按鈕存在
+✅ 390｜P1 1× 對戰在跑（十名英雄、時間前進）　0.5 → 3.0
+✅ 390｜P2 2× 對戰在跑（十名英雄、時間前進）　3.3 → 8.0
+✅ 390｜P4 4× 對戰在跑（十名英雄、時間前進）　8.5 → 16.8
+✅ 390｜V1 具名技能真的畫到　named 2241
+✅ 390｜V2 實戰中技能家族層真的畫出來（≥ 1 種；出現哪幾種依選角而定）　{"sky":25,"lightning":0,"slam":536,"burst":0,"trail":386}
+✅ 390｜S1 英雄身上出現 ≥ 3 種不同狀態造型、≥ 2 個類別　{"onset:shield":73,"onset:hero-haste":30,"shield:bubble":1102,"buff:streaks":831,"onset:shield-break":70,"onset:ignite":2,"debuff:flames":48,"onset:root":5,"onset:dot":3,"control:spikes":31,"onset:hero-slow":17,"debuff:frost":185,"onset:stun":7,"control:stars":32,"onset:guard":7,"shield:plates":49,"onset:mark":2,"debuff:icon":31,"onset:knockup":3}
+✅ 390｜N1 野怪與營地底下沒有環形幾何　{"neutralRings":0,"objectiveRings":0}
+❌ 390｜J1 英雄會對野怪／龍／巴龍施放技能　objectiveSkillFx max 0
+✅ 390｜F1 迷霧開：有我方視野來源、迷霧中的敵方英雄被隱藏過　sources 56／hidden max 5
+✅ 390｜C1 導播節拍會變（≥ 2 種），且兩次換鏡間隔 ≥ 1.4 秒　beats roam,skirmish,fight／min gap 2781ms
+✅ 390｜F2 迷霧關：沒有 fog、沒有隱藏英雄　null
+✅ 390｜C2 近戰 > 標準 > 全景（正交 zoom）　close 5.46／tactical 3.07／wide 2.12
+✅ 390｜X0 戰鬥畫面無橫向 overflow
+✅ 390｜R0 比賽結束 ⇒ 結果頁
+✅ 390｜R1 Replay 開啟且有迷霧／鏡頭按鈕
+✅ 390｜R2 Replay 迷霧可切換（開有 fog、關為全圖）　on 17／off null
+✅ 390｜R3 Replay 鏡頭可切換　auto → tactical
+✅ G｜sky 家族在技能預覽中畫出（phantom:R）　14
+✅ G｜lightning 家族在技能預覽中畫出（leiting:Q）　12
+✅ G｜slam 家族在技能預覽中畫出（ironclad:Q）　13
+✅ X1 page error = 0　[]
+✅ X2 console／shader error = 0　[]
+
+MOBA spectacle ＋ vision：41/43　RESULT=PRODUCT_FAIL　耗時 399266ms
+   evidence: {"name":"MOBA spectacle ＋ vision","verdict":"PRODUCT_FAIL","pass":41,"fail":2,"elapsedMs":399266,"angleBackendRequested":"default","failurePhase":null,"ports":{"vite":63699,"cdp":63713},"pids":{"vite":48688,"chrome":44828},"cleanup":{"chromeClose":{"confirmed":true,"timedOut":false,"error":null,"forced":false,"profileRemoved":true,"profileError":null},"serverStop":{"confirmed":true,"timedOut":false,"error":null,"forced":false}},"ts":"2026-11-11T16:31:56.142Z"}

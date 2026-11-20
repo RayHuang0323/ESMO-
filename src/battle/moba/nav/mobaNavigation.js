@@ -481,13 +481,15 @@ class Heap {
 /**
  * A* 路徑（模擬座標的折線；含終點，不含起點）。
  * 走不到或超出預算回 null。
+ * @param avoid  可選：額外不可走的圓 [{x, y, r}]（moba-sim.v23 safeRoute：敵塔危險半徑）。
+ *               只影響「搜尋時哪些格可走」，不改碰撞；省略 ⇒ 與舊版逐位元相同。
  */
-export function findPath(from, to, radius = HERO_RADIUS, alive = null) {
-  const path = findPathOneDirection(from, to, radius, alive);
+export function findPath(from, to, radius = HERO_RADIUS, alive = null, avoid = null) {
+  const path = findPathOneDirection(from, to, radius, alive, avoid);
   return path ? path.slice(1) : null;
 }
 
-function findPathOneDirection(from, to, radius, alive) {
+function findPathOneDirection(from, to, radius, alive, avoid = null) {
   //  ⚠ A* 的鄰居展開順序與堆疊 tie-break 不是旋轉等變的：同一條路走藍方或紅方
   //  會得到長度略微不同的折線 ⇒ 直接變成藍紅不公平（實測 3 條測試路線有 2 條不對稱）。
   //  解法：把問題**正規化**到同一半邊再解，然後把結果鏡射回去。
@@ -498,10 +500,11 @@ function findPathOneDirection(from, to, radius, alive) {
   const mir = (p) => ({ x: 2 * cxx - p.x, y: 2 * cyy - p.y });
   const key = (from.x - cxx) + (from.y - cyy);
   if (key > 0 || (key === 0 && (to.x - cxx) + (to.y - cyy) > 0)) {
-    const path = findPathCanonical(mir(from), mir(to), radius, mirrorAlive(alive));
+    //  avoid 圓也要一起鏡射（與 alive 同一個理由：正規化後的問題必須與原問題等價）。
+    const path = findPathCanonical(mir(from), mir(to), radius, mirrorAlive(alive), avoid ? avoid.map((c) => ({ ...mir(c), r: c.r })) : null);
     return path ? path.map(mir) : null;
   }
-  return findPathCanonical(from, to, radius, alive);
+  return findPathCanonical(from, to, radius, alive, avoid);
 }
 
 /**
@@ -526,8 +529,16 @@ function mirrorAlive(alive) {
       out.add(`${side}_${MIRROR_LANE_ID[m[2]]}_${m[3]}`);
       continue;
     }
+    //  moba-sim.v23 候選 safeRoute "v4"：門牙塔（blue_nexus_0／1 ↔ red_nexus_0／1）原本沒有鏡射——上面的規則只認上／中／下三路，
+    //  門牙塔原樣留在集合裡 ⇒ 紅方半場的投影／尋路用的是「藍方門牙塔」的存亡狀態：
+    //   · 藍方門牙塔已倒、紅方的還在 ⇒ 紅方門牙塔在正規化後被當成不存在：傳送／技能位移落在它的碰撞圓裡（projectToWalkable 原樣回傳），
+    //     尋路穿過它；· 反過來 ⇒ 已倒的紅方門牙塔仍被當成障礙。
+    //  修正只在呼叫端在集合上標了 navMirrorV2 時生效（引擎的 safeRoute "v4"）；沒有標記 ⇒ 與舊版逐位元相同。
+    const g = src.navMirrorV2 ? /^(blue|red)_nexus_(\d+)$/.exec(id) : null;
+    if (g) { out.add(`${g[1] === "blue" ? "red" : "blue"}_nexus_${g[2]}`); continue; }
     out.add(id === "blue_nexus" ? "red_nexus" : id === "red_nexus" ? "blue_nexus" : id);
   }
+  if (src.navMirrorV2) out.navMirrorV2 = true;
   return out;
 }
 
@@ -644,7 +655,7 @@ function scratch(n) {
   return _scratch;
 }
 
-function findPathCanonical(from, to, radius, alive) {
+function findPathCanonical(from, to, radius, alive, avoid = null) {
   const { F } = nav();
   const need = radius;
   const start = projectToWalkable(from.x, from.y, radius, alive);
@@ -696,10 +707,18 @@ function findPathCanonical(from, to, radius, alive) {
   const sId = F.idx(sx, sy), tId = F.idx(tx, ty);
   if (sId === tId) return [{ x: start.x, y: start.y }, { x: goal.x, y: goal.y }];
 
-  const cellOk = (ix, iy) => {
-    const id = F.idx(ix, iy);
-    return F.dist[id] * F.cellToSim >= need && !blockedCells[id];
-  };
+  const cellOk = avoid && avoid.length
+    ? (ix, iy) => {
+      const id = F.idx(ix, iy);
+      if (!(F.dist[id] * F.cellToSim >= need && !blockedCells[id])) return false;
+      const wx = F.B.minX + ix * F.cellToSim, wy = F.B.minY + iy * F.cellToSim;
+      for (const c of avoid) { const dx = wx - c.x, dy = wy - c.y; if (dx * dx + dy * dy < c.r * c.r) return false; }
+      return true;
+    }
+    : (ix, iy) => {
+      const id = F.idx(ix, iy);
+      return F.dist[id] * F.cellToSim >= need && !blockedCells[id];
+    };
 
   //  ⚠ 這三張表**重用**（見 scratch）：每次搜尋重新配置 3 × 48,841 格
   //  （Float32 + Int32 + Uint8，約 0.4 MB）並填初值，光這一項一場就要配置 900 次。

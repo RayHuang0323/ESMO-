@@ -1,0 +1,2 @@
+Calibration Sprint 校準批次（已用過的 Seeds，嚴格單線）：基準 540 場（54 段）、消融 720 場（72 段），全部 exit 0、stderr 0 bytes；沒有中斷、沒有續跑、沒有剔除。
+逐筆原始資料留在 C:/Users/ifikn/esmo-measure/v24-cal-base、v24-cal-abl。

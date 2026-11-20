@@ -1,0 +1,3546 @@
+{
+ "tool_inv_v13": {
+  "belief": {
+   "byIntel": {
+    "buff|memAlive": {
+     "n": 3950,
+     "rate": 0.471
+    },
+    "buff|memRespawn": {
+     "n": 900,
+     "rate": 0.482
+    },
+    "buff|prior": {
+     "n": 6215,
+     "rate": 0.278
+    },
+    "buff|seen": {
+     "n": 172,
+     "rate": 0.826
+    },
+    "camp|memAlive": {
+     "n": 3162,
+     "rate": 0.638
+    },
+    "camp|memRespawn": {
+     "n": 1059,
+     "rate": 0.602
+    },
+    "camp|prior": {
+     "n": 18412,
+     "rate": 0.419
+    },
+    "camp|seen": {
+     "n": 186,
+     "rate": 0.898
+    }
+   },
+   "byIntelRho": {
+    "buff|memAlive|rho<.50": {
+     "n": 356,
+     "rate": 0.5
+    },
+    "buff|memAlive|rho<.65": {
+     "n": 2753,
+     "rate": 0.488
+    },
+    "buff|memAlive|rho>=.65": {
+     "n": 841,
+     "rate": 0.405
+    },
+    "buff|memRespawn|rho<.50": {
+     "n": 32,
+     "rate": 0.531
+    },
+    "buff|memRespawn|rho<.65": {
+     "n": 703,
+     "rate": 0.496
+    },
+    "buff|memRespawn|rho>=.65": {
+     "n": 165,
+     "rate": 0.412
+    },
+    "buff|prior|rho<.35": {
+     "n": 324,
+     "rate": 0.019
+    },
+    "buff|prior|rho<.50": {
+     "n": 1608,
+     "rate": 0.177
+    },
+    "buff|prior|rho<.65": {
+     "n": 3384,
+     "rate": 0.35
+    },
+    "buff|prior|rho>=.65": {
+     "n": 899,
+     "rate": 0.284
+    },
+    "buff|seen|rho<.50": {
+     "n": 22,
+     "rate": 0.773
+    },
+    "buff|seen|rho<.65": {
+     "n": 125,
+     "rate": 0.832
+    },
+    "buff|seen|rho>=.65": {
+     "n": 25,
+     "rate": 0.84
+    },
+    "camp|memAlive|rho<.50": {
+     "n": 330,
+     "rate": 0.67
+    },
+    "camp|memAlive|rho<.65": {
+     "n": 2086,
+     "rate": 0.671
+    },
+    "camp|memAlive|rho>=.65": {
+     "n": 746,
+     "rate": 0.531
+    },
+    "camp|memRespawn|rho<.50": {
+     "n": 40,
+     "rate": 0.6
+    },
+    "camp|memRespawn|rho<.65": {
+     "n": 729,
+     "rate": 0.63
+    },
+    "camp|memRespawn|rho>=.65": {
+     "n": 290,
+     "rate": 0.534
+    },
+    "camp|prior|rho<.35": {
+     "n": 648,
+     "rate": 0.606
+    },
+    "camp|prior|rho<.50": {
+     "n": 3682,
+     "rate": 0.329
+    },
+    "camp|prior|rho<.65": {
+     "n": 11185,
+     "rate": 0.441
+    },
+    "camp|prior|rho>=.65": {
+     "n": 2897,
+     "rate": 0.407
+    },
+    "camp|seen|rho<.50": {
+     "n": 26,
+     "rate": 0.923
+    },
+    "camp|seen|rho<.65": {
+     "n": 120,
+     "rate": 0.883
+    },
+    "camp|seen|rho>=.65": {
+     "n": 40,
+     "rate": 0.925
+    }
+   },
+   "byMemAge": {
+    "buff|<180": {
+     "n": 1056,
+     "rate": 0.485
+    },
+    "buff|<20": {
+     "n": 428,
+     "rate": 0.654
+    },
+    "buff|<45": {
+     "n": 428,
+     "rate": 0.421
+    },
+    "buff|<90": {
+     "n": 631,
+     "rate": 0.372
+    },
+    "buff|>=180": {
+     "n": 1407,
+     "rate": 0.466
+    },
+    "camp|<180": {
+     "n": 708,
+     "rate": 0.605
+    },
+    "camp|<20": {
+     "n": 519,
+     "rate": 0.815
+    },
+    "camp|<45": {
+     "n": 471,
+     "rate": 0.673
+    },
+    "camp|<90": {
+     "n": 633,
+     "rate": 0.599
+    },
+    "camp|>=180": {
+     "n": 831,
+     "rate": 0.566
+    }
+   },
+   "byRespawnAge": {
+    "buff|<20": {
+     "n": 31,
+     "rate": 0.903
+    },
+    "buff|<40": {
+     "n": 98,
+     "rate": 0.653
+    },
+    "buff|<80": {
+     "n": 177,
+     "rate": 0.356
+    },
+    "buff|>=80": {
+     "n": 594,
+     "rate": 0.47
+    },
+    "camp|<20": {
+     "n": 14,
+     "rate": 0.857
+    },
+    "camp|<40": {
+     "n": 110,
+     "rate": 0.7
+    },
+    "camp|<80": {
+     "n": 248,
+     "rate": 0.609
+    },
+    "camp|>=80": {
+     "n": 687,
+     "rate": 0.579
+    }
+   },
+   "byPriorT": {
+    "buff|<150": {
+     "n": 1415,
+     "rate": 0.091
+    },
+    "buff|<300": {
+     "n": 1681,
+     "rate": 0.267
+    },
+    "buff|<600": {
+     "n": 2102,
+     "rate": 0.362
+    },
+    "buff|<900": {
+     "n": 928,
+     "rate": 0.366
+    },
+    "buff|>=900": {
+     "n": 89,
+     "rate": 0.573
+    },
+    "camp|<150": {
+     "n": 2830,
+     "rate": 0.271
+    },
+    "camp|<300": {
+     "n": 3500,
+     "rate": 0.342
+    },
+    "camp|<600": {
+     "n": 6327,
+     "rate": 0.439
+    },
+    "camp|<900": {
+     "n": 4683,
+     "rate": 0.49
+    },
+    "camp|>=900": {
+     "n": 1072,
+     "rate": 0.626
+    }
+   },
+   "byEj": {
+    "buff|seen|ejDead": {
+     "n": 20,
+     "rate": 0.95
+    },
+    "buff|seen|ejFar": {
+     "n": 17,
+     "rate": 0.706
+    },
+    "buff|seen|ejMid<60": {
+     "n": 32,
+     "rate": 0.75
+    },
+    "buff|seen|ejNear<25": {
+     "n": 77,
+     "rate": 0.896
+    },
+    "buff|seen|ejOld": {
+     "n": 26,
+     "rate": 0.692
+    },
+    "buff|unseen|ejDead": {
+     "n": 564,
+     "rate": 0.702
+    },
+    "buff|unseen|ejFar": {
+     "n": 992,
+     "rate": 0.661
+    },
+    "buff|unseen|ejMid<60": {
+     "n": 2906,
+     "rate": 0.482
+    },
+    "buff|unseen|ejNear<25": {
+     "n": 756,
+     "rate": 0.558
+    },
+    "buff|unseen|ejNever": {
+     "n": 849,
+     "rate": 0.011
+    },
+    "buff|unseen|ejOld": {
+     "n": 4998,
+     "rate": 0.228
+    },
+    "camp|seen|ejDead": {
+     "n": 22,
+     "rate": 1
+    },
+    "camp|seen|ejFar": {
+     "n": 27,
+     "rate": 0.889
+    },
+    "camp|seen|ejMid<60": {
+     "n": 39,
+     "rate": 0.923
+    },
+    "camp|seen|ejNear<25": {
+     "n": 32,
+     "rate": 0.906
+    },
+    "camp|seen|ejOld": {
+     "n": 66,
+     "rate": 0.848
+    },
+    "camp|unseen|ejDead": {
+     "n": 1168,
+     "rate": 0.699
+    },
+    "camp|unseen|ejFar": {
+     "n": 5009,
+     "rate": 0.558
+    },
+    "camp|unseen|ejMid<60": {
+     "n": 4480,
+     "rate": 0.558
+    },
+    "camp|unseen|ejNear<25": {
+     "n": 211,
+     "rate": 0.73
+    },
+    "camp|unseen|ejNever": {
+     "n": 1698,
+     "rate": 0.261
+    },
+    "camp|unseen|ejOld": {
+     "n": 10067,
+     "rate": 0.364
+    }
+   },
+   "byEjRho": {
+    "buff|ejDead|rho<.50": {
+     "n": 76,
+     "rate": 0.658
+    },
+    "buff|ejDead|rho<.65": {
+     "n": 360,
+     "rate": 0.725
+    },
+    "buff|ejDead|rho>=.65": {
+     "n": 128,
+     "rate": 0.664
+    },
+    "buff|ejFar|rho<.50": {
+     "n": 126,
+     "rate": 0.508
+    },
+    "buff|ejFar|rho<.65": {
+     "n": 702,
+     "rate": 0.704
+    },
+    "buff|ejFar|rho>=.65": {
+     "n": 164,
+     "rate": 0.598
+    },
+    "buff|ejMid<60|rho<.50": {
+     "n": 541,
+     "rate": 0.357
+    },
+    "buff|ejMid<60|rho<.65": {
+     "n": 1873,
+     "rate": 0.534
+    },
+    "buff|ejMid<60|rho>=.65": {
+     "n": 492,
+     "rate": 0.419
+    },
+    "buff|ejNear<25|rho<.50": {
+     "n": 138,
+     "rate": 0.543
+    },
+    "buff|ejNear<25|rho<.65": {
+     "n": 519,
+     "rate": 0.57
+    },
+    "buff|ejNear<25|rho>=.65": {
+     "n": 99,
+     "rate": 0.515
+    },
+    "buff|ejNever|rho<.35": {
+     "n": 324,
+     "rate": 0.019
+    },
+    "buff|ejNever|rho<.50": {
+     "n": 516,
+     "rate": 0.006
+    },
+    "buff|ejNever|rho<.65": {
+     "n": 9,
+     "rate": 0
+    },
+    "buff|ejOld|rho<.50": {
+     "n": 599,
+     "rate": 0.157
+    },
+    "buff|ejOld|rho<.65": {
+     "n": 3377,
+     "rate": 0.244
+    },
+    "buff|ejOld|rho>=.65": {
+     "n": 1022,
+     "rate": 0.219
+    },
+    "camp|ejDead|rho<.50": {
+     "n": 160,
+     "rate": 0.575
+    },
+    "camp|ejDead|rho<.65": {
+     "n": 742,
+     "rate": 0.756
+    },
+    "camp|ejDead|rho>=.65": {
+     "n": 266,
+     "rate": 0.613
+    },
+    "camp|ejFar|rho<.50": {
+     "n": 834,
+     "rate": 0.446
+    },
+    "camp|ejFar|rho<.65": {
+     "n": 3303,
+     "rate": 0.592
+    },
+    "camp|ejFar|rho>=.65": {
+     "n": 872,
+     "rate": 0.533
+    },
+    "camp|ejMid<60|rho<.50": {
+     "n": 797,
+     "rate": 0.514
+    },
+    "camp|ejMid<60|rho<.65": {
+     "n": 3009,
+     "rate": 0.575
+    },
+    "camp|ejMid<60|rho>=.65": {
+     "n": 674,
+     "rate": 0.531
+    },
+    "camp|ejNear<25|rho<.50": {
+     "n": 24,
+     "rate": 1
+    },
+    "camp|ejNear<25|rho<.65": {
+     "n": 156,
+     "rate": 0.776
+    },
+    "camp|ejNear<25|rho>=.65": {
+     "n": 31,
+     "rate": 0.29
+    },
+    "camp|ejNever|rho<.35": {
+     "n": 648,
+     "rate": 0.606
+    },
+    "camp|ejNever|rho<.50": {
+     "n": 1032,
+     "rate": 0.049
+    },
+    "camp|ejNever|rho<.65": {
+     "n": 18,
+     "rate": 0
+    },
+    "camp|ejOld|rho<.50": {
+     "n": 1205,
+     "rate": 0.422
+    },
+    "camp|ejOld|rho<.65": {
+     "n": 6772,
+     "rate": 0.357
+    },
+    "camp|ejOld|rho>=.65": {
+     "n": 2090,
+     "rate": 0.351
+    }
+   }
+  },
+  "success": {
+   "starts": 12,
+   "aliveAtArrival": 0.833,
+   "ends": {
+    "retreat_hp": 2,
+    "lost_race": 4,
+    "stolen": 4,
+    "retreat_threat": 1,
+    "partner_lost": 1
+   },
+   "all": {
+    "buff|clear|n1": {
+     "n": 4,
+     "arrived": 0.25,
+     "captured": 0.25,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 2,
+     "arrived": 0,
+     "captured": 0,
+     "died": 0.5
+    },
+    "camp|clear|n1": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 5,
+     "arrived": 0.6,
+     "captured": 0.4,
+     "died": 0.2
+    }
+   },
+   "givenAlive": {
+    "buff|clear|n1": {
+     "n": 3,
+     "arrived": 0.333,
+     "captured": 0.333,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 2,
+     "arrived": 0,
+     "captured": 0,
+     "died": 0.5
+    },
+    "camp|clear|n1": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 4,
+     "arrived": 0.75,
+     "captured": 0.5,
+     "died": 0
+    }
+   },
+   "givenAliveByType": {
+    "buff": {
+     "n": 5,
+     "arrived": 0.2,
+     "captured": 0.2,
+     "died": 0.2
+    },
+    "camp": {
+     "n": 5,
+     "arrived": 0.8,
+     "captured": 0.6,
+     "died": 0
+    }
+   },
+   "allByType": {
+    "buff": {
+     "n": 6,
+     "arrived": 0.167,
+     "captured": 0.167,
+     "died": 0.167
+    },
+    "camp": {
+     "n": 6,
+     "arrived": 0.667,
+     "captured": 0.5,
+     "died": 0.167
+    }
+   }
+  },
+  "farm": {
+   "sides": 60,
+   "ownClearsPerMin": 1.349,
+   "foeClearsPerMin": 1.349,
+   "ownRho": 0.674,
+   "foeRho": 0.674
+  }
+ },
+ "tool_AB_v13": {
+  "belief": {
+   "byIntel": {
+    "buff|memAlive": {
+     "n": 3028,
+     "rate": 0.473
+    },
+    "buff|memRespawn": {
+     "n": 1335,
+     "rate": 0.497
+    },
+    "buff|prior": {
+     "n": 6441,
+     "rate": 0.292
+    },
+    "buff|seen": {
+     "n": 168,
+     "rate": 0.923
+    },
+    "camp|memAlive": {
+     "n": 3187,
+     "rate": 0.598
+    },
+    "camp|memRespawn": {
+     "n": 1221,
+     "rate": 0.6
+    },
+    "camp|prior": {
+     "n": 17773,
+     "rate": 0.428
+    },
+    "camp|seen": {
+     "n": 165,
+     "rate": 0.921
+    }
+   },
+   "byIntelRho": {
+    "buff|memAlive|rho<.50": {
+     "n": 369,
+     "rate": 0.439
+    },
+    "buff|memAlive|rho<.65": {
+     "n": 1934,
+     "rate": 0.501
+    },
+    "buff|memAlive|rho>=.65": {
+     "n": 725,
+     "rate": 0.414
+    },
+    "buff|memRespawn|rho<.50": {
+     "n": 142,
+     "rate": 0.493
+    },
+    "buff|memRespawn|rho<.65": {
+     "n": 953,
+     "rate": 0.524
+    },
+    "buff|memRespawn|rho>=.65": {
+     "n": 240,
+     "rate": 0.396
+    },
+    "buff|prior|rho<.35": {
+     "n": 372,
+     "rate": 0.086
+    },
+    "buff|prior|rho<.50": {
+     "n": 1836,
+     "rate": 0.214
+    },
+    "buff|prior|rho<.65": {
+     "n": 3056,
+     "rate": 0.367
+    },
+    "buff|prior|rho>=.65": {
+     "n": 1177,
+     "rate": 0.284
+    },
+    "buff|seen|rho<.50": {
+     "n": 51,
+     "rate": 0.922
+    },
+    "buff|seen|rho<.65": {
+     "n": 85,
+     "rate": 0.906
+    },
+    "buff|seen|rho>=.65": {
+     "n": 32,
+     "rate": 0.969
+    },
+    "camp|memAlive|rho<.50": {
+     "n": 667,
+     "rate": 0.655
+    },
+    "camp|memAlive|rho<.65": {
+     "n": 2044,
+     "rate": 0.587
+    },
+    "camp|memAlive|rho>=.65": {
+     "n": 476,
+     "rate": 0.565
+    },
+    "camp|memRespawn|rho<.50": {
+     "n": 68,
+     "rate": 0.485
+    },
+    "camp|memRespawn|rho<.65": {
+     "n": 774,
+     "rate": 0.63
+    },
+    "camp|memRespawn|rho>=.65": {
+     "n": 379,
+     "rate": 0.557
+    },
+    "camp|prior|rho<.35": {
+     "n": 744,
+     "rate": 0.566
+    },
+    "camp|prior|rho<.50": {
+     "n": 4131,
+     "rate": 0.359
+    },
+    "camp|prior|rho<.65": {
+     "n": 9359,
+     "rate": 0.453
+    },
+    "camp|prior|rho>=.65": {
+     "n": 3539,
+     "rate": 0.413
+    },
+    "camp|seen|rho<.50": {
+     "n": 39,
+     "rate": 0.897
+    },
+    "camp|seen|rho<.65": {
+     "n": 90,
+     "rate": 0.944
+    },
+    "camp|seen|rho>=.65": {
+     "n": 36,
+     "rate": 0.889
+    }
+   },
+   "byMemAge": {
+    "buff|<180": {
+     "n": 734,
+     "rate": 0.302
+    },
+    "buff|<20": {
+     "n": 375,
+     "rate": 0.813
+    },
+    "buff|<45": {
+     "n": 360,
+     "rate": 0.544
+    },
+    "buff|<90": {
+     "n": 471,
+     "rate": 0.406
+    },
+    "buff|>=180": {
+     "n": 1088,
+     "rate": 0.475
+    },
+    "camp|<180": {
+     "n": 649,
+     "rate": 0.493
+    },
+    "camp|<20": {
+     "n": 512,
+     "rate": 0.82
+    },
+    "camp|<45": {
+     "n": 420,
+     "rate": 0.657
+    },
+    "camp|<90": {
+     "n": 512,
+     "rate": 0.5
+    },
+    "camp|>=180": {
+     "n": 1094,
+     "rate": 0.58
+    }
+   },
+   "byRespawnAge": {
+    "buff|<20": {
+     "n": 36,
+     "rate": 0.861
+    },
+    "buff|<40": {
+     "n": 167,
+     "rate": 0.599
+    },
+    "buff|<80": {
+     "n": 298,
+     "rate": 0.47
+    },
+    "buff|>=80": {
+     "n": 834,
+     "rate": 0.471
+    },
+    "camp|<20": {
+     "n": 12,
+     "rate": 0.917
+    },
+    "camp|<40": {
+     "n": 131,
+     "rate": 0.847
+    },
+    "camp|<80": {
+     "n": 251,
+     "rate": 0.709
+    },
+    "camp|>=80": {
+     "n": 827,
+     "rate": 0.522
+    }
+   },
+   "byPriorT": {
+    "buff|<150": {
+     "n": 1414,
+     "rate": 0.13
+    },
+    "buff|<300": {
+     "n": 1692,
+     "rate": 0.297
+    },
+    "buff|<600": {
+     "n": 2245,
+     "rate": 0.354
+    },
+    "buff|<900": {
+     "n": 992,
+     "rate": 0.376
+    },
+    "buff|>=900": {
+     "n": 98,
+     "rate": 0.276
+    },
+    "camp|<150": {
+     "n": 2828,
+     "rate": 0.274
+    },
+    "camp|<300": {
+     "n": 3470,
+     "rate": 0.367
+    },
+    "camp|<600": {
+     "n": 6146,
+     "rate": 0.455
+    },
+    "camp|<900": {
+     "n": 4673,
+     "rate": 0.503
+    },
+    "camp|>=900": {
+     "n": 656,
+     "rate": 0.62
+    }
+   },
+   "byEj": {
+    "buff|seen|ejDead": {
+     "n": 28,
+     "rate": 0.929
+    },
+    "buff|seen|ejFar": {
+     "n": 4,
+     "rate": 1
+    },
+    "buff|seen|ejMid<60": {
+     "n": 41,
+     "rate": 0.927
+    },
+    "buff|seen|ejNear<25": {
+     "n": 70,
+     "rate": 0.971
+    },
+    "buff|seen|ejOld": {
+     "n": 25,
+     "rate": 0.76
+    },
+    "buff|unseen|ejDead": {
+     "n": 491,
+     "rate": 0.733
+    },
+    "buff|unseen|ejFar": {
+     "n": 797,
+     "rate": 0.68
+    },
+    "buff|unseen|ejMid<60": {
+     "n": 2836,
+     "rate": 0.489
+    },
+    "buff|unseen|ejNear<25": {
+     "n": 759,
+     "rate": 0.553
+    },
+    "buff|unseen|ejNever": {
+     "n": 905,
+     "rate": 0.061
+    },
+    "buff|unseen|ejOld": {
+     "n": 5016,
+     "rate": 0.241
+    },
+    "camp|seen|ejDead": {
+     "n": 30,
+     "rate": 1
+    },
+    "camp|seen|ejFar": {
+     "n": 23,
+     "rate": 1
+    },
+    "camp|seen|ejMid<60": {
+     "n": 33,
+     "rate": 0.939
+    },
+    "camp|seen|ejNear<25": {
+     "n": 21,
+     "rate": 0.81
+    },
+    "camp|seen|ejOld": {
+     "n": 58,
+     "rate": 0.879
+    },
+    "camp|unseen|ejDead": {
+     "n": 1052,
+     "rate": 0.696
+    },
+    "camp|unseen|ejFar": {
+     "n": 4982,
+     "rate": 0.574
+    },
+    "camp|unseen|ejMid<60": {
+     "n": 4021,
+     "rate": 0.546
+    },
+    "camp|unseen|ejNear<25": {
+     "n": 193,
+     "rate": 0.756
+    },
+    "camp|unseen|ejNever": {
+     "n": 1810,
+     "rate": 0.269
+    },
+    "camp|unseen|ejOld": {
+     "n": 10123,
+     "rate": 0.378
+    }
+   },
+   "byEjRho": {
+    "buff|ejDead|rho<.50": {
+     "n": 59,
+     "rate": 0.695
+    },
+    "buff|ejDead|rho<.65": {
+     "n": 305,
+     "rate": 0.77
+    },
+    "buff|ejDead|rho>=.65": {
+     "n": 127,
+     "rate": 0.661
+    },
+    "buff|ejFar|rho<.50": {
+     "n": 140,
+     "rate": 0.564
+    },
+    "buff|ejFar|rho<.65": {
+     "n": 493,
+     "rate": 0.753
+    },
+    "buff|ejFar|rho>=.65": {
+     "n": 164,
+     "rate": 0.561
+    },
+    "buff|ejMid<60|rho<.50": {
+     "n": 631,
+     "rate": 0.384
+    },
+    "buff|ejMid<60|rho<.65": {
+     "n": 1637,
+     "rate": 0.548
+    },
+    "buff|ejMid<60|rho>=.65": {
+     "n": 568,
+     "rate": 0.437
+    },
+    "buff|ejNear<25|rho<.50": {
+     "n": 184,
+     "rate": 0.582
+    },
+    "buff|ejNear<25|rho<.65": {
+     "n": 474,
+     "rate": 0.542
+    },
+    "buff|ejNear<25|rho>=.65": {
+     "n": 101,
+     "rate": 0.554
+    },
+    "buff|ejNever|rho<.35": {
+     "n": 372,
+     "rate": 0.086
+    },
+    "buff|ejNever|rho<.50": {
+     "n": 501,
+     "rate": 0.038
+    },
+    "buff|ejNever|rho<.65": {
+     "n": 31,
+     "rate": 0.129
+    },
+    "buff|ejNever|rho>=.65": {
+     "n": 1,
+     "rate": 0
+    },
+    "buff|ejOld|rho<.50": {
+     "n": 832,
+     "rate": 0.165
+    },
+    "buff|ejOld|rho<.65": {
+     "n": 3003,
+     "rate": 0.275
+    },
+    "buff|ejOld|rho>=.65": {
+     "n": 1181,
+     "rate": 0.211
+    },
+    "camp|ejDead|rho<.50": {
+     "n": 141,
+     "rate": 0.702
+    },
+    "camp|ejDead|rho<.65": {
+     "n": 631,
+     "rate": 0.75
+    },
+    "camp|ejDead|rho>=.65": {
+     "n": 280,
+     "rate": 0.571
+    },
+    "camp|ejFar|rho<.50": {
+     "n": 1125,
+     "rate": 0.483
+    },
+    "camp|ejFar|rho<.65": {
+     "n": 2962,
+     "rate": 0.618
+    },
+    "camp|ejFar|rho>=.65": {
+     "n": 895,
+     "rate": 0.541
+    },
+    "camp|ejMid<60|rho<.50": {
+     "n": 844,
+     "rate": 0.597
+    },
+    "camp|ejMid<60|rho<.65": {
+     "n": 2350,
+     "rate": 0.523
+    },
+    "camp|ejMid<60|rho>=.65": {
+     "n": 827,
+     "rate": 0.561
+    },
+    "camp|ejNear<25|rho<.50": {
+     "n": 46,
+     "rate": 0.848
+    },
+    "camp|ejNear<25|rho<.65": {
+     "n": 125,
+     "rate": 0.72
+    },
+    "camp|ejNear<25|rho>=.65": {
+     "n": 22,
+     "rate": 0.773
+    },
+    "camp|ejNever|rho<.35": {
+     "n": 744,
+     "rate": 0.566
+    },
+    "camp|ejNever|rho<.50": {
+     "n": 1002,
+     "rate": 0.051
+    },
+    "camp|ejNever|rho<.65": {
+     "n": 62,
+     "rate": 0.226
+    },
+    "camp|ejNever|rho>=.65": {
+     "n": 2,
+     "rate": 0
+    },
+    "camp|ejOld|rho<.50": {
+     "n": 1708,
+     "rate": 0.419
+    },
+    "camp|ejOld|rho<.65": {
+     "n": 6047,
+     "rate": 0.379
+    },
+    "camp|ejOld|rho>=.65": {
+     "n": 2368,
+     "rate": 0.345
+    }
+   }
+  },
+  "success": {
+   "starts": 16,
+   "aliveAtArrival": 0.688,
+   "ends": {
+    "null": 1,
+    "stolen": 10,
+    "lost_race": 3,
+    "retreat_threat": 1,
+    "partner_lag": 1
+   },
+   "all": {
+    "buff|clear|n1": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "buff|contested|n2": {
+     "n": 3,
+     "arrived": 0.333,
+     "captured": 0.667,
+     "died": 0
+    },
+    "camp|clear|n1": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 9,
+     "arrived": 0.556,
+     "captured": 0.556,
+     "died": 0.111
+    }
+   },
+   "givenAlive": {
+    "buff|clear|n1": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "buff|contested|n2": {
+     "n": 1,
+     "arrived": 0,
+     "captured": 0,
+     "died": 0
+    },
+    "camp|clear|n1": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 7,
+     "arrived": 0.714,
+     "captured": 0.714,
+     "died": 0.143
+    }
+   },
+   "givenAliveByType": {
+    "buff": {
+     "n": 3,
+     "arrived": 0.667,
+     "captured": 0.667,
+     "died": 0
+    },
+    "camp": {
+     "n": 8,
+     "arrived": 0.75,
+     "captured": 0.75,
+     "died": 0.125
+    }
+   },
+   "allByType": {
+    "buff": {
+     "n": 5,
+     "arrived": 0.6,
+     "captured": 0.8,
+     "died": 0
+    },
+    "camp": {
+     "n": 11,
+     "arrived": 0.545,
+     "captured": 0.545,
+     "died": 0.091
+    }
+   }
+  },
+  "farm": {
+   "sides": 60,
+   "ownClearsPerMin": 1.372,
+   "foeClearsPerMin": 1.372,
+   "ownRho": 0.686,
+   "foeRho": 0.686
+  }
+ },
+ "tool_BA_v13": {
+  "belief": {
+   "byIntel": {
+    "buff|memAlive": {
+     "n": 3653,
+     "rate": 0.476
+    },
+    "buff|memRespawn": {
+     "n": 1687,
+     "rate": 0.465
+    },
+    "buff|prior": {
+     "n": 5703,
+     "rate": 0.288
+    },
+    "buff|seen": {
+     "n": 202,
+     "rate": 0.936
+    },
+    "camp|memAlive": {
+     "n": 3525,
+     "rate": 0.605
+    },
+    "camp|memRespawn": {
+     "n": 1214,
+     "rate": 0.613
+    },
+    "camp|prior": {
+     "n": 17862,
+     "rate": 0.456
+    },
+    "camp|seen": {
+     "n": 218,
+     "rate": 0.959
+    }
+   },
+   "byIntelRho": {
+    "buff|memAlive|rho<.50": {
+     "n": 760,
+     "rate": 0.487
+    },
+    "buff|memAlive|rho<.65": {
+     "n": 2488,
+     "rate": 0.488
+    },
+    "buff|memAlive|rho>=.65": {
+     "n": 405,
+     "rate": 0.383
+    },
+    "buff|memRespawn|rho<.50": {
+     "n": 298,
+     "rate": 0.557
+    },
+    "buff|memRespawn|rho<.65": {
+     "n": 1050,
+     "rate": 0.466
+    },
+    "buff|memRespawn|rho>=.65": {
+     "n": 339,
+     "rate": 0.383
+    },
+    "buff|prior|rho<.35": {
+     "n": 368,
+     "rate": 0.068
+    },
+    "buff|prior|rho<.50": {
+     "n": 1816,
+     "rate": 0.219
+    },
+    "buff|prior|rho<.65": {
+     "n": 3172,
+     "rate": 0.346
+    },
+    "buff|prior|rho>=.65": {
+     "n": 347,
+     "rate": 0.352
+    },
+    "buff|seen|rho<.50": {
+     "n": 68,
+     "rate": 0.971
+    },
+    "buff|seen|rho<.65": {
+     "n": 124,
+     "rate": 0.919
+    },
+    "buff|seen|rho>=.65": {
+     "n": 10,
+     "rate": 0.9
+    },
+    "camp|memAlive|rho<.50": {
+     "n": 941,
+     "rate": 0.621
+    },
+    "camp|memAlive|rho<.65": {
+     "n": 2162,
+     "rate": 0.611
+    },
+    "camp|memAlive|rho>=.65": {
+     "n": 422,
+     "rate": 0.533
+    },
+    "camp|memRespawn|rho<.50": {
+     "n": 220,
+     "rate": 0.65
+    },
+    "camp|memRespawn|rho<.65": {
+     "n": 832,
+     "rate": 0.589
+    },
+    "camp|memRespawn|rho>=.65": {
+     "n": 162,
+     "rate": 0.685
+    },
+    "camp|prior|rho<.35": {
+     "n": 736,
+     "rate": 0.606
+    },
+    "camp|prior|rho<.50": {
+     "n": 4766,
+     "rate": 0.432
+    },
+    "camp|prior|rho<.65": {
+     "n": 10735,
+     "rate": 0.47
+    },
+    "camp|prior|rho>=.65": {
+     "n": 1625,
+     "rate": 0.371
+    },
+    "camp|seen|rho<.50": {
+     "n": 50,
+     "rate": 0.98
+    },
+    "camp|seen|rho<.65": {
+     "n": 148,
+     "rate": 0.959
+    },
+    "camp|seen|rho>=.65": {
+     "n": 20,
+     "rate": 0.9
+    }
+   },
+   "byMemAge": {
+    "buff|<180": {
+     "n": 850,
+     "rate": 0.375
+    },
+    "buff|<20": {
+     "n": 477,
+     "rate": 0.784
+    },
+    "buff|<45": {
+     "n": 427,
+     "rate": 0.419
+    },
+    "buff|<90": {
+     "n": 578,
+     "rate": 0.327
+    },
+    "buff|>=180": {
+     "n": 1321,
+     "rate": 0.513
+    },
+    "camp|<180": {
+     "n": 818,
+     "rate": 0.556
+    },
+    "camp|<20": {
+     "n": 534,
+     "rate": 0.86
+    },
+    "camp|<45": {
+     "n": 462,
+     "rate": 0.686
+    },
+    "camp|<90": {
+     "n": 613,
+     "rate": 0.592
+    },
+    "camp|>=180": {
+     "n": 1098,
+     "rate": 0.489
+    }
+   },
+   "byRespawnAge": {
+    "buff|<20": {
+     "n": 30,
+     "rate": 0.7
+    },
+    "buff|<40": {
+     "n": 155,
+     "rate": 0.619
+    },
+    "buff|<80": {
+     "n": 261,
+     "rate": 0.245
+    },
+    "buff|>=80": {
+     "n": 1241,
+     "rate": 0.487
+    },
+    "camp|<20": {
+     "n": 24,
+     "rate": 1
+    },
+    "camp|<40": {
+     "n": 165,
+     "rate": 0.727
+    },
+    "camp|<80": {
+     "n": 283,
+     "rate": 0.618
+    },
+    "camp|>=80": {
+     "n": 742,
+     "rate": 0.573
+    }
+   },
+   "byPriorT": {
+    "buff|<150": {
+     "n": 1411,
+     "rate": 0.081
+    },
+    "buff|<300": {
+     "n": 1638,
+     "rate": 0.333
+    },
+    "buff|<600": {
+     "n": 1985,
+     "rate": 0.369
+    },
+    "buff|<900": {
+     "n": 590,
+     "rate": 0.397
+    },
+    "buff|>=900": {
+     "n": 79,
+     "rate": 0.215
+    },
+    "camp|<150": {
+     "n": 2834,
+     "rate": 0.294
+    },
+    "camp|<300": {
+     "n": 3510,
+     "rate": 0.385
+    },
+    "camp|<600": {
+     "n": 6149,
+     "rate": 0.498
+    },
+    "camp|<900": {
+     "n": 4330,
+     "rate": 0.526
+    },
+    "camp|>=900": {
+     "n": 1039,
+     "rate": 0.608
+    }
+   },
+   "byEj": {
+    "buff|seen|ejDead": {
+     "n": 30,
+     "rate": 0.967
+    },
+    "buff|seen|ejFar": {
+     "n": 15,
+     "rate": 1
+    },
+    "buff|seen|ejMid<60": {
+     "n": 58,
+     "rate": 0.966
+    },
+    "buff|seen|ejNear<25": {
+     "n": 67,
+     "rate": 0.955
+    },
+    "buff|seen|ejOld": {
+     "n": 32,
+     "rate": 0.781
+    },
+    "buff|unseen|ejDead": {
+     "n": 595,
+     "rate": 0.699
+    },
+    "buff|unseen|ejFar": {
+     "n": 830,
+     "rate": 0.7
+    },
+    "buff|unseen|ejMid<60": {
+     "n": 2754,
+     "rate": 0.512
+    },
+    "buff|unseen|ejNear<25": {
+     "n": 767,
+     "rate": 0.566
+    },
+    "buff|unseen|ejNever": {
+     "n": 930,
+     "rate": 0.04
+    },
+    "buff|unseen|ejOld": {
+     "n": 5167,
+     "rate": 0.249
+    },
+    "camp|seen|ejDead": {
+     "n": 27,
+     "rate": 0.963
+    },
+    "camp|seen|ejFar": {
+     "n": 30,
+     "rate": 0.967
+    },
+    "camp|seen|ejMid<60": {
+     "n": 49,
+     "rate": 0.98
+    },
+    "camp|seen|ejNear<25": {
+     "n": 33,
+     "rate": 1
+    },
+    "camp|seen|ejOld": {
+     "n": 79,
+     "rate": 0.924
+    },
+    "camp|unseen|ejDead": {
+     "n": 1277,
+     "rate": 0.645
+    },
+    "camp|unseen|ejFar": {
+     "n": 4578,
+     "rate": 0.606
+    },
+    "camp|unseen|ejMid<60": {
+     "n": 4357,
+     "rate": 0.61
+    },
+    "camp|unseen|ejNear<25": {
+     "n": 195,
+     "rate": 0.662
+    },
+    "camp|unseen|ejNever": {
+     "n": 1860,
+     "rate": 0.264
+    },
+    "camp|unseen|ejOld": {
+     "n": 10334,
+     "rate": 0.402
+    }
+   },
+   "byEjRho": {
+    "buff|ejDead|rho<.50": {
+     "n": 100,
+     "rate": 0.73
+    },
+    "buff|ejDead|rho<.65": {
+     "n": 402,
+     "rate": 0.677
+    },
+    "buff|ejDead|rho>=.65": {
+     "n": 93,
+     "rate": 0.763
+    },
+    "buff|ejFar|rho<.50": {
+     "n": 178,
+     "rate": 0.657
+    },
+    "buff|ejFar|rho<.65": {
+     "n": 545,
+     "rate": 0.728
+    },
+    "buff|ejFar|rho>=.65": {
+     "n": 107,
+     "rate": 0.626
+    },
+    "buff|ejMid<60|rho<.50": {
+     "n": 775,
+     "rate": 0.463
+    },
+    "buff|ejMid<60|rho<.65": {
+     "n": 1758,
+     "rate": 0.539
+    },
+    "buff|ejMid<60|rho>=.65": {
+     "n": 221,
+     "rate": 0.466
+    },
+    "buff|ejNear<25|rho<.50": {
+     "n": 271,
+     "rate": 0.472
+    },
+    "buff|ejNear<25|rho<.65": {
+     "n": 467,
+     "rate": 0.627
+    },
+    "buff|ejNear<25|rho>=.65": {
+     "n": 29,
+     "rate": 0.448
+    },
+    "buff|ejNever|rho<.35": {
+     "n": 368,
+     "rate": 0.068
+    },
+    "buff|ejNever|rho<.50": {
+     "n": 544,
+     "rate": 0.022
+    },
+    "buff|ejNever|rho<.65": {
+     "n": 18,
+     "rate": 0
+    },
+    "buff|ejOld|rho<.50": {
+     "n": 1006,
+     "rate": 0.243
+    },
+    "buff|ejOld|rho<.65": {
+     "n": 3520,
+     "rate": 0.253
+    },
+    "buff|ejOld|rho>=.65": {
+     "n": 641,
+     "rate": 0.239
+    },
+    "camp|ejDead|rho<.50": {
+     "n": 231,
+     "rate": 0.584
+    },
+    "camp|ejDead|rho<.65": {
+     "n": 861,
+     "rate": 0.671
+    },
+    "camp|ejDead|rho>=.65": {
+     "n": 185,
+     "rate": 0.6
+    },
+    "camp|ejFar|rho<.50": {
+     "n": 1197,
+     "rate": 0.622
+    },
+    "camp|ejFar|rho<.65": {
+     "n": 2947,
+     "rate": 0.611
+    },
+    "camp|ejFar|rho>=.65": {
+     "n": 434,
+     "rate": 0.535
+    },
+    "camp|ejMid<60|rho<.50": {
+     "n": 1328,
+     "rate": 0.644
+    },
+    "camp|ejMid<60|rho<.65": {
+     "n": 2740,
+     "rate": 0.61
+    },
+    "camp|ejMid<60|rho>=.65": {
+     "n": 289,
+     "rate": 0.457
+    },
+    "camp|ejNear<25|rho<.50": {
+     "n": 67,
+     "rate": 0.761
+    },
+    "camp|ejNear<25|rho<.65": {
+     "n": 114,
+     "rate": 0.667
+    },
+    "camp|ejNear<25|rho>=.65": {
+     "n": 14,
+     "rate": 0.143
+    },
+    "camp|ejNever|rho<.35": {
+     "n": 736,
+     "rate": 0.606
+    },
+    "camp|ejNever|rho<.50": {
+     "n": 1088,
+     "rate": 0.038
+    },
+    "camp|ejNever|rho<.65": {
+     "n": 36,
+     "rate": 0.111
+    },
+    "camp|ejOld|rho<.50": {
+     "n": 2016,
+     "rate": 0.476
+    },
+    "camp|ejOld|rho<.65": {
+     "n": 7031,
+     "rate": 0.388
+    },
+    "camp|ejOld|rho>=.65": {
+     "n": 1287,
+     "rate": 0.359
+    }
+   }
+  },
+  "success": {
+   "starts": 24,
+   "aliveAtArrival": 0.708,
+   "ends": {
+    "stolen": 11,
+    "lost_race": 6,
+    "retreat_threat": 4,
+    "retreat_hp": 1,
+    "partner_lost": 1,
+    "retreat": 1
+   },
+   "all": {
+    "buff|clear|n2": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp|clear|n1": {
+     "n": 5,
+     "arrived": 0.8,
+     "captured": 0.8,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 17,
+     "arrived": 0.353,
+     "captured": 0.353,
+     "died": 0.059
+    }
+   },
+   "givenAlive": {
+    "buff|clear|n2": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp|clear|n1": {
+     "n": 3,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 12,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0.083
+    }
+   },
+   "givenAliveByType": {
+    "buff": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp": {
+     "n": 15,
+     "arrived": 0.6,
+     "captured": 0.6,
+     "died": 0.067
+    }
+   },
+   "allByType": {
+    "buff": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp": {
+     "n": 22,
+     "arrived": 0.455,
+     "captured": 0.455,
+     "died": 0.045
+    }
+   }
+  },
+  "farm": {
+   "sides": 60,
+   "ownClearsPerMin": 1.301,
+   "foeClearsPerMin": 1.301,
+   "ownRho": 0.65,
+   "foeRho": 0.65
+  }
+ },
+ "career_low_v13": {
+  "belief": {
+   "byIntel": {
+    "buff|memAlive": {
+     "n": 1476,
+     "rate": 0.485
+    },
+    "buff|memRespawn": {
+     "n": 634,
+     "rate": 0.451
+    },
+    "buff|prior": {
+     "n": 3224,
+     "rate": 0.348
+    },
+    "buff|seen": {
+     "n": 55,
+     "rate": 0.873
+    },
+    "camp|memAlive": {
+     "n": 1572,
+     "rate": 0.616
+    },
+    "camp|memRespawn": {
+     "n": 641,
+     "rate": 0.674
+    },
+    "camp|prior": {
+     "n": 8706,
+     "rate": 0.468
+    },
+    "camp|seen": {
+     "n": 61,
+     "rate": 0.852
+    }
+   },
+   "byIntelRho": {
+    "buff|memAlive|rho<.50": {
+     "n": 204,
+     "rate": 0.52
+    },
+    "buff|memAlive|rho<.65": {
+     "n": 997,
+     "rate": 0.479
+    },
+    "buff|memAlive|rho>=.65": {
+     "n": 275,
+     "rate": 0.48
+    },
+    "buff|memRespawn|rho<.50": {
+     "n": 129,
+     "rate": 0.31
+    },
+    "buff|memRespawn|rho<.65": {
+     "n": 389,
+     "rate": 0.506
+    },
+    "buff|memRespawn|rho>=.65": {
+     "n": 116,
+     "rate": 0.422
+    },
+    "buff|prior|rho<.35": {
+     "n": 181,
+     "rate": 0.221
+    },
+    "buff|prior|rho<.50": {
+     "n": 822,
+     "rate": 0.231
+    },
+    "buff|prior|rho<.65": {
+     "n": 1844,
+     "rate": 0.403
+    },
+    "buff|prior|rho>=.65": {
+     "n": 377,
+     "rate": 0.398
+    },
+    "buff|seen|rho<.50": {
+     "n": 17,
+     "rate": 0.824
+    },
+    "buff|seen|rho<.65": {
+     "n": 29,
+     "rate": 0.897
+    },
+    "buff|seen|rho>=.65": {
+     "n": 9,
+     "rate": 0.889
+    },
+    "camp|memAlive|rho<.50": {
+     "n": 214,
+     "rate": 0.794
+    },
+    "camp|memAlive|rho<.65": {
+     "n": 1103,
+     "rate": 0.595
+    },
+    "camp|memAlive|rho>=.65": {
+     "n": 255,
+     "rate": 0.561
+    },
+    "camp|memRespawn|rho<.50": {
+     "n": 31,
+     "rate": 1
+    },
+    "camp|memRespawn|rho<.65": {
+     "n": 386,
+     "rate": 0.728
+    },
+    "camp|memRespawn|rho>=.65": {
+     "n": 224,
+     "rate": 0.536
+    },
+    "camp|prior|rho<.35": {
+     "n": 362,
+     "rate": 0.762
+    },
+    "camp|prior|rho<.50": {
+     "n": 2086,
+     "rate": 0.417
+    },
+    "camp|prior|rho<.65": {
+     "n": 5083,
+     "rate": 0.479
+    },
+    "camp|prior|rho>=.65": {
+     "n": 1175,
+     "rate": 0.42
+    },
+    "camp|seen|rho<.50": {
+     "n": 15,
+     "rate": 0.867
+    },
+    "camp|seen|rho<.65": {
+     "n": 46,
+     "rate": 0.848
+    }
+   },
+   "byMemAge": {
+    "buff|<180": {
+     "n": 340,
+     "rate": 0.394
+    },
+    "buff|<20": {
+     "n": 131,
+     "rate": 0.733
+    },
+    "buff|<45": {
+     "n": 147,
+     "rate": 0.578
+    },
+    "buff|<90": {
+     "n": 228,
+     "rate": 0.338
+    },
+    "buff|>=180": {
+     "n": 630,
+     "rate": 0.514
+    },
+    "camp|<180": {
+     "n": 279,
+     "rate": 0.47
+    },
+    "camp|<20": {
+     "n": 188,
+     "rate": 0.793
+    },
+    "camp|<45": {
+     "n": 193,
+     "rate": 0.72
+    },
+    "camp|<90": {
+     "n": 246,
+     "rate": 0.577
+    },
+    "camp|>=180": {
+     "n": 666,
+     "rate": 0.613
+    }
+   },
+   "byRespawnAge": {
+    "buff|<20": {
+     "n": 6,
+     "rate": 0.833
+    },
+    "buff|<40": {
+     "n": 67,
+     "rate": 0.463
+    },
+    "buff|<80": {
+     "n": 130,
+     "rate": 0.4
+    },
+    "buff|>=80": {
+     "n": 431,
+     "rate": 0.459
+    },
+    "camp|<20": {
+     "n": 10,
+     "rate": 1
+    },
+    "camp|<40": {
+     "n": 43,
+     "rate": 0.884
+    },
+    "camp|<80": {
+     "n": 89,
+     "rate": 0.955
+    },
+    "camp|>=80": {
+     "n": 499,
+     "rate": 0.599
+    }
+   },
+   "byPriorT": {
+    "buff|<150": {
+     "n": 700,
+     "rate": 0.144
+    },
+    "buff|<300": {
+     "n": 848,
+     "rate": 0.401
+    },
+    "buff|<600": {
+     "n": 1079,
+     "rate": 0.371
+    },
+    "buff|<900": {
+     "n": 508,
+     "rate": 0.445
+    },
+    "buff|>=900": {
+     "n": 89,
+     "rate": 0.629
+    },
+    "camp|<150": {
+     "n": 1400,
+     "rate": 0.306
+    },
+    "camp|<300": {
+     "n": 1736,
+     "rate": 0.411
+    },
+    "camp|<600": {
+     "n": 2832,
+     "rate": 0.498
+    },
+    "camp|<900": {
+     "n": 2048,
+     "rate": 0.523
+    },
+    "camp|>=900": {
+     "n": 690,
+     "rate": 0.652
+    }
+   },
+   "byEj": {
+    "buff|seen|ejDead": {
+     "n": 13,
+     "rate": 1
+    },
+    "buff|seen|ejFar": {
+     "n": 4,
+     "rate": 1
+    },
+    "buff|seen|ejMid<60": {
+     "n": 5,
+     "rate": 1
+    },
+    "buff|seen|ejNear<25": {
+     "n": 21,
+     "rate": 0.81
+    },
+    "buff|seen|ejOld": {
+     "n": 12,
+     "rate": 0.75
+    },
+    "buff|unseen|ejDead": {
+     "n": 175,
+     "rate": 0.794
+    },
+    "buff|unseen|ejFar": {
+     "n": 574,
+     "rate": 0.686
+    },
+    "buff|unseen|ejMid<60": {
+     "n": 1331,
+     "rate": 0.598
+    },
+    "buff|unseen|ejNear<25": {
+     "n": 283,
+     "rate": 0.459
+    },
+    "buff|unseen|ejNever": {
+     "n": 520,
+     "rate": 0.125
+    },
+    "buff|unseen|ejOld": {
+     "n": 2451,
+     "rate": 0.245
+    },
+    "camp|seen|ejFar": {
+     "n": 19,
+     "rate": 0.895
+    },
+    "camp|seen|ejMid<60": {
+     "n": 7,
+     "rate": 0.857
+    },
+    "camp|seen|ejNear<25": {
+     "n": 6,
+     "rate": 0.667
+    },
+    "camp|seen|ejOld": {
+     "n": 29,
+     "rate": 0.862
+    },
+    "camp|unseen|ejDead": {
+     "n": 395,
+     "rate": 0.792
+    },
+    "camp|unseen|ejFar": {
+     "n": 2483,
+     "rate": 0.639
+    },
+    "camp|unseen|ejMid<60": {
+     "n": 1931,
+     "rate": 0.645
+    },
+    "camp|unseen|ejNear<25": {
+     "n": 91,
+     "rate": 0.549
+    },
+    "camp|unseen|ejNever": {
+     "n": 1040,
+     "rate": 0.318
+    },
+    "camp|unseen|ejOld": {
+     "n": 4979,
+     "rate": 0.391
+    }
+   },
+   "byEjRho": {
+    "buff|ejDead|rho<.50": {
+     "n": 38,
+     "rate": 0.789
+    },
+    "buff|ejDead|rho<.65": {
+     "n": 118,
+     "rate": 0.797
+    },
+    "buff|ejDead|rho>=.65": {
+     "n": 19,
+     "rate": 0.789
+    },
+    "buff|ejFar|rho<.50": {
+     "n": 108,
+     "rate": 0.648
+    },
+    "buff|ejFar|rho<.65": {
+     "n": 374,
+     "rate": 0.687
+    },
+    "buff|ejFar|rho>=.65": {
+     "n": 92,
+     "rate": 0.728
+    },
+    "buff|ejMid<60|rho<.50": {
+     "n": 276,
+     "rate": 0.438
+    },
+    "buff|ejMid<60|rho<.65": {
+     "n": 838,
+     "rate": 0.636
+    },
+    "buff|ejMid<60|rho>=.65": {
+     "n": 217,
+     "rate": 0.654
+    },
+    "buff|ejNear<25|rho<.50": {
+     "n": 111,
+     "rate": 0.333
+    },
+    "buff|ejNear<25|rho<.65": {
+     "n": 140,
+     "rate": 0.521
+    },
+    "buff|ejNear<25|rho>=.65": {
+     "n": 32,
+     "rate": 0.625
+    },
+    "buff|ejNever|rho<.35": {
+     "n": 180,
+     "rate": 0.222
+    },
+    "buff|ejNever|rho<.50": {
+     "n": 310,
+     "rate": 0.065
+    },
+    "buff|ejNever|rho<.65": {
+     "n": 29,
+     "rate": 0.172
+    },
+    "buff|ejNever|rho>=.65": {
+     "n": 1,
+     "rate": 0
+    },
+    "buff|ejOld|rho<.35": {
+     "n": 1,
+     "rate": 0
+    },
+    "buff|ejOld|rho<.50": {
+     "n": 312,
+     "rate": 0.186
+    },
+    "buff|ejOld|rho<.65": {
+     "n": 1731,
+     "rate": 0.263
+    },
+    "buff|ejOld|rho>=.65": {
+     "n": 407,
+     "rate": 0.214
+    },
+    "camp|ejDead|rho<.50": {
+     "n": 85,
+     "rate": 0.941
+    },
+    "camp|ejDead|rho<.65": {
+     "n": 266,
+     "rate": 0.763
+    },
+    "camp|ejDead|rho>=.65": {
+     "n": 44,
+     "rate": 0.682
+    },
+    "camp|ejFar|rho<.50": {
+     "n": 487,
+     "rate": 0.653
+    },
+    "camp|ejFar|rho<.65": {
+     "n": 1540,
+     "rate": 0.638
+    },
+    "camp|ejFar|rho>=.65": {
+     "n": 456,
+     "rate": 0.627
+    },
+    "camp|ejMid<60|rho<.50": {
+     "n": 483,
+     "rate": 0.584
+    },
+    "camp|ejMid<60|rho<.65": {
+     "n": 1195,
+     "rate": 0.679
+    },
+    "camp|ejMid<60|rho>=.65": {
+     "n": 253,
+     "rate": 0.601
+    },
+    "camp|ejNear<25|rho<.50": {
+     "n": 27,
+     "rate": 0.556
+    },
+    "camp|ejNear<25|rho<.65": {
+     "n": 56,
+     "rate": 0.482
+    },
+    "camp|ejNear<25|rho>=.65": {
+     "n": 8,
+     "rate": 1
+    },
+    "camp|ejNever|rho<.35": {
+     "n": 360,
+     "rate": 0.767
+    },
+    "camp|ejNever|rho<.50": {
+     "n": 620,
+     "rate": 0.066
+    },
+    "camp|ejNever|rho<.65": {
+     "n": 58,
+     "rate": 0.241
+    },
+    "camp|ejNever|rho>=.65": {
+     "n": 2,
+     "rate": 0
+    },
+    "camp|ejOld|rho<.35": {
+     "n": 2,
+     "rate": 0
+    },
+    "camp|ejOld|rho<.50": {
+     "n": 629,
+     "rate": 0.531
+    },
+    "camp|ejOld|rho<.65": {
+     "n": 3457,
+     "rate": 0.386
+    },
+    "camp|ejOld|rho>=.65": {
+     "n": 891,
+     "rate": 0.314
+    }
+   }
+  },
+  "success": {
+   "starts": 13,
+   "aliveAtArrival": 0.846,
+   "ends": {
+    "retreat_threat": 3,
+    "stolen": 9,
+    "lost_race": 1
+   },
+   "all": {
+    "buff|clear|n1": {
+     "n": 3,
+     "arrived": 1,
+     "captured": 0.667,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 2,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 8,
+     "arrived": 0.75,
+     "captured": 0.625,
+     "died": 0.25
+    }
+   },
+   "givenAlive": {
+    "buff|clear|n1": {
+     "n": 3,
+     "arrived": 1,
+     "captured": 0.667,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 2,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 6,
+     "arrived": 0.833,
+     "captured": 0.667,
+     "died": 0.333
+    }
+   },
+   "givenAliveByType": {
+    "buff": {
+     "n": 5,
+     "arrived": 1,
+     "captured": 0.8,
+     "died": 0
+    },
+    "camp": {
+     "n": 6,
+     "arrived": 0.833,
+     "captured": 0.667,
+     "died": 0.333
+    }
+   },
+   "allByType": {
+    "buff": {
+     "n": 5,
+     "arrived": 1,
+     "captured": 0.8,
+     "died": 0
+    },
+    "camp": {
+     "n": 8,
+     "arrived": 0.75,
+     "captured": 0.625,
+     "died": 0.25
+    }
+   }
+  },
+  "farm": {
+   "sides": 30,
+   "ownClearsPerMin": 1.39,
+   "foeClearsPerMin": 1.229,
+   "ownRho": 0.695,
+   "foeRho": 0.614
+  }
+ },
+ "career_mid_v13": {
+  "belief": {
+   "byIntel": {
+    "buff|memAlive": {
+     "n": 1972,
+     "rate": 0.479
+    },
+    "buff|memRespawn": {
+     "n": 672,
+     "rate": 0.47
+    },
+    "buff|prior": {
+     "n": 2757,
+     "rate": 0.342
+    },
+    "buff|seen": {
+     "n": 73,
+     "rate": 0.932
+    },
+    "camp|memAlive": {
+     "n": 1125,
+     "rate": 0.7
+    },
+    "camp|memRespawn": {
+     "n": 406,
+     "rate": 0.702
+    },
+    "camp|prior": {
+     "n": 9457,
+     "rate": 0.455
+    },
+    "camp|seen": {
+     "n": 80,
+     "rate": 0.963
+    }
+   },
+   "byIntelRho": {
+    "buff|memAlive|rho<.50": {
+     "n": 292,
+     "rate": 0.404
+    },
+    "buff|memAlive|rho<.65": {
+     "n": 1337,
+     "rate": 0.515
+    },
+    "buff|memAlive|rho>=.65": {
+     "n": 343,
+     "rate": 0.405
+    },
+    "buff|memRespawn|rho<.50": {
+     "n": 16,
+     "rate": 0.438
+    },
+    "buff|memRespawn|rho<.65": {
+     "n": 378,
+     "rate": 0.545
+    },
+    "buff|memRespawn|rho>=.65": {
+     "n": 278,
+     "rate": 0.371
+    },
+    "buff|prior|rho<.35": {
+     "n": 174,
+     "rate": 0.259
+    },
+    "buff|prior|rho<.50": {
+     "n": 746,
+     "rate": 0.251
+    },
+    "buff|prior|rho<.65": {
+     "n": 1413,
+     "rate": 0.4
+    },
+    "buff|prior|rho>=.65": {
+     "n": 424,
+     "rate": 0.344
+    },
+    "buff|seen|rho<.50": {
+     "n": 16,
+     "rate": 0.875
+    },
+    "buff|seen|rho<.65": {
+     "n": 45,
+     "rate": 0.933
+    },
+    "buff|seen|rho>=.65": {
+     "n": 12,
+     "rate": 1
+    },
+    "camp|memAlive|rho<.50": {
+     "n": 150,
+     "rate": 0.873
+    },
+    "camp|memAlive|rho<.65": {
+     "n": 706,
+     "rate": 0.7
+    },
+    "camp|memAlive|rho>=.65": {
+     "n": 269,
+     "rate": 0.606
+    },
+    "camp|memRespawn|rho<.50": {
+     "n": 39,
+     "rate": 0.949
+    },
+    "camp|memRespawn|rho<.65": {
+     "n": 237,
+     "rate": 0.793
+    },
+    "camp|memRespawn|rho>=.65": {
+     "n": 130,
+     "rate": 0.462
+    },
+    "camp|prior|rho<.35": {
+     "n": 348,
+     "rate": 0.776
+    },
+    "camp|prior|rho<.50": {
+     "n": 1939,
+     "rate": 0.355
+    },
+    "camp|prior|rho<.65": {
+     "n": 5454,
+     "rate": 0.464
+    },
+    "camp|prior|rho>=.65": {
+     "n": 1716,
+     "rate": 0.473
+    },
+    "camp|seen|rho<.50": {
+     "n": 17,
+     "rate": 1
+    },
+    "camp|seen|rho<.65": {
+     "n": 41,
+     "rate": 0.927
+    },
+    "camp|seen|rho>=.65": {
+     "n": 22,
+     "rate": 1
+    }
+   },
+   "byMemAge": {
+    "buff|<180": {
+     "n": 471,
+     "rate": 0.346
+    },
+    "buff|<20": {
+     "n": 185,
+     "rate": 0.816
+    },
+    "buff|<45": {
+     "n": 181,
+     "rate": 0.525
+    },
+    "buff|<90": {
+     "n": 303,
+     "rate": 0.403
+    },
+    "buff|>=180": {
+     "n": 832,
+     "rate": 0.498
+    },
+    "camp|<180": {
+     "n": 227,
+     "rate": 0.542
+    },
+    "camp|<20": {
+     "n": 196,
+     "rate": 0.872
+    },
+    "camp|<45": {
+     "n": 175,
+     "rate": 0.789
+    },
+    "camp|<90": {
+     "n": 220,
+     "rate": 0.686
+    },
+    "camp|>=180": {
+     "n": 307,
+     "rate": 0.668
+    }
+   },
+   "byRespawnAge": {
+    "buff|<20": {
+     "n": 4,
+     "rate": 1
+    },
+    "buff|<40": {
+     "n": 62,
+     "rate": 0.323
+    },
+    "buff|<80": {
+     "n": 113,
+     "rate": 0.142
+    },
+    "buff|>=80": {
+     "n": 493,
+     "rate": 0.56
+    },
+    "camp|<20": {
+     "n": 6,
+     "rate": 1
+    },
+    "camp|<40": {
+     "n": 51,
+     "rate": 0.627
+    },
+    "camp|<80": {
+     "n": 99,
+     "rate": 0.677
+    },
+    "camp|>=80": {
+     "n": 250,
+     "rate": 0.72
+    }
+   },
+   "byPriorT": {
+    "buff|<150": {
+     "n": 698,
+     "rate": 0.186
+    },
+    "buff|<300": {
+     "n": 782,
+     "rate": 0.385
+    },
+    "buff|<600": {
+     "n": 890,
+     "rate": 0.387
+    },
+    "buff|<900": {
+     "n": 367,
+     "rate": 0.436
+    },
+    "buff|>=900": {
+     "n": 20,
+     "rate": 0.4
+    },
+    "camp|<150": {
+     "n": 1398,
+     "rate": 0.313
+    },
+    "camp|<300": {
+     "n": 1771,
+     "rate": 0.412
+    },
+    "camp|<600": {
+     "n": 3338,
+     "rate": 0.498
+    },
+    "camp|<900": {
+     "n": 2422,
+     "rate": 0.498
+    },
+    "camp|>=900": {
+     "n": 528,
+     "rate": 0.498
+    }
+   },
+   "byEj": {
+    "buff|seen|ejDead": {
+     "n": 13,
+     "rate": 1
+    },
+    "buff|seen|ejFar": {
+     "n": 11,
+     "rate": 1
+    },
+    "buff|seen|ejMid<60": {
+     "n": 9,
+     "rate": 0.778
+    },
+    "buff|seen|ejNear<25": {
+     "n": 29,
+     "rate": 0.931
+    },
+    "buff|seen|ejOld": {
+     "n": 11,
+     "rate": 0.909
+    },
+    "buff|unseen|ejDead": {
+     "n": 268,
+     "rate": 0.828
+    },
+    "buff|unseen|ejFar": {
+     "n": 459,
+     "rate": 0.658
+    },
+    "buff|unseen|ejMid<60": {
+     "n": 1407,
+     "rate": 0.576
+    },
+    "buff|unseen|ejNear<25": {
+     "n": 359,
+     "rate": 0.538
+    },
+    "buff|unseen|ejNever": {
+     "n": 542,
+     "rate": 0.129
+    },
+    "buff|unseen|ejOld": {
+     "n": 2366,
+     "rate": 0.256
+    },
+    "camp|seen|ejDead": {
+     "n": 15,
+     "rate": 0.933
+    },
+    "camp|seen|ejFar": {
+     "n": 9,
+     "rate": 1
+    },
+    "camp|seen|ejMid<60": {
+     "n": 19,
+     "rate": 0.947
+    },
+    "camp|seen|ejNear<25": {
+     "n": 14,
+     "rate": 1
+    },
+    "camp|seen|ejOld": {
+     "n": 23,
+     "rate": 0.957
+    },
+    "camp|unseen|ejDead": {
+     "n": 553,
+     "rate": 0.814
+    },
+    "camp|unseen|ejFar": {
+     "n": 2384,
+     "rate": 0.598
+    },
+    "camp|unseen|ejMid<60": {
+     "n": 2117,
+     "rate": 0.602
+    },
+    "camp|unseen|ejNear<25": {
+     "n": 74,
+     "rate": 0.743
+    },
+    "camp|unseen|ejNever": {
+     "n": 1084,
+     "rate": 0.315
+    },
+    "camp|unseen|ejOld": {
+     "n": 4776,
+     "rate": 0.382
+    }
+   },
+   "byEjRho": {
+    "buff|ejDead|rho<.50": {
+     "n": 47,
+     "rate": 0.702
+    },
+    "buff|ejDead|rho<.65": {
+     "n": 171,
+     "rate": 0.848
+    },
+    "buff|ejDead|rho>=.65": {
+     "n": 50,
+     "rate": 0.88
+    },
+    "buff|ejFar|rho<.50": {
+     "n": 64,
+     "rate": 0.609
+    },
+    "buff|ejFar|rho<.65": {
+     "n": 315,
+     "rate": 0.746
+    },
+    "buff|ejFar|rho>=.65": {
+     "n": 80,
+     "rate": 0.35
+    },
+    "buff|ejMid<60|rho<.50": {
+     "n": 281,
+     "rate": 0.452
+    },
+    "buff|ejMid<60|rho<.65": {
+     "n": 889,
+     "rate": 0.631
+    },
+    "buff|ejMid<60|rho>=.65": {
+     "n": 237,
+     "rate": 0.519
+    },
+    "buff|ejNear<25|rho<.50": {
+     "n": 71,
+     "rate": 0.451
+    },
+    "buff|ejNear<25|rho<.65": {
+     "n": 222,
+     "rate": 0.55
+    },
+    "buff|ejNear<25|rho>=.65": {
+     "n": 66,
+     "rate": 0.591
+    },
+    "buff|ejNever|rho<.35": {
+     "n": 174,
+     "rate": 0.259
+    },
+    "buff|ejNever|rho<.50": {
+     "n": 318,
+     "rate": 0.072
+    },
+    "buff|ejNever|rho<.65": {
+     "n": 42,
+     "rate": 0.048
+    },
+    "buff|ejNever|rho>=.65": {
+     "n": 8,
+     "rate": 0
+    },
+    "buff|ejOld|rho<.50": {
+     "n": 273,
+     "rate": 0.212
+    },
+    "buff|ejOld|rho<.65": {
+     "n": 1489,
+     "rate": 0.265
+    },
+    "buff|ejOld|rho>=.65": {
+     "n": 604,
+     "rate": 0.255
+    },
+    "camp|ejDead|rho<.50": {
+     "n": 89,
+     "rate": 0.708
+    },
+    "camp|ejDead|rho<.65": {
+     "n": 357,
+     "rate": 0.838
+    },
+    "camp|ejDead|rho>=.65": {
+     "n": 107,
+     "rate": 0.822
+    },
+    "camp|ejFar|rho<.50": {
+     "n": 426,
+     "rate": 0.577
+    },
+    "camp|ejFar|rho<.65": {
+     "n": 1599,
+     "rate": 0.604
+    },
+    "camp|ejFar|rho>=.65": {
+     "n": 359,
+     "rate": 0.596
+    },
+    "camp|ejMid<60|rho<.50": {
+     "n": 407,
+     "rate": 0.56
+    },
+    "camp|ejMid<60|rho<.65": {
+     "n": 1296,
+     "rate": 0.604
+    },
+    "camp|ejMid<60|rho>=.65": {
+     "n": 414,
+     "rate": 0.638
+    },
+    "camp|ejNear<25|rho<.50": {
+     "n": 21,
+     "rate": 0.952
+    },
+    "camp|ejNear<25|rho<.65": {
+     "n": 36,
+     "rate": 0.778
+    },
+    "camp|ejNear<25|rho>=.65": {
+     "n": 17,
+     "rate": 0.412
+    },
+    "camp|ejNever|rho<.35": {
+     "n": 348,
+     "rate": 0.776
+    },
+    "camp|ejNever|rho<.50": {
+     "n": 636,
+     "rate": 0.074
+    },
+    "camp|ejNever|rho<.65": {
+     "n": 84,
+     "rate": 0.214
+    },
+    "camp|ejNever|rho>=.65": {
+     "n": 16,
+     "rate": 0.438
+    },
+    "camp|ejOld|rho<.50": {
+     "n": 549,
+     "rate": 0.459
+    },
+    "camp|ejOld|rho<.65": {
+     "n": 3025,
+     "rate": 0.37
+    },
+    "camp|ejOld|rho>=.65": {
+     "n": 1202,
+     "rate": 0.378
+    }
+   }
+  },
+  "success": {
+   "starts": 2,
+   "aliveAtArrival": 1,
+   "ends": {
+    "retreat_threat": 1,
+    "stolen": 1
+   },
+   "all": {
+    "buff|clear|n1": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0.5
+    }
+   },
+   "givenAlive": {
+    "buff|clear|n1": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0.5
+    }
+   },
+   "givenAliveByType": {
+    "buff": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0.5
+    }
+   },
+   "allByType": {
+    "buff": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0.5
+    }
+   }
+  },
+  "farm": {
+   "sides": 30,
+   "ownClearsPerMin": 1.379,
+   "foeClearsPerMin": 1.269,
+   "ownRho": 0.689,
+   "foeRho": 0.634
+  }
+ },
+ "career_high_v13": {
+  "belief": {
+   "byIntel": {
+    "buff|memAlive": {
+     "n": 1933,
+     "rate": 0.441
+    },
+    "buff|memRespawn": {
+     "n": 729,
+     "rate": 0.398
+    },
+    "buff|prior": {
+     "n": 2707,
+     "rate": 0.342
+    },
+    "buff|seen": {
+     "n": 92,
+     "rate": 0.913
+    },
+    "camp|memAlive": {
+     "n": 1487,
+     "rate": 0.59
+    },
+    "camp|memRespawn": {
+     "n": 746,
+     "rate": 0.603
+    },
+    "camp|prior": {
+     "n": 8692,
+     "rate": 0.455
+    },
+    "camp|seen": {
+     "n": 86,
+     "rate": 0.942
+    }
+   },
+   "byIntelRho": {
+    "buff|memAlive|rho<.50": {
+     "n": 268,
+     "rate": 0.478
+    },
+    "buff|memAlive|rho<.65": {
+     "n": 1333,
+     "rate": 0.426
+    },
+    "buff|memAlive|rho>=.65": {
+     "n": 332,
+     "rate": 0.47
+    },
+    "buff|memRespawn|rho<.50": {
+     "n": 49,
+     "rate": 0.612
+    },
+    "buff|memRespawn|rho<.65": {
+     "n": 384,
+     "rate": 0.461
+    },
+    "buff|memRespawn|rho>=.65": {
+     "n": 296,
+     "rate": 0.28
+    },
+    "buff|prior|rho<.35": {
+     "n": 165,
+     "rate": 0.279
+    },
+    "buff|prior|rho<.50": {
+     "n": 808,
+     "rate": 0.255
+    },
+    "buff|prior|rho<.65": {
+     "n": 1421,
+     "rate": 0.398
+    },
+    "buff|prior|rho>=.65": {
+     "n": 313,
+     "rate": 0.345
+    },
+    "buff|seen|rho<.50": {
+     "n": 16,
+     "rate": 0.938
+    },
+    "buff|seen|rho<.65": {
+     "n": 69,
+     "rate": 0.928
+    },
+    "buff|seen|rho>=.65": {
+     "n": 7,
+     "rate": 0.714
+    },
+    "camp|memAlive|rho<.50": {
+     "n": 230,
+     "rate": 0.517
+    },
+    "camp|memAlive|rho<.65": {
+     "n": 1033,
+     "rate": 0.615
+    },
+    "camp|memAlive|rho>=.65": {
+     "n": 224,
+     "rate": 0.549
+    },
+    "camp|memRespawn|rho<.50": {
+     "n": 112,
+     "rate": 0.625
+    },
+    "camp|memRespawn|rho<.65": {
+     "n": 464,
+     "rate": 0.569
+    },
+    "camp|memRespawn|rho>=.65": {
+     "n": 170,
+     "rate": 0.682
+    },
+    "camp|prior|rho<.35": {
+     "n": 330,
+     "rate": 0.797
+    },
+    "camp|prior|rho<.50": {
+     "n": 1922,
+     "rate": 0.383
+    },
+    "camp|prior|rho<.65": {
+     "n": 4936,
+     "rate": 0.456
+    },
+    "camp|prior|rho>=.65": {
+     "n": 1504,
+     "rate": 0.469
+    },
+    "camp|seen|rho<.50": {
+     "n": 9,
+     "rate": 0.667
+    },
+    "camp|seen|rho<.65": {
+     "n": 59,
+     "rate": 0.983
+    },
+    "camp|seen|rho>=.65": {
+     "n": 18,
+     "rate": 0.944
+    }
+   },
+   "byMemAge": {
+    "buff|<180": {
+     "n": 457,
+     "rate": 0.368
+    },
+    "buff|<20": {
+     "n": 247,
+     "rate": 0.794
+    },
+    "buff|<45": {
+     "n": 221,
+     "rate": 0.439
+    },
+    "buff|<90": {
+     "n": 315,
+     "rate": 0.302
+    },
+    "buff|>=180": {
+     "n": 693,
+     "rate": 0.427
+    },
+    "camp|<180": {
+     "n": 319,
+     "rate": 0.42
+    },
+    "camp|<20": {
+     "n": 268,
+     "rate": 0.884
+    },
+    "camp|<45": {
+     "n": 224,
+     "rate": 0.714
+    },
+    "camp|<90": {
+     "n": 250,
+     "rate": 0.456
+    },
+    "camp|>=180": {
+     "n": 426,
+     "rate": 0.545
+    }
+   },
+   "byRespawnAge": {
+    "buff|<20": {
+     "n": 13,
+     "rate": 0.846
+    },
+    "buff|<40": {
+     "n": 65,
+     "rate": 0.462
+    },
+    "buff|<80": {
+     "n": 122,
+     "rate": 0.221
+    },
+    "buff|>=80": {
+     "n": 529,
+     "rate": 0.42
+    },
+    "camp|<20": {
+     "n": 10,
+     "rate": 1
+    },
+    "camp|<40": {
+     "n": 66,
+     "rate": 0.848
+    },
+    "camp|<80": {
+     "n": 126,
+     "rate": 0.563
+    },
+    "camp|>=80": {
+     "n": 544,
+     "rate": 0.575
+    }
+   },
+   "byPriorT": {
+    "buff|<150": {
+     "n": 702,
+     "rate": 0.184
+    },
+    "buff|<300": {
+     "n": 804,
+     "rate": 0.368
+    },
+    "buff|<600": {
+     "n": 944,
+     "rate": 0.398
+    },
+    "buff|<900": {
+     "n": 189,
+     "rate": 0.434
+    },
+    "buff|>=900": {
+     "n": 68,
+     "rate": 0.618
+    },
+    "camp|<150": {
+     "n": 1424,
+     "rate": 0.313
+    },
+    "camp|<300": {
+     "n": 1748,
+     "rate": 0.395
+    },
+    "camp|<600": {
+     "n": 3086,
+     "rate": 0.526
+    },
+    "camp|<900": {
+     "n": 2048,
+     "rate": 0.478
+    },
+    "camp|>=900": {
+     "n": 386,
+     "rate": 0.567
+    }
+   },
+   "byEj": {
+    "buff|seen|ejDead": {
+     "n": 22,
+     "rate": 1
+    },
+    "buff|seen|ejFar": {
+     "n": 1,
+     "rate": 1
+    },
+    "buff|seen|ejMid<60": {
+     "n": 20,
+     "rate": 0.9
+    },
+    "buff|seen|ejNear<25": {
+     "n": 40,
+     "rate": 0.9
+    },
+    "buff|seen|ejOld": {
+     "n": 9,
+     "rate": 0.778
+    },
+    "buff|unseen|ejDead": {
+     "n": 285,
+     "rate": 0.698
+    },
+    "buff|unseen|ejFar": {
+     "n": 371,
+     "rate": 0.628
+    },
+    "buff|unseen|ejMid<60": {
+     "n": 1360,
+     "rate": 0.506
+    },
+    "buff|unseen|ejNear<25": {
+     "n": 428,
+     "rate": 0.671
+    },
+    "buff|unseen|ejNever": {
+     "n": 557,
+     "rate": 0.131
+    },
+    "buff|unseen|ejOld": {
+     "n": 2368,
+     "rate": 0.248
+    },
+    "camp|seen|ejDead": {
+     "n": 13,
+     "rate": 1
+    },
+    "camp|seen|ejFar": {
+     "n": 8,
+     "rate": 1
+    },
+    "camp|seen|ejMid<60": {
+     "n": 14,
+     "rate": 1
+    },
+    "camp|seen|ejNear<25": {
+     "n": 15,
+     "rate": 0.8
+    },
+    "camp|seen|ejOld": {
+     "n": 36,
+     "rate": 0.944
+    },
+    "camp|unseen|ejDead": {
+     "n": 611,
+     "rate": 0.714
+    },
+    "camp|unseen|ejFar": {
+     "n": 2172,
+     "rate": 0.603
+    },
+    "camp|unseen|ejMid<60": {
+     "n": 2194,
+     "rate": 0.611
+    },
+    "camp|unseen|ejNear<25": {
+     "n": 112,
+     "rate": 0.661
+    },
+    "camp|unseen|ejNever": {
+     "n": 1118,
+     "rate": 0.325
+    },
+    "camp|unseen|ejOld": {
+     "n": 4718,
+     "rate": 0.373
+    }
+   },
+   "byEjRho": {
+    "buff|ejDead|rho<.50": {
+     "n": 20,
+     "rate": 0.7
+    },
+    "buff|ejDead|rho<.65": {
+     "n": 191,
+     "rate": 0.77
+    },
+    "buff|ejDead|rho>=.65": {
+     "n": 74,
+     "rate": 0.514
+    },
+    "buff|ejFar|rho<.50": {
+     "n": 89,
+     "rate": 0.775
+    },
+    "buff|ejFar|rho<.65": {
+     "n": 182,
+     "rate": 0.61
+    },
+    "buff|ejFar|rho>=.65": {
+     "n": 100,
+     "rate": 0.53
+    },
+    "buff|ejMid<60|rho<.50": {
+     "n": 270,
+     "rate": 0.481
+    },
+    "buff|ejMid<60|rho<.65": {
+     "n": 891,
+     "rate": 0.531
+    },
+    "buff|ejMid<60|rho>=.65": {
+     "n": 199,
+     "rate": 0.427
+    },
+    "buff|ejNear<25|rho<.50": {
+     "n": 112,
+     "rate": 0.571
+    },
+    "buff|ejNear<25|rho<.65": {
+     "n": 271,
+     "rate": 0.712
+    },
+    "buff|ejNear<25|rho>=.65": {
+     "n": 45,
+     "rate": 0.667
+    },
+    "buff|ejNever|rho<.35": {
+     "n": 165,
+     "rate": 0.279
+    },
+    "buff|ejNever|rho<.50": {
+     "n": 344,
+     "rate": 0.076
+    },
+    "buff|ejNever|rho<.65": {
+     "n": 46,
+     "rate": 0.022
+    },
+    "buff|ejNever|rho>=.65": {
+     "n": 2,
+     "rate": 0
+    },
+    "buff|ejOld|rho<.50": {
+     "n": 290,
+     "rate": 0.21
+    },
+    "buff|ejOld|rho<.65": {
+     "n": 1557,
+     "rate": 0.247
+    },
+    "buff|ejOld|rho>=.65": {
+     "n": 521,
+     "rate": 0.271
+    },
+    "camp|ejDead|rho<.50": {
+     "n": 41,
+     "rate": 0.829
+    },
+    "camp|ejDead|rho<.65": {
+     "n": 410,
+     "rate": 0.724
+    },
+    "camp|ejDead|rho>=.65": {
+     "n": 160,
+     "rate": 0.656
+    },
+    "camp|ejFar|rho<.50": {
+     "n": 515,
+     "rate": 0.633
+    },
+    "camp|ejFar|rho<.65": {
+     "n": 1318,
+     "rate": 0.585
+    },
+    "camp|ejFar|rho>=.65": {
+     "n": 339,
+     "rate": 0.625
+    },
+    "camp|ejMid<60|rho<.50": {
+     "n": 421,
+     "rate": 0.558
+    },
+    "camp|ejMid<60|rho<.65": {
+     "n": 1438,
+     "rate": 0.635
+    },
+    "camp|ejMid<60|rho>=.65": {
+     "n": 335,
+     "rate": 0.576
+    },
+    "camp|ejNear<25|rho<.50": {
+     "n": 22,
+     "rate": 0.864
+    },
+    "camp|ejNear<25|rho<.65": {
+     "n": 68,
+     "rate": 0.588
+    },
+    "camp|ejNear<25|rho>=.65": {
+     "n": 22,
+     "rate": 0.682
+    },
+    "camp|ejNever|rho<.35": {
+     "n": 330,
+     "rate": 0.797
+    },
+    "camp|ejNever|rho<.50": {
+     "n": 692,
+     "rate": 0.107
+    },
+    "camp|ejNever|rho<.65": {
+     "n": 92,
+     "rate": 0.272
+    },
+    "camp|ejNever|rho>=.65": {
+     "n": 4,
+     "rate": 0.25
+    },
+    "camp|ejOld|rho<.50": {
+     "n": 573,
+     "rate": 0.415
+    },
+    "camp|ejOld|rho<.65": {
+     "n": 3107,
+     "rate": 0.356
+    },
+    "camp|ejOld|rho>=.65": {
+     "n": 1038,
+     "rate": 0.403
+    }
+   }
+  },
+  "success": {
+   "starts": 8,
+   "aliveAtArrival": 0.875,
+   "ends": {
+    "retreat_threat": 2,
+    "partner_lost": 1,
+    "lost_race": 1,
+    "stolen": 3,
+    "outnumbered": 1
+   },
+   "all": {
+    "buff|clear|n1": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 1,
+     "arrived": 0,
+     "captured": 0,
+     "died": 0
+    },
+    "camp|clear|n1": {
+     "n": 2,
+     "arrived": 1,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 4,
+     "arrived": 0.5,
+     "captured": 0.25,
+     "died": 0.25
+    }
+   },
+   "givenAlive": {
+    "buff|clear|n1": {
+     "n": 1,
+     "arrived": 1,
+     "captured": 1,
+     "died": 0
+    },
+    "buff|clear|n2": {
+     "n": 1,
+     "arrived": 0,
+     "captured": 0,
+     "died": 0
+    },
+    "camp|clear|n1": {
+     "n": 2,
+     "arrived": 1,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp|prior|n1": {
+     "n": 3,
+     "arrived": 0.667,
+     "captured": 0.333,
+     "died": 0.333
+    }
+   },
+   "givenAliveByType": {
+    "buff": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp": {
+     "n": 5,
+     "arrived": 0.8,
+     "captured": 0.4,
+     "died": 0.2
+    }
+   },
+   "allByType": {
+    "buff": {
+     "n": 2,
+     "arrived": 0.5,
+     "captured": 0.5,
+     "died": 0
+    },
+    "camp": {
+     "n": 6,
+     "arrived": 0.667,
+     "captured": 0.333,
+     "died": 0.167
+    }
+   }
+  },
+  "farm": {
+   "sides": 30,
+   "ownClearsPerMin": 1.34,
+   "foeClearsPerMin": 1.3,
+   "ownRho": 0.67,
+   "foeRho": 0.65
+  }
+ }
+}

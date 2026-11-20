@@ -1,0 +1,8 @@
+{
+ "env": "parity",
+ "recordedAt": "2026-11-20T13:01:21.211Z",
+ "pins": {
+  "balanceTool.v24|v2.jungle_invasion|v2.jungle_invasion|11|-": "40b0ff22c6b9eb0376d8",
+  "balanceTool.v24|classic.m7|v2.jungle_invasion|17|-": "cd64b8925f179f824ca0"
+ }
+}

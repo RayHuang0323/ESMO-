@@ -1,0 +1,5040 @@
+{
+ "generatedAt": "2026-11-13T17:16:55.256Z",
+ "pairs": 140,
+ "verdicts": [
+  {
+   "id": "N1 撤退退回直線回家（blockedFallback）：新臂 ≤ 基準臂 的 20%（前提基準臂 ≥ 20）",
+   "ok": true,
+   "detail": {
+    "v3": 293,
+    "v5": 0,
+    "cross": 12,
+    "radialSkipped": 164,
+    "pocketExit": 699,
+    "pocketHold": 296
+   }
+  },
+  {
+   "id": "N1b 藍、紅各自減少",
+   "ok": true,
+   "detail": {
+    "blue": {
+     "v3": 125,
+     "v5": 0
+    },
+    "red": {
+     "v3": 168,
+     "v5": 0
+    }
+   }
+  },
+  {
+   "id": "N2 座標不可走、NaN：新臂皆 0",
+   "ok": true,
+   "detail": {
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   }
+  },
+  {
+   "id": "N3 career:pooled 撤退安全沒有變差：撤退中被塔打中、撤退中陣亡、被塔擊殺（CI 下界 > 0 且 > +5% ⇒ 變差）；撤退成功率（CI 上界 < 0 且 < −5% ⇒ 變差）",
+   "ok": true,
+   "detail": {
+    "retreatShots": [
+     0.13,
+     [
+      -6.69,
+      6.95
+     ]
+    ],
+    "retreatDeaths": [
+     1.83,
+     [
+      -2.78,
+      6.43
+     ]
+    ],
+    "towerDeaths": [
+     -1.94,
+     [
+      -16.8,
+      12.92
+     ]
+    ],
+    "retreatSuccess": [
+     -0.23,
+     [
+      -0.76,
+      0.31
+     ]
+    ]
+   }
+  },
+  {
+   "id": "N4 career:pooled 沒有變得不敢進攻、沒有明顯惡化：推塔、Gank 出發、英雄擊殺（CI 上界 < 0 且 < −5% ⇒ 惡化）；總陣亡（CI 下界 > 0 且 > +5% ⇒ 惡化）",
+   "ok": true,
+   "detail": {
+    "towersDestroyed": [
+     1.46,
+     [
+      -2.34,
+      5.27
+     ]
+    ],
+    "gankStart": [
+     2.6,
+     [
+      -0.99,
+      6.2
+     ]
+    ],
+    "heroKills": [
+     2.68,
+     [
+      -4.79,
+      10.15
+     ]
+    ],
+    "deaths": [
+     2.44,
+     [
+      -4.55,
+      9.43
+     ]
+    ],
+    "duration": [
+     0.77,
+     [
+      -1.11,
+      2.64
+     ]
+    ]
+   }
+  },
+  {
+   "id": "N3 tool:pooled 撤退安全沒有變差：撤退中被塔打中、撤退中陣亡、被塔擊殺（CI 下界 > 0 且 > +5% ⇒ 變差）；撤退成功率（CI 上界 < 0 且 < −5% ⇒ 變差）",
+   "ok": true,
+   "detail": {
+    "retreatShots": [
+     0.55,
+     [
+      -5.68,
+      6.78
+     ]
+    ],
+    "retreatDeaths": [
+     -2.41,
+     [
+      -15.21,
+      10.39
+     ]
+    ],
+    "towerDeaths": [
+     -17.39,
+     [
+      -57.2,
+      22.42
+     ]
+    ],
+    "retreatSuccess": [
+     0.22,
+     [
+      -0.19,
+      0.63
+     ]
+    ]
+   }
+  },
+  {
+   "id": "N4 tool:pooled 沒有變得不敢進攻、沒有明顯惡化：推塔、Gank 出發、英雄擊殺（CI 上界 < 0 且 < −5% ⇒ 惡化）；總陣亡（CI 下界 > 0 且 > +5% ⇒ 惡化）",
+   "ok": true,
+   "detail": {
+    "towersDestroyed": [
+     1.56,
+     [
+      -0.87,
+      3.98
+     ]
+    ],
+    "gankStart": [
+     2.86,
+     [
+      -0.99,
+      6.72
+     ]
+    ],
+    "heroKills": [
+     9.44,
+     [
+      -5.25,
+      24.13
+     ]
+    ],
+    "deaths": [
+     7.03,
+     [
+      -7,
+      21.07
+     ]
+    ],
+    "duration": [
+     1.75,
+     [
+      0.08,
+      3.42
+     ]
+    ]
+   }
+  },
+  {
+   "id": "N5 不製造新的卡住：卡住 ≥ 20 秒、30 秒內避塔 ≥ 6 次——成對差 95% CI 下界 > 0 且總數 > 基準臂 × 1.1 ⇒ 不通過；塔邊等待 ≥ 20 秒、等待中掉血 ≥ 25% 新臂 ≤ 基準臂＋2",
+   "ok": true,
+   "detail": {
+    "stuck20": {
+     "v3": 230,
+     "v5": 228
+    },
+    "stuck20CI": [
+     -0.1459,
+     0.1173
+    ],
+    "avoidLoop": {
+     "v3": 223,
+     "v5": 212
+    },
+    "avoidLoopCI": [
+     -0.3144,
+     0.1573
+    ],
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 2,
+     "v5": 1
+    }
+   }
+  },
+  {
+   "id": "N6 career:pooled 藍方勝率配對差 95% CI 含 0（不含 ⇒ 列為風險，不擋）",
+   "ok": false,
+   "detail": {
+    "v3": 52,
+    "v5": 64,
+    "n": 100,
+    "ci": [
+     0.0289,
+     0.2111
+    ]
+   }
+  },
+  {
+   "id": "N6 tool:pooled 藍方勝率配對差 95% CI 含 0（不含 ⇒ 列為風險，不擋）",
+   "ok": true,
+   "detail": {
+    "v3": 23,
+    "v5": 25,
+    "n": 40,
+    "ci": [
+     -0.0521,
+     0.1521
+    ]
+   }
+  },
+  {
+   "id": "N7 每 tick 成本：新臂 ≤ 基準臂 × 1.2（全部配對平均）",
+   "ok": true,
+   "detail": {
+    "v3": 2.098,
+    "v5": 2.095
+   }
+  },
+  {
+   "id": "N8 全部對局都打完（沒有未結束的對局）",
+   "ok": true,
+   "detail": {
+    "v3": 0,
+    "v5": 0
+   }
+  }
+ ],
+ "groups": {
+  "career:high": {
+   "pairs": 40,
+   "totals": {
+    "deaths": {
+     "v3": 783,
+     "v5": 845
+    },
+    "towerDeaths": {
+     "v3": 43,
+     "v5": 39
+    },
+    "chasedDeaths": {
+     "v3": 404,
+     "v5": 430
+    },
+    "retreatDeaths": {
+     "v3": 553,
+     "v5": 577
+    },
+    "retreatSuccess": {
+     "v3": 34.754,
+     "v5": 34.636
+    },
+    "retreatShots": {
+     "v3": 2168,
+     "v5": 2190
+    },
+    "towerShots": {
+     "v3": 7213,
+     "v5": 7525
+    },
+    "towersDestroyed": {
+     "v3": 538,
+     "v5": 562
+    },
+    "gankStart": {
+     "v3": 357,
+     "v5": 367
+    },
+    "gankKill": {
+     "v3": 39,
+     "v5": 40
+    },
+    "heroKills": {
+     "v3": 740,
+     "v5": 806
+    },
+    "duration": {
+     "v3": 41718,
+     "v5": 42672.5
+    },
+    "tickMs": {
+     "v3": 85.599,
+     "v5": 86.752
+    },
+    "blockedFallback": {
+     "v3": 98,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 7
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 65
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 193
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 88
+    },
+    "blueBlocked": {
+     "v3": 31,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 67,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 1,
+     "v5": 1
+    },
+    "stuck20": {
+     "v3": 52,
+     "v5": 58
+    },
+    "avoidLoop": {
+     "v3": 65,
+     "v5": 54
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 40,
+     "baseMean": 19.575,
+     "meanDelta": 1.55,
+     "ci95": [
+      -0.8405,
+      3.9405
+     ],
+     "pctDelta": 7.92,
+     "pctCI": [
+      -4.29,
+      20.13
+     ]
+    },
+    "towerDeaths": {
+     "n": 40,
+     "baseMean": 1.075,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.3169,
+      0.1169
+     ],
+     "pctDelta": -9.3,
+     "pctCI": [
+      -29.48,
+      10.87
+     ]
+    },
+    "chasedDeaths": {
+     "n": 40,
+     "baseMean": 10.1,
+     "meanDelta": 0.65,
+     "ci95": [
+      -0.3698,
+      1.6698
+     ],
+     "pctDelta": 6.44,
+     "pctCI": [
+      -3.66,
+      16.53
+     ]
+    },
+    "retreatDeaths": {
+     "n": 40,
+     "baseMean": 13.825,
+     "meanDelta": 0.6,
+     "ci95": [
+      -0.5251,
+      1.7251
+     ],
+     "pctDelta": 4.34,
+     "pctCI": [
+      -3.8,
+      12.48
+     ]
+    },
+    "retreatSuccess": {
+     "n": 40,
+     "baseMean": 0.8689,
+     "meanDelta": -0.003,
+     "ci95": [
+      -0.0107,
+      0.0047
+     ],
+     "pctDelta": -0.34,
+     "pctCI": [
+      -1.23,
+      0.55
+     ]
+    },
+    "retreatShots": {
+     "n": 40,
+     "baseMean": 54.2,
+     "meanDelta": 0.55,
+     "ci95": [
+      -4.7658,
+      5.8658
+     ],
+     "pctDelta": 1.01,
+     "pctCI": [
+      -8.79,
+      10.82
+     ]
+    },
+    "towerShots": {
+     "n": 40,
+     "baseMean": 180.325,
+     "meanDelta": 7.8,
+     "ci95": [
+      -7.711,
+      23.311
+     ],
+     "pctDelta": 4.33,
+     "pctCI": [
+      -4.28,
+      12.93
+     ]
+    },
+    "towersDestroyed": {
+     "n": 40,
+     "baseMean": 13.45,
+     "meanDelta": 0.6,
+     "ci95": [
+      -0.3038,
+      1.5038
+     ],
+     "pctDelta": 4.46,
+     "pctCI": [
+      -2.26,
+      11.18
+     ]
+    },
+    "gankStart": {
+     "n": 40,
+     "baseMean": 8.925,
+     "meanDelta": 0.25,
+     "ci95": [
+      -0.1748,
+      0.6748
+     ],
+     "pctDelta": 2.8,
+     "pctCI": [
+      -1.96,
+      7.56
+     ]
+    },
+    "gankKill": {
+     "n": 40,
+     "baseMean": 0.975,
+     "meanDelta": 0.025,
+     "ci95": [
+      -0.2228,
+      0.2728
+     ],
+     "pctDelta": 2.56,
+     "pctCI": [
+      -22.85,
+      27.98
+     ]
+    },
+    "heroKills": {
+     "n": 40,
+     "baseMean": 18.5,
+     "meanDelta": 1.65,
+     "ci95": [
+      -0.8041,
+      4.1041
+     ],
+     "pctDelta": 8.92,
+     "pctCI": [
+      -4.35,
+      22.18
+     ]
+    },
+    "duration": {
+     "n": 40,
+     "baseMean": 1042.95,
+     "meanDelta": 23.8625,
+     "ci95": [
+      -6.6336,
+      54.3586
+     ],
+     "pctDelta": 2.29,
+     "pctCI": [
+      -0.64,
+      5.21
+     ]
+    },
+    "tickMs": {
+     "n": 40,
+     "baseMean": 2.14,
+     "meanDelta": 0.0288,
+     "ci95": [
+      -0.0342,
+      0.0919
+     ],
+     "pctDelta": 1.35,
+     "pctCI": [
+      -1.6,
+      4.29
+     ]
+    },
+    "blockedFallback": {
+     "n": 40,
+     "baseMean": 2.45,
+     "meanDelta": -2.45,
+     "ci95": [
+      -3.5802,
+      -1.3198
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -146.13,
+      -53.87
+     ]
+    },
+    "blockedCross": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0.175,
+     "ci95": [
+      0.0508,
+      0.2992
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 1.625,
+     "ci95": [
+      0.7892,
+      2.4608
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 4.825,
+     "ci95": [
+      3.098,
+      6.552
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 2.2,
+     "ci95": [
+      1.2546,
+      3.1454
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 40,
+     "baseMean": 0.775,
+     "meanDelta": -0.775,
+     "ci95": [
+      -1.3667,
+      -0.1833
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -176.35,
+      -23.65
+     ]
+    },
+    "redBlocked": {
+     "n": 40,
+     "baseMean": 1.675,
+     "meanDelta": -1.675,
+     "ci95": [
+      -2.5226,
+      -0.8274
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -150.6,
+      -49.4
+     ]
+    },
+    "hold20": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 40,
+     "baseMean": 0.025,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      0,
+      0
+     ]
+    },
+    "stuck20": {
+     "n": 40,
+     "baseMean": 1.3,
+     "meanDelta": 0.15,
+     "ci95": [
+      -0.1649,
+      0.4649
+     ],
+     "pctDelta": 11.54,
+     "pctCI": [
+      -12.69,
+      35.76
+     ]
+    },
+    "avoidLoop": {
+     "n": 40,
+     "baseMean": 1.625,
+     "meanDelta": -0.275,
+     "ci95": [
+      -0.7762,
+      0.2262
+     ],
+     "pctDelta": -16.92,
+     "pctCI": [
+      -47.77,
+      13.92
+     ]
+    },
+    "unwalkable": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 26,
+    "v5": 30,
+    "pairedDelta": {
+     "n": 40,
+     "baseMean": 0.65,
+     "meanDelta": 0.1,
+     "ci95": [
+      -0.0602,
+      0.2602
+     ],
+     "pctDelta": 15.38,
+     "pctCI": [
+      -9.26,
+      40.03
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 4
+  },
+  "career:low": {
+   "pairs": 20,
+   "totals": {
+    "deaths": {
+     "v3": 398,
+     "v5": 427
+    },
+    "towerDeaths": {
+     "v3": 27,
+     "v5": 30
+    },
+    "chasedDeaths": {
+     "v3": 181,
+     "v5": 192
+    },
+    "retreatDeaths": {
+     "v3": 262,
+     "v5": 276
+    },
+    "retreatSuccess": {
+     "v3": 17.294,
+     "v5": 17.179
+    },
+    "retreatShots": {
+     "v3": 1078,
+     "v5": 1088
+    },
+    "towerShots": {
+     "v3": 3984,
+     "v5": 4046
+    },
+    "towersDestroyed": {
+     "v3": 277,
+     "v5": 285
+    },
+    "gankStart": {
+     "v3": 103,
+     "v5": 109
+    },
+    "gankKill": {
+     "v3": 7,
+     "v5": 9
+    },
+    "heroKills": {
+     "v3": 371,
+     "v5": 397
+    },
+    "duration": {
+     "v3": 21072.5,
+     "v5": 21392
+    },
+    "tickMs": {
+     "v3": 41.572,
+     "v5": 42.456
+    },
+    "blockedFallback": {
+     "v3": 65,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 1
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 22
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 139
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 74
+    },
+    "blueBlocked": {
+     "v3": 22,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 43,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 1,
+     "v5": 0
+    },
+    "stuck20": {
+     "v3": 51,
+     "v5": 51
+    },
+    "avoidLoop": {
+     "v3": 31,
+     "v5": 33
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 20,
+     "baseMean": 19.9,
+     "meanDelta": 1.45,
+     "ci95": [
+      -2.1588,
+      5.0588
+     ],
+     "pctDelta": 7.29,
+     "pctCI": [
+      -10.85,
+      25.42
+     ]
+    },
+    "towerDeaths": {
+     "n": 20,
+     "baseMean": 1.35,
+     "meanDelta": 0.15,
+     "ci95": [
+      -0.315,
+      0.615
+     ],
+     "pctDelta": 11.11,
+     "pctCI": [
+      -23.33,
+      45.55
+     ]
+    },
+    "chasedDeaths": {
+     "n": 20,
+     "baseMean": 9.05,
+     "meanDelta": 0.55,
+     "ci95": [
+      -0.7579,
+      1.8579
+     ],
+     "pctDelta": 6.08,
+     "pctCI": [
+      -8.37,
+      20.53
+     ]
+    },
+    "retreatDeaths": {
+     "n": 20,
+     "baseMean": 13.1,
+     "meanDelta": 0.7,
+     "ci95": [
+      -0.9091,
+      2.3091
+     ],
+     "pctDelta": 5.34,
+     "pctCI": [
+      -6.94,
+      17.63
+     ]
+    },
+    "retreatSuccess": {
+     "n": 20,
+     "baseMean": 0.8647,
+     "meanDelta": -0.0057,
+     "ci95": [
+      -0.0186,
+      0.0072
+     ],
+     "pctDelta": -0.66,
+     "pctCI": [
+      -2.16,
+      0.83
+     ]
+    },
+    "retreatShots": {
+     "n": 20,
+     "baseMean": 53.9,
+     "meanDelta": 0.5,
+     "ci95": [
+      -8.6813,
+      9.6813
+     ],
+     "pctDelta": 0.93,
+     "pctCI": [
+      -16.11,
+      17.96
+     ]
+    },
+    "towerShots": {
+     "n": 20,
+     "baseMean": 199.2,
+     "meanDelta": 3.1,
+     "ci95": [
+      -22.6914,
+      28.8914
+     ],
+     "pctDelta": 1.56,
+     "pctCI": [
+      -11.39,
+      14.5
+     ]
+    },
+    "towersDestroyed": {
+     "n": 20,
+     "baseMean": 13.85,
+     "meanDelta": 0.4,
+     "ci95": [
+      -1.1537,
+      1.9537
+     ],
+     "pctDelta": 2.89,
+     "pctCI": [
+      -8.33,
+      14.11
+     ]
+    },
+    "gankStart": {
+     "n": 20,
+     "baseMean": 5.15,
+     "meanDelta": 0.3,
+     "ci95": [
+      -0.3069,
+      0.9069
+     ],
+     "pctDelta": 5.83,
+     "pctCI": [
+      -5.96,
+      17.61
+     ]
+    },
+    "gankKill": {
+     "n": 20,
+     "baseMean": 0.35,
+     "meanDelta": 0.1,
+     "ci95": [
+      -0.1753,
+      0.3753
+     ],
+     "pctDelta": 28.57,
+     "pctCI": [
+      -50.07,
+      107.22
+     ]
+    },
+    "heroKills": {
+     "n": 20,
+     "baseMean": 18.55,
+     "meanDelta": 1.3,
+     "ci95": [
+      -2.3862,
+      4.9862
+     ],
+     "pctDelta": 7.01,
+     "pctCI": [
+      -12.86,
+      26.88
+     ]
+    },
+    "duration": {
+     "n": 20,
+     "baseMean": 1053.625,
+     "meanDelta": 15.975,
+     "ci95": [
+      -36.3198,
+      68.2698
+     ],
+     "pctDelta": 1.52,
+     "pctCI": [
+      -3.45,
+      6.48
+     ]
+    },
+    "tickMs": {
+     "n": 20,
+     "baseMean": 2.0786,
+     "meanDelta": 0.0442,
+     "ci95": [
+      -0.0508,
+      0.1392
+     ],
+     "pctDelta": 2.13,
+     "pctCI": [
+      -2.44,
+      6.7
+     ]
+    },
+    "blockedFallback": {
+     "n": 20,
+     "baseMean": 3.25,
+     "meanDelta": -3.25,
+     "ci95": [
+      -4.8161,
+      -1.6839
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -148.19,
+      -51.81
+     ]
+    },
+    "blockedCross": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.0614,
+      0.1614
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 1.1,
+     "ci95": [
+      -0.0532,
+      2.2532
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 6.95,
+     "ci95": [
+      4.1065,
+      9.7935
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 3.7,
+     "ci95": [
+      1.4365,
+      5.9635
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 20,
+     "baseMean": 1.1,
+     "meanDelta": -1.1,
+     "ci95": [
+      -2.3085,
+      0.1085
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -209.86,
+      9.86
+     ]
+    },
+    "redBlocked": {
+     "n": 20,
+     "baseMean": 2.15,
+     "meanDelta": -2.15,
+     "ci95": [
+      -3.4953,
+      -0.8047
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -162.57,
+      -37.43
+     ]
+    },
+    "hold20": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 20,
+     "baseMean": 0.05,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.1614,
+      0.0614
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -322.8,
+      122.8
+     ]
+    },
+    "stuck20": {
+     "n": 20,
+     "baseMean": 2.55,
+     "meanDelta": 0,
+     "ci95": [
+      -0.3233,
+      0.3233
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      -12.68,
+      12.68
+     ]
+    },
+    "avoidLoop": {
+     "n": 20,
+     "baseMean": 1.55,
+     "meanDelta": 0.1,
+     "ci95": [
+      -0.2926,
+      0.4926
+     ],
+     "pctDelta": 6.45,
+     "pctCI": [
+      -18.88,
+      31.78
+     ]
+    },
+    "unwalkable": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 8,
+    "v5": 8,
+    "pairedDelta": {
+     "n": 20,
+     "baseMean": 0.4,
+     "meanDelta": 0,
+     "ci95": [
+      -0.1616,
+      0.1616
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      -40.41,
+      40.41
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 1
+  },
+  "career:mid": {
+   "pairs": 40,
+   "totals": {
+    "deaths": {
+     "v3": 824,
+     "v5": 782
+    },
+    "towerDeaths": {
+     "v3": 33,
+     "v5": 32
+    },
+    "chasedDeaths": {
+     "v3": 418,
+     "v5": 403
+    },
+    "retreatDeaths": {
+     "v3": 553,
+     "v5": 540
+    },
+    "retreatSuccess": {
+     "v3": 34.317,
+     "v5": 34.353
+    },
+    "retreatShots": {
+     "v3": 2150,
+     "v5": 2125
+    },
+    "towerShots": {
+     "v3": 7400,
+     "v5": 7304
+    },
+    "towersDestroyed": {
+     "v3": 551,
+     "v5": 539
+    },
+    "gankStart": {
+     "v3": 231,
+     "v5": 233
+    },
+    "gankKill": {
+     "v3": 32,
+     "v5": 34
+    },
+    "heroKills": {
+     "v3": 791,
+     "v5": 750
+    },
+    "duration": {
+     "v3": 42004,
+     "v5": 41534
+    },
+    "tickMs": {
+     "v3": 91.594,
+     "v5": 90.098
+    },
+    "blockedFallback": {
+     "v3": 38,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 4
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 30
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 205
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 54
+    },
+    "blueBlocked": {
+     "v3": 25,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 13,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 0,
+     "v5": 0
+    },
+    "stuck20": {
+     "v3": 72,
+     "v5": 65
+    },
+    "avoidLoop": {
+     "v3": 67,
+     "v5": 50
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 40,
+     "baseMean": 20.6,
+     "meanDelta": -1.05,
+     "ci95": [
+      -3.0972,
+      0.9972
+     ],
+     "pctDelta": -5.1,
+     "pctCI": [
+      -15.03,
+      4.84
+     ]
+    },
+    "towerDeaths": {
+     "n": 40,
+     "baseMean": 0.825,
+     "meanDelta": -0.025,
+     "ci95": [
+      -0.2728,
+      0.2228
+     ],
+     "pctDelta": -3.03,
+     "pctCI": [
+      -33.07,
+      27.01
+     ]
+    },
+    "chasedDeaths": {
+     "n": 40,
+     "baseMean": 10.45,
+     "meanDelta": -0.375,
+     "ci95": [
+      -1.2108,
+      0.4608
+     ],
+     "pctDelta": -3.59,
+     "pctCI": [
+      -11.59,
+      4.41
+     ]
+    },
+    "retreatDeaths": {
+     "n": 40,
+     "baseMean": 13.825,
+     "meanDelta": -0.325,
+     "ci95": [
+      -1.2036,
+      0.5536
+     ],
+     "pctDelta": -2.35,
+     "pctCI": [
+      -8.71,
+      4
+     ]
+    },
+    "retreatSuccess": {
+     "n": 40,
+     "baseMean": 0.8579,
+     "meanDelta": 0.0009,
+     "ci95": [
+      -0.0058,
+      0.0076
+     ],
+     "pctDelta": 0.11,
+     "pctCI": [
+      -0.68,
+      0.89
+     ]
+    },
+    "retreatShots": {
+     "n": 40,
+     "baseMean": 53.75,
+     "meanDelta": -0.625,
+     "ci95": [
+      -7.2635,
+      6.0135
+     ],
+     "pctDelta": -1.16,
+     "pctCI": [
+      -13.51,
+      11.19
+     ]
+    },
+    "towerShots": {
+     "n": 40,
+     "baseMean": 185,
+     "meanDelta": -2.4,
+     "ci95": [
+      -19.8467,
+      15.0467
+     ],
+     "pctDelta": -1.3,
+     "pctCI": [
+      -10.73,
+      8.13
+     ]
+    },
+    "towersDestroyed": {
+     "n": 40,
+     "baseMean": 13.775,
+     "meanDelta": -0.3,
+     "ci95": [
+      -0.9548,
+      0.3548
+     ],
+     "pctDelta": -2.18,
+     "pctCI": [
+      -6.93,
+      2.58
+     ]
+    },
+    "gankStart": {
+     "n": 40,
+     "baseMean": 5.775,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.3365,
+      0.4365
+     ],
+     "pctDelta": 0.87,
+     "pctCI": [
+      -5.83,
+      7.56
+     ]
+    },
+    "gankKill": {
+     "n": 40,
+     "baseMean": 0.8,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.1562,
+      0.2562
+     ],
+     "pctDelta": 6.25,
+     "pctCI": [
+      -19.52,
+      32.02
+     ]
+    },
+    "heroKills": {
+     "n": 40,
+     "baseMean": 19.775,
+     "meanDelta": -1.025,
+     "ci95": [
+      -3.0545,
+      1.0045
+     ],
+     "pctDelta": -5.18,
+     "pctCI": [
+      -15.45,
+      5.08
+     ]
+    },
+    "duration": {
+     "n": 40,
+     "baseMean": 1050.1,
+     "meanDelta": -11.75,
+     "ci95": [
+      -43.1766,
+      19.6766
+     ],
+     "pctDelta": -1.12,
+     "pctCI": [
+      -4.11,
+      1.87
+     ]
+    },
+    "tickMs": {
+     "n": 40,
+     "baseMean": 2.2899,
+     "meanDelta": -0.0374,
+     "ci95": [
+      -0.1184,
+      0.0436
+     ],
+     "pctDelta": -1.63,
+     "pctCI": [
+      -5.17,
+      1.91
+     ]
+    },
+    "blockedFallback": {
+     "n": 40,
+     "baseMean": 0.95,
+     "meanDelta": -0.95,
+     "ci95": [
+      -1.3822,
+      -0.5178
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -145.5,
+      -54.5
+     ]
+    },
+    "blockedCross": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0.1,
+     "ci95": [
+      0.0019,
+      0.1981
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0.75,
+     "ci95": [
+      0.3128,
+      1.1872
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 5.125,
+     "ci95": [
+      3.4494,
+      6.8006
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 1.35,
+     "ci95": [
+      0.6316,
+      2.0684
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 40,
+     "baseMean": 0.625,
+     "meanDelta": -0.625,
+     "ci95": [
+      -1.0166,
+      -0.2334
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -162.66,
+      -37.34
+     ]
+    },
+    "redBlocked": {
+     "n": 40,
+     "baseMean": 0.325,
+     "meanDelta": -0.325,
+     "ci95": [
+      -0.549,
+      -0.101
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -168.93,
+      -31.07
+     ]
+    },
+    "hold20": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "stuck20": {
+     "n": 40,
+     "baseMean": 1.8,
+     "meanDelta": -0.175,
+     "ci95": [
+      -0.4375,
+      0.0875
+     ],
+     "pctDelta": -9.72,
+     "pctCI": [
+      -24.3,
+      4.86
+     ]
+    },
+    "avoidLoop": {
+     "n": 40,
+     "baseMean": 1.675,
+     "meanDelta": -0.425,
+     "ci95": [
+      -0.8868,
+      0.0368
+     ],
+     "pctDelta": -25.37,
+     "pctCI": [
+      -52.94,
+      2.2
+     ]
+    },
+    "unwalkable": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 18,
+    "v5": 26,
+    "pairedDelta": {
+     "n": 40,
+     "baseMean": 0.45,
+     "meanDelta": 0.2,
+     "ci95": [
+      0.0502,
+      0.3498
+     ],
+     "pctDelta": 44.44,
+     "pctCI": [
+      11.15,
+      77.74
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 2
+  },
+  "tool:AB": {
+   "pairs": 20,
+   "totals": {
+    "deaths": {
+     "v3": 140,
+     "v5": 159
+    },
+    "towerDeaths": {
+     "v3": 13,
+     "v5": 9
+    },
+    "chasedDeaths": {
+     "v3": 60,
+     "v5": 70
+    },
+    "retreatDeaths": {
+     "v3": 79,
+     "v5": 86
+    },
+    "retreatSuccess": {
+     "v3": 19.311,
+     "v5": 19.289
+    },
+    "retreatShots": {
+     "v3": 1002,
+     "v5": 994
+    },
+    "towerShots": {
+     "v3": 2991,
+     "v5": 2993
+    },
+    "towersDestroyed": {
+     "v3": 265,
+     "v5": 266
+    },
+    "gankStart": {
+     "v3": 243,
+     "v5": 256
+    },
+    "gankKill": {
+     "v3": 7,
+     "v5": 6
+    },
+    "heroKills": {
+     "v3": 127,
+     "v5": 150
+    },
+    "duration": {
+     "v3": 21483.5,
+     "v5": 21945.5
+    },
+    "tickMs": {
+     "v3": 38.351,
+     "v5": 38.177
+    },
+    "blockedFallback": {
+     "v3": 57,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 0
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 18
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 93
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 51
+    },
+    "blueBlocked": {
+     "v3": 13,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 44,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 0,
+     "v5": 0
+    },
+    "stuck20": {
+     "v3": 30,
+     "v5": 29
+    },
+    "avoidLoop": {
+     "v3": 38,
+     "v5": 48
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 20,
+     "baseMean": 7,
+     "meanDelta": 0.95,
+     "ci95": [
+      -0.6127,
+      2.5127
+     ],
+     "pctDelta": 13.57,
+     "pctCI": [
+      -8.75,
+      35.9
+     ]
+    },
+    "towerDeaths": {
+     "n": 20,
+     "baseMean": 0.65,
+     "meanDelta": -0.2,
+     "ci95": [
+      -0.6456,
+      0.2456
+     ],
+     "pctDelta": -30.77,
+     "pctCI": [
+      -99.32,
+      37.78
+     ]
+    },
+    "chasedDeaths": {
+     "n": 20,
+     "baseMean": 3,
+     "meanDelta": 0.5,
+     "ci95": [
+      -0.3321,
+      1.3321
+     ],
+     "pctDelta": 16.67,
+     "pctCI": [
+      -11.07,
+      44.4
+     ]
+    },
+    "retreatDeaths": {
+     "n": 20,
+     "baseMean": 3.95,
+     "meanDelta": 0.35,
+     "ci95": [
+      -0.5246,
+      1.2246
+     ],
+     "pctDelta": 8.86,
+     "pctCI": [
+      -13.28,
+      31
+     ]
+    },
+    "retreatSuccess": {
+     "n": 20,
+     "baseMean": 0.9656,
+     "meanDelta": -0.0011,
+     "ci95": [
+      -0.0069,
+      0.0046
+     ],
+     "pctDelta": -0.11,
+     "pctCI": [
+      -0.71,
+      0.48
+     ]
+    },
+    "retreatShots": {
+     "n": 20,
+     "baseMean": 50.1,
+     "meanDelta": -0.4,
+     "ci95": [
+      -5.6036,
+      4.8036
+     ],
+     "pctDelta": -0.8,
+     "pctCI": [
+      -11.18,
+      9.59
+     ]
+    },
+    "towerShots": {
+     "n": 20,
+     "baseMean": 149.55,
+     "meanDelta": 0.1,
+     "ci95": [
+      -11.7214,
+      11.9214
+     ],
+     "pctDelta": 0.07,
+     "pctCI": [
+      -7.84,
+      7.97
+     ]
+    },
+    "towersDestroyed": {
+     "n": 20,
+     "baseMean": 13.25,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.3919,
+      0.4919
+     ],
+     "pctDelta": 0.38,
+     "pctCI": [
+      -2.96,
+      3.71
+     ]
+    },
+    "gankStart": {
+     "n": 20,
+     "baseMean": 12.15,
+     "meanDelta": 0.65,
+     "ci95": [
+      -0.1626,
+      1.4626
+     ],
+     "pctDelta": 5.35,
+     "pctCI": [
+      -1.34,
+      12.04
+     ]
+    },
+    "gankKill": {
+     "n": 20,
+     "baseMean": 0.35,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.2463,
+      0.1463
+     ],
+     "pctDelta": -14.29,
+     "pctCI": [
+      -70.37,
+      41.8
+     ]
+    },
+    "heroKills": {
+     "n": 20,
+     "baseMean": 6.35,
+     "meanDelta": 1.15,
+     "ci95": [
+      -0.243,
+      2.543
+     ],
+     "pctDelta": 18.11,
+     "pctCI": [
+      -3.83,
+      40.05
+     ]
+    },
+    "duration": {
+     "n": 20,
+     "baseMean": 1074.175,
+     "meanDelta": 23.1,
+     "ci95": [
+      -8.884,
+      55.084
+     ],
+     "pctDelta": 2.15,
+     "pctCI": [
+      -0.83,
+      5.13
+     ]
+    },
+    "tickMs": {
+     "n": 20,
+     "baseMean": 1.9175,
+     "meanDelta": -0.0087,
+     "ci95": [
+      -0.0718,
+      0.0544
+     ],
+     "pctDelta": -0.45,
+     "pctCI": [
+      -3.75,
+      2.84
+     ]
+    },
+    "blockedFallback": {
+     "n": 20,
+     "baseMean": 2.85,
+     "meanDelta": -2.85,
+     "ci95": [
+      -5.1029,
+      -0.5971
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -179.05,
+      -20.95
+     ]
+    },
+    "blockedCross": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0.9,
+     "ci95": [
+      0.2355,
+      1.5645
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 4.65,
+     "ci95": [
+      1.3443,
+      7.9557
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 2.55,
+     "ci95": [
+      0.2443,
+      4.8557
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 20,
+     "baseMean": 0.65,
+     "meanDelta": -0.65,
+     "ci95": [
+      -1.3955,
+      0.0955
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -214.7,
+      14.7
+     ]
+    },
+    "redBlocked": {
+     "n": 20,
+     "baseMean": 2.2,
+     "meanDelta": -2.2,
+     "ci95": [
+      -3.861,
+      -0.539
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -175.5,
+      -24.5
+     ]
+    },
+    "hold20": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "stuck20": {
+     "n": 20,
+     "baseMean": 1.5,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.4282,
+      0.3282
+     ],
+     "pctDelta": -3.33,
+     "pctCI": [
+      -28.55,
+      21.88
+     ]
+    },
+    "avoidLoop": {
+     "n": 20,
+     "baseMean": 1.9,
+     "meanDelta": 0.5,
+     "ci95": [
+      -0.2495,
+      1.2495
+     ],
+     "pctDelta": 26.32,
+     "pctCI": [
+      -13.13,
+      65.76
+     ]
+    },
+    "unwalkable": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 13,
+    "v5": 15,
+    "pairedDelta": {
+     "n": 20,
+     "baseMean": 0.65,
+     "meanDelta": 0.1,
+     "ci95": [
+      -0.0533,
+      0.2533
+     ],
+     "pctDelta": 15.38,
+     "pctCI": [
+      -8.21,
+      38.98
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 1
+  },
+  "tool:BA": {
+   "pairs": 20,
+   "totals": {
+    "deaths": {
+     "v3": 116,
+     "v5": 115
+    },
+    "towerDeaths": {
+     "v3": 10,
+     "v5": 10
+    },
+    "chasedDeaths": {
+     "v3": 72,
+     "v5": 62
+    },
+    "retreatDeaths": {
+     "v3": 87,
+     "v5": 76
+    },
+    "retreatSuccess": {
+     "v3": 19.196,
+     "v5": 19.303
+    },
+    "retreatShots": {
+     "v3": 820,
+     "v5": 838
+    },
+    "towerShots": {
+     "v3": 2508,
+     "v5": 2604
+    },
+    "towersDestroyed": {
+     "v3": 249,
+     "v5": 256
+    },
+    "gankStart": {
+     "v3": 246,
+     "v5": 247
+    },
+    "gankKill": {
+     "v3": 2,
+     "v5": 1
+    },
+    "heroKills": {
+     "v3": 106,
+     "v5": 105
+    },
+    "duration": {
+     "v3": 20481.5,
+     "v5": 20754.5
+    },
+    "tickMs": {
+     "v3": 36.584,
+     "v5": 35.885
+    },
+    "blockedFallback": {
+     "v3": 35,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 0
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 29
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 69
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 29
+    },
+    "blueBlocked": {
+     "v3": 34,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 1,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 0,
+     "v5": 0
+    },
+    "stuck20": {
+     "v3": 25,
+     "v5": 25
+    },
+    "avoidLoop": {
+     "v3": 22,
+     "v5": 27
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 20,
+     "baseMean": 5.8,
+     "meanDelta": -0.05,
+     "ci95": [
+      -1.2209,
+      1.1209
+     ],
+     "pctDelta": -0.86,
+     "pctCI": [
+      -21.05,
+      19.33
+     ]
+    },
+    "towerDeaths": {
+     "n": 20,
+     "baseMean": 0.5,
+     "meanDelta": 0,
+     "ci95": [
+      -0.2286,
+      0.2286
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      -45.72,
+      45.72
+     ]
+    },
+    "chasedDeaths": {
+     "n": 20,
+     "baseMean": 3.6,
+     "meanDelta": -0.5,
+     "ci95": [
+      -0.9982,
+      -0.0018
+     ],
+     "pctDelta": -13.89,
+     "pctCI": [
+      -27.73,
+      -0.05
+     ]
+    },
+    "retreatDeaths": {
+     "n": 20,
+     "baseMean": 4.35,
+     "meanDelta": -0.55,
+     "ci95": [
+      -1.2633,
+      0.1633
+     ],
+     "pctDelta": -12.64,
+     "pctCI": [
+      -29.04,
+      3.75
+     ]
+    },
+    "retreatSuccess": {
+     "n": 20,
+     "baseMean": 0.9598,
+     "meanDelta": 0.0053,
+     "ci95": [
+      -0.0008,
+      0.0115
+     ],
+     "pctDelta": 0.55,
+     "pctCI": [
+      -0.09,
+      1.19
+     ]
+    },
+    "retreatShots": {
+     "n": 20,
+     "baseMean": 41,
+     "meanDelta": 0.9,
+     "ci95": [
+      -2.5739,
+      4.3739
+     ],
+     "pctDelta": 2.2,
+     "pctCI": [
+      -6.28,
+      10.67
+     ]
+    },
+    "towerShots": {
+     "n": 20,
+     "baseMean": 125.4,
+     "meanDelta": 4.8,
+     "ci95": [
+      -4.2352,
+      13.8352
+     ],
+     "pctDelta": 3.83,
+     "pctCI": [
+      -3.38,
+      11.03
+     ]
+    },
+    "towersDestroyed": {
+     "n": 20,
+     "baseMean": 12.45,
+     "meanDelta": 0.35,
+     "ci95": [
+      -0.1681,
+      0.8681
+     ],
+     "pctDelta": 2.81,
+     "pctCI": [
+      -1.35,
+      6.97
+     ]
+    },
+    "gankStart": {
+     "n": 20,
+     "baseMean": 12.3,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.565,
+      0.665
+     ],
+     "pctDelta": 0.41,
+     "pctCI": [
+      -4.59,
+      5.41
+     ]
+    },
+    "gankKill": {
+     "n": 20,
+     "baseMean": 0.1,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.1614,
+      0.0614
+     ],
+     "pctDelta": -50,
+     "pctCI": [
+      -161.4,
+      61.4
+     ]
+    },
+    "heroKills": {
+     "n": 20,
+     "baseMean": 5.3,
+     "meanDelta": -0.05,
+     "ci95": [
+      -1.2539,
+      1.1539
+     ],
+     "pctDelta": -0.94,
+     "pctCI": [
+      -23.66,
+      21.77
+     ]
+    },
+    "duration": {
+     "n": 20,
+     "baseMean": 1024.075,
+     "meanDelta": 13.65,
+     "ci95": [
+      -7.9912,
+      35.2912
+     ],
+     "pctDelta": 1.33,
+     "pctCI": [
+      -0.78,
+      3.45
+     ]
+    },
+    "tickMs": {
+     "n": 20,
+     "baseMean": 1.8292,
+     "meanDelta": -0.0349,
+     "ci95": [
+      -0.0794,
+      0.0095
+     ],
+     "pctDelta": -1.91,
+     "pctCI": [
+      -4.34,
+      0.52
+     ]
+    },
+    "blockedFallback": {
+     "n": 20,
+     "baseMean": 1.75,
+     "meanDelta": -1.75,
+     "ci95": [
+      -3.0007,
+      -0.4993
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -171.47,
+      -28.53
+     ]
+    },
+    "blockedCross": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 1.45,
+     "ci95": [
+      -0.0444,
+      2.9444
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 3.45,
+     "ci95": [
+      1.5896,
+      5.3104
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 1.45,
+     "ci95": [
+      0.3842,
+      2.5158
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 20,
+     "baseMean": 1.7,
+     "meanDelta": -1.7,
+     "ci95": [
+      -2.8889,
+      -0.5111
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -169.93,
+      -30.07
+     ]
+    },
+    "redBlocked": {
+     "n": 20,
+     "baseMean": 0.05,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.1614,
+      0.0614
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -322.8,
+      122.8
+     ]
+    },
+    "hold20": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "stuck20": {
+     "n": 20,
+     "baseMean": 1.25,
+     "meanDelta": 0,
+     "ci95": [
+      -0.1616,
+      0.1616
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      -12.93,
+      12.93
+     ]
+    },
+    "avoidLoop": {
+     "n": 20,
+     "baseMean": 1.1,
+     "meanDelta": 0.25,
+     "ci95": [
+      -0.394,
+      0.894
+     ],
+     "pctDelta": 22.73,
+     "pctCI": [
+      -35.82,
+      81.27
+     ]
+    },
+    "unwalkable": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 20,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 10,
+    "v5": 10,
+    "pairedDelta": {
+     "n": 20,
+     "baseMean": 0.5,
+     "meanDelta": 0,
+     "ci95": [
+      -0.1616,
+      0.1616
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      -32.33,
+      32.33
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 0
+  },
+  "career:pooled": {
+   "pairs": 100,
+   "totals": {
+    "deaths": {
+     "v3": 2005,
+     "v5": 2054
+    },
+    "towerDeaths": {
+     "v3": 103,
+     "v5": 101
+    },
+    "chasedDeaths": {
+     "v3": 1003,
+     "v5": 1025
+    },
+    "retreatDeaths": {
+     "v3": 1368,
+     "v5": 1393
+    },
+    "retreatSuccess": {
+     "v3": 86.365,
+     "v5": 86.168
+    },
+    "retreatShots": {
+     "v3": 5396,
+     "v5": 5403
+    },
+    "towerShots": {
+     "v3": 18597,
+     "v5": 18875
+    },
+    "towersDestroyed": {
+     "v3": 1366,
+     "v5": 1386
+    },
+    "gankStart": {
+     "v3": 691,
+     "v5": 709
+    },
+    "gankKill": {
+     "v3": 78,
+     "v5": 83
+    },
+    "heroKills": {
+     "v3": 1902,
+     "v5": 1953
+    },
+    "duration": {
+     "v3": 104794.5,
+     "v5": 105598.5
+    },
+    "tickMs": {
+     "v3": 218.765,
+     "v5": 219.306
+    },
+    "blockedFallback": {
+     "v3": 201,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 12
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 117
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 537
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 216
+    },
+    "blueBlocked": {
+     "v3": 78,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 123,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 2,
+     "v5": 1
+    },
+    "stuck20": {
+     "v3": 175,
+     "v5": 174
+    },
+    "avoidLoop": {
+     "v3": 163,
+     "v5": 137
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 100,
+     "baseMean": 20.05,
+     "meanDelta": 0.49,
+     "ci95": [
+      -0.9114,
+      1.8914
+     ],
+     "pctDelta": 2.44,
+     "pctCI": [
+      -4.55,
+      9.43
+     ]
+    },
+    "towerDeaths": {
+     "n": 100,
+     "baseMean": 1.03,
+     "meanDelta": -0.02,
+     "ci95": [
+      -0.173,
+      0.133
+     ],
+     "pctDelta": -1.94,
+     "pctCI": [
+      -16.8,
+      12.92
+     ]
+    },
+    "chasedDeaths": {
+     "n": 100,
+     "baseMean": 10.03,
+     "meanDelta": 0.22,
+     "ci95": [
+      -0.3504,
+      0.7904
+     ],
+     "pctDelta": 2.19,
+     "pctCI": [
+      -3.49,
+      7.88
+     ]
+    },
+    "retreatDeaths": {
+     "n": 100,
+     "baseMean": 13.68,
+     "meanDelta": 0.25,
+     "ci95": [
+      -0.3801,
+      0.8801
+     ],
+     "pctDelta": 1.83,
+     "pctCI": [
+      -2.78,
+      6.43
+     ]
+    },
+    "retreatSuccess": {
+     "n": 100,
+     "baseMean": 0.8636,
+     "meanDelta": -0.002,
+     "ci95": [
+      -0.0066,
+      0.0026
+     ],
+     "pctDelta": -0.23,
+     "pctCI": [
+      -0.76,
+      0.31
+     ]
+    },
+    "retreatShots": {
+     "n": 100,
+     "baseMean": 53.96,
+     "meanDelta": 0.07,
+     "ci95": [
+      -3.6115,
+      3.7515
+     ],
+     "pctDelta": 0.13,
+     "pctCI": [
+      -6.69,
+      6.95
+     ]
+    },
+    "towerShots": {
+     "n": 100,
+     "baseMean": 185.97,
+     "meanDelta": 2.78,
+     "ci95": [
+      -7.408,
+      12.968
+     ],
+     "pctDelta": 1.49,
+     "pctCI": [
+      -3.98,
+      6.97
+     ]
+    },
+    "towersDestroyed": {
+     "n": 100,
+     "baseMean": 13.66,
+     "meanDelta": 0.2,
+     "ci95": [
+      -0.3195,
+      0.7195
+     ],
+     "pctDelta": 1.46,
+     "pctCI": [
+      -2.34,
+      5.27
+     ]
+    },
+    "gankStart": {
+     "n": 100,
+     "baseMean": 6.91,
+     "meanDelta": 0.18,
+     "ci95": [
+      -0.0684,
+      0.4284
+     ],
+     "pctDelta": 2.6,
+     "pctCI": [
+      -0.99,
+      6.2
+     ]
+    },
+    "gankKill": {
+     "n": 100,
+     "baseMean": 0.78,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.0845,
+      0.1845
+     ],
+     "pctDelta": 6.41,
+     "pctCI": [
+      -10.83,
+      23.65
+     ]
+    },
+    "heroKills": {
+     "n": 100,
+     "baseMean": 19.02,
+     "meanDelta": 0.51,
+     "ci95": [
+      -0.9103,
+      1.9303
+     ],
+     "pctDelta": 2.68,
+     "pctCI": [
+      -4.79,
+      10.15
+     ]
+    },
+    "duration": {
+     "n": 100,
+     "baseMean": 1047.945,
+     "meanDelta": 8.04,
+     "ci95": [
+      -11.5901,
+      27.6701
+     ],
+     "pctDelta": 0.77,
+     "pctCI": [
+      -1.11,
+      2.64
+     ]
+    },
+    "tickMs": {
+     "n": 100,
+     "baseMean": 2.1876,
+     "meanDelta": 0.0054,
+     "ci95": [
+      -0.0384,
+      0.0493
+     ],
+     "pctDelta": 0.25,
+     "pctCI": [
+      -1.76,
+      2.25
+     ]
+    },
+    "blockedFallback": {
+     "n": 100,
+     "baseMean": 2.01,
+     "meanDelta": -2.01,
+     "ci95": [
+      -2.5852,
+      -1.4348
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -128.62,
+      -71.38
+     ]
+    },
+    "blockedCross": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 0.12,
+     "ci95": [
+      0.0547,
+      0.1853
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 1.17,
+     "ci95": [
+      0.7435,
+      1.5965
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 5.37,
+     "ci95": [
+      4.297,
+      6.443
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 2.16,
+     "ci95": [
+      1.5264,
+      2.7936
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 100,
+     "baseMean": 0.78,
+     "meanDelta": -0.78,
+     "ci95": [
+      -1.13,
+      -0.43
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -144.87,
+      -55.13
+     ]
+    },
+    "redBlocked": {
+     "n": 100,
+     "baseMean": 1.23,
+     "meanDelta": -1.23,
+     "ci95": [
+      -1.6721,
+      -0.7879
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -135.94,
+      -64.06
+     ]
+    },
+    "hold20": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 100,
+     "baseMean": 0.02,
+     "meanDelta": -0.01,
+     "ci95": [
+      -0.03,
+      0.01
+     ],
+     "pctDelta": -50,
+     "pctCI": [
+      -150,
+      50
+     ]
+    },
+    "stuck20": {
+     "n": 100,
+     "baseMean": 1.75,
+     "meanDelta": -0.01,
+     "ci95": [
+      -0.1817,
+      0.1617
+     ],
+     "pctDelta": -0.57,
+     "pctCI": [
+      -10.38,
+      9.24
+     ]
+    },
+    "avoidLoop": {
+     "n": 100,
+     "baseMean": 1.63,
+     "meanDelta": -0.26,
+     "ci95": [
+      -0.5365,
+      0.0165
+     ],
+     "pctDelta": -15.95,
+     "pctCI": [
+      -32.92,
+      1.01
+     ]
+    },
+    "unwalkable": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 100,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 52,
+    "v5": 64,
+    "pairedDelta": {
+     "n": 100,
+     "baseMean": 0.52,
+     "meanDelta": 0.12,
+     "ci95": [
+      0.0289,
+      0.2111
+     ],
+     "pctDelta": 23.08,
+     "pctCI": [
+      5.55,
+      40.6
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 7
+  },
+  "tool:pooled": {
+   "pairs": 40,
+   "totals": {
+    "deaths": {
+     "v3": 256,
+     "v5": 274
+    },
+    "towerDeaths": {
+     "v3": 23,
+     "v5": 19
+    },
+    "chasedDeaths": {
+     "v3": 132,
+     "v5": 132
+    },
+    "retreatDeaths": {
+     "v3": 166,
+     "v5": 162
+    },
+    "retreatSuccess": {
+     "v3": 38.508,
+     "v5": 38.592
+    },
+    "retreatShots": {
+     "v3": 1822,
+     "v5": 1832
+    },
+    "towerShots": {
+     "v3": 5499,
+     "v5": 5597
+    },
+    "towersDestroyed": {
+     "v3": 514,
+     "v5": 522
+    },
+    "gankStart": {
+     "v3": 489,
+     "v5": 503
+    },
+    "gankKill": {
+     "v3": 9,
+     "v5": 7
+    },
+    "heroKills": {
+     "v3": 233,
+     "v5": 255
+    },
+    "duration": {
+     "v3": 41965,
+     "v5": 42700
+    },
+    "tickMs": {
+     "v3": 74.935,
+     "v5": 74.062
+    },
+    "blockedFallback": {
+     "v3": 92,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 0
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 47
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 162
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 80
+    },
+    "blueBlocked": {
+     "v3": 47,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 45,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 0,
+     "v5": 0
+    },
+    "stuck20": {
+     "v3": 55,
+     "v5": 54
+    },
+    "avoidLoop": {
+     "v3": 60,
+     "v5": 75
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 40,
+     "baseMean": 6.4,
+     "meanDelta": 0.45,
+     "ci95": [
+      -0.4483,
+      1.3483
+     ],
+     "pctDelta": 7.03,
+     "pctCI": [
+      -7,
+      21.07
+     ]
+    },
+    "towerDeaths": {
+     "n": 40,
+     "baseMean": 0.575,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.3289,
+      0.1289
+     ],
+     "pctDelta": -17.39,
+     "pctCI": [
+      -57.2,
+      22.42
+     ]
+    },
+    "chasedDeaths": {
+     "n": 40,
+     "baseMean": 3.3,
+     "meanDelta": 0,
+     "ci95": [
+      -0.4682,
+      0.4682
+     ],
+     "pctDelta": 0,
+     "pctCI": [
+      -14.19,
+      14.19
+     ]
+    },
+    "retreatDeaths": {
+     "n": 40,
+     "baseMean": 4.15,
+     "meanDelta": -0.1,
+     "ci95": [
+      -0.6313,
+      0.4313
+     ],
+     "pctDelta": -2.41,
+     "pctCI": [
+      -15.21,
+      10.39
+     ]
+    },
+    "retreatSuccess": {
+     "n": 40,
+     "baseMean": 0.9627,
+     "meanDelta": 0.0021,
+     "ci95": [
+      -0.0018,
+      0.0061
+     ],
+     "pctDelta": 0.22,
+     "pctCI": [
+      -0.19,
+      0.63
+     ]
+    },
+    "retreatShots": {
+     "n": 40,
+     "baseMean": 45.55,
+     "meanDelta": 0.25,
+     "ci95": [
+      -2.5881,
+      3.0881
+     ],
+     "pctDelta": 0.55,
+     "pctCI": [
+      -5.68,
+      6.78
+     ]
+    },
+    "towerShots": {
+     "n": 40,
+     "baseMean": 137.475,
+     "meanDelta": 2.45,
+     "ci95": [
+      -4.3241,
+      9.2241
+     ],
+     "pctDelta": 1.78,
+     "pctCI": [
+      -3.15,
+      6.71
+     ]
+    },
+    "towersDestroyed": {
+     "n": 40,
+     "baseMean": 12.85,
+     "meanDelta": 0.2,
+     "ci95": [
+      -0.1119,
+      0.5119
+     ],
+     "pctDelta": 1.56,
+     "pctCI": [
+      -0.87,
+      3.98
+     ]
+    },
+    "gankStart": {
+     "n": 40,
+     "baseMean": 12.225,
+     "meanDelta": 0.35,
+     "ci95": [
+      -0.1213,
+      0.8213
+     ],
+     "pctDelta": 2.86,
+     "pctCI": [
+      -0.99,
+      6.72
+     ]
+    },
+    "gankKill": {
+     "n": 40,
+     "baseMean": 0.225,
+     "meanDelta": -0.05,
+     "ci95": [
+      -0.1521,
+      0.0521
+     ],
+     "pctDelta": -22.22,
+     "pctCI": [
+      -67.6,
+      23.16
+     ]
+    },
+    "heroKills": {
+     "n": 40,
+     "baseMean": 5.825,
+     "meanDelta": 0.55,
+     "ci95": [
+      -0.3056,
+      1.4056
+     ],
+     "pctDelta": 9.44,
+     "pctCI": [
+      -5.25,
+      24.13
+     ]
+    },
+    "duration": {
+     "n": 40,
+     "baseMean": 1049.125,
+     "meanDelta": 18.375,
+     "ci95": [
+      0.8383,
+      35.9117
+     ],
+     "pctDelta": 1.75,
+     "pctCI": [
+      0.08,
+      3.42
+     ]
+    },
+    "tickMs": {
+     "n": 40,
+     "baseMean": 1.8734,
+     "meanDelta": -0.0218,
+     "ci95": [
+      -0.057,
+      0.0134
+     ],
+     "pctDelta": -1.17,
+     "pctCI": [
+      -3.04,
+      0.71
+     ]
+    },
+    "blockedFallback": {
+     "n": 40,
+     "baseMean": 2.3,
+     "meanDelta": -2.3,
+     "ci95": [
+      -3.4794,
+      -1.1206
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -151.28,
+      -48.72
+     ]
+    },
+    "blockedCross": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 1.175,
+     "ci95": [
+      0.4298,
+      1.9202
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 4.05,
+     "ci95": [
+      2.3229,
+      5.7771
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 2,
+     "ci95": [
+      0.837,
+      3.163
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 40,
+     "baseMean": 1.175,
+     "meanDelta": -1.175,
+     "ci95": [
+      -1.8326,
+      -0.5174
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -155.96,
+      -44.04
+     ]
+    },
+    "redBlocked": {
+     "n": 40,
+     "baseMean": 1.125,
+     "meanDelta": -1.125,
+     "ci95": [
+      -1.956,
+      -0.294
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -173.87,
+      -26.13
+     ]
+    },
+    "hold20": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "stuck20": {
+     "n": 40,
+     "baseMean": 1.375,
+     "meanDelta": -0.025,
+     "ci95": [
+      -0.2112,
+      0.1612
+     ],
+     "pctDelta": -1.82,
+     "pctCI": [
+      -15.36,
+      11.73
+     ]
+    },
+    "avoidLoop": {
+     "n": 40,
+     "baseMean": 1.5,
+     "meanDelta": 0.375,
+     "ci95": [
+      -0.0739,
+      0.8239
+     ],
+     "pctDelta": 25,
+     "pctCI": [
+      -4.92,
+      54.92
+     ]
+    },
+    "unwalkable": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 40,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 23,
+    "v5": 25,
+    "pairedDelta": {
+     "n": 40,
+     "baseMean": 0.575,
+     "meanDelta": 0.05,
+     "ci95": [
+      -0.0521,
+      0.1521
+     ],
+     "pctDelta": 8.7,
+     "pctCI": [
+      -9.06,
+      26.45
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 1
+  },
+  "all": {
+   "pairs": 140,
+   "totals": {
+    "deaths": {
+     "v3": 2261,
+     "v5": 2328
+    },
+    "towerDeaths": {
+     "v3": 126,
+     "v5": 120
+    },
+    "chasedDeaths": {
+     "v3": 1135,
+     "v5": 1157
+    },
+    "retreatDeaths": {
+     "v3": 1534,
+     "v5": 1555
+    },
+    "retreatSuccess": {
+     "v3": 124.873,
+     "v5": 124.76
+    },
+    "retreatShots": {
+     "v3": 7218,
+     "v5": 7235
+    },
+    "towerShots": {
+     "v3": 24096,
+     "v5": 24472
+    },
+    "towersDestroyed": {
+     "v3": 1880,
+     "v5": 1908
+    },
+    "gankStart": {
+     "v3": 1180,
+     "v5": 1212
+    },
+    "gankKill": {
+     "v3": 87,
+     "v5": 90
+    },
+    "heroKills": {
+     "v3": 2135,
+     "v5": 2208
+    },
+    "duration": {
+     "v3": 146759.5,
+     "v5": 148298.5
+    },
+    "tickMs": {
+     "v3": 293.7,
+     "v5": 293.368
+    },
+    "blockedFallback": {
+     "v3": 293,
+     "v5": 0
+    },
+    "blockedCross": {
+     "v3": 0,
+     "v5": 12
+    },
+    "radialSkipped": {
+     "v3": 0,
+     "v5": 164
+    },
+    "pocketExit": {
+     "v3": 0,
+     "v5": 699
+    },
+    "pocketHold": {
+     "v3": 0,
+     "v5": 296
+    },
+    "blueBlocked": {
+     "v3": 125,
+     "v5": 0
+    },
+    "redBlocked": {
+     "v3": 168,
+     "v5": 0
+    },
+    "hold20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "edge20": {
+     "v3": 0,
+     "v5": 0
+    },
+    "holdDrained": {
+     "v3": 2,
+     "v5": 1
+    },
+    "stuck20": {
+     "v3": 230,
+     "v5": 228
+    },
+    "avoidLoop": {
+     "v3": 223,
+     "v5": 212
+    },
+    "unwalkable": {
+     "v3": 0,
+     "v5": 0
+    },
+    "nan": {
+     "v3": 0,
+     "v5": 0
+    }
+   },
+   "paired": {
+    "deaths": {
+     "n": 140,
+     "baseMean": 16.15,
+     "meanDelta": 0.4786,
+     "ci95": [
+      -0.5413,
+      1.4984
+     ],
+     "pctDelta": 2.96,
+     "pctCI": [
+      -3.35,
+      9.28
+     ]
+    },
+    "towerDeaths": {
+     "n": 140,
+     "baseMean": 0.9,
+     "meanDelta": -0.0429,
+     "ci95": [
+      -0.168,
+      0.0823
+     ],
+     "pctDelta": -4.76,
+     "pctCI": [
+      -18.67,
+      9.14
+     ]
+    },
+    "chasedDeaths": {
+     "n": 140,
+     "baseMean": 8.1071,
+     "meanDelta": 0.1571,
+     "ci95": [
+      -0.2659,
+      0.5802
+     ],
+     "pctDelta": 1.94,
+     "pctCI": [
+      -3.28,
+      7.16
+     ]
+    },
+    "retreatDeaths": {
+     "n": 140,
+     "baseMean": 10.9571,
+     "meanDelta": 0.15,
+     "ci95": [
+      -0.319,
+      0.619
+     ],
+     "pctDelta": 1.37,
+     "pctCI": [
+      -2.91,
+      5.65
+     ]
+    },
+    "retreatSuccess": {
+     "n": 140,
+     "baseMean": 0.8919,
+     "meanDelta": -0.0008,
+     "ci95": [
+      -0.0042,
+      0.0026
+     ],
+     "pctDelta": -0.09,
+     "pctCI": [
+      -0.48,
+      0.3
+     ]
+    },
+    "retreatShots": {
+     "n": 140,
+     "baseMean": 51.5571,
+     "meanDelta": 0.1214,
+     "ci95": [
+      -2.5925,
+      2.8353
+     ],
+     "pctDelta": 0.24,
+     "pctCI": [
+      -5.03,
+      5.5
+     ]
+    },
+    "towerShots": {
+     "n": 140,
+     "baseMean": 172.1143,
+     "meanDelta": 2.6857,
+     "ci95": [
+      -4.7448,
+      10.1162
+     ],
+     "pctDelta": 1.56,
+     "pctCI": [
+      -2.76,
+      5.88
+     ]
+    },
+    "towersDestroyed": {
+     "n": 140,
+     "baseMean": 13.4286,
+     "meanDelta": 0.2,
+     "ci95": [
+      -0.1767,
+      0.5767
+     ],
+     "pctDelta": 1.49,
+     "pctCI": [
+      -1.32,
+      4.29
+     ]
+    },
+    "gankStart": {
+     "n": 140,
+     "baseMean": 8.4286,
+     "meanDelta": 0.2286,
+     "ci95": [
+      0.0102,
+      0.4469
+     ],
+     "pctDelta": 2.71,
+     "pctCI": [
+      0.12,
+      5.3
+     ]
+    },
+    "gankKill": {
+     "n": 140,
+     "baseMean": 0.6214,
+     "meanDelta": 0.0214,
+     "ci95": [
+      -0.0779,
+      0.1207
+     ],
+     "pctDelta": 3.45,
+     "pctCI": [
+      -12.53,
+      19.43
+     ]
+    },
+    "heroKills": {
+     "n": 140,
+     "baseMean": 15.25,
+     "meanDelta": 0.5214,
+     "ci95": [
+      -0.5087,
+      1.5515
+     ],
+     "pctDelta": 3.42,
+     "pctCI": [
+      -3.34,
+      10.17
+     ]
+    },
+    "duration": {
+     "n": 140,
+     "baseMean": 1048.2821,
+     "meanDelta": 10.9929,
+     "ci95": [
+      -3.7017,
+      25.6874
+     ],
+     "pctDelta": 1.05,
+     "pctCI": [
+      -0.35,
+      2.45
+     ]
+    },
+    "tickMs": {
+     "n": 140,
+     "baseMean": 2.0979,
+     "meanDelta": -0.0024,
+     "ci95": [
+      -0.0349,
+      0.0301
+     ],
+     "pctDelta": -0.11,
+     "pctCI": [
+      -1.66,
+      1.44
+     ]
+    },
+    "blockedFallback": {
+     "n": 140,
+     "baseMean": 2.0929,
+     "meanDelta": -2.0929,
+     "ci95": [
+      -2.6128,
+      -1.5729
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -124.84,
+      -75.16
+     ]
+    },
+    "blockedCross": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 0.0857,
+     "ci95": [
+      0.0387,
+      0.1327
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "radialSkipped": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 1.1714,
+     "ci95": [
+      0.8074,
+      1.5355
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketExit": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 4.9929,
+     "ci95": [
+      4.0935,
+      5.8922
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "pocketHold": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 2.1143,
+     "ci95": [
+      1.5645,
+      2.664
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "blueBlocked": {
+     "n": 140,
+     "baseMean": 0.8929,
+     "meanDelta": -0.8929,
+     "ci95": [
+      -1.2004,
+      -0.5853
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -134.44,
+      -65.56
+     ]
+    },
+    "redBlocked": {
+     "n": 140,
+     "baseMean": 1.2,
+     "meanDelta": -1.2,
+     "ci95": [
+      -1.5867,
+      -0.8133
+     ],
+     "pctDelta": -100,
+     "pctCI": [
+      -132.23,
+      -67.77
+     ]
+    },
+    "hold20": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "edge20": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "holdDrained": {
+     "n": 140,
+     "baseMean": 0.0143,
+     "meanDelta": -0.0071,
+     "ci95": [
+      -0.0213,
+      0.007
+     ],
+     "pctDelta": -50,
+     "pctCI": [
+      -149,
+      49
+     ]
+    },
+    "stuck20": {
+     "n": 140,
+     "baseMean": 1.6429,
+     "meanDelta": -0.0143,
+     "ci95": [
+      -0.1459,
+      0.1173
+     ],
+     "pctDelta": -0.87,
+     "pctCI": [
+      -8.88,
+      7.14
+     ]
+    },
+    "avoidLoop": {
+     "n": 140,
+     "baseMean": 1.5929,
+     "meanDelta": -0.0786,
+     "ci95": [
+      -0.3144,
+      0.1573
+     ],
+     "pctDelta": -4.93,
+     "pctCI": [
+      -19.74,
+      9.87
+     ]
+    },
+    "unwalkable": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    },
+    "nan": {
+     "n": 140,
+     "baseMean": 0,
+     "meanDelta": 0,
+     "ci95": [
+      0,
+      0
+     ],
+     "pctDelta": null,
+     "pctCI": null
+    }
+   },
+   "blueWin": {
+    "v3": 75,
+    "v5": 89,
+    "pairedDelta": {
+     "n": 140,
+     "baseMean": 0.5357,
+     "meanDelta": 0.1,
+     "ci95": [
+      0.0296,
+      0.1704
+     ],
+     "pctDelta": 18.67,
+     "pctCI": [
+      5.53,
+      31.81
+     ]
+    }
+   },
+   "unfinished": {
+    "v3": 0,
+    "v5": 0
+   },
+   "identical": 8
+  }
+ },
+ "arms": {
+  "old": "v3",
+  "new": "v5"
+ },
+ "hashes": [
+  {
+   "k": "career:high",
+   "seed": 97081,
+   "v3": "377407421c6b96a0",
+   "v5": "71caa7005abd8689"
+  },
+  {
+   "k": "career:high",
+   "seed": 97083,
+   "v3": "16cc5abc468ff1fe",
+   "v5": "25e42d60b1da8006"
+  },
+  {
+   "k": "career:high",
+   "seed": 97085,
+   "v3": "4d32c7f7767e141c",
+   "v5": "820a6360859b383a"
+  },
+  {
+   "k": "career:high",
+   "seed": 97087,
+   "v3": "40076516dc99fdd2",
+   "v5": "b21740c6f0f097ad"
+  },
+  {
+   "k": "career:high",
+   "seed": 97089,
+   "v3": "b1712b82dfcefc2b",
+   "v5": "e2613ac1a1414f50"
+  },
+  {
+   "k": "career:high",
+   "seed": 97091,
+   "v3": "38382d3d5d9bcbf3",
+   "v5": "38382d3d5d9bcbf3"
+  },
+  {
+   "k": "career:high",
+   "seed": 97093,
+   "v3": "22e8e669c96f2042",
+   "v5": "ac45c119aa8ed9cf"
+  },
+  {
+   "k": "career:high",
+   "seed": 97095,
+   "v3": "709d152be69b4b50",
+   "v5": "5a206d9f3af1b81f"
+  },
+  {
+   "k": "career:high",
+   "seed": 97097,
+   "v3": "5cc62697b562d541",
+   "v5": "fc00ed5f39fb3123"
+  },
+  {
+   "k": "career:high",
+   "seed": 97099,
+   "v3": "9cc64842d837dd4e",
+   "v5": "35f198263b4c417e"
+  },
+  {
+   "k": "career:high",
+   "seed": 97101,
+   "v3": "83752d32c400e2a8",
+   "v5": "6025abaf716fb437"
+  },
+  {
+   "k": "career:high",
+   "seed": 97103,
+   "v3": "a3fb2a42768fa4da",
+   "v5": "a3fb2a42768fa4da"
+  },
+  {
+   "k": "career:high",
+   "seed": 97105,
+   "v3": "3e923b0b36403d52",
+   "v5": "32f04b1d5250e1a4"
+  },
+  {
+   "k": "career:high",
+   "seed": 97107,
+   "v3": "5d0deab01b22c6c7",
+   "v5": "0227759064fea5ea"
+  },
+  {
+   "k": "career:high",
+   "seed": 97109,
+   "v3": "3cfabb09a781df59",
+   "v5": "3cfabb09a781df59"
+  },
+  {
+   "k": "career:high",
+   "seed": 97111,
+   "v3": "27329d9454b7cfe1",
+   "v5": "9d43163af3f60509"
+  },
+  {
+   "k": "career:high",
+   "seed": 97113,
+   "v3": "a2c496b185aa48b5",
+   "v5": "19bd5db2547389f0"
+  },
+  {
+   "k": "career:high",
+   "seed": 97115,
+   "v3": "df5e0b75b0f96bc7",
+   "v5": "b542c5bd4a68912d"
+  },
+  {
+   "k": "career:high",
+   "seed": 97117,
+   "v3": "f1c0621a58403b47",
+   "v5": "0db1fd2595055da7"
+  },
+  {
+   "k": "career:high",
+   "seed": 97119,
+   "v3": "740b4e645d31bfb2",
+   "v5": "740b4e645d31bfb2"
+  },
+  {
+   "k": "career:high",
+   "seed": 97121,
+   "v3": "04958a7f77028e30",
+   "v5": "95c6d49cffa5e08b"
+  },
+  {
+   "k": "career:high",
+   "seed": 97123,
+   "v3": "19c69f3ee60c7335",
+   "v5": "1a4686827064aaa4"
+  },
+  {
+   "k": "career:high",
+   "seed": 97125,
+   "v3": "1604961ccd7ea35a",
+   "v5": "5b21b1faf30a050b"
+  },
+  {
+   "k": "career:high",
+   "seed": 97127,
+   "v3": "c0b6d28ce2d37fb0",
+   "v5": "97c4cf300a98a06f"
+  },
+  {
+   "k": "career:high",
+   "seed": 97129,
+   "v3": "3e330d4177e60483",
+   "v5": "448cbd1acac04bc3"
+  },
+  {
+   "k": "career:high",
+   "seed": 97131,
+   "v3": "dbfacfbc04bc693b",
+   "v5": "ed388ddb96a88c79"
+  },
+  {
+   "k": "career:high",
+   "seed": 97133,
+   "v3": "f10b95db909b8be0",
+   "v5": "4f25f324bf4e4fe5"
+  },
+  {
+   "k": "career:high",
+   "seed": 97135,
+   "v3": "681a7b7cdb4a46a5",
+   "v5": "f1bd778c332e6c2b"
+  },
+  {
+   "k": "career:high",
+   "seed": 97137,
+   "v3": "60064b42ef7b3da6",
+   "v5": "0eee7c9700abbd23"
+  },
+  {
+   "k": "career:high",
+   "seed": 97139,
+   "v3": "6ab4c4e3931d5a15",
+   "v5": "82059cf07c8887a7"
+  },
+  {
+   "k": "career:high",
+   "seed": 97141,
+   "v3": "8c9911406106716a",
+   "v5": "b468959800b61028"
+  },
+  {
+   "k": "career:high",
+   "seed": 97143,
+   "v3": "283701db08f7ef81",
+   "v5": "28a17977d4d7db67"
+  },
+  {
+   "k": "career:high",
+   "seed": 97145,
+   "v3": "809a72a8008b02b3",
+   "v5": "1926e9218680571e"
+  },
+  {
+   "k": "career:high",
+   "seed": 97147,
+   "v3": "d7bf997ebe3703aa",
+   "v5": "ad3aa27f24a98fa4"
+  },
+  {
+   "k": "career:high",
+   "seed": 97149,
+   "v3": "bd929d8a290c2747",
+   "v5": "cf5b3c9741ad52cd"
+  },
+  {
+   "k": "career:high",
+   "seed": 97151,
+   "v3": "407aa4e3f68ab36d",
+   "v5": "ac1251f5b9c587ea"
+  },
+  {
+   "k": "career:high",
+   "seed": 97153,
+   "v3": "ce7d84395a41d086",
+   "v5": "7f3848a485e4423b"
+  },
+  {
+   "k": "career:high",
+   "seed": 97155,
+   "v3": "8f192748bb70bef7",
+   "v5": "be9a25a976199534"
+  },
+  {
+   "k": "career:high",
+   "seed": 97157,
+   "v3": "a5fbc66b7f7b688a",
+   "v5": "b15921fc92baba0a"
+  },
+  {
+   "k": "career:high",
+   "seed": 97159,
+   "v3": "89775d3142edafcc",
+   "v5": "c63fe25b1963cae2"
+  },
+  {
+   "k": "career:low",
+   "seed": 97081,
+   "v3": "8a9524310f9b4724",
+   "v5": "b361ba1a8c1f4182"
+  },
+  {
+   "k": "career:low",
+   "seed": 97083,
+   "v3": "0cd4c6038b2d24b3",
+   "v5": "9035bc4a24134334"
+  },
+  {
+   "k": "career:low",
+   "seed": 97085,
+   "v3": "a124f349b801f905",
+   "v5": "d289a7faf73c6cbf"
+  },
+  {
+   "k": "career:low",
+   "seed": 97087,
+   "v3": "74d42b36b191834d",
+   "v5": "b0cad6b09ed0ed24"
+  },
+  {
+   "k": "career:low",
+   "seed": 97089,
+   "v3": "6cc08848d93d8e78",
+   "v5": "3b4f6b0159c7f102"
+  },
+  {
+   "k": "career:low",
+   "seed": 97091,
+   "v3": "14130c5ae6ae782d",
+   "v5": "f547f5b0ca33789d"
+  },
+  {
+   "k": "career:low",
+   "seed": 97093,
+   "v3": "586403c4cadee7f0",
+   "v5": "a06199bfa066a58b"
+  },
+  {
+   "k": "career:low",
+   "seed": 97095,
+   "v3": "be2b6867b102e413",
+   "v5": "2341f34d09477564"
+  },
+  {
+   "k": "career:low",
+   "seed": 97097,
+   "v3": "4f85ac8edca4b4e7",
+   "v5": "56c7263ae6013572"
+  },
+  {
+   "k": "career:low",
+   "seed": 97099,
+   "v3": "29b832de795c9b17",
+   "v5": "f1026d41df1b4e33"
+  },
+  {
+   "k": "career:low",
+   "seed": 97101,
+   "v3": "34478e49287384b5",
+   "v5": "6289755dded1f469"
+  },
+  {
+   "k": "career:low",
+   "seed": 97103,
+   "v3": "5ca9d22d7422f631",
+   "v5": "188f3f2cce99a5fe"
+  },
+  {
+   "k": "career:low",
+   "seed": 97105,
+   "v3": "7eacdd78ffbf6da7",
+   "v5": "070101c3275361eb"
+  },
+  {
+   "k": "career:low",
+   "seed": 97107,
+   "v3": "a4ccbaed15e1ba9b",
+   "v5": "5adf677bf91c65ee"
+  },
+  {
+   "k": "career:low",
+   "seed": 97109,
+   "v3": "00fab5c44acd2071",
+   "v5": "d2afcbfa5407bdb7"
+  },
+  {
+   "k": "career:low",
+   "seed": 97111,
+   "v3": "67168f1cdad4f895",
+   "v5": "111ebc3f3b27f4dd"
+  },
+  {
+   "k": "career:low",
+   "seed": 97113,
+   "v3": "988bd26c11ba4c31",
+   "v5": "99c35b9e2c8d2356"
+  },
+  {
+   "k": "career:low",
+   "seed": 97115,
+   "v3": "2e72bb5bdfc4ce74",
+   "v5": "2e72bb5bdfc4ce74"
+  },
+  {
+   "k": "career:low",
+   "seed": 97117,
+   "v3": "53462e40de4a6d97",
+   "v5": "4255d8db618f31ce"
+  },
+  {
+   "k": "career:low",
+   "seed": 97119,
+   "v3": "0afea7282d73ac73",
+   "v5": "af30ea55ee7429f5"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97081,
+   "v3": "86abe9fc6e8dc6e0",
+   "v5": "634315985113c7cd"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97083,
+   "v3": "55a268a6bb295604",
+   "v5": "1df250424609b9eb"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97085,
+   "v3": "8f669fca1549339e",
+   "v5": "2cd1c8fc04b3b4a4"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97087,
+   "v3": "7da7a0c5d7ecfa5c",
+   "v5": "909c315d923971c9"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97089,
+   "v3": "90bde8777469caef",
+   "v5": "93348e57b1d6e7d0"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97091,
+   "v3": "0bb0590390a14191",
+   "v5": "05ddd9ce27d10f4d"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97093,
+   "v3": "24b90a24cac34d25",
+   "v5": "c7a5b1865edcd3e9"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97095,
+   "v3": "a4dff194b0504df2",
+   "v5": "f08f60a07247eb02"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97097,
+   "v3": "503f35ae91635ef7",
+   "v5": "5fd81ed581496e98"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97099,
+   "v3": "8fd84bb483f4ca4d",
+   "v5": "dafa1ec3cb935449"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97101,
+   "v3": "4198bfe45b9b0486",
+   "v5": "7fdcb0dae8571c1b"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97103,
+   "v3": "cc6d64a245125877",
+   "v5": "d69c3a20eb84b5b8"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97105,
+   "v3": "2996eea8ce7e75f0",
+   "v5": "5ff8fb32b214b102"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97107,
+   "v3": "b3af1cca1e193239",
+   "v5": "39cb2ef4152a7d59"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97109,
+   "v3": "b35185cd1e311c5a",
+   "v5": "13259a41ca7cc3ee"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97111,
+   "v3": "4312a37746d802ec",
+   "v5": "f3734e37d13fcc20"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97113,
+   "v3": "0104d530cd2e677d",
+   "v5": "7c5ec7dd862a8ee8"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97115,
+   "v3": "2e5d9f9a2a488ed2",
+   "v5": "fc4a6cc8e4784399"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97117,
+   "v3": "ae5085a7c7950612",
+   "v5": "45039cc7e5410496"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97119,
+   "v3": "7e5db35e3ecae520",
+   "v5": "91526256c37f9132"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97121,
+   "v3": "6d5c7078926bdb5d",
+   "v5": "73a6d1846031ee9b"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97123,
+   "v3": "d2216304ef401e94",
+   "v5": "e76d8ba50b7b33db"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97125,
+   "v3": "2c715185a92a50ac",
+   "v5": "2c715185a92a50ac"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97127,
+   "v3": "fc9e8c46fee1ff19",
+   "v5": "de9e49a181ae941e"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97129,
+   "v3": "f6f9b7fc7e43fc4f",
+   "v5": "0429c25f718fc3d3"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97131,
+   "v3": "72ed292570a44ee8",
+   "v5": "72ed292570a44ee8"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97133,
+   "v3": "a70454e4aaad0f2d",
+   "v5": "e299ff397f4c267b"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97135,
+   "v3": "91b40820e7d91843",
+   "v5": "6acf7d22f89d005c"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97137,
+   "v3": "c43e5cc610b1ce84",
+   "v5": "5ddac26132d2ab0a"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97139,
+   "v3": "45f62533247bed47",
+   "v5": "231160c16d729707"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97141,
+   "v3": "88f8606ec24b5077",
+   "v5": "56253c68806ee1f8"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97143,
+   "v3": "8f8c083ce8698d42",
+   "v5": "d8bb6adaafc5f592"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97145,
+   "v3": "839878b4537bcc5c",
+   "v5": "4f630f97a97a3cd0"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97147,
+   "v3": "e58a3edf5bd72764",
+   "v5": "2130e775de6c9a5c"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97149,
+   "v3": "86a9413276bfa1ec",
+   "v5": "fa7fc38bfd9aa2c3"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97151,
+   "v3": "ebbabab6c37ecd63",
+   "v5": "0b7f711ff4e83223"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97153,
+   "v3": "d25ca4c229c5410b",
+   "v5": "fd2edd8380439b4c"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97155,
+   "v3": "ee26b268b132e671",
+   "v5": "f14a2ccbd6b27e12"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97157,
+   "v3": "5a418e6675047416",
+   "v5": "49087117aea59cb7"
+  },
+  {
+   "k": "career:mid",
+   "seed": 97159,
+   "v3": "8ff218e1c5d57f1f",
+   "v5": "a4e2a6c41e6adb07"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97081,
+   "v3": "d9524eedd2bdea6c",
+   "v5": "1bba48e10063f2dc"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97083,
+   "v3": "d8c2872f1e6324e5",
+   "v5": "073de3649870752a"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97085,
+   "v3": "627b63310dd49b8e",
+   "v5": "ebbcbd4cb427b8b1"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97087,
+   "v3": "d46aa5ef03f0d83b",
+   "v5": "01772312db420a65"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97089,
+   "v3": "ea0971cd1a10f0e2",
+   "v5": "eec6e34701803466"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97091,
+   "v3": "56ece9a49c3bdfca",
+   "v5": "56ece9a49c3bdfca"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97093,
+   "v3": "445b76b2b6bc8b65",
+   "v5": "4ab06890dcae2dd2"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97095,
+   "v3": "c015babf19d32bab",
+   "v5": "b92dbb589caf6027"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97097,
+   "v3": "439aed2969b8b467",
+   "v5": "e3d99560fc9ea280"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97099,
+   "v3": "5294b450575a284c",
+   "v5": "35256a85456bb038"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97101,
+   "v3": "7b15f83e22d87c7b",
+   "v5": "ff7447e789950604"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97103,
+   "v3": "17ca88b853ee03d2",
+   "v5": "794ffd2c16ce9ef1"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97105,
+   "v3": "34b86e2d4f8115bd",
+   "v5": "b394f6985dc7e3ae"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97107,
+   "v3": "7ff34d1ec15015df",
+   "v5": "df78a209f7e4bf1f"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97109,
+   "v3": "9d2b069ebeb473f0",
+   "v5": "75b4cd391ad4e757"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97111,
+   "v3": "8ba45a61e905f6be",
+   "v5": "41e8cc1a5966ecc0"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97113,
+   "v3": "5156b48176ee1409",
+   "v5": "5882c53c613e3aad"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97115,
+   "v3": "9ffe81d8681d0e16",
+   "v5": "4ded485f3f0c7f52"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97117,
+   "v3": "5f5acd0d1ca3fea6",
+   "v5": "883a56546b598931"
+  },
+  {
+   "k": "tool:AB",
+   "seed": 97119,
+   "v3": "8b5efe2943cce006",
+   "v5": "0580fb5201254a8c"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97081,
+   "v3": "60a1dcc9add6c2bc",
+   "v5": "8d91e882419baff7"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97083,
+   "v3": "8b825fcd895983a6",
+   "v5": "c666a6c9665d740c"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97085,
+   "v3": "3b87aea97a122042",
+   "v5": "4ddeb8c4b1d59d31"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97087,
+   "v3": "35e715c8f17b4802",
+   "v5": "d2e3067b387aa890"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97089,
+   "v3": "4d3c7817b2d02e0c",
+   "v5": "6d44edd3d85eebeb"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97091,
+   "v3": "cab7632022fc7d46",
+   "v5": "e4acdb4ae49fe0d1"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97093,
+   "v3": "3306271cb0a573b3",
+   "v5": "26de4bf7a973dd6d"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97095,
+   "v3": "538012df1fb92eba",
+   "v5": "bff211fe69dee034"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97097,
+   "v3": "0e56d8004f12af6e",
+   "v5": "d768cb741f0e6042"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97099,
+   "v3": "15d8fe8495080a0f",
+   "v5": "00d0973ab637f593"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97101,
+   "v3": "aded08943067c782",
+   "v5": "849af423fa72a5cd"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97103,
+   "v3": "f14da83d9c27e15e",
+   "v5": "6d65bedb97dd8963"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97105,
+   "v3": "25ae0c37922b6b28",
+   "v5": "d700b222eda90d99"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97107,
+   "v3": "bfef53402e8ac0ac",
+   "v5": "a78fd44a20c44bcd"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97109,
+   "v3": "4d72842ef7a54afd",
+   "v5": "5c83c2975ce7824c"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97111,
+   "v3": "ed419254ac8da84c",
+   "v5": "6941af1d7a3f1b34"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97113,
+   "v3": "bc5bfa124d5d96c0",
+   "v5": "4e62d09926123961"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97115,
+   "v3": "13de51486b3f02cf",
+   "v5": "5717323f7e9e52ef"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97117,
+   "v3": "cd56f3a646bca40b",
+   "v5": "f6966ed6c331a9af"
+  },
+  {
+   "k": "tool:BA",
+   "seed": 97119,
+   "v3": "32bf2d0927ad7463",
+   "v5": "6c75d9ce8550087d"
+  }
+ ]
+}

@@ -1,0 +1,108 @@
+{
+ "label": "warp-prod",
+ "url": "https://rayhuang0323.github.io/ESMO-/",
+ "env": {
+  "dpr": 1.5,
+  "inner": [
+   1280,
+   720
+  ],
+  "canvas": [
+   240,
+   240
+  ],
+  "screen": [
+   1280,
+   720
+  ],
+  "cores": 12,
+  "mem": 16,
+  "gl": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+ },
+ "segments": [
+  {
+   "quality": "high",
+   "qualityClicked": "true",
+   "rate": 2,
+   "realSec": 30.6,
+   "canvas": [
+    1920,
+    1080
+   ],
+   "frame": {
+    "frames": 145,
+    "fps": 4.8,
+    "p50": 200,
+    "p95": 250,
+    "p99": 283.4,
+    "max": 300,
+    "over50": 145,
+    "over100": 145,
+    "over200": 70
+   },
+   "mainBusyPct": 99.9,
+   "scriptPct": 17.8,
+   "longTasks": {
+    "n": 147,
+    "totalMs": 29013,
+    "max": 270
+   },
+   "simIntervals": {
+    "250": {
+     "n": 69,
+     "durMean": 4.3,
+     "durP95": 8.3,
+     "durMax": 16.5,
+     "lateP50": 168.7,
+     "lateP95": 365.1,
+     "lateMax": 385.7
+    }
+   },
+   "gameSec": 35,
+   "gamePerReal": 1.14,
+   "heapMB": 70
+  },
+  {
+   "quality": "low",
+   "qualityClicked": "true",
+   "rate": 2,
+   "realSec": 30.3,
+   "canvas": [
+    1280,
+    720
+   ],
+   "frame": {
+    "frames": 261,
+    "fps": 8.7,
+    "p50": 116.6,
+    "p95": 150,
+    "p99": 166.7,
+    "max": 166.7,
+    "over50": 261,
+    "over100": 162,
+    "over200": 0
+   },
+   "mainBusyPct": 99.7,
+   "scriptPct": 36.3,
+   "longTasks": {
+    "n": 261,
+    "totalMs": 27017,
+    "max": 151
+   },
+   "simIntervals": {
+    "250": {
+     "n": 114,
+     "durMean": 5.1,
+     "durP95": 11.1,
+     "durMax": 12.5,
+     "lateP50": 15,
+     "lateP95": 131.2,
+     "lateMax": 180.8
+    }
+   },
+   "gameSec": 58,
+   "gamePerReal": 1.92,
+   "heapMB": 53
+  }
+ ]
+}

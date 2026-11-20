@@ -1,0 +1,1639 @@
+{
+ "tool": "diag_camp_leash_v21",
+ "seeds": [
+  11,
+  13,
+  17,
+  19,
+  23,
+  29,
+  31,
+  37,
+  41,
+  43,
+  47,
+  53,
+  59,
+  61,
+  67,
+  71,
+  73,
+  79,
+  83,
+  89
+ ],
+ "horizonSec": 600,
+ "summary": {
+  "v20.std": {
+   "camp_blue_buff": {
+    "matches": 20,
+    "clearedWithinHorizon": 19,
+    "medianFirstClearAt": 95.5,
+    "matchesWithLeashReset": 20,
+    "leashResetsTotal": 527
+   },
+   "camp_blue_a": {
+    "matches": 20,
+    "clearedWithinHorizon": 19,
+    "medianFirstClearAt": 171.5,
+    "matchesWithLeashReset": 8,
+    "leashResetsTotal": 11
+   },
+   "camp_blue_b": {
+    "matches": 20,
+    "clearedWithinHorizon": 19,
+    "medianFirstClearAt": 133,
+    "matchesWithLeashReset": 16,
+    "leashResetsTotal": 63
+   },
+   "camp_red_buff": {
+    "matches": 20,
+    "clearedWithinHorizon": 20,
+    "medianFirstClearAt": 151.5,
+    "matchesWithLeashReset": 20,
+    "leashResetsTotal": 528
+   },
+   "camp_red_a": {
+    "matches": 20,
+    "clearedWithinHorizon": 18,
+    "medianFirstClearAt": 186.5,
+    "matchesWithLeashReset": 9,
+    "leashResetsTotal": 14
+   },
+   "camp_red_b": {
+    "matches": 20,
+    "clearedWithinHorizon": 20,
+    "medianFirstClearAt": 166.5,
+    "matchesWithLeashReset": 16,
+    "leashResetsTotal": 39
+   }
+  },
+  "v21.std": {
+   "camp_blue_buff": {
+    "matches": 20,
+    "clearedWithinHorizon": 20,
+    "medianFirstClearAt": 95.5,
+    "matchesWithLeashReset": 20,
+    "leashResetsTotal": 474
+   },
+   "camp_blue_a": {
+    "matches": 20,
+    "clearedWithinHorizon": 20,
+    "medianFirstClearAt": 235.5,
+    "matchesWithLeashReset": 5,
+    "leashResetsTotal": 6
+   },
+   "camp_blue_b": {
+    "matches": 20,
+    "clearedWithinHorizon": 20,
+    "medianFirstClearAt": 216.5,
+    "matchesWithLeashReset": 15,
+    "leashResetsTotal": 50
+   },
+   "camp_red_buff": {
+    "matches": 20,
+    "clearedWithinHorizon": 20,
+    "medianFirstClearAt": 151.5,
+    "matchesWithLeashReset": 18,
+    "leashResetsTotal": 562
+   },
+   "camp_red_a": {
+    "matches": 20,
+    "clearedWithinHorizon": 17,
+    "medianFirstClearAt": 179.5,
+    "matchesWithLeashReset": 8,
+    "leashResetsTotal": 10
+   },
+   "camp_red_b": {
+    "matches": 20,
+    "clearedWithinHorizon": 19,
+    "medianFirstClearAt": 165,
+    "matchesWithLeashReset": 14,
+    "leashResetsTotal": 38
+   }
+  }
+ },
+ "v20v21CampRecordsIdentical": false,
+ "rows": [
+  {
+   "arm": "v20.std",
+   "seed": 11,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 397.5,
+     "leashResets": 61,
+     "resetHpGain": 3847
+    },
+    "camp_blue_a": {
+     "firstClearAt": 446.5,
+     "leashResets": 2,
+     "resetHpGain": 90
+    },
+    "camp_blue_b": {
+     "firstClearAt": 410.5,
+     "leashResets": 8,
+     "resetHpGain": 127
+    },
+    "camp_red_buff": {
+     "firstClearAt": 140.5,
+     "leashResets": 18,
+     "resetHpGain": 1112
+    },
+    "camp_red_a": {
+     "firstClearAt": 177.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 156,
+     "leashResets": 3,
+     "resetHpGain": 62
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 13,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 95.5,
+     "leashResets": 34,
+     "resetHpGain": 2081
+    },
+    "camp_blue_a": {
+     "firstClearAt": 355.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 320,
+     "leashResets": 6,
+     "resetHpGain": 147
+    },
+    "camp_red_buff": {
+     "firstClearAt": 151.5,
+     "leashResets": 19,
+     "resetHpGain": 1113
+    },
+    "camp_red_a": {
+     "firstClearAt": 187.5,
+     "leashResets": 1,
+     "resetHpGain": 36
+    },
+    "camp_red_b": {
+     "firstClearAt": 166.5,
+     "leashResets": 5,
+     "resetHpGain": 189
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 17,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 8,
+     "resetHpGain": 433
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 56.5,
+     "leashResets": 6,
+     "resetHpGain": 296
+    },
+    "camp_red_a": {
+     "firstClearAt": 93.5,
+     "leashResets": 1,
+     "resetHpGain": 64
+    },
+    "camp_red_b": {
+     "firstClearAt": 71.5,
+     "leashResets": 1,
+     "resetHpGain": 12
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 19,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 53.5,
+     "leashResets": 6,
+     "resetHpGain": 431
+    },
+    "camp_blue_a": {
+     "firstClearAt": 82.5,
+     "leashResets": 1,
+     "resetHpGain": 79
+    },
+    "camp_blue_b": {
+     "firstClearAt": 63,
+     "leashResets": 2,
+     "resetHpGain": 40
+    },
+    "camp_red_buff": {
+     "firstClearAt": 56.5,
+     "leashResets": 7,
+     "resetHpGain": 366
+    },
+    "camp_red_a": {
+     "firstClearAt": 90,
+     "leashResets": 1,
+     "resetHpGain": 20
+    },
+    "camp_red_b": {
+     "firstClearAt": 68.5,
+     "leashResets": 1,
+     "resetHpGain": 20
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 23,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 54.5,
+     "leashResets": 5,
+     "resetHpGain": 243
+    },
+    "camp_blue_a": {
+     "firstClearAt": 91,
+     "leashResets": 1,
+     "resetHpGain": 86
+    },
+    "camp_blue_b": {
+     "firstClearAt": 69.5,
+     "leashResets": 2,
+     "resetHpGain": 78
+    },
+    "camp_red_buff": {
+     "firstClearAt": 58.5,
+     "leashResets": 4,
+     "resetHpGain": 176
+    },
+    "camp_red_a": {
+     "firstClearAt": 96,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 72.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 29,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 203,
+     "leashResets": 35,
+     "resetHpGain": 2123
+    },
+    "camp_blue_a": {
+     "firstClearAt": 297.5,
+     "leashResets": 3,
+     "resetHpGain": 55
+    },
+    "camp_blue_b": {
+     "firstClearAt": 213.5,
+     "leashResets": 2,
+     "resetHpGain": 58
+    },
+    "camp_red_buff": {
+     "firstClearAt": 206,
+     "leashResets": 32,
+     "resetHpGain": 1960
+    },
+    "camp_red_a": {
+     "firstClearAt": 379.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 239.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 31,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 133,
+     "leashResets": 44,
+     "resetHpGain": 2768
+    },
+    "camp_blue_a": {
+     "firstClearAt": 334.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 316.5,
+     "leashResets": 5,
+     "resetHpGain": 89
+    },
+    "camp_red_buff": {
+     "firstClearAt": 151,
+     "leashResets": 19,
+     "resetHpGain": 1171
+    },
+    "camp_red_a": {
+     "firstClearAt": 186.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 165,
+     "leashResets": 2,
+     "resetHpGain": 64
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 37,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": null,
+     "leashResets": 83,
+     "resetHpGain": 4762
+    },
+    "camp_blue_a": {
+     "firstClearAt": null,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": null,
+     "leashResets": 8,
+     "resetHpGain": 180
+    },
+    "camp_red_buff": {
+     "firstClearAt": 360.5,
+     "leashResets": 46,
+     "resetHpGain": 2613
+    },
+    "camp_red_a": {
+     "firstClearAt": 391,
+     "leashResets": 3,
+     "resetHpGain": 112
+    },
+    "camp_red_b": {
+     "firstClearAt": 370.5,
+     "leashResets": 4,
+     "resetHpGain": 73
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 41,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 4,
+     "resetHpGain": 268
+    },
+    "camp_blue_a": {
+     "firstClearAt": 81.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 61,
+     "leashResets": 1,
+     "resetHpGain": 17
+    },
+    "camp_red_buff": {
+     "firstClearAt": 62.5,
+     "leashResets": 7,
+     "resetHpGain": 381
+    },
+    "camp_red_a": {
+     "firstClearAt": 89.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 71.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 43,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 49,
+     "leashResets": 2,
+     "resetHpGain": 83
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 63.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 57,
+     "leashResets": 1,
+     "resetHpGain": 57
+    },
+    "camp_red_a": {
+     "firstClearAt": 93,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 69,
+     "leashResets": 1,
+     "resetHpGain": 130
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 47,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 101.5,
+     "leashResets": 41,
+     "resetHpGain": 2289
+    },
+    "camp_blue_a": {
+     "firstClearAt": 405.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 386.5,
+     "leashResets": 5,
+     "resetHpGain": 141
+    },
+    "camp_red_buff": {
+     "firstClearAt": 407.5,
+     "leashResets": 62,
+     "resetHpGain": 3799
+    },
+    "camp_red_a": {
+     "firstClearAt": null,
+     "leashResets": 1,
+     "resetHpGain": 29
+    },
+    "camp_red_b": {
+     "firstClearAt": 421,
+     "leashResets": 1,
+     "resetHpGain": 36
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 53,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 314.5,
+     "leashResets": 43,
+     "resetHpGain": 2599
+    },
+    "camp_blue_a": {
+     "firstClearAt": 344.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 325,
+     "leashResets": 5,
+     "resetHpGain": 285
+    },
+    "camp_red_buff": {
+     "firstClearAt": 551.5,
+     "leashResets": 74,
+     "resetHpGain": 4474
+    },
+    "camp_red_a": {
+     "firstClearAt": null,
+     "leashResets": 2,
+     "resetHpGain": 42
+    },
+    "camp_red_b": {
+     "firstClearAt": 559,
+     "leashResets": 2,
+     "resetHpGain": 40
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 59,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 328,
+     "leashResets": 44,
+     "resetHpGain": 2589
+    },
+    "camp_blue_a": {
+     "firstClearAt": 355,
+     "leashResets": 1,
+     "resetHpGain": 40
+    },
+    "camp_blue_b": {
+     "firstClearAt": 338.5,
+     "leashResets": 2,
+     "resetHpGain": 84
+    },
+    "camp_red_buff": {
+     "firstClearAt": 316,
+     "leashResets": 45,
+     "resetHpGain": 2577
+    },
+    "camp_red_a": {
+     "firstClearAt": 365.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 327.5,
+     "leashResets": 3,
+     "resetHpGain": 235
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 61,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 3,
+     "resetHpGain": 180
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 56.5,
+     "leashResets": 8,
+     "resetHpGain": 389
+    },
+    "camp_red_a": {
+     "firstClearAt": 93.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 71.5,
+     "leashResets": 3,
+     "resetHpGain": 58
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 67,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 2,
+     "resetHpGain": 280
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84,
+     "leashResets": 1,
+     "resetHpGain": 20
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 1,
+     "resetHpGain": 14
+    },
+    "camp_red_buff": {
+     "firstClearAt": 56.5,
+     "leashResets": 5,
+     "resetHpGain": 252
+    },
+    "camp_red_a": {
+     "firstClearAt": 93,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 71,
+     "leashResets": 1,
+     "resetHpGain": 11
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 71,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 95.5,
+     "leashResets": 18,
+     "resetHpGain": 1060
+    },
+    "camp_blue_a": {
+     "firstClearAt": 171.5,
+     "leashResets": 1,
+     "resetHpGain": 40
+    },
+    "camp_blue_b": {
+     "firstClearAt": 133,
+     "leashResets": 3,
+     "resetHpGain": 117
+    },
+    "camp_red_buff": {
+     "firstClearAt": 204.5,
+     "leashResets": 37,
+     "resetHpGain": 2185
+    },
+    "camp_red_a": {
+     "firstClearAt": 401,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 219.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 73,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 133,
+     "leashResets": 36,
+     "resetHpGain": 2228
+    },
+    "camp_blue_a": {
+     "firstClearAt": 379,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 359.5,
+     "leashResets": 4,
+     "resetHpGain": 142
+    },
+    "camp_red_buff": {
+     "firstClearAt": 221.5,
+     "leashResets": 20,
+     "resetHpGain": 1191
+    },
+    "camp_red_a": {
+     "firstClearAt": 356.5,
+     "leashResets": 2,
+     "resetHpGain": 148
+    },
+    "camp_red_b": {
+     "firstClearAt": 332,
+     "leashResets": 6,
+     "resetHpGain": 333
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 79,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 95.5,
+     "leashResets": 16,
+     "resetHpGain": 966
+    },
+    "camp_blue_a": {
+     "firstClearAt": 170.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 132.5,
+     "leashResets": 5,
+     "resetHpGain": 204
+    },
+    "camp_red_buff": {
+     "firstClearAt": 358,
+     "leashResets": 68,
+     "resetHpGain": 4183
+    },
+    "camp_red_a": {
+     "firstClearAt": 414.5,
+     "leashResets": 1,
+     "resetHpGain": 50
+    },
+    "camp_red_b": {
+     "firstClearAt": 393,
+     "leashResets": 3,
+     "resetHpGain": 221
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 83,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 53.5,
+     "leashResets": 4,
+     "resetHpGain": 293
+    },
+    "camp_blue_a": {
+     "firstClearAt": 83.5,
+     "leashResets": 1,
+     "resetHpGain": 55
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 62.5,
+     "leashResets": 8,
+     "resetHpGain": 408
+    },
+    "camp_red_a": {
+     "firstClearAt": 96,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 73.5,
+     "leashResets": 1,
+     "resetHpGain": 21
+    }
+   }
+  },
+  {
+   "arm": "v20.std",
+   "seed": 89,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 101,
+     "leashResets": 38,
+     "resetHpGain": 2338
+    },
+    "camp_blue_a": {
+     "firstClearAt": 352.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 316,
+     "leashResets": 4,
+     "resetHpGain": 178
+    },
+    "camp_red_buff": {
+     "firstClearAt": 228,
+     "leashResets": 42,
+     "resetHpGain": 2623
+    },
+    "camp_red_a": {
+     "firstClearAt": 355,
+     "leashResets": 2,
+     "resetHpGain": 76
+    },
+    "camp_red_b": {
+     "firstClearAt": 302.5,
+     "leashResets": 2,
+     "resetHpGain": 52
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 11,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 312.5,
+     "leashResets": 45,
+     "resetHpGain": 2756
+    },
+    "camp_blue_a": {
+     "firstClearAt": 345,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 323,
+     "leashResets": 3,
+     "resetHpGain": 38
+    },
+    "camp_red_buff": {
+     "firstClearAt": 196,
+     "leashResets": 31,
+     "resetHpGain": 1869
+    },
+    "camp_red_a": {
+     "firstClearAt": 233.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 211.5,
+     "leashResets": 1,
+     "resetHpGain": 16
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 13,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 95.5,
+     "leashResets": 35,
+     "resetHpGain": 2190
+    },
+    "camp_blue_a": {
+     "firstClearAt": 352,
+     "leashResets": 1,
+     "resetHpGain": 37
+    },
+    "camp_blue_b": {
+     "firstClearAt": 325.5,
+     "leashResets": 6,
+     "resetHpGain": 147
+    },
+    "camp_red_buff": {
+     "firstClearAt": 151.5,
+     "leashResets": 21,
+     "resetHpGain": 1181
+    },
+    "camp_red_a": {
+     "firstClearAt": 187.5,
+     "leashResets": 1,
+     "resetHpGain": 65
+    },
+    "camp_red_b": {
+     "firstClearAt": 166.5,
+     "leashResets": 7,
+     "resetHpGain": 281
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 17,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 8,
+     "resetHpGain": 433
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 56.5,
+     "leashResets": 6,
+     "resetHpGain": 296
+    },
+    "camp_red_a": {
+     "firstClearAt": 93.5,
+     "leashResets": 1,
+     "resetHpGain": 64
+    },
+    "camp_red_b": {
+     "firstClearAt": 71.5,
+     "leashResets": 1,
+     "resetHpGain": 12
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 19,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 53.5,
+     "leashResets": 4,
+     "resetHpGain": 255
+    },
+    "camp_blue_a": {
+     "firstClearAt": 82.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 63,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_a": {
+     "firstClearAt": 85,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 64,
+     "leashResets": 1,
+     "resetHpGain": 120
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 23,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 54.5,
+     "leashResets": 5,
+     "resetHpGain": 243
+    },
+    "camp_blue_a": {
+     "firstClearAt": 91,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 69.5,
+     "leashResets": 2,
+     "resetHpGain": 78
+    },
+    "camp_red_buff": {
+     "firstClearAt": 58.5,
+     "leashResets": 3,
+     "resetHpGain": 149
+    },
+    "camp_red_a": {
+     "firstClearAt": 96,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 72.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 29,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 215,
+     "leashResets": 38,
+     "resetHpGain": 2307
+    },
+    "camp_blue_a": {
+     "firstClearAt": 282.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 228,
+     "leashResets": 2,
+     "resetHpGain": 32
+    },
+    "camp_red_buff": {
+     "firstClearAt": 141.5,
+     "leashResets": 18,
+     "resetHpGain": 1096
+    },
+    "camp_red_a": {
+     "firstClearAt": 179.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 157.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 31,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 133,
+     "leashResets": 44,
+     "resetHpGain": 2768
+    },
+    "camp_blue_a": {
+     "firstClearAt": 334.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 316.5,
+     "leashResets": 5,
+     "resetHpGain": 89
+    },
+    "camp_red_buff": {
+     "firstClearAt": 151,
+     "leashResets": 19,
+     "resetHpGain": 1171
+    },
+    "camp_red_a": {
+     "firstClearAt": 186.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 165,
+     "leashResets": 2,
+     "resetHpGain": 64
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 37,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 359.5,
+     "leashResets": 49,
+     "resetHpGain": 2753
+    },
+    "camp_blue_a": {
+     "firstClearAt": 388,
+     "leashResets": 1,
+     "resetHpGain": 40
+    },
+    "camp_blue_b": {
+     "firstClearAt": 372.5,
+     "leashResets": 5,
+     "resetHpGain": 144
+    },
+    "camp_red_buff": {
+     "firstClearAt": 466,
+     "leashResets": 73,
+     "resetHpGain": 3985
+    },
+    "camp_red_a": {
+     "firstClearAt": null,
+     "leashResets": 1,
+     "resetHpGain": 40
+    },
+    "camp_red_b": {
+     "firstClearAt": 478.5,
+     "leashResets": 5,
+     "resetHpGain": 120
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 41,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 2,
+     "resetHpGain": 128
+    },
+    "camp_blue_a": {
+     "firstClearAt": 81.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 61,
+     "leashResets": 1,
+     "resetHpGain": 15
+    },
+    "camp_red_buff": {
+     "firstClearAt": 62.5,
+     "leashResets": 6,
+     "resetHpGain": 312
+    },
+    "camp_red_a": {
+     "firstClearAt": 89.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 71.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 43,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 49,
+     "leashResets": 2,
+     "resetHpGain": 64
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 63.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 57,
+     "leashResets": 7,
+     "resetHpGain": 395
+    },
+    "camp_red_a": {
+     "firstClearAt": 92.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 69,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 47,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 101.5,
+     "leashResets": 43,
+     "resetHpGain": 2751
+    },
+    "camp_blue_a": {
+     "firstClearAt": 421.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 402.5,
+     "leashResets": 6,
+     "resetHpGain": 117
+    },
+    "camp_red_buff": {
+     "firstClearAt": 371.5,
+     "leashResets": 57,
+     "resetHpGain": 3359
+    },
+    "camp_red_a": {
+     "firstClearAt": 408,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 385.5,
+     "leashResets": 3,
+     "resetHpGain": 92
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 53,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 316.5,
+     "leashResets": 45,
+     "resetHpGain": 2793
+    },
+    "camp_blue_a": {
+     "firstClearAt": 345.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 327,
+     "leashResets": 5,
+     "resetHpGain": 156
+    },
+    "camp_red_buff": {
+     "firstClearAt": 595,
+     "leashResets": 73,
+     "resetHpGain": 4448
+    },
+    "camp_red_a": {
+     "firstClearAt": null,
+     "leashResets": 1,
+     "resetHpGain": 12
+    },
+    "camp_red_b": {
+     "firstClearAt": null,
+     "leashResets": 1,
+     "resetHpGain": 24
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 59,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 328,
+     "leashResets": 44,
+     "resetHpGain": 2589
+    },
+    "camp_blue_a": {
+     "firstClearAt": 355,
+     "leashResets": 1,
+     "resetHpGain": 40
+    },
+    "camp_blue_b": {
+     "firstClearAt": 338.5,
+     "leashResets": 2,
+     "resetHpGain": 84
+    },
+    "camp_red_buff": {
+     "firstClearAt": 316,
+     "leashResets": 45,
+     "resetHpGain": 2577
+    },
+    "camp_red_a": {
+     "firstClearAt": 365.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 327.5,
+     "leashResets": 3,
+     "resetHpGain": 235
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 61,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 3,
+     "resetHpGain": 181
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_a": {
+     "firstClearAt": 87.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 1,
+     "resetHpGain": 100
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 67,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 48.5,
+     "leashResets": 2,
+     "resetHpGain": 109
+    },
+    "camp_blue_a": {
+     "firstClearAt": 84,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 1,
+     "resetHpGain": 14
+    },
+    "camp_red_buff": {
+     "firstClearAt": 56.5,
+     "leashResets": 7,
+     "resetHpGain": 429
+    },
+    "camp_red_a": {
+     "firstClearAt": 93,
+     "leashResets": 1,
+     "resetHpGain": 65
+    },
+    "camp_red_b": {
+     "firstClearAt": 71,
+     "leashResets": 2,
+     "resetHpGain": 33
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 71,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 95.5,
+     "leashResets": 17,
+     "resetHpGain": 1031
+    },
+    "camp_blue_a": {
+     "firstClearAt": 171.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 133,
+     "leashResets": 3,
+     "resetHpGain": 44
+    },
+    "camp_red_buff": {
+     "firstClearAt": 325,
+     "leashResets": 42,
+     "resetHpGain": 2526
+    },
+    "camp_red_a": {
+     "firstClearAt": 361,
+     "leashResets": 2,
+     "resetHpGain": 112
+    },
+    "camp_red_b": {
+     "firstClearAt": 340,
+     "leashResets": 2,
+     "resetHpGain": 73
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 73,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 133,
+     "leashResets": 36,
+     "resetHpGain": 2228
+    },
+    "camp_blue_a": {
+     "firstClearAt": 379,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 359.5,
+     "leashResets": 4,
+     "resetHpGain": 142
+    },
+    "camp_red_buff": {
+     "firstClearAt": 221.5,
+     "leashResets": 20,
+     "resetHpGain": 1191
+    },
+    "camp_red_a": {
+     "firstClearAt": 356.5,
+     "leashResets": 2,
+     "resetHpGain": 148
+    },
+    "camp_red_b": {
+     "firstClearAt": 332,
+     "leashResets": 6,
+     "resetHpGain": 333
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 79,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 95.5,
+     "leashResets": 15,
+     "resetHpGain": 910
+    },
+    "camp_blue_a": {
+     "firstClearAt": 170.5,
+     "leashResets": 1,
+     "resetHpGain": 20
+    },
+    "camp_blue_b": {
+     "firstClearAt": 132.5,
+     "leashResets": 2,
+     "resetHpGain": 59
+    },
+    "camp_red_buff": {
+     "firstClearAt": 571.5,
+     "leashResets": 84,
+     "resetHpGain": 5159
+    },
+    "camp_red_a": {
+     "firstClearAt": null,
+     "leashResets": 1,
+     "resetHpGain": 25
+    },
+    "camp_red_b": {
+     "firstClearAt": 586.5,
+     "leashResets": 3,
+     "resetHpGain": 88
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 83,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 53.5,
+     "leashResets": 4,
+     "resetHpGain": 293
+    },
+    "camp_blue_a": {
+     "firstClearAt": 83.5,
+     "leashResets": 2,
+     "resetHpGain": 77
+    },
+    "camp_blue_b": {
+     "firstClearAt": 64.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_buff": {
+     "firstClearAt": 62.5,
+     "leashResets": 7,
+     "resetHpGain": 390
+    },
+    "camp_red_a": {
+     "firstClearAt": 96,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 73.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  },
+  {
+   "arm": "v21.std",
+   "seed": 89,
+   "duration": 600,
+   "over": false,
+   "camps": {
+    "camp_blue_buff": {
+     "firstClearAt": 101,
+     "leashResets": 33,
+     "resetHpGain": 2055
+    },
+    "camp_blue_a": {
+     "firstClearAt": 235.5,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_blue_b": {
+     "firstClearAt": 216.5,
+     "leashResets": 3,
+     "resetHpGain": 108
+    },
+    "camp_red_buff": {
+     "firstClearAt": 292,
+     "leashResets": 43,
+     "resetHpGain": 2763
+    },
+    "camp_red_a": {
+     "firstClearAt": 319,
+     "leashResets": 0,
+     "resetHpGain": 0
+    },
+    "camp_red_b": {
+     "firstClearAt": 303,
+     "leashResets": 0,
+     "resetHpGain": 0
+    }
+   }
+  }
+ ]
+}

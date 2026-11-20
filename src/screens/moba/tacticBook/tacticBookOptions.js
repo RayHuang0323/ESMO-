@@ -20,6 +20,7 @@ const tacticBookOptions = (templateId, overlayIds, choices, opts = {}) => choice
 import { planProfile, seatMissionFit, coordinationLoad, contradictions, PROFILE_AXES, SEATS } from "../../../platform/tactics/tacticIndicators.js";
 import { aiCoachPlan } from "../../../platform/tactics/aiCoach.js";
 import { STANDARD_OPP_TACTIC, mobaTacticForTeamStyle } from "../../../platform/contracts/MobaTacticConfig.js";
+import { registryRow } from "../../../platform/tactics/capabilityRegistry.js";
 
 export const DIMENSION_GROUPS = Object.freeze([
   { id: "win", label: "勝利條件" },
@@ -108,6 +109,29 @@ export const MISSION_LABELS = Object.freeze({
 });
 export const SEAT_LABELS = Object.freeze({ b1: "上路", b2: "打野", b3: "中路", b4: "射手", b5: "輔助" });
 
+// ── Owner Preview UI（2026-11-10；只有呈現，不改任何選項的來源）──────────────────────────────
+//  時期部署表：三個時期 × 四種設定。時期＝比賽時間的前／中／後段（由 Tactical Director 依比賽時鐘切換）；與模板的「打法分類」無關。
+export const DEPLOY_PHASES = Object.freeze([{ id: "early", label: "前期" }, { id: "mid", label: "中期" }, { id: "late", label: "後期" }]);
+export const DEPLOY_FIELDS = Object.freeze([{ id: "stance", label: "姿態" }, { id: "grouping", label: "集結" }, { id: "objectiveOrder", label: "物件優先" }, { id: "focusLane", label: "強邊" }]);
+/** 每種設定「實際會改變什麼」的白話說明：只寫複驗量到的行為（不寫勝率、不寫「更有利」）。 */
+export const EFFECT_HINTS = Object.freeze({
+  stance: "這個時期主動接戰的頻率：進攻較常、防守較少。",
+  grouping: "成團＝隊員在這個時期更常決定去參團。",
+  objectiveOrder: "多去＝更常出現在那個坑邊；不保證拿到。推塔優先會讓三路站位前壓。",
+  focusLane: "打野在這個時期更常去抓指定的那一路；不代表那一路更有利。",
+  winCondition: "只替你沒選的格子填入預設；你自己選過的不會被改。",
+  quickStrongSide: "一次設定前期與中期的強邊；之後仍可分開調整。",
+});
+/** 一個維度的效果說明（沒有 ⇒ null）。維度名稱只在這支 view-model 裡判斷，呈現元件不自己認維度。 */
+export function effectHintOf(dimension) {
+  if (dimension === WIN_CONDITION_DIM) return EFFECT_HINTS.winCondition;
+  if (dimension === QUICK_STRONG_SIDE) return EFFECT_HINTS.quickStrongSide;
+  const m = /^phases\.[a-z]+\.([A-Za-z]+)$/.exec(String(dimension));
+  return m ? EFFECT_HINTS[m[1]] ?? null : null;
+}
+/** 模板列的分類標題：分類＝打法風格，不是比賽時間。 */
+export const TEMPLATE_GROUP_NOTE = "分類是打法風格，不是比賽時間；每套模板都會打完整場。";
+
 /** 模板列：依分類分組（經典八套、標準、v2 五類）。 */
 export function templateGroups(templateBalance = null) {
   const groups = [];
@@ -190,7 +214,8 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
   const config = tableEngine.mergeConfig(tpl, plan.overlayIds, fill.choices);
   const explicit = Object.fromEntries(leavesOf(plan.choices));
   const filledBy = Object.fromEntries(fill.filled);
-  const dimensions = tacticBookOptions(plan.templateId, plan.overlayIds, plan.choices, { tacticalDirector, templateBalance })
+  const rawRows = tacticBookOptions(plan.templateId, plan.overlayIds, plan.choices, { tacticalDirector, templateBalance });
+  const dimensions = rawRows
     //  只有一個可選（＝模板自己的值）的維度不畫：沒有東西可以選。
     .filter((row) => row.offered.length >= 2)
     .map((row) => {
@@ -222,9 +247,31 @@ export function tacticBookView({ templateId, overlayIds = [], choices = {}, seat
     });
   }
   const groups = DIMENSION_GROUPS.map((g) => ({ ...g, dimensions: dimensions.filter((d) => d.group === g.id) })).filter((g) => g.dimensions.length);
+  //  Owner Preview UI：呈現用的補充資料（不改 dimensions／groups 的內容，既有 gate 逐鍵比對的東西都沒動）。
+  //   · withheld：Registry 有、但這個模板／規則集目前不提供的選擇（只給畫面標「未開放」，不可點）
+  //   · fixed   ：只有一個值可選的維度（畫面標「模板固定」）
+  //   · status  ：default＝跟著模板、override＝玩家自己選的、win＝勝利條件替玩家填的
+  const withheldOf = (row) => (registryRow(row.dimension)?.choices ?? []).filter((c) => !row.offered.includes(c)).map((c) => ({ id: c, label: choiceLabel(row.dimension, c) }));
+  const rawBy = Object.fromEntries(rawRows.map((r) => [r.dimension, r]));
+  const dimensionMeta = Object.fromEntries(dimensions.filter((d) => !d.quick).map((d) => [d.dimension, {
+    status: d.explicit ? "override" : d.fromWinCondition ? "win" : "default",
+    withheld: rawBy[d.dimension] ? withheldOf(rawBy[d.dimension]) : [],
+    ownLabel: d.own === null ? "模板值" : choiceLabel(d.dimension, d.own),
+  }]));
+  const fixed = rawRows.filter((r) => r.offered.length < 2).map((r) => ({
+    dimension: r.dimension, group: DIMENSION_LABELS[r.dimension]?.group ?? "team", label: dimensionLabel(r.dimension),
+    valueLabel: r.own === null ? "模板值" : choiceLabel(r.dimension, r.own), withheld: withheldOf(r),
+  }));
+  const deployment = DEPLOY_PHASES.map((p) => ({
+    ...p,
+    cells: DEPLOY_FIELDS.map((fld) => {
+      const dim = "phases." + p.id + "." + fld.id;
+      return { field: fld.id, label: fld.label, dimension: dim, dim: dimensions.find((d) => d.dimension === dim) ?? null, fixed: fixed.find((x) => x.dimension === dim) ?? null };
+    }).filter((c) => c.dim || c.fixed),
+  })).filter((p) => p.cells.length);
   const profile = planProfile(binding, templateBalance);
   return {
-    ok: true, plan, binding, config, dimensions, groups,
+    ok: true, plan, binding, config, dimensions, groups, deployment, dimensionMeta, fixed,
     //  勝利條件實際填了哪些格、哪些格因玩家已選（explicit）或模板本來就是（already）而沒填。
     winCondition: fill.winCondition ? { id: fill.winCondition, label: choiceLabel(WIN_CONDITION_DIM, fill.winCondition), filled: fill.filled, skipped: fill.skipped } : null,
     profile: PROFILE_AXES.map((axis) => ({ axis, label: PROFILE_AXIS_LABELS[axis], value: profile[axis] })),

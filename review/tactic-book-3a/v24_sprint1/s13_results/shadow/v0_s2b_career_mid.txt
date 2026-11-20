@@ -1,0 +1,20 @@
+{
+ "s11": {
+  "sides": 30,
+  "oppPerSide": 0.17,
+  "sidesWithoutOpp": 0.9,
+  "utilisationAnyTarget": 0,
+  "utilisationSameTarget": 0,
+  "startsPerSide": 0.7,
+  "precision": 0
+ },
+ "s12": {
+  "sides": 30,
+  "oppPerSide": 0.1,
+  "sidesWithoutOpp": 0.9,
+  "utilisationAnyTarget": 0,
+  "utilisationSameTarget": 0,
+  "startsPerSide": 0.2,
+  "precision": 0
+ }
+}

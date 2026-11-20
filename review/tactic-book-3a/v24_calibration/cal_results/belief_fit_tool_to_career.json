@@ -1,0 +1,334 @@
+{
+ "K": 20,
+ "fitCells": [
+  "tool_inv_v13",
+  "tool_AB_v13",
+  "tool_BA_v13"
+ ],
+ "testCells": [
+  "career_low_v13",
+  "career_mid_v13",
+  "career_high_v13"
+ ],
+ "fitRows": 101438,
+ "table": {
+  "buff": {
+   "seen": {
+    "dead": 0.934,
+    "recent": 0.917,
+    "old": 0.772,
+    "never": 0.878
+   },
+   "memAlive:<20": {
+    "dead": 0.932,
+    "recent": 0.771,
+    "old": 0.589,
+    "never": 0.744
+   },
+   "memAlive:<45": {
+    "dead": 0.716,
+    "recent": 0.585,
+    "old": 0.332,
+    "never": 0.456
+   },
+   "memAlive:<90": {
+    "dead": 0.622,
+    "recent": 0.487,
+    "old": 0.258,
+    "never": 0.366
+   },
+   "memAlive:90+": {
+    "dead": 0.689,
+    "recent": 0.581,
+    "old": 0.309,
+    "never": 0.449
+   },
+   "respawn:<20": {
+    "dead": 0.868,
+    "recent": 0.843,
+    "old": 0.69,
+    "never": 0.748
+   },
+   "respawn:<40": {
+    "dead": 0.898,
+    "recent": 0.755,
+    "old": 0.429,
+    "never": 0.608
+   },
+   "respawn:40+": {
+    "dead": 0.786,
+    "recent": 0.58,
+    "old": 0.29,
+    "never": 0.453
+   },
+   "prior:<150": {
+    "dead": 0.321,
+    "recent": 0.241,
+    "old": 0.047,
+    "never": 0.038
+   },
+   "prior:<300": {
+    "dead": 0.433,
+    "recent": 0.555,
+    "old": 0.113,
+    "never": 0.118
+   },
+   "prior:<600": {
+    "dead": 0.545,
+    "recent": 0.527,
+    "old": 0.202,
+    "never": 0.361
+   },
+   "prior:<900": {
+    "dead": 0.599,
+    "recent": 0.512,
+    "old": 0.253,
+    "never": 0.377
+   },
+   "prior:900+": {
+    "dead": 0.467,
+    "recent": 0.396,
+    "old": 0.286,
+    "never": 0.359
+   }
+  },
+  "camp": {
+   "seen": {
+    "dead": 0.972,
+    "recent": 0.939,
+    "old": 0.889,
+    "never": 0.913
+   },
+   "memAlive:<20": {
+    "dead": 0.965,
+    "recent": 0.877,
+    "old": 0.735,
+    "never": 0.827
+   },
+   "memAlive:<45": {
+    "dead": 0.78,
+    "recent": 0.752,
+    "old": 0.579,
+    "never": 0.67
+   },
+   "memAlive:<90": {
+    "dead": 0.643,
+    "recent": 0.667,
+    "old": 0.457,
+    "never": 0.567
+   },
+   "memAlive:90+": {
+    "dead": 0.676,
+    "recent": 0.627,
+    "old": 0.459,
+    "never": 0.547
+   },
+   "respawn:<20": {
+    "dead": 0.857,
+    "recent": 0.901,
+    "old": 0.844,
+    "never": 0.807
+   },
+   "respawn:<40": {
+    "dead": 0.883,
+    "recent": 0.865,
+    "old": 0.64,
+    "never": 0.745
+   },
+   "respawn:40+": {
+    "dead": 0.717,
+    "recent": 0.66,
+    "old": 0.466,
+    "never": 0.578
+   },
+   "prior:<150": {
+    "dead": 0.071,
+    "recent": 0.293,
+    "old": 0.364,
+    "never": 0.267
+   },
+   "prior:<300": {
+    "dead": 0.487,
+    "recent": 0.517,
+    "old": 0.247,
+    "never": 0.184
+   },
+   "prior:<600": {
+    "dead": 0.66,
+    "recent": 0.582,
+    "old": 0.336,
+    "never": 0.464
+   },
+   "prior:<900": {
+    "dead": 0.675,
+    "recent": 0.612,
+    "old": 0.404,
+    "never": 0.506
+   },
+   "prior:900+": {
+    "dead": 0.707,
+    "recent": 0.641,
+    "old": 0.573,
+    "never": 0.617
+   }
+  }
+ },
+ "test": {
+  "table14": {
+   "n": 49383,
+   "base": 0.464,
+   "brier": 0.214,
+   "bss": 0.14,
+   "auc": 0.715,
+   "ece": 0.028
+  },
+  "v13approx": {
+   "n": 49383,
+   "base": 0.464,
+   "brier": 0.284,
+   "bss": -0.14,
+   "auc": 0.535,
+   "ece": 0.201
+  }
+ },
+ "perCell": {
+  "career_low_v13": {
+   "table14": {
+    "n": 16369,
+    "base": 0.47,
+    "brier": 0.212,
+    "bss": 0.147,
+    "auc": 0.726,
+    "ece": 0.04
+   },
+   "v13approx": {
+    "n": 16369,
+    "base": 0.47,
+    "brier": 0.282,
+    "bss": -0.134,
+    "auc": 0.526,
+    "ece": 0.192
+   }
+  },
+  "career_mid_v13": {
+   "table14": {
+    "n": 16542,
+    "base": 0.467,
+    "brier": 0.214,
+    "bss": 0.139,
+    "auc": 0.712,
+    "ece": 0.035
+   },
+   "v13approx": {
+    "n": 16542,
+    "base": 0.467,
+    "brier": 0.282,
+    "bss": -0.133,
+    "auc": 0.535,
+    "ece": 0.198
+   }
+  },
+  "career_high_v13": {
+   "table14": {
+    "n": 16472,
+    "base": 0.456,
+    "brier": 0.215,
+    "bss": 0.134,
+    "auc": 0.709,
+    "ece": 0.031
+   },
+   "v13approx": {
+    "n": 16472,
+    "base": 0.456,
+    "brier": 0.286,
+    "bss": -0.154,
+    "auc": 0.543,
+    "ece": 0.212
+   }
+  }
+ },
+ "counts": {
+  "buff|memAlive:90+|dead": "312/446",
+  "buff|memAlive:90+|old": "1021/3310",
+  "buff|memAlive:90+|recent": "1570/2700",
+  "buff|memAlive:<20|dead": "164/172",
+  "buff|memAlive:<20|old": "182/314",
+  "buff|memAlive:<20|recent": "613/794",
+  "buff|memAlive:<45|dead": "46/57",
+  "buff|memAlive:<45|old": "218/665",
+  "buff|memAlive:<45|recent": "291/493",
+  "buff|memAlive:<90|dead": "76/114",
+  "buff|memAlive:<90|old": "250/978",
+  "buff|memAlive:<90|recent": "289/588",
+  "buff|prior:900+|dead": "19/36",
+  "buff|prior:900+|old": "36/131",
+  "buff|prior:900+|recent": "40/99",
+  "buff|prior:<150|dead": "23/58",
+  "buff|prior:<150|never": "98/2628",
+  "buff|prior:<150|old": "16/362",
+  "buff|prior:<150|recent": "290/1192",
+  "buff|prior:<300|dead": "33/70",
+  "buff|prior:<300|never": "3/56",
+  "buff|prior:<300|old": "318/2836",
+  "buff|prior:<300|recent": "1142/2049",
+  "buff|prior:<600|dead": "98/173",
+  "buff|prior:<600|old": "653/3255",
+  "buff|prior:<600|recent": "1535/2904",
+  "buff|prior:<900|dead": "126/203",
+  "buff|prior:<900|old": "349/1391",
+  "buff|prior:<900|recent": "472/916",
+  "buff|respawn:40+|dead": "200/246",
+  "buff|respawn:40+|old": "487/1688",
+  "buff|respawn:40+|recent": "856/1471",
+  "buff|respawn:<20|dead": "18/18",
+  "buff|respawn:<20|old": "23/35",
+  "buff|respawn:<20|recent": "39/44",
+  "buff|respawn:<40|dead": "57/57",
+  "buff|respawn:<40|old": "89/216",
+  "buff|respawn:<40|recent": "114/147",
+  "buff|seen|dead": "74/78",
+  "buff|seen|old": "62/83",
+  "buff|seen|recent": "350/381",
+  "camp|memAlive:90+|dead": "366/538",
+  "camp|memAlive:90+|old": "1213/2644",
+  "camp|memAlive:90+|recent": "1265/2016",
+  "camp|memAlive:<20|dead": "188/192",
+  "camp|memAlive:<20|old": "460/628",
+  "camp|memAlive:<20|recent": "654/745",
+  "camp|memAlive:<45|dead": "102/128",
+  "camp|memAlive:<45|old": "377/654",
+  "camp|memAlive:<45|recent": "431/571",
+  "camp|memAlive:<90|dead": "134/206",
+  "camp|memAlive:<90|old": "371/816",
+  "camp|memAlive:<90|recent": "493/736",
+  "camp|prior:900+|dead": "240/337",
+  "camp|prior:900+|old": "732/1279",
+  "camp|prior:900+|recent": "738/1151",
+  "camp|prior:<150|dead": "4/116",
+  "camp|prior:<150|never": "1404/5256",
+  "camp|prior:<150|old": "265/724",
+  "camp|prior:<150|recent": "702/2396",
+  "camp|prior:<300|dead": "76/151",
+  "camp|prior:<300|never": "17/112",
+  "camp|prior:<300|old": "1419/5756",
+  "camp|prior:<300|recent": "2310/4461",
+  "camp|prior:<600|dead": "387/580",
+  "camp|prior:<600|old": "3069/9143",
+  "camp|prior:<600|recent": "5184/8899",
+  "camp|prior:<900|dead": "587/865",
+  "camp|prior:<900|old": "2937/7269",
+  "camp|prior:<900|recent": "3399/5552",
+  "camp|respawn:40+|dead": "250/345",
+  "camp|respawn:40+|old": "640/1379",
+  "camp|respawn:40+|recent": "869/1314",
+  "camp|respawn:<20|dead": "7/7",
+  "camp|respawn:<20|old": "21/24",
+  "camp|respawn:<20|recent": "19/19",
+  "camp|respawn:<40|dead": "31/32",
+  "camp|respawn:<40|old": "131/208",
+  "camp|respawn:<40|recent": "146/166",
+  "camp|seen|dead": "78/79",
+  "camp|seen|old": "180/203",
+  "camp|seen|recent": "270/287"
+ }
+}

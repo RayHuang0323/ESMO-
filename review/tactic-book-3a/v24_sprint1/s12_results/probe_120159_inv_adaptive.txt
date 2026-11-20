@@ -1,0 +1,235 @@
+t=15.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: top0:1907,mid0:2100,bot0:2100,bot1:2100,nexus_guard0:300,nexus_guard1:300,nexus9:7200
+   red  alive: top0:2100,top1:2100,top2:1684,mid0:2100,mid1:696,bot0:2100,nexus_guard0:300,nexus_guard1:300,nexus9:7200
+   btop           hp 0.98 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 133
+   bjungle        hp 1.00 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 232
+   bmid           hp 0.36 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 84
+   badc           hp 1.00 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 256
+   bsup           hp 1.00 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 161
+   rtop           hp 1.00 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 153
+   rjungle        hp 1.00 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 185
+   rmid           hp 0.37 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 108
+   radc           hp 1.00 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 145
+   rsup           hp 0.88 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 136
+t=17.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: top0:1907,mid0:2100,bot0:2100,bot1:2100,nexus_guard0:300,nexus_guard1:300,nexus9:7200
+   red  alive: top0:2100,top1:2100,top2:1684,mid0:2100,bot0:5,nexus_guard0:300,nexus_guard1:300,nexus9:7200
+   btop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 258
+   bjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 135
+   bmid           hp 0.03 lvl - state 回城中      task -          inv 0 def 0 distEnemyNexus 148
+   badc      DEAD hp 0.00 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 43
+   bsup           hp 0.25 lvl - state 回城中      task -          inv 0 def 0 distEnemyNexus 171
+   rtop           hp 0.44 lvl - state 回城中      task -          inv 0 def 0 distEnemyNexus 125
+   rjungle        hp 0.92 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 159
+   rmid      DEAD hp 0.00 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 105
+   radc           hp 0.96 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 263
+   rsup           hp 1.00 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 89
+t=19.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: top0:1907,mid0:923,bot0:2100,bot1:1075,nexus_guard0:300,nexus_guard1:300,nexus9:7200
+   red  alive: top0:2100,top1:2100,top2:1684,mid0:2100,bot0:5,nexus_guard0:300,nexus_guard1:300,nexus9:7200
+   btop           hp 1.00 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 231
+   bjungle        hp 1.00 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 233
+   bmid           hp 1.00 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 238
+   badc           hp 0.27 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 47
+   bsup      DEAD hp 0.00 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 54
+   rtop           hp 1.00 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 250
+   rjungle        hp 1.00 lvl - state 入侵       task -          inv 1 def 0 distEnemyNexus 138
+   rmid           hp 0.37 lvl - state 回城中      task -          inv 0 def 0 distEnemyNexus 74
+   radc           hp 0.99 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 260
+   rsup           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 119
+t=21.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: mid0:923,nexus9:7200
+   red  alive: mid0:2100,nexus_guard1:300,nexus9:7200
+   btop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 256
+   bjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 81
+   bmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 214
+   badc      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 19
+   bsup           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 199
+   rtop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 249
+   rjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 149
+   rmid           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 228
+   radc      DEAD hp 0.00 lvl - state 消耗       task -          inv 0 def 0 distEnemyNexus 58
+   rsup           hp 0.60 lvl - state 回城       task -          inv 0 def 0 distEnemyNexus 266
+t=23.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: mid0:923,nexus9:7200
+   red  alive: mid0:2100,nexus9:7200
+   btop      DEAD hp 0.00 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 236
+   bjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 140
+   bmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 233
+   badc           hp 0.01 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 46
+   bsup           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 232
+   rtop      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 232
+   rjungle        hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 256
+   rmid      DEAD hp 0.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 15
+   radc           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 232
+   rsup           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 219
+t=25.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: mid0:2100,nexus9:7200
+   btop      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 209
+   bjungle        hp 0.40 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 159
+   bmid      DEAD hp 0.00 lvl - state 對線       task -          inv 0 def 0 distEnemyNexus 247
+   badc           hp 1.00 lvl - state 跟兵線      task -          inv 0 def 0 distEnemyNexus 41
+   bsup           hp 0.97 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 39
+   rtop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 246
+   rjungle        hp 0.80 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 221
+   rmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 142
+   radc           hp 0.76 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 15
+   rsup      DEAD hp 0.00 lvl - state 支援       task -          inv 0 def 0 distEnemyNexus 15
+t=27.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 188
+   bjungle        hp 1.00 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 194
+   bmid           hp 0.90 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 60
+   badc           hp 0.95 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 120
+   bsup      DEAD hp 0.00 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 167
+   rtop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 213
+   rjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 222
+   rmid           hp 0.58 lvl - state 回城       task -          inv 0 def 0 distEnemyNexus 266
+   radc           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 63
+   rsup           hp 0.90 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 117
+t=29.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 0.31 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 153
+   bjungle        hp 0.98 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 152
+   bmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 136
+   badc           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 150
+   bsup           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 156
+   rtop      DEAD hp 0.00 lvl - state 追擊       task -          inv 0 def 0 distEnemyNexus 115
+   rjungle        hp 1.00 lvl - state 入侵       task -          inv 1 def 0 distEnemyNexus 112
+   rmid           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 139
+   radc           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 135
+   rsup           hp 0.58 lvl - state 回城       task -          inv 0 def 0 distEnemyNexus 266
+t=31.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 248
+   bjungle   DEAD hp 0.00 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 236
+   bmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 193
+   badc           hp 0.56 lvl - state 回城       task -          inv 0 def 0 distEnemyNexus 262
+   bsup      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 219
+   rtop      DEAD hp 0.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 15
+   rjungle        hp 0.28 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 74
+   rmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 207
+   radc           hp 0.47 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 76
+   rsup      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 4
+t=33.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 198
+   bjungle   DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 99
+   bmid           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 259
+   badc           hp 0.51 lvl - state 回城       task -          inv 0 def 0 distEnemyNexus 266
+   bsup           hp 0.97 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 132
+   rtop           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 212
+   rjungle        hp 0.98 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 144
+   rmid           hp 0.21 lvl - state 回城       task -          inv 0 def 0 distEnemyNexus 266
+   radc           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 259
+   rsup      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 130
+t=35.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 174
+   bjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 118
+   bmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 222
+   badc           hp 0.87 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 108
+   bsup           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 164
+   rtop      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 92
+   rjungle        hp 1.00 lvl - state 跟兵線      task -          inv 0 def 0 distEnemyNexus 183
+   rmid      DEAD hp 0.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 86
+   radc           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 222
+   rsup      DEAD hp 0.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 15
+t=37.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 0.31 lvl - state 撤退       task -          inv 0 def 0 distEnemyNexus 87
+   bjungle        hp 0.90 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 136
+   bmid           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 186
+   badc           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 162
+   bsup           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 156
+   rtop           hp 1.00 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 171
+   rjungle        hp 0.35 lvl - state 回城中      task -          inv 0 def 0 distEnemyNexus 189
+   rmid           hp 0.51 lvl - state 回城中      task -          inv 0 def 0 distEnemyNexus 195
+   radc           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 183
+   rsup           hp 1.00 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 186
+t=39.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 0.59 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 15
+   bjungle        hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 49
+   bmid           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 252
+   badc      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 48
+   bsup      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 104
+   rtop      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 208
+   rjungle        hp 0.99 lvl - state 入侵       task -          inv 1 def 0 distEnemyNexus 82
+   rmid      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 213
+   radc           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 249
+   rsup      DEAD hp 0.00 lvl - state 拉扯       task -          inv 0 def 0 distEnemyNexus 136
+t=41.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 235
+   bjungle        hp 1.00 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 253
+   bmid      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 49
+   badc      DEAD hp 0.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 120
+   bsup      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 123
+   rtop      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 209
+   rjungle   DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 150
+   rmid      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 138
+   radc           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 216
+   rsup      DEAD hp 0.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 153
+t=43.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 235
+   bjungle        hp 1.00 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 159
+   bmid      DEAD hp 0.00 lvl - state 跟兵線      task -          inv 0 def 0 distEnemyNexus 128
+   badc           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 237
+   bsup      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 70
+   rtop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 232
+   rjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 136
+   rmid      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 131
+   radc           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 237
+   rsup           hp 0.68 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 138
+t=45.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 50
+   bjungle        hp 1.00 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 241
+   bmid      DEAD hp 0.00 lvl - state 跟兵線      task -          inv 0 def 0 distEnemyNexus 130
+   badc      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 159
+   bsup      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 25
+   rtop           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 252
+   rjungle        hp 1.00 lvl - state 團戰!      task -          inv 0 def 0 distEnemyNexus 216
+   rmid      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 131
+   radc      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 101
+   rsup      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 173
+t=47.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 0.38 lvl - state 回城中      task -          inv 0 def 0 distEnemyNexus 174
+   bjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 136
+   bmid           hp 0.68 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 153
+   badc           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 201
+   bsup           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 193
+   rtop      DEAD hp 0.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 46
+   rjungle        hp 1.00 lvl - state 跟兵線      task -          inv 0 def 0 distEnemyNexus 159
+   rmid           hp 0.97 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 135
+   radc           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 183
+   rsup      DEAD hp 0.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 91
+t=49.0m  minions b/r 0/0  enemy minions near base b/r 0/0
+   blue alive: nexus9:7200
+   red  alive: nexus9:7200
+   btop           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 189
+   bjungle        hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 234
+   bmid           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 232
+   badc           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 238
+   bsup           hp 1.00 lvl - state 圍攻       task -          inv 0 def 0 distEnemyNexus 190
+   rtop           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 234
+   rjungle   DEAD hp 0.00 lvl - state 打野       task -          inv 0 def 0 distEnemyNexus 228
+   rmid           hp 1.00 lvl - state 避塔       task -          inv 0 def 0 distEnemyNexus 234
+   radc           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 232
+   rsup           hp 1.00 lvl - state 圍攻主堡     task -          inv 0 def 0 distEnemyNexus 235
+END over=false winner=null t=50.0m

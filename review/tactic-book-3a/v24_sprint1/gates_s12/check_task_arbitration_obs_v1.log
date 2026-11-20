@@ -1,0 +1,14 @@
+$ node tools/check_task_arbitration_obs_v1.mjs
+{"selfcheck":"arbitration_obs_is_passive","plain":"248f1373712d9c835bcdfa35bf143cbe9690998c","observed":"248f1373712d9c835bcdfa35bf143cbe9690998c","ticks":1996,"ok":true}
+✅ ① observer on/off per-tick hash equal (seed 93001 career mid)　ticks=1996
+✅ ② winner ∈ TASKS, reason ∈ REASONS, rewrites ⊂ REWRITES, suppressed ⊂ SUPPRESSED_KEYS　records=19108 bad=0
+✅ ③ exactly one record per living hero per tick　badTicks=0 unseen=0 observerErrors=0
+✅ ④ no own key added to players/engine beyond wrapped methods; detach() restores originals　wrapped=21 engineAdded=[] engineMissing=[] playerDiff=[] notRestored=[] missingMethods=[]
+✅ ⑤ lib has no field assignment on p./e./engine. except the method wrapping　wrapAssignments=2 illegal=[] defineProperty=false otherDeletes=[]
+✅ ⑥ git diff --quiet HEAD -- src
+{"rules":{"decisionV17":true,"taskCommitV19":true,"engagementFsm":true,"teamCallV20":true,"twoPhaseTick":true,"tacticOn":true,"invasionV2":true,"towerEdgeV23":true,"safeRouteV23":true},"winners":{"default":11971,"local":499,"team_call":131,"tower_fallback":167,"fight_join":41,"retreat":2479,"disengage":95,"objective_window":2887,"chase":4,"initiative_siege":834},"reasons":{"default_lane":10371,"default_farm":1592,"local_engage":499,"call_focus":111,"tower_fallback":167,"fight_join":41,"local_retreat":500,"call_lowhp":20,"hp_low":1977,"disengage":95,"objective_window":2887,"edge_retreat":2,"roam_window":8,"chase_hold":4,"initiative_siege":834},"approx":1889,"overridden":{"rewrite:idle_retask|fight_join":1,"rewrite:idle_retask|objective_window":1,"rewrite:idle_retask|team_call":1},"topSuppressed":[["objective_window>retreat",978],["local>objective_window",224],["fight_join>objective_window",166],["fight_join>retreat",148],["team_call>objective_window",93]],"topRewrites":[["rewrite:formation|default",790],["rewrite:idle_retask|default",586],["rewrite:formation|objective_window",584],["rewrite:formation|local",499],["rewrite:safe_route|initiative_siege",353]]}
+
+check_task_arbitration_obs_v1：6/6 PASS  (13.4 s)
+
+
+[14s] [exit 0]

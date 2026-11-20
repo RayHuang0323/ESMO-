@@ -3,51 +3,53 @@
 //
 //  純呈現：模板清單來自 templateGroups()（tacticTemplates.js 的資料），我的戰術書來自 store 的 tacticBook。
 //  經典模板的按鈕保留 data-tactic-card="m1"…（既有瀏覽器 gate 用這個屬性選戰術）。
+//  Owner Preview UI（2026-11-10）：模板是**單選**；分組標題是「打法分類」（不是比賽時間）。每一套模板的按鈕都在 DOM 裡（不折疊、不分頁），
+//  手機上每個分類一列、左右滑動。樣式在 tacticBook.css（tbx-）。
 // ============================================================================
 import React from "react";
-import { GC } from "../../../ui/theme.js";
+import { TEMPLATE_GROUP_NOTE } from "./tacticBookOptions.js";
 
-const riskC = (r) => (r === "高" ? GC.red : r === "中" ? GC.gold : GC.green);
+const riskClass = (r) => (r === "高" ? "is-red" : r === "中" ? "is-gold" : "is-green");
 
-export default function TemplateStrip({ groups, selectedId, onSelect, columns = "repeat(auto-fill,minmax(min(190px,100%),1fr))", fitOf = null, book = [], activeBookId = null, onLoadBook, onDeleteBook }) {
+export default function TemplateStrip({ groups, selectedId, onSelect, fitOf = null, book = [], activeBookId = null, onLoadBook, onDeleteBook }) {
   return (
-    <div data-testid="tb-template-strip" style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+    <div data-testid="tb-template-strip" className="tbx-tpl-groups">
       {book.length > 0 && (
         <section data-testid="tb-book" aria-label="我的戰術書" style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.15em", color: GC.gold, fontWeight: 900, marginBottom: 5 }}>我的戰術書（{book.length}/5）</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div className="tbx-sub" style={{ color: "var(--tbx-gold)" }}>我的戰術書（{book.length}/5）<small>點一下載入已存的計畫</small></div>
+          <div className="tbx-book">
             {book.map((e) => {
               const on = e.id === activeBookId;
               return (
-                <span key={e.id} style={{ display: "inline-flex", minWidth: 0, borderRadius: 8, overflow: "hidden", border: `1px solid ${on ? GC.gold : GC.line}`, background: on ? `${GC.gold}1f` : GC.card2 }}>
-                  <button type="button" data-testid={`tb-book-${e.id}`} aria-pressed={on} onClick={() => onLoadBook?.(e)}
-                    style={{ minWidth: 0, minHeight: 36, background: "transparent", border: 0, padding: "6px 10px", color: "#fff", cursor: "pointer", fontSize: 11.5, fontWeight: 800 }}>📘 {e.name}</button>
-                  <button type="button" data-testid={`tb-book-delete-${e.id}`} aria-label={`刪除「${e.name}」`} onClick={() => onDeleteBook?.(e)}
-                    style={{ minWidth: 36, minHeight: 36, background: "transparent", border: 0, borderLeft: `1px solid ${GC.line}`, color: GC.gray, cursor: "pointer", fontSize: 12 }}>✕</button>
+                <span key={e.id} className={`tbx-book-item${on ? " is-on" : ""}`}>
+                  <button type="button" data-testid={`tb-book-${e.id}`} aria-pressed={on} onClick={() => onLoadBook?.(e)}>📘 {e.name}</button>
+                  <button type="button" data-testid={`tb-book-delete-${e.id}`} aria-label={`刪除「${e.name}」`} onClick={() => onDeleteBook?.(e)}>✕</button>
                 </span>
               );
             })}
           </div>
         </section>
       )}
+      <div className="tbx-note" data-testid="tb-tplnote">{TEMPLATE_GROUP_NOTE}</div>
       {groups.map((g) => (
-        <section key={g.id} aria-label={g.label} style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.15em", color: GC.gray, fontWeight: 900, marginBottom: 5 }}>{g.label}</div>
-          <div style={{ display: "grid", gridTemplateColumns: columns, gap: 8 }}>
+        <section key={g.id} aria-label={`打法分類：${g.label}`} data-testid={`tb-tplgroup-${g.id}`} style={{ minWidth: 0 }}>
+          <div className="tbx-sub">{g.label}<small>{g.templates.length} 套{g.templates.some((t) => t.templateId === selectedId) ? " · 目前選用的在這一類" : ""}</small></div>
+          <div className={`tbx-tpl-row${g.templates.length <= 1 ? " is-few" : ""}`}>
             {g.templates.map((t) => {
               const isSel = selectedId === t.templateId;
               const fg = fitOf?.(t.templateId) ?? null;
               return (
-                <button key={t.templateId} type="button" data-testid={`tb-template-${t.templateId}`} aria-pressed={isSel}
+                <button key={t.templateId} type="button" className="tbx-tpl" data-testid={`tb-template-${t.templateId}`} aria-pressed={isSel}
                   {...(t.kind === "classic" ? { "data-tactic-card": t.legacyTacticId } : {})}
-                  onClick={() => onSelect?.(t.templateId)}
-                  style={{ textAlign: "left", minWidth: 0, background: isSel ? GC.card2 : GC.card, border: `1px solid ${isSel ? GC.blueL : GC.line}`, borderRadius: 10, padding: "9px 11px", color: "#fff", cursor: "pointer" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 900, minWidth: 0 }}>{t.emoji ? `${t.emoji} ` : ""}{t.name}</span>
-                    {t.risk && <span style={{ flexShrink: 0, fontSize: 8.5, fontWeight: 800, color: riskC(t.risk), border: `1px solid ${riskC(t.risk)}55`, borderRadius: 4, padding: "0 4px" }}>{t.risk}風險</span>}
-                  </div>
-                  <div style={{ fontSize: 9.5, color: GC.gray, marginTop: 3, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t.desc}</div>
-                  {fg && <div style={{ marginTop: 4, textAlign: "right", fontSize: 8.5, fontWeight: 800, color: fg.c }}>適性 {fg.g}</div>}
+                  onClick={() => onSelect?.(t.templateId)}>
+                  <span className="tbx-tpl-top">
+                    <span className="tbx-tpl-name">{t.emoji ? `${t.emoji} ` : ""}{t.name}</span>
+                  </span>
+                  <span className="tbx-tpl-desc">{t.desc}</span>
+                  <span className="tbx-tpl-foot">
+                    {t.risk && <span className={`tbx-pill ${riskClass(t.risk)}`} style={{ fontSize: 10, padding: "0 7px" }}>{t.risk}風險</span>}
+                    {fg && <span className="tbx-chip" style={{ color: fg.c, borderColor: `${fg.c}66` }}>適性 {fg.g}</span>}
+                  </span>
                 </button>
               );
             })}

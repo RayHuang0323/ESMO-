@@ -1,0 +1,30 @@
+{
+ "url": "http://127.0.0.1:5643/ESMO-/",
+ "steps": {
+  "toBattle": true,
+  "banner": "OWNER PREVIEW · v21＋v22＋v23（路線安全＋塔邊決策＋塔邊等待小修 v3）候選 未核准發布 · 本機隔離",
+  "speed4": "true",
+  "hud": "▾\n🦭\n德國海豹\n0\n4:01\n0\n黑曜守望\n🔥\n$0.7萬\n擊殺 · 比賽時間 · 擊殺\n$0.7萬",
+  "quickFinish": "true",
+  "endScreen": true,
+  "endText": "VICTORY 德國海豹 獲勝 · 21:29 · 16:24 · 🐉3 👑0",
+  "continueVisible": true,
+  "continue": "true",
+  "leftBattle": true,
+  "afterContinue": "ESMO MODERN ESPORTS MANAGEMENT WEEK 2 TEAM COMMAND CENTER 收件匣 2 🦭 1 GSEAL 德國海豹 這是你的戰隊總部。掌握本週節奏，先處理最重要的決策，再把隊伍送上舞台。 第 2 週 12.8萬 支持者 8 天營運 OPERATING FUNDS $153.0萬 可用資金 · 由財務模組提供 CLUB LEVEL Lv. 1 CLUB X"
+ },
+ "stored": [
+  {
+   "k": "esmo.profile.v1",
+   "size": 165696,
+   "seen": {
+    "rulesetId=career.v23": 1,
+    "simVersion=moba-sim.v23": 1,
+    "jungleCamp=v2": 1,
+    "invasion=v2": 1,
+    "safeRoute=v3": 1
+   }
+  }
+ ],
+ "pageErrors": []
+}

@@ -1,0 +1,296 @@
+{
+ "tool": "pin_v20_v23_stream",
+ "gitHead": "00382eda",
+ "simVersion": "moba-sim.v23",
+ "currentFingerprint": "69237cce78edf2be",
+ "rows": [
+  {
+   "key": "balanceTool.v20|v2.standard_macro|v2.standard_macro|11|-",
+   "ticks": 2508,
+   "winner": "blue",
+   "hash": "8a13206961f7fcbe2cba"
+  },
+  {
+   "key": "balanceTool.v20|v2.jungle_invasion|v2.jungle_invasion|11|-",
+   "ticks": 2935,
+   "winner": "blue",
+   "hash": "9fc36012decf35860719"
+  },
+  {
+   "key": "balanceTool.v20|v2.jungle_invasion|classic.m7|13|-",
+   "ticks": 1800,
+   "winner": "red",
+   "hash": "7de57e8c7193966b2222"
+  },
+  {
+   "key": "balanceTool.v20|classic.m7|v2.jungle_invasion|17|-",
+   "ticks": 1728,
+   "winner": "red",
+   "hash": "60eca1deb2b9a62e8a9d"
+  },
+  {
+   "key": "balanceTool.v20|classic.m1|classic.m3|17|-",
+   "ticks": 2566,
+   "winner": "red",
+   "hash": "c020ed06f9d4911c9489"
+  },
+  {
+   "key": "balanceTool.v20|classic.m5|v2.standard_macro|19|-",
+   "ticks": 2534,
+   "winner": "blue",
+   "hash": "34aec6f80f0918b8783a"
+  },
+  {
+   "key": "balanceTool.v21|v2.standard_macro|v2.standard_macro|11|-",
+   "ticks": 2508,
+   "winner": "blue",
+   "hash": "8a13206961f7fcbe2cba"
+  },
+  {
+   "key": "balanceTool.v21|v2.jungle_invasion|v2.jungle_invasion|11|-",
+   "ticks": 2935,
+   "winner": "blue",
+   "hash": "9fc36012decf35860719"
+  },
+  {
+   "key": "balanceTool.v21|v2.jungle_invasion|classic.m7|13|-",
+   "ticks": 3064,
+   "winner": "blue",
+   "hash": "46e0d16c1443d6374d84"
+  },
+  {
+   "key": "balanceTool.v21|classic.m7|v2.jungle_invasion|17|-",
+   "ticks": 1785,
+   "winner": "red",
+   "hash": "7a873c8ada18e00b3e83"
+  },
+  {
+   "key": "balanceTool.v21|classic.m1|classic.m3|17|-",
+   "ticks": 1763,
+   "winner": "red",
+   "hash": "c04b111bc5f267e6e2d2"
+  },
+  {
+   "key": "balanceTool.v21|classic.m5|v2.standard_macro|19|-",
+   "ticks": 2534,
+   "winner": "blue",
+   "hash": "34aec6f80f0918b8783a"
+  },
+  {
+   "key": "balanceTool.v22|v2.standard_macro|v2.standard_macro|11|-",
+   "ticks": 2508,
+   "winner": "blue",
+   "hash": "8a13206961f7fcbe2cba"
+  },
+  {
+   "key": "balanceTool.v22|v2.jungle_invasion|v2.jungle_invasion|11|-",
+   "ticks": 2702,
+   "winner": "blue",
+   "hash": "54bf91ffa9a570bf04ec"
+  },
+  {
+   "key": "balanceTool.v22|v2.jungle_invasion|classic.m7|13|-",
+   "ticks": 3119,
+   "winner": "blue",
+   "hash": "54e57743d445e4319d1e"
+  },
+  {
+   "key": "balanceTool.v22|classic.m7|v2.jungle_invasion|17|-",
+   "ticks": 2031,
+   "winner": "red",
+   "hash": "bd12fb5d664ebf600aac"
+  },
+  {
+   "key": "balanceTool.v22|classic.m1|classic.m3|17|-",
+   "ticks": 1763,
+   "winner": "red",
+   "hash": "c04b111bc5f267e6e2d2"
+  },
+  {
+   "key": "balanceTool.v22|classic.m5|v2.standard_macro|19|-",
+   "ticks": 2534,
+   "winner": "blue",
+   "hash": "34aec6f80f0918b8783a"
+  },
+  {
+   "key": "balanceTool.v23|v2.standard_macro|v2.standard_macro|11|-",
+   "ticks": 2052,
+   "winner": "blue",
+   "hash": "a5d764856d4735e3d41a"
+  },
+  {
+   "key": "balanceTool.v23|v2.jungle_invasion|v2.jungle_invasion|11|-",
+   "ticks": 3002,
+   "winner": "blue",
+   "hash": "06e187dc52f6c16b91ae"
+  },
+  {
+   "key": "balanceTool.v23|v2.jungle_invasion|classic.m7|13|-",
+   "ticks": 1805,
+   "winner": "red",
+   "hash": "19600e9e159e70d441bc"
+  },
+  {
+   "key": "balanceTool.v23|classic.m7|v2.jungle_invasion|17|-",
+   "ticks": 1909,
+   "winner": "blue",
+   "hash": "15f2eb249372c0e9f2bb"
+  },
+  {
+   "key": "balanceTool.v23|classic.m1|classic.m3|17|-",
+   "ticks": 1838,
+   "winner": "red",
+   "hash": "e489b165f69838355530"
+  },
+  {
+   "key": "balanceTool.v23|classic.m5|v2.standard_macro|19|-",
+   "ticks": 2417,
+   "winner": "red",
+   "hash": "b8453a64578c09dfecd9"
+  },
+  {
+   "key": "career.v20|v2.standard_macro|-|11|-",
+   "ticks": 1971,
+   "winner": "red",
+   "hash": "81d9e298396d65606af8"
+  },
+  {
+   "key": "career.v20|v2.jungle_invasion|-|13|-",
+   "ticks": 3184,
+   "winner": "red",
+   "hash": "d06b418c580fa6b1aab9"
+  },
+  {
+   "key": "career.v20|classic.m7|-|17|-",
+   "ticks": 1661,
+   "winner": "blue",
+   "hash": "3e7a7dc22775d9e90029"
+  },
+  {
+   "key": "career.v20|v2.jungle_invasion|-|93001|mid",
+   "ticks": 1806,
+   "winner": "blue",
+   "hash": "c053497d95e4af44c656"
+  },
+  {
+   "key": "career.v20|v2.jungle_invasion|-|93003|low",
+   "ticks": 1992,
+   "winner": "red",
+   "hash": "f84e80b748c18ffe7749"
+  },
+  {
+   "key": "career.v20|v2.jungle_invasion|-|93021|high",
+   "ticks": 2699,
+   "winner": "red",
+   "hash": "8fbcdc3b675b6c909003"
+  },
+  {
+   "key": "career.v21|v2.standard_macro|-|11|-",
+   "ticks": 2587,
+   "winner": "red",
+   "hash": "fcf86effa322e47471a7"
+  },
+  {
+   "key": "career.v21|v2.jungle_invasion|-|13|-",
+   "ticks": 1870,
+   "winner": "blue",
+   "hash": "72d0f5c5cf271beb0fee"
+  },
+  {
+   "key": "career.v21|classic.m7|-|17|-",
+   "ticks": 2163,
+   "winner": "blue",
+   "hash": "1de75ee0deb5a0bb5f93"
+  },
+  {
+   "key": "career.v21|v2.jungle_invasion|-|93001|mid",
+   "ticks": 2323,
+   "winner": "blue",
+   "hash": "fd89ca6bd050b0025099"
+  },
+  {
+   "key": "career.v21|v2.jungle_invasion|-|93003|low",
+   "ticks": 2457,
+   "winner": "red",
+   "hash": "cf02fb57d774353dc934"
+  },
+  {
+   "key": "career.v21|v2.jungle_invasion|-|93021|high",
+   "ticks": 1587,
+   "winner": "red",
+   "hash": "b5492c3914166dc2b432"
+  },
+  {
+   "key": "career.v22|v2.standard_macro|-|11|-",
+   "ticks": 2562,
+   "winner": "red",
+   "hash": "44f651c5f71bb8b657b0"
+  },
+  {
+   "key": "career.v22|v2.jungle_invasion|-|13|-",
+   "ticks": 1817,
+   "winner": "blue",
+   "hash": "323b3dd763eec63fe608"
+  },
+  {
+   "key": "career.v22|classic.m7|-|17|-",
+   "ticks": 2007,
+   "winner": "red",
+   "hash": "3204056f6a5a028eeb0b"
+  },
+  {
+   "key": "career.v22|v2.jungle_invasion|-|93001|mid",
+   "ticks": 2630,
+   "winner": "blue",
+   "hash": "cd3992bf5b539720d711"
+  },
+  {
+   "key": "career.v22|v2.jungle_invasion|-|93003|low",
+   "ticks": 2525,
+   "winner": "blue",
+   "hash": "439b0f83607ef7a5ac6a"
+  },
+  {
+   "key": "career.v22|v2.jungle_invasion|-|93021|high",
+   "ticks": 3299,
+   "winner": "blue",
+   "hash": "5c6f05bc4287c27dcb72"
+  },
+  {
+   "key": "career.v23|v2.standard_macro|-|11|-",
+   "ticks": 2460,
+   "winner": "red",
+   "hash": "b866020c7014eac56df5"
+  },
+  {
+   "key": "career.v23|v2.jungle_invasion|-|13|-",
+   "ticks": 2284,
+   "winner": "blue",
+   "hash": "45c48c24f4d4d9772b82"
+  },
+  {
+   "key": "career.v23|classic.m7|-|17|-",
+   "ticks": 2026,
+   "winner": "red",
+   "hash": "e29815656b68f4336d9b"
+  },
+  {
+   "key": "career.v23|v2.jungle_invasion|-|93001|mid",
+   "ticks": 1996,
+   "winner": "blue",
+   "hash": "a89d901036081f4bcbb4"
+  },
+  {
+   "key": "career.v23|v2.jungle_invasion|-|93003|low",
+   "ticks": 1806,
+   "winner": "red",
+   "hash": "4d24a003c26b76eb0c30"
+  },
+  {
+   "key": "career.v23|v2.jungle_invasion|-|93021|high",
+   "ticks": 2326,
+   "winner": "red",
+   "hash": "2e0771ffec74c501e36f"
+  }
+ ]
+}

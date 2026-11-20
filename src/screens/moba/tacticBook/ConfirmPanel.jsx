@@ -8,7 +8,7 @@ import React from "react";
 import { GC } from "../../../ui/theme.js";
 import { dimensionLabel, choiceLabel, PROFILE_AXIS_LABELS } from "./tacticBookOptions.js";
 
-export default function ConfirmPanel({ templateName, variantName = null, dimensions = [], dropped = [], profile = null, intel, onEdit, onGo }) {
+export default function ConfirmPanel({ templateName, variantName = null, dimensions = [], dropped = [], profile = null, intel, onEdit, onGo, deployment = [], dimensionMeta = {} }) {
   const chosen = dimensions.filter((d) => d.explicit || d.fromWinCondition);
   return (
     <section data-testid="tb-confirm" aria-label="確認戰術" style={{ background: GC.card, border: `1px solid ${GC.green}44`, borderRadius: 12, padding: "12px 14px", minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -21,6 +21,26 @@ export default function ConfirmPanel({ templateName, variantName = null, dimensi
           ? chosen.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.value)}${d.fromWinCondition ? "（勝利條件）" : ""}`).join("、")
           : "沒有額外調整（照模板）"}
       </div>
+      {/* Owner Preview UI：三個時期實際會用的設定（照模板／你覆寫的／勝利條件填的）。純呈現。 */}
+      {deployment.length > 0 && (
+        <div className="tbx-deploy-table" data-testid="tb-confirm-deployment">
+          {deployment.map((p) => (
+            <div key={p.id} className="tbx-deploy-col" data-phase={p.id}>
+              <h4>{p.label}</h4>
+              {p.cells.map((cell) => {
+                const st = cell.dim ? dimensionMeta[cell.dimension]?.status ?? "default" : "fixed";
+                const value = cell.dim ? choiceLabel(cell.dimension, cell.dim.value) : cell.fixed.valueLabel;
+                return (
+                  <div key={cell.dimension} className="tbx-deploy-line" data-status={st}>
+                    <span>{cell.label}</span>
+                    <b className={st === "override" ? "is-override" : st === "win" ? "is-win" : undefined}>{value}{st === "override" ? " · 覆寫" : st === "win" ? " · 勝利條件" : ""}</b>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
       {dropped.length > 0 && (
         <div data-testid="tb-confirm-dropped" role="status" style={{ fontSize: 11, color: "#fde68a", lineHeight: 1.6 }}>
           本場不使用：{dropped.map((d) => `${dimensionLabel(d.dimension)}＝${choiceLabel(d.dimension, d.choice)}`).join("、")}（目前不提供）

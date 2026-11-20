@@ -1,0 +1,7719 @@
+{
+ "tool": "trace_retreat_tower_deaths",
+ "seeds": [
+  11,
+  13,
+  15,
+  17
+ ],
+ "horizon": 75,
+ "template": "v2.jungle_invasion",
+ "summary": {
+  "balanceTool.v22": {
+   "matches": 4,
+   "deathsAll": 1,
+   "deathsByTower": 1,
+   "junglerDeaths": 1,
+   "junglerTowerDeaths": 1,
+   "junglerRetreatTowerDeaths": 1,
+   "junglerAfterInvadeTowerDeaths": 1,
+   "retreatTowerDeathsAllRoles": 1,
+   "navPathCalls": 247,
+   "examples": [
+    {
+     "seed": 17,
+     "t": 70,
+     "victim": "r2",
+     "tower": null,
+     "byTower": true,
+     "invEnd": {
+      "id": "r2",
+      "side": "red",
+      "t": 51.5,
+      "reason": "hp"
+     }
+    }
+   ]
+  }
+ },
+ "results": [
+  {
+   "rulesetId": "balanceTool.v22",
+   "seed": 11,
+   "deaths": [],
+   "invEnds": [
+    {
+     "id": "b2",
+     "side": "blue",
+     "t": 38,
+     "reason": "stolen"
+    },
+    {
+     "id": "r2",
+     "side": "red",
+     "t": 39.5,
+     "reason": "stolen"
+    }
+   ],
+   "navStats": {
+    "requested": 3637.3217391305,
+    "requestedIdeal": 3546.8852274845012,
+    "moved": 3329.531335016002,
+    "blockedTicks": 11,
+    "pathCalls": 64,
+    "pathNull": 0,
+    "ticks": 1294
+   },
+   "dump": []
+  },
+  {
+   "rulesetId": "balanceTool.v22",
+   "seed": 13,
+   "deaths": [],
+   "invEnds": [
+    {
+     "id": "b2",
+     "side": "blue",
+     "t": 38,
+     "reason": "stolen"
+    },
+    {
+     "id": "r2",
+     "side": "red",
+     "t": 39.5,
+     "reason": "stolen"
+    }
+   ],
+   "navStats": {
+    "requested": 3654.365217391371,
+    "requestedIdeal": 3537.5627773772194,
+    "moved": 3290.331632552836,
+    "blockedTicks": 25,
+    "pathCalls": 65,
+    "pathNull": 0,
+    "ticks": 1300
+   },
+   "dump": []
+  },
+  {
+   "rulesetId": "balanceTool.v22",
+   "seed": 15,
+   "deaths": [],
+   "invEnds": [
+    {
+     "id": "r2",
+     "side": "red",
+     "t": 53.5,
+     "reason": "stolen"
+    }
+   ],
+   "navStats": {
+    "requested": 3416.3834782609256,
+    "requestedIdeal": 3255.282130749442,
+    "moved": 2994.4502890787794,
+    "blockedTicks": 18,
+    "pathCalls": 56,
+    "pathNull": 0,
+    "ticks": 1215
+   },
+   "dump": []
+  },
+  {
+   "rulesetId": "balanceTool.v22",
+   "seed": 17,
+   "deaths": [
+    {
+     "t": 70,
+     "victim": "r2",
+     "side": "red",
+     "role": "jungle",
+     "killer": "b3",
+     "byTower": true,
+     "pos": {
+      "x": 162.1,
+      "y": 180.5
+     },
+     "trail": [
+      {
+       "t": 62,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "SETUP",
+       "intent": "避塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.45,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.1,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 62.5,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "SETUP",
+       "intent": "避塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.45,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.1,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 63,
+       "x": 155.1,
+       "y": 188.5,
+       "tgt": {
+        "x": 167.35133665532243,
+        "y": 126.19960933416962
+       },
+       "st": "打野",
+       "fsm": "FARM",
+       "intent": "打野",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.45,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 12.4,
+        "range": 12.7,
+        "inRange": true,
+        "onMe": false
+       }
+      },
+      {
+       "t": 63.5,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": {
+        "x": 155.41020968785008,
+        "y": 191.31447070727762
+       },
+       "st": "避塔",
+       "fsm": "SETUP",
+       "intent": "避塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.41,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 64,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.41,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 64.5,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.41,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 65,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.42,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 65.5,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.38,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 66,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.34,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 66.5,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.31,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 67,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.27,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 67.5,
+       "x": 154.5,
+       "y": 191.5,
+       "tgt": null,
+       "st": "避塔",
+       "fsm": "DISENGAGE",
+       "intent": "血量不足以越塔",
+       "ret": false,
+       "deep": false,
+       "rr": null,
+       "hp": 0.23,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 15.2,
+        "range": 13.1,
+        "inRange": false,
+        "onMe": false
+       }
+      },
+      {
+       "t": 68,
+       "x": 155.3,
+       "y": 188.5,
+       "tgt": {
+        "x": 261,
+        "y": 65
+       },
+       "st": "撤退",
+       "fsm": "RETREAT",
+       "intent": "撤退",
+       "ret": true,
+       "deep": false,
+       "rr": "人數劣勢",
+       "hp": 0.21,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 12.4,
+        "range": 12.7,
+        "inRange": true,
+        "onMe": false
+       }
+      },
+      {
+       "t": 68.5,
+       "x": 157.6,
+       "y": 185.9,
+       "tgt": {
+        "x": 261,
+        "y": 65
+       },
+       "st": "撤退",
+       "fsm": "RETREAT",
+       "intent": "撤退",
+       "ret": true,
+       "deep": false,
+       "rr": "撤離會吃太多塔傷",
+       "hp": 0.16,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 10.4,
+        "range": 12.7,
+        "inRange": true,
+        "onMe": true
+       }
+      },
+      {
+       "t": 69,
+       "x": 159.8,
+       "y": 183.2,
+       "tgt": {
+        "x": 261,
+        "y": 65
+       },
+       "st": "撤退",
+       "fsm": "RETREAT",
+       "intent": "撤退",
+       "ret": true,
+       "deep": false,
+       "rr": "撤離會吃太多塔傷",
+       "hp": 0.1,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 9.2,
+        "range": 12.7,
+        "inRange": true,
+        "onMe": true
+       }
+      },
+      {
+       "t": 69.5,
+       "x": 162.1,
+       "y": 180.5,
+       "tgt": {
+        "x": 261,
+        "y": 65
+       },
+       "st": "撤退",
+       "fsm": "RETREAT",
+       "intent": "撤退",
+       "ret": true,
+       "deep": false,
+       "rr": "撤離會吃太多塔傷",
+       "hp": 0.04,
+       "dead": false,
+       "inv": "end:hp",
+       "tw": {
+        "d": 9.4,
+        "range": 12.7,
+        "inRange": true,
+        "onMe": true
+       }
+      }
+     ],
+     "retreatingBefore": true,
+     "inEnemyTowerRange": true,
+     "towerId": null,
+     "invadedBefore": true,
+     "invEnd": {
+      "id": "r2",
+      "side": "red",
+      "t": 51.5,
+      "reason": "hp"
+     }
+    }
+   ],
+   "invEnds": [
+    {
+     "id": "r2",
+     "side": "red",
+     "t": 51.5,
+     "reason": "hp"
+    }
+   ],
+   "navStats": {
+    "requested": 3368.9915217391817,
+    "requestedIdeal": 3250.7771778423908,
+    "moved": 2972.1803792585697,
+    "blockedTicks": 29,
+    "pathCalls": 62,
+    "pathNull": 0,
+    "ticks": 1198
+   },
+   "dump": [
+    {
+     "id": "b2",
+     "t": 0.5,
+     "x": 70.7,
+     "y": 262.2,
+     "tgt": {
+      "x": 142.0483883476483,
+      "y": 187.9516116523517
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 151.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 0.5,
+     "x": 258.6,
+     "y": 65.1,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 152.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 1,
+     "x": 71.2,
+     "y": 261.8,
+     "tgt": {
+      "x": 142.13677669529662,
+      "y": 187.86322330470338
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 150.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 1,
+     "x": 258,
+     "y": 65.3,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 152.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 1.5,
+     "x": 73.9,
+     "y": 261,
+     "tgt": {
+      "x": 142.22516504294495,
+      "y": 187.77483495705505
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 148.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 1.5,
+     "x": 257,
+     "y": 67.8,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 149.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 2,
+     "x": 76.7,
+     "y": 261,
+     "tgt": {
+      "x": 142.31355339059326,
+      "y": 187.68644660940674
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 146.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 2,
+     "x": 257,
+     "y": 70.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 147.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 2.5,
+     "x": 79.3,
+     "y": 260.7,
+     "tgt": {
+      "x": 142.4019417382416,
+      "y": 187.5980582617584
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 144.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 2.5,
+     "x": 257,
+     "y": 73.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 145.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 3,
+     "x": 81.3,
+     "y": 258.7,
+     "tgt": {
+      "x": 142.4903300858899,
+      "y": 187.5096699141101
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 141.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 3,
+     "x": 256.2,
+     "y": 75.8,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 143.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 3.5,
+     "x": 82.7,
+     "y": 256.3,
+     "tgt": {
+      "x": 142.57871843353823,
+      "y": 187.42128156646177
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 138.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 3.5,
+     "x": 254.2,
+     "y": 77.8,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 140.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 4,
+     "x": 84,
+     "y": 254.1,
+     "tgt": {
+      "x": 142.66710678118653,
+      "y": 187.33289321881347
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 136.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 4,
+     "x": 252.2,
+     "y": 79.8,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 137.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 4.5,
+     "x": 86,
+     "y": 252,
+     "tgt": {
+      "x": 142.75549512883487,
+      "y": 187.24450487116513
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 133.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 4.5,
+     "x": 249.6,
+     "y": 80.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 135.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 5,
+     "x": 87.9,
+     "y": 250.1,
+     "tgt": {
+      "x": 142.84388347648317,
+      "y": 187.15611652351683
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 130.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 5,
+     "x": 247.6,
+     "y": 82.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 132.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 5.5,
+     "x": 89.9,
+     "y": 248.1,
+     "tgt": {
+      "x": 142.9322718241315,
+      "y": 187.0677281758685
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 127.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 5.5,
+     "x": 245.6,
+     "y": 84.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 129.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 6,
+     "x": 91.9,
+     "y": 246.1,
+     "tgt": {
+      "x": 143.0206601717798,
+      "y": 186.9793398282202
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 125,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 6,
+     "x": 243.6,
+     "y": 86.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 127.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 6.5,
+     "x": 93.2,
+     "y": 243.8,
+     "tgt": {
+      "x": 143.10904851942814,
+      "y": 186.89095148057186
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 122.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 6.5,
+     "x": 243,
+     "y": 89,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 124.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 7,
+     "x": 95.2,
+     "y": 241.8,
+     "tgt": {
+      "x": 143.19743686707645,
+      "y": 186.80256313292355
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 119.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 7,
+     "x": 242.4,
+     "y": 91.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 122.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 7.5,
+     "x": 97.2,
+     "y": 239.8,
+     "tgt": {
+      "x": 143.28582521472478,
+      "y": 186.71417478527522
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 116.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 7.5,
+     "x": 240.4,
+     "y": 93.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 119.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 8,
+     "x": 99.1,
+     "y": 237.9,
+     "tgt": {
+      "x": 143.3742135623731,
+      "y": 186.6257864376269
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 114,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 8,
+     "x": 238.5,
+     "y": 95.5,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 116.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 8.5,
+     "x": 101.1,
+     "y": 235.9,
+     "tgt": {
+      "x": 143.46260191002142,
+      "y": 186.53739808997858
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 111.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 8.5,
+     "x": 237.1,
+     "y": 97.9,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 114.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 9,
+     "x": 103.1,
+     "y": 233.9,
+     "tgt": {
+      "x": 143.55099025766972,
+      "y": 186.44900974233028
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 108.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 9,
+     "x": 235.8,
+     "y": 100.2,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 111.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 9.5,
+     "x": 105.1,
+     "y": 231.9,
+     "tgt": {
+      "x": 143.63937860531806,
+      "y": 186.36062139468194
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 105.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 9.5,
+     "x": 234.4,
+     "y": 102.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 109.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 10,
+     "x": 107.1,
+     "y": 229.9,
+     "tgt": {
+      "x": 143.72776695296636,
+      "y": 186.27223304703364
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 102.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 10,
+     "x": 233.1,
+     "y": 104.9,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 106.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 10.5,
+     "x": 109,
+     "y": 228,
+     "tgt": {
+      "x": 143.8161553006147,
+      "y": 186.1838446993853
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 100.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 10.5,
+     "x": 233,
+     "y": 107.7,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 104.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 11,
+     "x": 111,
+     "y": 226,
+     "tgt": {
+      "x": 143.904543648263,
+      "y": 186.095456351737
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 97.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 11,
+     "x": 233,
+     "y": 110.5,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 102.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 11.5,
+     "x": 113,
+     "y": 224,
+     "tgt": {
+      "x": 143.99293199591133,
+      "y": 186.00706800408867
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 94.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 11.5,
+     "x": 231.3,
+     "y": 112.7,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 100.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 12,
+     "x": 115,
+     "y": 222,
+     "tgt": {
+      "x": 144.08132034355964,
+      "y": 185.91867965644036
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 91.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 12,
+     "x": 229.3,
+     "y": 114.7,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 97.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 12.5,
+     "x": 117,
+     "y": 220,
+     "tgt": {
+      "x": 144.16970869120797,
+      "y": 185.83029130879203
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 88.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 12.5,
+     "x": 227.3,
+     "y": 116.7,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 94.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 13,
+     "x": 118.9,
+     "y": 218.1,
+     "tgt": {
+      "x": 144.25809703885628,
+      "y": 185.74190296114372
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 86.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 13,
+     "x": 225.3,
+     "y": 118.7,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 91.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 13.5,
+     "x": 120.9,
+     "y": 216.1,
+     "tgt": {
+      "x": 144.34648538650458,
+      "y": 185.65351461349542
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 83.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 13.5,
+     "x": 223.4,
+     "y": 120.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 89,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 14,
+     "x": 122.9,
+     "y": 214.1,
+     "tgt": {
+      "x": 144.43487373415292,
+      "y": 185.56512626584708
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 80.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 14,
+     "x": 221.4,
+     "y": 122.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 86.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 14.5,
+     "x": 124.9,
+     "y": 212.1,
+     "tgt": {
+      "x": 144.52326208180122,
+      "y": 185.47673791819878
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 77.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 14.5,
+     "x": 219.4,
+     "y": 124.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 83.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 15,
+     "x": 126.9,
+     "y": 210.1,
+     "tgt": {
+      "x": 144.61165042944955,
+      "y": 185.38834957055045
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 74.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 15,
+     "x": 217.4,
+     "y": 126.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 80.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 15.5,
+     "x": 128.8,
+     "y": 208.2,
+     "tgt": {
+      "x": 144.70003877709786,
+      "y": 185.29996122290214
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 72.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 15.5,
+     "x": 215.4,
+     "y": 128.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 77.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 16,
+     "x": 130.8,
+     "y": 206.2,
+     "tgt": {
+      "x": 144.7884271247462,
+      "y": 185.2115728752538
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 69.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 16,
+     "x": 213.5,
+     "y": 130.5,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 75.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 16.5,
+     "x": 132.8,
+     "y": 204.2,
+     "tgt": {
+      "x": 144.8768154723945,
+      "y": 185.1231845276055
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 66.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 16.5,
+     "x": 211.5,
+     "y": 132.5,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 72.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 17,
+     "x": 134.8,
+     "y": 202.2,
+     "tgt": {
+      "x": 144.96520382004283,
+      "y": 185.03479617995717
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 17,
+     "x": 209.5,
+     "y": 134.5,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 69.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 17.5,
+     "x": 136.8,
+     "y": 200.2,
+     "tgt": {
+      "x": 145.05359216769114,
+      "y": 184.94640783230886
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 60.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 17.5,
+     "x": 207.5,
+     "y": 136.5,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 66.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 18,
+     "x": 138.7,
+     "y": 198.3,
+     "tgt": {
+      "x": 145.14198051533947,
+      "y": 184.85801948466053
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 58.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 18,
+     "x": 205.5,
+     "y": 138.5,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 64,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 18.5,
+     "x": 140.7,
+     "y": 196.3,
+     "tgt": {
+      "x": 145.23036886298777,
+      "y": 184.76963113701223
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 55.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 18.5,
+     "x": 203.6,
+     "y": 140.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 61.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 19,
+     "x": 142.7,
+     "y": 194.3,
+     "tgt": {
+      "x": 145.3187572106361,
+      "y": 184.6812427893639
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 52.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 19,
+     "x": 201.6,
+     "y": 142.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 58.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 19.5,
+     "x": 144,
+     "y": 192.1,
+     "tgt": {
+      "x": 145.4071455582844,
+      "y": 184.5928544417156
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 50,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 19.5,
+     "x": 199.6,
+     "y": 144.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 55.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 20,
+     "x": 145,
+     "y": 189.7,
+     "tgt": {
+      "x": 145.49553390593275,
+      "y": 184.50446609406725
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 47.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 20,
+     "x": 197.6,
+     "y": 146.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 53,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 20.5,
+     "x": 143.4,
+     "y": 187.4,
+     "tgt": {
+      "x": 145.58392225358105,
+      "y": 184.41607774641895
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 47,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 20.5,
+     "x": 195.6,
+     "y": 148.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 50.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 21,
+     "x": 144,
+     "y": 185.6,
+     "tgt": {
+      "x": 145.67231060122938,
+      "y": 184.32768939877062
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 45.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 21,
+     "x": 193.7,
+     "y": 150.3,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 47.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 21.5,
+     "x": 145.8,
+     "y": 184.2,
+     "tgt": {
+      "x": 145.7606989488777,
+      "y": 184.2393010511223
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 43,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 21.5,
+     "x": 191.7,
+     "y": 152.3,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 44.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 22,
+     "x": 147.7,
+     "y": 182.3,
+     "tgt": {
+      "x": 176.2,
+      "y": 153.8
+     },
+     "st": "推進",
+     "fsm": "LANE",
+     "intent": "壓向前線建築",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 40.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 22,
+     "x": 189.7,
+     "y": 154.3,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 42,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 22.5,
+     "x": 145.9,
+     "y": 184.1,
+     "tgt": {
+      "x": 145.93747564417433,
+      "y": 184.06252435582567
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 42.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 22.5,
+     "x": 187.7,
+     "y": 156.3,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 39.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 23,
+     "x": 147.9,
+     "y": 182.1,
+     "tgt": {
+      "x": 176.2,
+      "y": 153.8
+     },
+     "st": "推進",
+     "fsm": "LANE",
+     "intent": "壓向前線建築",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 40,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 23,
+     "x": 185.7,
+     "y": 158.3,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 36.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 23.5,
+     "x": 146.1,
+     "y": 183.9,
+     "tgt": {
+      "x": 146.11425233947097,
+      "y": 183.88574766052903
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 42.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 23.5,
+     "x": 183.8,
+     "y": 160.2,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 33.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 24,
+     "x": 148.1,
+     "y": 181.9,
+     "tgt": {
+      "x": 176.2,
+      "y": 153.8
+     },
+     "st": "推進",
+     "fsm": "LANE",
+     "intent": "壓向前線建築",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 39.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 24,
+     "x": 181.8,
+     "y": 162.2,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 31.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 24.5,
+     "x": 146.3,
+     "y": 183.7,
+     "tgt": {
+      "x": 146.2910290347676,
+      "y": 183.7089709652324
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 42.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 24.5,
+     "x": 179.8,
+     "y": 164.2,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 28.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 25,
+     "x": 144.3,
+     "y": 185.7,
+     "tgt": {
+      "x": 97.8,
+      "y": 232.2
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 45.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 25,
+     "x": 179,
+     "y": 166.8,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 26.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 25.5,
+     "x": 142.9,
+     "y": 187.4,
+     "tgt": {
+      "x": 97.8,
+      "y": 232.2
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 47.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 25.5,
+     "x": 179,
+     "y": 169.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 26,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 26,
+     "x": 143,
+     "y": 187,
+     "tgt": {
+      "x": 97.8,
+      "y": 232.2
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 47,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 26,
+     "x": 179,
+     "y": 172.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 26.5,
+     "x": 145,
+     "y": 189,
+     "tgt": {
+      "x": 97.8,
+      "y": 232.2
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 47,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 26.5,
+     "x": 179,
+     "y": 175.2,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 27,
+     "x": 145,
+     "y": 191.8,
+     "tgt": {
+      "x": 97.8,
+      "y": 232.2
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 27,
+     "x": 179,
+     "y": 178,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 27.5,
+     "x": 143.1,
+     "y": 193.9,
+     "tgt": {
+      "x": 97.8,
+      "y": 232.2
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 51.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 27.5,
+     "x": 179,
+     "y": 180.8,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 28,
+     "x": 141.2,
+     "y": 195.8,
+     "tgt": {
+      "x": 98.78607214462436,
+      "y": 231.21392785537563
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 54.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 28,
+     "x": 179,
+     "y": 183.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 26.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 28.5,
+     "x": 139.2,
+     "y": 197.8,
+     "tgt": {
+      "x": 98.78607214462436,
+      "y": 231.21392785537563
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 57.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 28.5,
+     "x": 179,
+     "y": 186.4,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 27.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 29,
+     "x": 137.2,
+     "y": 199.8,
+     "tgt": {
+      "x": 98.78607214462436,
+      "y": 231.21392785537563
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 60.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 29,
+     "x": 177.3,
+     "y": 188.7,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 26.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 29.5,
+     "x": 135.2,
+     "y": 201.8,
+     "tgt": {
+      "x": 100.69526045382804,
+      "y": 229.30473954617196
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 29.5,
+     "x": 175.4,
+     "y": 190.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 30,
+     "x": 133.2,
+     "y": 203.8,
+     "tgt": {
+      "x": 100.69526045382804,
+      "y": 229.30473954617196
+     },
+     "st": "游走",
+     "fsm": "LANE",
+     "intent": "游走",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 65.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 30,
+     "x": 173.4,
+     "y": 192.6,
+     "tgt": {
+      "x": 169,
+      "y": 197
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 30.5,
+     "x": 135.5,
+     "y": 204.1,
+     "tgt": {
+      "x": 163.3878386582383,
+      "y": 204.624259164881
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 64.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 30.5,
+     "x": 171.6,
+     "y": 194.8,
+     "tgt": {
+      "x": 163,
+      "y": 205
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 31,
+     "x": 135.3,
+     "y": 204,
+     "tgt": {
+      "x": 163.9042914437128,
+      "y": 204.46653624208398
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 64.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 31,
+     "x": 169.8,
+     "y": 196.9,
+     "tgt": {
+      "x": 163,
+      "y": 205
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 26.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 31.5,
+     "x": 138.1,
+     "y": 204,
+     "tgt": {
+      "x": 164.21999283022046,
+      "y": 204.72775471682573
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 31.5,
+     "x": 168,
+     "y": 199.1,
+     "tgt": {
+      "x": 163,
+      "y": 205
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 26.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 32,
+     "x": 140.7,
+     "y": 203.3,
+     "tgt": {
+      "x": 164.2480792134767,
+      "y": 205.06926959569242
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 61,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 32,
+     "x": 166.2,
+     "y": 201.2,
+     "tgt": {
+      "x": 163,
+      "y": 205
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.98,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 27.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 32.5,
+     "x": 142.6,
+     "y": 201.4,
+     "tgt": {
+      "x": 164.78455783909365,
+      "y": 203.99586814038497
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 58.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 32.5,
+     "x": 163.2,
+     "y": 202,
+     "tgt": {
+      "x": 162.05975945226382,
+      "y": 202.37844689878324
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.96,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 26.5,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 33,
+     "x": 144.6,
+     "y": 199.4,
+     "tgt": {
+      "x": 164.78455783909365,
+      "y": 203.99586814038497
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 55.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 33,
+     "x": 162.1,
+     "y": 202.4,
+     "tgt": {
+      "x": 162.05975945226382,
+      "y": 202.37844689878324
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.96,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.5,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 33.5,
+     "x": 146.6,
+     "y": 197.4,
+     "tgt": {
+      "x": 164.78455783909365,
+      "y": 203.99586814038497
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 52.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 33.5,
+     "x": 162.1,
+     "y": 202.4,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.96,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 25.5,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 34,
+     "x": 148.6,
+     "y": 195.4,
+     "tgt": {
+      "x": 161.20658737562368,
+      "y": 205.25457231462337
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 50,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 34,
+     "x": 159.4,
+     "y": 200.8,
+     "tgt": {
+      "x": 153.19737453122832,
+      "y": 197.77181678830493
+     },
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "無兵線也無擊殺機會",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.96,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 22.5,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 34.5,
+     "x": 151.2,
+     "y": 195.2,
+     "tgt": {
+      "x": 158.655725913994,
+      "y": 203.74393610432014
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 34.5,
+     "x": 156.8,
+     "y": 199.3,
+     "tgt": {
+      "x": 153.2440415238612,
+      "y": 197.68131444617504
+     },
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "無兵線也無擊殺機會",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.96,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 19.5,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 35,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": {
+      "x": 156.13125869816136,
+      "y": 202.1927063992719
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.98,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 35,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": {
+      "x": 153.32055598522925,
+      "y": 197.5296912674446
+     },
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "無兵線也無擊殺機會",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.95,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 35.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "換血",
+     "fsm": "ENGAGE",
+     "intent": "換血",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.97,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 35.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.93,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 36,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "換血",
+     "fsm": "ENGAGE",
+     "intent": "換血",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.95,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 36,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.92,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 36.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "換血",
+     "fsm": "ENGAGE",
+     "intent": "換血",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.93,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 36.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.9,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 37,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "換血",
+     "fsm": "ENGAGE",
+     "intent": "換血",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.92,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 37,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.89,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 37.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "拉扯",
+     "fsm": "SETUP",
+     "intent": "拉扯",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.9,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 37.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.87,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 38,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.88,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 38,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.86,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 38.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.87,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 38.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.84,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 39,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.85,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 39,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.83,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 39.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.83,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 39.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.81,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 40,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "拉扯",
+     "fsm": "SETUP",
+     "intent": "拉扯",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.8,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 40,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.79,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 40.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.77,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 40.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.78,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 41,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.73,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 41,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.76,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 41.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.7,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 41.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.75,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 42,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.66,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 42,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.73,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 42.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "拉扯",
+     "fsm": "SETUP",
+     "intent": "拉扯",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.63,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 42.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.72,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 43,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.59,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 43,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.7,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 43.5,
+     "x": 152.7,
+     "y": 196.6,
+     "tgt": null,
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 43.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.69,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 44,
+     "x": 151.5,
+     "y": 196.5,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "短期換血吃虧",
+     "hp": 0.54,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 44,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.67,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 44.5,
+     "x": 151.5,
+     "y": 196.5,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "短期換血吃虧",
+     "hp": 0.53,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 44.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.65,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 45,
+     "x": 151.5,
+     "y": 196.5,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "短期換血吃虧",
+     "hp": 0.51,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 45,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.64,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 45.5,
+     "x": 151.5,
+     "y": 196.5,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "短期換血吃虧",
+     "hp": 0.49,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 45.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.62,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 46,
+     "x": 151.5,
+     "y": 196.5,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.46,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 46,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.61,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 46.5,
+     "x": 151.5,
+     "y": 196.5,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.42,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 46.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.59,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 47,
+     "x": 151.5,
+     "y": 196.5,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.39,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 47,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.58,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 47.5,
+     "x": 152,
+     "y": 196,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "人數劣勢",
+     "hp": 0.35,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 48.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 47.5,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 48,
+     "x": 149.2,
+     "y": 195,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "人數劣勢",
+     "hp": 0.33,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 49.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 48,
+     "x": 154.3,
+     "y": 197.6,
+     "tgt": null,
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.4,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 48.5,
+     "x": 146.3,
+     "y": 195.7,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "人數劣勢",
+     "hp": 0.31,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 51.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 48.5,
+     "x": 154.5,
+     "y": 196.1,
+     "tgt": {
+      "x": 153.47742129624322,
+      "y": 197.20520322534276
+     },
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "無兵線也無擊殺機會",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 49,
+     "x": 144,
+     "y": 198,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.29,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 54.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 49,
+     "x": 154.5,
+     "y": 196.1,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "無兵線也無擊殺機會",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 49.5,
+     "x": 141.7,
+     "y": 200.3,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.28,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 57.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 49.5,
+     "x": 154.5,
+     "y": 196.1,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "無兵線也無擊殺機會",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 50,
+     "x": 139.2,
+     "y": 202,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 60.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 50,
+     "x": 154.5,
+     "y": 196.1,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "無兵線也無擊殺機會",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 16.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 50.5,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": {
+      "x": 69,
+      "y": 265
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 50.5,
+     "x": 156.6,
+     "y": 198.4,
+     "tgt": {
+      "x": 160.12609192179477,
+      "y": 202.03458409070342
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 18.9,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 51,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 51,
+     "x": 158.8,
+     "y": 200.5,
+     "tgt": {
+      "x": 160.32130354270797,
+      "y": 201.90865271798756
+     },
+     "st": "入侵",
+     "fsm": "ROAM",
+     "intent": "入侵",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.55,
+     "dead": false,
+     "inv": "on",
+     "tw": {
+      "d": 21.8,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 51.5,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 51.5,
+     "x": 159.3,
+     "y": 197.5,
+     "tgt": {
+      "x": 167.4011762290459,
+      "y": 126.1838739938222
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.55,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 21,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 52,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 52,
+     "x": 159,
+     "y": 197.5,
+     "tgt": {
+      "x": 167.06462475475882,
+      "y": 126.24832833864826
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.55,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 20.8,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 52.5,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 52.5,
+     "x": 157.9,
+     "y": 194.9,
+     "tgt": {
+      "x": 166.72321675569498,
+      "y": 126.21897130223479
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.55,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 19,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 53,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 53,
+     "x": 156.5,
+     "y": 192.5,
+     "tgt": {
+      "x": 166.4026089080403,
+      "y": 126.09800905426465
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.55,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 16.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 53.5,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 53.5,
+     "x": 155,
+     "y": 189.9,
+     "tgt": {
+      "x": 166.12689476482367,
+      "y": 125.89453185986173
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.55,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 13.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 54,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 54,
+     "x": 155,
+     "y": 186.9,
+     "tgt": {
+      "x": 165.91679413493006,
+      "y": 125.62383094975971
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.55,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 10.7,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 54.5,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 54.5,
+     "x": 155.3,
+     "y": 189.9,
+     "tgt": {
+      "x": 155.4980548843411,
+      "y": 191.30485384271444
+     },
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.51,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 13.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": true
+     }
+    },
+    {
+     "id": "b2",
+     "t": 55,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 55,
+     "x": 155.5,
+     "y": 191.3,
+     "tgt": {
+      "x": 155.4980548843411,
+      "y": 191.30485384271444
+     },
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.51,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 55.5,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 55.5,
+     "x": 155.5,
+     "y": 191.3,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.51,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 56,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 56,
+     "x": 155.5,
+     "y": 191.3,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.51,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 56.5,
+     "x": 136.8,
+     "y": 204.2,
+     "tgt": null,
+     "st": "回城中",
+     "fsm": "RECALL",
+     "intent": "回城中",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.26,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 63.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 56.5,
+     "x": 155.5,
+     "y": 191.3,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.52,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 57,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": "血量低於門檻",
+     "hp": 0.31,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 57,
+     "x": 155.4,
+     "y": 188.6,
+     "tgt": {
+      "x": 166.46382895332235,
+      "y": 123.87083189528548
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.52,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 12.5,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 57.5,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.36,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 57.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": {
+      "x": 155.76574300533326,
+      "y": 191.27235397796187
+     },
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.48,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 58,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.41,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 58,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.48,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 58.5,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.46,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 58.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.48,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 59,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.51,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 59,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.48,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 59.5,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.56,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 59.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.48,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 60,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.61,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 60,
+     "x": 155.1,
+     "y": 188.5,
+     "tgt": {
+      "x": 168.16805052460109,
+      "y": 124.55485061835475
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.48,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 12.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 60.5,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.66,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 60.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": {
+      "x": 155.40513374403866,
+      "y": 191.31501060746396
+     },
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.45,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 61,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.71,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 61,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.45,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 61.5,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.76,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 61.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.45,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 62,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.81,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 62,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.45,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 62.5,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.86,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 62.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.45,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.1,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 63,
+     "x": 69,
+     "y": 265,
+     "tgt": null,
+     "st": "回城",
+     "fsm": "RECALL",
+     "intent": "回城",
+     "ret": true,
+     "deep": false,
+     "rr": null,
+     "hp": 0.91,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 154.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 63,
+     "x": 155.1,
+     "y": 188.5,
+     "tgt": {
+      "x": 167.35133665532243,
+      "y": 126.19960933416962
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.45,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 12.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 63.5,
+     "x": 71.3,
+     "y": 263.5,
+     "tgt": {
+      "x": 163.12688667816428,
+      "y": 203.75645676757725
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.96,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 151.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 63.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": {
+      "x": 155.41020968785008,
+      "y": 191.31447070727762
+     },
+     "st": "避塔",
+     "fsm": "SETUP",
+     "intent": "避塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.41,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 64,
+     "x": 72.9,
+     "y": 261.8,
+     "tgt": {
+      "x": 163.45979929204555,
+      "y": 203.83763834757232
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 149.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 64,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.41,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 64.5,
+     "x": 73.2,
+     "y": 262.8,
+     "tgt": {
+      "x": 163.75815817086826,
+      "y": 204.00617094631636
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 149.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 64.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.41,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 65,
+     "x": 75.3,
+     "y": 261,
+     "tgt": {
+      "x": 163.99954176281713,
+      "y": 204.24938940562737
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 147.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 65,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.42,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 65.5,
+     "x": 78.1,
+     "y": 261,
+     "tgt": {
+      "x": 164.16581018636563,
+      "y": 204.54901595442178
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 145.3,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 65.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.38,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 66,
+     "x": 80.5,
+     "y": 259.5,
+     "tgt": {
+      "x": 164.2444684352028,
+      "y": 204.882533775987
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 142.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 66,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.34,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 66.5,
+     "x": 82.4,
+     "y": 257.6,
+     "tgt": {
+      "x": 164.2296053730187,
+      "y": 205.22487913785756
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 139.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 66.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.31,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 67,
+     "x": 83.1,
+     "y": 254.9,
+     "tgt": {
+      "x": 164.1223379530617,
+      "y": 205.55032492140302
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 137.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 67,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.27,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 67.5,
+     "x": 85.1,
+     "y": 252.9,
+     "tgt": {
+      "x": 163.93072727954348,
+      "y": 205.83441400462456
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 134.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 67.5,
+     "x": 154.5,
+     "y": 191.5,
+     "tgt": null,
+     "st": "避塔",
+     "fsm": "DISENGAGE",
+     "intent": "血量不足以越塔",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 0.23,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 15.2,
+      "range": 13.1,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 68,
+     "x": 87.1,
+     "y": 250.9,
+     "tgt": {
+      "x": 163.66917281884355,
+      "y": 206.0557972052061
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 131.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 68,
+     "x": 155.3,
+     "y": 188.5,
+     "tgt": {
+      "x": 261,
+      "y": 65
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "人數劣勢",
+     "hp": 0.21,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 12.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 68.5,
+     "x": 89,
+     "y": 249,
+     "tgt": {
+      "x": 163.3573302853024,
+      "y": 206.19783766312707
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 129,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 68.5,
+     "x": 157.6,
+     "y": 185.9,
+     "tgt": {
+      "x": 261,
+      "y": 65
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0.16,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 10.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": true
+     }
+    },
+    {
+     "id": "b2",
+     "t": 69,
+     "x": 91,
+     "y": 247,
+     "tgt": {
+      "x": 163.0186345220579,
+      "y": 206.24986109411714
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 126.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 69,
+     "x": 159.8,
+     "y": 183.2,
+     "tgt": {
+      "x": 261,
+      "y": 65
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0.1,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.2,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": true
+     }
+    },
+    {
+     "id": "b2",
+     "t": 69.5,
+     "x": 93.4,
+     "y": 246,
+     "tgt": {
+      "x": 162.67853838184615,
+      "y": 206.2079579579
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 123.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 69.5,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": {
+      "x": 261,
+      "y": 65
+     },
+     "st": "撤退",
+     "fsm": "RETREAT",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0.04,
+     "dead": false,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": true
+     }
+    },
+    {
+     "id": "b2",
+     "t": 70,
+     "x": 96.2,
+     "y": 246,
+     "tgt": {
+      "x": 162.3625999551789,
+      "y": 206.07527725859987
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 122.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 70,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 70.5,
+     "x": 99,
+     "y": 246,
+     "tgt": {
+      "x": 162.09456188994344,
+      "y": 205.86178989832626
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 120.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 70.5,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 71,
+     "x": 101.8,
+     "y": 246,
+     "tgt": {
+      "x": 161.89456714079844,
+      "y": 205.5835393678215
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 118.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 71,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 71.5,
+     "x": 104.4,
+     "y": 245.6,
+     "tgt": {
+      "x": 161.77764523409297,
+      "y": 205.26143608447265
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 116.5,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 71.5,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 72,
+     "x": 106.4,
+     "y": 243.6,
+     "tgt": {
+      "x": 161.75258280490178,
+      "y": 204.91968598270998
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 113.7,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 72,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 72.5,
+     "x": 108.4,
+     "y": 241.6,
+     "tgt": {
+      "x": 161.82126328487246,
+      "y": 204.583971447602
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 110.9,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 72.5,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 73,
+     "x": 110.4,
+     "y": 239.6,
+     "tgt": {
+      "x": 161.97852536308167,
+      "y": 204.2795212937688
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 108.2,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 73,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 73.5,
+     "x": 112.4,
+     "y": 237.6,
+     "tgt": {
+      "x": 162.21255085651086,
+      "y": 204.02921482993497
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 105.4,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 73.5,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 74,
+     "x": 114.3,
+     "y": 235.7,
+     "tgt": {
+      "x": 162.50575284182884,
+      "y": 203.8518624879224
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 102.6,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 74,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 74.5,
+     "x": 116.3,
+     "y": 233.7,
+     "tgt": {
+      "x": 162.836097305729,
+      "y": 203.76079222613367
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 99.8,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 74.5,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    },
+    {
+     "id": "b2",
+     "t": 75,
+     "x": 118.3,
+     "y": 231.7,
+     "tgt": {
+      "x": 163.17875899232004,
+      "y": 203.76284793874612
+     },
+     "st": "打野",
+     "fsm": "FARM",
+     "intent": "打野",
+     "ret": false,
+     "deep": false,
+     "rr": null,
+     "hp": 1,
+     "dead": false,
+     "inv": null,
+     "tw": {
+      "d": 97.1,
+      "range": 12.7,
+      "inRange": false,
+      "onMe": false
+     }
+    },
+    {
+     "id": "r2",
+     "t": 75,
+     "x": 162.1,
+     "y": 180.5,
+     "tgt": null,
+     "st": "撤退",
+     "fsm": "RESPAWN",
+     "intent": "撤退",
+     "ret": true,
+     "deep": false,
+     "rr": "撤離會吃太多塔傷",
+     "hp": 0,
+     "dead": true,
+     "inv": "end:hp",
+     "tw": {
+      "d": 9.4,
+      "range": 12.7,
+      "inRange": true,
+      "onMe": false
+     }
+    }
+   ]
+  }
+ ]
+}
