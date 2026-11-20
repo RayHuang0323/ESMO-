@@ -3067,3 +3067,15 @@ Android／低RAM／熱降頻仍NOT_RUN／未認證，CPU4×FAIL與2118MiB歷史�
 相對c6cf4bb8，引擎／共享Store／Training公式／契約不變；Dune CT62～65%、Confluence小樣本CT39%風險維持，不重調勝率。本輪完整BP-9壓力NOT_RUN，前輪收據不冒充本輪；受影響Progress／Training／SaveBundle／Replay畫面新跑。main仍7cf1cebc，Claude現役910792ac及新未追蹤校準工具保護。唯一共同修改檔tools/verify.mjs，外部三方文字試合併無衝突，仍未驗真正整合SHA。
 
 完整差異、失敗、截圖、受控整合／部署步驟：review/cs-rc-ux-20261120/RELEASE_READINESS.md。production preview http://127.0.0.1:5193/ESMO-/（舊5192保持），無HTTPS tunnel。正式預設池／原34WIP／Replay／Owner存檔不動；不Push main、不Deploy、不新增Worktree。真Android／低RAM／CPU4×FAIL與2118MiB風險保留。保存乾淨文件Checkpoint後停止Owner Review。
+
+
+## 2026-11-20 CS × MOBA整合：來源未提交，停止於BLOCKED
+
+本輪重核CS c70bfeca（產品7a8a25fa）、Claude910792ac、遠端main／共同祖先7cf1cebc；110個Worktree皆存在，23個有tracked差異，全部僅唯讀。Claude現役仍有6個Calibration Sprint未追蹤工具，包含新增cal_fit_belief_v24／cal_fit_success_v24。依Owner「有未完成或未提交開發先停止」規則，沒有建立Integration分支或真merge，不碰Claude成果。精確檔案／SHA／mtime、來源及影響清單見 review/cs-moba-integration-20261120/INTEGRATION_BLOCKED.md。
+
+CS24個與MOBA17個src差異沒有共同路徑；唯一共同追蹤檔tools/verify.mjs的外部三方文字提案exit0，保留CS14/14與MOBAprovenance，但沒有套入工作區，不能當整合成功。整合MOBA／CS BO1／BO3／培養／Replay／存檔／BP-9／SaveSlim、320px並行及整合Release Gate全部NOT_RUN；舊PASS僅歷史。320px原PRODUCT_FAIL仍OPEN，隔離PASS不排除風險。
+
+既有CS5193唯讀HTTP200，明確不是整合預覽。本輪沒有新產品、測試、服務或資料清理；WIP／Replay／正式存檔／預設池不變，不新增Worktree、不Push／Deploy。新池opt-in、競技公平性、Android／低RAM／CPU4×FAIL與2118MiB風險維持；不具備此次整合發布條件。等待Claude已提交且明確的來源交接後再重核。保存文件Checkpoint後停止Owner Review。
+
+
+收尾補記（2026-11-20 12:49:32 UTC）：Claude HEAD仍910792ac，現役未提交工具由6增至7，新增pin_v13_baseline_v24.mjs；完整最新收據claude-final-status.json。整合仍BLOCKED，沒有合併或產品Gate，不把初查6檔當成最終數量。
