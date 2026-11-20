@@ -58,3 +58,31 @@ Production preview http://127.0.0.1:5192/ESMO-/ 。5190／5191舊預覽保留。
 ## 新UI九問檢查
 
 服務覆盤選手培養；解決看完戰報不知如何練；唯一主任務是選擇培養重點；首屏只1至3項、證據折疊；真資料來自analytics與calculateCourse；只導向既有Training確認；缺資料明示；手機使用單欄44px動作與原GC語意；動態僅進場並支援reduced-motion，不寫Store。
+
+## 2026-11-20 休眠停點：Tactical Fairness v2
+
+- 保存時間：2026-11-20 18:31:21 +08:00。Owner 通知約三分鐘後休眠，本輪立即停止新測試與產品修改。
+- 有效產品 Checkpoint：4f681c34b0e59b02d7a5bb0e6bed00576c8af4b5；分支 feature/cs-professional-expansion-20261116。追加本節之前 git status --short 為空。
+- 本輪僅完成接手核對、既有證據閱讀與 Dune 程式追查；沒有修改產品、啟動測試、預覽服務或新增 Worktree。
+- Claude／MOBA 保護工作區：D:\OneDrive\文件\GitHub\ESMO\.sprints\moba-v21-sprint0；分支 feature/moba-tower-edge-v23，觀察 HEAD feed38c14ee18f2a28652d3a1bc959c69b9fe1d4。續跑仍須重新核對，禁止覆蓋其成果。
+- 本輪唯讀觀察的遠端 main：7cf1cebc10915f096a256885388ecd8a7052e5f3；未 Push、未 Deploy。
+
+### 階段狀態與證據限制
+
+- A 部分完成：既有鏡像配對結果顯示 Dune native CT 132/188（70.21%）、共用 P250 CT 133/190（70.00%）；這是既有證據，非本輪重跑。樣本僅 2–4 組 seed 配對，不可把相關回合當獨立樣本。
+- 已定位兩處待驗證線索：EsportsFPS3D.jsx 的進點推進約 1835 行與 C4 plant fallback 約 2107 行，皆可能經由 aConn/car 重建 site-execute 路線。尚未證明它們造成持包者折返或偏差，不能據此修改產品。
+- 已確認模擬 frame 保留 roundSec、routePoints、routeIdx、路線來源／種類、持包與 droppedBomb，足以建立完整事件時間線。注意 waypointHistory.round 為零起算，routeBuilds 與 bomb-recovered.round 為一起算。
+- B 未完成本輪驗收：既有培養建議與合法 Training 閉環保留；仍需從正常賽後入口操作，先前以開發用網址起始的 browser PASS 不足以證明自然玩家入口。
+- C 未開始本輪驗收：沒有新的 build、BO1／BO3、Replay、BP-9、SaveSlim 或 Release Gate 收據。11/16 舊收據已超過 24 小時，不可聲稱本輪最終 SHA 已通過。
+- 沒有本輪啟動且需要中止的測試；既有預覽程序尚未重新確認所屬與可用性，不任意關閉他人程序。
+
+### 恢復後的最小下一步
+
+1. 查詢每週額度、確認目前 HEAD／工作區差異與 Claude 現役狀態；不要重做本次完整接手盤點。
+2. 沿用 tools/trace_cs_dune_timeout.mjs 與 tools/lib/fpsMajorTestApi.mjs，以既有 seed 61001 建立有限時間線，對齊 C4 掉落／拾取、routeBuild、waypoint 與 stage 切換，先證明根因；僅在必要時加入有限鏡像對照。
+3. 若因果未確認，保留分析並直接完成正常賽後戰報→培養建議→Training→確認→能力紀錄→下一場消費的驗收；不得硬修勝率。
+4. 修改完成後才跑受影響回歸、所需 BP-9／SaveSlim 與釘住最終產品 SHA 的新 Release Gate，並提供 production preview。
+
+既有證據位置：C:\Users\ifikn\esmo-measure\cs-tactical-coaching-20261116（fairness-r1、dune-timeout-trace.json、final-coachingloop、既有收據與 OWNER_REVIEW.md）；自然賽季案例位於 C:\Users\ifikn\esmo-measure\cs-competitive-quality-20261116。不得重建大型 Replay／Heap／Profile，不刪除原始 FAIL。
+
+本次暫停係配合 Owner 休眠；Dune 根因／修正、正常入口及本輪整合驗收尚未完成。等待 Owner 恢復後續跑。
