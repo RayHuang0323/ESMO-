@@ -119,3 +119,12 @@ Claude現役工作區 D:\OneDrive\文件\GitHub\ESMO\.sprints\moba-v21-sprint0�
 下一步僅列Owner Review：①分開Dune植包前與CT回防／拆包時間成本、Confluence修後方向；②增加角色／等武器的獨立配對seed，仍維持固定有限預算，不補償勝率；③真Android／低RAM與CPU4×風險實測，以及既有analytics訓練後三場追蹤的純呈現提案。
 
 本節文件提交後另以精確文件Checkpoint執行新Gate：確認src／tools／public／依賴等相對產品SHA完全不變，並實際重跑C4／Training／identity檢查。完整四項產品收據釘住7bc1ce15，文件Checkpoint不是另一個產品版本；最後SHA與收據以本輪最終回報為準。停止Owner Review，僅保留預覽，不啟動下一Sprint。
+
+
+## 2026-11-20 CS RC UX／Integration Readiness（Owner Review）
+
+新產品7a8a25fadac1：手機五分頁改為單列橫向滑動，useViewport判斷、44px觸控、唯一選取與尺寸變動自動揭露；桌機設計保留。檢查320／390／430px獎勵、長姓名與培養卡片。正常首頁→CS歷史→戰報→培養→Training→合法成長→下一場真Worker47/47，完整存檔重複確認逐值一致；正式池81/81、核心runner4/4與新SHA三項Gate／assert PASS。並行負載下曾46/47 PRODUCT_FAIL（320px縮放裁切），同SHA隔離47/47及獨立連續縮放14/14；原始FAIL保留，負載／渲染時序尚未完全歸因，Owner須覆核轉向，不能宣稱所有負載已認證。
+
+相對c6cf4bb8，引擎／共享Store／Training公式／契約不變；Dune CT62～65%、Confluence小樣本CT39%風險維持，不重調勝率。本輪完整BP-9壓力NOT_RUN，前輪收據不冒充本輪；受影響Progress／Training／SaveBundle／Replay畫面新跑。main仍7cf1cebc，Claude現役910792ac及新未追蹤校準工具保護。唯一共同修改檔tools/verify.mjs，外部三方文字試合併無衝突，仍未驗真正整合SHA。
+
+完整差異、失敗、截圖、受控整合／部署步驟：review/cs-rc-ux-20261120/RELEASE_READINESS.md。production preview http://127.0.0.1:5193/ESMO-/（舊5192保持），無HTTPS tunnel。正式預設池／原34WIP／Replay／Owner存檔不動；不Push main、不Deploy、不新增Worktree。真Android／低RAM／CPU4×FAIL與2118MiB風險保留。保存乾淨文件Checkpoint後停止Owner Review。
