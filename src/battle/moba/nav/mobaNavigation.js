@@ -35,6 +35,8 @@
 import { buildField, HERO_RADIUS } from "../map/mapPassability.js";
 import { buildMobaLayout } from "../map/mobaMapLayout.js";
 import { buildTerrainShapes } from "../map/mapTerrainShapes.js";
+import { hypot, isDetSimKernel, simKernelId } from "../sim/simMathContext.js";
+import { detCos, detSin } from "../sim/detMath.js";
 
 export { HERO_RADIUS };
 
@@ -68,12 +70,28 @@ const DIR16 = (() => {
   }
   return out;
 })();
+//  moba-sim.v26（C2 det.v2）：Firefox／WebKit 的 sin(π/4) 與 V8 差 1 ulp（C2 實測）⇒ det.v2 用 DetMath.v1 的 cos／sin 另算一份。
+//  原生核心仍用上面這份（v20～v25 不變）。
+let DIR16_DET = null;
+function dir16() {
+  if (!isDetSimKernel()) return DIR16;
+  if (!DIR16_DET) {
+    DIR16_DET = [];
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 16) * Math.PI * 2;
+      DIR16_DET.push([detCos(a), detSin(a)]);
+    }
+  }
+  return DIR16_DET;
+}
 
-let _cache = null;
+//  moba-sim.v26：導航圖依目前的模擬數學核心分開建（塔的碰撞圓來自依核心計算的塔位）。原生核心那一份＝之前的 _cache。
+const _caches = new Map();
 
-/** 建圖（只做一次；約 100ms）。 */
+/** 建圖（每個核心只做一次；約 100ms）。 */
 function nav() {
-  if (_cache) return _cache;
+  const hit = _caches.get(simKernelId());
+  if (hit) return hit;
   const L = buildMobaLayout();
   const T = buildTerrainShapes(L);
   //  ⚠ mirrorSymmetric 必開：地圖的裝飾岩石／崖體不是嚴格鏡像的，
@@ -99,10 +117,11 @@ function nav() {
     structures.set(`${n.side}_nexus`, { id: `${n.side}_nexus`, x: n.x, y: n.y, r: NEXUS_CORE_R, kind: "nexus" });
   }
 
-  _cache = { L, T, F, structures };
-  //  ⚠ 必須在 _cache 設好之後才能跑（下面用到 clearanceAt / nav()）
+  const built = { L, T, F, structures };
+  _caches.set(simKernelId(), built);
+  //  ⚠ 必須在快取設好之後才能跑（下面用到 clearanceAt / nav()）
   classifyStructureBlocking(F, structures);
-  return _cache;
+  return built;
 }
 
 /**
@@ -153,7 +172,7 @@ function classifyStructureBlocking(F, structures) {
     const ring = [];
     const R = s.r + HERO_RADIUS + 1;
     for (let k = 0; k < 16; k++) {
-      const half = DIR16[k % 8], sgn = k < 8 ? 1 : -1;
+      const half = dir16()[k % 8], sgn = k < 8 ? 1 : -1;
       const px = s.x + sgn * half[0] * R, py = s.y + sgn * half[1] * R;
       const ix = gx(px), iy = gy(py);
       if (ix < 0 || iy < 0 || ix >= nx || iy >= ny) continue;
@@ -296,7 +315,7 @@ function projectToWalkableCanonical(x, y, radius, alive, maxR) {
       //  ⚠ 用「精確反向」的偏移表，不要直接算 cos(π+a)：
       //  IEEE 下 Math.cos(Math.PI + a) !== -Math.cos(a)，差幾個 ulp 就可能落到隔壁格，
       //  鏡像兩側因此挑到不同候選（殘留 9% 不對稱就是這樣來的）。
-      const half = DIR16[k % 8];
+      const half = dir16()[k % 8];
       const sgn = k < 8 ? 1 : -1;
       const dx = sgn * half[0] * r, dy = sgn * half[1] * r;
       const nx2 = x + dx, ny2 = y + dy;
@@ -304,7 +323,7 @@ function projectToWalkableCanonical(x, y, radius, alive, maxR) {
       const score = [
         clearanceAt(nx2, ny2),                       // 1) 越開闊越好
         (vx * dx + vy * dy) / r,                     // 2) 偏向遠離地圖中心的方向
-        -Math.hypot(nx2 - cx, ny2 - cy),             // 3) 越靠近地圖中心越好
+        -hypot(nx2 - cx, ny2 - cy),             // 3) 越靠近地圖中心越好
       ];
       if (!bestScore || cmpScore(score, bestScore) > 0) { bestScore = score; best = { x: nx2, y: ny2 }; }
     }
@@ -365,7 +384,7 @@ function gradientAt(x, y) {
   const d = F.dist;
   const gxv = d[F.idx(ix + 1, iy)] - d[F.idx(ix - 1, iy)];
   const gyv = d[F.idx(ix, iy + 1)] - d[F.idx(ix, iy - 1)];
-  const len = Math.hypot(gxv, gyv);
+  const len = hypot(gxv, gyv);
   if (len < 1e-9) return null;
   return { x: gxv / len, y: gyv / len };
 }
@@ -391,7 +410,7 @@ export function moveTowards(from, to, maxDist, radius = HERO_RADIUS, alive = nul
   let guard = 0;
   while (remain > 1e-6 && guard++ < 64) {
     const dx = to.x - cx, dy = to.y - cy;
-    const d = Math.hypot(dx, dy);
+    const d = hypot(dx, dy);
     if (d < 1e-6) break;
     const step = Math.min(SUBSTEP, remain, d);
     const ux = dx / d, uy = dy / d;
@@ -411,7 +430,7 @@ export function moveTowards(from, to, maxDist, radius = HERO_RADIUS, alive = nul
     if (g) {
       const dot = ux * g.x + uy * g.y;
       let tx2 = ux - dot * g.x, ty2 = uy - dot * g.y;
-      const tl = Math.hypot(tx2, ty2);
+      const tl = hypot(tx2, ty2);
       if (tl > 1e-6) {
         tx2 /= tl; ty2 /= tl;
         const sxp = cx + tx2 * step, syp = cy + ty2 * step;
@@ -430,7 +449,7 @@ export function moveTowards(from, to, maxDist, radius = HERO_RADIUS, alive = nul
     else if (okB && !okA) { cy = by; moved += Math.abs(uy * step); remain -= step; }
     else if (okA && okB) {
       //  兩個軸都能走：選比較接近目標的那個
-      const da = Math.hypot(to.x - ax, to.y - ay), db = Math.hypot(to.x - bx, to.y - by);
+      const da = hypot(to.x - ax, to.y - ay), db = hypot(to.x - bx, to.y - by);
       if (da <= db) { cx = ax; moved += Math.abs(ux * step); } else { cy = by; moved += Math.abs(uy * step); }
       remain -= step;
     } else break;                                  // 死角：這一 tick 走不動，交給上層重新尋路
@@ -554,7 +573,8 @@ const _cellsByRadius = new Map();
  *          必須改用精確圓；見 isWalkable 的說明）
  */
 function structureCells(radius) {
-  let m = _cellsByRadius.get(radius);
+  const ckey = `${simKernelId()}|${radius}`;   // moba-sim.v26：依核心分開（塔的碰撞圓位置依核心不同）
+  let m = _cellsByRadius.get(ckey);
   if (m) return m;
   const { F, structures } = nav();
   //  一個格心與格內任一點的最大距離 = 半個格對角。邊界帶取這個寬度就足以涵蓋
@@ -569,7 +589,9 @@ function structureCells(radius) {
     for (let iy = Math.max(0, j0); iy <= Math.min(F.ny - 1, j1); iy++) {
       for (let ix = Math.max(0, i0); ix <= Math.min(F.nx - 1, i1); ix++) {
         const wx = F.B.minX + ix * F.cellToSim, wy = F.B.minY + iy * F.cellToSim;
-        const d2 = (wx - s.x) ** 2 + (wy - s.y) ** 2;
+        //  det.v2：平方改用乘法（`**` 只保證近似）；原生核心維持原式。
+        const ddx = wx - s.x, ddy = wy - s.y;
+        const d2 = isDetSimKernel() ? ddx * ddx + ddy * ddy : (wx - s.x) ** 2 + (wy - s.y) ** 2;
         const id = F.idx(ix, iy);
         if (d2 < rr * rr) inside.push(id);
         if (d2 < rn * rn) near.push(id);
@@ -577,7 +599,7 @@ function structureCells(radius) {
     }
     m.set(s.id, { inside, near });
   }
-  _cellsByRadius.set(radius, m);
+  _cellsByRadius.set(ckey, m);
   return m;
 }
 
@@ -615,7 +637,8 @@ function stampStructures(radius, alive) {
  * key 用「結構固定順序的 bitmask + 半徑」，完全對應一組存活狀態 ⇒ 不會拿到過期遮罩。
  */
 let _order = null;
-const _maskCache = new Map();          // `${radius}|${bits}` → Uint8Array
+//  moba-sim.v26：每個模擬數學核心一張遮罩快取（原生核心那張＝之前的 _maskCache，淘汰行為也不受 det.v2 影響）。
+const _maskCaches = new Map();         // simKernelId() → Map(`${radius}|${bits}` → Uint8Array)
 const MASK_CACHE_MAX = 6;
 function structOrder() {
   if (!_order) _order = [...nav().structures.keys()].sort();
@@ -631,6 +654,8 @@ function aliveBits(alive) {
 }
 function maskFor(radius, alive) {
   const key = `${radius}|${aliveBits(alive)}`;
+  let _maskCache = _maskCaches.get(simKernelId());
+  if (!_maskCache) { _maskCache = new Map(); _maskCaches.set(simKernelId(), _maskCache); }
   const hit = _maskCache.get(key);
   if (hit) return hit;
   const mask = stampStructures(radius, alive);
@@ -683,13 +708,13 @@ function findPathCanonical(from, to, radius, alive, avoid = null) {
     for (const s of nav().structures.values()) {
       if (s.blocks === false) continue;
       if (aliveSet && !aliveSet.has(s.id)) continue;
-      const d = Math.hypot(wx - s.x, wy - s.y);
+      const d = hypot(wx - s.x, wy - s.y);
       if (d >= s.r + radius) continue;
       if (!best || d < best.d - 1e-9 || (Math.abs(d - best.d) <= 1e-9 && s.id < best.s.id)) best = { s, d };
     }
     if (!best) return [ix, iy];
     const { s } = best;
-    const len = Math.hypot(wx - s.x, wy - s.y) || 1;
+    const len = hypot(wx - s.x, wy - s.y) || 1;
     const ux = (wx - s.x) / len, uy = (wy - s.y) / len;
     for (let k = 1; k <= 12; k++) {
       const px = s.x + ux * (s.r + radius + k * F.cellToSim);
@@ -726,7 +751,7 @@ function findPathCanonical(from, to, radius, alive, avoid = null) {
   const S = scratch(F.nx * F.ny);
   const gen = ++S.gen;
   const { g, prev, closed, stamp } = S;
-  const h = (ix, iy) => HEURISTIC_WEIGHT * Math.hypot(ix - tx, iy - ty);
+  const h = (ix, iy) => HEURISTIC_WEIGHT * hypot(ix - tx, iy - ty);
   const open = new Heap();
   g[sId] = 0; stamp[sId] = gen; prev[sId] = -1; closed[sId] = 0;
   open.push(sId, h(sx, sy));
@@ -777,7 +802,7 @@ function findPathCanonical(from, to, radius, alive, avoid = null) {
 
 /** a→b 這條直線整段都站得下英雄嗎（等距取樣）。 */
 export function lineWalkable(a, b, radius = HERO_RADIUS, alive = null) {
-  const d = Math.hypot(b.x - a.x, b.y - a.y);
+  const d = hypot(b.x - a.x, b.y - a.y);
   const n = Math.max(1, Math.ceil(d / (SUBSTEP * 0.9)));
   for (let i = 0; i <= n; i++) {
     const t = i / n;

@@ -133,6 +133,12 @@ export const FEATURE_FLAGS = Object.freeze({
    * 只有 Owner 能決定打開。
    */
   mobaDetMathV25: false,
+  /**
+   * moba-sim.v26 候選（C2 跨引擎決定性，Owner 2026-11-23 核准開發；未核准發布）：DetMath.v1＋DetHypot.v1，目標是 Node／Chrome／Firefox／WebKit 逐 tick 相同。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21、mobaJungleV22、mobaSafeRouteV23、mobaTacticExecV24 都開時生效**（career.v26＝career.v24＋mathKernel "det.v2"；與 V25 同開時取 v26）。
+   * 只有 Owner 能決定打開。
+   */
+  mobaDetMathV26: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */

@@ -3,7 +3,8 @@
 //  tools/check_c1_isolation.mjs — C1 Deterministic Math Kernel: version isolation, call-site coverage and pins for moba-sim.v25 (2026-11-23).
 //
 //  K1 rulesets: career.v25 / balanceTool.v25 = the v24 rulesets field for field + exactly one new layer key, mathKernel "det.v1";
-//     no other ruleset has mathKernel; v25 validates; RS-1 requires mobaDetMathV25 on career.v25.
+//     no other ruleset has mathKernel except the explicitly registered C2 successor rulesets career.v26 / balanceTool.v26 (mathKernel "det.v2",
+//     checked field by field in tools/check_c2_isolation.mjs); v25 validates; RS-1 requires mobaDetMathV25 on career.v25.
 //  K2 flags: mobaDetMathV25 defaults to false; all five flags ⇒ career.v25; the four v24 flags ⇒ career.v24; only mobaDetMathV25 ⇒ career.v20.
 //  K3 engine wiring: every legacy ruleset (v20–v24 tool and career paths) assembles an engine with _detMath === false and never calls
 //     configureMathKernel; v25 assembles with _detMath === true and configureMathKernel as the FIRST configure call.
@@ -41,8 +42,9 @@ const M = await modules(), C = await careerContext();
   const c = pair("career.v24", "career.v25"), t = pair("balanceTool.v24", "balanceTool.v25");
   const valid = ["career.v25", "balanceTool.v25"].map((id) => RS.validateRuleset(RS.MATCH_RULESETS[id]));
   const rs1 = RS.validateRuleset({ ...RS.MATCH_RULESETS["career.v25"], releaseRequirements: RS.MATCH_RULESETS["career.v25"].releaseRequirements.filter((f) => f !== "mobaDetMathV25") });
-  ck("K1 v25＝v24 逐欄＋恰好一個新鍵 mathKernel \"det.v1\"；其他規則集都沒有 mathKernel；v25 驗證通過；career.v25 少列 mobaDetMathV25 ⇒ RS-1 拒絕",
-    J(withMK) === J(["career.v25", "balanceTool.v25"]) && [c, t].every((p) => J(p.extra) === J(["mathKernel"]) && p.same && p.top && p.mk === "det.v1" && p.sim === "moba-sim.v25")
+  //  C2（2026-11-23）：明確登記 v26 的兩個規則集（det.v2，逐欄檢查在 check_c2_isolation.mjs）；清單以外的規則集帶 mathKernel 仍然 FAIL。
+  ck("K1 v25＝v24 逐欄＋恰好一個新鍵 mathKernel \"det.v1\"；除了登記的 v26（det.v2）其他規則集都沒有 mathKernel；v25 驗證通過；career.v25 少列 mobaDetMathV25 ⇒ RS-1 拒絕",
+    J(withMK) === J(["career.v25", "balanceTool.v25", "career.v26", "balanceTool.v26"]) && [c, t].every((p) => J(p.extra) === J(["mathKernel"]) && p.same && p.top && p.mk === "det.v1" && p.sim === "moba-sim.v25")
     && J(c.reqExtra) === J(["mobaDetMathV25"]) && J(t.reqExtra) === J([]) && valid.every((v) => v.ok) && !rs1.ok && rs1.errors.some((e) => /mathKernel det\.v1 requires mobaDetMathV25/.test(e)),
     J({ withMathKernel: withMK, career: c, tool: t, rs1: rs1.errors }));
 }

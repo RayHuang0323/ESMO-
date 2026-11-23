@@ -5,10 +5,13 @@
 // ============================================================================
 
 import { RIFT_EXTENT_RATIO, placeRiftAnchor } from './battle/moba/map/riftMapMetrics.js';
+//  moba-sim.v26（C2 det.v2）：dist／posOnLane／laneLength 依「目前的模擬數學核心」計算（battle/moba/sim/simMathContext.js）。
+//  預設＝原生 Math.hypot，與之前逐字相同的算式 ⇒ v20～v25 與所有畫面呼叫端的結果不變；只有 det.v2 引擎執行期間改用 DetHypot.v1。
+import { hypot, isDetSimKernel } from './battle/moba/sim/simMathContext.js';
 export const lerp = (a, b, t) => a + (b - a) * t;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
-export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+export const dist = (a, b) => hypot(a.x - b.x, a.y - b.y);
 export const fmtT = (s) => `${Math.floor(s / 60)}:${(Math.floor(s) % 60).toString().padStart(2, "0")}`;
 
 // Sprint 29B5：3D / Minimap / Camera / Replay 共用的正式世界 metadata。
@@ -54,9 +57,23 @@ for (const [name, pts] of Object.entries(LANES)) {
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
   LANE_ARC[name] = { cum, total: cum[cum.length - 1] };
 }
+//  det.v2 的弧長表：同一組路線點、同樣的累加順序，只把 Math.hypot 換成 DetHypot（第一次在 det.v2 核心下用到時才算）。
+let LANE_ARC_DET = null;
+function laneArcOf(lane) {
+  if (!isDetSimKernel()) return LANE_ARC[lane];
+  if (!LANE_ARC_DET) {
+    LANE_ARC_DET = {};
+    for (const [name, pts] of Object.entries(LANES)) {
+      const cum = [0];
+      for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+      LANE_ARC_DET[name] = { cum, total: cum[cum.length - 1] };
+    }
+  }
+  return LANE_ARC_DET[lane];
+}
 /** 沿路線的第 t 比例處（t 依**弧長**，非線段索引）。 */
 export function posOnLane(lane, t) {
-  const pts = LANES[lane], { cum, total } = LANE_ARC[lane];
+  const pts = LANES[lane], { cum, total } = laneArcOf(lane);
   t = clamp(t, 0, 1);
   const target = t * total;
   let i = 1;
@@ -67,7 +84,7 @@ export function posOnLane(lane, t) {
   return { x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f) };
 }
 /** 路線總長（單位）——供校準與驗證使用。 */
-export const laneLength = (lane) => LANE_ARC[lane].total;
+export const laneLength = (lane) => laneArcOf(lane).total;
 
 //  Topology Final（2026-10-06）：河道改成**貫通上下路**的完整河道（LoL 的河道語言：
 //  上路河口 → 巴龍坑 → 中路涉水點 → 小龍坑 → 下路河口），中心線就是兩主堡的中垂線

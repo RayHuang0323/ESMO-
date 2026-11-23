@@ -1,0 +1,6 @@
+[2026-11-23T13:09:29.615Z] start ruleset=balanceTool.v26 sim=moba-sim.v26 engines=chrome,firefox,webkit items=D1
+[2026-11-23T13:09:30.922Z] node D1 seed=142227 ticks=10 winner=null endT=5 final=f4f8a2db566b44a7 ms=1298
+[2026-11-23T13:09:36.083Z] chrome D1 IDENTICAL winner node/engine=null/null ms=1450
+[2026-11-23T13:10:58.933Z] firefox D1 IDENTICAL winner node/engine=null/null ms=1658
+[2026-11-23T13:11:19.920Z] webkit D1 IDENTICAL winner node/engine=null/null ms=1685
+[2026-11-23T13:11:19.961Z] done identical=3/3

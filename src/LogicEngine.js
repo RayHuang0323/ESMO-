@@ -52,6 +52,8 @@ import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.j
 //  moba-sim.v25 候選（C1 決定性數學核心，Owner 2026-11-23 核准）：mathKernel "det.v1" ⇒ 模擬中的 sin／cos／atan2／acos／asin 與整數次方改走 DetMath.v1。
 //  沒有這個層的規則集（v20～v24 全部）⇒ 一律呼叫原本的 Math.* 與 ** 運算子，結果逐位元不變。
 import { detSin, detCos, detAtan2, detAcos, detAsin, detPowInt } from "./battle/moba/sim/detMath.js";
+//  moba-sim.v26（C2 det.v2）：模擬數學情境（原生＝Math.hypot 原式；det.v2＝DetHypot.v1）。
+import { hypot as kHypot, withSimKernel, currentSimKernel, simKernelFor } from "./battle/moba/sim/simMathContext.js";
 import { createTaskArbitrationLedger, movedTarget as arbMovedV24 } from "./battle/moba/tactics/taskArbitrationLedger.js";
 import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, invadeLead as tacInvadeLeadV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24, endgameEscortLane as tacEndgameLaneV24, endgameTick13 as tacEndgameTickV24 } from "./battle/moba/tactics/tacticExecV24.js";
 
@@ -123,7 +125,7 @@ const TOWER_EDGE_REDECIDE_V23 = Object.freeze({ hurtDrop: 0.08, hurtRecentSec: 1
 function segHitsDisk(a, b, c) {
   const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
   const u = L2 > 0 ? Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / L2)) : 0;
-  return Math.hypot(a.x + dx * u - c.x, a.y + dy * u - c.y) < c.r;
+  return kHypot(a.x + dx * u - c.x, a.y + dy * u - c.y) < c.r;
 }
 
 export class LogicEngine {
@@ -152,6 +154,15 @@ export class LogicEngine {
    *   v1        = S28 之前的舊節奏（**壞的**），只保留供 baseline 對照與回歸比較。
    */
   constructor(seed = 1, loadout = null, opts = {}) {
+    //  moba-sim.v26（C2）：模擬數學核心在**建構時**決定（塔位、出生點都在建構子裡算）。不可列舉 ⇒ 不進狀態雜湊與 snapshot。
+    //  沒有 opts.mathKernel ⇒ 原生核心，與之前同一條路徑（v20～v25 不變）。
+    Object.defineProperty(this, "_simKernel", { value: simKernelFor(opts?.mathKernel), enumerable: false });
+    if (this._simKernel.det) withSimKernel(this._simKernel, () => this._initEngine(seed, loadout, opts));
+    else this._initEngine(seed, loadout, opts);
+  }
+
+  /** 原本的建構子內容（逐字未改；預設值已由 constructor 套用）。 */
+  _initEngine(seed, loadout, opts) {
     let x = seed | 0; this.rng = () => ((x = (x * 1664525 + 1013904223) & 0xffffffff) >>> 0) / 0xffffffff;
     this.seed = seed | 0;          // S24：保留 seed 供戰術層 rng2 派生
     this._initTacV20();
@@ -426,8 +437,10 @@ export class LogicEngine {
    * "native" ⇒ 原生 Math（＝沒有呼叫）。其他值丟錯（組裝器已先擋）。
    */
   configureMathKernel(kernel) {
-    if (kernel !== "native" && kernel !== "det.v1") throw new Error(`unknown math kernel "${kernel}"`);
-    this._detMath = kernel === "det.v1";
+    if (kernel !== "native" && kernel !== "det.v1" && kernel !== "det.v2") throw new Error(`unknown math kernel "${kernel}"`);
+    //  moba-sim.v26（C2）：det.v2 必須在建構時就選定（new LogicEngine(seed, loadout, { mathKernel: "det.v2" })），兩邊不一致直接丟錯。
+    if ((kernel === "det.v2") !== this._simKernel.det) throw new Error(`math kernel "${kernel}" does not match the kernel chosen at construction ("${this._simKernel.id}")`);
+    this._detMath = kernel === "det.v1" || kernel === "det.v2";   // det.v2 = DetMath.v1 三角／次方 + DetHypot.v1
   }
 
   //  C1：模擬裡所有三角函數與整數次方的唯一入口。非 det 時呼叫的就是原本的 Math.* ／ ** ⇒ 舊版本的引數、運算與結果完全相同。
@@ -439,6 +452,7 @@ export class LogicEngine {
   _powInt(x, n) { return this._detMath ? detPowInt(x, n) : x ** n; }
 
   configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureMatch(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.tacticOn = true;
     //  moba-sim.v24 候選：taskArbitration "v1" ⇒ 引擎每 tick 替每名存活英雄記一筆仲裁紀錄（this.arbLedger；只寫，不影響任何決定）。
@@ -581,6 +595,7 @@ export class LogicEngine {
    * @param {object} meta      { version, neutralStat, blueIds, redIds } → snapshot
    */
   configurePlayers({ blue = null, red = null, meta = null } = {}) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configurePlayers(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.playerStatsOn = true;
     this.playerStatsMeta = meta;
@@ -606,6 +621,7 @@ export class LogicEngine {
    * @param {object} meta      { version, arch } → snapshot.heroMeta
    */
   configureHeroes({ blue = null, red = null, meta = null } = {}) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroes(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.heroesOn = true;
     this.heroMeta = meta;
@@ -627,6 +643,7 @@ export class LogicEngine {
 
   /** Receives only validated, authored mechanics from heroSkillGameplay adapter. */
   configureHeroSkills(config) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroSkills(...arguments));   // C2 det.v2
     if (!config?.players || !Object.keys(config.players).length) return;
     this.heroSkillBaseRules = config.players;
     this.heroSkills = Object.fromEntries(Object.entries(config.players).map(([seat, rules]) => [seat, { ...rules }]));
@@ -654,6 +671,7 @@ export class LogicEngine {
    * 且規則集 `heroPowerCurveV1` 開啟；否則什麼都不做。唯一掛點是 _applyMatchLevel（power 與最大生命）。
    */
   configureHeroPowerCurve(config) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroPowerCurve(...arguments));   // C2 det.v2
     if (!this.heroSkillsOn || !this.rules.heroPowerCurveV1 || !config?.players) return false;
     const seats = Object.keys(config.players).filter((id) => this.players.some((p) => p.id === id));
     if (!seats.length) return false;
@@ -673,6 +691,7 @@ export class LogicEngine {
    * 規則語彙見 heroPassiveGameplay.js 檔頭；引擎這裡**只認語彙、不認 heroId**。
    */
   configureHeroPassives(config) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroPassives(...arguments));   // C2 det.v2
     if (!this.heroSkillsOn || !this.rules.heroPassivesV1 || !config?.players) return false;
     const seats = Object.keys(config.players).filter((id) => this.players.some((p) => p.id === id));
     if (!seats.length) return false;
@@ -1419,7 +1438,7 @@ export class LogicEngine {
     //  舊式站在成員座標上，英雄會被推到成員的外側：Buff 營跟班離中心約 4.9，英雄從外側打 ⇒ 離出生點 > campLeashRange（7.5）
     //  ⇒ 營地判定目標離開、回營、**回滿血並清掉傷害歸屬**（最後一隻 8→84 無限循環）。內側站位的離出生點距離恆 < 成員離中心的距離。
     if (this._jungleCampV2 === true || forceInset === true) {
-      const hx = camp.homePos.x - best.pos.x, hy = camp.homePos.y - best.pos.y, hd = Math.hypot(hx, hy);
+      const hx = camp.homePos.x - best.pos.x, hy = camp.homePos.y - best.pos.y, hd = kHypot(hx, hy);
       const k = hd > 1e-6 ? Math.min(CAMP_STAND_INSET, hd) / hd : 0;
       return { x: best.pos.x + hx * k, y: best.pos.y + hy * k };
     }
@@ -1520,12 +1539,12 @@ export class LogicEngine {
       //  safeRoute v5：出口那一側回不了家，但那裡安靜 ⇒ 照 v3 退出去（在射程外回城比殘血穿塔安全）。正在照穿出路線走時不回頭。
       if (skip && this._quietPocketV23 && !this._crossActiveV23(p, tgt) && !this._pocketThreatV23(p, out)) { skip = false; if (O) O.pocketExit++; }
       if (skip) { if (O) O.radialSkipped++; }
-      else if (isWalkable(out.x, out.y, HERO_RADIUS, alive) && !disks.some((c) => Math.hypot(out.x - c.x, out.y - c.y) < c.r)) { if (O) O.radialExits++; return out; }
+      else if (isWalkable(out.x, out.y, HERO_RADIUS, alive) && !disks.some((c) => kHypot(out.x - c.x, out.y - c.y) < c.r)) { if (O) O.radialExits++; return out; }
     }
     if (!disks.length || !crosses(p.pos, tgt)) { p._srPath = null; return tgt; }
     let S = p._srPath;
     //  safeRoute v5：正在口袋裡等（S.hold）時一受威脅就立刻重算（改成穿出去），不等 2 秒的快取到期。
-    if (!S || Math.hypot(S.gx - tgt.x, S.gy - tgt.y) > 6 || this.t >= S.until || (S.hold && this._pocketThreatV23(p, p.pos))) {
+    if (!S || kHypot(S.gx - tgt.x, S.gy - tgt.y) > 6 || this.t >= S.until || (S.hold && this._pocketThreatV23(p, p.pos))) {
       const path = findPath(p.pos, tgt, HERO_RADIUS, alive, disks);
       if (O) O.pathPlans++;
       if ((!path || !path.length) && this._towerEdgeV23) return this._safeRouteBlockedV23(p, tgt, disks, alive);
@@ -1568,7 +1587,7 @@ export class LogicEngine {
       const g = recenterToCorridor(c.x, c.y, HERO_RADIUS, alive);
       if (dist(g, tw.pos) < rad - 0.5) continue;
       if (!isWalkable(g.x, g.y, HERO_RADIUS, alive)) continue;
-      if (others.some((o) => Math.hypot(g.x - o.x, g.y - o.y) < o.r)) continue;
+      if (others.some((o) => kHypot(g.x - o.x, g.y - o.y) < o.r)) continue;
       if (!lineWalkable(p.pos, g, HERO_RADIUS, alive)) continue;
       if (O) { O.edgeExits++; if (k !== 0) O.edgeExitRotated++; }
       return g;
@@ -1630,7 +1649,7 @@ export class LogicEngine {
   /** safeRoute v4：這名英雄是否正照著「穿出去」的路線走（同一個目的地、還沒到重算時間）。 */
   _crossActiveV23(p, tgt) {
     const S = p._srPath;
-    return !!(S && S.cross && this.t < S.until && Math.hypot(S.gx - tgt.x, S.gy - tgt.y) <= 6);
+    return !!(S && S.cross && this.t < S.until && kHypot(S.gx - tgt.x, S.gy - tgt.y) <= 6);
   }
   /**
    * safeRoute v4：徑向出口 out（在塔 tw 的危險圓外）之後回得了家嗎？
@@ -1653,14 +1672,14 @@ export class LogicEngine {
    * 都求不到 ⇒ null（呼叫端照舊走原目標）。決定性、不讀 rng。
    */
   _retreatCrossV23(p, tgt, tight, alive) {
-    const order = tight.map((c, i) => ({ i, d: Math.hypot(p.pos.x - c.x, p.pos.y - c.y) - c.r })).sort((a, b) => a.d - b.d || a.i - b.i).slice(0, NAV_SAFETY_V23.tryDisks);
+    const order = tight.map((c, i) => ({ i, d: kHypot(p.pos.x - c.x, p.pos.y - c.y) - c.r })).sort((a, b) => a.d - b.d || a.i - b.i).slice(0, NAV_SAFETY_V23.tryDisks);
     let best = null;
     for (const { i } of order) {
       const c = tight[i];
       const path = findPath(p.pos, tgt, HERO_RADIUS, alive, tight.filter((_, j) => j !== i));
       if (!path || !path.length) continue;
       let exposed = 0;
-      for (const q of path) if (Math.hypot(q.x - c.x, q.y - c.y) < c.r) exposed++;
+      for (const q of path) if (kHypot(q.x - c.x, q.y - c.y) < c.r) exposed++;
       const cost = path.length + NAV_SAFETY_V23.exposureK * exposed;
       if (!best || cost < best.cost) best = { path, cost };
     }
@@ -1672,7 +1691,7 @@ export class LogicEngine {
     let s = 0;
     while (s + 1 <= L) {
       const q = { x: p.pos.x + ux * (s + 1), y: p.pos.y + uy * (s + 1) };
-      if (disks.some((c) => Math.hypot(q.x - c.x, q.y - c.y) < c.r + 0.5)) break;
+      if (disks.some((c) => kHypot(q.x - c.x, q.y - c.y) < c.r + 0.5)) break;
       s += 1;
     }
     return { x: p.pos.x + ux * s, y: p.pos.y + uy * s };
@@ -1883,7 +1902,7 @@ export class LogicEngine {
     const geometryDistance = (point) => {
       if (path) {
         const dx = target.x - from.x, dy = target.y - from.y;
-        const length = Math.hypot(dx, dy) || 1;
+        const length = kHypot(dx, dy) || 1;
         const along = ((point.x - from.x) * dx + (point.y - from.y) * dy) / length;
         const lateral = Math.abs((point.x - from.x) * dy - (point.y - from.y) * dx) / length;
         return along >= 0 && along <= length && lateral <= (rule.width ?? 0) ? along : Infinity;
@@ -1891,7 +1910,7 @@ export class LogicEngine {
       if (cone) {
         const dx = target.x - from.x, dy = target.y - from.y;
         const rx = point.x - from.x, ry = point.y - from.y;
-        const length = Math.hypot(dx, dy) || 1, distance = Math.hypot(rx, ry);
+        const length = kHypot(dx, dy) || 1, distance = kHypot(rx, ry);
         const dot = (rx * dx + ry * dy) / (Math.max(distance, 1e-6) * length);
         return distance <= rule.range && dot >= this._cos(rule.halfAngle) ? distance : Infinity;
       }
@@ -1977,7 +1996,7 @@ export class LogicEngine {
         }
       } else if (entry.kind === 'piercing-line') {
         const dx = entry.end.x - entry.from.x, dy = entry.end.y - entry.from.y;
-        const length = Math.hypot(dx, dy) || 1, ux = dx / length, uy = dy / length;
+        const length = kHypot(dx, dy) || 1, ux = dx / length, uy = dy / length;
         const occupants = this.players.filter((q) => !q.dead && q.side !== p.side).map((q) => {
           const rx = q.pos.x - entry.from.x, ry = q.pos.y - entry.from.y;
           return { q, along: rx * ux + ry * uy, lateral: Math.abs(rx * uy - ry * ux) };
@@ -2465,7 +2484,7 @@ export class LogicEngine {
       } else if (rule.mechanic === 'cone-strike') {
         const enemies = this.players.filter((q) => !q.dead && q.side !== p.side).map((q) => {
           const vx = q.pos.x - from.x, vy = q.pos.y - from.y;
-          const d = Math.hypot(vx, vy) || 1;
+          const d = kHypot(vx, vy) || 1;
           return { q, d, angle: this._acos(Math.max(-1, Math.min(1, (vx * ux + vy * uy) / d))) };
         }).filter(({ d, angle }) => d <= rule.range && angle <= rule.halfAngle)
           .sort((a, b) => a.d - b.d || a.q.id.localeCompare(b.q.id));
@@ -2682,6 +2701,7 @@ export class LogicEngine {
    *                    chaseDistance, retreatDistance, formationLine, formationSpread } }`
    */
   configureArchetypes({ blue = null, red = null, meta = null } = {}) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureArchetypes(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.archOn = true;
     this.archMeta = meta;
@@ -2786,7 +2806,7 @@ export class LogicEngine {
     let ux, uy;
     if (R.stableFormation) {
       const b = BASE[p.side];
-      const bl = Math.hypot(foe.pos.x - b.x, foe.pos.y - b.y) || 1;
+      const bl = kHypot(foe.pos.x - b.x, foe.pos.y - b.y) || 1;
       ux = (foe.pos.x - b.x) / bl; uy = (foe.pos.y - b.y) / bl;
     } else {
       ux = (foe.pos.x - p.pos.x) / (fd || 1);
@@ -2879,6 +2899,7 @@ export class LogicEngine {
    * @param {object} meta      { version } → snapshot.spellMeta
    */
   configureSpells({ blue = null, red = null, meta = null } = {}) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureSpells(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.spellsOn = true;
     this.spellMeta = meta;
@@ -2911,6 +2932,7 @@ export class LogicEngine {
    * @returns {boolean} 是否啟用
    */
   configureItems(cfg = null) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureItems(...arguments));   // C2 det.v2
     if (!cfg?.players || this.itemsOn || this.t > 0) return false;
     this.itemsOn = true;
     this.items = new ItemsEngineRuntime({
@@ -3890,6 +3912,7 @@ export class LogicEngine {
    * @returns {boolean} 是否生效
    */
   configureObjectiveLayout(layout) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureObjectiveLayout(...arguments));   // C2 det.v2
     if (this.t > 0) return false;
     this._layoutConfigured = true;
     this.objectiveLayout = normalizeObjectiveLayout(layout);
@@ -5507,17 +5530,20 @@ export class LogicEngine {
   }
 
   frontTower(attacker, lane) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.frontTower(...arguments));   // C2 det.v2
     const def = attacker === "blue" ? "red" : "blue";
     const arr = [0, 1, 2].map((tier) => this.towers[`${def}_${lane}_${tier}`]).filter(Boolean);
     arr.sort((a, b) => (attacker === "blue" ? a.t - b.t : b.t - a.t));
     return arr.find((tw) => tw.hp > 0) || null;
   }
   laneCleared(side) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.laneCleared(...arguments));   // C2 det.v2
     const def = side === "blue" ? "red" : "blue";
     return ["top", "mid", "bot"].some((ln) => [0, 1, 2].every((tr) => this.towers[`${def}_${ln}_${tr}`].hp <= 0));
   }
   /** 一路清空後先拆兩座門牙塔，最後才能傷害主堡；來源仍是 this.towers。 */
   frontStructure(attacker, lane, from = null) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.frontStructure(...arguments));   // C2 det.v2
     const laneTower = this.frontTower(attacker, lane);
     if (laneTower || !this.laneCleared(attacker)) return laneTower;
     const def = attacker === "blue" ? "red" : "blue";
@@ -5619,6 +5645,7 @@ export class LogicEngine {
    * 不會再出現「圈畫 6.0、實際打 30.7」。門牙塔／主堡不在 lane 上，用自己的半徑。
    */
   towerRange(tw) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.towerRange(...arguments));   // C2 det.v2
     const R = this.rules;
     if (R.towerSafetyV1) return this._towerSafeRange(tw);
     return (tw.lane === "nexus_guard" || tw.lane === "nexus")
@@ -5833,7 +5860,7 @@ export class LogicEngine {
     if (!lat) return c;
     const a = posOnLane(ln, Math.max(0, m.t - 0.002));
     const b = posOnLane(ln, Math.min(1, m.t + 0.002));
-    const L = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const L = kHypot(b.x - a.x, b.y - a.y) || 1;
     return { x: c.x - ((b.y - a.y) / L) * lat, y: c.y + ((b.x - a.x) / L) * lat };
   }
 
@@ -6143,13 +6170,13 @@ export class LogicEngine {
     });
     const x0 = p.pos.x, y0 = p.pos.y;
     ns.requested += spd; ns.ticks++;
-    ns.requestedIdeal += Math.min(spd, Math.hypot(tgt.x - p.pos.x, tgt.y - p.pos.y));
+    ns.requestedIdeal += Math.min(spd, kHypot(tgt.x - p.pos.x, tgt.y - p.pos.y));
 
     //  目標點先推回通道中心（見 recenterToCorridor）：手繪 lane 折線有兩成落在牆邊，
     //  直接拿來當目標的話英雄會整場貼牆磨，移速被系統性吃掉。
     const goal = recenterToCorridor(tgt.x, tgt.y, HERO_RADIUS, alive);
     //  目標明顯換位置 ⇒ 舊路徑作廢
-    if (!nav.goal || Math.hypot(nav.goal.x - goal.x, nav.goal.y - goal.y) > 6) {
+    if (!nav.goal || kHypot(nav.goal.x - goal.x, nav.goal.y - goal.y) > 6) {
       nav.goal = goal; nav.path = null;
     }
 
@@ -6160,7 +6187,7 @@ export class LogicEngine {
       const r = moveTowards(p.pos, wp, remain, HERO_RADIUS, alive);
       p.pos.x = r.x; p.pos.y = r.y;
       remain -= Math.max(0, r.moved);
-      if (Math.hypot(wp.x - p.pos.x, wp.y - p.pos.y) < 1.2) { nav.path.shift(); continue; }
+      if (kHypot(wp.x - p.pos.x, wp.y - p.pos.y) < 1.2) { nav.path.shift(); continue; }
       if (r.moved < 1e-3) { nav.path = null; }     // 路徑失效（例如中途蓋了塔）
       break;
     }
@@ -6174,7 +6201,7 @@ export class LogicEngine {
       //  近場 25 單位只要約 35 點，10 名英雄 × 每秒 2 tick 的成本可以接受。
       if (!nav.path && nav.cd === 0) {
         const dx = goal.x - p.pos.x, dy = goal.y - p.pos.y;
-        const dd = Math.hypot(dx, dy) || 1;
+        const dd = kHypot(dx, dy) || 1;
         const look = Math.min(NAV_LOOKAHEAD, dd);
         const ahead = { x: p.pos.x + (dx / dd) * look, y: p.pos.y + (dy / dd) * look };
         if (!lineWalkable(p.pos, ahead, HERO_RADIUS, alive)) {
@@ -6186,7 +6213,7 @@ export class LogicEngine {
             const r0 = moveTowards(p.pos, wp, remain, HERO_RADIUS, alive);
             p.pos.x = r0.x; p.pos.y = r0.y;
             remain -= Math.max(0, r0.moved);
-            if (Math.hypot(wp.x - p.pos.x, wp.y - p.pos.y) < 1.2) nav.path.shift();
+            if (kHypot(wp.x - p.pos.x, wp.y - p.pos.y) < 1.2) nav.path.shift();
           }
         }
       }
@@ -6205,12 +6232,12 @@ export class LogicEngine {
         }
       } else nav.stuck = 0;
     }
-    const movedNow = Math.hypot(p.pos.x - x0, p.pos.y - y0);
+    const movedNow = kHypot(p.pos.x - x0, p.pos.y - y0);
     ns.moved += movedNow;
     //  M1.6 debug：這一 tick「想走多少」與「真的走了多少」的差 ＝ 避碰／尋路的修正量。
     //  純觀測欄位，只有 enableCombatDebug() 之後才會被讀進 snapshot。
     if (this.debugOn) {
-      p.dbgNavDelta = Math.max(0, Math.min(spd, Math.hypot(tgt.x - x0, tgt.y - y0)) - movedNow);
+      p.dbgNavDelta = Math.max(0, Math.min(spd, kHypot(tgt.x - x0, tgt.y - y0)) - movedNow);
     }
     p.pos.x = clampMapX(p.pos.x); p.pos.y = clampMapY(p.pos.y);
   }
@@ -6257,6 +6284,7 @@ export class LogicEngine {
   }
 
   tick(dt) {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.tick(...arguments));   // C2 det.v2
     if (this.over) return;
     const R = this.rules;                       // S29：模擬規則集（移速/傷害/兵線/攻塔）
     //  M1.5：本 tick 開始時的血量快照。tick 尾端比對即可涵蓋**所有**傷害來源
@@ -7883,6 +7911,7 @@ export class LogicEngine {
   _dmgGold(side, g) { if (side === "blue") this.bGold += g; else this.rGold += g; }
 
   snapshot() {
+    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.snapshot(...arguments));   // C2 det.v2
     const gd = this.bGold - this.rGold;
     const tw = (s) => Object.values(this.towers).filter((t) => t.side === s && t.lane !== "nexus" && t.hp <= 0).length;
     const winProb = clamp(0.5 + gd / 14000 + (tw("red") - tw("blue")) * 0.05, 0.05, 0.95);

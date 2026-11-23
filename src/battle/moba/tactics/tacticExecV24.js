@@ -15,9 +15,11 @@
 // ============================================================================
 import { INVASION_POINT } from "../../../gameData.js";
 import { findPath, HERO_RADIUS } from "../nav/mobaNavigation.js";
+//  moba-sim.v26（C2 det.v2）：距離依目前的模擬數學核心（原生＝Math.hypot，與之前相同）。
+import { hypot } from "../sim/simMathContext.js";
 
 export const TACTIC_EXEC_CONTRACT = "TacticalExecution.v1";
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const dist = (a, b) => hypot(a.x - b.x, a.y - b.y);
 const otherSide = (s) => (s === "blue" ? "red" : "blue");
 const ENEMY_BITS = ["top", "jungle", "mid", "adc", "sup"];   // bit0＝top（與影子研究相同）
 const bitOf = (role) => { const i = ENEMY_BITS.indexOf(role); return i < 0 ? 0 : 1 << i; };
@@ -839,7 +841,7 @@ export function partnerStep(E, X, p, alive) {
   const camp = (E.neutrals?.camps ?? []).find((c) => c.id === A.camp);
   const anchor = camp?.pos ?? INVASION_POINT[p.side];
   if (A.arrivedAt == null && dist(p.pos, anchor) <= 8) { A.arrivedAt = E.t; }
-  const dx = L.pos.x - anchor.x, dy = L.pos.y - anchor.y, d = Math.hypot(dx, dy) || 1;
+  const dx = L.pos.x - anchor.x, dy = L.pos.y - anchor.y, d = hypot(dx, dy) || 1;
   return { tgt: { x: anchor.x + (dx / d) * C.partnerStand, y: anchor.y + (dy / d) * C.partnerStand }, st: "入侵" };
 }
 

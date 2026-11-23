@@ -62,11 +62,15 @@ export const SIMULATION_VERSION_SCHEMA = "SimulationVersion.v1";
 //   moba-sim.v25（候選，2026-11-23，Owner 核准 C1；未發布、正式旗標 mobaDetMathV25 預設關）：v24 的所有行為＋可選層 mathKernel "det.v1"
 //   （只在 career.v25／balanceTool.v25）——模擬中的 sin／cos／atan2／acos／asin 與整數次方改用 DetMath.v1（battle/moba/sim/detMath.js），
 //   Node 與瀏覽器逐位元相同（TD-TAC-56）。沒有這個層 ⇒ 引擎呼叫原本的 Math.*，v20～v24 的對局逐位元不變。v24 的登記值釘死（9727c0b4ae8beb3d，不得覆寫）。
-export const MOBA_SIMULATION_VERSION = "moba-sim.v25";
+//   moba-sim.v26（候選，2026-11-23，Owner 核准 C2；未發布、正式旗標 mobaDetMathV26 預設關）：v24 的所有行為＋可選層 mathKernel "det.v2"
+//   （只在 career.v26／balanceTool.v26）＝DetMath.v1 三角／次方＋DetHypot.v1（battle/moba/sim/detHypot.js）；引擎在建構時選定核心，
+//   gameData 的 dist／posOnLane／laneLength、塔位、導航、戰術執行、道具的距離在 det.v2 引擎執行期間走 DetHypot（battle/moba/sim/simMathContext.js），
+//   塔位與導航快取依核心分開。沒有這個層 ⇒ 與之前同一條原生路徑，v20～v25 逐位元不變。v25 的登記值釘死（15a8c67f3bcea44a，不得覆寫）。
+export const MOBA_SIMULATION_VERSION = "moba-sim.v26";
 
 /** 已知版本。歷史 Challenge 帶的版本若不在其中 ⇒ 不明版本，一律不可重播。 */
 //  ⚠ 舊版本**留著不刪**：它是歷史挑戰「當初用哪一版跑的」的憑據。
-export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", "moba-sim.v21", "moba-sim.v22", "moba-sim.v23", "moba-sim.v24", MOBA_SIMULATION_VERSION]);
+export const KNOWN_SIMULATION_VERSIONS = Object.freeze(["moba-sim.v1", "moba-sim.v2", "moba-sim.v3", "moba-sim.v4", "moba-sim.v5", "moba-sim.v6", "moba-sim.v7", "moba-sim.v8", "moba-sim.v9", "moba-sim.v10", "moba-sim.v11", "moba-sim.v12", "moba-sim.v13", "moba-sim.v14", "moba-sim.v15", "moba-sim.v16", "moba-sim.v17", "moba-sim.v18", "moba-sim.v19", "moba-sim.v20", "moba-sim.v21", "moba-sim.v22", "moba-sim.v23", "moba-sim.v24", "moba-sim.v25", MOBA_SIMULATION_VERSION]);
 
 /**
  * **決定模擬語意的檔案清單**（Slice 2 的版本閘門）。
@@ -311,6 +315,9 @@ export const KNOWN_TRANSITIVE_GAPS = Object.freeze([
   "src/data/heroDatabase.js",
   //  2026-11-23（moba-sim.v25 候選，C1）：決定性數學核心。mathKernel "det.v1" 時引擎的三角函數與整數次方全部走這支。
   "src/battle/moba/sim/detMath.js",
+  //  2026-11-23（moba-sim.v26 候選，C2）：決定性 hypot 與模擬數學情境（det.v2）。
+  "src/battle/moba/sim/detHypot.js",
+  "src/battle/moba/sim/simMathContext.js",
 ]);
 
 /**
@@ -722,6 +729,8 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   "moba-sim.v24": "9727c0b4ae8beb3d",
   //  v25 候選（2026-11-23，Owner 核准 C1）：mathKernel "det.v1"（DetMath.v1）＋語意清單加入 detMath.js。v24 那一行凍結於上面的值，不得覆寫。
   "moba-sim.v25": "15a8c67f3bcea44a",
+  //  v26 候選（2026-11-23，Owner 核准 C2）：mathKernel "det.v2"（DetMath.v1＋DetHypot.v1）＋語意清單加入 detHypot.js、simMathContext.js。v25 那一行凍結於上面的值，不得覆寫。
+  "moba-sim.v26": "PENDING_C2",
 });
 
 export const isKnownSimulationVersion = (v) =>

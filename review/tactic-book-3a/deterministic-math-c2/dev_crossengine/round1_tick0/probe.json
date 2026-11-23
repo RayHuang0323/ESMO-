@@ -1,0 +1,81 @@
+{
+ "ruleset": "balanceTool.v26",
+ "sim": "moba-sim.v26",
+ "node": "v24.18.0",
+ "items": [
+  {
+   "id": "D1",
+   "seed": 142227,
+   "blue": "v2.jungle_invasion",
+   "red": "v2.jungle_invasion"
+  }
+ ],
+ "results": [
+  {
+   "id": "D1",
+   "seed": 142227,
+   "engine": "chrome",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 10,
+    "winner": null,
+    "endT": 5,
+    "final": "f4f8a2db566b44a7"
+   },
+   "engineRun": {
+    "ticks": 10,
+    "winner": null,
+    "endT": 5,
+    "final": "f4f8a2db566b44a7"
+   },
+   "ms": 1450
+  },
+  {
+   "id": "D1",
+   "seed": 142227,
+   "engine": "firefox",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 10,
+    "winner": null,
+    "endT": 5,
+    "final": "f4f8a2db566b44a7"
+   },
+   "engineRun": {
+    "ticks": 10,
+    "winner": null,
+    "endT": 5,
+    "final": "f4f8a2db566b44a7"
+   },
+   "ms": 1658
+  },
+  {
+   "id": "D1",
+   "seed": 142227,
+   "engine": "webkit",
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 10,
+    "winner": null,
+    "endT": 5,
+    "final": "f4f8a2db566b44a7"
+   },
+   "engineRun": {
+    "ticks": 10,
+    "winner": null,
+    "endT": 5,
+    "final": "f4f8a2db566b44a7"
+   },
+   "ms": 1685
+  }
+ ]
+}

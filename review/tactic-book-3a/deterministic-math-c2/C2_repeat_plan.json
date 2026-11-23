@@ -1,0 +1,96 @@
+{
+ "schema": "C1CrossEnvPlan.v1",
+ "toolEnv": "parity",
+ "rulesets": {
+  "det": "balanceTool.v26"
+ },
+ "engines": [
+  "chrome",
+  "firefox",
+  "webkit"
+ ],
+ "rule": "item i = 0..79: seed 261001+i, config standard, blue = TACTIC_TEMPLATE_LIST[(3*i + 1) % 21], red = TACTIC_TEMPLATE_LIST[(7*i + 4) % 21] (C1 rule, new seeds)",
+ "templates": [
+  "classic.m1",
+  "classic.m2",
+  "classic.m3",
+  "classic.m4",
+  "classic.m5",
+  "classic.m6",
+  "classic.m7",
+  "classic.m8",
+  "std",
+  "v2.three_lane_pressure",
+  "v2.jungle_invasion",
+  "v2.bot_duo_pressure",
+  "v2.mid_jungle_sync",
+  "v2.support_roamer",
+  "v2.dragon_pit_macro",
+  "v2.top_solo_split",
+  "v2.mid_solo_split",
+  "v2.hard_engage_stack",
+  "v2.protect_core_scaling",
+  "v2.standard_macro",
+  "v2.defensive_hold"
+ ],
+ "planId": "c2-repeat-8",
+ "registeredBefore": "any measurement on these seeds (C2_事前登記.md §4, repeatability: second run of the first 8 items)",
+ "items": [
+  {
+   "id": "Z001",
+   "seed": 261001,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "classic.m5"
+  },
+  {
+   "id": "Z002",
+   "seed": 261002,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "Z003",
+   "seed": 261003,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "Z004",
+   "seed": 261004,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m5"
+  },
+  {
+   "id": "Z005",
+   "seed": 261005,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "Z006",
+   "seed": 261006,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "Z007",
+   "seed": 261007,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "classic.m5"
+  },
+  {
+   "id": "Z008",
+   "seed": 261008,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.bot_duo_pressure"
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+[2026-11-23T13:11:25.745Z] start ruleset=balanceTool.v26 sim=moba-sim.v26 engines=chrome,firefox,webkit items=D1,D2,D3,D4
+[2026-11-23T13:11:39.791Z] node D1 seed=142227 ticks=2580 winner=blue endT=1290 final=71d52e35df277079 ms=14037
+[2026-11-23T13:11:56.254Z] node D2 seed=153001 ticks=2977 winner=red endT=1488.5 final=d21d66ef45f253fd ms=16458
+[2026-11-23T13:12:13.419Z] node D3 seed=142243 ticks=1741 winner=blue endT=870.5 final=d48a81f65da88db0 ms=17159
+[2026-11-23T13:12:31.063Z] node D4 seed=146045 ticks=1939 winner=red endT=969.5 final=2dd04eeea532c008 ms=17638
+[2026-11-23T13:12:58.470Z] chrome D1 IDENTICAL winner node/engine=blue/blue ms=23745
+[2026-11-23T13:13:21.222Z] chrome D2 IDENTICAL winner node/engine=red/red ms=22746
+[2026-11-23T13:13:34.534Z] chrome D3 IDENTICAL winner node/engine=blue/blue ms=13306
+[2026-11-23T13:13:51.319Z] chrome D4 IDENTICAL winner node/engine=red/red ms=16777
+[2026-11-23T13:15:23.933Z] firefox D1 IDENTICAL winner node/engine=blue/blue ms=15863
+[2026-11-23T13:15:38.846Z] firefox D2 IDENTICAL winner node/engine=red/red ms=14908
+[2026-11-23T13:15:47.600Z] firefox D3 IDENTICAL winner node/engine=blue/blue ms=8749
+[2026-11-23T13:15:57.236Z] firefox D4 IDENTICAL winner node/engine=red/red ms=9632
+[2026-11-23T13:16:18.383Z] webkit D1 IDENTICAL winner node/engine=blue/blue ms=18368
+[2026-11-23T13:16:35.877Z] webkit D2 IDENTICAL winner node/engine=red/red ms=17489
+[2026-11-23T13:16:44.486Z] webkit D3 IDENTICAL winner node/engine=blue/blue ms=8605
+[2026-11-23T13:16:54.780Z] webkit D4 IDENTICAL winner node/engine=red/red ms=10288
+[2026-11-23T13:16:54.848Z] done identical=12/12

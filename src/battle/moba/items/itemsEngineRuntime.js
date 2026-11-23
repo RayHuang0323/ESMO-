@@ -17,6 +17,8 @@ import { BUILD_POLICY_VERSION, BUILD_STRATEGIES, buildTargets, nextStep } from "
 import { COMBAT_STATS_SCHEMA, DAMAGE_PROFILE_BY_ARCH, computeCombatStats } from "./combatStatsV1.js";
 import { antiCritOf, auraTotals, lifestealHeal, lowHpShield, mitigate, omnivampHeal, outgoingDamage } from "./itemEffects.js";
 import { purchaseCost } from "./itemRecipes.js";
+//  moba-sim.v26（C2 det.v2）：距離依目前的模擬數學核心（原生＝Math.hypot，與之前相同）。
+import { hypot } from "../sim/simMathContext.js";
 
 export const ITEMS_RUNTIME_VERSION = "moba-items.runtime.v1";
 export const ITEMS_SNAPSHOT_SCHEMA = "MobaItemsSnapshot.v1";
@@ -30,7 +32,7 @@ const FALLBACK_ARCH_BY_ROLE = Object.freeze({ top: "戰士", jungle: "刺客", m
 
 const seatRank = (id) => (String(id)[0] === "b" ? 0 : 10) + Number(String(id).slice(1));
 const bySeat = (a, b) => seatRank(a.id) - seatRank(b.id);
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const dist = (a, b) => hypot(a.x - b.x, a.y - b.y);
 const r2 = (v) => Math.round(v * 100) / 100;
 const r1 = (v) => Math.round(v * 10) / 10;
 const effectsOf = (cs, type) => cs.effects.filter((e) => e.type === type);

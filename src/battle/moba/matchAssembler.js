@@ -336,7 +336,10 @@ export function assembleMatch(setup, deps = {}) {
 
   // ── 組裝 ────────────────────────────────────────────────────────────────
   //  建構子：useLocalServer:167 `new LogicEngine(seed, loadout)`；challengeRunner:137 同；runner:118 無 loadout（＝null）。
-  const engine = new LogicEngine(setup.seed, clone(setup.loadout ?? null));
+  //  moba-sim.v26（C2）：det.v2 必須在建構時選定（塔位與出生點在建構子裡算）；其他規則集維持與之前完全相同的兩個引數呼叫。
+  const engine = hasMathKernel && L.mathKernel === "det.v2"
+    ? new LogicEngine(setup.seed, clone(setup.loadout ?? null), { mathKernel: "det.v2" })
+    : new LogicEngine(setup.seed, clone(setup.loadout ?? null));
   if (isTool && tool.ruleOverrides) engine.rules = { ...engine.rules, ...clone(tool.ruleOverrides) }; // runner:119
   const configured = [];
   //  只有 tool 規則集、且只有 TOOL_TOLERATED_ENGINE_METHODS 這三個方法容忍引擎缺席（略過、不記入 configured）；

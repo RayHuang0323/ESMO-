@@ -1,0 +1,297 @@
+{
+ "ruleset": "balanceTool.v26",
+ "sim": "moba-sim.v26",
+ "node": "v24.18.0",
+ "items": [
+  {
+   "id": "D1",
+   "seed": 142227,
+   "blue": "v2.jungle_invasion",
+   "red": "v2.jungle_invasion"
+  },
+  {
+   "id": "D2",
+   "seed": 153001,
+   "blue": "classic.m2",
+   "red": "classic.m5"
+  },
+  {
+   "id": "D3",
+   "seed": 142243,
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m7"
+  },
+  {
+   "id": "D4",
+   "seed": 146045,
+   "blue": "classic.m7",
+   "red": "v2.jungle_invasion"
+  }
+ ],
+ "results": [
+  {
+   "id": "D1",
+   "seed": 142227,
+   "engine": "chrome",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 2580,
+    "winner": "blue",
+    "endT": 1290,
+    "final": "71d52e35df277079"
+   },
+   "engineRun": {
+    "ticks": 2580,
+    "winner": "blue",
+    "endT": 1290,
+    "final": "71d52e35df277079"
+   },
+   "ms": 23745
+  },
+  {
+   "id": "D2",
+   "seed": 153001,
+   "engine": "chrome",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 2977,
+    "winner": "red",
+    "endT": 1488.5,
+    "final": "d21d66ef45f253fd"
+   },
+   "engineRun": {
+    "ticks": 2977,
+    "winner": "red",
+    "endT": 1488.5,
+    "final": "d21d66ef45f253fd"
+   },
+   "ms": 22746
+  },
+  {
+   "id": "D3",
+   "seed": 142243,
+   "engine": "chrome",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 1741,
+    "winner": "blue",
+    "endT": 870.5,
+    "final": "d48a81f65da88db0"
+   },
+   "engineRun": {
+    "ticks": 1741,
+    "winner": "blue",
+    "endT": 870.5,
+    "final": "d48a81f65da88db0"
+   },
+   "ms": 13306
+  },
+  {
+   "id": "D4",
+   "seed": 146045,
+   "engine": "chrome",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 1939,
+    "winner": "red",
+    "endT": 969.5,
+    "final": "2dd04eeea532c008"
+   },
+   "engineRun": {
+    "ticks": 1939,
+    "winner": "red",
+    "endT": 969.5,
+    "final": "2dd04eeea532c008"
+   },
+   "ms": 16777
+  },
+  {
+   "id": "D1",
+   "seed": 142227,
+   "engine": "firefox",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 2580,
+    "winner": "blue",
+    "endT": 1290,
+    "final": "71d52e35df277079"
+   },
+   "engineRun": {
+    "ticks": 2580,
+    "winner": "blue",
+    "endT": 1290,
+    "final": "71d52e35df277079"
+   },
+   "ms": 15863
+  },
+  {
+   "id": "D2",
+   "seed": 153001,
+   "engine": "firefox",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 2977,
+    "winner": "red",
+    "endT": 1488.5,
+    "final": "d21d66ef45f253fd"
+   },
+   "engineRun": {
+    "ticks": 2977,
+    "winner": "red",
+    "endT": 1488.5,
+    "final": "d21d66ef45f253fd"
+   },
+   "ms": 14908
+  },
+  {
+   "id": "D3",
+   "seed": 142243,
+   "engine": "firefox",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 1741,
+    "winner": "blue",
+    "endT": 870.5,
+    "final": "d48a81f65da88db0"
+   },
+   "engineRun": {
+    "ticks": 1741,
+    "winner": "blue",
+    "endT": 870.5,
+    "final": "d48a81f65da88db0"
+   },
+   "ms": 8749
+  },
+  {
+   "id": "D4",
+   "seed": 146045,
+   "engine": "firefox",
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 1939,
+    "winner": "red",
+    "endT": 969.5,
+    "final": "2dd04eeea532c008"
+   },
+   "engineRun": {
+    "ticks": 1939,
+    "winner": "red",
+    "endT": 969.5,
+    "final": "2dd04eeea532c008"
+   },
+   "ms": 9632
+  },
+  {
+   "id": "D1",
+   "seed": 142227,
+   "engine": "webkit",
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 2580,
+    "winner": "blue",
+    "endT": 1290,
+    "final": "71d52e35df277079"
+   },
+   "engineRun": {
+    "ticks": 2580,
+    "winner": "blue",
+    "endT": 1290,
+    "final": "71d52e35df277079"
+   },
+   "ms": 18368
+  },
+  {
+   "id": "D2",
+   "seed": 153001,
+   "engine": "webkit",
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 2977,
+    "winner": "red",
+    "endT": 1488.5,
+    "final": "d21d66ef45f253fd"
+   },
+   "engineRun": {
+    "ticks": 2977,
+    "winner": "red",
+    "endT": 1488.5,
+    "final": "d21d66ef45f253fd"
+   },
+   "ms": 17489
+  },
+  {
+   "id": "D3",
+   "seed": 142243,
+   "engine": "webkit",
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 1741,
+    "winner": "blue",
+    "endT": 870.5,
+    "final": "d48a81f65da88db0"
+   },
+   "engineRun": {
+    "ticks": 1741,
+    "winner": "blue",
+    "endT": 870.5,
+    "final": "d48a81f65da88db0"
+   },
+   "ms": 8605
+  },
+  {
+   "id": "D4",
+   "seed": 146045,
+   "engine": "webkit",
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "bundleSim": "moba-sim.v26",
+   "identical": true,
+   "firstDifferentTick": -1,
+   "node": {
+    "ticks": 1939,
+    "winner": "red",
+    "endT": 969.5,
+    "final": "2dd04eeea532c008"
+   },
+   "engineRun": {
+    "ticks": 1939,
+    "winner": "red",
+    "endT": 969.5,
+    "final": "2dd04eeea532c008"
+   },
+   "ms": 10288
+  }
+ ]
+}

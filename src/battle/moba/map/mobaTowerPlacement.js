@@ -30,6 +30,9 @@
 import { posOnLane } from "../../../gameData.js";
 import { buildMobaLayout } from "./mobaMapLayout.js";
 import { buildTerrainShapes } from "./mapTerrainShapes.js";
+//  moba-sim.v26（C2 det.v2）：塔位依目前的模擬數學核心計算（posOnLane 由 gameData 依核心切換），快取依核心分開。
+//  原生核心的算式與快取行為與之前逐字相同（v20～v25 不變）；det.v2 另算一份，不改任何地圖設定。
+import { hypot, isDetSimKernel, simKernelId } from "../sim/simMathContext.js";
 
 /** 180° 旋轉下的對應路線（上下路互換、中路自我對映）。 */
 const MIRROR_LANE = { top: "bot", bot: "top", mid: "mid" };
@@ -41,7 +44,9 @@ function nearestLaneT(lane, p) {
     for (let i = 0; i <= steps; i++) {
       const t = lo + ((hi - lo) * i) / steps;
       const q = posOnLane(lane, t);
-      const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+      //  det.v2：平方改用乘法（`**` 在各引擎只保證近似；乘法是正確捨入）。原生核心維持原式。
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const d = isDetSimKernel() ? dx * dx + dy * dy : (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
       if (d < bd) { bd = d; bt = t; }
     }
   };
@@ -50,7 +55,7 @@ function nearestLaneT(lane, p) {
   return bt;
 }
 
-let _cache = null;
+const _caches = new Map();               // simKernelId() → placement（原生核心那一份＝之前的 _cache）
 
 /**
  * @returns {{ byId: Object, list: Array, guardById: Object, nexusGuards: Array }}
@@ -58,7 +63,8 @@ let _cache = null;
  *   laneOffset = 塔離 lane 折線的側偏（模擬單位；驗收用，證明塔仍在路上）
  */
 export function buildTowerPlacement() {
-  if (_cache) return _cache;
+  const cached = _caches.get(simKernelId());
+  if (cached) return cached;
   const T = buildTerrainShapes(buildMobaLayout());
 
   const raw = new Map();
@@ -68,7 +74,7 @@ export function buildTowerPlacement() {
     raw.set(tw.id, {
       id: tw.id, side: tw.side, lane: tw.lane, tier: tw.tier,
       x: tw.x, y: tw.y, tRaw: t,
-      laneOffset: Math.hypot(q.x - tw.x, q.y - tw.y),
+      laneOffset: hypot(q.x - tw.x, q.y - tw.y),
     });
   }
 
@@ -94,11 +100,12 @@ export function buildTowerPlacement() {
     id: tw.id, side: tw.side, lane: "nexus_guard", tier: tw.tier,
     x: tw.x, y: tw.y,
   }]));
-  _cache = {
+  const built = {
     byId, list: Object.values(byId),
     guardById, nexusGuards: Object.values(guardById),
   };
-  return _cache;
+  _caches.set(simKernelId(), built);
+  return built;
 }
 
 /** 引擎建塔用：id → { x, y, t }。 */
