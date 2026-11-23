@@ -46,7 +46,7 @@ export const REGISTERED_SUCCESSORS = Object.freeze({
     frozenAt: "eb28fbb9", golden: "tools/check_c2_v25_golden.mjs",
   }),
   "moba-sim.v26": Object.freeze({
-    fingerprint: "PENDING_C2", registeredAt: "PENDING_C2", base: LEGACY_GOLDEN_SOURCE, parent: "moba-sim.v25", approval: "Owner 2026-11-23（C2 跨引擎決定性）",
+    fingerprint: "da35b3af6c8fea67", registeredAt: "6d0969ee", base: LEGACY_GOLDEN_SOURCE, parent: "moba-sim.v25", approval: "Owner 2026-11-23（C2 跨引擎決定性）",
     //  相對 parent 凍結點 eb28fbb9 新增或修改的每一個 src 檔案（步進檢查只認這張表）。
     changedSrc: Object.freeze(["src/LogicEngine.js", "src/battle/moba/matchAssembler.js", "src/battle/moba/sim/detHypot.js", "src/battle/moba/sim/simMathContext.js",
       "src/gameData.js", "src/battle/moba/map/mobaTowerPlacement.js", "src/battle/moba/nav/mobaNavigation.js", "src/battle/moba/tactics/tacticExecV24.js",
