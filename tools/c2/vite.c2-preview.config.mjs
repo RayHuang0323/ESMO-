@@ -1,6 +1,6 @@
 // ============================================================================
 //  tools/c2/vite.c2-preview.config.mjs — local Owner Preview of the moba-sim.v26 candidate (C2 Cross-Engine Determinism, 2026-11-23)
-//  （由 tools/c1/vite.c1-preview.config.mjs 複製；差別只有：旗標換成 v26、port 5648、獨立 cache／標語。量測 API 沿用 tools/c1/c1_preview_hook.js。）
+//  （由 tools/c1/vite.c1-preview.config.mjs 複製；差別只有：旗標換成 v26、port 5648、獨立 cache／標語。量測 API：tools/c2/c2_preview_hook.js（＝C1 的 window.__esmoC1 原樣＋唯讀的分核心幾何探針 window.__esmoC2）。）
 //
 //  【狀態】moba-sim.v26 未核准發布。這個檔只給 Owner 在自己的電腦上看；正式 build（npm run build）與 deploy.yml 都不會讀它。
 //  【做法】與 tools/owner_preview/vite.v24-preview.config.mjs 相同：不改 src；送出 src/featureFlags.js 時把五個旗標換成 true
@@ -24,7 +24,7 @@ const FLAG_FILE = /\/src\/featureFlags\.js(\?.*)?$/;
 const LIVE_FILE = /\/src\/useLocalServer\.js(\?.*)?$/;
 const MAIN_FILE = /\/src\/main\.jsx(\?.*)?$/;
 const LIVE_CALL = "const prepared = prepareLiveMatch(liveInputs);";
-const HOOK = join(dirname(fileURLToPath(import.meta.url)), "../c1/c1_preview_hook.js").replace(/\\/g, "/");
+const HOOK = join(dirname(fileURLToPath(import.meta.url)), "c2_preview_hook.js").replace(/\\/g, "/");
 const FLIPS = ["mobaTacticalDirectorV21", "mobaJungleV22", "mobaSafeRouteV23", "mobaTacticExecV24", "mobaDetMathV26"];
 const PORT = 5648;
 const OUTSIDE = join(tmpdir(), "esmo-c2-owner-preview");
