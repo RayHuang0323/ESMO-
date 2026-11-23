@@ -4,10 +4,12 @@
 //  of the same setup (window.__esmoC1), so Node can replay the same match and compare tick by tick.
 import fs from "node:fs";
 const [mode, out, tag] = process.argv.slice(2);
-const SP = "C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser";
+const SP = process.argv[5] ?? "C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser";
 const url = "http://127.0.0.1:5647/ESMO-/";
 const hook = "window.__errs=[]; const oe=console.error; console.error=(...a)=>{window.__errs.push(a.map(String).join(' ').slice(0,300)); oe(...a)}; window.addEventListener('error',e=>window.__errs.push('ERR '+e.message)); window.addEventListener('unhandledrejection',e=>window.__errs.push('REJ '+String(e.reason).slice(0,300))); return 1;";
-const clockSec = "(()=>{const t=(document.querySelector('[data-testid=\"hud-clock\"]')?.innerText||'').match(/(\d+):(\d\d)/); return t? +t[1]*60 + +t[2] : -1})()";
+//  2026-11-23 fix (C1 closure): inside this JS string the regex needs \\d — a bare \d became "d", so the watch stop condition never fired.
+//  Also: an optional 4th argument sets the engine-specific screenshot/save prefix directory (default SP).
+const clockSec = "(()=>{const t=(document.querySelector('[data-testid=\"hud-clock\"]')?.innerText||'').match(/(\\d+):(\\d\\d)/); return t? +t[1]*60 + +t[2] : -1})()";
 const steps = [
   ...(mode === "mobile" ? [{ vp: [390, 844, true] }] : []),
   { nav: url }, { js: hook }, { js: "return JSON.stringify({api:!!window.__esmoC1, sim:window.__esmoC1?.simVersion, banner:!!document.querySelector('[data-owner-preview=\"c1\"]')});" },

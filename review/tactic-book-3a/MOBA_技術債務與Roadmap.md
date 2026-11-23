@@ -635,3 +635,46 @@ Owner 2026-11-20 核准「v24 Calibration Sprint — 真實戰鬥入侵校準」
 | 19 | 整合準備：TD-TAC-60 的 Gate 版本化、TD-TAC-61 其他瀏覽器 | 否 | 待 Owner |
 | 20 | Sprint 2B：3～4 人編隊、護送、救援 | 是 | **暫緩**（Owner 決策） |
 | 21 | 發布線（G-A8 新判準等） | 否 | 待 Owner |
+
+
+## 2026-11-23 更新（C1 Acceptance Closure 之後）
+
+> 文件：`deterministic-math-c1/C1_驗收收尾.md`（結論）、`精度契約v2_事前登記.md`、`C1_四引擎_事前登記.md`。`src/`、DetMath.v1 與 v25 指紋 `15a8c67f3bcea44a` 都沒有改。
+
+- 精度契約：v1 原判準（atan2 < 1 ulp）**未通過的紀錄保留**；v2（事前登記、全新 120 萬筆）7／7 PASS，四個環境的 det 逐位元相同。
+- 跨引擎（事前登記 80 場、Seeds 153001～153080）：**Chrome PASS 80／80；Firefox FAIL 0／80；WebKit FAIL 0／80**（全部 tick 0 分歧；勝方不同 31／80、33／80）。原因：模擬仍用原生 `Math.hypot`（塔座標），非 V8 引擎的 hypot 實作不同。
+- 歷史 Gate：版本化範圍（歷史來源一致＋舊版本逐 tick Golden）後 cal_parity 6／6、s15_preflight 5／5、s2_contract 55／55；runtime29 第 10 條正則誤判修好，flat 35／35。
+- 地圖幾何（唯讀）：地形多邊形在三個瀏覽器都與 Node 不同（被距離場吸收）；Firefox／WebKit 的塔座標與碰撞圓不同（進入模擬）。未修改。
+- 戰術契約 v3.1：判定工具＋合成測試 10／10（草案，未啟用）。
+
+### 技術債：狀態有變的
+
+| 編號 | 內容 | 狀態 |
+|---|---|---|
+| TD-TAC-56（Sprint 2A 分支登記） | 跨環境對局結果分歧 | **V8 系已解決**（Node＝Chrome 兩次 80／80、Edge 158 數學向量相同）；**Firefox、WebKit 仍分歧**（新 TD-TAC-63） |
+| TD-TAC-57（同上） | 地圖幾何用原生三角函數 | 唯讀檢查證實：地形多邊形在 Chrome／Firefox／WebKit 都與 Node 不同（最大 1.7×10⁻¹⁰），目前被距離場吸收；**未修改**，待 Owner |
+| TD-TAC-58（同上） | `hypot`／`**` 只保證近似 | `**` 已在 det 路徑處理；**`hypot` 在非 V8 引擎證實會分歧**（35～37% 輸入不同、路線 12 段有 10 段不同），升為 TD-TAC-63 的主因 |
+| TD-TAC-59 | runtime29 第 10 條正則誤判 | **已修**（改成播放速率識別字＋建構子簽名；反向測試仍會擋） |
+| TD-TAC-60 | 歷史量測前置 Gate 在 MOBA 原始碼改動後必紅 | **已修**（`tools/lib/mobaVersionedScope.mjs`；反向自我測試 9／9）；登記表需 Owner 核准為整合規則 |
+| TD-TAC-61 | 其他瀏覽器引擎未認證 | **已實測**：Firefox 155、WebKit 26.6（Windows build）FAIL；iOS／macOS Safari、Android 仍未認證 |
+
+### 技術債：新增的
+
+| 編號 | 內容 | 嚴重度 |
+|---|---|---|
+| TD-TAC-63 | **非 V8 引擎的模擬分歧**：`Math.hypot`（`gameData.dist`／`posOnLane`、LogicEngine 23 處、mobaNavigation 10 處、tacticExecV24 2 處、itemsEngineRuntime 1 處）在 SpiderMonkey／JavaScriptCore 與 V8 不同 ⇒ 塔座標 tick 0 就不同、約四成比賽換勝方。修正需要新的核心版本（det.v2）與新指紋，並會碰到導航程式 | **高**（阻擋 v25 在所有瀏覽器啟用） |
+| TD-TAC-64 | `heroProgress.xpNeed` 用 `Math.round(120·Math.pow(1.18, L−1))`；Firefox／WebKit 的 pow 有 0.2% 輸入與 V8 差 1 ulp，極少數情況下會改變取整 ⇒ 跨場的熟練等級門檻可能不同（不在 tick 模擬內） | 低 |
+
+### Roadmap（取代前一節的順序）
+
+| 順序 | 項目 | 改語意嗎 | 狀態 |
+|---|---|---|---|
+| 1～14 | v23 凍結 … Sprint 2A 結案 | — | 完成 |
+| 15 | C1 決定性數學核心（moba-sim.v25 候選） | 是（只在新層） | 完成 |
+| 16 | **C1 Acceptance Closure**（本節） | 否 | **完成，等 Owner Review** |
+| 17 | **Owner 決定**：① 非 V8 一致性要不要做（det.v2：hypot 等，含導航；TD-TAC-63）② 版本化範圍登記表是否成為整合規則（TD-TAC-60）③ 地圖幾何保險項（TD-TAC-57） | 依選項 | 待 Owner |
+| 18 | v25 以未啟用候選整合 main（Release Gate SHA 守門、與 CS／main 對齊） | 否 | 待 17 |
+| 19 | 戰術契約 v3.1 事前登記與 v25 上的產品驗收 | 否 | 待 Owner |
+| 20 | 真實裝置（iOS／macOS Safari、Android）驗證 | 否 | 待 17 |
+| 21 | Sprint 2B：3～4 人編隊 | 是 | **暫緩** |
+| 22 | 發布線（G-A8 新判準等） | 否 | 待 Owner |

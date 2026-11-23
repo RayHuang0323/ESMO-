@@ -1,0 +1,29 @@
+[2026-11-23T10:36:04.601Z] start {"head":"1aaa87a985de0418d3de44db0adc601a1dc0af88","srcDirty":false,"node":"v24.18.0","sim":"moba-sim.v25","fingerprint":"15a8c67f3bcea44a","digest":"C1StateDigest.v1","plan":"c1-crossengine-dev","kernel":"det","ruleset":"balanceTool.v25","toolEnv":"parity"} engines=chrome,firefox,webkit items=8
+[2026-11-23T10:36:08.529Z] engine chrome Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 
+[2026-11-23T10:36:51.467Z] chrome S142243 seed=142243 IDENTICAL ticks=2643/2643 red/red node=18902ms chrome=23999ms
+[2026-11-23T10:37:18.268Z] chrome S142227 seed=142227 IDENTICAL ticks=2000/2000 red/red node=10697ms chrome=16067ms
+[2026-11-23T10:37:46.082Z] chrome S146045 seed=146045 IDENTICAL ticks=1922/1922 red/red node=11563ms chrome=16221ms
+[2026-11-23T10:38:14.165Z] chrome S146065 seed=146065 IDENTICAL ticks=2037/2037 blue/blue node=11352ms chrome=16691ms
+[2026-11-23T10:38:38.790Z] chrome F001 seed=151001 IDENTICAL ticks=1863/1863 blue/blue node=9173ms chrome=15420ms
+[2026-11-23T10:39:15.494Z] chrome F002 seed=151002 IDENTICAL ticks=2798/2798 red/red node=13545ms chrome=23129ms
+[2026-11-23T10:39:39.122Z] chrome F003 seed=151003 IDENTICAL ticks=1828/1828 red/red node=8613ms chrome=13506ms
+[2026-11-23T10:40:11.258Z] chrome F004 seed=151004 IDENTICAL ticks=2396/2396 blue/blue node=11536ms chrome=20567ms
+[2026-11-23T10:42:28.343Z] engine firefox Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0 155.0
+[2026-11-23T10:42:39.060Z] firefox S142243 seed=142243 DIFF@0 ticks=2643/1741 red/blue node=18902ms firefox=10693ms
+[2026-11-23T10:42:54.452Z] firefox S142227 seed=142227 DIFF@0 ticks=2000/2580 red/blue node=10697ms firefox=15370ms
+[2026-11-23T10:43:06.534Z] firefox S146045 seed=146045 DIFF@0 ticks=1922/1939 red/red node=11563ms firefox=10560ms
+[2026-11-23T10:43:15.749Z] firefox S146065 seed=146065 DIFF@0 ticks=2037/1794 blue/blue node=11352ms firefox=9197ms
+[2026-11-23T10:43:23.725Z] firefox F001 seed=151001 DIFF@0 ticks=1863/1765 blue/blue node=9173ms firefox=7958ms
+[2026-11-23T10:43:36.799Z] firefox F002 seed=151002 DIFF@0 ticks=2798/2621 red/blue node=13545ms firefox=13055ms
+[2026-11-23T10:43:48.713Z] firefox F003 seed=151003 DIFF@0 ticks=1828/2501 red/red node=8613ms firefox=11895ms
+[2026-11-23T10:44:04.944Z] firefox F004 seed=151004 DIFF@0 ticks=2396/2581 blue/blue node=11536ms firefox=16209ms
+[2026-11-23T10:44:09.630Z] engine webkit Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15 26.6
+[2026-11-23T10:44:19.922Z] webkit S142243 seed=142243 DIFF@0 ticks=2643/1741 red/blue node=18902ms webkit=10261ms
+[2026-11-23T10:44:41.413Z] webkit S142227 seed=142227 DIFF@0 ticks=2000/2580 red/blue node=10697ms webkit=21475ms
+[2026-11-23T10:44:52.163Z] webkit S146045 seed=146045 DIFF@0 ticks=1922/1939 red/red node=11563ms webkit=10737ms
+[2026-11-23T10:45:01.749Z] webkit S146065 seed=146065 DIFF@0 ticks=2037/1794 blue/blue node=11352ms webkit=9572ms
+[2026-11-23T10:45:08.749Z] webkit F001 seed=151001 DIFF@0 ticks=1863/1765 blue/blue node=9173ms webkit=6987ms
+[2026-11-23T10:45:25.371Z] webkit F002 seed=151002 DIFF@0 ticks=2798/3103 red/red node=13545ms webkit=16609ms
+[2026-11-23T10:45:37.068Z] webkit F003 seed=151003 DIFF@0 ticks=1828/2501 red/red node=8613ms webkit=11685ms
+[2026-11-23T10:45:49.897Z] webkit F004 seed=151004 DIFF@0 ticks=2396/2581 blue/blue node=11536ms webkit=12817ms
+[2026-11-23T10:45:49.935Z] end done=24 skipped=0

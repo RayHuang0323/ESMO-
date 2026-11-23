@@ -1,0 +1,111 @@
+{
+ "node": "v24.18.0",
+ "inputs": 100000,
+ "laneSegments": 32,
+ "engines": {
+  "chrome": {
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "browserVersion": null,
+   "differingInputs": {
+    "hypot": 0,
+    "sqrt": 0,
+    "sin": 3313,
+    "cos": 3335,
+    "atan2": 17765,
+    "acos": 7641,
+    "asin": 6022,
+    "exp": 9445,
+    "log": 2106,
+    "pow": 0
+   },
+   "laneHypotDiffs": 0,
+   "laneExamples": []
+  },
+  "firefox": {
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "browserVersion": "155.0",
+   "differingInputs": {
+    "hypot": 35477,
+    "sqrt": 0,
+    "sin": 2277,
+    "cos": 2245,
+    "atan2": 0,
+    "acos": 0,
+    "asin": 0,
+    "exp": 0,
+    "log": 0,
+    "pow": 185
+   },
+   "laneHypotDiffs": 10,
+   "laneExamples": [
+    {
+     "lane": "top",
+     "seg": 6,
+     "node": "25.831182706178982",
+     "engine": "25.83118270617898"
+    },
+    {
+     "lane": "top",
+     "seg": 8,
+     "node": "28.442925306655788",
+     "engine": "28.442925306655784"
+    },
+    {
+     "lane": "top",
+     "seg": 9,
+     "node": "28.0713376952364",
+     "engine": "28.071337695236398"
+    },
+    {
+     "lane": "mid",
+     "seg": 1,
+     "node": "25.455844122715714",
+     "engine": "25.45584412271571"
+    }
+   ]
+  },
+  "webkit": {
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "browserVersion": "26.6",
+   "differingInputs": {
+    "hypot": 36808,
+    "sqrt": 0,
+    "sin": 2277,
+    "cos": 2245,
+    "atan2": 17736,
+    "acos": 851,
+    "asin": 2380,
+    "exp": 9168,
+    "log": 2100,
+    "pow": 185
+   },
+   "laneHypotDiffs": 10,
+   "laneExamples": [
+    {
+     "lane": "top",
+     "seg": 6,
+     "node": "25.831182706178982",
+     "engine": "25.83118270617898"
+    },
+    {
+     "lane": "top",
+     "seg": 8,
+     "node": "28.442925306655788",
+     "engine": "28.442925306655784"
+    },
+    {
+     "lane": "top",
+     "seg": 9,
+     "node": "28.0713376952364",
+     "engine": "28.071337695236398"
+    },
+    {
+     "lane": "mid",
+     "seg": 1,
+     "node": "25.455844122715714",
+     "engine": "25.45584412271571"
+    }
+   ]
+  }
+ }
+}

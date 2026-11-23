@@ -14,7 +14,7 @@ import { sharedMatchAssemblerDeps } from "../../src/battle/moba/matchAssemblerDe
 import { mathKernelOf } from "../../src/platform/contracts/matchRuleset.js";
 import { MOBA_SIMULATION_VERSION } from "../../src/platform/contracts/simulationVersion.js";
 import { c1Assemble } from "./c1_assemble.js";
-import { stateDigest, runDigest, C1_DIGEST_VERSION } from "./c1_state_digest.js";
+import { stateDigest, runDigest, stateLeaves, C1_DIGEST_VERSION } from "./c1_state_digest.js";
 import { geometryDigest, geometryLeaves, C1_GEOMETRY_VERSION } from "./c1_geometry_digest.js";
 
 const api = {
@@ -25,6 +25,8 @@ const api = {
   geometryDigest() { return geometryDigest(); },
   geometryLeaves(cat) { return geometryLeaves(cat); },
   runTool(setupJson, capSec = 3000) { return runDigest(c1Assemble(setupJson).engine, capSec); },
+  //  C1 closure：診斷用——assemble 後跑到第 tick 個 tick，回傳整個引擎狀態的葉節點（唯讀）。
+  stateLeavesAt(setupJson, tick = 0) { const e = c1Assemble(setupJson).engine; for (let i = 0; i < tick && !e.over; i++) e.tick(0.5); return stateLeaves(e); },
   runLive(setupJson, capSec = 3000) {
     const r = assembleMatch(JSON.parse(setupJson), sharedMatchAssemblerDeps());
     if (!r.ok) throw new Error(`runLive: assembleMatch failed: ${r.errors.map((x) => `${x.code}@${x.field}`).join(",")}`);

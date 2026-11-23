@@ -42,6 +42,22 @@ export function stateDigest(root, { excludeTopKeys = null } = {}) {
   return (a >>> 0).toString(16).padStart(8, "0") + (b >>> 0).toString(16).padStart(8, "0");
 }
 
+/** Every primitive leaf of the engine state as [path, exact text] (same walk order as stateDigest) — used to name the first differing field. */
+export function stateLeaves(root) {
+  const out = [], seen = new Set();
+  const txt = (x) => (typeof x === "number" ? (Object.is(x, -0) ? "-0" : String(x)) : typeof x === "function" ? "f" : JSON.stringify(x) ?? "U");
+  const walk = (v, p) => {
+    if (v === null || typeof v !== "object") { out.push([p, txt(v)]); return; }
+    if (seen.has(v)) return; seen.add(v);
+    if (Array.isArray(v) || ArrayBuffer.isView(v)) { for (let i = 0; i < v.length; i++) walk(v[i], `${p}[${i}]`); return; }
+    if (v instanceof Map) { let i = 0; for (const [k, x] of v) walk(x, `${p}<${String(k)}#${i++}>`); return; }
+    if (v instanceof Set) { let i = 0; for (const x of v) walk(x, `${p}{${i++}}`); return; }
+    for (const k of Object.keys(v)) walk(v[k], `${p}.${k}`);
+  };
+  walk(root, "e");
+  return out;
+}
+
 /** Tick the engine to the end (or capSec), digesting the whole state after every tick. */
 export function runDigest(e, capSec = 3000, opts = {}) {
   const perTick = [stateDigest(e, opts)];

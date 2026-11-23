@@ -1,0 +1,229 @@
+{
+ "version": "C1Geometry.v1",
+ "node": {
+  "version": "v24.18.0",
+  "digest": {
+   "layout": "7da58ccaca21676e",
+   "terrain": "d744709e1ac94726",
+   "field": "9329e1b3d809a2d9",
+   "structures": "aafc9385829a5587",
+   "navInfo": "851e008f5253fa3f"
+  }
+ },
+ "engines": {
+  "chrome": {
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "browserVersion": null,
+   "identical": false,
+   "categories": {
+    "layout": {
+     "same": true,
+     "digest": "7da58ccaca21676e"
+    },
+    "terrain": {
+     "same": false,
+     "nodeDigest": "d744709e1ac94726",
+     "engineDigest": "51e031c85d388010",
+     "leaves": {
+      "node": 58013,
+      "engine": 58013
+     },
+     "differingLeaves": 2187,
+     "firstDifference": {
+      "index": 905,
+      "node": [
+       "terrain.groundLayers[11].poly[0].x",
+       "102.09254620692805"
+      ],
+      "engine": [
+       "terrain.groundLayers[11].poly[0].x",
+       "102.0925462067565"
+      ]
+     },
+     "maxAbsDifference": 1.71581859831349e-10,
+     "maxAt": "terrain.groundLayers[11].poly[9].x"
+    },
+    "field": {
+     "same": true,
+     "digest": "9329e1b3d809a2d9"
+    },
+    "structures": {
+     "same": true,
+     "digest": "aafc9385829a5587"
+    },
+    "navInfo": {
+     "same": true,
+     "digest": "851e008f5253fa3f"
+    }
+   }
+  },
+  "firefox": {
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "browserVersion": "155.0",
+   "identical": false,
+   "categories": {
+    "layout": {
+     "same": false,
+     "nodeDigest": "7da58ccaca21676e",
+     "engineDigest": "eda3ed302265f324",
+     "leaves": {
+      "node": 495,
+      "engine": 495
+     },
+     "differingLeaves": 12,
+     "firstDifference": {
+      "index": 115,
+      "node": [
+       "layout.towers[3].x",
+       "205.70043627800044"
+      ],
+      "engine": [
+       "layout.towers[3].x",
+       "205.70043627800047"
+      ]
+     },
+     "maxAbsDifference": 5.684341886080802e-14,
+     "maxAt": "layout.towers[13].x"
+    },
+    "terrain": {
+     "same": false,
+     "nodeDigest": "d744709e1ac94726",
+     "engineDigest": "eb52b53030f08d2e",
+     "leaves": {
+      "node": 58013,
+      "engine": 58013
+     },
+     "differingLeaves": 1081,
+     "firstDifference": {
+      "index": 611,
+      "node": [
+       "terrain.groundLayers[5].poly[0].x",
+       "217.69312713048006"
+      ],
+      "engine": [
+       "terrain.groundLayers[5].poly[0].x",
+       "217.69312713055604"
+      ]
+     },
+     "maxAbsDifference": 1.715534381219186e-10,
+     "maxAt": "terrain.groundLayers[11].poly[0].x"
+    },
+    "field": {
+     "same": true,
+     "digest": "9329e1b3d809a2d9"
+    },
+    "structures": {
+     "same": false,
+     "nodeDigest": "aafc9385829a5587",
+     "engineDigest": "7d71ad7eb6a34a5e",
+     "leaves": {
+      "node": 168,
+      "engine": 168
+     },
+     "differingLeaves": 8,
+     "firstDifference": {
+      "index": 15,
+      "node": [
+       "structures[2].x",
+       "84.13842534213047"
+      ],
+      "engine": [
+       "structures[2].x",
+       "84.13842534213049"
+      ]
+     },
+     "maxAbsDifference": 5.684341886080802e-14,
+     "maxAt": "structures[4].x"
+    },
+    "navInfo": {
+     "same": true,
+     "digest": "851e008f5253fa3f"
+    }
+   }
+  },
+  "webkit": {
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "browserVersion": "26.6",
+   "identical": false,
+   "categories": {
+    "layout": {
+     "same": false,
+     "nodeDigest": "7da58ccaca21676e",
+     "engineDigest": "eda3ed302265f324",
+     "leaves": {
+      "node": 495,
+      "engine": 495
+     },
+     "differingLeaves": 12,
+     "firstDifference": {
+      "index": 115,
+      "node": [
+       "layout.towers[3].x",
+       "205.70043627800044"
+      ],
+      "engine": [
+       "layout.towers[3].x",
+       "205.70043627800047"
+      ]
+     },
+     "maxAbsDifference": 5.684341886080802e-14,
+     "maxAt": "layout.towers[13].x"
+    },
+    "terrain": {
+     "same": false,
+     "nodeDigest": "d744709e1ac94726",
+     "engineDigest": "159ea37b9eb889cf",
+     "leaves": {
+      "node": 58013,
+      "engine": 58013
+     },
+     "differingLeaves": 2437,
+     "firstDifference": {
+      "index": 611,
+      "node": [
+       "terrain.groundLayers[5].poly[0].x",
+       "217.69312713048006"
+      ],
+      "engine": [
+       "terrain.groundLayers[5].poly[0].x",
+       "217.69312713055604"
+      ]
+     },
+     "maxAbsDifference": 1.715534381219186e-10,
+     "maxAt": "terrain.groundLayers[11].poly[0].x"
+    },
+    "field": {
+     "same": true,
+     "digest": "9329e1b3d809a2d9"
+    },
+    "structures": {
+     "same": false,
+     "nodeDigest": "aafc9385829a5587",
+     "engineDigest": "7d71ad7eb6a34a5e",
+     "leaves": {
+      "node": 168,
+      "engine": 168
+     },
+     "differingLeaves": 8,
+     "firstDifference": {
+      "index": 15,
+      "node": [
+       "structures[2].x",
+       "84.13842534213047"
+      ],
+      "engine": [
+       "structures[2].x",
+       "84.13842534213049"
+      ]
+     },
+     "maxAbsDifference": 5.684341886080802e-14,
+     "maxAt": "structures[4].x"
+    },
+    "navInfo": {
+     "same": true,
+     "digest": "851e008f5253fa3f"
+    }
+   }
+  }
+ }
+}

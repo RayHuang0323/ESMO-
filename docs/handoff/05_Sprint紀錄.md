@@ -27190,3 +27190,18 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 驗證：check_det_math_c1 7/7（150 萬筆 Node＝Chrome 逐位元；誤差不比 Node 原生差：sin 0.76、atan2 1.39 ulp；Sprint 2A 的 922 個分歧輸入 det 0 個不同）；check_c1_isolation 7/7（含 det 對局中引擎 0 次原生三角函數、4 場釘點）。事前登記 948fb192 後的正式 80 場新 Seeds（151001～151080）：det 80/80 每個 tick 整場引擎狀態 Node＝Chrome（175,455 tick，X1／X2 PASS）；原生對照 80/80 分歧、4 場勝方翻轉；det 與 v24 原生 Node 結局 80/80 相同。Sprint 2A 案例 142227 原生勝方翻轉 → det 一致。效能中位數 −0.02%。舊版本：check_match_golden_v21a 137 條逐字相同、tactic_exec_v24 19/19。瀏覽器 5647（career.v25）：一般觀看、快速完成、390px 三場 Node＝Chrome 逐 tick、畫面引擎最終狀態也相同；結算、Replay、回總部正常，console error 0。Edge 158 探索：det 150 萬筆相同（同屬 V8，不算第二種引擎）。
 
 已知：runtime29 第 10 條在 main 就紅（TD-TAC-59）；三支歷史量測前置 Gate 預期紅（TD-TAC-60）；Firefox／Safari 未認證（TD-TAC-61）。文件：review/tactic-book-3a/deterministic-math-c1/。
+
+
+## 2026-11-23 C1 Acceptance Closure（Owner Review 前）
+
+分支 feature/moba-det-math-c1（.sprints/moba-deterministic-math-c1，只在本機，未 push）。本輪沒有改 src/、DetMath.v1 或 v25 指紋 15a8c67f3bcea44a；只新增工具、Gate、事前登記與文件。Playwright 的 Firefox 155／WebKit 26.6 由 Owner 核准下載（Python Playwright 1.63 的快取）。
+
+完成：
+- 精度契約 v2：事前登記 0b6b1d09 後用全新 120 萬筆驗證，7/7 PASS（sin 0.751、cos 0.759、acos 0.849、asin 0.850、atan2 1.454 ulp，都不比 Node 原生差），Node／Chrome／Firefox／WebKit 的 det 逐位元相同。v1 原判準 atan2 < 1 ulp 的未通過紀錄保留不改。
+- 歷史 Gate（TD-TAC-60）：tools/lib/mobaVersionedScope.mjs 把「src 與歷史基準相同」拆成「歷史來源一致」（基準＝053fd582 的保護範圍、053fd582 的指紋由 git 物件重算＝9727c0b4ae8beb3d）與「現役引擎的舊版本行為不變」（登記的後繼版本、登記的變更集、v20～v24 共 8 場逐 tick Golden，從 git archive 053fd582 錄製）。cal_parity 6/6、s15_preflight 5/5、s2_contract 55/55，反向自我測試 9/9。v1.4 補丁改在它自己的基準 910792ac 上檢查。
+- runtime29 第 10 條（TD-TAC-59）：改成播放速率識別字＋建構子簽名，flat 35/35。
+- 戰術契約 v3.1：判定工具（草案、ENABLED=false）＋合成資料自我測試 10/10。分類依引擎開賽前傾向（null⇒N、auto／conservative⇒T、aggressive／allin⇒A，A 優先、互斥）。
+- 四引擎驗證（事前登記 cc294701，Seeds 153001～153080）：Chrome PASS 80/80；Firefox FAIL 0/80；WebKit FAIL 0/80。全部 tick 0 分歧，原因是模擬仍用原生 Math.hypot（gameData.posOnLane ⇒ 塔座標差 1.4e-14～5.7e-14），勝方不同 31/80、33/80。未修正（需要新核心版本與新指紋，超出本輪範圍）。
+- 地圖幾何唯讀檢查（TD-TAC-57）：地形多邊形在三個瀏覽器都與 Node 不同（被距離場吸收）；Firefox／WebKit 的塔座標與碰撞圓不同。未修改。
+
+已知與待決：TD-TAC-63（非 V8 引擎分歧，高）、TD-TAC-64（xpNeed 的 pow 取整，低）；WebKit 的 Windows build 不代表 iOS／macOS Safari。文件：review/tactic-book-3a/deterministic-math-c1/C1_驗收收尾.md。

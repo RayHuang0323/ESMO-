@@ -1,0 +1,695 @@
+{
+ "planId": "c1-crossengine-80",
+ "node": {
+  "files": 80,
+  "env": {
+   "head": "1aaa87a985de0418d3de44db0adc601a1dc0af88",
+   "srcDirty": false,
+   "node": "v24.18.0",
+   "sim": "moba-sim.v25",
+   "fingerprint": "15a8c67f3bcea44a",
+   "digest": "C1StateDigest.v1",
+   "plan": "c1-crossengine-80",
+   "kernel": "det",
+   "ruleset": "balanceTool.v25",
+   "toolEnv": "parity"
+  }
+ },
+ "engines": {
+  "chrome": {
+   "verdict": "PASS",
+   "identical": 80,
+   "of": 80,
+   "missing": 0,
+   "mismatches": [],
+   "ticksCompared": 173821,
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "browserVersion": null,
+   "msMean": 16050
+  },
+  "firefox": {
+   "verdict": "FAIL",
+   "identical": 0,
+   "of": 80,
+   "missing": 0,
+   "mismatches": [
+    {
+     "id": "X001",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X002",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X003",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X004",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X005",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X006",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X007",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X008",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X009",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X010",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X011",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X012",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X013",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X014",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X015",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X016",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X017",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X018",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X019",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X020",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X021",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X022",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X023",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X024",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X025",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X026",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X027",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X028",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X029",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X030",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X031",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X032",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X033",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X034",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X035",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X036",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X037",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X038",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X039",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X040",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X041",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X042",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X043",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X044",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X045",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X046",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X047",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X048",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X049",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X050",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X051",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X052",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X053",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X054",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X055",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X056",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X057",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X058",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X059",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X060",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X061",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X062",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X063",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X064",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X065",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X066",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X067",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X068",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X069",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X070",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X071",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X072",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X073",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X074",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X075",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X076",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X077",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X078",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X079",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X080",
+     "firstDifferentTick": 0
+    }
+   ],
+   "ticksCompared": 0,
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "browserVersion": "155.0",
+   "msMean": 9340
+  },
+  "webkit": {
+   "verdict": "FAIL",
+   "identical": 0,
+   "of": 80,
+   "missing": 0,
+   "mismatches": [
+    {
+     "id": "X001",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X002",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X003",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X004",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X005",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X006",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X007",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X008",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X009",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X010",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X011",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X012",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X013",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X014",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X015",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X016",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X017",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X018",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X019",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X020",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X021",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X022",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X023",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X024",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X025",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X026",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X027",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X028",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X029",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X030",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X031",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X032",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X033",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X034",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X035",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X036",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X037",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X038",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X039",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X040",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X041",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X042",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X043",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X044",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X045",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X046",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X047",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X048",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X049",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X050",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X051",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X052",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X053",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X054",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X055",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X056",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X057",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X058",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X059",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X060",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X061",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X062",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X063",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X064",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X065",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X066",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X067",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X068",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X069",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X070",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X071",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X072",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X073",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X074",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X075",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X076",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X077",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X078",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X079",
+     "firstDifferentTick": 0
+    },
+    {
+     "id": "X080",
+     "firstDifferentTick": 0
+    }
+   ],
+   "ticksCompared": 0,
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "browserVersion": "26.6",
+   "msMean": 8950
+  }
+ }
+}

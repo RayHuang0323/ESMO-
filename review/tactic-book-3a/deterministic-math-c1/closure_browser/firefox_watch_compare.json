@@ -1,0 +1,30 @@
+{
+ "rulesetId": "career.v25",
+ "simVersion": "moba-sim.v25",
+ "mathKernel": "det.v1",
+ "node": {
+  "ticks": 2406,
+  "winner": "red",
+  "endT": 1203,
+  "final": "bfec1c0879f91ad8"
+ },
+ "pageHeadless": {
+  "ticks": 2144,
+  "winner": "red",
+  "endT": 1072,
+  "final": "db50046e9b7da972"
+ },
+ "pageUi": {
+  "rulesetId": "career.v25",
+  "simVersion": "moba-sim.v25",
+  "mathKernel": "det.v1",
+  "setupHash": "56d0a861a4b210eb",
+  "t": 1072,
+  "over": true,
+  "winner": "red",
+  "digest": "db50046e9b7da972"
+ },
+ "nodeEqualsPageHeadlessEveryTick": false,
+ "firstDifferentTick": 0,
+ "nodeFinalEqualsUiEngine": false
+}

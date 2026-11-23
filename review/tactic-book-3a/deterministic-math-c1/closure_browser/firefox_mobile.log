@@ -1,0 +1,36 @@
+engine firefox Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0 155.0
+js 1
+js {"api":true,"sim":"moba-sim.v25","banner":true}
+tap home-mode-moba ok 154 676
+tap prep-primary-action ok 195 759
+until [...document.querySelectorAll('button')].some(b=>/確認進入對戰/.te true 10.1s
+tap 確認進入對戰 ok 195 807
+until document.querySelector('[data-testid="matchmaking-enter-banp true 5.0s
+tap matchmaking-enter-banpick ok 247 442
+until document.querySelector('[data-testid="hero-choose"]') true 0.0s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_1_banpick.png
+js {"log":["ironclad","thornwall","ravager","cinderfist","sting","duskblade","embercoil","confirm@9"],"confirm":true,"picks":"出戰配置 5/5"}
+tap confirm-draft ok 195 537
+until document.querySelector('[data-testid="tb-step-confirm"]') true 0.0s
+tap tb-step-confirm ok 321 93
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_2_tactic.png
+tap tb-confirm-go ok 281 734
+until window.__esmoC1 && window.__esmoC1.live && document.querySel true 3.6s
+js {"rulesetId":"career.v25","simVersion":"moba-sim.v25","mathKernel":"det.v1","setupHash":"5710dce9fa634a77"}
+save C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_setup.json 4721
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_3_battle.png
+tap quick-finish-match ok 345 163
+until document.querySelector('[data-testid="battle-end-screen"]') true 5.7s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_5_result.png
+save C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_result.json 40379
+tap 觀看重播 ok 108 809
+until document.querySelector('input[aria-label="重播時間軸"]') true 0.0s
+js {"min":"0","max":"1049","n":136,"rows":["[0:44] Nacht 使用懲戒（藍 Buff）","[0:46] Ash 使用懲戒（紅 Buff）","[1:28] Frost 使用幽魂（逃生）","[2:02] Blitz 使用治療（保命）","[2:20] Nacht 使用懲戒（藍 Buff）","[2:26] Ash 使用懲戒（紅 Buff）","[2:36] Pyre 使用點燃（收頭）","[2:46] Cinder 使用治療（保命）","[3:48] Cinder 使用閃現（逃生）","[3:52] Nacht 使用懲戒（藍 Buff）","[4:00] 巨龍 已刷新","[4:20] Scoria 使用閃現（切入）","[4:20] Seelöwe 使用點燃（收頭）","[4:20] Nacht 使用閃現（逃生）","[4:24] Ember 使用閃現（切入）","[4:28] Frost 使用幽魂（逃生）","[4:49] Pyre 大絕招 R 升至 Lv1","[4:49] Scoria 大絕招 R 升至 Lv1","[4:50] 巨龍 被紅方擊殺","[4:50] Seelöwe 使用閃現（切入）","[4:50] Kaiser 使用閃現（切入）","[5:02] Blitz 使用治療（保命）","[5:10] Ash 使用懲戒（紅 Buff）","[5:11] Ember 天賦技能 Q 滿級（Lv3）","[5:18] Nacht 使用懲戒（藍方石甲蟲）","[5:46] Ash 大絕招 R 升至 Lv1","[5:53] Nacht 大絕招 R 升至 Lv1","[5:53] Frost 大絕招 R 升至 Lv1","[6:15] Scoria 天賦技能 W 滿級（Lv3）","[6:18] Ash 擊殺 Nacht（助攻 Pyre）【抓單】","[6:18] Pyre 使用點燃（收頭）","[6:25] Ash 天賦技能 W 滿級（Lv3）","[6:32] Kaiser 使用傳送（支援守塔）","[6:52] Nacht 使用懲戒（藍方狼營）","[6:54] Ash 使用懲戒（紅 Buff）","[7:20] 巨龍 已刷新","[7:23] Pyre 天賦技能 W 滿級（Lv3）","[7:28] Frost 天賦技能 Q 滿級（Lv3）","[7:32] Frost 使用幽魂（逃生）","[7:46] Seelöwe 使用點燃（收頭）","[8:00] 巨龍 被紅方擊殺","[8:00] 巴龍 已刷新","[8:02] Blitz 使用治療（救援）","[8:18] Ash 使用懲戒（紅方狼營）","[8:26] Nacht 使用懲戒（藍方狼營）","[8:43] Kaiser 大絕招 R 升至 Lv1","[8:43] Nacht 天賦技能 E 滿級（Lv3）","[8:52] Cinder 使用治療（保命）","[8:56] Ash 擊殺 Nacht（助攻 Cinder）【目標戰】","[9:08] Pyre 使用閃現（切入）","[9:24] 紅方上路 1 塔 被摧毀","[9:28] Blitz 大絕招 R 升至 Lv1","[9:34] Seelöwe 使用閃現（逃生）","[9:46] Ash 使用閃現（切入）","[9:52] Scoria 使用閃現（切入）","[9:54] Ash 擊殺 Kaiser（助攻 Scoria,Ember）【抓單】","[10:02] Frost 使用閃現（追擊）","[10:16] Cinder 大絕招 R 升至 Lv1","[10:16] 巴龍 被紅方擊殺","[10:20] Pyre 使用點燃（收頭）","[10:26] 藍方中路 1 塔 被摧毀","[10:30] 巨龍 已刷新","[10:48] Cinder 天賦技能 W 滿級（Lv3）","[10:48] Cinder 擊殺 Blitz（助攻 Pyre,Ash）【目標戰】","[10:50] Frost 使用幽魂（逃生）","[10:54] Seelöwe 使用點燃（收頭）","[10:56] 藍方下路 1 塔 被摧毀","[10:58] 藍方上路 1 塔 被摧毀","[11:02] 巨龍 被紅方擊殺","[11:11] Ember 大絕招 R 升至 Lv2","[11:16] Nacht 使用懲戒（藍 Buff）","[11:18] Ash 使用懲戒（紅 Buff）","[11:54] Ember 擊殺 Seelöwe【追擊】","[11:58] Blitz 使用治療（保命）","[12:34] Ash 大絕招 R 升至 Lv2","[12:34] Ash 擊殺 Frost【追擊】","[12:34] 藍方中路 2 塔 被摧毀","[12:40] Ash 擊殺 Nacht（助攻 Pyre）【抓單】","[12:40] 雙殺！ Ash","[12:40] Blitz 天賦技能 E 滿級（Lv3）","[12:42] Ember 擊殺 Blitz【追擊】","[13:02] Kaiser 使用傳送（支援守塔）","[13:02] Cinder 使用治療（保命）","[13:24] Ash 使用懲戒（紅 Buff）","[13:30] Nacht 使用懲戒（藍 Buff）","[13:32] 巨龍 已刷新","[13:40] Ember 擊殺 Blitz【抓單】","[13:40] Seelöwe 使用閃現（逃生）","[13:46] 巴龍 已刷新","[13:47] Kaiser 天賦技能 Q 滿級（Lv3）","[14:06] 巨龍 被紅方擊殺","[14:18] Nacht 使用閃現（切入）","[14:18] Frost 使用閃現（切入）","[14:18] Pyre 使用點燃（收頭）","[14:20] Ash 擊殺 Nacht（助攻 Pyre）【團戰】","[14:20] Frost 使用幽魂（逃生）","[14:22] Scoria 使用閃現（切入）","[14:24] Ash 擊殺 Seelöwe【追擊】","[14:24] 雙殺！ Ash","[14:24] Seelöwe 使用點燃（收頭）","[14:28] Blitz 使用閃現（逃生）","[15:04] Kaiser 擊殺 Scoria【目標戰】","[15:13] Pyre 大絕招 R 升至 Lv2","[15:14] Pyre 擊殺 Seelöwe【追擊】","[15:14] Nacht 使用懲戒（藍 Buff）","[15:16] Cinder 擊殺 Kaiser【追擊】","[15:26] 巴龍 被紅方擊殺","[15:26] Ash 使用懲戒（巴龍）","[15:56] Nacht 擊殺 Pyre（助攻 Frost）【抓單】","[15:56] Pyre 擊殺 Nacht【追擊】","[15:56] 藍方下路 2 塔 被摧毀","[15:58] Pyre 擊殺 Frost【追擊】","[15:58] 雙殺！ Pyre","[15:58] Blitz 使用治療（保命）","[16:00] Ember 擊殺 Blitz【抓單】","[16:00] Ember 擊殺 Seelöwe【抓單】","[16:00] 雙殺！ Ember","[16:36] 巨龍 已刷新","[16:38] 藍方中路 3 塔 被摧毀","[16:45] Seelöwe 大絕招 R 升至 Lv1","[16:46] Seelöwe 擊殺 Ember（助攻 Blitz）【抓單】","[16:46] Ember 使用閃現（逃生）","[17:04] Ash 擊殺 Kaiser（助攻 Cinder,Scoria）【團戰】","[17:04] Cinder 擊殺 Nacht（助攻 Pyre）【團戰】","[17:04] Pyre 使用點燃（收頭）","[17:06] Cinder 使用閃現（切入）","[17:08] Ash 使用閃現（切入）","[17:08] Pyre 使用閃現（切入）","[17:12] Cinder 擊殺 Frost【抓單】","[17:12] 雙殺！ Cinder","[17:16] Cinder 大絕招 R 升至 Lv2","[17:16] 巨龍 被紅方擊殺","[17:16] Ash 使用懲戒（巨龍）","[17:18] 藍方門牙塔 被摧毀","[17:29] 藍方主堡 被摧毀","[17:29] 勝利！"]}
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_6_replay.png
+tap 關閉重播 ok 343 28
+until document.querySelector('[data-testid="battle-result-continue true 0.0s
+tap battle-result-continue ok 259 809
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_7_settlement.png
+until document.querySelector('[data-testid="home-mode-moba"]') true 0.0s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/firefox_mobile_8_home.png
+js {"home":true,"overflowX":false,"errs":[]}

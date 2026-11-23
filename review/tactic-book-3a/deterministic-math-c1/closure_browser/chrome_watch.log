@@ -1,0 +1,40 @@
+engine chrome Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 
+js 1
+js {"api":true,"sim":"moba-sim.v25","banner":true}
+tap home-mode-moba ok 765 373
+tap prep-primary-action ok 622 658
+until [...document.querySelectorAll('button')].some(b=>/確認進入對戰/.te true 10.1s
+tap 確認進入對戰 ok 622 708
+until document.querySelector('[data-testid="matchmaking-enter-banp true 5.1s
+tap matchmaking-enter-banpick ok 681 398
+until document.querySelector('[data-testid="hero-choose"]') true 0.0s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_1_banpick.png
+js {"log":["ironclad","thornwall","ravager","cinderfist","sting","duskblade","greymantle","confirm@9"],"confirm":true,"picks":"出戰配置 5/5"}
+tap confirm-draft ok 629 536
+until document.querySelector('[data-testid="tb-step-confirm"]') true 0.0s
+tap tb-step-confirm ok 975 93
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_2_tactic.png
+tap tb-confirm-go ok 886 504
+until window.__esmoC1 && window.__esmoC1.live && document.querySel true 3.5s
+js {"rulesetId":"career.v25","simVersion":"moba-sim.v25","mathKernel":"det.v1","setupHash":"5c53a9f6b2ac7f68"}
+save C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_setup.json 4721
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_3_battle.png
+tap match-speed-4 ok 1123 28
+until (()=>{const t=(document.querySelector('[data-testid="hud-clo true 125.5s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_4_watch.png
+js {"clock":"5:03","t":303.5,"digest":"f43a59afe015b1c1"}
+tap quick-finish-match ok 1195 28
+until document.querySelector('[data-testid="battle-end-screen"]') true 7.1s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_5_result.png
+save C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_result.json 39157
+tap 觀看重播 ok 534 712
+until document.querySelector('input[aria-label="重播時間軸"]') true 0.1s
+js {"min":"0","max":"1016.5","n":121,"rows":["[0:44] Nacht 使用懲戒（藍 Buff）","[0:45] Ash 使用懲戒（紅 Buff）","[1:48] Seelöwe 使用點燃（收頭）","[1:48] Ash 使用閃現（切入）","[1:57] Cinder 使用治療（保命）","[2:12] Blitz 使用治療（救援）","[2:28] Nacht 使用懲戒（藍 Buff）","[2:33] Ash 使用懲戒（紅 Buff）","[3:04] Frost 使用幽魂（逃生）","[4:00] 巨龍 已刷新","[4:00] Nacht 使用懲戒（藍 Buff）","[4:23] Scoria 使用閃現（逃生）","[4:31] Frost 大絕招 R 升至 Lv1","[4:31] 巨龍 被藍方擊殺","[4:33] Seelöwe 使用點燃（收頭）","[4:35] Ember 使用閃現（逃生）","[4:35] Blitz 使用閃現（切入）","[4:35] Seelöwe 使用閃現（切入）","[4:40] 首殺！ Frost 擊殺 Ash（助攻 Kaiser,Seelöwe,Blitz）【抓單】","[4:51] Ember 使用傳送（支援守塔）","[4:55] Frost 天賦技能 Q 滿級（Lv3）","[5:15] Nacht 使用懲戒（藍方石甲蟲）","[5:21] Ash 使用懲戒（紅 Buff）","[5:23] Pyre 大絕招 R 升至 Lv1","[5:47] Seelöwe 大絕招 R 升至 Lv1","[6:02] Cinder 大絕招 R 升至 Lv1","[6:03] Pyre 使用護盾（保命）","[6:05] Frost 使用幽魂（逃生）","[6:11] Blitz 大絕招 R 升至 Lv1","[6:20] Cinder 天賦技能 Q 滿級（Lv3）","[6:21] 藍方上路 1 塔 被摧毀","[6:21] 紅方下路 1 塔 被摧毀","[6:29] Blitz 天賦技能 E 滿級（Lv3）","[6:56] Ash 大絕招 R 升至 Lv1","[6:56] Pyre 天賦技能 Q 滿級（Lv3）","[7:01] 巨龍 已刷新","[7:27] Scoria 大絕招 R 升至 Lv1","[7:33] Blitz 使用治療（保命）","[7:38] Kaiser 大絕招 R 升至 Lv1","[7:38] Nacht 天賦技能 E 滿級（Lv3）","[7:39] 巨龍 被藍方擊殺","[7:43] Ash 擊殺 Blitz（助攻 Scoria）【追擊】","[7:53] Kaiser 使用傳送（支援守塔）","[7:55] Cinder 使用治療（救援）","[7:57] Ash 天賦技能 Q 滿級（Lv3）","[7:57] 藍方中路 1 塔 被摧毀","[8:00] Seelöwe 天賦技能 Q 滿級（Lv3）","[8:01] 巴龍 已刷新","[8:03] Nacht 使用懲戒（藍 Buff）","[8:23] Kaiser 使用閃現（逃生）","[8:23] Seelöwe 使用點燃（收頭）","[8:25] Ash 擊殺 Kaiser（助攻 Cinder,Ember）【目標戰】","[8:25] Ember 使用閃現（追擊）","[8:27] Cinder 使用閃現（逃生）","[8:33] Scoria 使用閃現（切入）","[8:37] Blitz 使用閃現（切入）","[8:53] Scoria 天賦技能 Q 滿級（Lv3）","[9:11] Nacht 使用閃現（逃生）","[9:25] Ash 擊殺 Seelöwe（助攻 Scoria）【追擊】","[9:33] Ash 使用閃現（逃生）","[9:37] 巴龍 被紅方擊殺","[9:47] Frost 使用幽魂（逃生）","[9:59] Nacht 使用懲戒（藍 Buff）","[10:09] 巨龍 已刷新","[10:30] Ember 大絕招 R 升至 Lv1","[10:31] 巨龍 被紅方擊殺","[10:31] Ash 使用懲戒（巨龍）","[10:37] 藍方中路 2 塔 被摧毀","[10:57] Kaiser 天賦技能 Q 滿級（Lv3）","[11:05] Seelöwe 使用閃現（逃生）","[11:14] Cinder 大絕招 R 升至 Lv2","[11:17] 藍方上路 2 塔 被摧毀","[11:35] Nacht 使用懲戒（藍 Buff）","[11:47] Ash 使用懲戒（紅方狼營）","[12:09] Pyre 擊殺 Frost（助攻 Ash）【抓單】","[12:09] Pyre 大絕招 R 升至 Lv2","[12:13] Seelöwe 使用點燃（收頭）","[12:13] Ember 使用閃現（逃生）","[12:25] Cinder 使用治療（救援）","[12:45] Blitz 大絕招 R 升至 Lv2","[12:45] 紅方下路 2 塔 被摧毀","[13:01] 巨龍 已刷新","[13:01] Ash 使用懲戒（紅 Buff）","[13:03] Blitz 擊殺 Ember【追擊】","[13:03] Blitz 使用治療（保命）","[13:07] 巴龍 已刷新","[13:19] Ash 擊殺 Frost【目標戰】","[13:21] Ash 使用閃現（逃生）","[13:45] Nacht 擊殺 Cinder（助攻 Blitz）【抓單】","[13:51] Pyre 使用閃現（切入）","[14:15] Kaiser 擊殺 Ash【目標戰】","[14:19] Frost 使用幽魂（逃生）","[14:21] Pyre 使用護盾（保命）","[14:27] Ember 天賦技能 Q 滿級（Lv3）","[14:27] 巨龍 被紅方擊殺","[14:35] Kaiser 使用閃現（追擊）","[14:35] Seelöwe 使用閃現（追擊）","[14:35] Scoria 使用閃現（逃生）","[14:37] Seelöwe 擊殺 Scoria（助攻 Kaiser,Blitz,Nacht）【越塔】","[15:03] Blitz 擊殺 Ember【追擊】","[15:03] 紅方中路 1 塔 被摧毀","[15:08] Ash 大絕招 R 升至 Lv2","[15:09] Ash 擊殺 Kaiser【目標戰】","[15:21] Cinder 擊殺 Nacht【埋伏】","[15:49] 巴龍 被紅方擊殺","[15:55] Cinder 使用閃現（追擊）","[15:57] Cinder 擊殺 Frost【追擊】","[15:57] Frost 使用閃現（逃生）","[16:03] Pyre 擊殺 Seelöwe（助攻 Scoria）【抓單】","[16:07] Ash 擊殺 Blitz【抓單】","[16:11] 藍方下路 1 塔 被摧毀","[16:21] Ash 使用懲戒（紅 Buff）","[16:29] 藍方中路 3 塔 被摧毀","[16:41] Cinder 擊殺 Nacht（助攻 Pyre,Scoria）【抓單】","[16:41] Scoria 大絕招 R 升至 Lv2","[16:45] Cinder 擊殺 Frost（助攻 Scoria）【追擊】","[16:45] 雙殺！ Cinder","[16:51] 藍方門牙塔 被摧毀","[16:55] 藍方門牙塔 被摧毀","[16:56] 藍方主堡 被摧毀","[16:56] 勝利！"]}
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_6_replay.png
+tap 關閉重播 ok 1211 29
+until document.querySelector('[data-testid="battle-result-continue true 0.0s
+tap battle-result-continue ok 686 712
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_7_settlement.png
+until document.querySelector('[data-testid="home-mode-moba"]') true 0.0s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/closure_browser/chrome_watch_8_home.png
+js {"home":true,"overflowX":false,"errs":[]}

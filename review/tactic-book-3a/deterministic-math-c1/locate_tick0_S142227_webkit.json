@@ -1,0 +1,71 @@
+{
+ "id": "S142227",
+ "engine": "webkit",
+ "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+ "tick": 0,
+ "leaves": {
+  "node": 5378,
+  "engine": 5378
+ },
+ "differing": 8,
+ "onlyInEngine": 0,
+ "byGroup": {
+  "e.towers.blue_top_2": 2,
+  "e.towers.red_bot_2": 2,
+  "e.towers.red_top_1": 1,
+  "e.towers.red_top_2": 1,
+  "e.towers.blue_bot_1": 1,
+  "e.towers.blue_bot_2": 1
+ },
+ "first": [
+  {
+   "path": "e.towers.blue_top_2.pos.x",
+   "node": "84.13842534213047",
+   "engine": "84.13842534213049",
+   "absDiff": 1.4210854715202004e-14
+  },
+  {
+   "path": "e.towers.blue_top_2.pos.y",
+   "node": "127.29236198680428",
+   "engine": "127.29236198680425",
+   "absDiff": 2.842170943040401e-14
+  },
+  {
+   "path": "e.towers.red_top_1.pos.x",
+   "node": "172.11419826434815",
+   "engine": "172.1141982643482",
+   "absDiff": 5.684341886080802e-14
+  },
+  {
+   "path": "e.towers.red_top_2.pos.x",
+   "node": "129.85900984901372",
+   "engine": "129.85900984901377",
+   "absDiff": 5.684341886080802e-14
+  },
+  {
+   "path": "e.towers.blue_bot_1.pos.x",
+   "node": "157.88580173565185",
+   "engine": "157.8858017356518",
+   "absDiff": 5.684341886080802e-14
+  },
+  {
+   "path": "e.towers.blue_bot_2.pos.x",
+   "node": "200.14099015098628",
+   "engine": "200.14099015098623",
+   "absDiff": 5.684341886080802e-14
+  },
+  {
+   "path": "e.towers.red_bot_2.pos.x",
+   "node": "245.86157465786954",
+   "engine": "245.8615746578695",
+   "absDiff": 2.842170943040401e-14
+  },
+  {
+   "path": "e.towers.red_bot_2.pos.y",
+   "node": "202.70763801319572",
+   "engine": "202.70763801319575",
+   "absDiff": 2.842170943040401e-14
+  }
+ ],
+ "maxAbsDiff": 5.684341886080802e-14
+}
