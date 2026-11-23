@@ -15,10 +15,15 @@ import { mathKernelOf } from "../../src/platform/contracts/matchRuleset.js";
 import { MOBA_SIMULATION_VERSION } from "../../src/platform/contracts/simulationVersion.js";
 import { c1Assemble } from "./c1_assemble.js";
 import { stateDigest, runDigest, C1_DIGEST_VERSION } from "./c1_state_digest.js";
+import { geometryDigest, geometryLeaves, C1_GEOMETRY_VERSION } from "./c1_geometry_digest.js";
 
 const api = {
   digestVersion: C1_DIGEST_VERSION,
   simVersion: MOBA_SIMULATION_VERSION,
+  //  C1 closure（TD-TAC-57）：唯讀地圖幾何一致性量測；不寫回任何東西。
+  geometryVersion: C1_GEOMETRY_VERSION,
+  geometryDigest() { return geometryDigest(); },
+  geometryLeaves(cat) { return geometryLeaves(cat); },
   runTool(setupJson, capSec = 3000) { return runDigest(c1Assemble(setupJson).engine, capSec); },
   runLive(setupJson, capSec = 3000) {
     const r = assembleMatch(JSON.parse(setupJson), sharedMatchAssemblerDeps());

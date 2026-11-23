@@ -1,0 +1,600 @@
+{
+ "schema": "C1CrossEnvPlan.v1",
+ "planId": "c1-crossengine-80",
+ "registeredBefore": "any four-engine measurement on these seeds",
+ "toolEnv": "parity",
+ "rulesets": {
+  "det": "balanceTool.v25"
+ },
+ "engines": [
+  "chrome",
+  "firefox",
+  "webkit"
+ ],
+ "rule": "item i = 0..79: seed 153001+i, config standard, blue = TACTIC_TEMPLATE_LIST[(3*i + 1) % 21], red = TACTIC_TEMPLATE_LIST[(7*i + 4) % 21]",
+ "templates": [
+  "classic.m1",
+  "classic.m2",
+  "classic.m3",
+  "classic.m4",
+  "classic.m5",
+  "classic.m6",
+  "classic.m7",
+  "classic.m8",
+  "std",
+  "v2.three_lane_pressure",
+  "v2.jungle_invasion",
+  "v2.bot_duo_pressure",
+  "v2.mid_jungle_sync",
+  "v2.support_roamer",
+  "v2.dragon_pit_macro",
+  "v2.top_solo_split",
+  "v2.mid_solo_split",
+  "v2.hard_engage_stack",
+  "v2.protect_core_scaling",
+  "v2.standard_macro",
+  "v2.defensive_hold"
+ ],
+ "items": [
+  {
+   "id": "X001",
+   "seed": 153001,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X002",
+   "seed": 153002,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X003",
+   "seed": 153003,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X004",
+   "seed": 153004,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X005",
+   "seed": 153005,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X006",
+   "seed": 153006,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X007",
+   "seed": 153007,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X008",
+   "seed": 153008,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X009",
+   "seed": 153009,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X010",
+   "seed": 153010,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X011",
+   "seed": 153011,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X012",
+   "seed": 153012,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X013",
+   "seed": 153013,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X014",
+   "seed": 153014,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X015",
+   "seed": 153015,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X016",
+   "seed": 153016,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X017",
+   "seed": 153017,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X018",
+   "seed": 153018,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X019",
+   "seed": 153019,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X020",
+   "seed": 153020,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X021",
+   "seed": 153021,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X022",
+   "seed": 153022,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X023",
+   "seed": 153023,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X024",
+   "seed": 153024,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X025",
+   "seed": 153025,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X026",
+   "seed": 153026,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X027",
+   "seed": 153027,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X028",
+   "seed": 153028,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X029",
+   "seed": 153029,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X030",
+   "seed": 153030,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X031",
+   "seed": 153031,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X032",
+   "seed": 153032,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X033",
+   "seed": 153033,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X034",
+   "seed": 153034,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X035",
+   "seed": 153035,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X036",
+   "seed": 153036,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X037",
+   "seed": 153037,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X038",
+   "seed": 153038,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X039",
+   "seed": 153039,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X040",
+   "seed": 153040,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X041",
+   "seed": 153041,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X042",
+   "seed": 153042,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X043",
+   "seed": 153043,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X044",
+   "seed": 153044,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X045",
+   "seed": 153045,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X046",
+   "seed": 153046,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X047",
+   "seed": 153047,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X048",
+   "seed": 153048,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X049",
+   "seed": 153049,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X050",
+   "seed": 153050,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X051",
+   "seed": 153051,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X052",
+   "seed": 153052,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X053",
+   "seed": 153053,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X054",
+   "seed": 153054,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X055",
+   "seed": 153055,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X056",
+   "seed": 153056,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X057",
+   "seed": 153057,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X058",
+   "seed": 153058,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X059",
+   "seed": 153059,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X060",
+   "seed": 153060,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X061",
+   "seed": 153061,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X062",
+   "seed": 153062,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X063",
+   "seed": 153063,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X064",
+   "seed": 153064,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X065",
+   "seed": 153065,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X066",
+   "seed": 153066,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X067",
+   "seed": 153067,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X068",
+   "seed": 153068,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X069",
+   "seed": 153069,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X070",
+   "seed": 153070,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X071",
+   "seed": 153071,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X072",
+   "seed": 153072,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X073",
+   "seed": 153073,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X074",
+   "seed": 153074,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X075",
+   "seed": 153075,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X076",
+   "seed": 153076,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X077",
+   "seed": 153077,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "X078",
+   "seed": 153078,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "X079",
+   "seed": 153079,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m5"
+  },
+  {
+   "id": "X080",
+   "seed": 153080,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "v2.bot_duo_pressure"
+  }
+ ]
+}

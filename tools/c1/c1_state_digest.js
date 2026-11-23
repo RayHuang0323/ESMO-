@@ -9,7 +9,12 @@
 // ============================================================================
 export const C1_DIGEST_VERSION = "C1StateDigest.v1";
 
-export function stateDigest(root) {
+/**
+ * @param root the engine
+ * @param opts.excludeTopKeys engine-level keys to leave out (default none). Only the legacy-golden check uses it, to drop the single config flag
+ *        `_detMath` that C1 added to every engine (it is not simulation state; the check asserts it is false separately).
+ */
+export function stateDigest(root, { excludeTopKeys = null } = {}) {
   let a = 0x811c9dc5 | 0, b = 0x01000193 | 0;
   const feed = (s) => { for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193); b = Math.imul(b ^ c, 0x0100019d); } };
   const seen = new Map();
@@ -30,7 +35,7 @@ export function stateDigest(root) {
     if (v instanceof Set) { feed("S" + v.size + ":"); for (const x of v) walk(x); feed("}"); return; }
     if (ArrayBuffer.isView(v)) { feed("V" + v.length + ":"); for (let i = 0; i < v.length; i++) walk(v[i]); feed("]"); return; }
     feed("{");
-    for (const k of Object.keys(v)) { feed(k); feed("="); walk(v[k]); }
+    for (const k of Object.keys(v)) { if (v === root && excludeTopKeys && excludeTopKeys.includes(k)) continue; feed(k); feed("="); walk(v[k]); }
     feed("}");
   };
   walk(root);
@@ -38,9 +43,9 @@ export function stateDigest(root) {
 }
 
 /** Tick the engine to the end (or capSec), digesting the whole state after every tick. */
-export function runDigest(e, capSec = 3000) {
-  const perTick = [stateDigest(e)];
+export function runDigest(e, capSec = 3000, opts = {}) {
+  const perTick = [stateDigest(e, opts)];
   let ticks = 0;
-  while (!e.over && e.t < capSec) { e.tick(0.5); ticks++; perTick.push(stateDigest(e)); }
+  while (!e.over && e.t < capSec) { e.tick(0.5); ticks++; perTick.push(stateDigest(e, opts)); }
   return { ticks, over: !!e.over, winner: e.winner ?? null, endT: e.t, kills: [e.bK, e.rK], gold: [e.bGold, e.rGold], final: perTick[perTick.length - 1], perTick };
 }
