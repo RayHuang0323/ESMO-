@@ -7,7 +7,8 @@
 //     RS-1 requires mobaDetMathV26 on career.v26; v20–v25 ruleset objects unchanged (v25 still mathKernel "det.v1").
 //  I2 flags: mobaDetMathV26 defaults to false; four v24 flags + V26 ⇒ career.v26 (also with V25 on); four + V25 ⇒ career.v25; only V26 ⇒ career.v20;
 //     Challenge unaffected.
-//  I3 engine wiring: v20–v25 engines are constructed on the native simulation-math context (engine._simKernel.id "native", not enumerable ⇒ not in
+//  I3 engine wiring (+ 2026-11-24: an engine VIEW without _simKernel, as diagnostics build with Object.create(LogicEngine.prototype), may call
+//     prototype methods without throwing and gets the real engine's result): v20–v25 engines are constructed on the native context (engine._simKernel.id "native", not enumerable ⇒ not in
 //     any state digest); v26 engines on "det.v2", _detMath true, configureMathKernel first; the kernel/constructor mismatch throws both ways.
 //  I4 kernel scoping: after assembling and ticking v26 engines the global context is native again; a v25 and a v26 engine ticked INTERLEAVED in one
 //     process give exactly the per-tick digests each gives alone.
@@ -87,8 +88,20 @@ const geoBefore = nativeGeo();
   const throws = (f) => { try { f(); return false; } catch { return true; } };
   const mismatch = { nativeAsksV2: throws(() => new LogicEngine(1, null).configureMathKernel("det.v2")), v2AsksNative: throws(() => new LogicEngine(1, null, { mathKernel: "det.v2" }).configureMathKernel("native")),
     v2AsksV1: throws(() => new LogicEngine(1, null, { mathKernel: "det.v2" }).configureMathKernel("det.v1")), v2AsksV2: !throws(() => new LogicEngine(1, null, { mathKernel: "det.v2" }).configureMathKernel("det.v2")) };
-  ck("I3 v20～v25 引擎建在原生情境（_simKernel 不可列舉）；v26 建在 det.v2、_detMath＝true、configureMathKernel 第一個呼叫；建構與設定不一致兩個方向都丟錯",
-    legacyOk && v26Ok && Object.values(mismatch).every(Boolean), J({ rows: rows.map((x) => [x.id, x.kernel, x.det, x.calls]), mismatch }));
+  //  診斷工具（diag_te24_s15_escort_mirror、check_tactic_exec_v24）用 Object.create(LogicEngine.prototype)／一般物件做「鏡像視圖」再呼叫原型方法：
+  //  視圖沒有 _simKernel ⇒ 守衛不得丟錯，結果要等於真引擎（2026-11-24 凍結後的 s15_preflight P3 抓到第一版守衛會丟 TypeError）。
+  const eng = c1Assemble(setupJson(146001, "v2.jungle_invasion", "classic.m7", "balanceTool.v24")).engine;
+  for (let i = 0; i < 400; i++) eng.tick(0.5);
+  const view = Object.create(LogicEngine.prototype); Object.assign(view, eng);
+  const plain = { ...eng };
+  let viewOk;
+  try {
+    viewOk = J(LogicEngine.prototype.frontTower.call(view, "blue", "mid")) === J(eng.frontTower("blue", "mid"))
+      && J(LogicEngine.prototype.frontTower.call(plain, "red", "top")) === J(eng.frontTower("red", "top"))
+      && J(view.towerRange(eng.towers.blue_mid_0)) === J(eng.towerRange(eng.towers.blue_mid_0)) && !("_simKernel" in view) && !("_simKernel" in plain);
+  } catch (e) { viewOk = `threw ${String(e.message).slice(0, 120)}`; }
+  ck("I3 v20～v25 引擎建在原生情境（_simKernel 不可列舉）；v26 建在 det.v2、_detMath＝true、configureMathKernel 第一個呼叫；建構與設定不一致兩個方向都丟錯；沒有 _simKernel 的引擎視圖呼叫原型方法不丟錯且結果＝真引擎",
+    legacyOk && v26Ok && Object.values(mismatch).every(Boolean) && viewOk === true, J({ rows: rows.map((x) => [x.id, x.kernel, x.det, x.calls]), mismatch, viewOk }));
 }
 // ── I4 ──
 {

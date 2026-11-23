@@ -439,7 +439,7 @@ export class LogicEngine {
   configureMathKernel(kernel) {
     if (kernel !== "native" && kernel !== "det.v1" && kernel !== "det.v2") throw new Error(`unknown math kernel "${kernel}"`);
     //  moba-sim.v26（C2）：det.v2 必須在建構時就選定（new LogicEngine(seed, loadout, { mathKernel: "det.v2" })），兩邊不一致直接丟錯。
-    if ((kernel === "det.v2") !== this._simKernel.det) throw new Error(`math kernel "${kernel}" does not match the kernel chosen at construction ("${this._simKernel.id}")`);
+    if ((kernel === "det.v2") !== !!this._simKernel?.det) throw new Error(`math kernel "${kernel}" does not match the kernel chosen at construction ("${this._simKernel?.id ?? "native"}")`);
     this._detMath = kernel === "det.v1" || kernel === "det.v2";   // det.v2 = DetMath.v1 三角／次方 + DetHypot.v1
   }
 
@@ -452,7 +452,7 @@ export class LogicEngine {
   _powInt(x, n) { return this._detMath ? detPowInt(x, n) : x ** n; }
 
   configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureMatch(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureMatch(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.tacticOn = true;
     //  moba-sim.v24 候選：taskArbitration "v1" ⇒ 引擎每 tick 替每名存活英雄記一筆仲裁紀錄（this.arbLedger；只寫，不影響任何決定）。
@@ -595,7 +595,7 @@ export class LogicEngine {
    * @param {object} meta      { version, neutralStat, blueIds, redIds } → snapshot
    */
   configurePlayers({ blue = null, red = null, meta = null } = {}) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configurePlayers(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configurePlayers(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.playerStatsOn = true;
     this.playerStatsMeta = meta;
@@ -621,7 +621,7 @@ export class LogicEngine {
    * @param {object} meta      { version, arch } → snapshot.heroMeta
    */
   configureHeroes({ blue = null, red = null, meta = null } = {}) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroes(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroes(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.heroesOn = true;
     this.heroMeta = meta;
@@ -643,7 +643,7 @@ export class LogicEngine {
 
   /** Receives only validated, authored mechanics from heroSkillGameplay adapter. */
   configureHeroSkills(config) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroSkills(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroSkills(...arguments));   // C2 det.v2
     if (!config?.players || !Object.keys(config.players).length) return;
     this.heroSkillBaseRules = config.players;
     this.heroSkills = Object.fromEntries(Object.entries(config.players).map(([seat, rules]) => [seat, { ...rules }]));
@@ -671,7 +671,7 @@ export class LogicEngine {
    * 且規則集 `heroPowerCurveV1` 開啟；否則什麼都不做。唯一掛點是 _applyMatchLevel（power 與最大生命）。
    */
   configureHeroPowerCurve(config) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroPowerCurve(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroPowerCurve(...arguments));   // C2 det.v2
     if (!this.heroSkillsOn || !this.rules.heroPowerCurveV1 || !config?.players) return false;
     const seats = Object.keys(config.players).filter((id) => this.players.some((p) => p.id === id));
     if (!seats.length) return false;
@@ -691,7 +691,7 @@ export class LogicEngine {
    * 規則語彙見 heroPassiveGameplay.js 檔頭；引擎這裡**只認語彙、不認 heroId**。
    */
   configureHeroPassives(config) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroPassives(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureHeroPassives(...arguments));   // C2 det.v2
     if (!this.heroSkillsOn || !this.rules.heroPassivesV1 || !config?.players) return false;
     const seats = Object.keys(config.players).filter((id) => this.players.some((p) => p.id === id));
     if (!seats.length) return false;
@@ -2701,7 +2701,7 @@ export class LogicEngine {
    *                    chaseDistance, retreatDistance, formationLine, formationSpread } }`
    */
   configureArchetypes({ blue = null, red = null, meta = null } = {}) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureArchetypes(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureArchetypes(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.archOn = true;
     this.archMeta = meta;
@@ -2899,7 +2899,7 @@ export class LogicEngine {
    * @param {object} meta      { version } → snapshot.spellMeta
    */
   configureSpells({ blue = null, red = null, meta = null } = {}) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureSpells(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureSpells(...arguments));   // C2 det.v2
     if (!blue && !red) return;
     this.spellsOn = true;
     this.spellMeta = meta;
@@ -2932,7 +2932,7 @@ export class LogicEngine {
    * @returns {boolean} 是否啟用
    */
   configureItems(cfg = null) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureItems(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureItems(...arguments));   // C2 det.v2
     if (!cfg?.players || this.itemsOn || this.t > 0) return false;
     this.itemsOn = true;
     this.items = new ItemsEngineRuntime({
@@ -3912,7 +3912,7 @@ export class LogicEngine {
    * @returns {boolean} 是否生效
    */
   configureObjectiveLayout(layout) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureObjectiveLayout(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.configureObjectiveLayout(...arguments));   // C2 det.v2
     if (this.t > 0) return false;
     this._layoutConfigured = true;
     this.objectiveLayout = normalizeObjectiveLayout(layout);
@@ -5530,20 +5530,20 @@ export class LogicEngine {
   }
 
   frontTower(attacker, lane) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.frontTower(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.frontTower(...arguments));   // C2 det.v2
     const def = attacker === "blue" ? "red" : "blue";
     const arr = [0, 1, 2].map((tier) => this.towers[`${def}_${lane}_${tier}`]).filter(Boolean);
     arr.sort((a, b) => (attacker === "blue" ? a.t - b.t : b.t - a.t));
     return arr.find((tw) => tw.hp > 0) || null;
   }
   laneCleared(side) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.laneCleared(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.laneCleared(...arguments));   // C2 det.v2
     const def = side === "blue" ? "red" : "blue";
     return ["top", "mid", "bot"].some((ln) => [0, 1, 2].every((tr) => this.towers[`${def}_${ln}_${tr}`].hp <= 0));
   }
   /** 一路清空後先拆兩座門牙塔，最後才能傷害主堡；來源仍是 this.towers。 */
   frontStructure(attacker, lane, from = null) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.frontStructure(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.frontStructure(...arguments));   // C2 det.v2
     const laneTower = this.frontTower(attacker, lane);
     if (laneTower || !this.laneCleared(attacker)) return laneTower;
     const def = attacker === "blue" ? "red" : "blue";
@@ -5645,7 +5645,7 @@ export class LogicEngine {
    * 不會再出現「圈畫 6.0、實際打 30.7」。門牙塔／主堡不在 lane 上，用自己的半徑。
    */
   towerRange(tw) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.towerRange(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.towerRange(...arguments));   // C2 det.v2
     const R = this.rules;
     if (R.towerSafetyV1) return this._towerSafeRange(tw);
     return (tw.lane === "nexus_guard" || tw.lane === "nexus")
@@ -6284,7 +6284,7 @@ export class LogicEngine {
   }
 
   tick(dt) {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.tick(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.tick(...arguments));   // C2 det.v2
     if (this.over) return;
     const R = this.rules;                       // S29：模擬規則集（移速/傷害/兵線/攻塔）
     //  M1.5：本 tick 開始時的血量快照。tick 尾端比對即可涵蓋**所有**傷害來源
@@ -7911,7 +7911,7 @@ export class LogicEngine {
   _dmgGold(side, g) { if (side === "blue") this.bGold += g; else this.rGold += g; }
 
   snapshot() {
-    if (this._simKernel.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.snapshot(...arguments));   // C2 det.v2
+    if (this._simKernel?.det && currentSimKernel() !== this._simKernel) return withSimKernel(this._simKernel, () => this.snapshot(...arguments));   // C2 det.v2
     const gd = this.bGold - this.rGold;
     const tw = (s) => Object.values(this.towers).filter((t) => t.side === s && t.lane !== "nexus" && t.hp <= 0).length;
     const winProb = clamp(0.5 + gd / 14000 + (tw("red") - tw("blue")) * 0.05, 0.05, 0.95);
