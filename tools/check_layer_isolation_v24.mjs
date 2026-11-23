@@ -124,7 +124,9 @@ function buildV24(kind, tb, tr, seed, tier) {
 // ── I5 ──
 {
   const V24_KEYS = ["taskArbitration", "taskCommit", "tacticExec"];
-  const old = Object.values(RS.MATCH_RULESETS).filter((r) => !r.rulesetId.endsWith(".v24"));
+  //  2026-11-23（C1）：v25 規則集是 v24 逐欄衍生（＋mathKernel），本來就帶 v24 的層 ⇒ 與 v24 一樣不算「舊規則集」。
+  //  檢查的對象仍是 v20～v23（以及 challenge 規則集），條件一個字都沒改；v25＝v24＋mathKernel 由 tools/check_c1_isolation.mjs 驗。
+  const old = Object.values(RS.MATCH_RULESETS).filter((r) => !r.rulesetId.endsWith(".v24") && !r.rulesetId.endsWith(".v25"));
   const leaked = old.filter((r) => V24_KEYS.some((k) => k in r.layers)).map((r) => r.rulesetId);
   const pair = (a, b) => {
     const A = RS.MATCH_RULESETS[a], B = RS.MATCH_RULESETS[b];

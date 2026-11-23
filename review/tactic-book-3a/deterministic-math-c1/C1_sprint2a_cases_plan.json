@@ -1,0 +1,40 @@
+{
+ "schema": "C1CrossEnvPlan.v1",
+ "planId": "c1-sprint2a-cases",
+ "note": "Seeds already used in Sprint 2A §8.3 (5646 preview); same recipe as tools/owner_preview/export_preview_s2a_r2_v24.mjs (balanceTool, Career-Parity, mirrored roster); only adaptive.v1.3 exists on main",
+ "toolEnv": "parity",
+ "rulesets": {
+  "det": "balanceTool.v25",
+  "native": "balanceTool.v24"
+ },
+ "items": [
+  {
+   "id": "S142243",
+   "seed": 142243,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m7"
+  },
+  {
+   "id": "S142227",
+   "seed": 142227,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.jungle_invasion"
+  },
+  {
+   "id": "S146045",
+   "seed": 146045,
+   "config": "standard",
+   "blue": "classic.m7",
+   "red": "v2.jungle_invasion"
+  },
+  {
+   "id": "S146065",
+   "seed": 146065,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m7"
+  }
+ ]
+}

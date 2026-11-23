@@ -51,7 +51,7 @@
 // ============================================================================
 import { BUILD_STRATEGIES } from "./items/buildPolicy.js";
 import { MATCH_SETUP_VERSION, fnv1a64Hex } from "../../platform/contracts/matchSetup.js";
-import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME, templateBalanceOf, JUNGLE_CAMPS, DEFAULT_JUNGLE_CAMP, INVASIONS, DEFAULT_INVASION, SAFE_ROUTES, DEFAULT_SAFE_ROUTE, TASK_ARBITRATIONS, DEFAULT_TASK_ARBITRATION, TASK_COMMITS, DEFAULT_TASK_COMMIT, TACTIC_EXECS, DEFAULT_TACTIC_EXEC } from "../../platform/contracts/matchRuleset.js";
+import { ASSEMBLY_ORDERS, TACTICAL_DIRECTOR_MODES, tacticalDirectorModeOf, LANE_FRAMES, DEFAULT_LANE_FRAME, templateBalanceOf, JUNGLE_CAMPS, DEFAULT_JUNGLE_CAMP, INVASIONS, DEFAULT_INVASION, SAFE_ROUTES, DEFAULT_SAFE_ROUTE, TASK_ARBITRATIONS, DEFAULT_TASK_ARBITRATION, TASK_COMMITS, DEFAULT_TASK_COMMIT, TACTIC_EXECS, DEFAULT_TACTIC_EXEC, MATH_KERNELS, DEFAULT_MATH_KERNEL } from "../../platform/contracts/matchRuleset.js";
 import { stableStringify } from "../../platform/contracts/squadSnapshot.js";
 
 export const MATCH_ASSEMBLER_VERSION = "MatchAssembler.v1";
@@ -155,6 +155,8 @@ export function assembleMatch(setup, deps = {}) {
   const hasTaskArbitration = Object.prototype.hasOwnProperty.call(L, "taskArbitration");
   const hasTaskCommit = Object.prototype.hasOwnProperty.call(L, "taskCommit");
   const hasTacticExec = Object.prototype.hasOwnProperty.call(L, "tacticExec");
+  //  moba-sim.v25 候選（C1）：mathKernel 層。層不存在 ⇒ 不呼叫 configureMathKernel（v20～v24 的組裝呼叫序列逐字不變）。
+  const hasMathKernel = Object.prototype.hasOwnProperty.call(L, "mathKernel");
 
   // ── 驗證（全部在建構引擎之前；有任何錯誤就不建引擎、零 configure 呼叫）──────────
   if (!TACTICAL_DIRECTOR_MODES.includes(directorMode)) err("tactical_director_unknown", "ruleset.layers.tacticalDirector", `unknown tactical director mode "${directorMode}" (known: ${TACTICAL_DIRECTOR_MODES.join("|")})`);
@@ -164,6 +166,7 @@ export function assembleMatch(setup, deps = {}) {
   if (hasSafeRoute && !SAFE_ROUTES.includes(L.safeRoute)) err("safe_route_unknown", "ruleset.layers.safeRoute", `unknown safe route mode "${L.safeRoute}" (known: ${SAFE_ROUTES.join("|")})`);
   if (hasTaskArbitration && !TASK_ARBITRATIONS.includes(L.taskArbitration)) err("task_arbitration_unknown", "ruleset.layers.taskArbitration", `unknown task arbitration mode "${L.taskArbitration}" (known: ${TASK_ARBITRATIONS.join("|")})`);
   if (hasTaskCommit && !TASK_COMMITS.includes(L.taskCommit)) err("task_commit_unknown", "ruleset.layers.taskCommit", `unknown task commit mode "${L.taskCommit}" (known: ${TASK_COMMITS.join("|")})`);
+  if (hasMathKernel && !MATH_KERNELS.includes(L.mathKernel)) err("math_kernel_unknown", "ruleset.layers.mathKernel", `unknown math kernel "${L.mathKernel}" (known: ${MATH_KERNELS.join("|")})`);
   if (hasTacticExec && !TACTIC_EXECS.includes(L.tacticExec)) err("tactic_exec_unknown", "ruleset.layers.tacticExec", `unknown tactic exec mode "${L.tacticExec}" (known: ${TACTIC_EXECS.join("|")})`);
   if (!ASSEMBLY_ORDERS.includes(order)) err("assembly_order_unknown", "ruleset.layers.assemblyOrder", `unknown assembly order "${order}" (known: ${ASSEMBLY_ORDERS.join("|")})`);
   if (order === "challengeV20") {
@@ -215,6 +218,8 @@ export function assembleMatch(setup, deps = {}) {
       need(LogicEngine.SUPPORTS_TASK_COMMIT === true, "deps.LogicEngine.SUPPORTS_TASK_COMMIT", `taskCommit ${L.taskCommit}: the engine in use does not declare taskCommit support`);
     if (hasTacticExec && L.tacticExec !== DEFAULT_TACTIC_EXEC && typeof LogicEngine === "function")
       need(LogicEngine.SUPPORTS_TACTIC_EXEC === true, "deps.LogicEngine.SUPPORTS_TACTIC_EXEC", `tacticExec ${L.tacticExec}: the engine in use does not declare tacticExec support`);
+    if (hasMathKernel && L.mathKernel !== DEFAULT_MATH_KERNEL && typeof LogicEngine === "function")
+      need(LogicEngine.SUPPORTS_MATH_KERNEL === true, "deps.LogicEngine.SUPPORTS_MATH_KERNEL", `mathKernel ${L.mathKernel}: the engine in use does not declare mathKernel support`);
   }
   if (E.items) needFn(isTool ? "toEngineItems" : "matchItemsConfig", "items layer");
   if (E.archetypes) {
@@ -453,6 +458,8 @@ export function assembleMatch(setup, deps = {}) {
       if (isTool && tool.incomeK !== null && tool.incomeK !== undefined && tool.incomeK !== 1) engine.items.incomeK = tool.incomeK;
     },
   };
+  //  C1：數學核心在任何 configure 之前決定（之後每一個步驟與每一個 tick 都用同一個核心）；層不存在 ⇒ 不呼叫。
+  if (hasMathKernel) call("configureMathKernel", L.mathKernel);
   for (const step of ASSEMBLY_STEPS[order]) STEPS[step]();
 
   return {

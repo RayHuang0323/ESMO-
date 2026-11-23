@@ -1,0 +1,55 @@
+{
+ "schema": "C1Pins.v1",
+ "recordedAt": "2026-11-23T05:44:21.886Z",
+ "note": "moba-sim.v25 balanceTool.v25 (mathKernel det.v1), Career-Parity",
+ "pins": [
+  {
+   "seed": 151001,
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m7",
+   "rulesetId": "balanceTool.v25",
+   "toolEnv": "parity",
+   "ticks": 2107,
+   "winner": "red",
+   "endT": 1053.5,
+   "streamHash": "54a4eb5e5e345420",
+   "c1Final": "4a429c7829bf7da4"
+  },
+  {
+   "seed": 151002,
+   "blue": "classic.m3",
+   "red": "v2.hard_engage_stack",
+   "rulesetId": "balanceTool.v25",
+   "toolEnv": "parity",
+   "ticks": 2325,
+   "winner": "red",
+   "endT": 1162.5,
+   "streamHash": "ee88d790a67befee",
+   "c1Final": "f90ffacd08c331b7"
+  },
+  {
+   "seed": 142227,
+   "blue": "v2.jungle_invasion",
+   "red": "v2.jungle_invasion",
+   "rulesetId": "balanceTool.v25",
+   "toolEnv": "parity",
+   "ticks": 2000,
+   "winner": "red",
+   "endT": 1000,
+   "streamHash": "069f0b54d128b6e0",
+   "c1Final": "274048e178ddf551"
+  },
+  {
+   "seed": 146065,
+   "blue": "v2.jungle_invasion",
+   "red": "classic.m7",
+   "rulesetId": "balanceTool.v25",
+   "toolEnv": "parity",
+   "ticks": 2037,
+   "winner": "blue",
+   "endT": 1018.5,
+   "streamHash": "e02c67328d36b528",
+   "c1Final": "38d9507e777fd65e"
+  }
+ ]
+}

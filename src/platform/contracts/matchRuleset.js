@@ -108,8 +108,17 @@ export const tacticExecOf = (r) => r?.layers?.tacticExec ?? DEFAULT_TACTIC_EXEC;
 export const TACTIC_EXEC_RELEASE_FLAG = Object.freeze({ "adaptive.v1": "mobaTacticExecV24", "adaptive.v1.1": "mobaTacticExecV24", "adaptive.v1.2": "mobaTacticExecV24", "adaptive.v1.3": "mobaTacticExecV24" });
 //  正式旗標 mobaTacticExecV24（預設 OFF；只在 mobaTacticalDirectorV21＋mobaJungleV22＋mobaSafeRouteV23 也開時有意義：career.v24＝career.v23＋v24 的層）。
 export const TASK_ARBITRATION_RELEASE_FLAG = Object.freeze({ v1: "mobaTacticExecV24" });
+//  mathKernel 層（moba-sim.v25 候選，C1 決定性數學核心，Owner 2026-11-23 核准開發）：
+//   · "native"＝原生 Math（＝層不存在）；"det.v1"＝DetMath.v1（battle/moba/sim/detMath.js，Node 與瀏覽器逐位元相同）。
+//   · 只在 career.v25／balanceTool.v25；v20～v24 規則集永不加這個鍵（整份進 setup 雜湊）。
+//   · 正式旗標 mobaDetMathV25（預設 OFF；只在 v24 的四個旗標都開時有意義：career.v25＝career.v24＋mathKernel "det.v1"）。
+export const MATH_KERNELS = Object.freeze(["native", "det.v1"]);
+export const DEFAULT_MATH_KERNEL = "native";
+/** 讀取 ruleset 的 mathKernel 層；缺少 ≡ "native"。 */
+export const mathKernelOf = (r) => r?.layers?.mathKernel ?? DEFAULT_MATH_KERNEL;
+export const MATH_KERNEL_RELEASE_FLAG = Object.freeze({ "det.v1": "mobaDetMathV25" });
 export const TASK_COMMIT_RELEASE_FLAG = Object.freeze({ v19push: "mobaTacticExecV24" });
-export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG), ...Object.values(SAFE_ROUTE_RELEASE_FLAG), ...Object.values(TASK_ARBITRATION_RELEASE_FLAG)])]);
+export const RELEASE_FLAGS = Object.freeze([...new Set([...Object.values(LAYER_RELEASE_FLAG), ...Object.values(MATH_KERNEL_RELEASE_FLAG), ...Object.values(TACTICAL_DIRECTOR_RELEASE_FLAG), ...Object.values(JUNGLE_CAMP_RELEASE_FLAG), ...Object.values(SAFE_ROUTE_RELEASE_FLAG), ...Object.values(TASK_ARBITRATION_RELEASE_FLAG)])]);
 const R = (o) => Object.freeze({ version: MATCH_RULESET_VERSION, ...o, layers: Object.freeze({ ...o.layers }), releaseRequirements: Object.freeze([...(o.releaseRequirements ?? [])]) });
 const BASE_RULESETS = Object.freeze({
   "career.v20": R({ rulesetId: "career.v20", kind: "production", simVersion: "moba-sim.v20",
@@ -174,12 +183,23 @@ const v24Of = (base, extraRequirements = []) => R({
   layers: { ...base.layers, taskArbitration: "v1", taskCommit: "v19", tacticExec: "adaptive.v1.3" },
   releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
 });
+const V24_RULESETS = Object.freeze({
+  "career.v24": v24Of(V23_RULESETS["career.v23"], [TASK_ARBITRATION_RELEASE_FLAG.v1]),
+  "balanceTool.v24": v24Of(V23_RULESETS["balanceTool.v23"]),
+});
+//  moba-sim.v25 候選（C1，2026-11-23）：從 v24 逐欄衍生，只多 mathKernel "det.v1"。v24 物件一個欄位都沒動（v24 的 setup 雜湊不變）。
+const v25Of = (base, extraRequirements = []) => R({
+  ...base, rulesetId: base.rulesetId.replace(".v24", ".v25"), simVersion: "moba-sim.v25",
+  layers: { ...base.layers, mathKernel: "det.v1" },
+  releaseRequirements: [...base.releaseRequirements, ...extraRequirements],
+});
 export const MATCH_RULESETS = Object.freeze({
   ...BASE_RULESETS,
   ...V22_RULESETS,
   ...V23_RULESETS,
-  "career.v24": v24Of(V23_RULESETS["career.v23"], [TASK_ARBITRATION_RELEASE_FLAG.v1]),
-  "balanceTool.v24": v24Of(V23_RULESETS["balanceTool.v23"]),
+  ...V24_RULESETS,
+  "career.v25": v25Of(V24_RULESETS["career.v24"], [MATH_KERNEL_RELEASE_FLAG["det.v1"]]),
+  "balanceTool.v25": v25Of(V24_RULESETS["balanceTool.v24"]),
 });
 export const rulesetById = (id) => MATCH_RULESETS[id] ?? null;
 //  戰術輸入的種類（Phase 3a T9）：每個 ruleset 接受哪幾種 `setup.tactic.<side>.kind`。
@@ -199,6 +219,8 @@ export const TACTIC_KINDS_BY_RULESET = Object.freeze({
   "balanceTool.v23": Object.freeze(["legacy", "std", "binding"]),
   "career.v24": Object.freeze(["legacy", "std", "binding"]),
   "balanceTool.v24": Object.freeze(["legacy", "std", "binding"]),
+  "career.v25": Object.freeze(["legacy", "std", "binding"]),
+  "balanceTool.v25": Object.freeze(["legacy", "std", "binding"]),
   //  T16：Challenge 雙方仍是快照裡選定的靜態模板（legacy）；不收 binding（自訂每時期戰術屬 3c）。
   "challenge.v21": Object.freeze(["legacy", "std"]),
 });
@@ -220,7 +242,9 @@ export function resolveRulesetForMode({ mode, flags }) {
   const jungle = director && on("mobaJungleV22");
   //  moba-sim.v24 候選：mobaTacticExecV24 只在前三個旗標都開時才有意義（career.v24＝career.v23＋v24 的層）。四個旗標預設都關 ⇒ 與之前逐字相同。
   const route = jungle && on("mobaSafeRouteV23");
-  const base = MATCH_RULESETS[director ? (jungle ? (route ? (on("mobaTacticExecV24") ? "career.v24" : "career.v23") : "career.v22") : "career.v21") : "career.v20"];
+  //  moba-sim.v25 候選（C1）：mobaDetMathV25 只在 v24 的四個旗標都開時才有意義（career.v25＝career.v24＋mathKernel "det.v1"）。五個旗標預設都關 ⇒ 與之前逐字相同。
+  const tacticExec = route && on("mobaTacticExecV24");
+  const base = MATCH_RULESETS[director ? (jungle ? (route ? (tacticExec ? (on("mobaDetMathV25") ? "career.v25" : "career.v24") : "career.v23") : "career.v22") : "career.v21") : "career.v20"];
   const skills = on("heroSkillsV1");
   const newLayers = { ...base.layers, heroSkills: skills, heroPassives: skills, heroPowerCurve: skills,
     battleTalents: skills && on("heroBattleTalentsV1"), items: on("itemsV1") };
@@ -235,6 +259,7 @@ export function resolveRulesetForMode({ mode, flags }) {
   if (director && newLayers.invasion && !newReqs.includes(INVASION_RELEASE_FLAG[newLayers.invasion])) newReqs.push(INVASION_RELEASE_FLAG[newLayers.invasion]);
   if (director && newLayers.safeRoute) newReqs.push(SAFE_ROUTE_RELEASE_FLAG[newLayers.safeRoute]);
   if (director && newLayers.taskArbitration && TASK_ARBITRATION_RELEASE_FLAG[newLayers.taskArbitration]) newReqs.push(TASK_ARBITRATION_RELEASE_FLAG[newLayers.taskArbitration]);
+  if (director && newLayers.mathKernel && MATH_KERNEL_RELEASE_FLAG[newLayers.mathKernel]) newReqs.push(MATH_KERNEL_RELEASE_FLAG[newLayers.mathKernel]);
 
   return R({ ...base, layers: newLayers, releaseRequirements: newReqs });
 }
@@ -266,6 +291,7 @@ export function validateRuleset(r) {
   if (r?.layers && "taskArbitration" in r.layers && !TASK_ARBITRATIONS.includes(r.layers.taskArbitration)) errors.push("taskArbitration");
   if (r?.layers && "taskCommit" in r.layers && !TASK_COMMITS.includes(r.layers.taskCommit)) errors.push("taskCommit");
   if (r?.layers && "tacticExec" in r.layers && !TACTIC_EXECS.includes(r.layers.tacticExec)) errors.push("tacticExec");
+  if (r?.layers && "mathKernel" in r.layers && !MATH_KERNELS.includes(r.layers.mathKernel)) errors.push("mathKernel");
   //  Phase 3a-B 第一階段：可選層 templateBalance——有這個鍵就必須是已登錄的修正表 id（缺少 ≡ 出貨版模板）。
   if (r?.layers && "templateBalance" in r.layers && !TEMPLATE_BALANCES.includes(r.layers.templateBalance)) errors.push("templateBalance");
 
@@ -312,6 +338,11 @@ export function validateRuleset(r) {
     if (te !== DEFAULT_TACTIC_EXEC && TACTIC_EXECS.includes(te)) {
       const flag = TACTIC_EXEC_RELEASE_FLAG[te];
       if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`tacticExec ${te} requires ${flag ?? "a release flag"}`);
+    }
+    const mk = mathKernelOf(r);
+    if (mk !== DEFAULT_MATH_KERNEL && MATH_KERNELS.includes(mk)) {
+      const flag = MATH_KERNEL_RELEASE_FLAG[mk];
+      if (!flag || !r.releaseRequirements?.includes(flag)) errors.push(`mathKernel ${mk} requires ${flag ?? "a release flag"}`);
     }
     for (const f of Array.isArray(r.releaseRequirements) ? r.releaseRequirements : []) {
       if (!RELEASE_FLAGS.includes(f)) errors.push(`releaseRequirements: ${String(f)} is not a release flag`);

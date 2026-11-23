@@ -49,6 +49,9 @@ import { curveKAt, phaseIndexOf } from './battle/moba/heroPowerCurve.js';
 import { OBJECTIVE_LAYOUT, normalizeObjectiveLayout, objectivePitsFor } from './platform/contracts/objectiveLayout.js';
 //  Phase 3a-C2：戰術資料（knobs／Tactical Identity／戰術階段）的唯一讀取入口（static 模式＝設定值原樣回傳）。
 import { createTacticalDirector } from "./battle/moba/tactics/tacticalDirector.js";
+//  moba-sim.v25 候選（C1 決定性數學核心，Owner 2026-11-23 核准）：mathKernel "det.v1" ⇒ 模擬中的 sin／cos／atan2／acos／asin 與整數次方改走 DetMath.v1。
+//  沒有這個層的規則集（v20～v24 全部）⇒ 一律呼叫原本的 Math.* 與 ** 運算子，結果逐位元不變。
+import { detSin, detCos, detAtan2, detAcos, detAsin, detPowInt } from "./battle/moba/sim/detMath.js";
 import { createTaskArbitrationLedger, movedTarget as arbMovedV24 } from "./battle/moba/tactics/taskArbitrationLedger.js";
 import { createTacticExecState, tacticExecTick, invadeGuard as tacInvadeGuardV24, invadeLead as tacInvadeLeadV24, partnerStep as tacPartnerStepV24, defendStep as tacDefendStepV24, endgameEscortLane as tacEndgameLaneV24, endgameTick13 as tacEndgameTickV24 } from "./battle/moba/tactics/tacticExecV24.js";
 
@@ -135,6 +138,8 @@ export class LogicEngine {
   static SUPPORTS_TASK_COMMIT = true;
   //  v24 Sprint 1：configureMatch 認得 `tacticExec`（自適應戰術執行 TacticalExecution.v1）。
   static SUPPORTS_TACTIC_EXEC = true;
+  //  moba-sim.v25 候選（C1）：configureMathKernel 認得 mathKernel "det.v1"；組裝器以此做能力檢查。
+  static SUPPORTS_MATH_KERNEL = true;
   //  C3-1 laneFrame（TD-3A-23 §2.4-9）：這個引擎的 configureMatch 認得 `laneFrame` 並原樣交給 Director（轉換在 Director）。
   //  組裝器以此做能力檢查：規則集要求 teamRelative、引擎卻沒有宣告 ⇒ deps_missing（ESMO_BALANCE_ROOT 跨樹 A/B 不得默默照對調跑）。
   static SUPPORTS_LANE_FRAME = true;
@@ -153,6 +158,7 @@ export class LogicEngine {
     //  v16 Objective Layout：預設 STANDARD；_objPits=null ⇒ _pitOf 回傳原本的 PITS（逐位元不變）
     this.objectiveLayout = OBJECTIVE_LAYOUT.STANDARD; this._objPits = null; this._layoutConfigured = false;
     this.tacticOn = false;         // S24：未 configureMatch ⇒ 全部戰術程式碼不生效
+    this._detMath = false;         // C1：未 configureMathKernel("det.v1") ⇒ 三角函數與次方一律走原生 Math（舊版本逐位元不變）
     this.director = null;          // Phase 3a-C2：Tactical Director（configureMatch 才建立；null ⇒ 讀取點走原式）
     this.playerStatsOn = false;    // S28：未 configurePlayers ⇒ 全部能力程式碼不生效
     this.heroesOn = false;         // H：未 configureHeroes ⇒ 全部英雄定位程式碼不生效
@@ -414,6 +420,24 @@ export class LogicEngine {
    * @param {object} blue/red  行為權重 knobs（toEngineTactic 輸出形狀）
    * @param {object} meta      { tacticId, tacticName, version, opponentTacticId } → snapshot / BattleResult
    */
+  /**
+   * moba-sim.v25 候選（C1）：選擇模擬的數學核心。只有規則集帶 mathKernel 層時，組裝器才會在建構後第一個呼叫它。
+   * "det.v1" ⇒ DetMath.v1（src/battle/moba/sim/detMath.js：只用規格保證精確的運算，Node 與各瀏覽器逐位元相同）。
+   * "native" ⇒ 原生 Math（＝沒有呼叫）。其他值丟錯（組裝器已先擋）。
+   */
+  configureMathKernel(kernel) {
+    if (kernel !== "native" && kernel !== "det.v1") throw new Error(`unknown math kernel "${kernel}"`);
+    this._detMath = kernel === "det.v1";
+  }
+
+  //  C1：模擬裡所有三角函數與整數次方的唯一入口。非 det 時呼叫的就是原本的 Math.* ／ ** ⇒ 舊版本的引數、運算與結果完全相同。
+  _sin(x) { return this._detMath ? detSin(x) : Math.sin(x); }
+  _cos(x) { return this._detMath ? detCos(x) : Math.cos(x); }
+  _atan2(y, x) { return this._detMath ? detAtan2(y, x) : Math.atan2(y, x); }
+  _acos(x) { return this._detMath ? detAcos(x) : Math.acos(x); }
+  _asin(x) { return this._detMath ? detAsin(x) : Math.asin(x); }
+  _powInt(x, n) { return this._detMath ? detPowInt(x, n) : x ** n; }
+
   configureMatch({ blue = null, red = null, meta = null, identity = null, phases = null, laneFrame = null, jungleCamp = null, invasion = null, safeRoute = null, taskArbitration = null, taskCommit = null, tacticExec = null } = {}) {
     if (!blue && !red) return;
     this.tacticOn = true;
@@ -1536,11 +1560,11 @@ export class LogicEngine {
       if (t === tw || t.hp <= 0 || t.side === p.side) continue;
       others.push({ x: t.pos.x, y: t.pos.y, r: this.towerRange(t) + pad });
     }
-    const a0 = Math.atan2(p.pos.y - tw.pos.y, p.pos.x - tw.pos.x);
+    const a0 = this._atan2(p.pos.y - tw.pos.y, p.pos.x - tw.pos.x);
     for (let i = 0; i <= 16; i++) {
       const k = i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2);
       const a = a0 + k * (Math.PI / 12);
-      const c = { x: clampMapX(tw.pos.x + Math.cos(a) * rad), y: clampMapY(tw.pos.y + Math.sin(a) * rad) };
+      const c = { x: clampMapX(tw.pos.x + this._cos(a) * rad), y: clampMapY(tw.pos.y + this._sin(a) * rad) };
       const g = recenterToCorridor(c.x, c.y, HERO_RADIUS, alive);
       if (dist(g, tw.pos) < rad - 0.5) continue;
       if (!isWalkable(g.x, g.y, HERO_RADIUS, alive)) continue;
@@ -1869,7 +1893,7 @@ export class LogicEngine {
         const rx = point.x - from.x, ry = point.y - from.y;
         const length = Math.hypot(dx, dy) || 1, distance = Math.hypot(rx, ry);
         const dot = (rx * dx + ry * dy) / (Math.max(distance, 1e-6) * length);
-        return distance <= rule.range && dot >= Math.cos(rule.halfAngle) ? distance : Infinity;
+        return distance <= rule.range && dot >= this._cos(rule.halfAngle) ? distance : Infinity;
       }
       const d = dist(point, target);
       return d <= (radius ?? 0) ? d : Infinity;
@@ -1960,7 +1984,7 @@ export class LogicEngine {
         }).filter(({ along, lateral }) => along >= 0 && along <= length && lateral <= rule.width)
           .sort((a, b) => a.along - b.along || a.q.id.localeCompare(b.q.id));
         occupants.forEach(({ q }, index) => hit(p, q,
-          (rule.damage + p.power * rule.powerRatio) * rule.falloff ** index, rule));
+          (rule.damage + p.power * rule.powerRatio) * this._powInt(rule.falloff, index), rule));
       } else if (entry.kind === 'delayed-area') {
         for (const foe of this.players) {
           if (!foe.dead && foe.side !== p.side && dist(foe.pos, target) <= rule.radius) {
@@ -2032,7 +2056,7 @@ export class LogicEngine {
           if (foe && !foe.dead && foe.hp > 0) {
             const finalMultiplier = entry.hitIndex + 1 === rule.hitCount ? (rule.finalMultiplier ?? 1) : 1;
             hit(p, foe, (rule.damage + p.power * rule.powerRatio)
-              * rule.falloff ** entry.hitIndex * finalMultiplier, rule);
+              * this._powInt(rule.falloff, entry.hitIndex) * finalMultiplier, rule);
             if (entry.hitIndex + 1 < rule.hitCount) {
               this.heroSkillPending.push({ ...entry, hitIndex: entry.hitIndex + 1,
                 at: entry.at + rule.interval });
@@ -2442,7 +2466,7 @@ export class LogicEngine {
         const enemies = this.players.filter((q) => !q.dead && q.side !== p.side).map((q) => {
           const vx = q.pos.x - from.x, vy = q.pos.y - from.y;
           const d = Math.hypot(vx, vy) || 1;
-          return { q, d, angle: Math.acos(Math.max(-1, Math.min(1, (vx * ux + vy * uy) / d))) };
+          return { q, d, angle: this._acos(Math.max(-1, Math.min(1, (vx * ux + vy * uy) / d))) };
         }).filter(({ d, angle }) => d <= rule.range && angle <= rule.halfAngle)
           .sort((a, b) => a.d - b.d || a.q.id.localeCompare(b.q.id));
         for (const { q } of enemies) hit(p, q, rule.damage + p.power * rule.powerRatio, rule);
@@ -2807,10 +2831,10 @@ export class LogicEngine {
     if (R.stableFormation) {
       //  想要的弧長間距 → 角度；want 越小角度越大，弧上實際間距才一致。
       const arc = (a.formationSpread ?? 2) * 0.55;
-      let theta = slot * Math.asin(Math.max(-0.85, Math.min(0.85, arc / Math.max(1, want))));
+      let theta = slot * this._asin(Math.max(-0.85, Math.min(0.85, arc / Math.max(1, want))));
       //  刺客：把切入角再推開，仍留在同一個半徑上 ⇒ 側面進場但打得到。
       if (a.formationLine === "flank") theta += (slot >= 0 ? 1 : -1) * 0.55;
-      const cs = Math.cos(theta), sn = Math.sin(theta);
+      const cs = this._cos(theta), sn = this._sin(theta);
       const rx = ux * cs - uy * sn, ry = ux * sn + uy * cs;
       gx = foe.pos.x - rx * want;
       gy = foe.pos.y - ry * want;
@@ -3890,7 +3914,7 @@ export class LogicEngine {
     const idx = Math.max(0, mates.indexOf(p));
     const ang = (idx / Math.max(1, mates.length)) * Math.PI * 2 + (p.side === "blue" ? Math.PI * 0.75 : -Math.PI * 0.25);
     const r = this.rules.objStandRadius ?? 3.2;
-    const spot = projectToWalkable(pit.x + Math.cos(ang) * r, pit.y + Math.sin(ang) * r, HERO_RADIUS, null);
+    const spot = projectToWalkable(pit.x + this._cos(ang) * r, pit.y + this._sin(ang) * r, HERO_RADIUS, null);
     return spot && Number.isFinite(spot.x) ? { x: spot.x, y: spot.y } : pit;
   }
   _idleReasonV17(p, st, effLane, alive) {
@@ -5057,8 +5081,8 @@ export class LogicEngine {
         // 小幅決定性巡遊；半徑遠小於營地 clearR，不會穿進牆或路線。
         const a = this.t * R.campIdleSpeed + c.idlePhase;
         moveToward(c, {
-          x: c.homePos.x + Math.cos(a) * R.campIdleRadius,
-          y: c.homePos.y + Math.sin(a) * R.campIdleRadius,
+          x: c.homePos.x + this._cos(a) * R.campIdleRadius,
+          y: c.homePos.y + this._sin(a) * R.campIdleRadius,
         }, R.campMoveSpeed * 0.45);
       }
 
@@ -7445,7 +7469,7 @@ export class LogicEngine {
           //  只要 KITE 持續就永遠繞。已進入自己的攻擊距離時不再側移：站定輸出火力，
           //  符合「進入攻擊距離後應穩定停下並攻擊」。拉扯本身（拉開距離）保留。
           const turn = Number(p.id.slice(1)) % 2 ? 1 : -1;
-          const angle = 0.18 * turn, cos = Math.cos(angle), sin = Math.sin(angle);
+          const angle = 0.18 * turn, cos = this._cos(angle), sin = this._sin(angle);
           tgt = {
             x: localTarget.pos.x + (ux * cos - uy * sin) * dd,
             y: localTarget.pos.y + (ux * sin + uy * cos) * dd,

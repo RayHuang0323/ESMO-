@@ -1,0 +1,596 @@
+{
+ "schema": "C1CrossEnvPlan.v1",
+ "planId": "c1-formal-80",
+ "registeredBefore": "any C1 measurement on these seeds",
+ "toolEnv": "parity",
+ "rulesets": {
+  "det": "balanceTool.v25",
+  "native": "balanceTool.v24"
+ },
+ "rule": "item i = 0..79: seed 151001+i, config standard, blue = TACTIC_TEMPLATE_LIST[i % 21], red = TACTIC_TEMPLATE_LIST[(5*i + 7) % 21]",
+ "templates": [
+  "classic.m1",
+  "classic.m2",
+  "classic.m3",
+  "classic.m4",
+  "classic.m5",
+  "classic.m6",
+  "classic.m7",
+  "classic.m8",
+  "std",
+  "v2.three_lane_pressure",
+  "v2.jungle_invasion",
+  "v2.bot_duo_pressure",
+  "v2.mid_jungle_sync",
+  "v2.support_roamer",
+  "v2.dragon_pit_macro",
+  "v2.top_solo_split",
+  "v2.mid_solo_split",
+  "v2.hard_engage_stack",
+  "v2.protect_core_scaling",
+  "v2.standard_macro",
+  "v2.defensive_hold"
+ ],
+ "items": [
+  {
+   "id": "F001",
+   "seed": 151001,
+   "config": "standard",
+   "blue": "classic.m1",
+   "red": "classic.m8"
+  },
+  {
+   "id": "F002",
+   "seed": 151002,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.mid_jungle_sync"
+  },
+  {
+   "id": "F003",
+   "seed": 151003,
+   "config": "standard",
+   "blue": "classic.m3",
+   "red": "v2.hard_engage_stack"
+  },
+  {
+   "id": "F004",
+   "seed": 151004,
+   "config": "standard",
+   "blue": "classic.m4",
+   "red": "classic.m2"
+  },
+  {
+   "id": "F005",
+   "seed": 151005,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m7"
+  },
+  {
+   "id": "F006",
+   "seed": 151006,
+   "config": "standard",
+   "blue": "classic.m6",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "F007",
+   "seed": 151007,
+   "config": "standard",
+   "blue": "classic.m7",
+   "red": "v2.mid_solo_split"
+  },
+  {
+   "id": "F008",
+   "seed": 151008,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m1"
+  },
+  {
+   "id": "F009",
+   "seed": 151009,
+   "config": "standard",
+   "blue": "std",
+   "red": "classic.m6"
+  },
+  {
+   "id": "F010",
+   "seed": 151010,
+   "config": "standard",
+   "blue": "v2.three_lane_pressure",
+   "red": "v2.jungle_invasion"
+  },
+  {
+   "id": "F011",
+   "seed": 151011,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.top_solo_split"
+  },
+  {
+   "id": "F012",
+   "seed": 151012,
+   "config": "standard",
+   "blue": "v2.bot_duo_pressure",
+   "red": "v2.defensive_hold"
+  },
+  {
+   "id": "F013",
+   "seed": 151013,
+   "config": "standard",
+   "blue": "v2.mid_jungle_sync",
+   "red": "classic.m5"
+  },
+  {
+   "id": "F014",
+   "seed": 151014,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.three_lane_pressure"
+  },
+  {
+   "id": "F015",
+   "seed": 151015,
+   "config": "standard",
+   "blue": "v2.dragon_pit_macro",
+   "red": "v2.dragon_pit_macro"
+  },
+  {
+   "id": "F016",
+   "seed": 151016,
+   "config": "standard",
+   "blue": "v2.top_solo_split",
+   "red": "v2.standard_macro"
+  },
+  {
+   "id": "F017",
+   "seed": 151017,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m4"
+  },
+  {
+   "id": "F018",
+   "seed": 151018,
+   "config": "standard",
+   "blue": "v2.hard_engage_stack",
+   "red": "std"
+  },
+  {
+   "id": "F019",
+   "seed": 151019,
+   "config": "standard",
+   "blue": "v2.protect_core_scaling",
+   "red": "v2.support_roamer"
+  },
+  {
+   "id": "F020",
+   "seed": 151020,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "F021",
+   "seed": 151021,
+   "config": "standard",
+   "blue": "v2.defensive_hold",
+   "red": "classic.m3"
+  },
+  {
+   "id": "F022",
+   "seed": 151022,
+   "config": "standard",
+   "blue": "classic.m1",
+   "red": "classic.m8"
+  },
+  {
+   "id": "F023",
+   "seed": 151023,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.mid_jungle_sync"
+  },
+  {
+   "id": "F024",
+   "seed": 151024,
+   "config": "standard",
+   "blue": "classic.m3",
+   "red": "v2.hard_engage_stack"
+  },
+  {
+   "id": "F025",
+   "seed": 151025,
+   "config": "standard",
+   "blue": "classic.m4",
+   "red": "classic.m2"
+  },
+  {
+   "id": "F026",
+   "seed": 151026,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m7"
+  },
+  {
+   "id": "F027",
+   "seed": 151027,
+   "config": "standard",
+   "blue": "classic.m6",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "F028",
+   "seed": 151028,
+   "config": "standard",
+   "blue": "classic.m7",
+   "red": "v2.mid_solo_split"
+  },
+  {
+   "id": "F029",
+   "seed": 151029,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m1"
+  },
+  {
+   "id": "F030",
+   "seed": 151030,
+   "config": "standard",
+   "blue": "std",
+   "red": "classic.m6"
+  },
+  {
+   "id": "F031",
+   "seed": 151031,
+   "config": "standard",
+   "blue": "v2.three_lane_pressure",
+   "red": "v2.jungle_invasion"
+  },
+  {
+   "id": "F032",
+   "seed": 151032,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.top_solo_split"
+  },
+  {
+   "id": "F033",
+   "seed": 151033,
+   "config": "standard",
+   "blue": "v2.bot_duo_pressure",
+   "red": "v2.defensive_hold"
+  },
+  {
+   "id": "F034",
+   "seed": 151034,
+   "config": "standard",
+   "blue": "v2.mid_jungle_sync",
+   "red": "classic.m5"
+  },
+  {
+   "id": "F035",
+   "seed": 151035,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.three_lane_pressure"
+  },
+  {
+   "id": "F036",
+   "seed": 151036,
+   "config": "standard",
+   "blue": "v2.dragon_pit_macro",
+   "red": "v2.dragon_pit_macro"
+  },
+  {
+   "id": "F037",
+   "seed": 151037,
+   "config": "standard",
+   "blue": "v2.top_solo_split",
+   "red": "v2.standard_macro"
+  },
+  {
+   "id": "F038",
+   "seed": 151038,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m4"
+  },
+  {
+   "id": "F039",
+   "seed": 151039,
+   "config": "standard",
+   "blue": "v2.hard_engage_stack",
+   "red": "std"
+  },
+  {
+   "id": "F040",
+   "seed": 151040,
+   "config": "standard",
+   "blue": "v2.protect_core_scaling",
+   "red": "v2.support_roamer"
+  },
+  {
+   "id": "F041",
+   "seed": 151041,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "F042",
+   "seed": 151042,
+   "config": "standard",
+   "blue": "v2.defensive_hold",
+   "red": "classic.m3"
+  },
+  {
+   "id": "F043",
+   "seed": 151043,
+   "config": "standard",
+   "blue": "classic.m1",
+   "red": "classic.m8"
+  },
+  {
+   "id": "F044",
+   "seed": 151044,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.mid_jungle_sync"
+  },
+  {
+   "id": "F045",
+   "seed": 151045,
+   "config": "standard",
+   "blue": "classic.m3",
+   "red": "v2.hard_engage_stack"
+  },
+  {
+   "id": "F046",
+   "seed": 151046,
+   "config": "standard",
+   "blue": "classic.m4",
+   "red": "classic.m2"
+  },
+  {
+   "id": "F047",
+   "seed": 151047,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m7"
+  },
+  {
+   "id": "F048",
+   "seed": 151048,
+   "config": "standard",
+   "blue": "classic.m6",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "F049",
+   "seed": 151049,
+   "config": "standard",
+   "blue": "classic.m7",
+   "red": "v2.mid_solo_split"
+  },
+  {
+   "id": "F050",
+   "seed": 151050,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m1"
+  },
+  {
+   "id": "F051",
+   "seed": 151051,
+   "config": "standard",
+   "blue": "std",
+   "red": "classic.m6"
+  },
+  {
+   "id": "F052",
+   "seed": 151052,
+   "config": "standard",
+   "blue": "v2.three_lane_pressure",
+   "red": "v2.jungle_invasion"
+  },
+  {
+   "id": "F053",
+   "seed": 151053,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.top_solo_split"
+  },
+  {
+   "id": "F054",
+   "seed": 151054,
+   "config": "standard",
+   "blue": "v2.bot_duo_pressure",
+   "red": "v2.defensive_hold"
+  },
+  {
+   "id": "F055",
+   "seed": 151055,
+   "config": "standard",
+   "blue": "v2.mid_jungle_sync",
+   "red": "classic.m5"
+  },
+  {
+   "id": "F056",
+   "seed": 151056,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.three_lane_pressure"
+  },
+  {
+   "id": "F057",
+   "seed": 151057,
+   "config": "standard",
+   "blue": "v2.dragon_pit_macro",
+   "red": "v2.dragon_pit_macro"
+  },
+  {
+   "id": "F058",
+   "seed": 151058,
+   "config": "standard",
+   "blue": "v2.top_solo_split",
+   "red": "v2.standard_macro"
+  },
+  {
+   "id": "F059",
+   "seed": 151059,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m4"
+  },
+  {
+   "id": "F060",
+   "seed": 151060,
+   "config": "standard",
+   "blue": "v2.hard_engage_stack",
+   "red": "std"
+  },
+  {
+   "id": "F061",
+   "seed": 151061,
+   "config": "standard",
+   "blue": "v2.protect_core_scaling",
+   "red": "v2.support_roamer"
+  },
+  {
+   "id": "F062",
+   "seed": 151062,
+   "config": "standard",
+   "blue": "v2.standard_macro",
+   "red": "v2.protect_core_scaling"
+  },
+  {
+   "id": "F063",
+   "seed": 151063,
+   "config": "standard",
+   "blue": "v2.defensive_hold",
+   "red": "classic.m3"
+  },
+  {
+   "id": "F064",
+   "seed": 151064,
+   "config": "standard",
+   "blue": "classic.m1",
+   "red": "classic.m8"
+  },
+  {
+   "id": "F065",
+   "seed": 151065,
+   "config": "standard",
+   "blue": "classic.m2",
+   "red": "v2.mid_jungle_sync"
+  },
+  {
+   "id": "F066",
+   "seed": 151066,
+   "config": "standard",
+   "blue": "classic.m3",
+   "red": "v2.hard_engage_stack"
+  },
+  {
+   "id": "F067",
+   "seed": 151067,
+   "config": "standard",
+   "blue": "classic.m4",
+   "red": "classic.m2"
+  },
+  {
+   "id": "F068",
+   "seed": 151068,
+   "config": "standard",
+   "blue": "classic.m5",
+   "red": "classic.m7"
+  },
+  {
+   "id": "F069",
+   "seed": 151069,
+   "config": "standard",
+   "blue": "classic.m6",
+   "red": "v2.bot_duo_pressure"
+  },
+  {
+   "id": "F070",
+   "seed": 151070,
+   "config": "standard",
+   "blue": "classic.m7",
+   "red": "v2.mid_solo_split"
+  },
+  {
+   "id": "F071",
+   "seed": 151071,
+   "config": "standard",
+   "blue": "classic.m8",
+   "red": "classic.m1"
+  },
+  {
+   "id": "F072",
+   "seed": 151072,
+   "config": "standard",
+   "blue": "std",
+   "red": "classic.m6"
+  },
+  {
+   "id": "F073",
+   "seed": 151073,
+   "config": "standard",
+   "blue": "v2.three_lane_pressure",
+   "red": "v2.jungle_invasion"
+  },
+  {
+   "id": "F074",
+   "seed": 151074,
+   "config": "standard",
+   "blue": "v2.jungle_invasion",
+   "red": "v2.top_solo_split"
+  },
+  {
+   "id": "F075",
+   "seed": 151075,
+   "config": "standard",
+   "blue": "v2.bot_duo_pressure",
+   "red": "v2.defensive_hold"
+  },
+  {
+   "id": "F076",
+   "seed": 151076,
+   "config": "standard",
+   "blue": "v2.mid_jungle_sync",
+   "red": "classic.m5"
+  },
+  {
+   "id": "F077",
+   "seed": 151077,
+   "config": "standard",
+   "blue": "v2.support_roamer",
+   "red": "v2.three_lane_pressure"
+  },
+  {
+   "id": "F078",
+   "seed": 151078,
+   "config": "standard",
+   "blue": "v2.dragon_pit_macro",
+   "red": "v2.dragon_pit_macro"
+  },
+  {
+   "id": "F079",
+   "seed": 151079,
+   "config": "standard",
+   "blue": "v2.top_solo_split",
+   "red": "v2.standard_macro"
+  },
+  {
+   "id": "F080",
+   "seed": 151080,
+   "config": "standard",
+   "blue": "v2.mid_solo_split",
+   "red": "classic.m4"
+  }
+ ]
+}

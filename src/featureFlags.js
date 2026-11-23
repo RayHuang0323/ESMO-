@@ -127,6 +127,12 @@ export const FEATURE_FLAGS = Object.freeze({
    * 只有 Owner 能決定打開。
    */
   mobaTacticExecV24: false,
+  /**
+   * moba-sim.v25 候選（C1 決定性數學核心，Owner 2026-11-23 核准開發；未核准發布）：模擬的三角函數改用 DetMath.v1，Node 與瀏覽器逐位元相同。
+   * **正式站預設 OFF，只在 mobaTacticalDirectorV21、mobaJungleV22、mobaSafeRouteV23、mobaTacticExecV24 都開時生效**（career.v25＝career.v24＋mathKernel "det.v1"）。
+   * 只有 Owner 能決定打開。
+   */
+  mobaDetMathV25: false,
 });
 
 /** 單一查詢出口（呼叫端不直接讀物件，日後要改成遠端旗標也只動這裡）。 */
