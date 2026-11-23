@@ -66,6 +66,46 @@ export function vectorsFor(fn, count = VECTOR_PLAN[fn]) {
   return out.slice(0, count);
 }
 
+// ---------------------------------------------------------------------------- v2 (DetMathAccuracy.v2, registered in
+//  review/tactic-book-3a/deterministic-math-c1/精度契約v2_事前登記.md before first use). New seeds 7101–7105 and new mixes; v1 above is untouched.
+export const VECTOR_PLAN_V2 = Object.freeze({ sin: 300000, cos: 300000, atan2: 300000, acos: 150000, asin: 150000 });
+const sgn = (r) => ((r() & 1) ? 1 : -1);
+/** |x| in [2^lo, 2^hi) with uniform exponent and random mantissa, random sign (exact: built from bits). */
+const expRange = (r, lo, hi) => fromBits((((r() % (hi - lo)) + lo + 1023) << 20) | (r() & 0xfffff), r()) * sgn(r);
+export function vectorsForV2(fn, count = VECTOR_PLAN_V2[fn]) {
+  const r = rng({ sin: 7101, cos: 7102, atan2: 7103, acos: 7104, asin: 7105 }[fn]), out = [];
+  const PIO4 = 0.7853981633974483;
+  if (fn === "sin" || fn === "cos") {
+    while (out.length < count) {
+      const c = r() % 20;
+      if (c < 8) out.push([unif(r, -200, 20000)]);                                          // 40% game range
+      else if (c < 11) { const k = (r() % 2000001) - 1000000; out.push([k * PIO4 + unif(r, -1e-9, 1e-9)]); }   // 15% near k·π/4
+      else if (c < 13) out.push([expRange(r, -1022, -30)]);                                  // 10% tiny
+      else if (c < 15) out.push([expRange(r, 21, 40)]);                                      // 10% huge (≥ 2^21 > 2^20·π/2)
+      else out.push([anyFinite(r)]);                                                         // 25% any finite
+    }
+  } else if (fn === "atan2") {
+    while (out.length < count) {
+      const c = r() % 20;
+      if (c < 8) out.push([unif(r, -300, 300), unif(r, -300, 300)]);                        // 40% map deltas
+      else if (c < 11) { const x = unif(r, -300, 300); out.push([x * (1 + unif(r, -1e-6, 1e-6)) * sgn(r), x]); }   // 15% |y/x| ≈ 1
+      else if (c < 14) { const x = unif(r, -300, 300), k = expRange(r, 30, 60); out.push((r() & 1) ? [x / k, x] : [x * Math.abs(k), x]); }   // 15% tiny/huge ratio
+      else if (c < 15) { const v = unif(r, -300, 300), z = (r() & 1) ? 0 : -0; out.push((r() & 1) ? [z, v] : [v, z]); }   // 5% a zero
+      else out.push([anyFinite(r), anyFinite(r)]);                                          // 25% any finite pair
+    }
+  } else if (fn === "acos" || fn === "asin") {
+    while (out.length < count) {
+      const c = r() % 20;
+      if (c < 10) out.push([unif(r, -1, 1)]);                                                // 50% uniform
+      else if (c < 14) out.push([sgn(r) * (1 - unif(r, 0, 1e-12))]);                          // 20% near ±1
+      else if (c < 16) out.push([sgn(r) * ((r() & 1) ? 0.5 : 0.975) * (1 + unif(r, -1e-9, 1e-9))]);   // 10% near ±0.5 / ±0.975
+      else if (c < 17) out.push([sgn(r) * unif(r, 1, 64)]);                                  // 5% |x| > 1 (x = 1 exactly is possible only at unif = 0)
+      else out.push([anyFinite(r)]);                                                         // 15% any finite
+    }
+  } else throw new Error(`unknown v2 fn ${fn}`);
+  return out.slice(0, count);
+}
+
 /** Text for one result: exact bits as hex, every NaN as "NaN" (the contract compares NaN by kind, not payload). */
 export function resultKey(v) { if (v !== v) return "NaN"; const [h, l] = bitsOf(v); return h.toString(16).padStart(8, "0") + l.toString(16).padStart(8, "0"); }
 /** FNV-1a over result keys, per chunk of `chunk` results ⇒ array of hex hashes (cheap to compare across runtimes). */
