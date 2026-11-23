@@ -1,0 +1,13 @@
+check_c1_legacy_golden exit=0 124s check_c1_legacy_golden：3/3 PASS（124 秒）
+check_cal_parity_v24 exit=0 152s 6/6 PASS（153 秒）
+check_s15_preflight_v24 exit=0 109s 5/5 PASS（109 秒）
+check_s2_contract_v24 exit=0 116s 55/55 passed
+check_c1_isolation exit=0 68s check_c1_isolation：7/7 PASS（67 秒）
+check_det_math_c1 exit=0 20s check_det_math_c1：7/7 PASS（20 秒）
+check_simulation_version_gate exit=0 2s simulationVersion Gate：106/106 PASS
+check_match_ruleset_3a exit=0 0s Match Ruleset 3a：63/63 PASS
+check_v23_freeze exit=0 3s PASS 3/3
+check_layer_isolation_v24 exit=0 180s check_layer_isolation_v24：8/8 PASS  (178.1 s)
+check_match_setup_3a exit=0 216s Match Setup 3a：153/153 PASS
+runtime29_flat exit=0 107s 35/35 通過　+ 9 段委派給 runner（未計入分母）
+done

@@ -136,8 +136,12 @@ ck("9) 1× / 2× / 4× 不改變模擬結果（rate 只改真實間隔，dt 恆�
   // 三種 rate 下引擎收到的 dt 完全相同 ⇒ 重跑必然逐位元一致
   [1, 2, 4].every(() => fp(run(4242, { tactic: M1 }).snap) === base4242));
 
+//  2026-11-23（TD-TAC-59）：原本的 /playbackRate|rate/ 會命中引擎既有的脫戰回血區域變數 `rate`（RG.outOfCombatPctPerSec），在 053fd582 就是假紅。
+//  改成明確的識別字與建構子簽名：播放速率的任何識別字都不得進引擎，建構子仍只吃 seed／loadout／opts（規則），useLocalServer 那一半不變。
+const LEC = code(src("src/LogicEngine.js"));
 ck("10) playback rate 不污染 rng（rate 不進引擎；引擎建構子只吃 seed/loadout/rules）",
-  !/playbackRate|rate/.test(code(src("src/LogicEngine.js"))) &&
+  !/\b(playbackRate|PLAYBACK_RATES|DEFAULT_RATE|tickMsFor|setRate|useLocalServer)\b|\bthis\.rate\b|\.playbackRate\b/.test(LEC) &&
+  /\bconstructor\(\s*seed\s*=\s*1\s*,\s*loadout\s*=\s*null\s*,\s*opts\s*=\s*\{\}\s*\)/.test(LEC) &&
   !/setRate[\s\S]{0,120}(new LogicEngine|configureMatch|configurePlayers)/.test(ULS));
 
 // movement 不因低 FPS 變慢/加速：位置只在 tick 內更新，且與 dt 成正比

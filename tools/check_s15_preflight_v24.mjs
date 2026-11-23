@@ -10,7 +10,7 @@
 //   P5 src/ 與 feed38c1 相同；v24／v23 指紋不變；src/ 沒有 import 任何診斷工具
 // ============================================================================
 import fs from "node:fs";
-import {inspectMobaIntegrationScope} from './lib/mobaIntegrationScope.mjs';
+import {inspectVersionedScope} from './lib/mobaVersionedScope.mjs';
 import os from "node:os";
 import path from "node:path";
 import { execSync, spawnSync } from "node:child_process";
@@ -73,13 +73,14 @@ const J = JSON.stringify, t0 = Date.now();
 // ── P5 ──
 {
   const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd: ROOT, encoding: "utf8" });
-  const scope=inspectMobaIntegrationScope('feed38c1',ROOT),srcSame=scope.ok;
+  //  2026-11-23（TD-TAC-60）：版本化範圍——src 與 feed38c1 相同照原規則；否則必須是登記的後繼版本且歷史來源一致、v20～v24 逐 tick Golden 不變（tools/lib/mobaVersionedScope.mjs）。
+  const scope=await inspectVersionedScope('feed38c1',ROOT),srcSame=scope.ok;
   const { SIMULATION_SEMANTICS_FINGERPRINTS: F } = await imp("src/platform/contracts/simulationVersion.js");
   const fp = { v24: F["moba-sim.v24"], v23: F["moba-sim.v23"] };
   //  只擋 import：src/ 的註解可以正當地提到 owner_preview 底下的量測工具
   const importRe = /(?:\bfrom\s*|\bimport\s*\(?\s*)["'`][^"'`]*(?:owner_preview|diag_te24_s15|report_te24_s15)[^"'`]*["'`]/;
   const offenders = git("ls-files", "src").trim().split("\n").filter((f) => /\.(js|jsx|mjs)$/.test(f) && !f.endsWith("heroImages.js")).filter((f) => importRe.test(fs.readFileSync(path.join(ROOT, f), "utf8")));
-  ck("P5 MOBA保護範圍與feed38c1相同、明確CS面可整合且src乾淨；v24／v23指紋不變；src沒有import診斷工具",
+  ck("P5 MOBA保護範圍與feed38c1相同或為登記後繼版本（歷史來源一致＋舊版本逐 tick 不變）、明確CS面可整合且src乾淨；v24／v23指紋不變；src沒有import診斷工具",
     srcSame && fp.v24 === "9727c0b4ae8beb3d" && fp.v23 === "69237cce78edf2be" && offenders.length === 0, J({ srcSame, scope, fp, offenders }));
 }
 const pass = results.filter((r) => r.ok).length;

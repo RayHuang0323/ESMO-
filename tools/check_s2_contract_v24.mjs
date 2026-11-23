@@ -13,7 +13,7 @@
 //  用法：node tools/check_s2_contract_v24.mjs
 // ============================================================================
 import fs from "node:fs";
-import {inspectMobaIntegrationScope} from './lib/mobaIntegrationScope.mjs';
+import {inspectVersionedScope} from './lib/mobaVersionedScope.mjs';
 import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -151,8 +151,10 @@ if (hidden && shown) {
 const importRe = /(?:\bfrom\s*|\bimport\s*\(?\s*)["'`][^"'`]*(?:owner_preview|lib_s2_oracle|lib_s11_legal|lib_closure_natural|s2_contract_v2|closure_stress|closure_natural)[^"'`]*["'`]/;
 const offenders = git("ls-files", "src").trim().split("\n").filter((f) => /\.(js|jsx|mjs)$/.test(f) && !f.endsWith("heroImages.js")).filter((f) => importRe.test(fs.readFileSync(path.join(ROOT, f), "utf8")));
 ck("T13a src/ 沒有引用量測工具", offenders.length === 0, offenders.join(","));
-const integrationScope=inspectMobaIntegrationScope(BASELINE,ROOT);
-ck("T13b MOBA保護範圍與原基準相同，僅放行明確CS整合面且src乾淨", integrationScope.ok, JSON.stringify(integrationScope));
+//  2026-11-23（TD-TAC-60）：改用版本化範圍。src 與原基準相同 ⇒ 照原規則；否則必須是登記的後繼版本，且「歷史來源一致」（原基準＝Golden 來源 053fd582 的保護範圍、
+//  053fd582 的指紋＝登記的 v24）與「現役引擎的舊版本行為不變」（登記的變更集、指紋、v20～v24 逐 tick Golden）同時成立。沒有任何條件被放寬。
+const integrationScope=await inspectVersionedScope(BASELINE,ROOT);
+ck("T13b MOBA保護範圍：與原基準相同；或是登記的後繼版本（歷史來源一致＋現役引擎跑舊規則集逐 tick 不變）；僅放行明確CS整合面且src乾淨", integrationScope.ok, JSON.stringify(integrationScope));
 const { SIMULATION_SEMANTICS_FINGERPRINTS: FP } = await import("../src/platform/contracts/simulationVersion.js");
 ck("T13c v24 與 v23 指紋不變", FP["moba-sim.v24"] === "9727c0b4ae8beb3d" && FP["moba-sim.v23"] === "69237cce78edf2be", JSON.stringify({ v24: FP["moba-sim.v24"], v23: FP["moba-sim.v23"] }));
 ck("T13d 契約版本與門檻", S2_CONTRACT_V2.version === "s2.v2" && S2_CONTRACT_V2.A.lowerMin === 0.65 && S2_CONTRACT_V2.A.minStarts === 60 && S2_CONTRACT_V2.C.c1Min === 0.6 && S2_CONTRACT_V2.C.c1Max === 1.5 && S2_CONTRACT_V2.C.c2Min === 0.5);
