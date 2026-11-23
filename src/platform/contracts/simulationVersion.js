@@ -730,7 +730,8 @@ export const SIMULATION_SEMANTICS_FINGERPRINTS = Object.freeze({
   //  v25 候選（2026-11-23，Owner 核准 C1）：mathKernel "det.v1"（DetMath.v1）＋語意清單加入 detMath.js。v24 那一行凍結於上面的值，不得覆寫。
   "moba-sim.v25": "15a8c67f3bcea44a",
   //  v26 候選（2026-11-23，Owner 核准 C2）：mathKernel "det.v2"（DetMath.v1＋DetHypot.v1）＋語意清單加入 detHypot.js、simMathContext.js。v25 那一行凍結於上面的值，不得覆寫。
-  "moba-sim.v26": "da35b3af6c8fea67",
+  //  上一個值 da35b3af6c8fea67＝第一次凍結 e3a7c87e（核心守衛對沒有 _simKernel 的引擎視圖會丟錯；結果見 deterministic-math-c2/C2_結果.md）。
+  "moba-sim.v26": "360474218ca774b9",
 });
 
 export const isKnownSimulationVersion = (v) =>
