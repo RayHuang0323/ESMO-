@@ -1,0 +1,55 @@
+{
+ "planId": "c1-formal-80",
+ "env": {
+  "head": "948fb192a93899a12b1f79d56e53ff36069de420",
+  "srcDirty": false,
+  "node": "v24.18.0",
+  "sim": "moba-sim.v25",
+  "fingerprint": "15a8c67f3bcea44a",
+  "digest": "C1StateDigest.v1",
+  "plan": "c1-formal-80",
+  "toolEnv": "parity"
+ },
+ "chrome": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+ "verdict": {
+  "X1": "PASS",
+  "X2": "PASS"
+ },
+ "X1": {
+  "identical": 80,
+  "of": 80,
+  "mismatches": [],
+  "ticksCompared": 175455
+ },
+ "X2": {
+  "detFiles": 80,
+  "nativeFiles": 80,
+  "bothEnded": 80
+ },
+ "control": {
+  "files": 80,
+  "diverged": 80,
+  "outcomeDiffers": 7,
+  "winnerDiffers": 4,
+  "firstDivergentTick": {
+   "min": 179,
+   "median": 576,
+   "max": 1858
+  }
+ },
+ "detVsNativeNode": {
+  "comparable": 80,
+  "sameOutcome": 80,
+  "sameWinner": 80
+ },
+ "winners": {
+  "det": {
+   "blue": 37,
+   "red": 43
+  }
+ },
+ "timing": {
+  "nodeMsMean": 9553,
+  "chromeMsMean": 15489
+ }
+}

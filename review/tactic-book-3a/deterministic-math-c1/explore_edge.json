@@ -1,0 +1,19 @@
+{
+ "edge": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36 Edg/158.0.0.0",
+ "node": "v24.18.0",
+ "vectors": 1500000,
+ "detIdenticalToNode": {
+  "sin": true,
+  "cos": true,
+  "atan2": true,
+  "acos": true,
+  "asin": true,
+  "powInt": true
+ },
+ "allIdentical": true,
+ "sprint2aDivergentInputs": {
+  "n": 922,
+  "edgeNativeDiffersFromNodeNative": 922,
+  "edgeNativeDiffersFromChrome157Native": 0
+ }
+}

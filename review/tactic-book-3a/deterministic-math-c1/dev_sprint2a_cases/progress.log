@@ -1,0 +1,11 @@
+[2026-11-23T05:18:07.927Z] start {"head":"053fd5823522aad2cb07a4c91609020475e31a26","srcDirty":true,"node":"v24.18.0","sim":"moba-sim.v25","fingerprint":"15a8c67f3bcea44a","digest":"C1StateDigest.v1","plan":"c1-sprint2a-cases","toolEnv":"parity"} kernels=native,det items=4
+[2026-11-23T05:18:12.997Z] chrome Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36
+[2026-11-23T05:19:04.623Z] native S142243 seed=142243 v2.jungle_invasion/classic.m7 DIFF@682 ticks=2643/2643 red/red node=21974ms chrome=29621ms
+[2026-11-23T05:19:49.953Z] native S142227 seed=142227 v2.jungle_invasion/v2.jungle_invasion DIFF@682 ticks=2000/2752 red/blue node=13949ms chrome=31356ms
+[2026-11-23T05:20:23.736Z] native S146045 seed=146045 classic.m7/v2.jungle_invasion DIFF@190 ticks=1922/1922 red/red node=14268ms chrome=19484ms
+[2026-11-23T05:20:56.801Z] native S146065 seed=146065 v2.jungle_invasion/classic.m7 DIFF@1309 ticks=2037/2037 blue/blue node=12875ms chrome=20161ms
+[2026-11-23T05:21:45.358Z] det S142243 seed=142243 v2.jungle_invasion/classic.m7 IDENTICAL ticks=2643/2643 red/red node=19609ms chrome=28928ms
+[2026-11-23T05:22:17.733Z] det S142227 seed=142227 v2.jungle_invasion/v2.jungle_invasion IDENTICAL ticks=2000/2000 red/red node=12649ms chrome=19707ms
+[2026-11-23T05:22:50.457Z] det S146045 seed=146045 classic.m7/v2.jungle_invasion IDENTICAL ticks=1922/1922 red/red node=13273ms chrome=19433ms
+[2026-11-23T05:23:23.047Z] det S146065 seed=146065 v2.jungle_invasion/classic.m7 IDENTICAL ticks=2037/2037 blue/blue node=12557ms chrome=20001ms
+[2026-11-23T05:23:24.412Z] end done=8 skipped=0

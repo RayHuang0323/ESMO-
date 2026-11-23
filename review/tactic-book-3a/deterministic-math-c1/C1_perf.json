@@ -1,0 +1,42 @@
+{
+ "node": "v24.18.0",
+ "cpu": "AMD Ryzen 5 5600U with Radeon Graphics         ",
+ "cores": 12,
+ "items": 20,
+ "rounds": [
+  {
+   "round": 1,
+   "nativeMsPerTick": 1.81421,
+   "detMsPerTick": 1.81381,
+   "overheadPct": -0.02
+  },
+  {
+   "round": 2,
+   "nativeMsPerTick": 1.81179,
+   "detMsPerTick": 1.81278,
+   "overheadPct": 0.05
+  },
+  {
+   "round": 3,
+   "nativeMsPerTick": 1.83828,
+   "detMsPerTick": 1.81284,
+   "overheadPct": -1.38
+  }
+ ],
+ "medianOverheadPct": -0.02,
+ "pass": true,
+ "micro": {
+  "sin": {
+   "nativeNsPerCall": 27.5,
+   "detNsPerCall": 35.9
+  },
+  "cos": {
+   "nativeNsPerCall": 27.3,
+   "detNsPerCall": 37.9
+  },
+  "atan2": {
+   "nativeNsPerCall": 19.3,
+   "detNsPerCall": 31
+  }
+ }
+}

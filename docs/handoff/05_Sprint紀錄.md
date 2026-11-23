@@ -27180,3 +27180,13 @@ Claude交接0b577dab（成果47914b16）與CS e0bd5614來源乾淨，11支工具
 S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存；只將全src相等假設改為73支MOBA語意與所有非明確24個CS路徑的保護，仍用原基準，12項正反例PASS，不改門檻／指紋。適配後55/55、5/5、6/6，v23 69237cce78edf2be／v24 9727c0b4ae8beb3d不變。整合MOBA runner14/14、正常MOBA Browser9/9、CS正式三圖BO1／BO3 81/81、培養閉環與MOBA並行47/47、額外有界並行縮放14/14、BP-9原子1464/1464、SaveSlim20季112/112、舊三圖Replay與production build及七項新SHA Gate／assert全部PASS。
 
 完整來源／處置／收據／截圖與限制：review/cs-moba-integration-20261121/INTEGRATION_RESULT.md；原始資料 C:\Users\ifikn\esmo-measure\cs-moba-integration-20261121。整合production preview http://127.0.0.1:5194/ESMO-/ 。四個正式MOBA旗標false、Sprint2／A～D未實作、CS池opt-in／正式預設不變。320px並行補證PASS但原偶發FAIL不抹除；Android／低RAM／CPU4×FAIL／2118MiB及既有公平性風險維持。桌機技術候選可Owner Review，正式發布仍須Owner核准與新main／正式站驗收；不Push／Deploy／force／新增Worktree／清理原WIP。保存文件Checkpoint後停止。
+
+## 2026-11-23 C1：決定性數學核心（moba-sim.v25 候選，Owner Review）
+
+分支 feature/moba-det-math-c1（.sprints/moba-deterministic-math-c1，從 origin/main 053fd582，只在本機，未 push）。Sprint 2A 已由 Owner 結案，它的候選（B／C／D、v1.5／v1.6）沒有帶進來；Sprint 2A 的 worktree 與 0c7d5830 原樣保留。
+
+完成：DetMath.v1（src/battle/moba/sim/detMath.js，sin／cos／atan2／acos／asin，fdlibm／musl 演算法，只用規格保證精確的運算，超大引數用 BigInt 精確化簡）；新可選層 mathKernel "det.v1" 只在 career.v25／balanceTool.v25（v24 逐欄＋這一個鍵），旗標 mobaDetMathV25 預設 false；LogicEngine 的 10 處三角函數與 2 處 ** 改經 _sin…_powInt，沒有這個層時呼叫原本的 Math.*；組裝器只在有這個層時先呼叫 configureMathKernel。moba-sim.v25 指紋 15a8c67f3bcea44a，v20～v24 登記值不變。地圖幾何、導航、野怪、數值、戰術參數都沒動。
+
+驗證：check_det_math_c1 7/7（150 萬筆 Node＝Chrome 逐位元；誤差不比 Node 原生差：sin 0.76、atan2 1.39 ulp；Sprint 2A 的 922 個分歧輸入 det 0 個不同）；check_c1_isolation 7/7（含 det 對局中引擎 0 次原生三角函數、4 場釘點）。事前登記 948fb192 後的正式 80 場新 Seeds（151001～151080）：det 80/80 每個 tick 整場引擎狀態 Node＝Chrome（175,455 tick，X1／X2 PASS）；原生對照 80/80 分歧、4 場勝方翻轉；det 與 v24 原生 Node 結局 80/80 相同。Sprint 2A 案例 142227 原生勝方翻轉 → det 一致。效能中位數 −0.02%。舊版本：check_match_golden_v21a 137 條逐字相同、tactic_exec_v24 19/19。瀏覽器 5647（career.v25）：一般觀看、快速完成、390px 三場 Node＝Chrome 逐 tick、畫面引擎最終狀態也相同；結算、Replay、回總部正常，console error 0。Edge 158 探索：det 150 萬筆相同（同屬 V8，不算第二種引擎）。
+
+已知：runtime29 第 10 條在 main 就紅（TD-TAC-59）；三支歷史量測前置 Gate 預期紅（TD-TAC-60）；Firefox／Safari 未認證（TD-TAC-61）。文件：review/tactic-book-3a/deterministic-math-c1/。

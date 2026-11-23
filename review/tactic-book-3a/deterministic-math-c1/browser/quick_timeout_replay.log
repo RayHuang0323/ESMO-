@@ -1,0 +1,36 @@
+js 1
+js {"api":true,"sim":"moba-sim.v25","banner":true}
+tap home-mode-moba ok 819 450
+tap prep-primary-action ok 683 799
+until [...document.querySelectorAll('button')].some(b=>/確認進入對戰/.te true 10.1s
+tap 確認進入對戰 ok 676 862
+until document.querySelector('[data-testid="matchmaking-enter-banp true 5.0s
+tap matchmaking-enter-banpick ok 735 450
+until document.querySelector('[data-testid="hero-choose"]') true 0.1s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser/quick_1_banpick.png
+js {"log":["ironclad","thornwall","ravager","cinderfist","sting","auralith","razorwing","confirm@9"],"confirm":true,"picks":"出戰配置 5/5"}
+tap confirm-draft ok 683 536
+until document.querySelector('[data-testid="tb-step-confirm"]') true 0.0s
+tap tb-step-confirm ok 1029 93
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser/quick_2_tactic.png
+tap tb-confirm-go ok 940 504
+until window.__esmoC1 && window.__esmoC1.live && document.querySel true 3.6s
+js {"rulesetId":"career.v25","simVersion":"moba-sim.v25","mathKernel":"det.v1","setupHash":"068d56de75cefe71"}
+save C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser/quick_setup.json 4724
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser/quick_3_battle.png
+tap quick-finish-match ok 1303 28
+until document.querySelector('[data-testid="battle-end-screen"]') true 15.8s
+shot C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser/quick_5_result.png
+save C:/Users/ifikn/AppData/Local/Temp/claude/6ab21551ede7cdb5/ed52c22f-4e7c-485f-8479-8304226cf890/scratchpad/c1/browser/quick_result.json 46902
+tap 觀看重播 ok 588 866
+until document.querySelector('input[aria-label="重播時間軸"]') true 0.1s
+file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-deterministic-math-c1/tools/browser/cdp.mjs:297
+      reject(new Error(`CDP ${method} 逾時（${timeoutMs}ms）`));
+             ^
+
+Error: CDP Runtime.evaluate 逾時（840000ms）
+    at Timeout._onTimeout (file:///D:/OneDrive/%E6%96%87%E4%BB%B6/GitHub/ESMO/.sprints/moba-deterministic-math-c1/tools/browser/cdp.mjs:297:14)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Node.js v24.18.0

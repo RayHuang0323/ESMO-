@@ -592,3 +592,46 @@ Owner 2026-11-20 核准「v24 Calibration Sprint — 真實戰鬥入侵校準」
 | 16 | 8b 擴大樣本、taskCommit v19push 的三項驗證（改在 Career-Parity 下） | 否 | 待核准 |
 | 17 | Sprint 2：護送、3～4 人、救援、2 人後勤 | 是 | 未核准；條件尚未具備 |
 | 18 | 發布線（G-A8 新判準等） | 否 | 待 Owner |
+
+
+## 2026-11-23 更新（C1 決定性數學核心之後）
+
+> 分支 `feature/moba-det-math-c1`（從 origin/main `053fd582`），程式與事前登記 commit `948fb192`。文件：`deterministic-math-c1/C1_結果.md`、`C1_事前登記.md`、`C1_交接.md`。
+> Sprint 2A（`feature/moba-v24-sprint2a`，`0c7d5830`）已由 Owner 正式結案：歷史 FAIL／INCONCLUSIVE／NOT_ELIGIBLE 不變；B／C／D、v1.5／v1.6 是研究候選，沒有併入 main，也沒有帶進 C1。TD-TAC-45～58 登記在那個分支的同一份檔案，尚未整合；本節延續編號從 59 開始。
+
+- `moba-sim.v25` 候選（`15a8c67f3bcea44a`）：新可選層 `mathKernel "det.v1"`，只在 `career.v25`／`balanceTool.v25`（＝v24＋這一個鍵），旗標 `mobaDetMathV25` 預設關。
+- DetMath.v1（`src/battle/moba/sim/detMath.js`）：sin／cos／atan2／acos／asin 只用規格保證精確的運算；150 萬筆 Node＝Chrome 逐位元；誤差不比 Node 原生差。
+- 正式 80 場新 Seeds（151001～151080）：det **80／80 逐 tick 一致**（175,455 tick）；原生對照 80／80 分歧、4 場勝方翻轉。Sprint 2A 分歧案例 4／4 修正。效能 −0.02%（中位數）。
+- 舊版本：`check_match_golden_v21a` 137 條逐字相同；v20～v24 指紋登記值不變。
+
+### 技術債：狀態有變的
+
+| 編號 | 內容 | 狀態 |
+|---|---|---|
+| TD-TAC-56（Sprint 2A 分支） | Node／Chrome 對局結果分歧 | **v25 候選內已解決**；v20～v24 照舊（刻意保留） |
+| TD-TAC-57（同上） | 地圖與導航在組裝時用原生三角函數 | 依 Owner 指示未改；所有實測無影響；保險項待 Owner |
+| TD-TAC-58（同上） | `hypot`／`**` 只保證近似 | `**` 在 det 路徑已換成連乘；`hypot` 維持原生（三個執行環境實測相同） |
+
+### 技術債：新增的
+
+| 編號 | 內容 | 嚴重度 |
+|---|---|---|
+| TD-TAC-59 | `check_moba_runtime29` 第 10 條的正則 `/playbackRate\|rate/` 命中既有的回血速率變數 `rate` ⇒ 在 main `053fd582` 就是紅的（CLAUDE.md 只記了 §29） | 低（Gate 假紅） |
+| TD-TAC-60 | 三支歷史量測前置 Gate（cal_parity C3、s15_preflight P5、s2_contract T13b）在 MOBA 原始碼改動後必紅；Sprint 2A 分支的版本化登記尚未整合 | 中（整合 v25 前需 Owner 決定） |
+| TD-TAC-61 | 其他瀏覽器引擎（Firefox／Safari）未認證；這台機器只有 Chromium 系 | 中（正式發布前） |
+| TD-TAC-62 | det 精度是 fdlibm 等級（atan2 最大 1.39 ulp），Chrome 157 原生是正確捨入 | 低（資訊） |
+
+### Roadmap（取代前一節的順序）
+
+| 順序 | 項目 | 改語意嗎 | 狀態 |
+|---|---|---|---|
+| 1～12 | v23 凍結 … Calibration Sprint | — | 完成 |
+| 13 | Owner 決定入侵的產品取捨 | 依選項 | 已由 Sprint 2A 處理（分支 `feature/moba-v24-sprint2a`） |
+| 14 | Sprint 2A（兩輪）＋結案：合法接近、雙人集合 | 否（研究候選未併入 main） | **Owner 已結案**；研究基準 G1 0.427 |
+| 15 | **C1 決定性數學核心（moba-sim.v25 候選）** | 是（只在新層；舊版本逐位元不變） | **完成，等 Owner Review** |
+| 16 | 新版戰術驗收契約 v3.1（草案 `deterministic-math-c1/新版戰術驗收契約草案.md`）：判定函式＋合成資料自我測試 | 否 | 待 Owner 核准 |
+| 17 | v25 上的戰術產品驗收（事前登記、新 Seeds；Node 統計即代表瀏覽器） | 否 | 待 16 |
+| 18 | 生涯 S5（TD-TAC-29、33）；8b 擴大樣本、taskCommit v19push 的三項驗證 | 待查／否 | 待核准 |
+| 19 | 整合準備：TD-TAC-60 的 Gate 版本化、TD-TAC-61 其他瀏覽器 | 否 | 待 Owner |
+| 20 | Sprint 2B：3～4 人編隊、護送、救援 | 是 | **暫緩**（Owner 決策） |
+| 21 | 發布線（G-A8 新判準等） | 否 | 待 Owner |
