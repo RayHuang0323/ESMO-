@@ -723,3 +723,10 @@ Owner 2026-11-20 核准「v24 Calibration Sprint — 真實戰鬥入侵校準」
 | 21 | 戰術契約 v3.1 事前登記與產品驗收（v26 上） | 否 | 待 Owner |
 | 22 | Sprint 2B：3～4 人編隊 | 是 | **暫緩** |
 | 23 | 發布線（G-A8 新判準等） | 否 | 待 Owner |
+
+## 2026-11-25　C1＋C2 Release Closure 狀態更新
+
+- **v26（det.v2）仍未啟用**：正式旗標全關，只以候選版本隨整合存在；指紋 `360474218ca774b9` 不變。
+- **TD-TAC-65**：繼續只監看，不改 v18 地形。整合候選上 `check_c2_geometry`（det.v2／native）的地形分歧與 C2 紀錄逐項相同（最大差 1.7e-10）。
+- **TD-TAC-66**：已由整合驗證的 P1（事前登記 `review/c1c2-integration-20261124/事前登記_效能與情境污染.md`）實測，v24 舊路徑 +1.66%、v20 +2.55%，符合 ≤10% 門檻。Closure 最終候選另按發布規範重跑 P1。
+- 詳見 `docs/handoff/05_Sprint紀錄.md` 的 Closure 節與 `review/c1c2-release-closure-20261125/`。

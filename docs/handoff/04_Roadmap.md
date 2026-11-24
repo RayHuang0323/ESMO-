@@ -3088,3 +3088,8 @@ Claude交接0b577dab（成果47914b16）與CS e0bd5614來源乾淨，11支工具
 S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存；只將全src相等假設改為73支MOBA語意與所有非明確24個CS路徑的保護，仍用原基準，12項正反例PASS，不改門檻／指紋。適配後55/55、5/5、6/6，v23 69237cce78edf2be／v24 9727c0b4ae8beb3d不變。整合MOBA runner14/14、正常MOBA Browser9/9、CS正式三圖BO1／BO3 81/81、培養閉環與MOBA並行47/47、額外有界並行縮放14/14、BP-9原子1464/1464、SaveSlim20季112/112、舊三圖Replay與production build及七項新SHA Gate／assert全部PASS。
 
 完整來源／處置／收據／截圖與限制：review/cs-moba-integration-20261121/INTEGRATION_RESULT.md；原始資料 C:\Users\ifikn\esmo-measure\cs-moba-integration-20261121。整合production preview http://127.0.0.1:5194/ESMO-/ 。四個正式MOBA旗標false、Sprint2／A～D未實作、CS池opt-in／正式預設不變。320px並行補證PASS但原偶發FAIL不抹除；Android／低RAM／CPU4×FAIL／2118MiB及既有公平性風險維持。桌機技術候選可Owner Review，正式發布仍須Owner核准與新main／正式站驗收；不Push／Deploy／force／新增Worktree／清理原WIP。保存文件Checkpoint後停止。
+
+## 2026-11-25　C1＋C2 Release Blocker Closure（進行中）
+
+- 從 `9f4902a3` 開 `release/c1c2-closure-20261125`。main 既有的兩條 Gate 紅燈（TD-59、TD-60）已處理（只改測試定位＋行為回歸，`017470e7`）。
+- 剩下：P2v2 正式重新驗證（事前登記已提交）、`match_golden_v21a` 40 案待 Owner 決定、最終候選 SHA 的完整 Release Readiness。v26 仍未啟用；不開始 Sprint 2B。

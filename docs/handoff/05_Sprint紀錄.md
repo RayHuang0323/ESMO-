@@ -27248,3 +27248,16 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - WebKit 的 Windows build 不代表 iOS／macOS Safari；真實裝置都還沒驗證。
 
 文件：review/tactic-book-3a/deterministic-math-c2/C2_結果.md。
+
+## 2026-11-25　C1＋C2 Release Blocker Closure（進行中；結果另節追加）
+
+- 分支／worktree：`release/c1c2-closure-20261125`／`.sprints/c1c2-release-closure`，從已驗證的整合版本 `9f4902a3` 開出（原整合分支、main、C1、C2、CS 工作區都沒動）。不 Push、不 Deploy、不 Merge，正式旗標全關，v26 仍是**未啟用**候選（指紋 `360474218ca774b9`）。
+- **main 既有缺陷兩項（已處理，Owner 核准，`017470e7`，只改測試與測試工具，`src/` 零變更）**：
+  - TD-59 `check_moba_experience26`「Tactic grid 有 min() 防護」：防護在 11-11 改版搬到 `tacticBook.css`，產品正確；改查實際位置＋新增 `check_tactic_grid_guard_closure`（8/8）與 `browser_check_tactic_grid_narrow`（9/9，180px／320／390，含反向測試）。
+  - TD-60 `check_moba_stats28` §18：冪等正確，斷言寫死 `BattleResult.v2`（09-28 升 v3 漏改）；改寫死契約字面 `"BattleResult.v3"`＋新增 `check_progress_idempotency_closure`（32/32，含兩個故意改壞冪等的反向測試）。
+  - 修正後局部回歸：experience26 29/29、stats28 21/21、talent27、progress25 全綠（verify flat）。
+  - 原 FAIL 證據（main `053fd582` 與 `9f4902a3` 逐行相同）與原收據 `c1c2-active__FAIL` 永久保留。
+- **舊 P2 FAIL 永久保留**（`c1c2-perf-p2__FAIL`，`9f4902a3`）。新契約 P2v2 事前登記：`review/c1c2-release-closure-20261125/P2v2_事前登記.md`（同場控制、新樣本種子 31001～31003、GC 前／後／峰值／三輪增長／卡頓，未 GC heap 仍是正式判準；停止規則：FAIL 或 INVALID 即停）。
+- **`check_match_golden_v21a` 97/137（40 案）**：與 3a-B 已登記的 40 案逐案相同（main、`9f4902a3` 皆同），屬「旗標關閉時等於標準運營」的預期變化。證據：`review/c1c2-release-closure-20261125/match_golden_v21a_40案處置證據.md`。**未豁免、未重錄、未改判準**，處置待 Owner 決定；在此之前它仍是 Release Gate FAIL。
+- TD-TAC-65（v18 地圖模組原生三角函數）：繼續只監看；四引擎 geometry 與 C2 紀錄逐項相同。
+- TD-TAC-66（舊路徑每 tick 成本）：整合驗證 P1 實測 v24 +1.66%、v20 +2.55%（登記門檻 ≤10%）⇒ 符合門檻。
