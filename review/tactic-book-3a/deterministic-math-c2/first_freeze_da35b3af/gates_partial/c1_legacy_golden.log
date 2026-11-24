@@ -1,0 +1,5 @@
+✅ G1 v20～v24 共 8 場，每個 tick 的整場引擎狀態＝053fd582 錄的 Golden（17,345 個 tick）　[["L1","balanceTool.v20","same"],["L2","balanceTool.v21","same"],["L3","balanceTool.v22","same"],["L4","balanceTool.v23","same"],["L5","balanceTool.v24","same"],["L6","balanceTool.v24","same"],["L7","balanceTool.v24","same"],["L8","balanceTool.v23","same"]]
+✅ G2 舊規則集的引擎 _detMath 都是 false（digest 只排除這一個設定欄位）　[["L1",false],["L2",false],["L3",false],["L4",false],["L5",false],["L6",false],["L7",false],["L8",false]]
+✅ G3 Golden 檔是登記的那一份（來源 053fd582、parity、8 場、排除 ["_detMath"]）
+
+check_c1_legacy_golden：3/3 PASS（75 秒）

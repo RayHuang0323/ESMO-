@@ -1,0 +1,19 @@
+[20:22:52] start chrome_watch
+[20:27:58] done chrome_watch exit=0
+[20:27:58] start chrome_quick
+[20:31:29] done chrome_quick exit=0
+[20:31:29] start chrome_mobile
+[20:34:19] done chrome_mobile exit=0
+[20:34:19] start firefox_watch
+[20:38:34] done firefox_watch exit=0
+[20:38:34] start firefox_quick
+[20:41:21] done firefox_quick exit=0
+[20:41:21] start firefox_mobile
+[20:45:01] done firefox_mobile exit=0
+[20:45:01] start webkit_watch
+[20:48:25] done webkit_watch exit=0
+[20:48:25] start webkit_quick
+[20:50:22] done webkit_quick exit=0
+[20:50:22] start webkit_mobile
+[20:52:14] done webkit_mobile exit=0
+all-done

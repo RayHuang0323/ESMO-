@@ -1,0 +1,11 @@
+✅ D0 detMath.js 與 eb28fbb9 逐位元相同（DetMath.v1 沿用 C1 精度契約 v2 的 PASS）　{"diffBytes":0}
+✅ H1 遊戲範圍（均勻／近似相等／整數，各 20 萬）每一組誤差 < 1 ulp　{"H1a":{"checked":200000,"maxUlp":0.9045,"meanUlp":0.2733},"H1b":{"checked":200000,"maxUlp":0.8464,"meanUlp":0.2708},"H1c":{"checked":200000,"maxUlp":0.5,"meanUlp":0.2497}}
+✅ H2 寬範圍（指數 −1000～1000，20 萬）誤差 < 1 ulp、沒有 ∞、非零輸入不得為 0　{"checked":200000,"maxUlp":0.8118,"meanUlp":0.0076,"inf":0,"zero":0}
+✅ H3 極小／次正規（10 萬）誤差 ≤ 1 ulp（下限 2^-1074）、非零輸入不得為 0　{"checked":100000,"maxUlp":0.8744,"meanUlp":0.1306,"zero":0}
+✅ H4 極大（10 萬）精確值 < MAX ⇒ 有限且 < 1 ulp；精確值 > MAX·(1+2^-53) ⇒ +∞；邊界帶照實回報　{"below":99814,"above":186,"band":0,"belowNotFinite":0,"aboveNotInfinity":0,"maxUlp":0.8535,"meanUlp":0.2735,"bandSample":[]}
+✅ H5 36 組特殊值全部等於登記的期望值　{"count":36,"bad":[]}
+✅ H6 對稱：hypot(x,y)＝hypot(y,x)＝hypot(−x,y)＝hypot(x,−y) 逐位元（H1、H2）　{"H1a":0,"H1b":0,"H1c":0,"H2":0}
+✅ H7 遊戲範圍精度不變差：DetHypot 最大誤差 ≤ Node 原生 Math.hypot 最大誤差（H1）　{"detMaxUlp":0.9045,"nativeMaxUlp":1.8445,"detMean":[0.2733,0.2708,0.2497],"nativeMean":[0.4216,0.3627,0.4202],"node":"v24.18.0"}
+⏭️ H8 跨引擎（未指定 --engines ⇒ SKIP，本次不算完整通過）　{"nodeHash":"6721fa6df73f9d05","outputs":3400036}
+
+check_det_hypot_c2（DetHypot.v1）：8/8 INCOMPLETE（H8 未跑）（8 秒）

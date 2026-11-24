@@ -1,0 +1,49 @@
+[20:57:57] start det_hypot_node
+[20:58:04] done det_hypot_node exit=0 8s | check_det_hypot_c2（DetHypot.v1）：8/8 INCOMPLETE（H8 未跑）（7 秒）
+[20:58:05] start c2_v25_golden
+[20:59:13] done c2_v25_golden exit=0 69s | check_c2_v25_golden：3/3 PASS（69 秒）
+[20:59:14] start c1_legacy_golden
+[21:00:29] done c1_legacy_golden exit=0 75s | check_c1_legacy_golden：3/3 PASS（75 秒）
+[21:00:29] start c2_versioned_scope
+[21:04:19] done c2_versioned_scope exit=0 230s | check_c2_versioned_scope：9/9 PASS
+[21:04:19] start c1_versioned_scope
+[21:05:33] done c1_versioned_scope exit=0 74s | check_c1_versioned_scope：9/9 PASS
+[21:05:33] start c1_isolation
+[21:06:37] done c1_isolation exit=0 64s | check_c1_isolation：7/7 PASS（63 秒）
+[21:06:37] start c2_isolation
+[21:19:52] done c2_isolation exit=0 795s | check_c2_isolation：8/8 PASS（795 秒）
+[21:19:53] start det_math_c1
+[21:20:13] done det_math_c1 exit=0 20s | check_det_math_c1：7/7 PASS（20 秒）
+[21:20:13] start sim_version_gate
+[21:20:15] done sim_version_gate exit=0 2s | simulationVersion Gate：106/106 PASS
+[21:20:15] start cal_parity_v24
+[21:23:39] done cal_parity_v24 exit=0 204s | 6/6 PASS（203 秒）
+[21:23:39] start s15_preflight_v24
+[21:26:34] done s15_preflight_v24 exit=1 175s | 4/5 PASS（175 秒）
+[21:26:35] start s2_contract_v24
+[21:27:45] done s2_contract_v24 exit=127 70s | PASS T13a src/ 沒有引用量測工具
+[21:27:46] start match_ruleset_3a
+[21:27:46] done match_ruleset_3a exit=0 0s | Match Ruleset 3a：66/66 PASS
+[21:27:47] start v23_freeze
+[21:27:51] done v23_freeze exit=0 4s | PASS 3/3
+[21:27:51] start layer_isolation_v24
+[21:31:15] done layer_isolation_v24 exit=1 204s | check_layer_isolation_v24：6/8 FAIL  (201.4 s)
+[21:31:15] start match_setup_3a
+[21:35:16] done match_setup_3a exit=1 241s | Match Setup 3a：151/153 FAIL
+[21:35:16] start tactic_acceptance_v31
+[21:35:17] done tactic_acceptance_v31 exit=0 2s | check_tactic_acceptance_v31：10/10 PASS
+[21:35:18] start regress
+[21:36:13] done regress exit=0 55s | 結束率 15/15 | 平均時長 20.8分 | 平均擊殺 14.0 | 0殺場 0 | 撤退鎖死 1 | 平均hot 63% | 平均破塔 15.4/12
+[21:36:13] start regress2
+[21:37:10] done regress2 exit=0 57s | 節奏門檻 8/8 通過
+[21:37:10] start geometry_native
+[21:39:13] done geometry_native exit=2 123s |    towerPlacement: DIFF 20/186 leaves, max |Δ| 5.684341886080802e-14 at towerPlacement.byId.blue_bot_1.x; first {"index":7,"node":["towerPlacement.byId.blue_to
+[21:39:14] start regress
+[21:40:06] done regress exit=0 52s | 結束率 15/15 | 平均時長 20.8分 | 平均擊殺 14.0 | 0殺場 0 | 撤退鎖死 1 | 平均hot 63% | 平均破塔 15.4/12
+[21:40:07] start regress2
+[21:41:05] done regress2 exit=0 58s | 節奏門檻 8/8 通過
+[21:41:06] start runtime29_flat
+[21:43:04] done runtime29_flat exit=0 119s | v2: 結束 20/20 | 時長 13.4分 | 首塔 3.2分 | 5分: 擊殺 2.5 塔倒 1.4 均Lv 3.5 | 終局 擊殺 15 均Lv 8.1
+[21:43:04] start npm_build
+[21:43:31] done npm_build exit=0 27s | [32m✓ built in 22.90s[39m
+all-done

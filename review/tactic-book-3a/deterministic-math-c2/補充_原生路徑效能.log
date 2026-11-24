@@ -1,0 +1,4 @@
+{"round":1,"eb28fbb9MsPerTick":1.75794,"currentMsPerTick":1.87204,"overPct":6.49,"ticks":[20876,20876]}
+{"round":2,"eb28fbb9MsPerTick":1.74056,"currentMsPerTick":1.82421,"overPct":4.81,"ticks":[20876,20876]}
+{"round":3,"eb28fbb9MsPerTick":1.73909,"currentMsPerTick":1.83053,"overPct":5.26,"ticks":[20876,20876]}
+{"note":"supplementary, not registered","ruleset":"balanceTool.v24","items":10,"medianOverPct":5.26,"rounds":[{"round":1,"eb28fbb9MsPerTick":1.75794,"currentMsPerTick":1.87204,"overPct":6.49,"ticks":[20876,20876]},{"round":2,"eb28fbb9MsPerTick":1.74056,"currentMsPerTick":1.82421,"overPct":4.81,"ticks":[20876,20876]},{"round":3,"eb28fbb9MsPerTick":1.73909,"currentMsPerTick":1.83053,"overPct":5.26,"ticks":[20876,20876]}]}

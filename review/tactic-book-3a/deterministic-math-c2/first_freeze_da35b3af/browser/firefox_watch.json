@@ -1,0 +1,165 @@
+[
+ {
+  "nav": "http://127.0.0.1:5648/ESMO-/"
+ },
+ {
+  "js": "window.__errs=[]; const oe=console.error; console.error=(...a)=>{window.__errs.push(a.map(String).join(' ').slice(0,300)); oe(...a)}; window.addEventListener('error',e=>window.__errs.push('ERR '+e.message)); window.addEventListener('unhandledrejection',e=>window.__errs.push('REJ '+String(e.reason).slice(0,300))); return 1;"
+ },
+ {
+  "js": "return JSON.stringify({api:!!window.__esmoC1, sim:window.__esmoC1?.simVersion, banner:!!document.querySelector('[data-owner-preview=\"c2\"]')});"
+ },
+ {
+  "tap": "home-mode-moba"
+ },
+ {
+  "wait": 2000
+ },
+ {
+  "tap": "prep-primary-action"
+ },
+ {
+  "until": "[...document.querySelectorAll('button')].some(b=>/確認進入對戰/.test(b.innerText))",
+  "ms": 40000
+ },
+ {
+  "tapText": "確認進入對戰"
+ },
+ {
+  "until": "document.querySelector('[data-testid=\"matchmaking-enter-banpick\"]') && !document.querySelector('[data-testid=\"matchmaking-enter-banpick\"]').disabled",
+  "ms": 40000
+ },
+ {
+  "wait": 800
+ },
+ {
+  "tap": "matchmaking-enter-banpick"
+ },
+ {
+  "until": "document.querySelector('[data-testid=\"hero-choose\"]')",
+  "ms": 30000
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_1_banpick.png"
+ },
+ {
+  "js": "const sl = (ms) => new Promise((r) => setTimeout(r, ms));\nconst log = [];\nfor (let i = 0; i < 90; i++) {\n  if (document.querySelector('[data-testid=\"confirm-draft\"]')) { log.push(\"confirm@\" + i); break; }\n  const c = document.querySelector('[data-testid=\"hero-choose\"]');\n  if (c && /輪到你/.test(document.body.innerText)) { log.push(c.dataset.hero); c.click(); await sl(900); continue; }\n  await sl(800);\n}\nconst cf = document.querySelector('[data-testid=\"confirm-draft\"]');\nreturn JSON.stringify({ log, confirm: !!cf, picks: (document.body.innerText.match(/出戰配置 \\d\\/5/) || [\"\"])[0] });\n"
+ },
+ {
+  "tap": "confirm-draft"
+ },
+ {
+  "until": "document.querySelector('[data-testid=\"tb-step-confirm\"]')",
+  "ms": 30000
+ },
+ {
+  "tap": "tb-step-confirm"
+ },
+ {
+  "wait": 1200
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_2_tactic.png"
+ },
+ {
+  "tap": "tb-confirm-go"
+ },
+ {
+  "until": "window.__esmoC1 && window.__esmoC1.live && document.querySelector('[data-testid=\"hud-clock\"]')",
+  "ms": 180000
+ },
+ {
+  "js": "const L=window.__esmoC1.live; return JSON.stringify({rulesetId:L.rulesetId, simVersion:L.simVersion, mathKernel:L.mathKernel, setupHash:L.setupHash});"
+ },
+ {
+  "save": {
+   "expr": "return window.__esmoC1.live.setupJson;",
+   "path": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_setup.json"
+  }
+ },
+ {
+  "wait": 3000
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_3_battle.png"
+ },
+ {
+  "tap": "match-speed-4"
+ },
+ {
+  "until": "(()=>{const t=(document.querySelector('[data-testid=\"hud-clock\"]')?.innerText||'').match(/(\\d+):(\\d\\d)/); return t? +t[1]*60 + +t[2] : -1})() >= 300",
+  "ms": 900000
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_4_watch.png"
+ },
+ {
+  "js": "const s=window.__esmoC1.liveState(); return JSON.stringify({clock:document.querySelector('[data-testid=\"hud-clock\"]')?.innerText, t:s.t, digest:s.digest});"
+ },
+ {
+  "tap": "quick-finish-match"
+ },
+ {
+  "wait": 1500
+ },
+ {
+  "until": "document.querySelector('[data-testid=\"battle-end-screen\"]')",
+  "ms": 300000
+ },
+ {
+  "wait": 1500
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_5_result.png"
+ },
+ {
+  "save": {
+   "expr": "const s=window.__esmoC1.liveState(); const h=window.__esmoC1.runLive(window.__esmoC1.live.setupJson, 3000); return JSON.stringify({ui:s, headless:{ticks:h.ticks, over:h.over, winner:h.winner, endT:h.endT, final:h.final, perTick:h.perTick}, text:document.body.innerText.split(String.fromCharCode(10)).filter(Boolean).slice(0,24).join(' | ')});",
+   "path": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_result.json"
+  }
+ },
+ {
+  "tapText": "觀看重播"
+ },
+ {
+  "until": "document.querySelector('input[aria-label=\"重播時間軸\"]')",
+  "ms": 60000
+ },
+ {
+  "wait": 1500
+ },
+ {
+  "js": "const sl = (ms) => new Promise((r) => setTimeout(r, ms));\nconst r = document.querySelector('input[aria-label=\"重播時間軸\"]');\nif (!r) return JSON.stringify({ error: \"no range\" });\nconst set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, \"value\").set;\nconst seen = new Map();\nconst pts = [];\nconst lo = Math.max(0, Number(r.min)), hi = Math.min(3000, Number(r.max)); for (let s = lo; s <= hi; s += 2) pts.push(s); pts.push(hi);\nfor (const s of pts) {\n  set.call(r, String(s));\n  r.dispatchEvent(new Event(\"input\", { bubbles: true }));\n  r.dispatchEvent(new Event(\"change\", { bubbles: true }));\n  await sl(25);\n  for (const e of document.querySelectorAll('[data-testid=\"replay-event-text\"]')) {\n    const row = e.parentElement ? e.parentElement.innerText.trim() : e.innerText.trim();\n    if (!seen.has(row)) seen.set(row, s);\n  }\n}\nreturn JSON.stringify({ min: r.min, max: r.max, n: seen.size, rows: [...seen.keys()] });\n"
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_6_replay.png"
+ },
+ {
+  "tapText": "關閉重播"
+ },
+ {
+  "wait": 1500
+ },
+ {
+  "until": "document.querySelector('[data-testid=\"battle-result-continue\"]')",
+  "ms": 30000
+ },
+ {
+  "tap": "battle-result-continue"
+ },
+ {
+  "wait": 3000
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_7_settlement.png"
+ },
+ {
+  "until": "document.querySelector('[data-testid=\"home-mode-moba\"]')",
+  "ms": 30000
+ },
+ {
+  "shot": "C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_8_home.png"
+ },
+ {
+  "js": "return JSON.stringify({home:!!document.querySelector('[data-testid=\"home-mode-moba\"]'), overflowX: document.documentElement.scrollWidth > window.innerWidth + 1, errs:window.__errs});"
+ }
+]

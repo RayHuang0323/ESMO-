@@ -13,6 +13,7 @@
 //   I5 規則集結構：v20～v23 物件沒有 v24 的層鍵；career.v24／balanceTool.v24＝v23 逐欄＋恰好兩個新鍵；旗標全關 ⇒ career.v20
 //   I6 檔案：v23 凍結清單的語意檔，除了這次刻意改的 3 支（LogicEngine／matchRuleset／matchAssembler）之外逐檔不變；
 //      這次補進清單的 21 支依賴檔＝凍結清單 engineClosureGaps 的內容（沒有被順手改）
+//      2026-11-24（C2）：登記後繼版本（mobaVersionedScope 的鏈）登記過的檔案可以不同，但必須版本化範圍整體通過（指紋＋逐 tick Golden）；其餘照舊
 //   I7 taskCommit "v19push"：只有工具規則集能開，而且開了真的改變對局；正式規則集被鎖在 "v19"
 //  用法：node tools/check_layer_isolation_v24.mjs
 // ============================================================================
@@ -126,7 +127,8 @@ function buildV24(kind, tb, tr, seed, tier) {
   const V24_KEYS = ["taskArbitration", "taskCommit", "tacticExec"];
   //  2026-11-23（C1）：v25 規則集是 v24 逐欄衍生（＋mathKernel），本來就帶 v24 的層 ⇒ 與 v24 一樣不算「舊規則集」。
   //  檢查的對象仍是 v20～v23（以及 challenge 規則集），條件一個字都沒改；v25＝v24＋mathKernel 由 tools/check_c1_isolation.mjs 驗。
-  const old = Object.values(RS.MATCH_RULESETS).filter((r) => !r.rulesetId.endsWith(".v24") && !r.rulesetId.endsWith(".v25"));
+  //  2026-11-24（C2）：v26 規則集同樣是 v24 逐欄衍生（＋mathKernel "det.v2"）⇒ 同樣不算舊規則集；逐欄檢查在 tools/check_c2_isolation.mjs I1。
+  const old = Object.values(RS.MATCH_RULESETS).filter((r) => !r.rulesetId.endsWith(".v24") && !r.rulesetId.endsWith(".v25") && !r.rulesetId.endsWith(".v26"));
   const leaked = old.filter((r) => V24_KEYS.some((k) => k in r.layers)).map((r) => r.rulesetId);
   const pair = (a, b) => {
     const A = RS.MATCH_RULESETS[a], B = RS.MATCH_RULESETS[b];
@@ -156,14 +158,24 @@ function buildV24(kind, tb, tr, seed, tier) {
 {
   const blob = (f) => { try { return execFileSync("git", ["hash-object", "--no-filters", f], { cwd: ROOT, encoding: "utf8" }).trim(); } catch { return null; } };
   const INTENDED = new Set(["src/LogicEngine.js", "src/platform/contracts/matchRuleset.js", "src/battle/moba/matchAssembler.js"]);
-  const changed = Object.entries(MAN.semanticsFiles).filter(([f, h]) => !INTENDED.has(f) && blob(f) !== h).map(([f]) => f);
+  const changedAll = Object.entries(MAN.semanticsFiles).filter(([f, h]) => !INTENDED.has(f) && blob(f) !== h).map(([f]) => f);
   const gaps = Object.entries(MAN.engineClosureGaps).filter(([f]) => f !== "src/platform/contracts/tacticalDirective.js");
-  const gapChanged = gaps.filter(([f, h]) => blob(f) !== h).map(([f]) => f);
+  const gapChangedAll = gaps.filter(([f, h]) => blob(f) !== h).map(([f]) => f);
+  //  2026-11-24（C2，Owner 核准的版本化設計）：登記後繼版本（tools/lib/mobaVersionedScope.mjs 的鏈，目前 v26→v25）登記過的檔案可以不同，
+  //  但**只在**版本化範圍整體通過時才放行（各版本指紋由 git 物件重算＋v20～v24 與 v25 的逐 tick Golden 都相同＋src 乾淨）。
+  //  不在登記清單裡的改動、或版本化範圍不通過 ⇒ 照舊 FAIL。
+  const VS = await imp("tools/lib/mobaVersionedScope.mjs");
+  const allowed = new Set(VS.successorChain(SV.MOBA_SIMULATION_VERSION).flatMap((c) => c.changedSrc ?? []));
+  const changed = changedAll.filter((f) => !allowed.has(f)), gapChanged = gapChangedAll.filter((f) => !allowed.has(f));
+  const viaSuccessor = [...changedAll, ...gapChangedAll].filter((f) => allowed.has(f));
+  let scope = null;
+  if (viaSuccessor.length) scope = await VS.inspectVersionedScope(VS.LEGACY_GOLDEN_SOURCE, ROOT);
+  const successorOk = viaSuccessor.length === 0 || scope?.ok === true;
   const listed = gaps.filter(([f]) => SV.SIMULATION_SEMANTICS_FILES.includes(f)).length;
   const directiveSame = blob("src/platform/contracts/tacticalDirective.js") === MAN.engineClosureGaps["src/platform/contracts/tacticalDirective.js"];
-  ck("I6 v23 凍結清單的語意檔只改了刻意的 3 支；補進清單的 21 支依賴檔內容＝凍結時的內容；tacticalDirective.js 不變",
-    changed.length === 0 && gapChanged.length === 0 && listed === gaps.length && gaps.length === 21 && directiveSame && SV.SIMULATION_SEMANTICS_FILES.includes("src/battle/moba/tactics/taskArbitrationLedger.js"),
-    `changed=${J(changed)} gapChanged=${J(gapChanged)} listed=${listed}/${gaps.length} directiveSame=${directiveSame}`);
+  ck("I6 v23 凍結清單的語意檔只改了刻意的 3 支（＋登記後繼版本的檔案，且版本化範圍與 Golden 通過）；補進清單的 21 支依賴檔內容＝凍結時的內容（同上）；tacticalDirective.js 不變",
+    changed.length === 0 && gapChanged.length === 0 && successorOk && listed === gaps.length && gaps.length === 21 && directiveSame && SV.SIMULATION_SEMANTICS_FILES.includes("src/battle/moba/tactics/taskArbitrationLedger.js"),
+    `changed=${J(changed)} gapChanged=${J(gapChanged)} viaRegisteredSuccessor=${J(viaSuccessor)} scope=${J(scope ? { ok: scope.ok, mode: scope.mode, chain: scope.current?.chain, B1: scope.current?.B1, B2: scope.current?.B2, B4: scope.current?.B4, B5: scope.current?.B5, B6: scope.current?.B6 } : null)} listed=${listed}/${gaps.length} directiveSame=${directiveSame}`);
 }
 
 // ── I7 ──

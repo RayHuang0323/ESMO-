@@ -1,0 +1,63 @@
+{"round":1,"v24MsPerTick":1.85951,"v26MsPerTickVsV24":2.00777,"v25MsPerTick":1.84823,"v26MsPerTickVsV25":1.96965,"overVsV24Pct":7.97,"overVsV25Pct":6.57,"ticks":{"v24":40090,"v25":40090,"v26":43930}}
+{"round":2,"v24MsPerTick":1.85299,"v26MsPerTickVsV24":1.97611,"v25MsPerTick":1.87548,"v26MsPerTickVsV25":1.97759,"overVsV24Pct":6.64,"overVsV25Pct":5.44,"ticks":{"v24":40090,"v25":40090,"v26":43930}}
+{"round":3,"v24MsPerTick":1.85841,"v26MsPerTickVsV24":1.97419,"v25MsPerTick":1.8674,"v26MsPerTickVsV25":1.97979,"overVsV24Pct":6.23,"overVsV25Pct":6.02,"ticks":{"v24":40090,"v25":40090,"v26":43930}}
+{
+ "node": "v24.18.0",
+ "cpu": "AMD Ryzen 5 5600U with Radeon Graphics         ",
+ "cores": 12,
+ "items": 20,
+ "plan": "c2-crossengine-80",
+ "rounds": [
+  {
+   "round": 1,
+   "v24MsPerTick": 1.85951,
+   "v26MsPerTickVsV24": 2.00777,
+   "v25MsPerTick": 1.84823,
+   "v26MsPerTickVsV25": 1.96965,
+   "overVsV24Pct": 7.97,
+   "overVsV25Pct": 6.57,
+   "ticks": {
+    "v24": 40090,
+    "v25": 40090,
+    "v26": 43930
+   }
+  },
+  {
+   "round": 2,
+   "v24MsPerTick": 1.85299,
+   "v26MsPerTickVsV24": 1.97611,
+   "v25MsPerTick": 1.87548,
+   "v26MsPerTickVsV25": 1.97759,
+   "overVsV24Pct": 6.64,
+   "overVsV25Pct": 5.44,
+   "ticks": {
+    "v24": 40090,
+    "v25": 40090,
+    "v26": 43930
+   }
+  },
+  {
+   "round": 3,
+   "v24MsPerTick": 1.85841,
+   "v26MsPerTickVsV24": 1.97419,
+   "v25MsPerTick": 1.8674,
+   "v26MsPerTickVsV25": 1.97979,
+   "overVsV24Pct": 6.23,
+   "overVsV25Pct": 6.02,
+   "ticks": {
+    "v24": 40090,
+    "v25": 40090,
+    "v26": 43930
+   }
+  }
+ ],
+ "medianOverVsV24Pct": 6.64,
+ "medianOverVsV25Pct": 6.02,
+ "pass": true,
+ "micro": {
+  "hypot": {
+   "nativeNsPerCall": 17.6,
+   "detNsPerCall": 16
+  }
+ }
+}

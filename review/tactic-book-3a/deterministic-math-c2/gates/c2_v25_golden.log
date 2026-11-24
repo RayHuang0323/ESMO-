@@ -1,0 +1,5 @@
+✅ G1 v25 共 6 場，每個 tick 的整場引擎狀態＝eb28fbb9 錄的 Golden（13,824 個 tick，不排除任何欄位）　[["V1",142227,"same"],["V2",153001,"same"],["V3",142243,"same"],["V4",146045,"same"],["V5",146006,"same"],["V6",153040,"same"]]
+✅ G2 v25 引擎 _detMath＝true，且模擬數學情境是原生（不走 det.v2）　{"detFlags":[true,true,true,true,true,true],"simKernel":"native"}
+✅ G3 Golden 檔是登記的那一份（來源 eb28fbb9、parity、6 場、不排除欄位）
+
+check_c2_v25_golden：3/3 PASS（65 秒）

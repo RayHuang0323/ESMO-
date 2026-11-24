@@ -1,0 +1,9 @@
+✅ M1 特殊值契約（NaN、±0、±∞、定義域外、atan2 各象限與邊界）　{"cases":57,"failures":[],"nonIntegerExponentThrows":true}
+✅ M3 與本環境原生函式的差 ≤ 1 ulp（powInt 只報）　{"node":"v24.18.0","sin":{"equalToNative":417005,"of":420000,"maxUlpFromNative":1},"cos":{"equalToNative":417091,"of":420000,"maxUlpFromNative":1},"atan2":{"equalToNative":319934,"of":320000,"maxUlpFromNative":1},"acos":{"equalToNative":150000,"of":150000,"maxUlpFromNative":0},"asin":{"equalToNative":150000,"of":150000,"maxUlpFromNative":0},"powInt":{"equalToNative":23160,"of":40000,"maxUlpFromNative":5}}
+✅ M4 同一個 Node 算兩次，結果雜湊相同　{"fns":6}
+✅ M5 Node 與 Chrome 逐位元相同（1,500,000 筆）　{"node":"v24.18.0","chrome":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36","perFn":{"sin":420000,"cos":420000,"atan2":320000,"acos":150000,"asin":150000,"powInt":40000},"diffs":{}}
+✅ M6 Sprint 2A 的分歧輸入：原生在這個 Chrome 仍不同、det 兩邊逐位元相同　{"inputs":922,"nativeStillDiffers":922,"detDiffers":0,"detEqualsNodeNative":793,"detBad":[],"source":"Sprint 2A diag_math_divergence_v24.mjs (commit 0c7d5830): Node v24.18.0 vs HeadlessChrome 157, seeds 142243 v1.3 / 142227 v1.6-duo / 146065 v1.6-duo"}
+✅ M2 與 BigInt 參考值的誤差：sin／cos／acos／asin < 1 ulp、atan2 < 2 ulp，且不比 Node 原生差（Chrome 原生只報）　{"sin":{"det":0.759,"nodeNative":0.8308,"chromeNative":0.5,"checked":359689,"detMean":0.2517,"detAtLeast1":0},"cos":{"det":0.7642,"nodeNative":0.8314,"chromeNative":0.5,"checked":360023,"detMean":0.2516,"detAtLeast1":0},"atan2":{"det":1.3928,"nodeNative":1.3928,"chromeNative":0.5,"checked":184989,"detMean":0.3137,"detAtLeast1":589},"acos":{"det":0.8746,"nodeNative":0.8746,"chromeNative":0.5,"checked":125895,"detMean":0.2573,"detAtLeast1":0},"asin":{"det":0.8332,"nodeNative":0.8332,"chromeNative":0.5,"checked":125635,"detMean":0.2535,"detAtLeast1":0}}
+✅ M7 參考端 π（Störmer 公式）與公開的十六進位前 65 位相同　3243f6a8885a308d…
+
+check_det_math_c1：7/7 PASS（20 秒）

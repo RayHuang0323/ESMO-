@@ -27205,3 +27205,46 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - 地圖幾何唯讀檢查（TD-TAC-57）：地形多邊形在三個瀏覽器都與 Node 不同（被距離場吸收）；Firefox／WebKit 的塔座標與碰撞圓不同。未修改。
 
 已知與待決：TD-TAC-63（非 V8 引擎分歧，高）、TD-TAC-64（xpNeed 的 pow 取整，低）；WebKit 的 Windows build 不代表 iOS／macOS Safari。文件：review/tactic-book-3a/deterministic-math-c1/C1_驗收收尾.md。
+
+
+## 2026-11-24 C2 跨引擎決定性收斂（Owner Review 前）
+
+分支 feature/moba-det-math-c2（.sprints/moba-det-math-c2，從 C1 HEAD eb28fbb9 開出，只在本機，未 push）。
+
+最終候選 moba-sim.v26（mathKernel "det.v2"，規則集 career.v26／balanceTool.v26），正式旗標 mobaDetMathV26 預設關，指紋 360474218ca774b9（第二次凍結 dcb54cd7）。v25 指紋 15a8c67f3bcea44a 原值保留。
+
+完成：
+- 實作
+  - DetHypot.v1（src/battle/moba/sim/detHypot.js）：fdlibm e_hypot 結構，Dekker 切分，精確的 2 的冪次縮放，ECMAScript 特殊值。
+  - 模擬數學情境（simMathContext.js）：核心在引擎建構時決定，對外入口都在核心範圍內執行。
+  - gameData dist／posOnLane／laneLength、塔位、導航（快取依核心分開、DIR16 det 版）、戰術執行、道具、LogicEngine hypot 都改走核心；原生分支是逐字原式。
+  - v18 地圖模組、detMath.js 都沒有修改。
+- 精度契約（事前登記）9／9 PASS：遊戲範圍最大 0.90 ulp，Node 原生 1.84；沒有新的溢位或下溢；340 萬筆輸出 Node／Chrome／Firefox／WebKit 相同。
+- 開發診斷（用過的種子）：12／12，補漏後 18／18 相同；數學修正輪次 0／2。
+- 四引擎正式驗證（事前登記，種子 261001～261080）：Chrome 157、Firefox 155、WebKit 26.6 各 80／80 與 Node 逐 tick 相同；重現性四個引擎各 8／8。兩次凍結都 PASS，兩次的 Node 紀錄 80／80 逐 tick 相同。
+- 效能（事前登記）：相對 v24 +6.64%、相對 v25 +6.02%，PASS。
+- 歷史：
+  - v20～v24 Golden（053fd582）、新錄的 v25 Golden（eb28fbb9 匯出版，不排除任何欄位）、v20～v23 共 48 場釘點、v25 釘點、所有歷史指紋都不變。
+  - 版本化範圍擴成後繼版本鏈；負向測試 9／9，包含真實語意回歸注入。
+- 產品流程（5648 預覽，career.v26）：Chrome、Firefox、WebKit 的一般觀看、快速完成、390px 共 9／9。
+  - 每段都與 Node 逐 tick 相同，畫面引擎等於重跑；結算、Replay、回總部都正常；console error 0。
+- Gate 全套綠燈；npm run build 通過，產品 bundle 裡 mobaDetMathV26 是 false。
+- 被修改的既有 Gate：
+  - check_c1_isolation K1：明確登記 v26。
+  - check_c1_versioned_scope：改針對目前版本。
+  - check_layer_isolation_v24：I5 排除 .v26；I6 的檔案只有在登記於後繼鏈而且版本化範圍與 Golden 通過時才放行。
+  - check_match_setup_3a：S1 組裝器建構點 1→2；V3 改成 v26 並多釘 v25 的指紋。
+  - 每一條都在 C2_結果.md §7 交代。
+
+實作補漏：
+- tacticExecV24.js:844 漏改的 hypot，靜態掃描抓到，在第一次凍結前補上。
+- 引擎視圖（Object.create(LogicEngine.prototype)）在守衛處丟 TypeError，check_s15_preflight_v24 P3 抓到。
+  - 修正後先提交補充登記，再在第二次凍結上整套重跑。
+
+已知與待決：
+- TD-TAC-65：v18 地圖模組的原生三角函數，四引擎實測相同但沒有規格保證。
+- TD-TAC-66：原生路徑每 tick 慢約 5.3%，結果不受影響。
+- TD-TAC-67：診斷用的鏡像視圖。
+- WebKit 的 Windows build 不代表 iOS／macOS Safari；真實裝置都還沒驗證。
+
+文件：review/tactic-book-3a/deterministic-math-c2/C2_結果.md。

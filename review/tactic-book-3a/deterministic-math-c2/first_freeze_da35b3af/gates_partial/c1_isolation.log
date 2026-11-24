@@ -1,0 +1,9 @@
+✅ K1 v25＝v24 逐欄＋恰好一個新鍵 mathKernel "det.v1"；除了登記的 v26（det.v2）其他規則集都沒有 mathKernel；v25 驗證通過；career.v25 少列 mobaDetMathV25 ⇒ RS-1 拒絕　{"withMathKernel":["career.v25","balanceTool.v25","career.v26","balanceTool.v26"],"career":{"extra":["mathKernel"],"same":true,"top":true,"mk":"det.v1","sim":"moba-sim.v25","id":"career.v25","reqExtra":["mobaDetMathV25"]},"tool":{"extra":["mathKernel"],"same":true,"top":true,"mk":"det.v1","sim":"moba-sim.v25","id":"balanceTool.v25","reqExtra":[]},"rs1":["mathKernel det.v1 requires mobaDetMathV25"]}
+✅ K2 旗標 mobaDetMathV25 預設關；五個都開 ⇒ career.v25；只開 v24 四個 ⇒ career.v24；只開 det ⇒ career.v20；Challenge 不受影響　{"off":"career.v20","four":"career.v24","five":"career.v25","onlyDet":"career.v20","challenge":"challenge.v20"}
+✅ K3 v20～v24 組出的引擎 _detMath＝false 且從不呼叫 configureMathKernel；v25 ＝true 且它是第一個 configure　{"tool":[["balanceTool.v20",false],["balanceTool.v21",false],["balanceTool.v22",false],["balanceTool.v23",false],["balanceTool.v24",false],["balanceTool.v25",true]],"assembled":[{"id":"balanceTool.v20","det":false,"first":"configureObjectiveLayout","calls":0},{"id":"balanceTool.v24","det":false,"first":"configureObjectiveLayout","calls":0},{"id":"balanceTool.v25","det":true,"first":"configureMathKernel","calls":1}]}
+✅ K4 LogicEngine.js（剝掉註解）：超越函數與 ** 只出現在 6 個核心入口（_sin…_powInt）　{"helperLines":[447,448,449,450,451,452],"outside":[]}
+✅ K5 det 對局（600 秒）中 LogicEngine.js 呼叫原生超越函數 0 次；同一場 v24 有呼叫（探針有效）；其他模組只報　{"det":{},"nativeEngineCalls":{"cos @ src/LogicEngine.js":5487,"sin @ src/LogicEngine.js":5480,"asin @ src/LogicEngine.js":1247,"atan2 @ src/LogicEngine.js":123,"acos @ src/LogicEngine.js":75}}
+✅ K6 組裝器：未知 mathKernel ⇒ math_kernel_unknown；引擎沒宣告 SUPPORTS_MATH_KERNEL ⇒ 拒絕　{"unknown":"c1Assemble: assembleMatch failed: math_kernel_unknown@ruleset.layers.mathKernel","oldEngine":["deps.LogicEngine.SUPPORTS_MATH_KERNEL"]}
+✅ K7 v25 固定釘點（4 場整場雜湊＋C1 整場狀態雜湊）＝tools/fixtures/c1_pins_v25.json　{"diff":[]}
+
+check_c1_isolation：7/7 PASS（63 秒）

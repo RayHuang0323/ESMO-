@@ -1,0 +1,36 @@
+engine chrome Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 
+js 1
+js {"api":true,"sim":"moba-sim.v26","banner":true}
+tap home-mode-moba ok 765 373
+tap prep-primary-action ok 622 658
+until [...document.querySelectorAll('button')].some(b=>/確認進入對戰/.te true 10.1s
+tap 確認進入對戰 ok 622 708
+until document.querySelector('[data-testid="matchmaking-enter-banp true 5.0s
+tap matchmaking-enter-banpick ok 681 398
+until document.querySelector('[data-testid="hero-choose"]') true 0.0s
+shot C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_1_banpick.png
+js {"log":["ironclad","thornwall","ravager","cinderfist","greymantle","embercoil","gambler","confirm@9"],"confirm":true,"picks":"出戰配置 5/5"}
+tap confirm-draft ok 629 536
+until document.querySelector('[data-testid="tb-step-confirm"]') true 0.0s
+tap tb-step-confirm ok 975 93
+shot C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_2_tactic.png
+tap tb-confirm-go ok 886 504
+until window.__esmoC1 && window.__esmoC1.live && document.querySel true 4.1s
+js {"rulesetId":"career.v26","simVersion":"moba-sim.v26","mathKernel":"det.v2","setupHash":"1b1ec478fc4a8b28"}
+save C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_setup.json 4719
+shot C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_3_battle.png
+tap quick-finish-match ok 1195 28
+until document.querySelector('[data-testid="battle-end-screen"]') true 9.5s
+shot C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_5_result.png
+save C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_result.json 39493
+tap 觀看重播 ok 534 712
+until document.querySelector('input[aria-label="重播時間軸"]') true 0.1s
+js {"min":"0","max":"1025","n":138,"rows":["[0:44] Nacht 使用懲戒（藍 Buff）","[0:46] Ash 使用懲戒（紅 Buff）","[1:48] Seelöwe 使用點燃（收頭）","[1:48] Ember 使用幽魂（逃生）","[1:50] Frost 使用點燃（收頭）","[2:00] Pyre 使用點燃（收頭）","[2:34] Ash 使用懲戒（紅 Buff）","[2:36] Nacht 使用懲戒（藍 Buff）","[2:58] Blitz 使用治療（保命）","[4:00] 巨龍 已刷新","[4:04] Frost 大絕招 R 升至 Lv1","[4:13] Cinder 大絕招 R 升至 Lv1","[4:28] 巨龍 被藍方擊殺","[4:28] Nacht 使用懲戒（巨龍）","[4:30] Cinder 使用治療（救援）","[4:32] Frost 天賦技能 W 滿級（Lv3）","[4:34] Scoria 使用閃現（切入）","[4:36] Nacht 使用閃現（切入）","[4:38] Cinder 使用閃現（逃生）","[4:44] Pyre 使用點燃（收頭）","[4:50] Blitz 大絕招 R 升至 Lv1","[4:52] Ember 使用幽魂（逃生）","[4:53] Pyre 大絕招 R 升至 Lv1","[4:54] Ash 使用懲戒（紅 Buff）","[4:56] 紅方下路 1 塔 被摧毀","[5:42] Nacht 使用懲戒（藍方石甲蟲）","[5:47] Cinder 天賦技能 Q 滿級（Lv3）","[5:48] Seelöwe 使用點燃（收頭）","[5:51] Pyre 天賦技能 Q 滿級（Lv3）","[5:52] Ash 大絕招 R 升至 Lv1","[5:53] Blitz 天賦技能 E 滿級（Lv3）","[6:18] Frost 使用點燃（收頭）","[6:20] Frost 使用閃現（追擊）","[6:20] Ash 使用閃現（逃生）","[6:22] 首殺！ Frost 擊殺 Ash（助攻 Nacht）【越塔】","[6:58] 巨龍 已刷新","[7:02] Ash 使用懲戒（紅 Buff）","[7:08] Kaiser 擊殺 Pyre（助攻 Frost,Nacht）【團戰】","[7:08] Nacht 大絕招 R 升至 Lv1","[7:08] Pyre 使用閃現（逃生）","[7:14] Frost 擊殺 Ash（助攻 Nacht,Kaiser）【團戰】","[7:14] Kaiser 大絕招 R 升至 Lv1","[7:22] Seelöwe 使用閃現（追擊）","[7:22] Ember 使用閃現（逃生）","[7:25] Scoria 大絕招 R 升至 Lv1","[7:28] Scoria 擊殺 Nacht（助攻 Cinder）【追擊】","[7:57] Kaiser 天賦技能 W 滿級（Lv3）","[7:57] Nacht 天賦技能 W 滿級（Lv3）","[7:57] Seelöwe 大絕招 R 升至 Lv1","[7:58] 巨龍 被藍方擊殺","[8:00] 巴龍 已刷新","[8:22] Scoria 使用閃現（切入）","[8:24] Cinder 使用治療（保命）","[8:26] Ember 使用幽魂（逃生）","[8:32] Pyre 使用點燃（收頭）","[8:34] Seelöwe 使用點燃（收頭）","[8:34] Cinder 使用閃現（切入）","[8:38] Frost 擊殺 Scoria（助攻 Seelöwe）【追擊】","[8:42] Blitz 使用治療（救援）","[9:02] Blitz 擊殺 Pyre【抓單】","[9:16] Ash 使用懲戒（紅 Buff）","[9:23] Seelöwe 天賦技能 W 滿級（Lv3）","[9:24] 巴龍 被藍方擊殺","[9:24] Nacht 使用懲戒（巴龍）","[9:26] Frost 使用點燃（收頭）","[9:49] Ash 天賦技能 Q 滿級（Lv3）","[9:52] 紅方上路 1 塔 被摧毀","[10:18] Blitz 擊殺 Ember（助攻 Seelöwe）【抓單】","[10:26] 紅方中路 1 塔 被摧毀","[10:28] 巨龍 已刷新","[10:29] Scoria 天賦技能 Q 滿級（Lv3）","[10:52] Ash 使用閃現（逃生）","[11:00] 藍方上路 1 塔 被摧毀","[11:03] Frost 大絕招 R 升至 Lv2","[11:03] Blitz 大絕招 R 升至 Lv2","[11:04] Blitz 擊殺 Scoria（助攻 Frost）【目標戰】","[11:16] 巨龍 被藍方擊殺","[11:31] Ember 大絕招 R 升至 Lv1","[11:36] Ash 使用懲戒（紅 Buff）","[11:42] Nacht 使用懲戒（藍 Buff）","[11:50] Seelöwe 使用點燃（收頭）","[11:50] Ember 使用幽魂（逃生）","[11:58] Blitz 使用治療（救援）","[12:06] Scoria 擊殺 Kaiser（助攻 Cinder）【追擊】","[12:06] Pyre 使用點燃（收頭）","[12:10] 紅方中路 2 塔 被摧毀","[12:20] Cinder 使用治療（救援）","[12:54] 巴龍 已刷新","[12:56] Blitz 擊殺 Ember（助攻 Seelöwe）【抓單】","[13:00] Ash 擊殺 Nacht【抓單】","[13:04] Frost 擊殺 Cinder【抓單】","[13:04] Frost 使用點燃（收頭）","[13:08] Kaiser 擊殺 Scoria（助攻 Frost）【目標戰】","[13:34] Ash 使用懲戒（紅 Buff）","[13:36] Blitz 擊殺 Pyre【追擊】","[13:38] Frost 擊殺 Ash（助攻 Seelöwe）【目標戰】","[13:46] 巨龍 已刷新","[13:52] 巴龍 被藍方擊殺","[13:52] Nacht 使用懲戒（巴龍）","[14:16] Ember 使用閃現（逃生）","[14:18] Blitz 擊殺 Ember（助攻 Seelöwe）【目標戰】","[14:24] 巨龍 被藍方擊殺","[14:30] 紅方下路 2 塔 被摧毀","[14:35] Pyre 大絕招 R 升至 Lv2","[14:35] Cinder 大絕招 R 升至 Lv2","[14:36] 藍方中路 1 塔 被摧毀","[14:48] Ash 使用懲戒（紅方石甲蟲）","[14:48] Kaiser 使用傳送（支援守塔）","[14:54] Blitz 使用閃現（逃生）","[14:56] Ash 擊殺 Blitz【追擊】","[15:00] Seelöwe 擊殺 Ash（助攻 Blitz）【追擊】","[15:00] Seelöwe 使用點燃（收頭）","[15:06] Cinder 使用閃現（逃生）","[15:08] Ember 天賦技能 Q 滿級（Lv3）","[15:10] Pyre 擊殺 Frost【追擊】","[15:14] Ember 使用幽魂（逃生）","[15:16] Kaiser 擊殺 Pyre【追擊】","[15:16] Pyre 使用點燃（收頭）","[15:20] Kaiser 使用閃現（逃生）","[15:24] Scoria 擊殺 Nacht【追擊】","[15:28] Blitz 使用治療（救援）","[16:04] Ash 使用閃現（逃生）","[16:06] Blitz 擊殺 Ash【追擊】","[16:08] 藍方上路 2 塔 被摧毀","[16:08] Frost 使用點燃（收頭）","[16:13] Kaiser 大絕招 R 升至 Lv2","[16:13] Seelöwe 大絕招 R 升至 Lv2","[16:14] 紅方中路 3 塔 被摧毀","[16:20] 紅方門牙塔 被摧毀","[16:28] Nacht 大絕招 R 升至 Lv2","[16:28] Nacht 擊殺 Scoria【追擊】","[16:30] Seelöwe 使用閃現（逃生）","[16:34] Cinder 使用治療（救援）","[16:54] 紅方門牙塔 被摧毀","[16:54] 巨龍 已刷新","[17:00] Ash 使用懲戒（紅 Buff）","[17:05] 紅方主堡 被摧毀","[17:05] 勝利！"]}
+shot C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_6_replay.png
+tap 關閉重播 ok 1211 29
+until document.querySelector('[data-testid="battle-result-continue true 0.0s
+tap battle-result-continue ok 686 712
+shot C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_7_settlement.png
+until document.querySelector('[data-testid="home-mode-moba"]') true 0.0s
+shot C:/Users/ifikn/esmo-measure/c2/browser/chrome_quick_8_home.png
+js {"home":true,"overflowX":false,"errs":[]}

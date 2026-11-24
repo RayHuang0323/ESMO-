@@ -1,0 +1,11 @@
+✅ C1 登記的 v26→v25 鏈＋所有 Golden 一致 ⇒ ok　{"mode":"registeredSuccessor","chain":["moba-sim.v26","moba-sim.v25"],"B1":true,"B2":true,"B5":true,"outside":[],"anc":[{"version":"moba-sim.v25","frozenAt":"eb28fbb9","fingerprint":"15a8c67f3bcea44a","ok":true}]}
+✅ C2 祖先 v25 的 Golden 有一個 tick 不同 ⇒ 拒絕（B6）　{"B6":false}
+✅ C3 祖先登記的指紋與 frozenAt 的 git 物件重算值不符 ⇒ 拒絕（B5）　{"B5":false}
+✅ C4 凍結表的 v25 被改 ⇒ 拒絕（B3 與 B5）　{"B3":false,"B5":false}
+✅ C5 只在 v25 登記過、v26 沒登記的檔案（LogicEngine.js）在 v25 凍結後又被改 ⇒ 步進檢查拒絕（B2）　{"outside":["src/LogicEngine.js"]}
+✅ C6 v26 的 parent 沒有登記（鏈斷掉）⇒ 拒絕　{"chain":["moba-sim.v26"],"B2":false,"B5":false}
+✅ C7 祖先沒有 frozenAt ⇒ 拒絕　{"B5":false,"B2":false}
+✅ C8 目前版本（v26）沒有登記、只有別的版本接在鏈上 ⇒ 拒絕（不自動放行未知版本）　{"B1":false,"chain":[]}
+✅ R1 真實語意回歸（原生 hypot 分支差 1 ulp）⇒ v25 Golden 與 v20～v24 Golden 都 FAIL、版本化範圍拒絕；檔案已逐位元還原　{"v25Golden":false,"v25Rows":["V1:DIFF@1","V2:DIFF@1","V3:DIFF@1","V4:DIFF@1","V5:DIFF@1","V6:DIFF@1"],"legacyGolden":false,"scopeOk":false,"scopeDirty":[" M src/battle/moba/sim/simMathContext.js"],"restored":true}
+
+check_c2_versioned_scope：9/9 PASS

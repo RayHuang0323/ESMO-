@@ -1,0 +1,81 @@
+{
+ "planId": "c2-crossengine-80",
+ "fingerprint": "da35b3af6c8fea67",
+ "engines": {
+  "chrome": {
+   "verdict": "PASS",
+   "identical": 80,
+   "of": 80,
+   "missing": 0,
+   "mismatches": [],
+   "ticksCompared": 176897,
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "browserVersion": null,
+   "msMean": 15912
+  },
+  "firefox": {
+   "verdict": "PASS",
+   "identical": 80,
+   "of": 80,
+   "missing": 0,
+   "mismatches": [],
+   "ticksCompared": 176897,
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "browserVersion": "155.0",
+   "msMean": 10203
+  },
+  "webkit": {
+   "verdict": "PASS",
+   "identical": 80,
+   "of": 80,
+   "missing": 0,
+   "mismatches": [],
+   "ticksCompared": 176897,
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "browserVersion": "26.6",
+   "msMean": 9591
+  }
+ },
+ "repeat": {
+  "node": {
+   "same": 8,
+   "of": 8,
+   "rows": []
+  },
+  "chrome": {
+   "same": 8,
+   "of": 8,
+   "rows": []
+  },
+  "firefox": {
+   "same": 8,
+   "of": 8,
+   "rows": []
+  },
+  "webkit": {
+   "same": 8,
+   "of": 8,
+   "rows": []
+  }
+ },
+ "env": {
+  "records": 352,
+  "heads": [
+   "e3a7c87eb837b700c1d91c59fcb0bfd683c7ac3c"
+  ],
+  "fingerprints": [
+   "da35b3af6c8fea67"
+  ],
+  "sims": [
+   "moba-sim.v26"
+  ],
+  "anyDirty": false,
+  "ok": true
+ },
+ "winners": {
+  "blue": 34,
+  "red": 46,
+  "none": 0
+ },
+ "overall": "PASS"
+}

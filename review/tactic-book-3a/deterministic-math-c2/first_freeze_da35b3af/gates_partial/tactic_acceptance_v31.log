@@ -1,0 +1,12 @@
+✅ V1 分類只看開賽前傾向：null⇒N、auto／conservative⇒T、aggressive／allin⇒A；入侵模板＋積極傾向⇒A（A 優先）；未知傾向丟錯　{"cls":{"null":"N","undef":"N","auto":"T","conservative":"T","aggressive":"A","allin":"A"},"priority":{"N":0,"T":0,"A":1}}
+✅ V2 互斥：每個 side-match 恰好落在一類（N＋T＋A＝總數）；同一個 side-match 重複 ⇒ 丟錯；把別類的紀錄交給某類判定 ⇒ 丟錯　{"counts":{"N":50,"T":50,"A":50},"dup":true,"wrong":true}
+✅ V3 N：從不入侵 ⇒ PASS（沒有下限）；恰好 0.30 ⇒ PASS（上限含等號）；0.40 ⇒ FAIL；平均 0.30 但有變異跨過上限 ⇒ INCONCLUSIVE　{"n0":"PASS","n30":["PASS",0.3],"n40":"FAIL","nMix":["INCONCLUSIVE",0.26,0.34]}
+✅ V4 T：C1 在 [0.30, 1.5] 且 C2 ≥ 1/3 ⇒ PASS；C1 合格但集中在少數場（C2 0.1）⇒ FAIL；C2 合格但 C1 2.0 ⇒ FAIL；兩者都太低 ⇒ FAIL；C2 恰好 1/3 ⇒ PASS（含等號）　{"ok":{"c1":"PASS","c2":"PASS"},"concentrated":{"c1":"PASS","c2":"FAIL"},"tooMany":{"c1":"FAIL","c2":"PASS"},"token":{"c1":"FAIL","c2":"FAIL"},"edge":[{"c1":"PASS","c2":"PASS"},0.3333333333333333]}
+✅ V5 A 獨立分層、沿用較高目標：C1 0.7／C2 0.7 ⇒ PASS；C1 0.5 ⇒ A 為 FAIL（同樣數字在 T 是 PASS）　{"aOk":{"c1":"PASS","c2":"PASS"},"aLow":{"c1":"FAIL","c2":"PASS"},"asT":{"c1":"PASS","c2":"PASS"}}
+✅ V6 樣本不足：99 個 side-match ⇒ INCONCLUSIVE（不判 PASS）；100 個 ⇒ 進入判定　{"s99":[99,"INCONCLUSIVE","sample < 100 side-matches"],"s100":[100,"PASS"]}
+✅ V7 S5-abs 門檻不變：陣亡上界 ≤ +1.0 且被塔擊殺上界 ≤ +0.3 ⇒ PASS（含等號）；被塔 0.31 ⇒ FAIL；陣亡 1.01 ⇒ FAIL；formal＝true　{"ok":"PASS","tower":"FAIL","deaths":"FAIL"}
+✅ V8 S5-rel 只供研發審查（researchOnly true、formalRelease false）：差異小 ⇒ NON_INFERIOR；陣亡 +0.8 ⇒ WORSE；區間跨過邊界 ⇒ INCONCLUSIVE　{"ni":"NON_INFERIOR","worse":"WORSE","inc":["INCONCLUSIVE",0.2800000000000001,0.6199999999999976]}
+✅ V9 決定性：同一份輸入兩次判定的區間逐值相同　{"c1":{"point":0.3333333333333333,"lower":0.31666666666666665,"upper":0.35},"c2":{"point":0.3333333333333333,"lower":0.31666666666666665,"upper":0.35}}
+✅ V10 草案狀態：ENABLED＝false、版本 tactic-acceptance.v3.1-draft；src/ 沒有任何檔案引用判定工具　{"importers":[]}
+
+check_tactic_acceptance_v31：10/10 PASS

@@ -350,7 +350,8 @@ const ENGINE_FILE = "src/LogicEngine.js";
 //   · enableCombatDebug       ⇒ useLocalServer.js 一處（?diag=1／?shot= 才開；只多輸出觀測欄位），釘死。
 const PINNED_DIRECT_CONFIGURE = Object.freeze({ "src/debug/ItemInspector/ItemInspector.jsx": 5, "src/debug/ItemsUiGallery/ItemsUiGallery.jsx": 5 });
 const PINNED_DIRECT_ENABLE = Object.freeze({ "src/useLocalServer.js": 1 });
-const PINNED_CONSTRUCT = Object.freeze({ [ASSEMBLER]: 1, "src/App.jsx": 2, "src/useGameStore.js": 2, "src/debug/ItemInspector/ItemInspector.jsx": 1, "src/debug/ItemsUiGallery/ItemsUiGallery.jsx": 1 });
+//  2026-11-24（C2）：組裝器多一個建構點——det.v2 必須在建構時選定核心（new LogicEngine(seed, loadout, { mathKernel: "det.v2" })），其他規則集維持原本的兩引數呼叫。
+const PINNED_CONSTRUCT = Object.freeze({ [ASSEMBLER]: 2, "src/App.jsx": 2, "src/useGameStore.js": 2, "src/debug/ItemInspector/ItemInspector.jsx": 1, "src/debug/ItemsUiGallery/ItemsUiGallery.jsx": 1 });
 const EXPECTED_ASSEMBLE_CALLERS = Object.freeze(["src/platform/challenge/challengeRunner.js", "src/useLocalServer.js"]);
 
 /** @param {Map<string,string>} files @returns {{ violations: string[], table: object }} */
@@ -429,12 +430,14 @@ ck("S4 assembleMatch( 在 src/ 的呼叫端恰為 Live hook（useLocalServer）�
   //  2026-11-12：目前版本改為 moba-sim.v23（未發布候選，safeRoute 層）。v22 的登記值也釘死（c2b507e0cc723382，不得覆寫 v22 的證據）。
   //  2026-11-15：目前版本改為 moba-sim.v24（未發布候選）。v23 已凍結：登記值也釘死（69237cce78edf2be，不得覆寫）。
   //  2026-11-23：目前版本改為 moba-sim.v25（未發布候選，C1 mathKernel "det.v1"）。v24 的登記值也釘死（9727c0b4ae8beb3d，不得覆寫 v24 的證據）。
-  ck("V3 目前版本是 moba-sim.v25（未發布候選）；v25 有指紋；v21 仍是 620196ccea5a8249、v22 仍是 c2b507e0cc723382、v23 仍是凍結值 69237cce78edf2be、v24 仍是 9727c0b4ae8beb3d；v20～v24 都仍在已知清單",
-    SV.MOBA_SIMULATION_VERSION === "moba-sim.v25" && /^[0-9a-f]{16}$/.test(SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v25"] ?? "")
+  //  2026-11-24：目前版本改為 moba-sim.v26（未發布候選，C2 mathKernel "det.v2"）。v25 的登記值也釘死（15a8c67f3bcea44a，不得覆寫 v25 的證據）。
+  ck("V3 目前版本是 moba-sim.v26（未發布候選）；v26 有指紋；v21 仍是 620196ccea5a8249、v22 仍是 c2b507e0cc723382、v23 仍是凍結值 69237cce78edf2be、v24 仍是 9727c0b4ae8beb3d、v25 仍是 15a8c67f3bcea44a；v20～v25 都仍在已知清單",
+    SV.MOBA_SIMULATION_VERSION === "moba-sim.v26" && /^[0-9a-f]{16}$/.test(SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v26"] ?? "")
+    && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v25"] === "15a8c67f3bcea44a"
     && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v21"] === "620196ccea5a8249" && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v22"] === "c2b507e0cc723382"
     && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v23"] === "69237cce78edf2be" && SV.SIMULATION_SEMANTICS_FINGERPRINTS["moba-sim.v24"] === "9727c0b4ae8beb3d"
-    && new Set(["moba-sim.v21", "moba-sim.v22", "moba-sim.v23", "moba-sim.v24", "moba-sim.v25"].map((v) => SV.SIMULATION_SEMANTICS_FINGERPRINTS[v])).size === 5
-    && ["moba-sim.v20", "moba-sim.v21", "moba-sim.v22", "moba-sim.v23", "moba-sim.v24"].every((v) => SV.KNOWN_SIMULATION_VERSIONS.includes(v)));
+    && new Set(["moba-sim.v21", "moba-sim.v22", "moba-sim.v23", "moba-sim.v24", "moba-sim.v25", "moba-sim.v26"].map((v) => SV.SIMULATION_SEMANTICS_FINGERPRINTS[v])).size === 6
+    && ["moba-sim.v20", "moba-sim.v21", "moba-sim.v22", "moba-sim.v23", "moba-sim.v24", "moba-sim.v25"].every((v) => SV.KNOWN_SIMULATION_VERSIONS.includes(v)));
   //  組裝路徑上的模組：改它們可能改變同一份 setup 的結果 ⇒ 必須在語意清單。
   //  規則：組裝入口模組的每一條相對 import ⊆ 清單 ∪ 明列的例外（每個例外附理由，且必須真的被 import——不留死例外）。
   const ENTRY = ["src/battle/moba/matchAssembler.js", "src/battle/moba/matchAssemblerDepsCore.js", "src/battle/moba/matchAssemblerDeps.js", "src/battle/moba/liveMatchSetup.js",

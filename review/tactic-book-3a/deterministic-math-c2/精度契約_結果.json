@@ -1,0 +1,314 @@
+{
+ "version": "DetHypot.v1",
+ "node": "v24.18.0",
+ "at": "2026-11-23T18:24:59.477Z",
+ "results": [
+  {
+   "name": "D0 detMath.js 與 eb28fbb9 逐位元相同（DetMath.v1 沿用 C1 精度契約 v2 的 PASS）",
+   "ok": true,
+   "info": {
+    "diffBytes": 0
+   }
+  },
+  {
+   "name": "H1 遊戲範圍（均勻／近似相等／整數，各 20 萬）每一組誤差 < 1 ulp",
+   "ok": true,
+   "info": {
+    "H1a": {
+     "checked": 200000,
+     "maxUlp": 0.9045,
+     "meanUlp": 0.2733
+    },
+    "H1b": {
+     "checked": 200000,
+     "maxUlp": 0.8464,
+     "meanUlp": 0.2708
+    },
+    "H1c": {
+     "checked": 200000,
+     "maxUlp": 0.5,
+     "meanUlp": 0.2497
+    }
+   }
+  },
+  {
+   "name": "H2 寬範圍（指數 −1000～1000，20 萬）誤差 < 1 ulp、沒有 ∞、非零輸入不得為 0",
+   "ok": true,
+   "info": {
+    "checked": 200000,
+    "maxUlp": 0.8118,
+    "meanUlp": 0.0076,
+    "inf": 0,
+    "zero": 0
+   }
+  },
+  {
+   "name": "H3 極小／次正規（10 萬）誤差 ≤ 1 ulp（下限 2^-1074）、非零輸入不得為 0",
+   "ok": true,
+   "info": {
+    "checked": 100000,
+    "maxUlp": 0.8744,
+    "meanUlp": 0.1306,
+    "zero": 0
+   }
+  },
+  {
+   "name": "H4 極大（10 萬）精確值 < MAX ⇒ 有限且 < 1 ulp；精確值 > MAX·(1+2^-53) ⇒ +∞；邊界帶照實回報",
+   "ok": true,
+   "info": {
+    "below": 99814,
+    "above": 186,
+    "band": 0,
+    "belowNotFinite": 0,
+    "aboveNotInfinity": 0,
+    "maxUlp": 0.8535,
+    "meanUlp": 0.2735,
+    "bandSample": []
+   }
+  },
+  {
+   "name": "H5 36 組特殊值全部等於登記的期望值",
+   "ok": true,
+   "info": {
+    "count": 36,
+    "bad": []
+   }
+  },
+  {
+   "name": "H6 對稱：hypot(x,y)＝hypot(y,x)＝hypot(−x,y)＝hypot(x,−y) 逐位元（H1、H2）",
+   "ok": true,
+   "info": {
+    "H1a": 0,
+    "H1b": 0,
+    "H1c": 0,
+    "H2": 0
+   }
+  },
+  {
+   "name": "H7 遊戲範圍精度不變差：DetHypot 最大誤差 ≤ Node 原生 Math.hypot 最大誤差（H1）",
+   "ok": true,
+   "info": {
+    "detMaxUlp": 0.9045,
+    "nativeMaxUlp": 1.8445,
+    "detMean": [
+     0.2733,
+     0.2708,
+     0.2497
+    ],
+    "nativeMean": [
+     0.4216,
+     0.3627,
+     0.4202
+    ],
+    "node": "v24.18.0"
+   }
+  },
+  {
+   "name": "H8 跨引擎：Node 與 chrome／firefox／webkit 的全部輸出雜湊相同、沒有某引擎獨有的 ∞／0／NaN",
+   "ok": true,
+   "info": {
+    "node": {
+     "hash": "6721fa6df73f9d05",
+     "outputs": 3400036,
+     "nonFinite": {
+      "inf": 186,
+      "zero": 0,
+      "nan": 0
+     },
+     "ua": "Node v24.18.0"
+    },
+    "chrome": {
+     "hash": "6721fa6df73f9d05",
+     "outputs": 3400036,
+     "nonFinite": {
+      "inf": 186,
+      "zero": 0,
+      "nan": 0
+     },
+     "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36"
+    },
+    "firefox": {
+     "hash": "6721fa6df73f9d05",
+     "outputs": 3400036,
+     "nonFinite": {
+      "inf": 186,
+      "zero": 0,
+      "nan": 0
+     },
+     "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0"
+    },
+    "webkit": {
+     "hash": "6721fa6df73f9d05",
+     "outputs": 3400036,
+     "nonFinite": {
+      "inf": 186,
+      "zero": 0,
+      "nan": 0
+     },
+     "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15"
+    }
+   }
+  }
+ ],
+ "stat": {
+  "H1a": {
+   "n": 200000,
+   "max": 0.9044853448867798,
+   "sum": 54667.20195102692,
+   "checked": 200000,
+   "nativeMax": 1.844513714313507,
+   "nativeSum": 84311.84291410446,
+   "inf": 0,
+   "zeroNonZero": 0,
+   "sym": 0,
+   "below": 0,
+   "above": 0,
+   "band": 0,
+   "belowBad": 0,
+   "aboveBad": 0,
+   "bandResults": [],
+   "mean": 0.27333600975513456,
+   "nativeMean": 0.4215592145705223
+  },
+  "H1b": {
+   "n": 200000,
+   "max": 0.846356987953186,
+   "sum": 54160.95659351349,
+   "checked": 200000,
+   "nativeMax": 1.6384915113449097,
+   "nativeSum": 72547.08851540089,
+   "inf": 0,
+   "zeroNonZero": 0,
+   "sym": 0,
+   "below": 0,
+   "above": 0,
+   "band": 0,
+   "belowBad": 0,
+   "aboveBad": 0,
+   "bandResults": [],
+   "mean": 0.27080478296756744,
+   "nativeMean": 0.3627354425770044
+  },
+  "H1c": {
+   "n": 200000,
+   "max": 0.49999451637268066,
+   "sum": 49935.81794345379,
+   "checked": 200000,
+   "nativeMax": 1.8249682188034058,
+   "nativeSum": 84043.31592398882,
+   "inf": 0,
+   "zeroNonZero": 0,
+   "sym": 0,
+   "below": 0,
+   "above": 0,
+   "band": 0,
+   "belowBad": 0,
+   "aboveBad": 0,
+   "bandResults": [],
+   "mean": 0.24967908971726893,
+   "nativeMean": 0.4202165796199441
+  },
+  "H2": {
+   "n": 200000,
+   "max": 0.8118492364883423,
+   "sum": 1516.6990231275558,
+   "checked": 200000,
+   "nativeMax": 0,
+   "nativeSum": 0,
+   "inf": 0,
+   "zeroNonZero": 0,
+   "sym": 0,
+   "below": 0,
+   "above": 0,
+   "band": 0,
+   "belowBad": 0,
+   "aboveBad": 0,
+   "bandResults": [],
+   "mean": 0.007583495115637779,
+   "nativeMean": 0
+  },
+  "H3": {
+   "n": 100000,
+   "max": 0.8744043707847595,
+   "sum": 13064.266696691513,
+   "checked": 100000,
+   "nativeMax": 0,
+   "nativeSum": 0,
+   "inf": 0,
+   "zeroNonZero": 0,
+   "sym": 0,
+   "below": 0,
+   "above": 0,
+   "band": 0,
+   "belowBad": 0,
+   "aboveBad": 0,
+   "bandResults": [],
+   "mean": 0.13064266696691512,
+   "nativeMean": 0
+  },
+  "H4": {
+   "n": 100000,
+   "max": 0.8534854054450989,
+   "sum": 27298.260371744633,
+   "checked": 99814,
+   "nativeMax": 0,
+   "nativeSum": 0,
+   "inf": 186,
+   "zeroNonZero": 0,
+   "sym": 0,
+   "below": 99814,
+   "above": 186,
+   "band": 0,
+   "belowBad": 0,
+   "aboveBad": 0,
+   "bandResults": [],
+   "mean": 0.2734912975308537,
+   "nativeMean": 0
+  }
+ },
+ "engines": {
+  "node": {
+   "hash": "6721fa6df73f9d05",
+   "outputs": 3400036,
+   "nonFinite": {
+    "inf": 186,
+    "zero": 0,
+    "nan": 0
+   },
+   "ua": "Node v24.18.0"
+  },
+  "chrome": {
+   "hash": "6721fa6df73f9d05",
+   "outputs": 3400036,
+   "nonFinite": {
+    "inf": 186,
+    "zero": 0,
+    "nan": 0
+   },
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+   "browserVersion": null
+  },
+  "firefox": {
+   "hash": "6721fa6df73f9d05",
+   "outputs": 3400036,
+   "nonFinite": {
+    "inf": 186,
+    "zero": 0,
+    "nan": 0
+   },
+   "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0",
+   "browserVersion": "155.0"
+  },
+  "webkit": {
+   "hash": "6721fa6df73f9d05",
+   "outputs": 3400036,
+   "nonFinite": {
+    "inf": 186,
+    "zero": 0,
+    "nan": 0
+   },
+   "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+   "browserVersion": "26.6"
+  }
+ }
+}

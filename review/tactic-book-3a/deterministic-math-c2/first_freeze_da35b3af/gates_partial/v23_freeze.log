@@ -1,0 +1,8 @@
+✅ F1a moba-sim.v23 的登記指紋＝凍結值 69237cce78edf2be　{"got":"69237cce78edf2be"}
+✅ F1b career.v23／balanceTool.v23 的 safeRoute＝v5
+✅ F1c 凍結清單的版本、指紋、層值與本 gate 的常數一致
+ℹ 目前版本是 moba-sim.v26（已不是 v23）：F2／F3 只報告與 v23 凍結清單的差異，不判紅。
+  語意檔差異 29 支：["src/LogicEngine.js（內容不同）","src/gameData.js（內容不同）","src/battle/moba/nav/mobaNavigation.js（內容不同）","src/battle/moba/map/mobaTowerPlacement.js（內容不同）","src/platform/contracts/matchRuleset.js（內容不同）","src/battle/moba/matchAssembler.js（內容不同）","src/battle/moba/items/itemsEngineRuntime.js（新出現）","src/battle/moba/items/itemEffects.js（新出現）","src/battle/moba/items/itemEffectKeys.js（新出現）","src/battle/moba/items/combatStatsV1.js（新出現）","src/battle/moba/items/itemCatalog.js（新出現）","src/battle/moba/items/itemEconomy.js（新出現）"]
+  依賴缺口差異 21 支：["src/battle/moba/items/combatStatsV1.js（清單有、現在沒有）","src/battle/moba/items/itemCatalog.js（清單有、現在沒有）","src/battle/moba/items/itemEconomy.js（清單有、現在沒有）","src/battle/moba/items/itemEffectKeys.js（清單有、現在沒有）","src/battle/moba/items/itemEffects.js（清單有、現在沒有）","src/battle/moba/items/itemInventory.js（清單有、現在沒有）","src/battle/moba/items/itemRecipes.js（清單有、現在沒有）","src/battle/moba/items/itemsEngineRuntime.js（清單有、現在沒有）","src/battle/moba/map/mapBaseBlueprint.js（清單有、現在沒有）","src/battle/moba/map/mapBaseFrame.js（清單有、現在沒有）","src/battle/moba/map/mapBaseLayoutStyle.js（清單有、現在沒有）","src/battle/moba/map/mapBushCover.js（清單有、現在沒有）"]
+
+PASS 3/3

@@ -1,0 +1,11 @@
+✅ S1 原始碼與基準相同 ⇒ 照原規則（mode identical，不需要 Golden）　{"mode":"identical"}
+✅ S2 登記的後繼版本＋Golden 一致 ⇒ ok（mode registeredSuccessor）　{"mode":"registeredSuccessor"}
+✅ S3 Golden 有任何一個 tick 不同 ⇒ 拒絕　{"B4":false}
+✅ S4 目前版本沒有登記成後繼版本 ⇒ 拒絕　{"B1":false,"B2":false}
+✅ S5 登記的指紋與實際不符 ⇒ 拒絕　{"B1":false}
+✅ S6 有一個改動的 src 檔不在登記的變更集裡 ⇒ 拒絕　{"outside":["src/platform/contracts/matchRuleset.js"]}
+✅ S7 src 有未提交的檔案 ⇒ 拒絕（探針檔已刪除）　{"dirty":["?? src/__c1_versioned_scope_probe.js"]}
+✅ S8 凍結的歷史指紋被改 ⇒ 拒絕（歷史來源 A2 與版本表 B3 都不成立）　{"A2":false,"B3":false}
+✅ S9 基準 commit 的 MOBA 範圍與 Golden 來源不同（77780df3＝v24 交付點 A）⇒ 拒絕　{"A1":false,"semanticChanges":5}
+
+check_c1_versioned_scope：9/9 PASS

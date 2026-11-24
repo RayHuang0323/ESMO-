@@ -1,0 +1,40 @@
+engine firefox Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0 155.0
+js 1
+js {"api":true,"sim":"moba-sim.v26","banner":true}
+tap home-mode-moba ok 826 450
+tap prep-primary-action ok 683 798
+until [...document.querySelectorAll('button')].some(b=>/確認進入對戰/.te true 10.1s
+tap 確認進入對戰 ok 683 863
+until document.querySelector('[data-testid="matchmaking-enter-banp true 5.1s
+tap matchmaking-enter-banpick ok 735 451
+until document.querySelector('[data-testid="hero-choose"]') true 0.0s
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_1_banpick.png
+js {"log":["ironclad","thornwall","ravager","sting","duskblade","greymantle","auralith","confirm@9"],"confirm":true,"picks":"出戰配置 5/5"}
+tap confirm-draft ok 683 537
+until document.querySelector('[data-testid="tb-step-confirm"]') true 0.0s
+tap tb-step-confirm ok 1036 93
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_2_tactic.png
+tap tb-confirm-go ok 940 506
+until window.__esmoC1 && window.__esmoC1.live && document.querySel true 4.1s
+js {"rulesetId":"career.v26","simVersion":"moba-sim.v26","mathKernel":"det.v2","setupHash":"83f5ef8ae41af430"}
+save C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_setup.json 4715
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_3_battle.png
+tap match-speed-4 ok 1230 28
+until (()=>{const t=(document.querySelector('[data-testid="hud-clo true 76.0s
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_4_watch.png
+js {"clock":"5:02","t":302,"digest":"5ac9c5490d663793"}
+tap quick-finish-match ok 1303 28
+until document.querySelector('[data-testid="battle-end-screen"]') true 5.7s
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_5_result.png
+save C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_result.json 44774
+tap 觀看重播 ok 596 865
+until document.querySelector('input[aria-label="重播時間軸"]') true 0.0s
+js {"min":"0","max":"1164","n":152,"rows":["[0:40] Nacht 使用懲戒（藍 Buff）","[0:43] Ash 使用懲戒（紅 Buff）","[1:44] Blitz 使用治療（救援）","[1:44] Seelöwe 使用點燃（收頭）","[1:44] Ember 使用幽魂（逃生）","[1:51] Frost 使用點燃（收頭）","[2:28] Nacht 使用懲戒（藍 Buff）","[2:32] Ash 使用懲戒（紅 Buff）","[3:23] Pyre 使用閃現（切入）","[3:47] 首殺！ Blitz 擊殺 Ember【埋伏】","[4:00] 巨龍 已刷新","[4:23] Frost 大絕招 R 升至 Lv1","[4:23] 巨龍 被藍方擊殺","[4:29] Nacht 使用懲戒（藍 Buff）","[4:33] Seelöwe 使用點燃（收頭）","[4:38] Ash 使用懲戒（紅 Buff）","[4:44] Pyre 使用護盾（保命）","[4:47] Ember 使用幽魂（逃生）","[4:49] Blitz 大絕招 R 升至 Lv1","[4:54] Frost 天賦技能 W 滿級（Lv3）","[5:21] Nacht 大絕招 R 升至 Lv1","[5:27] Ash 大絕招 R 升至 Lv1","[5:32] Frost 使用點燃（收頭）","[5:34] Ember 使用閃現（逃生）","[5:36] Seelöwe 使用閃現（追擊）","[5:51] Cinder 大絕招 R 升至 Lv1","[6:10] Nacht 使用懲戒（藍 Buff）","[6:15] Blitz 天賦技能 W 滿級（Lv3）","[6:16] Ash 使用懲戒（紅 Buff）","[6:24] 藍方上路 1 塔 被摧毀","[6:27] Seelöwe 大絕招 R 升至 Lv1","[6:27] Pyre 大絕招 R 升至 Lv1","[6:28] 紅方下路 1 塔 被摧毀","[6:36] Blitz 使用閃現（追擊）","[6:38] Blitz 擊殺 Ember（助攻 Seelöwe）【抓單】","[6:44] Scoria 大絕招 R 升至 Lv1","[6:54] 巨龍 已刷新","[7:14] Cinder 使用治療（救援）","[7:30] Blitz 擊殺 Ember（助攻 Seelöwe）【目標戰】","[7:30] Seelöwe 使用點燃（收頭）","[7:32] Scoria 使用閃現（逃生）","[7:39] Seelöwe 天賦技能 W 滿級（Lv3）","[7:40] 巨龍 被藍方擊殺","[7:40] Blitz 使用治療（保命）","[7:45] Ash 天賦技能 Q 滿級（Lv3）","[7:50] Kaiser 大絕招 R 升至 Lv1","[7:50] 紅方中路 1 塔 被摧毀","[7:58] Nacht 使用懲戒（藍 Buff）","[8:00] 巴龍 已刷新","[8:24] Cinder 擊殺 Nacht（助攻 Ash,Pyre）【目標戰】","[8:24] Pyre 天賦技能 W 滿級（Lv3）","[8:24] Cinder 天賦技能 W 滿級（Lv3）","[8:36] Scoria 擊殺 Seelöwe（助攻 Ash,Pyre,Cinder）【團戰】","[8:38] Pyre 使用閃現（切入）","[8:44] Kaiser 天賦技能 W 滿級（Lv3）","[8:44] Frost 使用點燃（收頭）","[8:50] Ember 使用幽魂（逃生）","[9:00] Pyre 使用護盾（保命）","[9:01] Scoria 天賦技能 W 滿級（Lv3）","[9:02] 巴龍 被紅方擊殺","[9:16] Ash 使用懲戒（紅 Buff）","[9:22] Nacht 使用懲戒（藍方狼營）","[9:42] Blitz 擊殺 Ember（助攻 Seelöwe）【抓單】","[9:52] 藍方下路 1 塔 被摧毀","[10:10] 巨龍 已刷新","[10:30] 巨龍 被紅方擊殺","[10:30] Ash 使用懲戒（巨龍）","[10:36] Ash 擊殺 Frost（助攻 Scoria）【追擊】","[10:38] Nacht 使用懲戒（藍 Buff）","[10:42] Kaiser 使用傳送（支援守塔）","[10:46] Ash 擊殺 Kaiser（助攻 Scoria,Cinder,Pyre）【越塔】","[10:46] 雙殺！ Ash","[10:46] Ember 大絕招 R 升至 Lv1","[10:48] 藍方中路 1 塔 被摧毀","[11:08] Seelöwe 使用點燃（收頭）","[11:10] Ember 使用閃現（逃生）","[11:10] Blitz 使用閃現（追擊）","[11:10] Seelöwe 使用閃現（追擊）","[11:36] Ash 擊殺 Nacht【埋伏】","[11:35] Ash 大絕招 R 升至 Lv2","[11:50] Blitz 大絕招 R 升至 Lv2","[11:56] Cinder 使用治療（保命）","[12:04] Blitz 擊殺 Ember【追擊】","[12:07] Pyre 大絕招 R 升至 Lv2","[12:08] 藍方中路 2 塔 被摧毀","[12:26] Nacht 使用懲戒（藍 Buff）","[12:32] 巴龍 已刷新","[12:53] Frost 大絕招 R 升至 Lv2","[12:58] Nacht 使用閃現（逃生）","[13:00] Scoria 擊殺 Nacht（助攻 Pyre）【目標戰】","[13:00] Scoria 大絕招 R 升至 Lv2","[13:00] 巨龍 已刷新","[13:03] Ember 天賦技能 W 滿級（Lv3）","[13:04] 巴龍 被紅方擊殺","[13:04] Ash 使用懲戒（巴龍）","[13:18] Cinder 擊殺 Kaiser（助攻 Scoria）【抓單】","[13:18] Cinder 大絕招 R 升至 Lv2","[13:18] Ember 使用幽魂（逃生）","[13:20] Blitz 擊殺 Ember（助攻 Seelöwe）【抓單】","[13:20] Frost 使用點燃（收頭）","[13:20] Pyre 使用護盾（保命）","[13:30] 紅方下路 2 塔 被摧毀","[13:46] Nacht 使用懲戒（藍方狼營）","[14:06] Frost 擊殺 Cinder【追擊】","[14:06] Cinder 擊殺 Frost【埋伏】","[14:06] 巨龍 被紅方擊殺","[14:16] Blitz 使用治療（保命）","[14:22] Ash 使用懲戒（紅方狼營）","[15:08] Cinder 使用治療（保命）","[15:10] Scoria 擊殺 Frost（助攻 Ash）【埋伏】","[15:22] Seelöwe 使用點燃（收頭）","[15:24] Ember 擊殺 Seelöwe【追擊】","[15:24] Seelöwe 使用閃現（逃生）","[15:30] 藍方上路 2 塔 被摧毀","[15:30] Nacht 使用懲戒（藍方狼營）","[15:56] Ash 使用懲戒（紅方狼營）","[16:10] Ash 擊殺 Nacht【追擊】","[16:34] 巴龍 已刷新","[16:36] Cinder 擊殺 Kaiser【追擊】","[16:36] 巨龍 已刷新","[16:58] Ember 擊殺 Blitz（助攻 Ash）【追擊】","[16:58] Blitz 使用閃現（逃生）","[17:04] Nacht 擊殺 Ember（助攻 Seelöwe）【抓單】","[17:03] Seelöwe 大絕招 R 升至 Lv2","[17:06] Ash 擊殺 Nacht（助攻 Ember,Pyre）【團戰】","[17:08] Ash 擊殺 Seelöwe（助攻 Ember,Pyre）【抓單】","[17:08] 雙殺！ Ash","[17:18] Frost 使用點燃（收頭）","[17:20] Cinder 擊殺 Frost（助攻 Ash）【抓單】","[17:44] 紅方上路 1 塔 被摧毀","[17:46] 巴龍 被紅方擊殺","[17:54] 紅方上路 2 塔 被摧毀","[17:56] Blitz 使用治療（保命）","[18:02] Nacht 使用懲戒（藍 Buff）","[18:12] Nacht 擊殺 Ember【抓單】","[18:16] 巨龍 被紅方擊殺","[18:16] Ash 使用懲戒（巨龍）","[18:30] Scoria 擊殺 Frost（助攻 Ash）【埋伏】","[18:32] 藍方中路 3 塔 被摧毀","[18:32] Pyre 使用護盾（保命）","[18:34] 藍方上路 3 塔 被摧毀","[18:34] Pyre 使用閃現（逃生）","[19:06] Ash 擊殺 Kaiser【抓單】","[19:14] Seelöwe 使用點燃（收頭）","[19:14] Cinder 使用治療（救援）","[19:14] Ember 使用幽魂（逃生）","[19:16] Ash 擊殺 Frost【追擊】","[19:16] 雙殺！ Ash","[19:15] Ash 技能全數滿級","[19:18] 藍方門牙塔 被摧毀","[19:24] 藍方主堡 被摧毀","[19:24] 勝利！"]}
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_6_replay.png
+tap 關閉重播 ok 1319 28
+until document.querySelector('[data-testid="battle-result-continue true 0.0s
+tap battle-result-continue ok 747 865
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_7_settlement.png
+until document.querySelector('[data-testid="home-mode-moba"]') true 0.0s
+shot C:/Users/ifikn/esmo-measure/c2/browser/firefox_watch_8_home.png
+js {"home":true,"overflowX":false,"errs":[]}
