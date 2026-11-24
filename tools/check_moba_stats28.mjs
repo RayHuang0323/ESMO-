@@ -328,8 +328,11 @@ const tx = mobaResultToTransaction(brStats, { players: BASE5, streak: 0, fansNow
 const st0 = { players: clone(BASE5), finance: { funds: 0 }, meta: { fans: 0, reputation: 0 }, processedMatchTransactions: {} };
 const a1 = applyProgressToState(st0, tx);
 const a2 = applyProgressToState(a1.nextState, tx);
+//  2026-11-25 C1＋C2 Release Closure（Owner 核准）：BattleResult 在 09-28（6d93a973，MOBA v14）升到 v3，tactic24／progress25 當時已更新，本條漏改。
+//  刻意寫死契約字面 "BattleResult.v3"：不讀產品的 BATTLE_RESULT_VERSION，避免和產品讀同一個常數而失去驗證意義。
+//  冪等的行為面（重複結算時資金／XP／進度／交易紀錄都不增加，含故意破壞的反向測試）另由 check_progress_idempotency_closure 驗。
 ck("18) Progress 冪等不受影響（同 tx 二次套用 ⇒ alreadyApplied，不重複發獎）",
-  brStats.schema === "BattleResult.v2" && !!tx && tx.playerProgress.length === 5 &&
+  brStats.schema === "BattleResult.v3" && !!tx && tx.playerProgress.length === 5 &&
   tx.playerProgress.every((pp) => ENGINE_SLOT_IDS.blue.includes(pp.playerId)) &&
   !!a1.nextState && a2.nextState === null && a2.receipt.alreadyApplied === true);
 

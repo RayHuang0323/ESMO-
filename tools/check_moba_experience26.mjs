@@ -164,7 +164,13 @@ ck("   重播播放不改結算狀態（掃全 frames 前後 state 位元一致�
 
 // ═══ B. Tactic 跑版根因（靜態防線）═════════════════════════════════════════
 const tacSrc = src("src/screens/moba/TacticScreen.jssx".replace("jssx", "jsx"));
-ck("   Tactic grid 有 min() 防護（<190px 容器不溢出）", tacSrc.includes("minmax(min(190px,100%),1fr)"));
+//  2026-11-25 C1＋C2 Release Closure（Owner 核准）：11-11 戰術書改版（503e1b95）把模板列搬到 TemplateStrip＋tacticBook.css，
+//  舊字面 minmax(min(190px,100%),1fr) 因此消失、本條從那天起一直紅。判準不變（模板 grid 必須有 min(…,100%) 防護），
+//  改查實際生效的防護；判斷式單一來源 tools/lib/tacticGridGuard.mjs，反向測試在 check_tactic_grid_guard_closure，
+//  真實版面（180px 容器、320／390）在 browser_check_tactic_grid_narrow。
+const { tacticGridGuard } = await import(u("tools/lib/tacticGridGuard.mjs"));
+const tacGuard = tacticGridGuard({ tacticScreen: tacSrc, templateStrip: src("src/screens/moba/tacticBook/TemplateStrip.jsx"), css: src("src/screens/moba/tacticBook/tacticBook.css") });
+ck("   Tactic grid 有 min() 防護（<190px 容器不溢出）", tacGuard.ok);
 ck("   Frame 有寬度防護 + sticky footer（確認鈕永遠可點）",
   lineupSrc.includes('position: "sticky"') && lineupSrc.includes('width: "100%", boxSizing: "border-box"'));
 ck("   Lineup / Codex 固定 380px 已移除",
