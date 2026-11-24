@@ -3093,3 +3093,11 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 
 - 從 `9f4902a3` 開 `release/c1c2-closure-20261125`。main 既有的兩條 Gate 紅燈（TD-59、TD-60）已處理（只改測試定位＋行為回歸，`017470e7`）。
 - 剩下：P2v2 正式重新驗證（事前登記已提交）、`match_golden_v21a` 40 案待 Owner 決定、最終候選 SHA 的完整 Release Readiness。v26 仍未啟用；不開始 Sprint 2B。
+
+## 2026-11-25　C1＋C2 Release Blocker Closure　結果
+
+- 最終候選 `a76e9d08e21c28ce940ffba9b14a27167b3ecc22`（`release/c1c2-closure-20261125`）。`src/` 相對 `9f4902a3` 零變更；v25／v26 旗標仍 `false`。未 Push、未 Deploy、未 Merge。
+- 綁定最終 SHA 的 Release Gate：moba、det、platform、production、active（含 experience26 29/29、stats28 21/21、兩支 closure 回歸）、P1（v24 +3.20%、v20 +3.04%）、**P2v2 PASS 11/11**、四引擎（三引擎各 80/80、H8 9/9）、瀏覽器（MOBA 桌機／390、CS 81/81、教練、縮放、Tactic grid 窄寬度）全部 **PASS**。
+- 舊 P2 FAIL（`9f4902a3`）永久保留；TD-59、TD-60 已處理（只改測試定位＋行為回歸，含反向測試）。
+- **仍是 FAIL**：`check_match_golden_v21a` 97/137（與 3a-B 已登記的 40 案逐案相同）。待 Owner 決定處置；在此之前**不是 Release GO**，只能條件式整合。
+- 結果與證據：`review/c1c2-release-closure-20261125/Closure_結果.md`。
