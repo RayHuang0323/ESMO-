@@ -219,7 +219,7 @@ const SEGMENTS = [
   { id: "match_golden_v21a", script: "tools/check_match_golden_v21a.mjs", shape: /Match Golden v21-A：(\d+)\/\1 PASS/, note: "Phase 3a-C1 G-AC1 參照：v20 的 39 案＋21 模板＋提供的選擇（binding）＋紅方 binding 共 109 案重跑，digest／streamHash／resultHash／configure 序列逐案相同（約 7 分鐘）" },
   { id: "c3_phase_skeleton", script: "tools/check_c3_phase_skeleton.mjs", shape: /C3 Phase Skeleton：(\d+)\/\1 PASS/, note: "Phase 3a-C3-1：Director core.v1 時期骨架（479.9/480、959.9/960 邊界只變宣告的欄位、三份相同 ⇒ 同參照）、Resolver／組裝器的 phases、RS-1 擴充（career.v21／balanceTool.v21、旗標關＝v20 逐字相同）、G-AC1 ②（golden live＋runner 案在 v21 規則集下 digest／streamHash／resultHash 逐案相同；約 6 分鐘）" },
   { id: "laneframe_c3", script: "tools/check_laneframe_c3.mjs", shape: /LaneFrame C3：(\d+)\/\1 PASS/, note: "Phase 3a-C3-1 laneFrame（TD-3A-23，D-1 = A）：事前登記檔 laneframe_registration_c3.json 的 A1–A5（186 組輸入；teamRelative 0／legacy 120）、C1、規則集層與能力檢查、C3（v21 規則集下改變集合恰好＝登記的 9 個 v21-A 案；約 6 分鐘）" },
-  { id: "moba_integration_scope", script: "tools/check_moba_integration_scope.mjs", shape: /MOBA_INTEGRATION_SCOPE RESULT=PASS assertions=12/, note: "CS整合面精確界線與拒絕反例" },
+  { id: "moba_integration_scope", script: "tools/check_moba_integration_scope.mjs", shape: /MOBA_INTEGRATION_SCOPE RESULT=PASS assertions=13/, note: "CS整合面精確界線與拒絕反例" },
   { id: "moba_v23_freeze", script: "tools/check_v23_freeze.mjs", shape: /^PASS (\d+)\/\1$/m, note: "v23凍結指紋與來源保護" },
   { id: "moba_v24_tactic", script: "tools/check_tactic_exec_v24.mjs", shape: /check_tactic_exec_v24：19\/19 PASS/, note: "v24戰術契約" },
   { id: "moba_v24_isolation", script: "tools/check_layer_isolation_v24.mjs", shape: /check_layer_isolation_v24：8\/8 PASS/, note: "v20～v23逐tick相同與v24層隔離" },
