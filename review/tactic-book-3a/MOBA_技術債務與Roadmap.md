@@ -734,3 +734,10 @@ Owner 2026-11-20 核准「v24 Calibration Sprint — 真實戰鬥入侵校準」
 ## 2026-11-25　v21-A Golden 版本化（Owner 核准選項 2）
 
 - 旗標關閉時 40 個 binding 案改用 main `053fd582` 基準的版本化預期（`check_match_golden_v21a` V 段，146/146）。v21 開啟時仍未驗證（TD-61）。
+
+## 2026-11-25　C1＋C2 最終技術驗收：版本定位
+
+- v25（det.v1）保留為歷史版本；v26（det.v2，指紋 `360474218ca774b9`）是後續主要候選。`mobaDetMathV25`、`mobaDetMathV26` 與其他正式旗標仍 `false`。
+- 已驗證候選 `93655403` 上四引擎 80/80（Chrome 157、Firefox 155、WebKit 26.6）、重現性 8/8×4、H8 9/9。
+- **TD-TAC-65**：繼續只監看。`check_c2_geometry`（det.v2／native）結果與 `a76e9d08` 那輪逐項相同；不改 v18 地形。
+- WebKit 的 Windows build 不代表 iOS／macOS Safari；真實裝置與低階裝置仍未驗證。

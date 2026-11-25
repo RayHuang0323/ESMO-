@@ -27277,3 +27277,13 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - 新工具 `tools/capture_golden_v21a_flagsoff.mjs`；新 fixture `tools/fixtures/match_golden_v21a_flagsoff_v20.json`；說明 `review/c1c2-release-closure-20261125/Golden_v21a_版本化處置.md`。
 - 仍開放：TD-61（v21 開啟時的 Golden 未驗證，v21 重啟時在 `career.v21` 重錄）。v26 仍未啟用；TD-TAC-65 監看。
 - 最終 Release Gate 綁定包含本節的 commit；結果與收據清單放在 repo 外 `C:\Users\ifikn\esmo-measure\c1c2-golden-v21a-flagsoff-20261125\`（不再追加文件 commit，避免產生沒有收據的新 SHA）。
+
+## 2026-11-25　C1＋C2 最終技術驗收收尾（Owner 接受成果；核准文件收尾與本機 Commit）
+
+- 已驗證候選 `93655403806340bbc1456623fb7834b92f331ce3`（`release/c1c2-closure-20261125`）。`src/` 相對 `a76e9d08`／`9f4902a3` 零變更；`moba-sim.v26`／`360474218ca774b9`；正式旗標（V21～V24、`mobaDetMathV25`、`mobaDetMathV26`）全部 `false`。v25 保留為歷史版本，v26 為後續主要候選，皆未啟用。遠端 main 仍 `053fd582`，候選包含它。未 Push、未 Deploy、未 Merge。
+- **完成**（全部有綁定 `93655403` 的 PASS 收據）：moba、det、platform、production、active、v21a **146/146**、P1（第一次 v24 INCONCLUSIVE 離散度 18.23%，收據 FAIL；P1a 只重跑 v24 → +6.09% PASS；v20 +7.89% PASS）、四引擎（第一次 WebKit 記憶體不足崩潰 0/80，收據 FAIL；原證據複製後只補跑 WebKit → 三引擎各 80/80、重現性 8/8×4、H8 9/9 PASS）、瀏覽器（休眠前主動停止、無收據；新資料夾重跑 → MOBA 桌機／390 9/9、CS 池 81/81、教練 47/47、戰鬥消耗、縮放 14/14、Tactic grid 9/9 PASS）。
+- 中斷恢復：上一個 session 中途退出，恢復時沒有測試仍在執行；清掉約 40 個孤兒 `tail` 監看，保留 `keepawake_mem.ps1`。既有 PASS 未重跑；所有歷史 FAIL 收據保留。
+- **未完成／未驗證**：P2v2 只有 `a76e9d08` 的 PASS，依正式規則不能自動沿用到 `93655403`（SHA、tree 不同、超過 24 小時、事前登記無轉移條款）；等價證據是 `src/` 零差異＋兩個 SHA 的正式 bundle 581 檔逐位元相同，需 Owner 裁定接受或重測。本 Commit（只改文件）是新的 SHA，正式規則下沒有收據（TD-62）。TD-61、TD-TAC-65、真實裝置與低階裝置（iOS／macOS Safari、Android、低 RAM、CPU 4×、2118 MiB）仍未驗證。
+- **工具操作安全事件**：休眠前停止瀏覽器 Gate 時，以埠號查到的 PID 執行 `taskkill /T`，其中一筆 TIME_WAIT 的 PID 是 0，導致 Owner 的 Chrome 被關閉（`mem.log` 18:53→18:54 chrome 35→0）。驗證證據未受影響。規則寫入 `AGENTS.md` §12。
+- 報告與收據索引：`review/c1c2-release-closure-20261125/Release_Readiness_93655403.md`；原始證據 `C:\Users\ifikn\esmo-measure\c1c2-golden-v21a-flagsoff-20261125\final\`。
+- 狀態：停止，等待 Owner 正式發布核准。不啟動新 Sprint。

@@ -221,6 +221,18 @@ runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀
 - 不可未驗證就宣稱手機體驗完成。
 - 不可自動開始下一 Sprint。
 
+### ⚠⚠ 停止測試行程的安全規則（2026-11-25 起，適用所有 AI）
+
+**事件**：2026-11-25 停止瀏覽器 Gate 時，用 `Get-NetTCPConnection -LocalPort 5649` 查到的 `OwningProcess` 執行 `taskkill /PID <pid> /T /F`。其中一筆 TIME_WAIT 連線的 PID 是 **0**，`/T` 因此對整棵行程樹動手；系統行程拒絕終止，但 **Owner 自己的 Chrome 被整個關閉**（未存分頁可能遺失）。驗證證據未受影響。
+
+**規則**（停止任何測試／預覽／監看行程前都必須照做）：
+
+1. **只終止自己記錄過的行程**：優先用啟動時取得的 PID（例如 Release Gate 或 runner 的根行程），不要事後用埠號、名稱或萬用字元推測。
+2. **終止前逐一驗證並印出**：PID、行程名稱、完整命令列、所屬工作區（命令列或工作目錄必須指向本次的 worktree 或 `esmo-measure` 證據資料夾）。四項有任何一項對不上就不終止。
+3. **禁止**：對 PID 0、PID 4、系統行程（`System`、`Idle`、`csrss`、`wininit`、`services`、`lsass`、`svchost`、`explorer` 等）或未確認的行程樹執行 `taskkill /T`、`Stop-Process`；禁止以 `chrome.exe`、`node.exe` 等名稱整批終止（Owner 自己的 Chrome、Codex 的 node 都在同一台機器上）。
+4. **以埠號找行程時**：只取 `State -eq 'Listen'` 且 `OwningProcess -gt 4` 的那一筆，並先執行規則 2；TIME_WAIT／CLOSE_WAIT 的 PID 一律忽略。
+5. 終止後再查一次 Owner 的應用程式（Chrome 等）行程數是否不變；若有變化，立即如實回報。
+
 ## 手機優先原則
 
 手機是第一級目標。UI 需在 320 / 360 / 390 / 430px 不水平溢出；面板不長期遮戰場；

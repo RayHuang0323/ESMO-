@@ -3109,3 +3109,10 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - 新工具 `tools/capture_golden_v21a_flagsoff.mjs`；新 fixture `tools/fixtures/match_golden_v21a_flagsoff_v20.json`；說明 `review/c1c2-release-closure-20261125/Golden_v21a_版本化處置.md`。
 - 仍開放：TD-61（v21 開啟時的 Golden 未驗證，v21 重啟時在 `career.v21` 重錄）。v26 仍未啟用；TD-TAC-65 監看。
 - 最終 Release Gate 綁定包含本節的 commit；結果與收據清單放在 repo 外 `C:\Users\ifikn\esmo-measure\c1c2-golden-v21a-flagsoff-20261125\`（不再追加文件 commit，避免產生沒有收據的新 SHA）。
+
+
+## 2026-11-25　C1＋C2 最終技術驗收：Owner 接受，等待正式發布核准
+
+- 已驗證候選 `93655403`：全部 Release Gate PASS（v21a 146/146、四引擎三引擎各 80/80、P1、MOBA／CS 瀏覽器）。P2v2 只綁 `a76e9d08`，沿用需 Owner 裁定。報告：`review/c1c2-release-closure-20261125/Release_Readiness_93655403.md`。
+- 版本路線：v25（det.v1）保留為歷史版本；v26（det.v2）是後續主要候選；正式旗標全部維持 `false`，啟用需另行核准。
+- 下一步（需 Owner）：決定發布 SHA 與 P2v2 處置 → 正式發布核准 → Push／Deploy → 新 main 與正式站驗收。之後才排 TD-61（v21 Golden）、TD-TAC-65、真實裝置與低階裝置驗證。不自動開始新 Sprint。
