@@ -29,6 +29,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
+import { verifyCarry, CARRY_GATE, CARRY_SCHEMA } from "./docsCarry.mjs";
 
 export const RELEASE_GATE_VERSION = "1.0.0";
 export const RECEIPT_SCHEMA = "esmo.release-gate.receipt/1";
@@ -53,6 +54,23 @@ export function canonical(v) {
   return JSON.stringify(v) ?? "null";
 }
 const mk = (id, status, detail = "") => ({ id, status, detail });
+
+/**
+ * 一個 build 輸出資料夾的內容雜湊：依相對路徑排序，逐檔 `路徑\0sha256\n` 再取 sha256。
+ * 與 CS 正式流程工具的 bundleSha256 不同（那個只算 JS）；這個涵蓋 dist 內全部檔案。
+ */
+export function hashDir(dir) {
+  const files = [];
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (e.isFile()) files.push(p); else throw new Error(`build 輸出含非一般檔：${p}`); } };
+  walk(dir);
+  const rows = files.map((f) => [path.relative(dir, f).split(path.sep).join("/"), crypto.createHash("sha256").update(fs.readFileSync(f)).digest("hex")]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  return { files: rows.length, aggregateSha256: sha256(rows.map(([r, h]) => `${r}\0${h}\n`).join("")) };
+}
+/** build 時有哪些 VITE_* 環境變數（只記名稱與值的雜湊，絕不記值）。Vite 會把它們內嵌進 bundle。 */
+export function viteEnvFingerprint(env = process.env) {
+  return Object.fromEntries(Object.keys(env).filter((k) => k.startsWith("VITE_")).sort().map((k) => [k, sha256(String(env[k]))]));
+}
+
 export function aggregate(checks) {
   if (checks.some((c) => c.status === "FAIL")) return "FAIL";
   if (checks.some((c) => c.status === "BLOCKED")) return "BLOCKED";
@@ -293,7 +311,7 @@ function captureEnv(ctx, di, repo) {
 // ── 收據 ─────────────────────────────────────────────────────────────────
 export function digestOf(receipt) { const { digest, ...rest } = receipt; return sha256(canonical(rest)); }
 const safe = (s) => String(s).replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 60);
-export function buildReceipt({ gate, pre, commands, post, startedAt, finishedAt, status, reasons }) {
+export function buildReceipt({ gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category, checkpoint }) {
   const r = {
     schema: RECEIPT_SCHEMA, gateVersion: RELEASE_GATE_VERSION, gate, status,
     requestedTarget: pre.ctx.requested, targetSha: pre.ctx.targetFull, actualSha: pre.ctx.actualSha,
@@ -301,6 +319,8 @@ export function buildReceipt({ gate, pre, commands, post, startedAt, finishedAt,
     branch: pre.ctx.branch, detached: pre.ctx.detached, repo: pre.ctx.repoTop,
     startedAt, finishedAt, durationMs: Date.parse(finishedAt) - Date.parse(startedAt),
     env: pre.ctx.env, checks: [...pre.checks, ...(post ? post.checks : [])], commands, warnings: pre.ctx.warnings, reasons,
+    // 選用欄位（舊收據沒有；沒有就不出現，digest 計算與舊版相同）
+    bundle: bundle || undefined, category: category || undefined, checkpoint: checkpoint || undefined,
   };
   r.digest = digestOf(r);
   return r;
@@ -357,9 +377,17 @@ export function assertReceipts(opts) {
   const detail = {};
   if (pre.status === "PASS") {
     for (const g of gates) {
-      const found = loadReceipts(pre.ctx.receiptsDir, { targetSha: pre.ctx.targetFull, gate: g });
-      if (!found.length) { all.push(mk(`gate:${g}`, "BLOCKED", `這個 SHA 沒有 gate「${g}」的收據。請先執行 run`)); continue; }
-      const v = verifyReceipt(found[0].receipt, pre.ctx, { maxAgeHours: opts.maxAgeHours, allowPreflightOnly: opts.allowPreflightOnly });
+      const found = loadReceipts(pre.ctx.receiptsDir, { targetSha: pre.ctx.targetFull, gate: g }).filter((f) => f.receipt.schema !== CARRY_SCHEMA);
+      if (!found.length) {
+        // 沒有直接收據 ⇒ 才看 TD-62 沿用收據。直接收據（就算是 FAIL）永遠優先：目標 SHA 上真的跑過的結果不能被沿用蓋掉。
+        const carries = g === CARRY_GATE ? [] : loadReceipts(pre.ctx.receiptsDir, { targetSha: pre.ctx.targetFull, gate: CARRY_GATE });
+        if (!carries.length) { all.push(mk(`gate:${g}`, "BLOCKED", `這個 SHA 沒有 gate「${g}」的收據。請先執行 run`)); continue; }
+        const v = verifyCarry(carries[0].receipt, pre.ctx, g, { receiptsDir: pre.ctx.receiptsDir, maxAgeHours: opts.maxAgeHours, now: opts.now });
+        detail[g] = { file: carries[0].file, via: CARRY_GATE, base: carries[0].receipt.baseSha, checks: v.checks };
+        all.push(mk(`gate:${g}`, v.status, v.status === "PASS" ? `沿用自 ${String(carries[0].receipt.baseSha).slice(0, 12)}（docs-carry ${path.basename(carries[0].file)}；來源 ${v.ref.file}；到期 ${carries[0].receipt.expiresAt}）` : v.checks.filter((x) => x.status !== "PASS").map((x) => `${x.id}: ${x.detail}`).join("｜")));
+        continue;
+      }
+      const v = verifyReceipt(found[0].receipt, pre.ctx, { maxAgeHours: opts.maxAgeHours, allowPreflightOnly: opts.allowPreflightOnly, now: opts.now });
       detail[g] = { file: found[0].file, olderIgnored: found.length - 1, checks: v.checks };
       all.push(mk(`gate:${g}`, v.status, v.status === "PASS" ? `最新收據有效（${path.basename(found[0].file)}${found.length > 1 ? `；${found.length - 1} 張較舊的不採用` : ""}）` : v.checks.filter((x) => x.status !== "PASS").map((x) => `${x.id}: ${x.detail}`).join("｜")));
     }

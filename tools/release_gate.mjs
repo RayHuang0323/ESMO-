@@ -12,6 +12,8 @@
 //    run           預檢 → 通過才依序執行 --cmd 指令 → 事後再確認 HEAD 沒動 → 寫收據
 //    assert        正式整合前的「查驗」：重新預檢 + 對每個 --require-gate 驗最新一張收據
 //    resolve-main  查遠端 main 現在真正的 SHA（git ls-remote；main 會移動，不要用記憶或本機 origin/main）
+//    carry         TD-62：純文件 Commit 的證據沿用。--base-sha <已驗證 SHA> --target-sha <文件 SHA> --require-gate …
+//                  產生一張綁在目標 SHA 的「沿用收據」，不轉移、不修改原收據；assert 時才當場重驗原收據（見 tools/lib/docsCarry.mjs）
 //
 //  常用選項
 //    --repo <路徑>            必填。worktree 根目錄（不接受子資料夾；不預設用目前目錄，避免在錯的地方驗）
@@ -25,6 +27,9 @@
 //    --require-browser        也要求找得到 Chrome（跑 browser gate 時）
 //    --receipts-dir <路徑>    收據目錄，預設 <git common dir>/esmo-release-gate/receipts（所有 worktree 共用、不進版控）
 //    --timeout-min <n>        每個 --cmd 的逾時，預設 120
+//    --record-bundle <dir>    run 用（production gate）：指令跑完後記錄 <dir>（相對 repo）全部檔案的雜湊與 VITE_* 建置環境；
+//                             docs-carry 要靠它證明「文件 Commit 的產品輸出與來源相同」。dir 必須是這次 run 期間新 build 的
+//    --category <名稱>        run 用：收據分類（logic｜golden｜browser｜perf｜prod-smoke｜build），供效期規劃與報告使用
 //    --json                   輸出 JSON（機器可讀）
 //
 //  結果與 exit code：PASS 0｜FAIL 1｜BLOCKED 2｜用法錯誤 64。FAIL ＞ BLOCKED ＞ PASS。
@@ -32,10 +37,12 @@
 // ============================================================================
 import path from "node:path";
 import os from "node:os";
+import fs from "node:fs";
 import {
   RELEASE_GATE_VERSION, EXIT, DEFAULT_MAX_AGE_HOURS, preflight, assertReceipts, buildReceipt, writeReceipt,
-  runCommand, commandStatus, aggregate, git, remoteHead,
+  runCommand, commandStatus, aggregate, git, remoteHead, hashDir, viteEnvFingerprint,
 } from "./lib/releaseGate.mjs";
+import { buildCarry } from "./lib/docsCarry.mjs";
 
 const SYMBOL = { PASS: "✔", FAIL: "✘", BLOCKED: "⛔", WARN: "⚠", INFO: "·" };
 function parse(argv) {
@@ -72,9 +79,9 @@ function report({ title, status, checks, ctx, extra, json }) {
 
 const args = parse(process.argv.slice(2));
 const sub = args._[0];
-if (args.help || !sub) { console.log(`見 tools/release_gate.mjs 檔頭說明；子命令：preflight｜run｜assert｜resolve-main`); process.exit(args.help ? 0 : EXIT.USAGE); }
+if (args.help || !sub) { console.log(`見 tools/release_gate.mjs 檔頭說明；子命令：preflight｜run｜assert｜resolve-main｜carry`); process.exit(args.help ? 0 : EXIT.USAGE); }
 if (args._error) usage(args._error);
-if (!["preflight", "run", "assert", "resolve-main"].includes(sub)) usage(`不認得的子命令「${sub}」`);
+if (!["preflight", "run", "assert", "resolve-main", "carry"].includes(sub)) usage(`不認得的子命令「${sub}」`);
 
 if (sub === "resolve-main") {
   if (!args.repo) usage("resolve-main 需要 --repo（用來決定查哪個 repo 的 remote）");
@@ -110,6 +117,21 @@ if (sub === "assert") {
   report({ title: `assert（查驗收據：${args.gates.join("、")}）`, status: res.status, checks: res.checks, ctx: res.ctx, extra: { gate: args.gates.join(",") }, json: args.json });
 }
 
+if (sub === "carry") {
+  if (!args["base-sha"]) usage("carry 需要 --base-sha <已驗證的來源 SHA>");
+  if (!args.gates.length) usage("carry 至少要一個 --require-gate <名稱>（要沿用哪幾張來源收據）");
+  const res = buildCarry({ repo: args.repo, target: args["target-sha"], base: args["base-sha"], gates: args.gates, receiptsDir: args["receipts-dir"], maxAgeHours: maxAge });
+  let file = null;
+  if (res.ctx.receiptsDir && res.receipt.targetSha) { try { file = writeReceipt(res.ctx.receiptsDir, res.receipt); } catch (e) { res.checks.push({ id: "receipt_written", status: "BLOCKED", detail: `沿用收據寫不進去：${e.code || e.message}` }); } }
+  const st = file ? res.status : aggregate([...res.checks, { status: "BLOCKED" }]);
+  if (!args.json) {
+    console.log(`\n  base   : ${res.receipt.baseSha || "(無效)"}`);
+    if (res.receipt.carriedGates.length) console.log(`  沿用   : ${res.receipt.carriedGates.join("、")}（到期 ${res.receipt.expiresAt}）`);
+    for (const r of res.receipt.requiresDirect) console.log(`  需直接重跑 : ${r.gate}（${r.reason}）`);
+  }
+  report({ title: `carry（純文件證據沿用 ${String(args["base-sha"]).slice(0, 12)} → ${String(args["target-sha"]).slice(0, 12)}）`, status: st, checks: res.checks, ctx: res.ctx, extra: { gate: "docs-carry", receipt: file, carriedGates: res.receipt.carriedGates, requiresDirect: res.receipt.requiresDirect, expiresAt: res.receipt.expiresAt }, json: args.json });
+}
+
 // ── run ────────────────────────────────────────────────────────────────
 if (!args.gate) usage("run 需要 --gate <名稱>");
 if (!args.cmd.length) usage("run 至少要一個 --cmd \"<指令>\"（只想預檢請用 preflight）");
@@ -136,10 +158,22 @@ if (pre.status === "PASS") {
   ] };
   for (const c of post.checks) if (c.status !== "PASS") reasons.push(c.id);
 } else reasons.push(...pre.checks.filter((c) => c.status !== "PASS" && c.status !== "WARN" && c.status !== "INFO").map((c) => `preflight:${c.id}`));
+// 選用：記錄 build 輸出雜湊（只在全部指令 PASS 時）
+let bundle = null; const bundleChecks = [];
+if (args["record-bundle"] && post && commands.length && commands.every((c) => c.status === "PASS")) {
+  const dir = path.resolve(pre.ctx.repoTop, args["record-bundle"]);
+  const rel = path.relative(pre.ctx.repoTop, dir);
+  let st = null; try { st = fs.statSync(path.join(dir, "index.html")); } catch { /* 下面處理 */ }
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) bundleChecks.push({ id: "bundle_recorded", status: "FAIL", detail: `--record-bundle 必須在 repo 內：${dir}` });
+  else if (!st) bundleChecks.push({ id: "bundle_recorded", status: "BLOCKED", detail: `${rel}/index.html 不存在（指令沒有 build 到這裡？）` });
+  else if (st.mtimeMs < Date.parse(startedAt) - 2000) bundleChecks.push({ id: "bundle_recorded", status: "FAIL", detail: `${rel} 是這次 run 開始前就存在的舊 build，不能代表這個 SHA` });
+  else { try { bundle = { dir: rel.split(path.sep).join("/"), ...hashDir(dir), buildEnv: viteEnvFingerprint(process.env) }; bundleChecks.push({ id: "bundle_recorded", status: "PASS", detail: `${bundle.files} 檔 ${bundle.aggregateSha256.slice(0, 16)}` }); } catch (e) { bundleChecks.push({ id: "bundle_recorded", status: "BLOCKED", detail: String(e.message || e) }); } }
+  if (post) post.checks.push(...bundleChecks);
+} else if (args["record-bundle"]) reasons.push("bundle_not_recorded_commands_not_pass");
 const cmdChecks = commands.map((c) => ({ id: `command: ${c.cmd}`, status: c.status, detail: c.status === "PASS" ? `exit 0，${(c.durationMs / 1000).toFixed(1)}s` : c.timedOut ? "逾時" : c.spawnError ? `起不來：${c.spawnError}` : `exit ${c.exitCode}（${c.status === "BLOCKED" ? "2＝既有慣例的『環境／未跑完』" : "指令本身失敗"}）` }));
 const status = aggregate([...pre.checks, ...(post ? post.checks : []), ...cmdChecks]);
 const finishedAt = new Date().toISOString();
-const receipt = buildReceipt({ gate: args.gate, pre, commands, post, startedAt, finishedAt, status, reasons });
+const receipt = buildReceipt({ gate: args.gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category: args.category });
 const dir = pre.ctx.receiptsDir || path.resolve(args["receipts-dir"] || path.join(os.tmpdir(), "esmo-release-gate", "receipts"));
 let file = null; try { file = writeReceipt(dir, receipt); } catch (e) { cmdChecks.push({ id: "receipt_written", status: "BLOCKED", detail: `收據寫不進去：${e.code || e.message}` }); }
 const finalStatus = file ? status : aggregate([status, "BLOCKED"].map((s) => ({ status: s })));
