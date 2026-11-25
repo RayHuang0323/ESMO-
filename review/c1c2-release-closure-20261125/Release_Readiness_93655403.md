@@ -112,3 +112,12 @@
 ## 10. 工具操作安全事件（2026-11-25）
 
 休眠前停止瀏覽器 Gate 時，以埠號 5649 查到的 `OwningProcess` 執行 `taskkill /PID <pid> /T /F`；其中一筆 TIME_WAIT 連線的 PID 是 0，`/T` 因此對整棵行程樹動手。系統行程拒絕終止，但 **Owner 自己的 Chrome（35 個行程）被關閉**（`mem.log`：18:53 chrome=35 → 18:54 chrome=0）。驗證證據未受影響。規則已寫入 `AGENTS.md` §12。
+
+## 後續（2026-11-26）：已正式發布
+
+本報告寫於發布前，「未 Push／Deploy／Merge」等描述已經過時：
+- `93655403` 已在 2026-11-25 推送為正式 main
+- Pages Workflow 45650627711 第 2 次執行成功
+- 正式站 Production Smoke 全部 PASS
+
+發布結果見 `Production_Release_93655403.md`；TD-62 方案見 `TD-62_純文件Commit證據沿用方案.md`。

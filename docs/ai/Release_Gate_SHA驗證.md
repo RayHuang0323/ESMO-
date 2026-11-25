@@ -186,3 +186,13 @@ Release Gate 交接單
 - 簽章（防有心人偽造收據）：未做。
 - 全依賴樹驗證：未做（只驗頂層依賴）。
 - 把 `verify.mjs`／各 browser gate 內建收據：未做（目前用 `run --cmd` 包住即可，不改它們）。
+
+## 2026-11-26　已知缺口：純文件 Commit（TD-62）
+
+- 收據綁完整 SHA。在已驗證 SHA 之上的純文件 Commit 也是沒有收據的新 SHA，`assert` 會 BLOCKED。這是刻意的保守設計，**目前沒有沿用規則**。
+- 提案（未實作）：`review/c1c2-release-closure-20261125/TD-62_純文件Commit證據沿用方案.md`。重點：
+  - 新增 `docs-carry` 收據，綁新 SHA，**不轉移原收據**
+  - 白名單預設拒絕；`review/` 下被工具讀取的檔案不算文件
+  - 白名單外的 tree 必須相同；dist bundle 雜湊必須相同
+  - 效期取 base 收據最早到期
+- 在實作之前，純文件 Commit 的發布只能走 Owner 書面例外，或重跑 Gate。

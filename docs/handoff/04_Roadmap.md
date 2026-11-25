@@ -3116,3 +3116,21 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - 已驗證候選 `93655403`：全部 Release Gate PASS（v21a 146/146、四引擎三引擎各 80/80、P1、MOBA／CS 瀏覽器）。P2v2 只綁 `a76e9d08`，沿用需 Owner 裁定。報告：`review/c1c2-release-closure-20261125/Release_Readiness_93655403.md`。
 - 版本路線：v25（det.v1）保留為歷史版本；v26（det.v2）是後續主要候選；正式旗標全部維持 `false`，啟用需另行核准。
 - 下一步（需 Owner）：決定發布 SHA 與 P2v2 處置 → 正式發布核准 → Push／Deploy → 新 main 與正式站驗收。之後才排 TD-61（v21 Golden）、TD-TAC-65、真實裝置與低階裝置驗證。不自動開始新 Sprint。
+
+## 2026-11-26　C1＋C2 已發布：下一階段建議（待 Owner 決定，不自動開始）
+
+C1＋C2 已發布為正式 main `93655403`，並結案。決定性數學 v26 已經在正式 bundle 裡，但旗標關閉。建議順序：
+
+1. **真實裝置與低階裝置驗證**（短，不改產品）。目前只有桌機 Chrome 模擬的 390；Android、iOS Safari、低 RAM、CPU 4× 都沒有實測。這是之後任何「啟用」決策的前提。
+2. **v26 啟用評估 Sprint**（產品決策）。v26 會改變比賽結果，是新版規則集。要先處理：
+   - 新舊規則集並存與存檔版本（career 版本鍵）
+   - Golden 重錄
+   - 平衡統計：用新 seeds 紅藍複驗
+   - 四引擎在真實裝置上的抽驗
+   - 灰度或旗標策略
+   
+   產出啟用與否的建議，不直接開旗標。
+3. **TD-62 工具 Sprint**（發布流程）：`docs-carry` 收據、部署 `paths-ignore`、CI 改用 `npm ci`。可以和 1 並行，因為它不碰 `src/`。
+4. **玩法線**：v26 決定之後，再在 Sprint 2B（3～4 人編隊、護送、救援）和 v21 Tactical Director 重啟（需同時處理 TD-61）之間選一條。兩者都會疊在 v26 的決定性核心上，所以排在 2 之後。
+
+不建議現在直接開 Sprint 2B。原因：v26 是否啟用會改變所有玩法 Golden，先做玩法會讓 Golden 和平衡要重做兩次。

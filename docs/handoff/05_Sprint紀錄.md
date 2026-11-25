@@ -27287,3 +27287,23 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - **工具操作安全事件**：休眠前停止瀏覽器 Gate 時，以埠號查到的 PID 執行 `taskkill /T`，其中一筆 TIME_WAIT 的 PID 是 0，導致 Owner 的 Chrome 被關閉（`mem.log` 18:53→18:54 chrome 35→0）。驗證證據未受影響。規則寫入 `AGENTS.md` §12。
 - 報告與收據索引：`review/c1c2-release-closure-20261125/Release_Readiness_93655403.md`；原始證據 `C:\Users\ifikn\esmo-measure\c1c2-golden-v21a-flagsoff-20261125\final\`。
 - 狀態：停止，等待 Owner 正式發布核准。不啟動新 Sprint。
+
+## 2026-11-26　C1＋C2 正式發布與結案（Owner 正式接受）
+
+- **正式 main `93655403806340bbc1456623fb7834b92f331ce3`**：從 `053fd582` fast-forward，沒有 force push。發布前 10 張 Release Gate 收據全部綁 `93655403`，`assert` PASS；P2v2 在 `93655403` 重測 PASS，沒有採用收據例外。
+- **Pages Workflow 45650627711**：
+  - 第 1 次執行：build 成功；deploy 因 GitHub 服務異常回 500。正式站維持舊版，沒有半套發布。
+  - 第 2 次執行（Owner Re-run）：**success**，2026-11-25T18:25:58Z。
+- **正式站**：入口 `index-S6a2NE21.js` → `index-BMEGjo1f.js`（sha256 `c288d2da…1ae1582`），含 `moba-sim.v26`；七個 MOBA 正式旗標在 bundle 裡全部是 `!1`。11 個 JS 的合計雜湊是 `2616f64d…9b7a21`。
+- **Production Smoke（正式站，1366＋390）**：
+  - `browser_check_prod_release_3aB`：90/90，涵蓋 MOBA→結算（只入帳一次）、Replay、存檔重整、Training、Competition Hub、部署前的舊正式存檔（8 欄逐值相同，再打一場入帳 1→2）、page／console error 0。
+  - `browser_check_cs_major_formal_flow --url=<正式站>`：1366 與 390 各 63/63。
+  - 結論：沒有白畫面、沒有回歸、沒有存檔損壞，不需要回滾。
+- **版本**：v26（det.v2，指紋 `360474218ca774b9`）是後續主要候選；v25 保留為歷史版本；正式旗標全部 `false`。
+- 完整報告：`review/c1c2-release-closure-20261125/Production_Release_93655403.md`。原始證據在 repo 外 `C:\Users\ifikn\esmo-measure\c1c2-release-20261126\`。
+- **本輪文件收尾**：在 `a7321afe` 上追加一個文件 Commit（未 Push）。TD-62 純文件證據沿用方案：`review/c1c2-release-closure-20261125/TD-62_純文件Commit證據沿用方案.md`（只是提案，沒有改 Release Gate）。
+- **未完成或保留**：
+  - 真實裝置與低階裝置未驗證
+  - TD-61、TD-62（方案待 Owner 決定）、TD-TAC-65
+  - 本機文件 Commit 待 Owner 決定推送方式
+  - 沒有開始新的 Sprint
