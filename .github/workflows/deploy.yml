@@ -16,7 +16,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── 需不需要部署（Release Engineering S1，2026-11-26；本機驗證，尚無真實 CI 證據）──────────
+  #  只有「自最後一次『成功』部署以來全部是不進 bundle 的文件」才跳過；任何不確定都部署。
+  #  不用 paths-ignore：它看不到上一次部署失敗（產品版本會因後續的文件 push 而永遠不上線），
+  #  也會把 public/**/*.md、被 ?raw 匯入的 .md 誤當文件。規則與測試：tools/ci/deploy_decision.mjs、
+  #  tools/check_ci_deploy_decision.mjs。workflow_dispatch（手動部署）一律部署。
+  decide:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: read
+    outputs:
+      deploy: ${{ steps.decide.outputs.deploy }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Decide
+        id: decide
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        #  判斷腳本出錯也只會輸出 deploy=true；這一步本身失敗時下面的 build 用 != 'false' 判斷，照樣部署。
+        run: node tools/ci/deploy_decision.mjs --repo . --head "${{ github.sha }}" --event "${{ github.event_name }}" --last-deployed-from-api --github-output "$GITHUB_OUTPUT"
+
   build:
+    needs: decide
+    #  只有明確判定 deploy=false 才跳過；decide 失敗、取消或沒有輸出都照常 build＋部署
+    if: ${{ !cancelled() && needs.decide.outputs.deploy != 'false' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -29,8 +62,13 @@ jobs:
           node-version: 20
           cache: npm
 
+      #  2026-11-26：npm install → npm ci。npm ci 嚴格照 package-lock.json 安裝、不改 lockfile；
+      #  本機實測 npm ci 裝出的整棵樹與現有環境相同（202 條目、0 不符），build 出的 581 檔與正式站逐位元相同。
       - name: Install
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
+
+      - name: Verify installed tree matches lockfile
+        run: node tools/ci/check_installed_tree.mjs
 
       # ── Supabase 連線設定（Backend B1D.2）────────────────────────────────
       #  兩個變數放在 repo 的 **Variables**（不是 Secrets）。理由：
@@ -60,6 +98,10 @@ jobs:
           #    讓玩家在正式站用它建立整個生涯，是我們在幫他製造損失。
           #    （所以這裡不傳 VITE_SUPABASE_ALLOW_ANONYMOUS。）
         run: npm run build
+
+      #  印出整個 dist 的內容雜湊：部署後可與正式站逐檔比對（本機以 VITE_SUPABASE_* 空字串 build 可重現）
+      - name: Print dist hash
+        run: node --input-type=module -e "import { hashDir } from './tools/lib/releaseGate.mjs'; console.log('DIST_HASH', JSON.stringify(hashDir('dist')))"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

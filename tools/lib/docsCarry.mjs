@@ -58,7 +58,7 @@ export function rawDiff(repo, a, b) {
   return out;
 }
 /** ls-tree -r 全部條目（含 mode 與型別），回傳 [{ mode, type, oid, path }] */
-function lsTree(repo, sha) {
+export function lsTree(repo, sha) {
   const r = git(repo, ["ls-tree", "-r", "-l", "-z", "--full-tree", sha]);
   if (!r.ok) return null;
   return r.raw.split("\0").filter(Boolean).map((e) => { const t = e.indexOf("\t"); const [mode, type, oid, size] = e.slice(0, t).trim().split(/\s+/); return { mode, type, oid, size: size === "-" ? 0 : Number(size), path: e.slice(t + 1) }; });
