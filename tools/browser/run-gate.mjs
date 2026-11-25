@@ -29,6 +29,7 @@
 // ============================================================================
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { createProcessRegistry } from "../lib/safeProcess.mjs";
 
 const DEFAULT_TIMEOUT_MS = 600_000; // 10 分鐘：比目前最重的 gate（C5C 三張圖）留寬裕
 
@@ -48,35 +49,7 @@ function parseArgs(argv) {
   return { gatePath, timeoutMs, passthrough };
 }
 
-/** PID 現在還在不在——不猜殺手行程的 exit code 意義，直接探測目標本身。 */
-function pidAlive(pid) {
-  try { process.kill(pid, 0); return true; }
-  catch { return false; }
-}
-
-async function killTreeBounded(pid, timeoutMs) {
-  if (pid == null) return { confirmed: true, timedOut: false };
-  if (process.platform !== "win32") {
-    try { process.kill(-pid, "SIGKILL"); return { confirmed: !pidAlive(pid), timedOut: false }; }
-    catch (e) { return { confirmed: !pidAlive(pid), timedOut: false, error: String(e?.message ?? e) }; }
-  }
-  return await new Promise((res) => {
-    const killer = spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
-    killer.unref(); // 這個幫手行程不該讓 supervisor 自己也拖著不退出
-    const timer = setTimeout(() => {
-      try { killer.kill(); } catch { /* 放棄，回報未確認 */ }
-      res({ confirmed: !pidAlive(pid), timedOut: true });
-    }, timeoutMs);
-    killer.once("exit", () => {
-      clearTimeout(timer);
-      res({ confirmed: !pidAlive(pid), timedOut: false });
-    });
-    killer.once("error", () => {
-      clearTimeout(timer);
-      res({ confirmed: !pidAlive(pid), timedOut: false });
-    });
-  });
-}
+//  （2026-11-26：原本的 killTreeBounded（`taskkill /pid <pid> /T /F`，沒有身分確認）已由 tools/lib/safeProcess.mjs 取代。）
 
 async function main() {
   const { gatePath, timeoutMs, passthrough } = parseArgs(process.argv);
@@ -93,13 +66,20 @@ async function main() {
   const child = spawn(process.execPath, [abs, ...passthrough], {
     stdio: "inherit", windowsHide: true,
   });
+  //  ⚠ 2026-11-26 起：逾時終止只透過 safeProcess 登記簿（PID＋OS 啟動時間＋命令列，終止前重驗身分；
+  //    PID ≤ 4、未登記、PID 被重用一律拒絕；後代逐一確認、不用 taskkill /T）。登記失敗就不做任何盲目終止。
+  let registry = null, registered = null;
+  try {
+    registry = createProcessRegistry({ taskId: `run-gate-${process.pid}-${startedAt}`, workspace: process.cwd() });
+    registered = registry.register(child, { label: `run-gate ${gatePath}` });
+  } catch (e) { console.log(`⚠ supervisor：子行程登記失敗（${e.code || e.message}），逾時時不會自動終止`); }
 
   let timedOut = false;
   const timer = setTimeout(async () => {
     timedOut = true;
     console.log(`\n❌ HARNESS_FAIL｜supervisor 總時限逾時（${timeoutMs}ms），強制終止子行程樹（pid=${child.pid}）`);
-    const r = await killTreeBounded(child.pid, 8_000);
-    console.log(`   kill 結果：${JSON.stringify(r)}`);
+    const r = registered ? await registry.terminate(registered, { graceMs: 2_000, reason: "supervisor timeout" }) : { result: "refused", code: "not_registered" };
+    console.log(`   終止結果：${JSON.stringify({ result: r.result, code: r.code, killed: r.killed })}（紀錄：${registry?.file ?? "無"}）`);
   }, timeoutMs);
 
   const exitCode = await new Promise((res) => {

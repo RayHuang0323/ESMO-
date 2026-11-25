@@ -30,6 +30,7 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { verifyCarry, CARRY_GATE, CARRY_SCHEMA } from "./docsCarry.mjs";
+import { createProcessRegistry, defaultRegistryDir as defaultProcessDir } from "./safeProcess.mjs";
 
 export const RELEASE_GATE_VERSION = "1.0.0";
 export const RECEIPT_SCHEMA = "esmo.release-gate.receipt/1";
@@ -396,15 +397,34 @@ export function assertReceipts(opts) {
 }
 
 // ── 執行被包住的指令 ─────────────────────────────────────────────────────
-export function runCommand(cmd, { cwd, env, timeoutMs, echo = true }) {
+/**
+ * 執行一個被包住的指令。逾時終止只透過 safeProcess 登記簿：登記時記 PID＋OS 啟動時間＋命令列，
+ * 終止前重驗身分（PID ≤ 4、未登記、PID 被重用一律拒絕），後代逐一確認、不用 `taskkill /T`。
+ * （2026-11-26 前是 `taskkill /pid <child.pid> /T /F`，沒有任何身分確認。）
+ */
+export function runCommand(cmd, { cwd, env, timeoutMs, echo = true, registry = null }) {
   return new Promise((resolve) => {
-    const started = Date.now(); let tail = ""; let timedOut = false; let spawnError = null;
+    const started = Date.now(); let tail = ""; let timedOut = false; let spawnError = null; let kill = null;
     const child = spawn(cmd, { cwd, env, shell: true, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    let reg = registry, entry = null;
+    try { reg = reg || createProcessRegistry({ taskId: `release-gate-${process.pid}-${started}`, dir: defaultProcessDir(cwd), workspace: cwd }); if (child.pid) entry = reg.register(child, { label: cmd.slice(0, 200) }); }
+    catch (e) { kill = { result: "not_registered", detail: String(e.code || e.message) }; }
     const feed = (d) => { const s = d.toString(); tail = (tail + s).slice(-4000); if (echo) process.stdout.write(s); };
     child.stdout.on("data", feed); child.stderr.on("data", feed);
-    const timer = setTimeout(() => { timedOut = true; if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { timeout: 15000 }); else child.kill("SIGKILL"); }, timeoutMs);
+    let done = false;
+    const finish = (code, sig) => { if (done) return; done = true; clearTimeout(timer); resolve({ cmd, exitCode: timedOut ? null : code, signal: sig || null, timedOut, spawnError, durationMs: Date.now() - started, tail: tail.split(/\r?\n/).slice(-12).join("\n"), ...(kill ? { kill } : {}) }); };
+    let killing = null;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killing = (async () => {
+        if (entry) { const r = await reg.terminate(entry, { graceMs: 3000, reason: "release gate command timeout" }); kill = { result: r.result, code: r.code, killed: r.killed?.length ?? 0, log: reg.file }; }
+        else { try { child.kill(); } catch { /* 已結束 */ } kill = { ...(kill || {}), fallback: "ChildProcess.kill（只結束自己持有控制代碼的直接子行程）" }; }
+      })();
+      // 孫行程若還握著 stdio，close 不會來：最多再等 10 秒就結束等待（結果已是逾時＝BLOCKED）
+      killing.finally(() => setTimeout(() => { try { child.stdout.destroy(); child.stderr.destroy(); } catch { /* 盡力 */ } finish(null, null); }, 10000).unref());
+    }, timeoutMs);
     child.on("error", (e) => { spawnError = String(e.message || e); });
-    child.on("close", (code, sig) => { clearTimeout(timer); resolve({ cmd, exitCode: timedOut ? null : code, signal: sig || null, timedOut, spawnError, durationMs: Date.now() - started, tail: tail.split(/\r?\n/).slice(-12).join("\n") }); });
+    child.on("close", (code, sig) => { if (killing) killing.finally(() => finish(code, sig)); else finish(code, sig); });
   });
 }
 /** 指令結果 → 狀態。0=過；2（既有慣例：HARNESS_FAIL／未跑完）、逾時、起不來 = BLOCKED；其他非 0 = FAIL。 */

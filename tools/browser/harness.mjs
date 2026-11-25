@@ -158,6 +158,8 @@ function pidAlive(pid) {
  */
 async function killProcessTree(pid, { timeoutMs = DEFAULT_TIMEOUTS.killConfirmMs } = {}) {
   if (pid == null) return { confirmed: true, timedOut: false, error: null };
+  //  2026-11-26（AGENTS.md §12）：PID 0／系統 PID 交給 taskkill /T 會掃過整台機器，一律拒絕
+  if (!Number.isInteger(pid) || pid <= 4 || pid === process.pid) return { confirmed: false, timedOut: false, error: `拒絕終止不安全的 PID ${pid}` };
   if (!pidAlive(pid)) return { confirmed: true, timedOut: false, error: null };
   try {
     if (process.platform === "win32") {

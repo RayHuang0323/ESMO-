@@ -91,8 +91,10 @@ async function stopProcess(proc) {
   try { proc.kill(); } catch {}
   if (await waitForExit(proc)) return;
   try {
+    //  2026-11-26（AGENTS.md §12）：PID 0／系統 PID 交給 taskkill /T 會掃過整台機器，一律拒絕
+    if (!Number.isInteger(proc.pid) || proc.pid <= 4 || proc.pid === process.pid) return;
     if (process.platform === "win32") {
-      spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
+      spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore", timeout: 15000 });
     } else {
       proc.kill("SIGKILL");
     }
