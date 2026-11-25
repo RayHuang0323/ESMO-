@@ -44,3 +44,10 @@
 | `check_cs_loading_v2_sim_equivalence` | 預設 `--ref origin/main` | 模擬對照變成自己比自己；要比對就明確傳 `--ref` |
 
 `record_verify_baseline_3aB` 合併後不得重錄基準；基準已存在時工具會拒絕，B2 也會擋。
+
+## 2026-11-25 更新：`check_match_golden_v21a` 40 案
+
+- Owner 核准選項 2（版本化預期變化）。上表第 11 行保留作為歷史，不刪。
+- 旗標關閉時，這 40 案改由 V 段與 `tools/fixtures/match_golden_v21a_flagsoff_v20.json` 四欄全比（main `053fd582` 基準＋三項獨立證據；內容雜湊釘死），`Match Golden v21-A：146/146 PASS`。
+- **v21 開啟時仍照本表原處置**：v21 重啟時改到 `career.v21` 路徑重錄，要 Owner 核准；在那之前 v21 開啟的結果沒有被驗證（TD-61）。
+- 說明：`review/c1c2-release-closure-20261125/Golden_v21a_版本化處置.md`。

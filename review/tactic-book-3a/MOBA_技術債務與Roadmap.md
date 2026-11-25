@@ -730,3 +730,7 @@ Owner 2026-11-20 核准「v24 Calibration Sprint — 真實戰鬥入侵校準」
 - **TD-TAC-65**：繼續只監看，不改 v18 地形。整合候選上 `check_c2_geometry`（det.v2／native）的地形分歧與 C2 紀錄逐項相同（最大差 1.7e-10）。
 - **TD-TAC-66**：已由整合驗證的 P1（事前登記 `review/c1c2-integration-20261124/事前登記_效能與情境污染.md`）實測，v24 舊路徑 +1.66%、v20 +2.55%，符合 ≤10% 門檻。Closure 最終候選另按發布規範重跑 P1。
 - 詳見 `docs/handoff/05_Sprint紀錄.md` 的 Closure 節與 `review/c1c2-release-closure-20261125/`。
+
+## 2026-11-25　v21-A Golden 版本化（Owner 核准選項 2）
+
+- 旗標關閉時 40 個 binding 案改用 main `053fd582` 基準的版本化預期（`check_match_golden_v21a` V 段，146/146）。v21 開啟時仍未驗證（TD-61）。

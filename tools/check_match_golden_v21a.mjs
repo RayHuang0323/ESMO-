@@ -21,6 +21,10 @@
 //       釘住 12 個 Challenge 案的 simulationVersion／challengeId／draft.hash 舊值、新值與新舊 resultHash。那 12 案：digest／streamHash／
 //       configure 序列／params 仍要與 fixture 逐位元相同；結果的三欄必須＝新值、resultHash＝新值、三欄換回舊值後的雜湊＝原 fixture；
 //       表外的案照舊逐欄比對。原始 fixture 不重錄。反向測試：竄改表的新值／舊值、結果多差一欄、表多列一個沒變的案 ⇒ 都抓得到。
+//   V   旗標關閉的版本化預期（Owner 2026-11-25 核准選項 2）：3a-B 已登記的 40 個 binding 案，只在 mobaTacticalDirectorV21===false 且
+//       live 解析出 career.v20 時，改與 tools/fixtures/match_golden_v21a_flagsoff_v20.json（main 053fd582 基準，內容雜湊釘死）四欄全比；
+//       預期值必須通過三項獨立證據（3a-B 79cc4276 的旗標關閉 digest、fixture 的 std 紀錄、同 seed 所有變體全同）。其他旗標狀態一律原 fixture。
+//       反向測試：旗標錯誤、未知案例、真正結果差異、未登記變更、白名單式假表、fixture 副本被改 ⇒ 都抓得到。v21 啟用驗證不在本段範圍。
 //   I   資訊（不計入通過數）：F4i 提供清單差異、simVersion／指紋與 fixture 的差異。C2 改到語意檔時指紋會變，那不是這支 gate 要判的事（版本 gate 另有）。
 // ============================================================================
 import fs from "node:fs";
@@ -31,6 +35,10 @@ const progress = (s) => process.stderr.write(`  ${s}\n`);
 
 const L = await import("./lib/matchGoldenV21a.mjs");
 const { MOBA_SIMULATION_VERSION, SIMULATION_SEMANTICS_FINGERPRINTS } = await import("../src/platform/contracts/simulationVersion.js");
+const { FEATURE_FLAGS } = await import("../src/featureFlags.js");
+const { resolveRulesetForMode } = await import("../src/platform/contracts/matchRuleset.js");
+const { LIVE_RULESET_MODE } = await import("../src/battle/moba/liveMatchSetup.js");
+const { createHash } = await import("node:crypto");
 
 ck("P0 runner 載入的引擎類別＝src/LogicEngine.js 的同一個類別（探針三條路徑量到同一棵樹）", L.PROBE_SHARES_RUNNER_ENGINE);
 
@@ -126,6 +134,74 @@ function correctionProblems(entry, fxCase, rec) {
   return out;
 }
 
+// ── V：旗標關閉的版本化預期（Owner 2026-11-25 核准選項 2；3a-B 已登記的 40 個 binding 案）──────────────
+//  v21 fixture 是 v21 旗標開啟時錄的（0e3c0224）。正式站旗標關閉時 live 解析出 career.v20，binding 不生效 ⇒ 這 40 案改與
+//  tools/fixtures/match_golden_v21a_flagsoff_v20.json 的預期值逐欄比對（digest／streamHash／resultHash／configure 序列）。
+//  預期值在 main 053fd582（已發布、C1／C2 之前）上由 tools/capture_golden_v21a_flagsoff.mjs 產生，並且必須通過三項獨立證據：
+//  3a-B 逐案分類（79cc4276）的旗標關閉 digest、fixture 自己錄的 std 紀錄（同 seed 四項全同）、同 seed 所有變體四項全同。
+//  只在「旗標確實為 false 且 live 確實解析出 career.v20」時套用；其他狀態（包括旗標開啟、旗標缺漏）一律回到原 fixture 比對＝原契約。
+//  ⚠ 這不是 v21 啟用驗證：v21 開啟時的契約仍是原 fixture，本次執行沒有在旗標開啟下重跑。
+//  ⚠ 重錄＝刻意行為：必須看得見地改 PINNED_FLAGSOFF_TABLE_SHA256。原 fixture、指紋、PINNED_* 與 K 段都不動。
+const PINNED_FLAGSOFF_TABLE_SHA256 = "d79fde83c85f9ebc73a75c58b0af1c81cdd1443ca6fc5ba7fe1af8ec813d072e";
+const PINNED_FLAGSOFF_BASELINE = "053fd5823522aad2cb07a4c91609020475e31a26";
+const FLAGSOFF_PATH = new URL("./fixtures/match_golden_v21a_flagsoff_v20.json", import.meta.url);
+const CLASSIFICATION = JSON.parse(fs.readFileSync(new URL("../review/tactic-book-3a/3a-B_整合_golden_v21a分類.json", import.meta.url), "utf8"));
+const FLAGSOFF_TEXT = fs.readFileSync(FLAGSOFF_PATH, "utf8");
+const FLAGSOFF = JSON.parse(FLAGSOFF_TEXT);
+const callsHashOf = (calls) => createHash("sha256").update(JSON.stringify((calls ?? []).map(({ m, h }) => ({ m, h })))).digest("hex").slice(0, 16);
+const tupleOf = (r) => ({ digest: r.digest, streamHash: r.streamHash, resultHash: r.resultHash, callsHash: callsHashOf(r.calls) });
+/** 旗標狀態 ⇒ 是否套用旗標關閉的預期。缺漏或任何非 false 的值都不套用（fail closed）。 */
+const flagsOffApplies = (flags) => flags?.mobaTacticalDirectorV21 === false && resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags }).rulesetId === "career.v20";
+/** 表的結構與出處 ⇒ 問題清單。 */
+function vStructureProblems(t, fx, cls) {
+  const out = [];
+  if (t.schema !== "esmo.golden-versioned-expectation.v1") out.push("schema");
+  if (t.fixture?.gitHead !== fx.gitHead || t.fixture?.fingerprint !== fx.fingerprint) out.push("table does not point at this fixture");
+  if (t.condition?.flag !== "mobaTacticalDirectorV21" || t.condition?.flagValue !== false || t.condition?.liveRuleset !== "career.v20") out.push("condition");
+  if (t.baseline?.gitHead !== PINNED_FLAGSOFF_BASELINE) out.push(`baseline ${t.baseline?.gitHead} != pinned ${PINNED_FLAGSOFF_BASELINE}`);
+  const ids = (t.cases ?? []).map((c) => c.id), clsIds = cls.rows.map((r) => r.id);
+  if (ids.length !== 40 || new Set(ids).size !== 40) out.push(`case count ${ids.length}`);
+  if (JSON.stringify([...ids].sort()) !== JSON.stringify([...clsIds].sort())) out.push("case ids != the 40 ids registered in 3a-B");
+  const byId = new Map(fx.cases.map((c) => [c.id, c]));
+  for (const c of t.cases ?? []) {
+    const f = byId.get(c.id);
+    if (!f) { out.push(`${c.id}: not a fixture case`); continue; }
+    if (!["binding-template", "binding-choice"].includes(f.group) || f.path !== "live" || f.seed !== c.seed) out.push(`${c.id}: not a live binding case of seed ${c.seed}`);
+    if (JSON.stringify(c.fixture) !== JSON.stringify(tupleOf(f))) out.push(`${c.id}: table's copy of the fixture record differs from the fixture`);
+  }
+  return out;
+}
+/** 表的預期值 × 三項獨立證據 ⇒ 問題清單。 */
+function vEvidenceProblems(t, fx, cls) {
+  const out = [], seedKey = new Map(), byId = new Map(fx.cases.map((c) => [c.id, c]));
+  for (const c of t.cases ?? []) {
+    const e = c.expected ?? {}, key = JSON.stringify(tupleOf(e));
+    const row = cls.rows.find((r) => r.id === c.id);
+    if (!row || row.nowDigest !== e.digest) out.push(`${c.id}: expected digest ${e.digest} != 3a-B flags-off digest ${row?.nowDigest}`);
+    if (!seedKey.has(c.seed)) seedKey.set(c.seed, key); else if (seedKey.get(c.seed) !== key) out.push(`${c.id}: differs from another variant of seed ${c.seed}`);
+    const std = byId.get(`bind-template:std:s${c.seed}`);
+    if (std && JSON.stringify(tupleOf(std)) !== key) out.push(`${c.id}: != fixture std:s${c.seed}`);
+  }
+  return out;
+}
+/** 一案的實際結果 × 表的預期 ⇒ 問題清單（四欄全比）。 */
+function vCaseProblems(entry, rec) {
+  if (!rec) return ["not run"];
+  const e = entry.expected, out = [];
+  for (const k of ["digest", "streamHash", "resultHash"]) if (rec[k] !== e[k]) out.push(`${k} ${rec[k]} != expected ${e[k]}`);
+  if (JSON.stringify(rec.calls.map(({ m, h }) => ({ m, h }))) !== JSON.stringify(e.calls)) out.push("configure calls != expected");
+  return out;
+}
+const VAPPLY = flagsOffApplies(FEATURE_FLAGS);
+const vById = new Map(FLAGSOFF.cases.map((c) => [c.id, c]));
+const tableSha = createHash("sha256").update(FLAGSOFF_TEXT).digest("hex");
+ck("V0 旗標關閉預期表：schema、指向這份 fixture、條件＝mobaTacticalDirectorV21 false／career.v20、基準＝main 053fd582、恰好 40 案＝3a-B 登記的 40 個 id、每案是 live binding 案且表內的 fixture 副本＝fixture",
+  vStructureProblems(FLAGSOFF, fixture, CLASSIFICATION).length === 0, vStructureProblems(FLAGSOFF, fixture, CLASSIFICATION).slice(0, 3).join(" | "));
+ck("V1 預期表內容雜湊＝本檔釘死的 PINNED_FLAGSOFF_TABLE_SHA256（任何改動都要看得見地改常數）", tableSha === PINNED_FLAGSOFF_TABLE_SHA256, tableSha);
+ck("V2 預期值的三項獨立證據：40 案 digest＝3a-B 旗標關閉紀錄（79cc4276）、同 seed 所有變體四項全同、有 std 紀錄的 seed 四項＝fixture std 紀錄",
+  vEvidenceProblems(FLAGSOFF, fixture, CLASSIFICATION).length === 0, vEvidenceProblems(FLAGSOFF, fixture, CLASSIFICATION).slice(0, 3).join(" | "));
+console.log(`ℹ V 狀態：mobaTacticalDirectorV21=${FEATURE_FLAGS.mobaTacticalDirectorV21}、live 規則集=${resolveRulesetForMode({ mode: LIVE_RULESET_MODE, flags: FEATURE_FLAGS }).rulesetId} ⇒ ${VAPPLY ? "40 案依旗標關閉預期比對" : "旗標不是關閉狀態：40 案依原 fixture 比對（原契約）"}。v21 啟用驗證：本次未執行。`);
+
 // ── C：逐案重跑 ─────────────────────────────────────────────────────────────
 const observed = [];
 const failedRun = new Map();
@@ -136,7 +212,19 @@ for (const [n, spec] of cases.entries()) {
 }
 //  修正表內的案：resultHash 的差異改由 correctionProblems 嚴格判定（其他欄位照 compareToFixture）。
 const corrResults = new Map();
-const observedForCmp = observed.map((o) => {
+//  V 段：旗標關閉時，表上的 40 案改與表的預期值四欄全比；全部成立才視同 fixture（交給 compareToFixture 的只剩 params／bindingHash 等輸入欄位），
+//  任何一欄不同就保留原樣 ⇒ compareToFixture 照常報出、V 結果也報出。旗標不是關閉狀態 ⇒ 完全不碰（原契約）。
+const vResults = new Map();
+const vSubstitute = (applies, o) => {
+  const entry = applies ? vById.get(o.id) : null;
+  if (!entry) return o;
+  const p = vCaseProblems(entry, o);
+  vResults.set(o.id, p);
+  const f = fxById.get(o.id);
+  return p.length === 0 ? { ...o, digest: f.digest, streamHash: f.streamHash, resultHash: f.resultHash, calls: f.calls } : o;
+};
+const observedForCmp = observed.map((o0) => {
+  const o = vSubstitute(VAPPLY, o0);
   const e = corrById.get(o.id);
   if (!e) return o;
   corrResults.set(o.id, correctionProblems(e, fxById.get(o.id), o));
@@ -149,7 +237,49 @@ for (const c of fixture.cases) {
   const mine = cmp.problems.filter((p) => p.startsWith(`${c.id}:`));
   const run = failedRun.get(c.id);
   const cp = corrResults.get(c.id) ?? [];
-  ck(`C ${c.id}　digest＋streamHash＋resultHash＋configure 序列＝fixture${corrById.has(c.id) ? "（resultHash 依版本事實修正表：只差三個身分欄位）" : ""}`, mine.length === 0 && cp.length === 0 && !run, run ?? [...mine, ...cp].join("; "));
+  const vp = vResults.get(c.id) ?? [];
+  const vNote = VAPPLY && vById.has(c.id) ? "（旗標關閉：依版本化預期＝v20 標準運營，main 053fd582 基準＋三項獨立證據）" : "";
+  ck(`C ${c.id}　digest＋streamHash＋resultHash＋configure 序列＝fixture${corrById.has(c.id) ? "（resultHash 依版本事實修正表：只差三個身分欄位）" : ""}${vNote}`, mine.length === 0 && cp.length === 0 && vp.length === 0 && !run, run ?? [...mine, ...cp, ...vp].join("; "));
+}
+ck(`V3 ${VAPPLY ? "旗標關閉：表上 40 案的實際結果全部＝版本化預期（四欄）" : "旗標不是關閉狀態：表未套用，40 案依原 fixture 比對"}`,
+  VAPPLY ? FLAGSOFF.cases.every((e) => (vResults.get(e.id) ?? ["not run"]).length === 0) : vResults.size === 0,
+  VAPPLY ? FLAGSOFF.cases.filter((e) => (vResults.get(e.id) ?? ["x"]).length).map((e) => e.id).join(" ") : "");
+// ── V：反向測試（用真的重跑結果）────────────────────────────────────────────
+{
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const recOf = (id) => observed.find((o) => o.id === id);
+  const v0 = FLAGSOFF.cases[0], rec0 = recOf(v0.id);
+  //  ① 旗標錯誤：V21 開啟、旗標缺漏、旗標是字串 "false" ⇒ 不套用；V21 開啟時用真的結果走原契約 ⇒ 40 案會被報出
+  const onApplies = flagsOffApplies({ ...FEATURE_FLAGS, mobaTacticalDirectorV21: true });
+  const missing = { ...FEATURE_FLAGS }; delete missing.mobaTacticalDirectorV21;
+  const cmpOn = L.compareToFixture(fixture, observed.map((o) => vSubstitute(false, o)));
+  const flaggedOn = FLAGSOFF.cases.filter((e) => cmpOn.problems.some((p) => p.startsWith(`${e.id}:`))).length;
+  ck("VN1 反向：旗標錯誤（V21 開、旗標缺漏、字串 \"false\"）⇒ 不套用；V21 開時以原 fixture 比對，40 案全部被擋",
+    !onApplies && !flagsOffApplies(missing) && !flagsOffApplies({ ...FEATURE_FLAGS, mobaTacticalDirectorV21: "false" }) && flaggedOn === 40, `擋下 ${flaggedOn}/40`);
+  //  ② 未知案例：表外的案結果不同 ⇒ 照樣報出；表多列一個未登記的案 ⇒ 結構不成立
+  const outsider = fixture.cases.find((c) => c.group === "v20" && c.path === "live");
+  const tamperedOutsider = observed.map((o) => (o.id === outsider.id ? { ...o, digest: "0.0:x:0:0:0:0" } : o)).map((o) => vSubstitute(true, o));
+  const planted = clone(FLAGSOFF); planted.cases.push({ ...clone(v0), id: outsider.id, seed: outsider.seed });
+  ck("VN2 反向：未知案例——表外案結果不同仍被報出；表多列一個未登記案 ⇒ V0 不成立",
+    L.compareToFixture(fixture, tamperedOutsider).problems.some((p) => p.startsWith(`${outsider.id}:`)) && vStructureProblems(planted, fixture, CLASSIFICATION).length > 0);
+  //  ③ 真正結果差異：表上的案實際 streamHash／resultHash／configure 序列任何一項不同 ⇒ 抓到
+  const r1 = { ...rec0, streamHash: rec0.streamHash === "00000000" ? "00000001" : "00000000" };
+  const r2 = { ...rec0, resultHash: "deadbeef" };
+  const r3 = { ...rec0, calls: rec0.calls.map((c, i) => (i === 0 ? { ...c, h: "ffffffff" } : c)) };
+  ck("VN3 反向：表上案的實際結果真的不同（streamHash／resultHash／configure 序列）⇒ 抓到",
+    !!rec0 && vCaseProblems(v0, r1).some((x) => x.startsWith("streamHash")) && vCaseProblems(v0, r2).some((x) => x.startsWith("resultHash")) && vCaseProblems(v0, r3).includes("configure calls != expected"));
+  //  ④ 未登記變更：改表的預期值（不論 digest 或只改 streamHash）⇒ 獨立證據不成立；改了任何位元組 ⇒ 內容雜湊不符
+  const badDigest = clone(FLAGSOFF); badDigest.cases[0].expected.digest = rec0?.digest === "1.0:x:0:0:0:0" ? "2.0:x:0:0:0:0" : "1.0:x:0:0:0:0";
+  const badStream = clone(FLAGSOFF); badStream.cases[0].expected.streamHash = "0badf00d";
+  const editedText = JSON.stringify(badStream, null, 1) + "\n";
+  ck("VN4 反向：未登記變更——改預期 digest ⇒ 與 3a-B 紀錄不符；只改 streamHash ⇒ 同 seed／std 證據不符；改任何位元組 ⇒ 內容雜湊≠釘死值",
+    vEvidenceProblems(badDigest, fixture, CLASSIFICATION).some((x) => x.includes("3a-B")) && vEvidenceProblems(badStream, fixture, CLASSIFICATION).length > 0
+    && createHash("sha256").update(editedText).digest("hex") !== PINNED_FLAGSOFF_TABLE_SHA256);
+  //  ⑤ 不是只靠 id 白名單：把預期改成「剛好等於這次跑出來的值」的假表（白名單式），若與證據不符一樣不成立；表內 fixture 副本被改 ⇒ V0 不成立
+  const whitelist = clone(FLAGSOFF); whitelist.cases = whitelist.cases.map((c) => ({ ...c, expected: { ...c.expected, digest: fixture.cases.find((f) => f.id === c.id).digest } }));
+  const badCopy = clone(FLAGSOFF); badCopy.cases[0].fixture.digest = "9.9:x:0:0:0:0";
+  ck("VN5 反向：不是 id 白名單——把預期改成任意值（例：原 fixture 的 v21 值）⇒ 證據不成立；表內 fixture 副本被改 ⇒ V0 不成立",
+    vEvidenceProblems(whitelist, fixture, CLASSIFICATION).length >= 40 && vStructureProblems(badCopy, fixture, CLASSIFICATION).some((x) => x.includes("copy of the fixture")));
 }
 ck("K1 修正表的 12 案全部成立（三欄＝新值、resultHash＝新值、換回舊值＝原 fixture）", CORR.cases.every((e) => (corrResults.get(e.id) ?? ["not run"]).length === 0),
   CORR.cases.filter((e) => (corrResults.get(e.id) ?? ["x"]).length).map((e) => e.id).join(" "));

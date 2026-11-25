@@ -1,0 +1,2315 @@
+{
+ "schema": "esmo.golden-versioned-expectation.v1",
+ "approval": "Owner 2026-11-25: option 2 (versioned expected change) for the 40 binding cases registered in 3a-B; v21 fixture, fingerprint and all historical receipts are kept",
+ "fixture": {
+  "path": "tools/fixtures/match_golden_v21a.json",
+  "gitHead": "0e3c022426f8869f88668c73997a7dca719b4b08",
+  "fingerprint": "29140fe0cb5a4c86"
+ },
+ "condition": {
+  "flag": "mobaTacticalDirectorV21",
+  "flagValue": false,
+  "liveRuleset": "career.v20",
+  "note": "applies only when the live mode resolves to career.v20; any other state compares to the original fixture"
+ },
+ "baseline": {
+  "gitHead": "053fd5823522aad2cb07a4c91609020475e31a26",
+  "simVersion": "moba-sim.v24",
+  "fingerprint": "9727c0b4ae8beb3d",
+  "how": "recordOf() of main's own tools/lib/matchGoldenV21a.mjs on a clean main worktree"
+ },
+ "evidence": {
+  "classification": {
+   "path": "review/tactic-book-3a/3a-B_整合_golden_v21a分類.json",
+   "commit": "79cc4276",
+   "recordedOn": "2026-11-04",
+   "field": "nowDigest"
+  },
+  "stdRecords": [
+   "bind-template:std:s29",
+   "bind-template:std:s11"
+  ]
+ },
+ "cases": [
+  {
+   "id": "bind-template:v2.three_lane_pressure:s19",
+   "seed": 19,
+   "fixture": {
+    "digest": "1222.5:blue:33:4:42740:28328",
+    "streamHash": "20545148",
+    "resultHash": "1d77b52d",
+    "callsHash": "169d4465de38324a"
+   },
+   "expected": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "61e90d5b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "302da23c"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "259e27f1"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "3e54ba9d"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "42b31c62"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "813fc0a5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.three_lane_pressure:s3",
+   "seed": 3,
+   "fixture": {
+    "digest": "1340.5:red:11:20:33452:39444",
+    "streamHash": "2dc7af62",
+    "resultHash": "cd068089",
+    "callsHash": "c21c1cbaa5d771fd"
+   },
+   "expected": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "e7714c36"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "078eefa9"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "0dda27f0"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "e3181f0f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6c029174"
+     },
+     {
+      "m": "configureSpells",
+      "h": "0e8935b6"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "3490f175"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.jungle_invasion:s23",
+   "seed": 23,
+   "fixture": {
+    "digest": "1355.0:blue:21:17:38744:35919",
+    "streamHash": "ecdb59fd",
+    "resultHash": "d304585f",
+    "callsHash": "9f9b84f771ade4e1"
+   },
+   "expected": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "c549694b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "02d53eda"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "5ded1ce2"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd74e92a"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "417be8e8"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60cf50be"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.jungle_invasion:s7",
+   "seed": 7,
+   "fixture": {
+    "digest": "985.0:blue:9:5:27849:24880",
+    "streamHash": "2483897e",
+    "resultHash": "6c4536aa",
+    "callsHash": "9358217cb92fb387"
+   },
+   "expected": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "7a73c029"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "f99bb118"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "b69fb8d7"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd5f4f9f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6a908872"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "baf736c3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.bot_duo_pressure:s29",
+   "seed": 29,
+   "fixture": {
+    "digest": "932.0:red:2:15:22069:30123",
+    "streamHash": "e99175d",
+    "resultHash": "f864affc",
+    "callsHash": "4f0fe0f6c8aa04d3"
+   },
+   "expected": {
+    "digest": "1048.0:red:6:19:25065:33497",
+    "streamHash": "1dc1ee0",
+    "resultHash": "72a42e84",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "057fb703"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "7f02717f"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "58d27fc6"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "0f7d84f4"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e054a660"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "dc42284c"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.bot_duo_pressure:s11",
+   "seed": 11,
+   "fixture": {
+    "digest": "863.5:red:3:9:21587:26601",
+    "streamHash": "758a97d3",
+    "resultHash": "3ec71c83",
+    "callsHash": "45036b5c8272bf8b"
+   },
+   "expected": {
+    "digest": "1578.5:red:22:31:42832:48321",
+    "streamHash": "898af023",
+    "resultHash": "1909a64a",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "69ef5eb0"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "b9e82781"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "7a77510d"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "7662404c"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e11475c1"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60ddbca1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.mid_jungle_sync:s3",
+   "seed": 3,
+   "fixture": {
+    "digest": "1293.0:red:14:17:34703:37270",
+    "streamHash": "cf3d5b42",
+    "resultHash": "02ff29f6",
+    "callsHash": "7e7d037d29374675"
+   },
+   "expected": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "e7714c36"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "078eefa9"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "0dda27f0"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "e3181f0f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6c029174"
+     },
+     {
+      "m": "configureSpells",
+      "h": "0e8935b6"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "3490f175"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.mid_jungle_sync:s19",
+   "seed": 19,
+   "fixture": {
+    "digest": "904.5:red:3:4:21802:24430",
+    "streamHash": "e1780b9c",
+    "resultHash": "9203ea11",
+    "callsHash": "5ef44e07b5aaf7e0"
+   },
+   "expected": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "61e90d5b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "302da23c"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "259e27f1"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "3e54ba9d"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "42b31c62"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "813fc0a5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.support_roamer:s7",
+   "seed": 7,
+   "fixture": {
+    "digest": "910.0:red:5:7:22490:26186",
+    "streamHash": "4da79efd",
+    "resultHash": "c17676bc",
+    "callsHash": "d8a02c2e9294058f"
+   },
+   "expected": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "7a73c029"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "f99bb118"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "b69fb8d7"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd5f4f9f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6a908872"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "baf736c3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.support_roamer:s23",
+   "seed": 23,
+   "fixture": {
+    "digest": "1003.0:blue:7:7:27984:25616",
+    "streamHash": "3354a75",
+    "resultHash": "0ccf9983",
+    "callsHash": "a08245b07f983f55"
+   },
+   "expected": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "c549694b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "02d53eda"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "5ded1ce2"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd74e92a"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "417be8e8"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60cf50be"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.dragon_pit_macro:s11",
+   "seed": 11,
+   "fixture": {
+    "digest": "1409.5:blue:28:14:44108:37260",
+    "streamHash": "eafd66cc",
+    "resultHash": "9e4b03f2",
+    "callsHash": "10afe290b1087a28"
+   },
+   "expected": {
+    "digest": "1578.5:red:22:31:42832:48321",
+    "streamHash": "898af023",
+    "resultHash": "1909a64a",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "69ef5eb0"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "b9e82781"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "7a77510d"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "7662404c"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e11475c1"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60ddbca1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.dragon_pit_macro:s29",
+   "seed": 29,
+   "fixture": {
+    "digest": "876.0:red:3:8:20204:26255",
+    "streamHash": "4c957f9a",
+    "resultHash": "fd923a0a",
+    "callsHash": "9526ba790f74bda2"
+   },
+   "expected": {
+    "digest": "1048.0:red:6:19:25065:33497",
+    "streamHash": "1dc1ee0",
+    "resultHash": "72a42e84",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "057fb703"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "7f02717f"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "58d27fc6"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "0f7d84f4"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e054a660"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "dc42284c"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.top_solo_split:s19",
+   "seed": 19,
+   "fixture": {
+    "digest": "859.0:blue:5:5:22646:24025",
+    "streamHash": "f8859c96",
+    "resultHash": "012f86b2",
+    "callsHash": "edef0cfcd20af57e"
+   },
+   "expected": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "61e90d5b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "302da23c"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "259e27f1"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "3e54ba9d"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "42b31c62"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "813fc0a5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.top_solo_split:s3",
+   "seed": 3,
+   "fixture": {
+    "digest": "1196.5:red:5:17:27743:37194",
+    "streamHash": "3cffc33f",
+    "resultHash": "bf162dcd",
+    "callsHash": "10c3f29f49d932c1"
+   },
+   "expected": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "e7714c36"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "078eefa9"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "0dda27f0"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "e3181f0f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6c029174"
+     },
+     {
+      "m": "configureSpells",
+      "h": "0e8935b6"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "3490f175"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.mid_solo_split:s23",
+   "seed": 23,
+   "fixture": {
+    "digest": "879.0:red:7:7:25003:23942",
+    "streamHash": "8e81d954",
+    "resultHash": "bb6158c7",
+    "callsHash": "6cec7c9b2ed4e26d"
+   },
+   "expected": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "c549694b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "02d53eda"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "5ded1ce2"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd74e92a"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "417be8e8"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60cf50be"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.mid_solo_split:s7",
+   "seed": 7,
+   "fixture": {
+    "digest": "866.0:red:9:5:22583:23936",
+    "streamHash": "646b83eb",
+    "resultHash": "332932d8",
+    "callsHash": "400d0f983e9646da"
+   },
+   "expected": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "7a73c029"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "f99bb118"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "b69fb8d7"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd5f4f9f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6a908872"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "baf736c3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.hard_engage_stack:s29",
+   "seed": 29,
+   "fixture": {
+    "digest": "994.5:red:2:11:23391:29637",
+    "streamHash": "d8e27945",
+    "resultHash": "78772264",
+    "callsHash": "48a6965c0b8da7c2"
+   },
+   "expected": {
+    "digest": "1048.0:red:6:19:25065:33497",
+    "streamHash": "1dc1ee0",
+    "resultHash": "72a42e84",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "057fb703"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "7f02717f"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "58d27fc6"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "0f7d84f4"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e054a660"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "dc42284c"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.hard_engage_stack:s11",
+   "seed": 11,
+   "fixture": {
+    "digest": "1375.0:red:16:23:35336:40667",
+    "streamHash": "5b9a88d0",
+    "resultHash": "6b46286e",
+    "callsHash": "2f7abe02ba85aee4"
+   },
+   "expected": {
+    "digest": "1578.5:red:22:31:42832:48321",
+    "streamHash": "898af023",
+    "resultHash": "1909a64a",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "69ef5eb0"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "b9e82781"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "7a77510d"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "7662404c"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e11475c1"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60ddbca1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.protect_core_scaling:s3",
+   "seed": 3,
+   "fixture": {
+    "digest": "809.5:red:2:3:19400:22536",
+    "streamHash": "76773f3e",
+    "resultHash": "5f72f8ef",
+    "callsHash": "febe8d7b0027ceea"
+   },
+   "expected": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "e7714c36"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "078eefa9"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "0dda27f0"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "e3181f0f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6c029174"
+     },
+     {
+      "m": "configureSpells",
+      "h": "0e8935b6"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "3490f175"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.protect_core_scaling:s19",
+   "seed": 19,
+   "fixture": {
+    "digest": "996.5:blue:12:8:28985:26702",
+    "streamHash": "ae48ee47",
+    "resultHash": "e2fbdced",
+    "callsHash": "026bc0a5d614faac"
+   },
+   "expected": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "61e90d5b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "302da23c"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "259e27f1"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "3e54ba9d"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "42b31c62"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "813fc0a5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.standard_macro:s7",
+   "seed": 7,
+   "fixture": {
+    "digest": "917.0:red:10:2:25380:23800",
+    "streamHash": "a723af8",
+    "resultHash": "554c7ba6",
+    "callsHash": "628d142fc54d0777"
+   },
+   "expected": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "7a73c029"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "f99bb118"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "b69fb8d7"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd5f4f9f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6a908872"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "baf736c3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.standard_macro:s23",
+   "seed": 23,
+   "fixture": {
+    "digest": "985.0:blue:12:2:30061:22677",
+    "streamHash": "8aa9e4e8",
+    "resultHash": "626107c8",
+    "callsHash": "396634fe97aecd52"
+   },
+   "expected": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "c549694b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "02d53eda"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "5ded1ce2"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd74e92a"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "417be8e8"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60cf50be"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.defensive_hold:s11",
+   "seed": 11,
+   "fixture": {
+    "digest": "1462.5:blue:22:17:42553:40437",
+    "streamHash": "b59b9403",
+    "resultHash": "018ef58d",
+    "callsHash": "1d8407a3e043b70a"
+   },
+   "expected": {
+    "digest": "1578.5:red:22:31:42832:48321",
+    "streamHash": "898af023",
+    "resultHash": "1909a64a",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "69ef5eb0"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "b9e82781"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "7a77510d"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "7662404c"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e11475c1"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60ddbca1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-template:v2.defensive_hold:s29",
+   "seed": 29,
+   "fixture": {
+    "digest": "907.5:red:0:16:22093:29708",
+    "streamHash": "7b5e818b",
+    "resultHash": "15a27469",
+    "callsHash": "5dbdc59a5c0773eb"
+   },
+   "expected": {
+    "digest": "1048.0:red:6:19:25065:33497",
+    "streamHash": "1dc1ee0",
+    "resultHash": "72a42e84",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "057fb703"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "7f02717f"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "58d27fc6"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "0f7d84f4"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e054a660"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "dc42284c"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:jungle.focus=farm:s3",
+   "seed": 3,
+   "fixture": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "callsHash": "57dda010831aa273"
+   },
+   "expected": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "e7714c36"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "078eefa9"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "0dda27f0"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "e3181f0f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6c029174"
+     },
+     {
+      "m": "configureSpells",
+      "h": "0e8935b6"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "3490f175"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:jungle.focus=farm:s19",
+   "seed": 19,
+   "fixture": {
+    "digest": "904.0:red:11:2:26129:24035",
+    "streamHash": "fcb7073d",
+    "resultHash": "fe5de597",
+    "callsHash": "f99dc988c5604dd3"
+   },
+   "expected": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "61e90d5b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "302da23c"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "259e27f1"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "3e54ba9d"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "42b31c62"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "813fc0a5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:jungle.focus=invade:s7",
+   "seed": 7,
+   "fixture": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "callsHash": "4070fc0b96a86ff2"
+   },
+   "expected": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "7a73c029"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "f99bb118"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "b69fb8d7"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd5f4f9f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6a908872"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "baf736c3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:jungle.focus=invade:s23",
+   "seed": 23,
+   "fixture": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "callsHash": "4bc056445e0e0b59"
+   },
+   "expected": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "c549694b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "02d53eda"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "5ded1ce2"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd74e92a"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "417be8e8"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60cf50be"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:lanes.mid.stance=split:s11",
+   "seed": 11,
+   "fixture": {
+    "digest": "892.5:blue:4:7:24645:24927",
+    "streamHash": "d7a07f5c",
+    "resultHash": "2d90c994",
+    "callsHash": "041c8e676f73c83c"
+   },
+   "expected": {
+    "digest": "1578.5:red:22:31:42832:48321",
+    "streamHash": "898af023",
+    "resultHash": "1909a64a",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "69ef5eb0"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "b9e82781"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "7a77510d"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "7662404c"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e11475c1"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60ddbca1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:lanes.mid.stance=split:s29",
+   "seed": 29,
+   "fixture": {
+    "digest": "942.5:red:2:14:21460:30248",
+    "streamHash": "fda1bcb2",
+    "resultHash": "8e1d3db1",
+    "callsHash": "9adcde58b1cdec14"
+   },
+   "expected": {
+    "digest": "1048.0:red:6:19:25065:33497",
+    "streamHash": "1dc1ee0",
+    "resultHash": "72a42e84",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "057fb703"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "7f02717f"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "58d27fc6"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "0f7d84f4"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e054a660"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "dc42284c"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=roam:s19",
+   "seed": 19,
+   "fixture": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "callsHash": "02e17ffaf0270b74"
+   },
+   "expected": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "61e90d5b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "302da23c"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "259e27f1"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "3e54ba9d"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "42b31c62"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "813fc0a5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=roam:s3",
+   "seed": 3,
+   "fixture": {
+    "digest": "818.0:red:3:3:20639:22752",
+    "streamHash": "4cbb6c75",
+    "resultHash": "e7b720b2",
+    "callsHash": "5cd4e26efe9fe45d"
+   },
+   "expected": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "e7714c36"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "078eefa9"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "0dda27f0"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "e3181f0f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6c029174"
+     },
+     {
+      "m": "configureSpells",
+      "h": "0e8935b6"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "3490f175"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=protect:s23",
+   "seed": 23,
+   "fixture": {
+    "digest": "932.5:red:8:11:24922:27699",
+    "streamHash": "6fabc230",
+    "resultHash": "a3f4ddce",
+    "callsHash": "4dddf4981d9624d0"
+   },
+   "expected": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "c549694b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "02d53eda"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "5ded1ce2"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd74e92a"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "417be8e8"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60cf50be"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:seats.b5.mission=protect:s7",
+   "seed": 7,
+   "fixture": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "callsHash": "a168ceaf851d501b"
+   },
+   "expected": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "7a73c029"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "f99bb118"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "b69fb8d7"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd5f4f9f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6a908872"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "baf736c3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:teamfight.posture=passive:s29",
+   "seed": 29,
+   "fixture": {
+    "digest": "997.5:blue:3:10:24324:28438",
+    "streamHash": "807af700",
+    "resultHash": "67aeeb1f",
+    "callsHash": "5ea06081a05f82d7"
+   },
+   "expected": {
+    "digest": "1048.0:red:6:19:25065:33497",
+    "streamHash": "1dc1ee0",
+    "resultHash": "72a42e84",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "057fb703"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "7f02717f"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "58d27fc6"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "0f7d84f4"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e054a660"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "dc42284c"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:teamfight.posture=passive:s11",
+   "seed": 11,
+   "fixture": {
+    "digest": "1389.5:red:10:27:34766:42495",
+    "streamHash": "3a1dfbf1",
+    "resultHash": "5df4871e",
+    "callsHash": "ef69b8c503808ece"
+   },
+   "expected": {
+    "digest": "1578.5:red:22:31:42832:48321",
+    "streamHash": "898af023",
+    "resultHash": "1909a64a",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "69ef5eb0"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "b9e82781"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "7a77510d"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "7662404c"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "e11475c1"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60ddbca1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:teamfight.posture=aggressive:s3",
+   "seed": 3,
+   "fixture": {
+    "digest": "1139.5:red:7:15:28754:34308",
+    "streamHash": "8f488b9b",
+    "resultHash": "e828f329",
+    "callsHash": "e42024347ba8ee7c"
+   },
+   "expected": {
+    "digest": "892.0:red:7:6:23674:25538",
+    "streamHash": "ff574f1a",
+    "resultHash": "0cef3214",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "199e706b"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "e7714c36"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "078eefa9"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "0dda27f0"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "e3181f0f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6c029174"
+     },
+     {
+      "m": "configureSpells",
+      "h": "0e8935b6"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "3490f175"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:teamfight.posture=aggressive:s19",
+   "seed": 19,
+   "fixture": {
+    "digest": "1014.0:red:11:12:26736:30103",
+    "streamHash": "913459be",
+    "resultHash": "2f9864df",
+    "callsHash": "287e5017d2260e49"
+   },
+   "expected": {
+    "digest": "1219.0:blue:22:10:37381:31333",
+    "streamHash": "49baa434",
+    "resultHash": "aac0b32d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "61e90d5b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "302da23c"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "259e27f1"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "3e54ba9d"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "42b31c62"
+     },
+     {
+      "m": "configureSpells",
+      "h": "76acb4a0"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "813fc0a5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:objectives.tower=high:s7",
+   "seed": 7,
+   "fixture": {
+    "digest": "1439.5:blue:14:21:36900:40369",
+    "streamHash": "7eea3494",
+    "resultHash": "9120cae3",
+    "callsHash": "5efd5af2f2165349"
+   },
+   "expected": {
+    "digest": "1325.0:red:17:15:34893:36041",
+    "streamHash": "1a711400",
+    "resultHash": "8f7c2456",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "7a73c029"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "f99bb118"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "b69fb8d7"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd5f4f9f"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "6a908872"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "baf736c3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "bind-choice:objectives.tower=high:s23",
+   "seed": 23,
+   "fixture": {
+    "digest": "824.0:blue:0:7:21031:23984",
+    "streamHash": "d4361602",
+    "resultHash": "4a852919",
+    "callsHash": "670dcf86fd4fad43"
+   },
+   "expected": {
+    "digest": "932.5:red:8:10:24997:27347",
+    "streamHash": "7906e169",
+    "resultHash": "5825423d",
+    "calls": [
+     {
+      "m": "configureObjectiveLayout",
+      "h": "e1f643fe"
+     },
+     {
+      "m": "configurePlayers",
+      "h": "f2ea7165"
+     },
+     {
+      "m": "configureHeroes",
+      "h": "c549694b"
+     },
+     {
+      "m": "configureHeroSkills",
+      "h": "02d53eda"
+     },
+     {
+      "m": "configureHeroPassives",
+      "h": "5ded1ce2"
+     },
+     {
+      "m": "configureHeroPowerCurve",
+      "h": "cd74e92a"
+     },
+     {
+      "m": "configureArchetypes",
+      "h": "417be8e8"
+     },
+     {
+      "m": "configureSpells",
+      "h": "5c394e9f"
+     },
+     {
+      "m": "configureMatch",
+      "h": "c9b503e3"
+     },
+     {
+      "m": "configureItems",
+      "h": "60cf50be"
+     }
+    ]
+   }
+  }
+ ]
+}

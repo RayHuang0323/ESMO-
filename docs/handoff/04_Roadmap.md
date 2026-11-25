@@ -3101,3 +3101,11 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - 舊 P2 FAIL（`9f4902a3`）永久保留；TD-59、TD-60 已處理（只改測試定位＋行為回歸，含反向測試）。
 - **仍是 FAIL**：`check_match_golden_v21a` 97/137（與 3a-B 已登記的 40 案逐案相同）。待 Owner 決定處置；在此之前**不是 Release GO**，只能條件式整合。
 - 結果與證據：`review/c1c2-release-closure-20261125/Closure_結果.md`。
+
+## 2026-11-25　C1＋C2 Closure：match_golden_v21a 版本化處置（Owner 核准選項 2）
+
+- 分支 `release/c1c2-closure-20261125`。只改測試與文件，`src/` 零變更，v20～v26 指紋不變，正式旗標不動。
+- `check_match_golden_v21a` 新增 V 段：旗標關閉時 3a-B 登記的 40 案改與 main `053fd582` 基準的版本化預期四欄全比（三項獨立證據、內容雜湊釘死、5 組反向測試）⇒ 146/146 PASS。原 fixture、指紋、K 段、所有歷史收據保留。
+- 新工具 `tools/capture_golden_v21a_flagsoff.mjs`；新 fixture `tools/fixtures/match_golden_v21a_flagsoff_v20.json`；說明 `review/c1c2-release-closure-20261125/Golden_v21a_版本化處置.md`。
+- 仍開放：TD-61（v21 開啟時的 Golden 未驗證，v21 重啟時在 `career.v21` 重錄）。v26 仍未啟用；TD-TAC-65 監看。
+- 最終 Release Gate 綁定包含本節的 commit；結果與收據清單放在 repo 外 `C:\Users\ifikn\esmo-measure\c1c2-golden-v21a-flagsoff-20261125\`（不再追加文件 commit，避免產生沒有收據的新 SHA）。
