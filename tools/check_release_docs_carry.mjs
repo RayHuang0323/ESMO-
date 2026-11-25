@@ -269,6 +269,21 @@ ck("diff 分類：一般 M／A／D 文件放行", DC.classifyDiff([{ status: "M"
   ck("來源 build 帶非空 VITE_* 值（無法重現）⇒ BLOCKED", c.code === 2 && /非空值/.test(checkOf(c, "carry_bundle_identical")?.detail || ""), c.out.slice(-300));
 }
 
+// ═══ 6. 收據引用 checkpoint（Phase D 與 Release Gate 的連結）══════════════
+{
+  const CPL = await import(pathToFileURL(path.join(HERE, "lib", "checkpoint.mjs")).href);
+  const r = makeRepo(); const B = head(r.dir); checkout(r, B);
+  const mkcp = (complete, sha = B) => { const d = path.join(BASE, `cp${++seq}`); const cp = CPL.createCheckpoint(d, { task: "t", candidateSha: sha, cases: ["a"], env: {} }); cp.validate({ candidateSha: sha, env: {} }); cp.interrupt("hibernate", "測試"); cp.validate({ candidateSha: sha, env: {} }); if (complete) { fs.writeFileSync(path.join(d, "raw", "a"), "1"); cp.record("a", path.join(d, "raw", "a")); cp.finalize(); } return d; };
+  const base = ["run", "--repo", r.dir, "--target-sha", B, "--receipts-dir", r.rdir, "--json", "--gate", "long", "--cmd", "node tools/check_logic.mjs"];
+  const ok = cli([...base, "--checkpoint", mkcp(true)]);
+  const rc = JSON.parse(fs.readFileSync(receiptFiles(r, (f) => f.includes("__long__PASS"))[0], "utf8"));
+  ck("收據引用已完成的 checkpoint：PASS，記錄中斷 1 次、續跑 2 次與原始資料雜湊", ok.code === 0 && rc.checkpoint?.interrupts?.length === 1 && rc.checkpoint.resumes === 2 && /^[0-9a-f]{64}$/.test(rc.checkpoint.rawAggregateSha256), JSON.stringify(rc.checkpoint));
+  const inc = cli([...base, "--checkpoint", mkcp(false)]);
+  ck("checkpoint 未完成 ⇒ BLOCKED checkpoint_complete", inc.code === 2 && has(inc, "checkpoint_complete", "BLOCKED"), inc.out.slice(-300));
+  const other = cli([...base, "--checkpoint", mkcp(true, "f".repeat(40))]);
+  ck("checkpoint 屬於別的 SHA ⇒ BLOCKED（不同候選的結果不能掛到這張收據）", other.code === 2 && /checkpoint 屬於/.test(checkOf(other, "checkpoint_complete")?.detail || ""), other.out.slice(-300));
+}
+
 console.log(`\nRelease docs-carry（TD-62）：${pass}/${pass + fail}　RESULT=${fail ? "FAIL" : "PASS"}`);
 if (fail) console.log("失敗：" + fails.join("；"));
 process.exit(fail ? 1 : 0);

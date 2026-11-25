@@ -29,6 +29,7 @@
 //    --timeout-min <n>        每個 --cmd 的逾時，預設 120
 //    --record-bundle <dir>    run 用（production gate）：指令跑完後記錄 <dir>（相對 repo）全部檔案的雜湊與 VITE_* 建置環境；
 //                             docs-carry 要靠它證明「文件 Commit 的產品輸出與來源相同」。dir 必須是這次 run 期間新 build 的
+//    --checkpoint <dir>       run 用：引用 tools/checkpoint_run.mjs 已完成的 checkpoint（同 SHA、全部完成），中斷／續跑次數寫進收據
 //    --category <名稱>        run 用：收據分類（logic｜golden｜browser｜perf｜prod-smoke｜build），供效期規劃與報告使用
 //    --json                   輸出 JSON（機器可讀）
 //
@@ -170,10 +171,22 @@ if (args["record-bundle"] && post && commands.length && commands.every((c) => c.
   else { try { bundle = { dir: rel.split(path.sep).join("/"), ...hashDir(dir), buildEnv: viteEnvFingerprint(process.env) }; bundleChecks.push({ id: "bundle_recorded", status: "PASS", detail: `${bundle.files} 檔 ${bundle.aggregateSha256.slice(0, 16)}` }); } catch (e) { bundleChecks.push({ id: "bundle_recorded", status: "BLOCKED", detail: String(e.message || e) }); } }
   if (post) post.checks.push(...bundleChecks);
 } else if (args["record-bundle"]) reasons.push("bundle_not_recorded_commands_not_pass");
+// 選用：引用一個已完成的 checkpoint（tools/checkpoint_run.mjs）。必須屬於同一個 SHA、而且全部完成
+let checkpoint = null;
+if (args.checkpoint && post) {
+  try {
+    const { openCheckpoint } = await import("./lib/checkpoint.mjs");
+    const cp = openCheckpoint(path.resolve(args.checkpoint)); const st = cp.status(); const j = cp.journal();
+    const complete = j.events.filter((e) => e.event === "complete").pop();
+    const ok = !j.broken && complete && cp.manifest.candidateSha === pre.ctx.targetFull && !st.pending.length;
+    checkpoint = { dir: path.resolve(args.checkpoint), task: cp.manifest.task, manifestDigest: cp.manifest.digest, policy: cp.manifest.policy, cases: cp.manifest.cases.length, rawAggregateSha256: complete?.rawAggregateSha256 ?? null, interrupts: st.interrupts.map((e) => ({ at: e.at, reason: e.reason })), resumes: j.events.filter((e) => e.event === "resume").length, unitResets: j.events.filter((e) => e.event === "unit-reset").length };
+    post.checks.push({ id: "checkpoint_complete", status: ok ? "PASS" : j.broken ? "FAIL" : "BLOCKED", detail: ok ? `${checkpoint.cases} 案例完成；中斷 ${checkpoint.interrupts.length} 次、續跑 ${checkpoint.resumes} 次` : j.broken ? `journal 損壞：${j.broken}` : cp.manifest.candidateSha !== pre.ctx.targetFull ? `checkpoint 屬於 ${cp.manifest.candidateSha}` : `checkpoint 尚未完成（剩 ${st.pending.length} 案例）` });
+  } catch (e) { post.checks.push({ id: "checkpoint_complete", status: "BLOCKED", detail: String(e.message || e) }); }
+}
 const cmdChecks = commands.map((c) => ({ id: `command: ${c.cmd}`, status: c.status, detail: c.status === "PASS" ? `exit 0，${(c.durationMs / 1000).toFixed(1)}s` : c.timedOut ? "逾時" : c.spawnError ? `起不來：${c.spawnError}` : `exit ${c.exitCode}（${c.status === "BLOCKED" ? "2＝既有慣例的『環境／未跑完』" : "指令本身失敗"}）` }));
 const status = aggregate([...pre.checks, ...(post ? post.checks : []), ...cmdChecks]);
 const finishedAt = new Date().toISOString();
-const receipt = buildReceipt({ gate: args.gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category: args.category });
+const receipt = buildReceipt({ gate: args.gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category: args.category, checkpoint });
 const dir = pre.ctx.receiptsDir || path.resolve(args["receipts-dir"] || path.join(os.tmpdir(), "esmo-release-gate", "receipts"));
 let file = null; try { file = writeReceipt(dir, receipt); } catch (e) { cmdChecks.push({ id: "receipt_written", status: "BLOCKED", detail: `收據寫不進去：${e.code || e.message}` }); }
 const finalStatus = file ? status : aggregate([status, "BLOCKED"].map((s) => ({ status: s })));
