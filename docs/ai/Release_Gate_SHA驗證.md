@@ -196,3 +196,20 @@ Release Gate 交接單
   - 白名單外的 tree 必須相同；dist bundle 雜湊必須相同
   - 效期取 base 收據最早到期
 - 在實作之前，純文件 Commit 的發布只能走 Owner 書面例外，或重跑 Gate。
+
+## 2026-11-26　TD-62 已實作（Release Engineering S1，未整合）：docs-carry
+
+- 指令：
+  - `node tools/release_gate.mjs carry --repo <D> --base-sha <B> --target-sha <D> --require-gate …`：產生綁在 D 的沿用收據，不轉移、不修改 B 的收據。
+  - `run --record-bundle dist`：production gate 記錄 dist 雜湊與 VITE_* 建置環境。沒有這個，就不能被沿用。
+  - `run --checkpoint <dir>`：引用已完成的 checkpoint，會做完整性檢查。
+  - `run --category <分類>`：效期規劃用。
+- assert：D 沒有直接收據的 gate，才改看沿用收據；直接收據即使是 FAIL 也優先。assert 當下會：
+  - 重驗來源收據的 digest、效期、環境
+  - 重算祖先關係、白名單外 tree、diff 是否只有文件
+- 不能沿用的情況：
+  - 文件被產品 import
+  - 工具讀到該文件、碰到該目錄，或依賴 git 歷史（只有那些 gate 要直接重跑）
+  - 來源收據沒有 bundle 雜湊
+  - 連鎖沿用
+- 細節與 58 條測試：`review/release-engineering-s1/02_TD62實作與驗收.md`。

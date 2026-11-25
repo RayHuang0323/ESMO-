@@ -27307,3 +27307,28 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
   - TD-61、TD-62（方案待 Owner 決定）、TD-TAC-65
   - 本機文件 Commit 待 Owner 決定推送方式
   - 沒有開始新的 Sprint
+
+## 2026-11-26　Release Engineering Sprint 1（本機完成，未整合）
+
+- 分支 `feature/release-engineering-s1`（worktree `.sprints/release-engineering-s1`），基準 main `43d2b757`。只改發布與測試工具、CI 候選設定和文件；**產品輸入 diff 為 0**，v26 指紋 `360474218ca774b9` 與 7 個正式旗標（false）不變。未 Push、未 Merge、未 Deploy。
+- 完成（每項都有正向與反向測試）：
+  - **TD-62 docs-carry**：`release_gate carry`，58/58。真實的 93655403→43d2b757 嘗試被 BLOCKED（舊收據沒有 bundle 雜湊）。
+  - **安全行程管理** `tools/lib/safeProcess.mjs`：40/40。Release Gate、run-gate、harness、cdp 都不再使用 `taskkill /T`。
+  - **Checkpoint 續跑**：`tools/lib/checkpoint.mjs` 加 `tools/checkpoint_run.mjs`，39/39；收據可引用 checkpoint。
+  - **CI**：`npm ci` 加整棵依賴樹檢查加 `DIST_HASH`；部署判斷改成和「最後一次成功部署」比對（39/39）。本機實測 `npm ci` 的依賴樹與 lockfile 完全相同，build 與正式站 581/581 相同。⏳ 尚無真實 CI 證據。
+  - **效期**：`tools/release_gate_plan.mjs` 的 status／plan（19/19）。分級效期方案待 Owner 決定；正式效期仍是 24 小時。
+  - **Readiness 報告** `tools/release_readiness.mjs`：JSON、MD、HTML，21/21。
+- 驗收：
+  - 獨立 Code Review 找到 1 嚴重、5 重要、4 次要。嚴重與重要全部修正並加了反向測試（`62c84db7`）。
+  - 既有 Release Gate 自我測試 118/118。
+  - build 581 檔，與正式站相同。
+  - regress 15/15、regress2 8/8。
+  - 真實 browser gate（CS 1366，正式站）經新 harness 63/63 ×2，Owner 的 Chrome 沒有被關。
+- Commits：`a7da3cfc` `e69b8e8e` `30218e06` `cf6ef2f1` `440c601c` `ed400c37` `62c84db7`，加上文件 commit。
+- 報告：`review/release-engineering-s1/01～06`；HTML 在 repo 外的 `C:\Users\ifikn\esmo-measure\release-engineering-s1\Release_Engineering_S1_最終報告.html`。
+- 未完成或風險：
+  - deploy.yml 沒有在 GitHub 上真實跑過。
+  - branch protection 對被跳過的 job 怎麼處理，未確認。
+  - checkpoint 還沒接進 P2v2、四引擎、browser_all。
+  - 本機沒有 YAML 解析器。
+  - 整合需要 Owner 核准。這不是純文件變更，要在最終 SHA 直接跑 Gate，見 05 第五節。

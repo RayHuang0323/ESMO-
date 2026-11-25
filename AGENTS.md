@@ -232,6 +232,7 @@ runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀
 3. **禁止**：對 PID 0、PID 4、系統行程（`System`、`Idle`、`csrss`、`wininit`、`services`、`lsass`、`svchost`、`explorer` 等）或未確認的行程樹執行 `taskkill /T`、`Stop-Process`；禁止以 `chrome.exe`、`node.exe` 等名稱整批終止（Owner 自己的 Chrome、Codex 的 node 都在同一台機器上）。
 4. **以埠號找行程時**：只取 `State -eq 'Listen'` 且 `OwningProcess -gt 4` 的那一筆，並先執行規則 2；TIME_WAIT／CLOSE_WAIT 的 PID 一律忽略。
 5. 終止後再查一次 Owner 的應用程式（Chrome 等）行程數是否不變；若有變化，立即如實回報。
+6. **2026-11-26 起由程式執行這些規則**：停止測試行程一律經 `tools/lib/safeProcess.mjs`（登記簿 `createProcessRegistry`／`terminate`，或手上只有 `ChildProcess` 時用 `terminateLiveTree(pid, { expectArgs: proc.spawnargs })`）。它會向 OS 重驗 PID 的啟動時間與命令列，拒絕 PID ≤ 4、未登記、PID 重用、比呼叫端更早啟動的行程（使用者自己的 Chrome）與系統保護行程；後代逐一確認、不用 `taskkill /T`。**不得新寫 `taskkill /T`、依名稱或依埠號終止**；埠號只能用唯讀的 `listenersOnPort`。測試：`node tools/check_safe_process.mjs`。
 
 ## 手機優先原則
 

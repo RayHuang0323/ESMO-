@@ -3134,3 +3134,14 @@ C1＋C2 已發布為正式 main `93655403`，並結案。決定性數學 v26 已
 4. **玩法線**：v26 決定之後，再在 Sprint 2B（3～4 人編隊、護送、救援）和 v21 Tactical Director 重啟（需同時處理 TD-61）之間選一條。兩者都會疊在 v26 的決定性核心上，所以排在 2 之後。
 
 不建議現在直接開 Sprint 2B。原因：v26 是否啟用會改變所有玩法 Golden，先做玩法會讓 Golden 和平衡要重做兩次。
+
+## 2026-11-26　Release Engineering S1 之後的下一步（待 Owner）
+
+1. **整合 Release Engineering S1**（工具與 CI）。在最終 SHA 上直接跑：自我測試、6 支新套件、1 支 browser gate、production build（加 `--record-bundle`）。push 後第一次 CI 要確認：decide、`npm ci`、整棵樹檢查、`DIST_HASH`，以及正式站 581/581 不變。
+2. **MOBA 產品線**（順序不變）：
+   - 先在真實裝置和低階裝置上驗證。
+   - 再做 v26 啟用評估 Sprint：存檔版本、Golden 重錄、新 seeds 紅藍複驗、真機抽驗、旗標策略。
+   - 最後在 Sprint 2B 和 v21 重啟之間二選一。
+   
+   有了 checkpoint，v26 評估裡的長批次可以安全續跑；之後的發布文件 commit 也可以用 docs-carry。
+3. 收據效期分級（`review/release-engineering-s1/06_收據效期分類方案.md`）由 Owner 決定，採用的話需要另開一輪工具 Sprint。
