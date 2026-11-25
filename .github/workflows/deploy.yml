@@ -113,6 +113,8 @@ jobs:
 
   deploy:
     needs: build
+    #  不能用預設的 success()：它會連帶看 decide 的結果；decide 失敗時 build 照跑、deploy 卻被跳過（2026-11-26 審查修正）
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
 
     runs-on: ubuntu-latest
 

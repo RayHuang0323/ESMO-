@@ -114,7 +114,26 @@ export function bundlerSpecifiers(text) {
   for (const re of res) for (const m of text.matchAll(re)) for (const s of String(m[1]).split(",")) out.push(s.replace(/^[\s\[]*["'`]|["'`][\s\]]*$/g, "").trim());
   return out.filter(Boolean);
 }
-const globMayMatch = (glob, p) => /[*{]/.test(glob) && new RegExp("(^|/)" + glob.replace(/^(\.\.?\/)+/, "").replace(/[.+^$()|[\]\\]/g, "\\$&").replace(/\*\*\/?/g, "\u0000").replace(/\*/g, "[^/]*").replace(/\u0000/g, ".*").replace(/\{([^}]*)\}/g, (m, a) => "(" + a.split(",").join("|") + ")") + "$").test(p);
+/**
+ * 一個 bundler 路徑會不會碰到變更的文件。fromDir＝引用它的檔案所在目錄（repo 相對）。
+ * ⚠ 2026-11-26 審查修正：Vite 的 `/docs/**` 是相對專案根目錄；`?raw` 等 query 要去掉；樣板字串 `${x}` 與 glob 一律以
+ *   「靜態前綴解析後落在哪裡」判斷——落在白名單文件目錄、repo 根目錄或往上跳出 repo，都保守視為會讀到文件。
+ */
+export function specTouchesDocs(spec, fromDir, changedPaths) {
+  let s = String(spec).trim().replace(/[?#].*$/, "");
+  if (/^(https?:|data:|node:|virtual:|\0)/.test(s)) return false;
+  if (!/^[./]/.test(s)) return false;                                   // 套件名稱（react、three…）
+  const resolve = (p) => (p.startsWith("/") ? path.posix.normalize(p.slice(1)) : path.posix.normalize(path.posix.join(fromDir || ".", p)));
+  const dyn = s.search(/\$\{|[*{[]/);
+  if (dyn < 0) { const r = resolve(s); return changedPaths.includes(r) || (!/\.[\w]+$/.test(r) && changedPaths.some((p) => p === `${r}.md` || p.startsWith(`${r}/`))); }
+  const lastSeg = s.slice(s.lastIndexOf("/") + 1);
+  if (/\.(?!md\b)[\w]+$/.test(lastSeg) && !/[{*$]/.test(lastSeg.slice(lastSeg.lastIndexOf(".")))) return false; // 動態但明確是 .js／.json 等非 md
+  const prefix = s.slice(0, dyn); const dirPart = prefix.includes("/") ? prefix.slice(0, prefix.lastIndexOf("/") + 1) : "";
+  const base = resolve(dirPart || ".").replace(/\/+$/, "").replace(/^\.\/?$/, ".") || ".";
+  if (base === "." || base.startsWith("..")) return true;                 // 從 repo 根目錄或更上層展開：保守
+  return changedPaths.some((p) => p === base || p.startsWith(base.endsWith("/") ? base : `${base}/`));
+}
+const globMayMatch = (glob, p) => specTouchesDocs(glob, ".", [p]);
 /** 回傳引用到任一變更文件的已追蹤檔（不含白名單文件本身）。比對完整路徑、檔名、以及所在目錄字串。 */
 export function findReaders(repo, sha, changedPaths, entries) {
   const needles = new Set();
@@ -131,8 +150,8 @@ export function findReaders(repo, sha, changedPaths, entries) {
     if (BUNDLED_SOURCE.test(e.path)) {
       // 產品原始碼：文件只會經由 import／import.meta.glob／new URL 進 bundle。註解或文案裡提到檔名不算讀取
       // （CLAUDE.md：「不得出現 X」類斷言要先問 X 會不會正當地出現在註解裡）。
-      const specs = bundlerSpecifiers(text);
-      const hits = specs.filter((s) => list.some((n) => s.includes(n)) || changedPaths.some((p) => globMayMatch(s, p)));
+      const specs = bundlerSpecifiers(text); const fromDir = path.posix.dirname(e.path);
+      const hits = specs.filter((s) => list.some((n) => s.includes(n)) || specTouchesDocs(s, fromDir, changedPaths));
       if (hits.length) readers.push({ path: e.path, needles: hits.slice(0, 5) });
       continue;
     }
@@ -170,7 +189,17 @@ export function reachableTools(repo, sha, commands, entries) {
     const p = queue.shift(); const t = read(entryOf.get(p));
     for (const m of t.matchAll(/([\w.\-]+\.(?:m?js|cjs))\b/g)) for (const e of byBase.get(m[1]) || []) if (!reach.has(e.path)) { reach.add(e.path); queue.push(e.path); }
   }
-  return { reach, unknown };
+  return { reach, unknown, textOf: (p) => read(entryOf.get(p)) };
+}
+
+/** 工具依賴 git 歷史（diff／log／HEAD…）：文件 commit 會讓它的結果不同 ⇒ 不能沿用。 */
+export const GIT_HISTORY_RE = /\bgit\b[^\n]{0,120}?\b(diff|log|show|rev-list|whatchanged|ls-files|status)\b|["'`](diff|log|show|rev-list|whatchanged|ls-files)["'`]|rev-parse[^\n]{0,40}HEAD|["'`]HEAD["'`]/;
+/** 工具以任何形式碰到這些變更所在的目錄（"docs"、'docs/'、/^docs\//、path.join(ROOT,"docs")…）。 */
+export function docAccessRegex(changedPaths) {
+  const tops = new Set(changedPaths.map((p) => (p.includes("/") ? p.slice(0, p.indexOf("/")) : null)).filter(Boolean));
+  const parts = [...tops].map((t) => `(^|[^\\w-])${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=[\\\\/"'\`]|\\\\\\/)`);
+  if (changedPaths.some((p) => !p.includes("/"))) parts.push("\\.md\\b");                    // 根目錄 .md：保守看任何 .md 讀取
+  return parts.length ? new RegExp(parts.join("|")) : null;
 }
 
 // ── C7：在目標上重新 build ─────────────────────────────────────────────────
@@ -282,12 +311,19 @@ export function buildCarry(opts) {
   }
 
   // 哪些 gate 跑得到讀文件的工具 ⇒ 不能沿用
+  // ⚠ 2026-11-26 審查修正：不只看「字面引用了變更檔名」——工具用 path.join(ROOT,"docs")、/^docs\//、列目錄，
+  //   或依賴 git 歷史（文件 commit 本身就會改變 diff／log／HEAD）都算受影響，一律要在目標 SHA 直接重跑。
+  const docRe = docAccessRegex(changed);
   for (const b of info.base) {
-    if (!info.toolReaders.length) { info.carriedGates.push(b.gate); continue; }
-    const { reach, unknown } = reachableTools(repo, D, b.commands, eD);
+    const { reach, unknown, textOf } = reachableTools(repo, D, b.commands, eD);
     const hit = info.toolReaders.filter((t) => reach.has(t));
-    if (hit.length || unknown) info.requiresDirect.push({ gate: b.gate, reason: hit.length ? `會跑到讀取變更文件的工具：${hit.slice(0, 3).join("、")}` : "指令無法靜態判定會跑到哪些工具（保守處理）" });
-    else info.carriedGates.push(b.gate);
+    const touch = docRe ? [...reach].filter((t) => docRe.test(textOf(t))) : [];
+    const hist = [...reach].filter((t) => GIT_HISTORY_RE.test(textOf(t)));
+    const reason = hit.length ? `會跑到讀取變更文件的工具：${hit.slice(0, 3).join("、")}`
+      : unknown ? "指令無法靜態判定會跑到哪些工具（保守處理）"
+      : touch.length ? `會跑到存取文件目錄的工具：${touch.slice(0, 3).join("、")}`
+      : hist.length ? `會跑到依賴 git 歷史的工具：${hist.slice(0, 3).join("、")}` : null;
+    if (reason) info.requiresDirect.push({ gate: b.gate, reason }); else info.carriedGates.push(b.gate);
   }
   if (info.requiresDirect.length) checks.push(mk("carry_affected_gates", "PASS", `${info.requiresDirect.length} 個 gate 受文件變更影響，必須在目標 SHA 直接重跑：${info.requiresDirect.map((r) => r.gate).join("、")}`));
 
@@ -312,6 +348,15 @@ export function verifyCarry(carry, ctx, gate, { receiptsDir, maxAgeHours = DEFAU
   c.push(carry.status === "PASS" ? mk("carry_status", "PASS") : mk("carry_status", carry.status === "BLOCKED" ? "BLOCKED" : "FAIL", `最新的沿用收據是 ${carry.status}`));
   c.push(carry.targetSha === ctx.targetFull && carry.actualSha === ctx.targetFull ? mk("carry_sha", "PASS") : mk("carry_sha", "FAIL", `沿用收據綁 ${carry.targetSha}，要驗的是 ${ctx.targetFull}`));
   c.push(carry.treeSha && carry.treeSha === ctx.treeSha ? mk("carry_tree", "PASS") : mk("carry_tree", "FAIL", "tree 不同"));
+  // 不只相信沿用收據自己的紀錄：結構檢查（祖先、白名單外 tree 相同、diff 全是文件）在 assert 當下用 git 重算（便宜）
+  if (ctx.repoTop && carry.baseSha && ctx.targetFull) {
+    const anc = git(ctx.repoTop, ["merge-base", "--is-ancestor", carry.baseSha, ctx.targetFull]).status === 0;
+    const eB = lsTree(ctx.repoTop, carry.baseSha), eD = lsTree(ctx.repoTop, ctx.targetFull);
+    const same = !!eB && !!eD && nonDocTreeDigest(eB) === nonDocTreeDigest(eD) && nonDocTreeDigest(eD) === carry.nonDocTreeDigest;
+    const rows = rawDiff(ctx.repoTop, carry.baseSha, ctx.targetFull);
+    const docsOnly = !!rows && rows.length > 0 && classifyDiff(rows).length === 0;
+    c.push(anc && same && docsOnly ? mk("carry_structure_recheck", "PASS") : mk("carry_structure_recheck", "FAIL", `當下重算不成立（祖先 ${anc}、白名單外 tree 相同 ${same}、只有文件 ${docsOnly}）`));
+  }
   const e = carry.env || {}, cur = ctx.env || {}; const diff = [];
   for (const k of ["nodeMajor", "platform", "arch", "depsDigest", "lockfileBlob"]) if (e[k] !== cur[k]) diff.push(`${k}: ${e[k]} ≠ ${cur[k]}`);
   c.push(diff.length ? mk("carry_env", "FAIL", diff.join("；")) : mk("carry_env", "PASS"));

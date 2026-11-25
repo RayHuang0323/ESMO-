@@ -64,12 +64,14 @@ export async function collect(o) {
     // checkpoint：進行中／中斷
     if (cps[g]) {
       try {
-        const cp = openCheckpoint(cps[g]); const cs = cp.status(); const j = cp.journal();
+        const cp = openCheckpoint(cps[g]); const cs = cp.status();
         const running = cs.openSession && osProbe.alive(cs.openSession.pid);
-        row.checkpoint = { dir: cps[g], candidateSha: cp.manifest.candidateSha, done: cs.done.size, total: cp.manifest.cases.length, complete: cs.complete, interrupts: cs.interrupts.map((e) => ({ at: e.at, reason: e.reason })), resumes: j.events.filter((e) => e.event === "resume").length, journalOk: !j.broken };
-        if (cp.manifest.candidateSha !== target) row.checkpoint.note = "checkpoint 屬於別的候選 SHA";
-        else if (!cs.complete) { row.state = running ? "RUNNING" : "INTERRUPTED"; }
-      } catch (e) { row.checkpoint = { dir: cps[g], error: String(e.message || e) }; }
+        const v = cp.verifyIntegrity(target);
+        row.checkpoint = { dir: cps[g], candidateSha: cp.manifest.candidateSha, done: cs.done.size, total: cp.manifest.cases.length, complete: cs.complete, interrupts: v.interrupts.map((e) => ({ at: e.at, reason: e.reason })), resumes: v.resumes, integrity: v.status, problems: v.checks.filter((x) => x.status !== "PASS").map((x) => `${x.id}: ${x.detail}`) };
+        if (cp.manifest.candidateSha !== target) { row.state = "BLOCKED"; block(`gate「${g}」的 checkpoint 屬於別的候選 ${cp.manifest.candidateSha.slice(0, 12)}`); }
+        else if (!cs.complete) row.state = running ? "RUNNING" : "INTERRUPTED";
+        else if (v.status !== "PASS") { row.state = v.status === "FAIL" ? "INVALID" : "BLOCKED"; block(`gate「${g}」的 checkpoint 完整性 ${v.status}：${row.checkpoint.problems.slice(0, 2).join("｜")}`); }
+      } catch (e) { row.checkpoint = { dir: cps[g], error: String(e.message || e) }; row.state = "BLOCKED"; }
     }
     if (row.state !== "PASS") block(`gate「${g}」是 ${row.state}${row.detail && row.state !== "NOT_RUN" ? `：${String(row.detail).slice(0, 160)}` : ""}`);
     return row;
@@ -99,13 +101,17 @@ export async function collect(o) {
   const withBundle = (out.gates || []).map((g) => g.file && path.join(receiptsDir, g.file)).filter(Boolean).map((f) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return null; } }).filter((r) => r?.bundle);
   out.build = withBundle.length ? { gate: withBundle[0].gate, files: withBundle[0].bundle.files, aggregateSha256: withBundle[0].bundle.aggregateSha256, buildEnv: Object.keys(withBundle[0].bundle.buildEnv || {}) } : { note: "沒有任何 gate 收據記錄 bundle 雜湊（production gate 加 --record-bundle 才有）" };
   // Pages（選用）
-  if (o.pages) out.pages = await pagesStatus(out.remoteMain?.sha);
+  if (o.pages) out.pages = await pagesStatus(out.remoteMain?.sha, git(repo, ["remote", "get-url", o.remote || "origin"]).out);
   return finalize(out);
 }
-async function pagesStatus(mainSha) {
-  const res = { source: "匿名 GitHub API（1 次）＋正式站 index.html（1 次）" };
-  try { const r = await fetch(`https://api.github.com/repos/RayHuang0323/ESMO-/actions/runs?head_sha=${mainSha}&per_page=1`, { headers: { accept: "application/vnd.github+json" } }); const j = await r.json(); const run = j.workflow_runs?.[0]; res.workflow = run ? { id: run.id, status: run.status, conclusion: run.conclusion, attempt: run.run_attempt, headSha: run.head_sha } : { note: "這個 SHA 沒有 workflow run（可能是被判定不需部署，或還沒觸發）" }; } catch (e) { res.workflow = { error: String(e.message || e) }; }
-  try { const h = await (await fetch(`https://rayhuang0323.github.io/ESMO-/?t=${Date.now()}`, { cache: "no-store" })).text(); res.entry = (h.match(/assets\/index-[\w-]+\.js/) || [null])[0]; } catch (e) { res.entry = null; res.entryError = String(e.message || e); }
+async function pagesStatus(mainSha, remoteUrl) {
+  // owner／repo 由 origin 網址推導（fork 也正確）；推不出來就不查
+  const m = /github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(String(remoteUrl || ""));
+  if (!m) return { error: `origin 不是 GitHub 網址，無法查 Pages：${remoteUrl}` };
+  const [, owner, name] = m;
+  const res = { source: "匿名 GitHub API（1 次）＋正式站 index.html（1 次）", repo: `${owner}/${name}`, site: `https://${owner.toLowerCase()}.github.io/${name}/` };
+  try { const r = await fetch(`https://api.github.com/repos/${owner}/${name}/actions/runs?head_sha=${mainSha}&per_page=1`, { headers: { accept: "application/vnd.github+json" } }); const j = await r.json(); const run = j.workflow_runs?.[0]; res.workflow = run ? { id: run.id, status: run.status, conclusion: run.conclusion, attempt: run.run_attempt, headSha: run.head_sha } : { note: "這個 SHA 沒有 workflow run（可能是被判定不需部署，或還沒觸發）" }; } catch (e) { res.workflow = { error: String(e.message || e) }; }
+  try { const h = await (await fetch(`${res.site}?t=${Date.now()}`, { cache: "no-store" })).text(); res.entry = (h.match(/assets\/index-[\w-]+\.js/) || [null])[0]; } catch (e) { res.entry = null; res.entryError = String(e.message || e); }
   return res;
 }
 function finalize(out) { out.decision = out.blockers.length ? "NO-GO" : "GO"; return out; }

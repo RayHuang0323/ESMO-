@@ -176,11 +176,12 @@ let checkpoint = null;
 if (args.checkpoint && post) {
   try {
     const { openCheckpoint } = await import("./lib/checkpoint.mjs");
-    const cp = openCheckpoint(path.resolve(args.checkpoint)); const st = cp.status(); const j = cp.journal();
-    const complete = j.events.filter((e) => e.event === "complete").pop();
-    const ok = !j.broken && complete && cp.manifest.candidateSha === pre.ctx.targetFull && !st.pending.length;
-    checkpoint = { dir: path.resolve(args.checkpoint), task: cp.manifest.task, manifestDigest: cp.manifest.digest, policy: cp.manifest.policy, cases: cp.manifest.cases.length, rawAggregateSha256: complete?.rawAggregateSha256 ?? null, interrupts: st.interrupts.map((e) => ({ at: e.at, reason: e.reason })), resumes: j.events.filter((e) => e.event === "resume").length, unitResets: j.events.filter((e) => e.event === "unit-reset").length };
-    post.checks.push({ id: "checkpoint_complete", status: ok ? "PASS" : j.broken ? "FAIL" : "BLOCKED", detail: ok ? `${checkpoint.cases} 案例完成；中斷 ${checkpoint.interrupts.length} 次、續跑 ${checkpoint.resumes} 次` : j.broken ? `journal 損壞：${j.broken}` : cp.manifest.candidateSha !== pre.ctx.targetFull ? `checkpoint 屬於 ${cp.manifest.candidateSha}` : `checkpoint 尚未完成（剩 ${st.pending.length} 案例）` });
+    const cp = openCheckpoint(path.resolve(args.checkpoint));
+    // 唯讀完整性檢查：manifest、journal 鏈、候選 SHA、全部完成、每份原始資料 digest、合計雜湊（2026-11-26 審查修正）
+    const v = cp.verifyIntegrity(pre.ctx.targetFull);
+    checkpoint = { dir: path.resolve(args.checkpoint), task: cp.manifest.task, manifestDigest: cp.manifest.digest, policy: cp.manifest.policy, cases: cp.manifest.cases.length, rawAggregateSha256: v.rawAggregateSha256, interrupts: v.interrupts.map((x) => ({ at: x.at, reason: x.reason })), resumes: v.resumes, unitResets: v.unitResets, integrity: v.status };
+    const bad = v.checks.filter((x) => x.status !== "PASS");
+    post.checks.push({ id: "checkpoint_complete", status: v.status, detail: v.status === "PASS" ? `${checkpoint.cases} 案例完成且原始資料未被改動；中斷 ${checkpoint.interrupts.length} 次、續跑 ${checkpoint.resumes} 次` : bad.map((x) => `${x.id}: ${x.detail}`).join("｜") });
   } catch (e) { post.checks.push({ id: "checkpoint_complete", status: "BLOCKED", detail: String(e.message || e) }); }
 }
 const cmdChecks = commands.map((c) => ({ id: `command: ${c.cmd}`, status: c.status, detail: c.status === "PASS" ? `exit 0，${(c.durationMs / 1000).toFixed(1)}s` : c.timedOut ? "逾時" : c.spawnError ? `起不來：${c.spawnError}` : `exit ${c.exitCode}（${c.status === "BLOCKED" ? "2＝既有慣例的『環境／未跑完』" : "指令本身失敗"}）` }));

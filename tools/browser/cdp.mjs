@@ -56,6 +56,7 @@ import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { terminateLiveTree } from "../lib/safeProcess.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const VITE_CLI = resolve(ROOT, "node_modules/vite/bin/vite.js");
@@ -93,11 +94,8 @@ async function stopProcess(proc) {
   try {
     //  2026-11-26（AGENTS.md §12）：PID 0／系統 PID 交給 taskkill /T 會掃過整台機器，一律拒絕
     if (!Number.isInteger(proc.pid) || proc.pid <= 4 || proc.pid === process.pid) return;
-    if (process.platform === "win32") {
-      spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore", timeout: 15000 });
-    } else {
-      proc.kill("SIGKILL");
-    }
+    //  不用 taskkill /T（沒有啟動時間檢查）：改用 safeProcess.terminateLiveTree（根行程須在本行程之後啟動、命令列含啟動參數、後代逐層檢查）
+    await terminateLiveTree(proc.pid, { expectArgs: proc.spawnargs });
   } catch {}
   await waitForExit(proc, 2_000);
 }

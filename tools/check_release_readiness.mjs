@@ -66,6 +66,14 @@ const collect = (o = {}) => RR.collect({ repo: R, target: B, gates: ["logic", "p
   const d2 = path.join(BASE, "cp-dead"); const c2 = CPL.createCheckpoint(d2, { task: "long", candidateSha: B, cases: ["a"], env: {} }); c2.validate({ candidateSha: B, env: {} }); c2._append({ event: "session-start", pid: 2147480000 });
   const r2 = await collect({ checkpoints: [`prod=${d2}`] });
   ck("checkpoint 沒跑完、session 行程已不在 ⇒ INTERRUPTED、NO-GO", r2.decision === "NO-GO" && r2.gates[1].state === "INTERRUPTED", JSON.stringify(r2.gates[1])); }
+{ const d3 = path.join(BASE, "cp-tampered"); const c3 = CPL.createCheckpoint(d3, { task: "long", candidateSha: B, cases: ["a"], env: {} }); c3.validate({ candidateSha: B, env: {} }); fs.writeFileSync(path.join(d3, "raw", "a"), "1"); c3.record("a", path.join(d3, "raw", "a")); c3.finalize();
+  const ok = await collect({ checkpoints: [`prod=${d3}`] });
+  fs.appendFileSync(path.join(d3, "raw", "a"), "tampered");
+  const r = await collect({ checkpoints: [`prod=${d3}`] });
+  ck("完成的 checkpoint 原始資料事後被改 ⇒ INVALID、NO-GO（完好時是 GO）", ok.decision === "GO" && r.decision === "NO-GO" && r.gates[1].state === "INVALID", JSON.stringify({ ok: ok.decision, st: r.gates[1].state, p: r.gates[1].checkpoint?.problems }));
+  const d4 = path.join(BASE, "cp-other"); const c4 = CPL.createCheckpoint(d4, { task: "long", candidateSha: "c".repeat(40), cases: ["a"], env: {} }); c4.validate({ candidateSha: "c".repeat(40), env: {} }); fs.writeFileSync(path.join(d4, "raw", "a"), "1"); c4.record("a", path.join(d4, "raw", "a")); c4.finalize();
+  const r4 = await collect({ checkpoints: [`prod=${d4}`] });
+  ck("checkpoint 屬於別的候選 SHA ⇒ NO-GO（不只是附註）", r4.decision === "NO-GO" && r4.blockers.some((b) => /別的候選/.test(b))); }
 { const r = await collect({ remoteMain: null });
   ck("查不到遠端 main ⇒ NO-GO", r.decision === "NO-GO" && r.blockers.some((b) => /遠端 main/.test(b))); }
 { git(R, "checkout", "-q", "-b", "other"); write(path.join(R, "docs", "b.md"), "b\n"); git(R, "add", "-A"); git(R, "commit", "-q", "-m", "o"); git(R, "push", "-q", "origin", "other:main"); git(R, "checkout", "-q", "--detach", B);

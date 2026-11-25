@@ -41,6 +41,16 @@ for (const [label, file] of mustDeploy) { const h = change(file); const r = awai
   write(path.join(R, "docs/readme.md"), "z\n"); git(R, "add", "-A"); git(R, "commit", "-q", "-m", "doc"); const h = git(R, "rev-parse", "HEAD").stdout.trim();
   const r = await decide({ repo: R, head: h, event: "push", lastDeployed: imp });
   ck("文件被 src 以 ?raw 匯入（會進 bundle）⇒ 部署", r0.deploy === false && r.deploy === true, JSON.stringify(r.reasons)); }
+// 審查補充：Vite 根目錄絕對路徑 glob、帶 query 的 glob、樣板字串 import
+for (const [label, code] of [["import.meta.glob('/docs/**/*.md')（根目錄絕對路徑）", 'export const a = import.meta.glob("/docs/**/*.md", { query: "?raw", eager: true });\n'], ["帶 ?raw 的相對 glob", 'export const a = import.meta.glob("../docs/*.md?raw");\n'], ["樣板字串動態 import", "export const f = (n) => import(`../docs/${n}.md?raw`);\n"]]) {
+  at(DEPLOYED); write(path.join(R, "src/main.js"), code); git(R, "add", "-A"); git(R, "commit", "-q", "-m", "glob"); const g = git(R, "rev-parse", "HEAD").stdout.trim();
+  write(path.join(R, "docs/readme.md"), `g${Math.random()}\n`); git(R, "add", "-A"); git(R, "commit", "-q", "-m", "doc"); const h = git(R, "rev-parse", "HEAD").stdout.trim();
+  const r = await decide({ repo: R, head: h, event: "push", lastDeployed: g });
+  ck(`文件被 ${label} 涵蓋 ⇒ 部署`, r.deploy === true, JSON.stringify(r.reasons));
+}
+{ at(DEPLOYED); write(path.join(R, "src/main.js"), "export const f = (id) => import(`./heroes/${id}.js`);\n"); git(R, "add", "-A"); git(R, "commit", "-q", "-m", "dyn js"); const g = git(R, "rev-parse", "HEAD").stdout.trim();
+  write(path.join(R, "docs/readme.md"), "dyn\n"); git(R, "add", "-A"); git(R, "commit", "-q", "-m", "doc"); const h = git(R, "rev-parse", "HEAD").stdout.trim();
+  ck("src 只有指向 .js 的動態 import（不會碰到文件）⇒ 純文件仍可不部署", (await decide({ repo: R, head: h, event: "push", lastDeployed: g })).deploy === false); }
 { // 上一次部署失敗：產品 commit P 沒有成功部署，接著推純文件 commit D
   const P = change("src/main.js", "export const x = 2;\n"); write(path.join(R, "docs/readme.md"), "after\n"); git(R, "add", "-A"); git(R, "commit", "-q", "-m", "docs"); const D = git(R, "rev-parse", "HEAD").stdout.trim();
   const r = await d(D);
@@ -80,7 +90,7 @@ for (const [label, file] of mustDeploy) { const h = change(file); const r = awai
   ck("workflow：安裝改用 npm ci --legacy-peer-deps，不再有 npm install", /run:\s*npm ci --legacy-peer-deps/.test(y) && !/run:\s*npm install/.test(y));
   ck("workflow：安裝後驗整棵依賴樹與 lockfile 相同", /check_installed_tree\.mjs/.test(y));
   ck("workflow：build 只有 decide 明確輸出 false 才跳過、取消時不跑（!cancelled）", /needs:\s*decide/.test(y) && /if:\s*\$\{\{\s*!cancelled\(\)\s*&&\s*needs\.decide\.outputs\.deploy\s*!=\s*'false'\s*\}\}/.test(y));
-  ck("workflow：deploy 仍 needs build（build 跳過時 deploy 也跳過）", /deploy:\s*\n\s*needs:\s*build/.test(y));
+  ck("workflow：deploy needs build，且條件是 build 成功（不受 decide 失敗連帶跳過）", /deploy:\s*\n\s*needs:\s*build/.test(y) && /if:\s*\$\{\{\s*!cancelled\(\)\s*&&\s*needs\.build\.result\s*==\s*'success'\s*\}\}/.test(y));
   ck("workflow：decide 有完整歷史（fetch-depth: 0）與 deployments: read", /fetch-depth:\s*0/.test(y) && /deployments:\s*read/.test(y));
   ck("workflow：保留 workflow_dispatch 手動部署與 Supabase 環境檢查", /workflow_dispatch:/.test(y) && /check_supabase_env\.mjs/.test(y));
   const code = y.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n"); // 註解裡說明「為什麼不用」不算（CLAUDE.md：先剝註解再比對）

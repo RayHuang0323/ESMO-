@@ -23,7 +23,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 export const CHECKPOINT_SCHEMA = "esmo.checkpoint/1";
-export const INTERRUPT_REASONS = ["session-interrupted", "hibernate", "process-crash", "browser-crash", "out-of-memory", "manual-stop", "unclean-stop", "timeout"];
+export const INTERRUPT_REASONS = ["session-interrupted", "hibernate", "process-crash", "browser-crash", "out-of-memory", "manual-stop", "unclean-stop", "timeout", "candidate-changed"];
 const sha256 = (b) => crypto.createHash("sha256").update(b).digest("hex");
 const canonical = (v) => Array.isArray(v) ? "[" + v.map(canonical).join(",") + "]" : v && typeof v === "object" ? "{" + Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => JSON.stringify(k) + ":" + canonical(v[k])).join(",") + "}" : JSON.stringify(v) ?? "null";
 const mk = (id, status, detail = "") => ({ id, status, detail });
@@ -52,6 +52,8 @@ export function createCheckpoint(dir, m) {
     tools: (m.tools || []).map((t) => ({ path: t, sha256: fileSha(t) })),
     contract: m.contract ? (typeof m.contract === "string" ? { path: m.contract, sha256: fileSha(m.contract) } : { inline: m.contract.inline, sha256: sha256(canonical(m.contract.inline)) }) : null,
     env: m.env || {}, cases, units, policy, createdAt: new Date().toISOString(),
+    // 執行程序（指令樣板、逾時等）：續跑時必須完全相同，否則兩種程序的結果會被拼成一份（2026-11-26 審查修正）
+    procedure: m.procedure ?? undefined,
   };
   manifest.digest = sha256(canonical(manifest));
   fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest, null, 1), { flag: "wx" });
@@ -114,6 +116,7 @@ export function openCheckpoint(dir) {
       const h = manifest.contract.path ? (fs.existsSync(manifest.contract.path) ? fileSha(manifest.contract.path) : null) : sha256(canonical(manifest.contract.inline));
       checks.push(h === manifest.contract.sha256 ? mk("contract", "PASS") : mk("contract", "BLOCKED", "事前登記契約變了"));
     }
+    if (manifest.procedure !== undefined) checks.push(canonical(ctx.procedure) === canonical(manifest.procedure) ? mk("procedure", "PASS") : mk("procedure", "BLOCKED", `執行程序與事前登記不同：checkpoint ${JSON.stringify(manifest.procedure)} ≠ 現在 ${JSON.stringify(ctx.procedure)}`));
     for (const [k, v] of Object.entries(manifest.env)) checks.push(canonical(ctx.env?.[k]) === canonical(v) ? mk(`env:${k}`, "PASS") : mk(`env:${k}`, "BLOCKED", `環境 ${k}：checkpoint ${JSON.stringify(v)} ≠ 現在 ${JSON.stringify(ctx.env?.[k])}`));
     const j = readJournal();
     checks.push(j.broken ? mk("journal_chain", "FAIL", j.broken) : mk("journal_chain", "PASS", `${j.events.length} 列`));
@@ -140,9 +143,30 @@ export function openCheckpoint(dir) {
     return { status, checks, pending: derive().pending, resetUnits };
   }
 
+  /**
+   * 唯讀的完整性檢查（不寫 journal）：給 Release Gate 收據與 Readiness 報告引用 checkpoint 時用。
+   * 檢查 manifest digest、journal 鏈、候選 SHA、全部完成、每個已完成案例的原始資料 digest、complete 事件的合計雜湊。
+   */
+  function verifyIntegrity(expectedSha) {
+    const checks = [];
+    const { digest, ...rest } = manifest;
+    checks.push(digest === sha256(canonical(rest)) ? mk("manifest_digest", "PASS") : mk("manifest_digest", "FAIL", "manifest 被改過"));
+    checks.push(manifest.candidateSha === expectedSha ? mk("candidate_sha", "PASS") : mk("candidate_sha", "BLOCKED", `checkpoint 屬於 ${manifest.candidateSha}，不是 ${expectedSha}`));
+    const j = readJournal(); checks.push(j.broken ? mk("journal_chain", "FAIL", j.broken) : mk("journal_chain", "PASS"));
+    const st = derive(j.events);
+    checks.push(st.pending.length ? mk("all_cases_done", "BLOCKED", `還有 ${st.pending.length} 個案例未完成`) : mk("all_cases_done", "PASS"));
+    let bad = 0;
+    for (const [c, e] of st.done) { const p = path.join(dir, e.raw); if (!fs.existsSync(p) || fileSha(p) !== e.sha256) { bad++; checks.push(mk(`raw:${c}`, "FAIL", `原始資料不見了或被改過：${e.raw}`)); } }
+    const complete = j.events.filter((e) => e.event === "complete").pop();
+    if (!complete) checks.push(mk("complete_event", "BLOCKED", "沒有 complete 事件"));
+    else if (!st.pending.length) { const agg2 = sha256(manifest.cases.map((c) => `${c}\0${st.done.get(c).sha256}`).join("\n")); checks.push(agg2 === complete.rawAggregateSha256 ? mk("raw_aggregate", "PASS") : mk("raw_aggregate", "FAIL", "原始資料合計雜湊與 complete 時不同")); }
+    if (!bad) checks.push(mk("raw_data", "PASS"));
+    return { status: agg(checks), checks, complete: !!complete, rawAggregateSha256: complete?.rawAggregateSha256 ?? null, interrupts: st.interrupts, resumes: j.events.filter((e) => e.event === "resume").length, unitResets: j.events.filter((e) => e.event === "unit-reset").length };
+  }
+
   function requireValidated() { if (!validated) throw new CheckpointError("not_validated", "寫入結果前必須先通過 validate()（確認候選 SHA、工具、契約、環境、原始資料）"); }
   return {
-    dir, manifest, validate,
+    dir, manifest, validate, verifyIntegrity,
     _append: append,
     status: () => derive(),
     journal: () => readJournal(),

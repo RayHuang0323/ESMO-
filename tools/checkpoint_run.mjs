@@ -41,12 +41,13 @@ for (const kv of a.env) { const i = kv.indexOf("="); env[kv.slice(0, i)] = kv.sl
 const cases = a.cases.split(",").map((s) => s.trim()).filter(Boolean);
 const units = a.units ? Object.fromEntries(a.units.split(";").filter(Boolean).map((u) => { const [k, v] = u.split("="); return [k.trim(), v.split(",").map((s) => s.trim())]; })) : null;
 
+const procedure = { cmd: a.cmd, timeoutMin: Number(a["timeout-min"] ?? 30) };
 let cp;
 try {
-  cp = a.resume ? openCheckpoint(dir) : createCheckpoint(dir, { task: a.task, candidateSha: head, treeSha: tree, tools: a.tool.map((t) => path.resolve(repo, t)), contract: a.contract ? path.resolve(a.contract) : null, env, cases, units, policy: units ? "per-unit" : "per-case" });
+  cp = a.resume ? openCheckpoint(dir) : createCheckpoint(dir, { task: a.task, candidateSha: head, treeSha: tree, tools: a.tool.map((t) => path.resolve(repo, t)), contract: a.contract ? path.resolve(a.contract) : null, env, cases, units, policy: units ? "per-unit" : "per-case", procedure });
 } catch (e) { die(e.code === "dir_not_empty" ? 2 : 1, `${e.code}: ${e.message}`); }
 if (a.resume && (cp.manifest.task !== a.task || JSON.stringify(cp.manifest.cases) !== JSON.stringify(cases))) die(2, "續跑的 --task／--cases 與 checkpoint 事前登記的不同");
-const v = cp.validate({ candidateSha: head, treeSha: tree, env }, { reason: a.resume ? "resume" : "start" });
+const v = cp.validate({ candidateSha: head, treeSha: tree, env, procedure }, { reason: a.resume ? "resume" : "start" });
 for (const c of v.checks.filter((x) => x.status !== "PASS")) console.log(`  ${c.status} ${c.id}  ${c.detail}`);
 if (v.status !== "PASS") die(v.status === "FAIL" ? 1 : 2, `checkpoint 驗證 ${v.status}：不續跑`);
 if (v.resetUnits.length) console.log(`  依契約整組重跑的單位：${v.resetUnits.join("、")}`);
@@ -65,6 +66,9 @@ for (const c of cp.status().pending) {
   const cmd = a.cmd.replaceAll("{case}", c).replaceAll("{out}", out);
   console.log(`▶ ${c}（第 ${attempt} 次）`);
   const r = await runCommand(cmd, { cwd: repo, env: { ...process.env, ESMO_CHECKPOINT_CASE: c, ESMO_CHECKPOINT_SHA: head }, timeoutMs, echo: true, registry });
+  // 每個案例記錄前重新確認工作目錄仍是同一個候選（別的 agent 中途切換 checkout 會混入別的 SHA）
+  const headNow = g(["rev-parse", "HEAD"]).stdout.trim(), dirtyNow = g(["status", "--porcelain", "--untracked-files=no"]).stdout.trim();
+  if (headNow !== head || dirtyNow) { cp.fail(c, "candidate-changed", { headNow, dirty: !!dirtyNow }); cp.interrupt("candidate-changed", `案例 ${c} 執行期間工作目錄變成 ${headNow}${dirtyNow ? "（有未提交變更）" : ""}`); die(2, `工作目錄在執行期間被改變，案例 ${c} 不記錄：BLOCKED`); }
   if (r.exitCode === 0 && fs.existsSync(out)) { cp.record(c, out, { durationMs: r.durationMs, attempt }); ran++; continue; }
   const reason = r.timedOut ? "timeout" : r.exitCode === 3 ? "browser-crash" : r.exitCode === 137 || /out of memory|heap out of memory|ENOMEM/i.test(r.tail) ? "out-of-memory" : "process-crash";
   cp.fail(c, reason, { exitCode: r.exitCode, attempt, tail: r.tail.slice(-400) });

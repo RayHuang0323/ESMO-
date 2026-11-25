@@ -110,11 +110,11 @@ ck("diff 分類：一般 M／A／D 文件放行", DC.classifyDiff([{ status: "M"
   const D = edit(r, "docs/readme.md", "hello again\n");
   const c = carry(r, B, D); const cj = J(c);
   ck("正常：carry PASS（exit 0）", c.code === 0 && cj?.status === "PASS", c.out.slice(-800));
-  ck("正常：三個 gate 都可沿用、沒有需直接重跑的", JSON.stringify(cj?.carriedGates) === JSON.stringify(["prod", "logic", "contract"]) && cj?.requiresDirect?.length === 0, JSON.stringify(cj));
+  ck("正常：prod、logic 可沿用；contract 會讀 docs/ 目錄（即使改的是別的文件）⇒ 保守要求直接重跑", JSON.stringify(cj?.carriedGates) === JSON.stringify(["prod", "logic"]) && cj?.requiresDirect?.length === 1 && cj.requiresDirect[0].gate === "contract", JSON.stringify({ carried: cj?.carriedGates, rd: cj?.requiresDirect }));
   ck("正常：在目標重新 build，bundle 與來源相同", has(c, "carry_bundle_identical", "PASS"));
-  const baseFin = ["prod", "logic", "contract"].map((gname) => Date.parse(JSON.parse(fs.readFileSync(receiptFiles(r, (f) => f.includes(`__${gname}__PASS`))[0], "utf8")).finishedAt));
+  const baseFin = ["prod", "logic"].map((gname) => Date.parse(JSON.parse(fs.readFileSync(receiptFiles(r, (f) => f.includes(`__${gname}__PASS`))[0], "utf8")).finishedAt));
   ck("正常：沿用到期時間 = 來源最早收據 +24h（不延長）", Date.parse(cj?.expiresAt) === Math.min(...baseFin) + 24 * 3600000, `${cj?.expiresAt}`);
-  const a = assert(r, D, ["prod", "logic", "contract"]);
+  const a = assert(r, D, ["prod", "logic"]);
   ck("正常：assert 目標 SHA PASS，且標示沿用來源", a.code === 0 && (J(a)?.checks || []).filter((x) => x.id.startsWith("gate:")).every((x) => x.status === "PASS" && x.detail.includes("沿用自")), a.out.slice(-600));
   const origB = fs.readdirSync(r.rdir).filter((f) => f.includes(B.slice(0, 12)));
   ck("正常：原收據檔名與內容不變（沒有被搬移或改寫）", origB.length === 3 && origB.every((f) => { const j = JSON.parse(fs.readFileSync(path.join(r.rdir, f), "utf8")); return j.targetSha === B && j.digest === LIB.digestOf(j); }));
@@ -282,6 +282,44 @@ ck("diff 分類：一般 M／A／D 文件放行", DC.classifyDiff([{ status: "M"
   ck("checkpoint 未完成 ⇒ BLOCKED checkpoint_complete", inc.code === 2 && has(inc, "checkpoint_complete", "BLOCKED"), inc.out.slice(-300));
   const other = cli([...base, "--checkpoint", mkcp(true, "f".repeat(40))]);
   ck("checkpoint 屬於別的 SHA ⇒ BLOCKED（不同候選的結果不能掛到這張收據）", other.code === 2 && /checkpoint 屬於/.test(checkOf(other, "checkpoint_complete")?.detail || ""), other.out.slice(-300));
+  const tam = mkcp(true); fs.appendFileSync(path.join(tam, "raw", "a"), "tampered");
+  const t = cli([...base, "--checkpoint", tam]);
+  ck("checkpoint 完成後原始資料被改 ⇒ FAIL checkpoint_complete（不只看 journal）", t.code === 1 && has(t, "checkpoint_complete", "FAIL") && /raw:a/.test(checkOf(t, "checkpoint_complete")?.detail || ""), t.out.slice(-300));
+}
+
+// ═══ 7. 審查修正：根目錄絕對 glob、工具以其他形式碰文件目錄、依賴 git 歷史、assert 當下重算結構 ═══
+{
+  const r = makeRepo(); const B = head(r.dir); checkout(r, B);
+  write(path.join(r.dir, "src", "main.js"), 'export const all = import.meta.glob("/docs/**/*.md", { query: "?raw", eager: true });\n');
+  write(path.join(r.dir, "tools", "check_dir.mjs"), 'import path from "node:path"; const d = path.join(process.cwd(), "docs"); process.exit(d ? 0 : 1);\n');
+  write(path.join(r.dir, "tools", "check_hist.mjs"), 'import { spawnSync } from "node:child_process"; spawnSync("git", ["diff", "--name-only", "HEAD~1"]); process.exit(0);\n');
+  git(r.dir, "add", "-A"); git(r.dir, "commit", "-q", "-m", "readers"); const B2 = head(r.dir);
+  const common = ["run", "--repo", r.dir, "--target-sha", B2, "--receipts-dir", r.rdir, "--json"];
+  cli([...common, "--gate", "prod", "--cmd", BUILD, "--record-bundle", "dist"]);
+  cli([...common, "--gate", "dirgate", "--cmd", "node tools/check_dir.mjs"]);
+  cli([...common, "--gate", "histgate", "--cmd", "node tools/check_hist.mjs"]);
+  cli([...common, "--gate", "logic", "--cmd", "node tools/check_logic.mjs"]);
+  const D = edit(r, "docs/deep/x.md", "x\n");
+  const c = carry(r, B2, D, ["prod", "dirgate", "histgate", "logic"]); const cj = J(c);
+  ck("src 用 Vite 根目錄絕對 glob（/docs/**/*.md?raw）匯入文件 ⇒ FAIL carry_docs_not_product_input", c.code === 1 && has(c, "carry_docs_not_product_input", "FAIL"), c.out.slice(-300));
+  void cj;
+  // 去掉產品讀取者，單獨看 gate 影響判斷
+  checkout(r, B2); write(path.join(r.dir, "src", "main.js"), "export const x = 1;\n"); git(r.dir, "add", "-A"); git(r.dir, "commit", "-q", "-m", "no glob"); const B3 = head(r.dir);
+  const common3 = ["run", "--repo", r.dir, "--target-sha", B3, "--receipts-dir", r.rdir, "--json"];
+  for (const [g, cmd] of [["prod", BUILD], ["dirgate", "node tools/check_dir.mjs"], ["histgate", "node tools/check_hist.mjs"], ["logic", "node tools/check_logic.mjs"]]) cli([...common3, "--gate", g, "--cmd", cmd, ...(g === "prod" ? ["--record-bundle", "dist"] : [])]);
+  const D3 = edit(r, "docs/deep/y.md", "y\n");
+  const c3 = carry(r, B3, D3, ["prod", "dirgate", "histgate", "logic"]); const j3 = J(c3);
+  const rd = (g) => j3?.requiresDirect?.find((x) => x.gate === g)?.reason || "";
+  ck("工具用 path.join(…, \"docs\") 碰文件目錄（沒有字面檔名）⇒ 該 gate 必須直接重跑", c3.code === 0 && /存取文件目錄/.test(rd("dirgate")), JSON.stringify(j3?.requiresDirect));
+  ck("工具依賴 git 歷史（git diff）⇒ 該 gate 必須直接重跑", /git 歷史/.test(rd("histgate")), JSON.stringify(j3?.requiresDirect));
+  ck("不碰文件、不碰歷史的 gate（logic、prod）仍可沿用", j3?.carriedGates?.includes("logic") && j3?.carriedGates?.includes("prod"), JSON.stringify(j3?.carriedGates));
+  // 偽造：拿 D3 的沿用收據改綁到一個不是只改文件的 commit（重算 digest 讓它看起來合法）
+  checkout(r, B3); git(r.dir, "checkout", "-q", "-B", "forge"); const F = edit(r, "src/main.js", "export const x = 999;\n");
+  const cf = receiptFiles(r, (f) => f.includes(D3.slice(0, 12)) && f.includes("__docs-carry__PASS"))[0];
+  const forged = JSON.parse(fs.readFileSync(cf, "utf8")); forged.targetSha = F; forged.actualSha = F; forged.treeSha = git(r.dir, "rev-parse", `${F}^{tree}`).stdout.trim(); forged.digest = LIB.digestOf(forged);
+  fs.writeFileSync(path.join(r.rdir, path.basename(cf).replace(D3.slice(0, 12), F.slice(0, 12))), JSON.stringify(forged));
+  const af = assert(r, F, ["logic"]);
+  ck("偽造的沿用收據（改綁到改了 src 的 commit、digest 重算）⇒ assert 當下重算結構 FAIL", af.code === 1 && af.out.includes("carry_structure_recheck"), af.out.slice(-400));
 }
 
 console.log(`\nRelease docs-carry（TD-62）：${pass}/${pass + fail}　RESULT=${fail ? "FAIL" : "PASS"}`);

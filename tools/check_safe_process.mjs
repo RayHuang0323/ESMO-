@@ -115,6 +115,23 @@ ck("不合法的 taskId 拒絕", throwsCode(() => SP.createProcessRegistry({ tas
   ck("跨 Session：同任務 ID 重新載入登記簿後可以清理（Claude Code 中斷後）", r.result === "terminated" && f.kills.includes(4100));
 }
 
+// ═══ 2b. terminateLiveTree（browser harness／cdp 取代 taskkill /T）════════════
+{
+  const nb = T0 + 100 * 1000; // 呼叫端（gate）在 T0+100s 啟動
+  const f = fakeOs([P(6000, 1, "chrome.exe", -3600, "使用者的 Chrome --user-data-dir=C:\\Users\\me"), P(6001, 6000, "chrome.exe", -3500, "使用者的分頁")]);
+  const r = await SP.terminateLiveTree(6000, { probe: f.probe, notBeforeMs: nb });
+  ck("terminateLiveTree：比 gate 更早啟動的行程（使用者的 Chrome，PID 被重用的情境）⇒ refused，不呼叫 kill", r.result === "refused" && r.code === "started_before_owner" && f.kills.length === 0, JSON.stringify(r));
+  const g = fakeOs([P(7000, 1, "chrome.exe", 200, "chrome.exe --user-data-dir=C:\\Temp\\esmo-gate-profile-1 --remote-debugging-port=0")]);
+  const r2 = await SP.terminateLiveTree(7000, { probe: g.probe, notBeforeMs: nb, expectArgs: ["chrome.exe", "--user-data-dir=C:\\Temp\\esmo-gate-profile-OTHER"] });
+  ck("terminateLiveTree：命令列不含自己的啟動參數 ⇒ refused cmd_mismatch", r2.result === "refused" && r2.code === "cmd_mismatch" && g.kills.length === 0);
+  const h = fakeOs([P(8000, 1, "chrome.exe", 200, "chrome.exe --user-data-dir=C:\\Temp\\esmo-gate-profile-1"), P(8001, 8000, "chrome.exe", 201), P(8002, 8000, "chrome.exe", 50, "PID 重用：比父行程早啟動")]);
+  const r3 = await SP.terminateLiveTree(8000, { probe: h.probe, notBeforeMs: nb, expectArgs: ["chrome.exe", "--user-data-dir=C:\\Temp\\esmo-gate-profile-1"] });
+  ck("terminateLiveTree：自己的 Chrome 樹由葉到根逐一終止；比父行程早啟動的「假子行程」不動", r3.result === "terminated" && JSON.stringify(h.kills) === "[8001,8000]" && h.table.get(8002).alive, JSON.stringify(h.kills));
+  ck("terminateLiveTree：PID 0 ⇒ refused", (await SP.terminateLiveTree(0)).result === "refused");
+  const src = ["browser/harness.mjs", "browser/cdp.mjs", "browser/run-gate.mjs", "lib/releaseGate.mjs"].map((f2) => fs.readFileSync(path.join(HERE, f2), "utf8").split("\n").filter((l) => !/^\s*(\/\/|\*)/.test(l)).join("\n"));
+  ck("原始碼：harness／cdp／run-gate／Release Gate 已沒有 taskkill /T（註解除外）", !src.some((t) => /["']\/T["']/.test(t)));
+}
+
 // ═══ 3. 真實行程（只對自己剛啟動的無害 node 子行程）═════════════════════
 const idle = () => { const c = spawn(process.execPath, ["-e", "setInterval(()=>{},1000)"], { stdio: "ignore", windowsHide: true }); ownChildren.push(c); return c; };
 {
@@ -138,6 +155,12 @@ const idle = () => { const c = spawn(process.execPath, ["-e", "setInterval(()=>{
   ck("真實：行程樹（父＋孫）都被終止，不留孤兒", r.result === "terminated" && grandPid && !SP.osProbe.alive(grandPid) && !SP.osProbe.alive(parent.pid), JSON.stringify({ r, grandPid }));
 }
 {
+  const c = idle(); await sleep(300);
+  const r = await SP.terminateLiveTree(c.pid, { expectArgs: c.spawnargs });
+  await sleep(300);
+  ck("真實：terminateLiveTree 終止自己剛啟動的無害子行程", r.result === "terminated" && !SP.osProbe.alive(c.pid), JSON.stringify(r));
+}
+{
   const reg = SP.createProcessRegistry({ taskId: "real-3", dir: DIR });
   const c = idle(); await sleep(300);
   const r = await reg.terminate(c.pid);
@@ -157,6 +180,16 @@ const idle = () => { const c = spawn(process.execPath, ["-e", "setInterval(()=>{
   ck("整合：Release Gate 指令逾時 ⇒ 透過登記簿終止整棵樹（含孫行程），結果標為逾時", r.timedOut && r.kill?.result === "terminated" && grand > 4 && !SP.osProbe.alive(grand), JSON.stringify({ kill: r.kill, grand, alive: SP.osProbe.alive(grand) }));
   const ev = fs.readFileSync(reg.file, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
   ck("整合：紀錄裡有 shell、node、孫行程的逐一終止", ev.filter((x) => x.event === "kill").length >= 2 && ev.some((x) => x.event === "tree"), JSON.stringify(ev.map((x) => x.event)));
+}
+{
+  // 整合：browser gate supervisor（tools/browser/run-gate.mjs）總時限逾時 ⇒ 經由登記簿終止 gate 與它的孫行程，exit 2
+  const pidFile = path.join(DIR, "rg-grand.pid"); const gateFile = path.join(DIR, "hang_gate.mjs");
+  fs.writeFileSync(gateFile, `import { spawn } from "node:child_process"; import fs from "node:fs"; const c = spawn(process.execPath, ["-e", "setInterval(()=>{},1000)"], { stdio: "ignore" }); fs.writeFileSync(${JSON.stringify(pidFile)}, String(c.pid)); setInterval(() => {}, 1000);\n`);
+  const { spawnSync } = await import("node:child_process");
+  const r = spawnSync(process.execPath, [path.join(HERE, "browser", "run-gate.mjs"), gateFile, "--timeout", "4000"], { encoding: "utf8", timeout: 90000, cwd: DIR });
+  await sleep(500);
+  const grand = fs.existsSync(pidFile) ? Number(fs.readFileSync(pidFile, "utf8")) : null;
+  ck("整合：run-gate 逾時 ⇒ exit 2（HARNESS_FAIL），gate 與孫行程都經登記簿終止", r.status === 2 && /"result":"terminated"/.test(r.stdout) && grand > 4 && !SP.osProbe.alive(grand), (r.stdout || "").slice(-400) + ` grand=${grand}`);
 }
 if (process.platform === "win32") {
   const srv = spawn(process.execPath, ["-e", "const s=require('http').createServer(()=>{}).listen(0,'127.0.0.1',()=>console.log(s.address().port));"], { stdio: ["ignore", "pipe", "ignore"], windowsHide: true });

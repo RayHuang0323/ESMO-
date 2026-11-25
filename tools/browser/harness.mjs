@@ -58,6 +58,7 @@ import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createWorkspaceBrowserProfile } from "./workspaceProfile.mjs";
+import { terminateLiveTree } from "../lib/safeProcess.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const VITE_CLI = resolve(ROOT, "node_modules/vite/bin/vite.js");
@@ -156,39 +157,20 @@ function pidAlive(pid) {
  *
  * @returns {{confirmed:boolean, timedOut:boolean, error:string|null}}
  */
-async function killProcessTree(pid, { timeoutMs = DEFAULT_TIMEOUTS.killConfirmMs } = {}) {
+async function killProcessTree(pid, { timeoutMs = DEFAULT_TIMEOUTS.killConfirmMs, expectArgs = null } = {}) {
   if (pid == null) return { confirmed: true, timedOut: false, error: null };
-  //  2026-11-26（AGENTS.md §12）：PID 0／系統 PID 交給 taskkill /T 會掃過整台機器，一律拒絕
+  //  2026-11-26（AGENTS.md §12＋Release Engineering S1 審查）：不再用 `taskkill /T`（它照「記錄的父 PID」整棵掃，
+  //  沒有啟動時間檢查，PID 被重用時會掃到別人的行程）。改由 safeProcess.terminateLiveTree：
+  //  PID 安全、根行程必須在本 Node 行程之後啟動（使用者自己的 Chrome 一律拒絕）、後代逐層檢查啟動時間、由葉到根逐一終止。
+  //  它內部的系統呼叫都有逾時（PowerShell 30 秒、taskkill 15 秒），不會無限期鎖住事件迴圈。
   if (!Number.isInteger(pid) || pid <= 4 || pid === process.pid) return { confirmed: false, timedOut: false, error: `拒絕終止不安全的 PID ${pid}` };
   if (!pidAlive(pid)) return { confirmed: true, timedOut: false, error: null };
+  const started = Date.now();
   try {
-    if (process.platform === "win32") {
-      const result = await new Promise((res) => {
-        const child = spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
-        child.unref(); // 幫手行程本身也不該拖著呼叫端的 process 不退出
-        const timer = setTimeout(() => {
-          //  taskkill 這個「幫手」行程本身卡住 ⇒ 放棄等它，回報未確認，
-          //  不要對它再做任何同步等待。
-          try { child.kill(); } catch { /* 盡力而為 */ }
-          res({ confirmed: !pidAlive(pid), timedOut: true, error: null });
-        }, timeoutMs);
-        child.once("exit", (code) => {
-          clearTimeout(timer);
-          const alive = pidAlive(pid);
-          res({ confirmed: !alive, timedOut: false, error: alive ? `taskkill exit=${code}，目標仍存活` : null });
-        });
-        child.once("error", (e) => {
-          clearTimeout(timer);
-          res({ confirmed: !pidAlive(pid), timedOut: false, error: e.message });
-        });
-      });
-      return result;
-    }
-    process.kill(-pid, "SIGKILL");
-    return { confirmed: !pidAlive(pid), timedOut: false, error: null };
+    const r = await terminateLiveTree(pid, { expectArgs });
+    const confirmed = r.result === "terminated" || r.result === "already-exited";
+    return { confirmed, timedOut: Date.now() - started > timeoutMs, error: confirmed ? null : `${r.code}：${r.detail ?? "未確認終止"}`, killed: r.killed?.length ?? 0 };
   } catch (e) {
-    //  ESRCH／找不到行程＝已經不在了，等同確認終止。
-    if (String(e?.message ?? e).includes("ESRCH")) return { confirmed: true, timedOut: false, error: null };
     return { confirmed: !pidAlive(pid), timedOut: false, error: String(e?.message ?? e) };
   }
 }
@@ -214,7 +196,7 @@ async function stopOwnedProcess(proc, { graceMs = 3_000, killMs = DEFAULT_TIMEOU
     sleep(graceMs).then(() => false),
   ]);
   if (gracefulExit || exited(proc)) { release(); return { confirmed: true, timedOut: false, error: null, forced: false }; }
-  const forced = await killProcessTree(proc.pid, { timeoutMs: killMs });
+  const forced = await killProcessTree(proc.pid, { timeoutMs: killMs, expectArgs: proc.spawnargs });
   release();
   return { ...forced, forced: true };
 }

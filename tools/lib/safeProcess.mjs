@@ -195,6 +195,37 @@ export function createProcessRegistry({ taskId, dir = defaultRegistryDir(), work
   return { taskId, file, register, terminate, entries, identify };
 }
 
+/**
+ * 給「手上有自己剛啟動的行程、但沒有登記簿」的舊呼叫端（browser harness、cdp）用的樹狀終止。取代 `taskkill /T`。
+ * 根行程身分檢查：PID 安全、不是保護名稱、**啟動時間不早於目前這個 Node 行程**（使用者自己開的 Chrome 一定更早 ⇒ 拒絕）、
+ * 有 expectArgs（ChildProcess.spawnargs）時命令列必須含其中最長的一個參數。後代每層「子行程啟動時間 ≥ 父行程」，由葉到根逐一終止。
+ * 回傳 { result: "terminated"|"already-exited"|"refused", code?, killed: [...] }
+ */
+export async function terminateLiveTree(pid, { probe = osProbe, expectArgs = null, notBeforeMs = Date.now() - process.uptime() * 1000 } = {}) {
+  try { assertSafePid(pid); } catch (e) { return { result: "refused", code: e.code, detail: e.message, killed: [] }; }
+  const root = probe.info(pid);
+  if (!root) return { result: "already-exited", killed: [] };
+  if (PROTECTED_NAMES.has(String(root.name || "").toLowerCase())) return { result: "refused", code: "protected_name", detail: root.name, killed: [] };
+  if (!Number.isFinite(root.startMs) || root.startMs + START_TOLERANCE_MS < notBeforeMs) return { result: "refused", code: "started_before_owner", detail: `PID ${pid}（${root.name}）比呼叫端更早啟動，不可能是自己啟動的行程（PID 被重用？）`, killed: [] };
+  const hint = (expectArgs || []).slice(1).map(String).filter((s) => s.length >= 8).sort((a, b) => b.length - a.length)[0];
+  if (hint && !String(root.commandLine || "").includes(hint)) return { result: "refused", code: "cmd_mismatch", detail: `PID ${pid} 的命令列不含啟動參數，不是自己啟動的那個行程`, killed: [] };
+  const snap = probe.snapshot(); const byParent = new Map();
+  for (const p of snap) { if (!byParent.has(p.ppid)) byParent.set(p.ppid, []); byParent.get(p.ppid).push(p); }
+  const tree = []; const seen = new Set([root.pid]);
+  const walk = (parent, depth) => { for (const c of byParent.get(parent.pid) || []) { if (seen.has(c.pid) || c.pid <= 4 || PROTECTED_NAMES.has(String(c.name || "").toLowerCase())) continue; if (!(Number.isFinite(c.startMs) && c.startMs + START_TOLERANCE_MS >= parent.startMs)) continue; seen.add(c.pid); walk(c, depth + 1); tree.push({ ...c, depth }); } };
+  walk(root, 1);
+  const killed = [];
+  for (const p of [...tree.sort((a, b) => b.depth - a.depth), { ...root, depth: 0 }]) {
+    const now = probe.info(p.pid);
+    if (!now || !sameStart(now.startMs, p.startMs) || (now.commandLine ?? null) !== (p.commandLine ?? null)) continue;
+    try { assertSafePid(p.pid); } catch { continue; }
+    killed.push({ pid: p.pid, name: p.name, ok: probe.kill(p.pid).ok });
+  }
+  await sleep(150);
+  const still = !!probe.info(pid) && sameStart(probe.info(pid)?.startMs, root.startMs);
+  return { result: still ? "refused" : "terminated", code: still ? "still_alive" : undefined, killed };
+}
+
 /** 唯讀：誰在 Listen 這個埠。只回 State=Listen 且 PID > 4 的那幾筆。這裡刻意沒有任何終止功能。 */
 export function listenersOnPort(port) {
   if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new UnsafeProcessError("bad_port", `埠號「${port}」不合法`);

@@ -35,6 +35,7 @@ let b = {}; try { b = JSON.parse(fs.readFileSync(${JSON.stringify(BEHAVIOR)}, "u
 const mode = b[c] || "ok";
 if (mode === "crash") process.exit(1);
 if (mode === "browser") process.exit(3);
+if (mode === "dirty") fs.appendFileSync(".gitignore", "changed-by-another-agent\\n");
 if (mode === "hang") setInterval(() => {}, 1000);
 else setTimeout(() => { fs.writeFileSync(out, c + ":" + process.env.ESMO_CHECKPOINT_SHA + "\\n"); process.exit(0); }, mode === "slow" ? 4000 : 50);
 `);
@@ -140,6 +141,26 @@ behave({});
   const ev = events(d);
   ck("續跑時不完整的單位 seed2 整組作廢重跑（unit-reset），完整的 seed1 保留", ev.some((e) => e.event === "unit-reset" && e.unit === "seed2" && e.cases.join(",") === "c") && !ev.some((e) => e.event === "unit-reset" && e.unit === "seed1"), JSON.stringify(ev.filter((e) => e.event === "unit-reset")));
   ck("重跑後 c 有兩份原始資料（舊的保留、標記 superseded），最終只算最新一份", r2.code === 0 && fs.existsSync(path.join(d, "raw", "c.1.out")) && fs.existsSync(path.join(d, "raw", "c.2.out")) && CP.openCheckpoint(d).status().done.get("c").raw === "raw/c.2.out", r2.out.slice(-300)); }
+
+// ═══ 7b. 審查修正：執行程序、完成後竄改、執行中切換工作目錄 ═══════════════
+{ const d = newDir(); run(args(d, ["--stop-after", "1"]));
+  const alt = args(d, ["--resume"]).map((x) => (x === 'node tools/case.mjs "{out}"' ? 'node tools/case.mjs "{out}" --other-seed' : x));
+  const r = run(alt);
+  ck("續跑時 --cmd 不同（不同程序）⇒ BLOCKED procedure，不把兩種結果拼在一起", r.code === 2 && /BLOCKED procedure/.test(r.out), r.out.slice(-300));
+  const r2 = run(args(d, ["--resume"]).map((x) => (x === "0.1" ? "0.2" : x)));
+  ck("續跑時逾時設定不同 ⇒ BLOCKED procedure", r2.code === 2 && /procedure/.test(r2.out));
+  const r3 = run(args(d, ["--resume"]));
+  const cp = CP.openCheckpoint(d);
+  ck("完成後 verifyIntegrity PASS（唯讀，不寫 journal）", r3.code === 0 && (() => { const n = events(d).length; const v = cp.verifyIntegrity(SHA); return v.status === "PASS" && events(d).length === n; })());
+  fs.appendFileSync(path.join(d, "raw", "b.1.out"), "x");
+  const v2 = cp.verifyIntegrity(SHA);
+  ck("完成後原始資料被改 ⇒ verifyIntegrity FAIL（raw:b）", v2.status === "FAIL" && v2.checks.some((c) => c.id === "raw:b"), JSON.stringify(v2.checks.filter((c) => c.status !== "PASS")));
+  ck("verifyIntegrity 指定別的 SHA ⇒ BLOCKED candidate_sha", cp.verifyIntegrity("b".repeat(40)).checks.some((c) => c.id === "candidate_sha" && c.status === "BLOCKED")); }
+{ const d = newDir(); behave({ b: "dirty" });
+  const r = run(args(d));
+  const ev = events(d);
+  ck("執行中工作目錄被改（別的 agent 改了追蹤檔）⇒ 該案例不記錄，BLOCKED candidate-changed", r.code === 2 && ev.some((e) => e.event === "interrupted" && e.reason === "candidate-changed") && !ev.some((e) => e.event === "case-done" && e.caseId === "b"), r.out.slice(-300));
+  git(REPO, "checkout", "-q", "--", ".gitignore"); behave({}); }
 
 // ═══ 8. 函式庫層：不驗證不能寫、重複、未知案例 ══════════════════════════
 { const d = newDir(); const cp = CP.createCheckpoint(d, { task: "lib", candidateSha: SHA, cases: ["x", "y"], env: {} });
