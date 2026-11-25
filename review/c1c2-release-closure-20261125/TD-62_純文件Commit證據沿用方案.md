@@ -142,3 +142,20 @@ on:
 建議選 **1**：
 - 文件只有 `.md`，風險可以用手動 C3、C4 完全排除。
 - PID 安全規則需要盡快讓 Codex、GPT 看到。
+
+## 7. 補充：實測發現有文件本身就是測試輸入（2026-11-26，寫本方案時）
+
+用本輪的文件 Commit 試做 C3／C5：
+- **C3**：`git diff --raw 93655403 HEAD` 共 12 列，全部是 mode 100644 的 `.md`（9 個修改、3 個新增）。產品輸入（`src`、`public`、`tools`、`package*`、`index.html`、`vite.config.js`、`.github`）的差異是 0 個檔。
+- **C5**：有工具讀到其中的文件。
+  - `tools/check_cs_season_contract.mjs`、`tools/check_home_team_contract.mjs` 會讀 `docs/ai/跨模型交接流程.md` 的內容做 `has()` 斷言，也就是說「交接文件是契約的一部分」。
+  - `tools/check_online_foundation_v2a.mjs` X7 把 `AGENTS.md`、`docs/handoff/*` 視為共用檔。這是看 git diff，不讀內容。
+- **本輪實跑**（文件追加後）：
+  - `check_cs_season_contract`：exit 0
+  - `check_home_team_contract`：讀交接文件的 3 條全部 PASS；另外 4 條 FAIL 是 `src` 路由與標記檢查（`src` 和 `93655403` 相同；05 早有紀錄這支在 main 上就是紅的）⇒ 36/40，和文件無關
+
+**對方案的修正**：C5 不能只是「有引用就 FAIL」，否則連交接文件都不能改。改成兩段：
+- **C5a**：找出讀取這次變更檔案的工具，用靜態掃描找路徑字串。
+- **C5b**：在 D 上只重跑這些工具，結果要和 B 上的結果**逐條相同**。所以 B 的收據要記錄每條檢查的結果，不能只記 exit code。不同 ⇒ FAIL。
+
+成本很低：通常只有幾支輕量的契約檢查。這也代表 `has()` 型契約斷言，在文件被「刪改」時會紅，「追加」時不會。所以要強制文件只能追加，正好由 C5b 自動把關。
