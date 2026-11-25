@@ -288,6 +288,7 @@ export function preflight(opts) {
   }
 
   ctx.env = captureEnv(ctx, di, repo);
+  if (opts.requireBrowser) ctx.env.browser = { chrome: chromeVersion() };
   return done();
 }
 
@@ -307,6 +308,14 @@ function captureEnv(ctx, di, repo) {
     osRelease: os.release(), git: gv, nodeModules: { kind: di.nodeModules.kind, real: di.nodeModules.real || null },
     depsDigest: di.digest, depCount: Object.keys(di.installed).length, lockfileBlob: lockBlob,
   };
+}
+
+/** 本機 Chrome 版本（Windows 讀 chrome.exe 的檔案版本；其他平台回 null）。只記錄進收據，供效期規劃判斷「瀏覽器自動更新了沒」；不影響 assert。 */
+export function chromeVersion() {
+  if (process.platform !== "win32") return null;
+  const exe = CHROME_CANDIDATES.find((p) => fs.existsSync(p)); if (!exe) return null;
+  const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `(Get-Item -LiteralPath '${exe.replace(/'/g, "''")}').VersionInfo.ProductVersion`], { encoding: "utf8", timeout: 20000, windowsHide: true });
+  return (r.stdout || "").trim() || null;
 }
 
 // ── 收據 ─────────────────────────────────────────────────────────────────
