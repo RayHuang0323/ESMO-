@@ -27,8 +27,9 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
   git, sha256, canonical, aggregate, preflight, loadReceipts, verifyReceipt, digestOf, RECEIPT_SCHEMA, DEFAULT_MAX_AGE_HOURS,
-  hashDir, viteEnvFingerprint,
+  hashDir, viteEnvFingerprint, browserProbe, probeDeployment,
 } from "./releaseGate.mjs";
+import { classifyGate } from "./gatePolicy.mjs";
 
 export const CARRY_SCHEMA = "esmo.release-gate.docs-carry/1";
 export const CARRY_GATE = "docs-carry";
@@ -230,7 +231,8 @@ function rebuild(repoTop, nodeModulesReal, baseBundle) {
  */
 export function buildCarry(opts) {
   const startedAt = new Date().toISOString();
-  const maxAgeHours = opts.maxAgeHours ?? DEFAULT_MAX_AGE_HOURS; const now = opts.now ?? Date.now();
+  const maxAgeHours = opts.maxAgeHours ?? null; const now = opts.now ?? Date.now();
+  const probes = { currentBrowser: opts.currentBrowser || browserProbe(), deploymentProbe: opts.deploymentProbe || probeDeployment };
   const pre = preflight({ repo: opts.repo, target: opts.target, receiptsDir: opts.receiptsDir });
   const checks = [...pre.checks]; const ctx = pre.ctx;
   const info = { baseSha: null, baseTree: null, diff: [], readers: [], toolReaders: [], carriedGates: [], requiresDirect: [], base: [], bundle: null, nonDocDigest: null, commits: [] };
@@ -297,7 +299,10 @@ export function buildCarry(opts) {
     const found = loadReceipts(ctx.receiptsDir, { targetSha: B, gate: g }).filter((f) => f.receipt.schema === RECEIPT_SCHEMA);
     if (!found.length) { checks.push(mk(`carry_base:${g}`, "BLOCKED", `來源 ${B.slice(0, 12)} 沒有 gate「${g}」的直接收據（沿用收據不能當來源，不能連鎖沿用）`)); continue; }
     const rc = found[0].receipt;
-    const v = verifyReceipt(rc, baseCtx, { maxAgeHours, now });
+    // TD-64：綁定部署的 gate（正式站 smoke）只代表當下那一版正式站，一律不沿用
+    const cls = classifyGate(g, (rc.commands || []).map((c) => c.cmd));
+    if (cls.neverCarry) { info.requiresDirect.push({ gate: g, reason: `${cls.label}綁定正式站部署，不能沿用（要在目標上直接重跑）` }); checks.push(mk(`carry_base:${g}`, "PASS", "不沿用（綁定部署）")); continue; }
+    const v = verifyReceipt(rc, baseCtx, { maxAgeHours, now, ...probes });
     const failed = v.checks.filter((c) => c.status !== "PASS");
     if (failed.length) {
       const tampered = failed.some((c) => c.id === "receipt_digest");
@@ -305,7 +310,8 @@ export function buildCarry(opts) {
       continue;
     }
     const fin = Date.parse(rc.finishedAt);
-    info.base.push({ gate: g, file: path.basename(found[0].file), digest: rc.digest, finishedAt: rc.finishedAt, expiresAt: new Date(fin + maxAgeHours * 3600000).toISOString(), commands: (rc.commands || []).map((c) => c.cmd) });
+    // 沿用不延長效期：到期時間＝來源收據自己依分類表算出的到期時間（舊收據 24h）
+    info.base.push({ gate: g, file: path.basename(found[0].file), digest: rc.digest, finishedAt: rc.finishedAt, expiresAt: v.policy.expiresAt, tier: v.policy.tier, commands: (rc.commands || []).map((c) => c.cmd) });
     if (rc.bundle) bundles.push({ gate: g, ...rc.bundle });
     checks.push(mk(`carry_base:${g}`, "PASS", `${path.basename(found[0].file)}（${((now - fin) / 3600000).toFixed(1)} 小時前）`));
   }
@@ -341,7 +347,7 @@ export function buildCarry(opts) {
 }
 
 /** assert 用：一張沿用收據能不能替 gate g 作證（現在、這個 SHA、這個環境）。 */
-export function verifyCarry(carry, ctx, gate, { receiptsDir, maxAgeHours = DEFAULT_MAX_AGE_HOURS, now = Date.now() } = {}) {
+export function verifyCarry(carry, ctx, gate, { receiptsDir, maxAgeHours = null, now = Date.now(), currentBrowser = null, deploymentProbe = probeDeployment } = {}) {
   const c = [];
   c.push(carry.schema === CARRY_SCHEMA ? mk("carry_schema", "PASS") : mk("carry_schema", "FAIL", `schema「${carry.schema}」不是沿用收據`));
   c.push(carry.digest && carry.digest === digestOf(carry) ? mk("carry_digest", "PASS") : mk("carry_digest", "FAIL", "沿用收據摘要不符：被改過或不完整"));
@@ -359,6 +365,7 @@ export function verifyCarry(carry, ctx, gate, { receiptsDir, maxAgeHours = DEFAU
   }
   const e = carry.env || {}, cur = ctx.env || {}; const diff = [];
   for (const k of ["nodeMajor", "platform", "arch", "depsDigest", "lockfileBlob"]) if (e[k] !== cur[k]) diff.push(`${k}: ${e[k]} ≠ ${cur[k]}`);
+  if (e.installedTree && e.installedTree.digest !== cur.installedTree?.digest) diff.push(`整棵依賴樹: ${String(e.installedTree.digest).slice(0, 12)} ≠ ${String(cur.installedTree?.digest ?? "未知").slice(0, 12)}`);
   c.push(diff.length ? mk("carry_env", "FAIL", diff.join("；")) : mk("carry_env", "PASS"));
   if (!(carry.carriedGates || []).includes(gate)) {
     const why = (carry.requiresDirect || []).find((r) => r.gate === gate);
@@ -374,7 +381,7 @@ export function verifyCarry(carry, ctx, gate, { receiptsDir, maxAgeHours = DEFAU
   if (!base) { c.push(mk("carry_base_present", "BLOCKED", `來源收據不見了：${ref.file}（原收據必須永久保留）`)); return { status: aggregate(c), checks: c }; }
   c.push(base.digest === ref.digest ? mk("carry_base_digest_pinned", "PASS") : mk("carry_base_digest_pinned", "FAIL", "來源收據與沿用時記錄的 digest 不同（被換掉或改過）"));
   c.push(base.schema === RECEIPT_SCHEMA && base.gate === gate && base.targetSha === carry.baseSha ? mk("carry_base_identity", "PASS") : mk("carry_base_identity", "FAIL", "來源收據不是該 gate／該來源 SHA 的直接收據"));
-  const v = verifyReceipt(base, { targetFull: carry.baseSha, treeSha: carry.baseTree, env: ctx.env }, { maxAgeHours, now });
+  const v = verifyReceipt(base, { targetFull: carry.baseSha, treeSha: carry.baseTree, env: ctx.env }, { maxAgeHours, now, currentBrowser, deploymentProbe });
   for (const x of v.checks) c.push({ ...x, id: `base_${x.id}` });
   return { status: aggregate(c), checks: c, ref };
 }

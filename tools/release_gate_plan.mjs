@@ -11,51 +11,47 @@
 //          依序執行時，所有收據的共同有效窗口取決於「第一個完成的」收據 ⇒ 最長的 gate 排第一，
 //          跨度＝總時長 − 第一個 gate 時長，最小。總時長已超過效期就直接說做不到（要分批或重跑）。
 //
-//  ⚠ 正式效期仍是 24 小時（DEFAULT_MAX_AGE_HOURS）。下面「建議效期」只是分類方案的試算，
-//    未經 Owner 核准前不影響 assert（見 review/release-engineering-s1/05 與效期方案文件）。
+//  ⚠ 效期（TD-64，2026-11-26 S1.1）：一律由 tools/lib/gatePolicy.mjs 的固定分類表決定（收據自己寫的 category 不採信）。
+//    status 顯示的到期時間：沒有提供目前環境時，72 小時類一律以 24 小時估（保守）；正式判定以 assert 為準。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { git, loadReceipts, digestOf, DEFAULT_MAX_AGE_HOURS, defaultReceiptsDir, chromeVersion } from "./lib/releaseGate.mjs";
+import { git, loadReceipts, digestOf, defaultReceiptsDir, chromeVersion, preflight } from "./lib/releaseGate.mjs";
 import { CARRY_GATE } from "./lib/docsCarry.mjs";
+import { CLASSES, classifyGate, eligibility72, GATE_POLICY_VERSION, POLICY_TABLE_DIGEST, LEGACY_HOURS } from "./lib/gatePolicy.mjs";
 
-/** 分類與「建議」效期（試算用，正式政策仍是 24h）。 */
-export const CATEGORIES = {
-  logic: { label: "純邏輯與決定性", proposedHours: 72, invalidates: "tree、依賴摘要、Node 主版本任一改變" },
-  golden: { label: "Golden 與版本隔離", proposedHours: 72, invalidates: "tree、依賴、Node、fixture／指紋常數改變" },
-  build: { label: "Production Build", proposedHours: 72, invalidates: "tree、依賴、Node、VITE_* 建置環境改變" },
-  browser: { label: "瀏覽器功能", proposedHours: 24, invalidates: "瀏覽器版本改變（Chrome 自動更新）、tree、依賴" },
-  perf: { label: "效能與記憶體", proposedHours: 24, invalidates: "瀏覽器版本、電源狀態、機器負載；契約規定的完整實驗單位" },
-  "prod-smoke": { label: "正式站 Production Smoke", proposedHours: 0, invalidates: "正式站 bundle 改變（任何部署）；只代表當下的正式站" },
-};
-export function categoryOf(gate, receipt) {
-  if (receipt?.category && CATEGORIES[receipt.category]) return receipt.category;
-  const g = String(gate).toLowerCase();
-  if (/prod.*smoke|smoke|production-smoke/.test(g)) return "prod-smoke";
-  if (/perf|p1a?\b|p2v?2?|bench|memory|heap/.test(g)) return "perf";
-  if (/browser|fourengine|crossengine|webkit|firefox|playwright|ui/.test(g)) return "browser";
-  if (/golden|v21a|baseline|fixture/.test(g)) return "golden";
-  if (/build|production/.test(g)) return "build";
-  return "logic";
+/** 分類表（唯讀轉出；來源是 tools/lib/gatePolicy.mjs）。 */
+export const CATEGORIES = CLASSES;
+/** gate 的分類：只看 gate 名稱＋收據裡的實際指令。收據自帶的 category 一律不採信（不能自己指定分類拿更長效期）。 */
+export function categoryOf(gate, receipt) { return classifyGate(gate, (receipt?.commands || []).map((c) => c.cmd)).class; }
+/** 一張直接收據的效期時數與等級（env＝目前環境；沒有就保守按 24h）。 */
+export function hoursOf(gate, rc, env = null) {
+  const cls = classifyGate(gate, (rc.commands || []).map((c) => c.cmd));
+  const p = rc.policy;
+  if (!p) return { cls, hours: LEGACY_HOURS, tier: "legacy-24h" };
+  if (p.version !== GATE_POLICY_VERSION || p.tableDigest !== POLICY_TABLE_DIGEST || p.class !== cls.class) return { cls, hours: LEGACY_HOURS, tier: "legacy-24h", policyMismatch: p.class !== cls.class };
+  if (cls.hours > LEGACY_HOURS) return env && eligibility72(cls, rc, env).ok ? { cls, hours: cls.hours, tier: `${cls.hours}h` } : { cls, hours: LEGACY_HOURS, tier: env ? "24h（環境不一致，不給 72h）" : "24h（未提供環境：保守估計）" };
+  return { cls, hours: Math.min(cls.hours, LEGACY_HOURS), tier: `${Math.min(cls.hours, LEGACY_HOURS)}h` };
 }
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null; };
 
-/** 每個 gate 的最新收據與效期狀態。now 可注入（測試用；不影響任何收據）。 */
-export function receiptStatus({ receiptsDir, targetSha, gates, maxAgeHours = DEFAULT_MAX_AGE_HOURS, now = Date.now(), currentBrowser = null }) {
-  const rows = [];
+/** 每個 gate 的最新收據與效期狀態。now 可注入（測試用；不影響任何收據）。currentBrowser：目前 Chrome 版本字串。 */
+export function receiptStatus({ receiptsDir, targetSha, gates, maxAgeHours = null, now = Date.now(), currentBrowser = null, env = null }) {
+  const rows = []; const cap = maxAgeHours === null || maxAgeHours === undefined ? Infinity : Number(maxAgeHours);
   for (const g of gates) {
     let found = loadReceipts(receiptsDir, { targetSha, gate: g }); let via = "direct";
     if (!found.length) { const c = loadReceipts(receiptsDir, { targetSha, gate: CARRY_GATE }).filter((x) => (x.receipt.carriedGates || []).includes(g)); if (c.length) { found = c; via = "docs-carry"; } }
     if (!found.length) { rows.push({ gate: g, state: "NOT_RUN", category: categoryOf(g) }); continue; }
     const rc = found[0].receipt; const fin = Date.parse(rc.finishedAt);
     const intact = rc.digest === digestOf(rc);
-    const expiresAt = via === "docs-carry" ? Date.parse(rc.expiresAt) : fin + maxAgeHours * 3600000;
+    const h = via === "docs-carry" ? { cls: classifyGate(g, []), hours: null, tier: "沿用（不延長來源效期）" } : hoursOf(g, rc, env);
+    const expiresAt = via === "docs-carry" ? Date.parse(rc.expiresAt) : fin + Math.min(h.hours, cap) * 3600000;
     const remainingHours = (expiresAt - now) / 3600000;
-    const cat = categoryOf(g, rc);
+    const cat = via === "docs-carry" ? categoryOf(g) : h.cls.class;
     const browserThen = rc.env?.browser?.chrome ?? null;
-    let state = !intact ? "INVALID" : rc.status !== "PASS" ? rc.status : remainingHours <= 0 ? "EXPIRED" : "PASS";
-    rows.push({ gate: g, state, via, category: cat, file: path.basename(found[0].file), finishedAt: rc.finishedAt, expiresAt: new Date(expiresAt).toISOString(), remainingHours: +remainingHours.toFixed(2), durationMin: rc.durationMs ? +(rc.durationMs / 60000).toFixed(1) : null, browserThen, browserChanged: !!(browserThen && currentBrowser && browserThen !== currentBrowser), olderReceipts: found.length - 1 });
+    let state = !intact ? "INVALID" : h.policyMismatch ? "INVALID" : rc.status !== "PASS" ? rc.status : remainingHours <= 0 ? "EXPIRED" : "PASS";
+    rows.push({ gate: g, state, via, category: cat, tier: h.tier, file: path.basename(found[0].file), finishedAt: rc.finishedAt, expiresAt: new Date(expiresAt).toISOString(), remainingHours: +remainingHours.toFixed(2), durationMin: rc.durationMs ? +(rc.durationMs / 60000).toFixed(1) : null, browserThen, browserChanged: !!(browserThen && currentBrowser && browserThen !== currentBrowser), olderReceipts: found.length - 1 });
   }
   const live = rows.filter((r) => r.state === "PASS");
   const windowEnds = live.length ? live.reduce((m, r) => (Date.parse(r.expiresAt) < Date.parse(m.expiresAt) ? r : m)) : null;
@@ -63,7 +59,7 @@ export function receiptStatus({ receiptsDir, targetSha, gates, maxAgeHours = DEF
 }
 
 /** 依序執行的最佳順序：最長的排第一。回傳順序、跨度、完成後剩餘窗口。 */
-export function planOrder(est, { maxAgeHours = DEFAULT_MAX_AGE_HOURS, order = null } = {}) {
+export function planOrder(est, { maxAgeHours = LEGACY_HOURS, order = null } = {}) {
   const total = Object.values(est).reduce((a, b) => a + b, 0);
   const evalOrder = (ord) => { const first = est[ord[0]] ?? 0; const spanMin = total - first; return { order: ord, totalMin: total, spanMin, windowAfterCompletionHours: +(maxAgeHours - spanMin / 60).toFixed(2), feasible: spanMin / 60 < maxAgeHours }; };
   const best = evalOrder(Object.keys(est).sort((a, b) => est[b] - est[a] || (a < b ? -1 : 1)));
@@ -81,12 +77,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     if (!a["target-sha"]) { console.error("status 需要 --target-sha"); process.exit(64); }
     const full = git(repo, ["rev-parse", "--verify", "--quiet", `${a["target-sha"]}^{commit}`]).out || a["target-sha"];
     const cur = chromeVersion();
-    const st = receiptStatus({ receiptsDir, targetSha: full, gates: a.gates, currentBrowser: cur });
+    const pre = preflight({ repo, target: full, receiptsDir });
+    const st = receiptStatus({ receiptsDir, targetSha: full, gates: a.gates, currentBrowser: cur, env: pre.ctx.env });
     const warn = Number(a["warn-hours"] ?? 6);
     if (a.json) console.log(JSON.stringify({ target: full, currentBrowser: cur, ...st }, null, 1));
     else {
-      console.log(`目標 ${full}　現在 Chrome ${cur ?? "(未知)"}　（正式效期 ${DEFAULT_MAX_AGE_HOURS}h）`);
-      for (const r of st.rows) console.log(`  ${r.state.padEnd(8)} ${r.gate.padEnd(28)} ${CATEGORIES[r.category].label.padEnd(12)} ${r.via ?? ""} ${r.expiresAt ? `到期 ${r.expiresAt}（剩 ${r.remainingHours}h）` : ""}${r.remainingHours !== undefined && r.remainingHours > 0 && r.remainingHours < warn ? "  ⚠ 即將到期" : ""}${r.browserChanged ? `  ⚠ 瀏覽器已從 ${r.browserThen} 更新` : ""}`);
+      console.log(`目標 ${full}　現在 Chrome ${cur ?? "(未知)"}　（效期分類表 ${GATE_POLICY_VERSION}；舊收據 ${LEGACY_HOURS}h）`);
+      for (const r of st.rows) console.log(`  ${r.state.padEnd(8)} ${r.gate.padEnd(28)} ${CATEGORIES[r.category].label.padEnd(12)} ${r.tier ?? ""} ${r.via ?? ""} ${r.expiresAt ? `到期 ${r.expiresAt}（剩 ${r.remainingHours}h）` : ""}${r.remainingHours !== undefined && r.remainingHours > 0 && r.remainingHours < warn ? "  ⚠ 即將到期" : ""}${r.browserChanged ? `  ⚠ 瀏覽器已從 ${r.browserThen} 更新` : ""}`);
       console.log(st.windowEndsAt ? `發布窗口到 ${st.windowEndsAt}（由 ${st.windowGate} 決定）` : "沒有有效的 PASS 收據");
     }
     process.exit(0);

@@ -21,7 +21,7 @@
 //    --gate <名稱>            run 必填。收據的名稱，例如 build、regress、cs-rc（assert 用同樣名稱查）
 //    --cmd "<指令>"           run 用，可重複；在 --repo 目錄執行，依序跑，第一個失敗就停
 //    --require-gate <名稱>    assert 用，可重複，至少一個
-//    --max-age-hours <n>      收據有效時數，預設 24
+//    --max-age-hours <n>      只能「縮短」收據有效時數：有效時數 = min(分類表的時數, n)。預設不縮短（分類表見 tools/lib/gatePolicy.mjs；舊收據 24）
 //    --require-ancestor <sha> 目標必須包含這個 commit（例：目前 main；不包含 ⇒ 要先 rebase）
 //    --expect-remote-main <sha> [--remote origin] [--branch main]   遠端 main 必須正是這個 SHA
 //    --require-browser        也要求找得到 Chrome（跑 browser gate 時）
@@ -30,7 +30,8 @@
 //    --record-bundle <dir>    run 用（production gate）：指令跑完後記錄 <dir>（相對 repo）全部檔案的雜湊與 VITE_* 建置環境；
 //                             docs-carry 要靠它證明「文件 Commit 的產品輸出與來源相同」。dir 必須是這次 run 期間新 build 的
 //    --checkpoint <dir>       run 用：引用 tools/checkpoint_run.mjs 已完成的 checkpoint（同 SHA、全部完成），中斷／續跑次數寫進收據
-//    --category <名稱>        run 用：收據分類（logic｜golden｜browser｜perf｜prod-smoke｜build），供效期規劃與報告使用
+//    --category <名稱>        run 用：只能「宣告預期」。分類一律由 tools/lib/gatePolicy.mjs 依 gate 名稱＋指令決定；宣告的與分類表不同 ⇒ FAIL
+//    --deployment-url <url>   run 用（正式站 smoke 必填）：執行前後各抓一次 index.html 的雜湊，記錄「這次 smoke 代表哪一次部署」
 //    --json                   輸出 JSON（機器可讀）
 //
 //  結果與 exit code：PASS 0｜FAIL 1｜BLOCKED 2｜用法錯誤 64。FAIL ＞ BLOCKED ＞ PASS。
@@ -40,9 +41,10 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import {
-  RELEASE_GATE_VERSION, EXIT, DEFAULT_MAX_AGE_HOURS, preflight, assertReceipts, buildReceipt, writeReceipt,
-  runCommand, commandStatus, aggregate, git, remoteHead, hashDir, viteEnvFingerprint,
+  RELEASE_GATE_VERSION, EXIT, preflight, assertReceipts, buildReceipt, writeReceipt,
+  runCommand, commandStatus, aggregate, git, remoteHead, hashDir, viteEnvFingerprint, probeDeployment, envFilesAt,
 } from "./lib/releaseGate.mjs";
+import { classifyGate, policyRecord } from "./lib/gatePolicy.mjs";
 import { buildCarry } from "./lib/docsCarry.mjs";
 
 const SYMBOL = { PASS: "✔", FAIL: "✘", BLOCKED: "⛔", WARN: "⚠", INFO: "·" };
@@ -98,8 +100,8 @@ const common = {
   repo: args.repo, target: args["target-sha"], requireAncestor: args["require-ancestor"], expectRemoteMain: args["expect-remote-main"],
   remote: args.remote, branch: args.branch, requireBrowser: !!args["require-browser"], receiptsDir: args["receipts-dir"],
 };
-const maxAge = args["max-age-hours"] === undefined ? DEFAULT_MAX_AGE_HOURS : Number(args["max-age-hours"]);
-if (!Number.isFinite(maxAge) || maxAge <= 0) usage("--max-age-hours 要是正數");
+const maxAge = args["max-age-hours"] === undefined ? null : Number(args["max-age-hours"]);
+if (maxAge !== null && (!Number.isFinite(maxAge) || maxAge <= 0)) usage("--max-age-hours 要是正數");
 
 if (sub === "preflight") {
   const pre = preflight(common);
@@ -139,7 +141,19 @@ if (!args.cmd.length) usage("run 至少要一個 --cmd \"<指令>\"（只想預�
 const timeoutMs = Number(args["timeout-min"] ?? 120) * 60000;
 if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) usage("--timeout-min 要是正數");
 const startedAt = new Date().toISOString();
-const pre = preflight(common);
+// 分類（TD-64）：由固定分類表依 gate 名稱＋指令決定；需要的瀏覽器版本在預檢時一併記錄
+const cls = classifyGate(args.gate, args.cmd);
+const pre = preflight({ ...common, browsers: cls.browsers, requireBrowser: common.requireBrowser || cls.browsers.includes("chrome") });
+const policyChecks = [];
+if (args.category && args.category !== cls.class) policyChecks.push({ id: "category_matches_policy", status: "FAIL", detail: `--category「${args.category}」與分類表的「${cls.class}」不同（${cls.why}）：分類不能由呼叫端指定` });
+else policyChecks.push({ id: "gate_policy", status: "PASS", detail: `${cls.label}（最長 ${cls.hours} 小時；${cls.why}）` });
+let deployment = null;
+if (cls.deploymentBound) {
+  if (!args["deployment-url"]) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: "正式站 smoke 必須加 --deployment-url <正式站網址>，才能證明結果代表哪一次部署" });
+  else { const d = probeDeployment(args["deployment-url"]); if (!d.ok) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: `抓不到 ${args["deployment-url"]}：${d.error}` }); else deployment = { url: d.url, indexSha256: d.indexSha256, before: d.at }; }
+}
+pre.checks.push(...policyChecks);
+if (policyChecks.some((c) => c.status !== "PASS")) pre.status = aggregate(pre.checks);
 const commands = []; let post = null; const reasons = [];
 if (pre.status === "PASS") {
   const env = { ...process.env, ESMO_GATE_NAME: args.gate, ESMO_GATE_VERSION: RELEASE_GATE_VERSION, ESMO_GATE_TARGET_SHA: pre.ctx.targetFull, ESMO_GATE_ACTUAL_SHA: pre.ctx.actualSha };
@@ -157,6 +171,11 @@ if (pre.status === "PASS") {
     { id: "post_head_unchanged", status: after === pre.ctx.actualSha ? "PASS" : "FAIL", detail: after === pre.ctx.actualSha ? "" : `執行期間 HEAD 從 ${pre.ctx.actualSha} 變成 ${after}` },
     { id: "post_tracked_files_unchanged", status: st.ok && !tracked.length ? "PASS" : st.ok ? "FAIL" : "BLOCKED", detail: tracked.length ? `指令改動了追蹤檔：${tracked.slice(0, 3).join("；")}` : "" },
   ] };
+  if (deployment) {
+    const d2 = probeDeployment(deployment.url);
+    deployment.after = d2.at || null; deployment.stable = d2.ok && d2.indexSha256 === deployment.indexSha256;
+    post.checks.push(deployment.stable ? { id: "deployment_unchanged", status: "PASS", detail: `${deployment.url} index ${deployment.indexSha256.slice(0, 12)}（執行前後相同）` } : { id: "deployment_unchanged", status: d2.ok ? "FAIL" : "BLOCKED", detail: d2.ok ? `執行期間正式站被重新部署（${deployment.indexSha256.slice(0, 12)} → ${d2.indexSha256.slice(0, 12)}）` : `事後抓不到正式站：${d2.error}` });
+  }
   for (const c of post.checks) if (c.status !== "PASS") reasons.push(c.id);
 } else reasons.push(...pre.checks.filter((c) => c.status !== "PASS" && c.status !== "WARN" && c.status !== "INFO").map((c) => `preflight:${c.id}`));
 // 選用：記錄 build 輸出雜湊（只在全部指令 PASS 時）
@@ -168,7 +187,7 @@ if (args["record-bundle"] && post && commands.length && commands.every((c) => c.
   if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) bundleChecks.push({ id: "bundle_recorded", status: "FAIL", detail: `--record-bundle 必須在 repo 內：${dir}` });
   else if (!st) bundleChecks.push({ id: "bundle_recorded", status: "BLOCKED", detail: `${rel}/index.html 不存在（指令沒有 build 到這裡？）` });
   else if (st.mtimeMs < Date.parse(startedAt) - 2000) bundleChecks.push({ id: "bundle_recorded", status: "FAIL", detail: `${rel} 是這次 run 開始前就存在的舊 build，不能代表這個 SHA` });
-  else { try { bundle = { dir: rel.split(path.sep).join("/"), ...hashDir(dir), buildEnv: viteEnvFingerprint(process.env) }; bundleChecks.push({ id: "bundle_recorded", status: "PASS", detail: `${bundle.files} 檔 ${bundle.aggregateSha256.slice(0, 16)}` }); } catch (e) { bundleChecks.push({ id: "bundle_recorded", status: "BLOCKED", detail: String(e.message || e) }); } }
+  else { try { bundle = { dir: rel.split(path.sep).join("/"), ...hashDir(dir), buildEnv: viteEnvFingerprint(process.env), envFiles: envFilesAt(pre.ctx.repoTop) }; bundleChecks.push({ id: "bundle_recorded", status: "PASS", detail: `${bundle.files} 檔 ${bundle.aggregateSha256.slice(0, 16)}` }); } catch (e) { bundleChecks.push({ id: "bundle_recorded", status: "BLOCKED", detail: String(e.message || e) }); } }
   if (post) post.checks.push(...bundleChecks);
 } else if (args["record-bundle"]) reasons.push("bundle_not_recorded_commands_not_pass");
 // 選用：引用一個已完成的 checkpoint（tools/checkpoint_run.mjs）。必須屬於同一個 SHA、而且全部完成
@@ -187,7 +206,7 @@ if (args.checkpoint && post) {
 const cmdChecks = commands.map((c) => ({ id: `command: ${c.cmd}`, status: c.status, detail: c.status === "PASS" ? `exit 0，${(c.durationMs / 1000).toFixed(1)}s` : c.timedOut ? "逾時" : c.spawnError ? `起不來：${c.spawnError}` : `exit ${c.exitCode}（${c.status === "BLOCKED" ? "2＝既有慣例的『環境／未跑完』" : "指令本身失敗"}）` }));
 const status = aggregate([...pre.checks, ...(post ? post.checks : []), ...cmdChecks]);
 const finishedAt = new Date().toISOString();
-const receipt = buildReceipt({ gate: args.gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category: args.category, checkpoint });
+const receipt = buildReceipt({ gate: args.gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category: cls.class, checkpoint, policy: policyRecord(cls), deployment });
 const dir = pre.ctx.receiptsDir || path.resolve(args["receipts-dir"] || path.join(os.tmpdir(), "esmo-release-gate", "receipts"));
 let file = null; try { file = writeReceipt(dir, receipt); } catch (e) { cmdChecks.push({ id: "receipt_written", status: "BLOCKED", detail: `收據寫不進去：${e.code || e.message}` }); }
 const finalStatus = file ? status : aggregate([status, "BLOCKED"].map((s) => ({ status: s })));

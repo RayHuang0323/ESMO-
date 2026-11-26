@@ -16,7 +16,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { git, assertReceipts, loadReceipts, remoteHead, DEFAULT_MAX_AGE_HOURS, defaultReceiptsDir } from "./lib/releaseGate.mjs";
+import { git, assertReceipts, loadReceipts, remoteHead, defaultReceiptsDir } from "./lib/releaseGate.mjs";
+import { GATE_POLICY_VERSION, LEGACY_HOURS } from "./lib/gatePolicy.mjs";
 import { receiptStatus, categoryOf, CATEGORIES } from "./release_gate_plan.mjs";
 import { openCheckpoint } from "./lib/checkpoint.mjs";
 import { osProbe } from "./lib/safeProcess.mjs";
@@ -51,14 +52,17 @@ export async function collect(o) {
   const commonDir = path.resolve(repo, git(repo, ["rev-parse", "--git-common-dir"]).out);
   const receiptsDir = o.receiptsDir ? path.resolve(o.receiptsDir) : defaultReceiptsDir(commonDir);
   const gates = o.gates || [];
-  const asr = assertReceipts({ repo, target, gates, receiptsDir, maxAgeHours: DEFAULT_MAX_AGE_HOURS, now });
-  const st = receiptStatus({ receiptsDir, targetSha: target, gates, now, currentBrowser: o.currentBrowser ?? null });
+  // 效期一律由分類表決定（TD-64）；assert 算出的到期時間是正式值，status 只補充歷史與預警
+  const asr = assertReceipts({ repo, target, gates, receiptsDir, now, currentBrowser: o.currentBrowserProbe, deploymentProbe: o.deploymentProbe });
+  const st = receiptStatus({ receiptsDir, targetSha: target, gates, now, currentBrowser: o.currentBrowser ?? null, env: asr.ctx?.env ?? null });
   const cps = Object.fromEntries((o.checkpoints || []).map((x) => { const i = x.indexOf("="); return [x.slice(0, i), path.resolve(x.slice(i + 1))]; }));
   out.gates = gates.map((g) => {
     const a = asr.checks.find((c) => c.id === `gate:${g}`); const s = st.rows.find((r) => r.gate === g);
     let state = a ? a.status : "BLOCKED"; // assert 沒跑到（預檢沒過）就不可能是 PASS
     if (state !== "PASS" && ["EXPIRED", "NOT_RUN", "INVALID", "FAIL"].includes(s?.state)) state = s.state;
-    const row = { gate: g, state, category: s?.category ?? categoryOf(g), categoryLabel: CATEGORIES[s?.category ?? categoryOf(g)].label, via: s?.via ?? null, file: s?.file ?? null, finishedAt: s?.finishedAt ?? null, expiresAt: s?.expiresAt ?? null, remainingHours: s?.remainingHours ?? null, detail: a?.detail ?? "預檢未通過，沒有驗收據", history: [] , checkpoint: null };
+    const pol = asr.detail?.[g]?.policy || null;
+    const exp = state === "PASS" && pol?.expiresAt ? pol.expiresAt : s?.expiresAt ?? null;
+    const row = { gate: g, state, category: pol?.class ?? s?.category ?? categoryOf(g), categoryLabel: CATEGORIES[pol?.class ?? s?.category ?? categoryOf(g)].label, tier: pol?.tier ?? s?.tier ?? null, via: s?.via ?? null, file: s?.file ?? null, finishedAt: s?.finishedAt ?? null, expiresAt: exp, remainingHours: exp ? +((Date.parse(exp) - now) / 3600000).toFixed(2) : null, detail: a?.detail ?? "預檢未通過，沒有驗收據", history: [] , checkpoint: null };
     // 歷史：同 SHA 同 gate 的所有收據（含 FAIL），舊到新
     row.history = loadReceipts(receiptsDir, { targetSha: target, gate: g }).map((f) => ({ file: path.basename(f.file), status: f.receipt.status, finishedAt: f.receipt.finishedAt })).reverse();
     // checkpoint：進行中／中斷
@@ -76,7 +80,8 @@ export async function collect(o) {
     if (row.state !== "PASS") block(`gate「${g}」是 ${row.state}${row.detail && row.state !== "NOT_RUN" ? `：${String(row.detail).slice(0, 160)}` : ""}`);
     return row;
   });
-  out.window = { endsAt: st.windowEndsAt, decidedBy: st.windowGate, policyHours: DEFAULT_MAX_AGE_HOURS };
+  const live = out.gates.filter((r) => r.state === "PASS" && r.expiresAt); const first = live.length ? live.reduce((m, r) => (Date.parse(r.expiresAt) < Date.parse(m.expiresAt) ? r : m)) : null;
+  out.window = { endsAt: first?.expiresAt ?? null, decidedBy: first?.gate ?? null, policy: `${GATE_POLICY_VERSION}（72h 只給登記且環境完全一致的 logic／golden／build；其他與舊收據 ${LEGACY_HOURS}h；smoke 綁定部署）` };
   // 旗標
   const ffText = git(repo, ["show", `${target}:src/featureFlags.js`]);
   const expectFalse = o.expectFlagFalse ?? DEFAULT_FORMAL_FLAGS;
@@ -121,7 +126,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 export function toMarkdown(r) {
   const L = [`# Release Readiness：${r.decision}`, "", `- 候選：\`${r.target}\``, `- 遠端 main：\`${r.remoteMain?.sha ?? "未知"}\`${r.remoteMain?.candidateContainsMain ? `（候選包含它，領先 ${r.remoteMain.ahead}）` : ""}`, `- 工作目錄：HEAD ${r.worktree?.headIsTarget ? "＝候選" : "≠ 候選"}，未提交追蹤檔 ${r.worktree?.trackedChanges ?? "?"}`, `- 產生時間：${r.generatedAt}`, "", "## Gate", "", "| Gate | 狀態 | 分類 | 來源 | 到期 | 剩餘 | 歷史 |", "|---|---|---|---|---|---|---|"];
   for (const g of r.gates || []) L.push(`| ${g.gate} | **${g.state}** | ${g.categoryLabel} | ${g.via ?? "—"} | ${g.expiresAt ?? "—"} | ${g.remainingHours ?? "—"}h | ${g.history.map((h) => h.status).join("→") || "—"}${g.checkpoint ? `；checkpoint ${g.checkpoint.done}/${g.checkpoint.total}，中斷 ${g.checkpoint.interrupts?.length ?? 0}` : ""} |`);
-  L.push("", `發布窗口：${r.window?.endsAt ?? "—"}（${r.window?.decidedBy ?? "—"}；正式效期 ${r.window?.policyHours}h）`, "", "## 版本與旗標", "", `- 指紋：${r.fingerprint?.state} ${r.fingerprint?.version ?? ""} ${r.fingerprint?.fingerprint ?? ""}`);
+  L.push("", `發布窗口：${r.window?.endsAt ?? "—"}（${r.window?.decidedBy ?? "—"}；效期 ${r.window?.policy}）`, "", "## 版本與旗標", "", `- 指紋：${r.fingerprint?.state} ${r.fingerprint?.version ?? ""} ${r.fingerprint?.fingerprint ?? ""}`);
   for (const [f, v] of Object.entries(r.flags?.expectFalse || {})) L.push(`- ${f}：${v}`);
   L.push("", `## Build`, "", r.build?.aggregateSha256 ? `- ${r.build.gate}：${r.build.files} 檔，\`${r.build.aggregateSha256}\`` : `- ${r.build?.note}`);
   if (r.pages) L.push("", "## GitHub Pages", "", `- workflow：${JSON.stringify(r.pages.workflow)}`, `- 正式站入口：${r.pages.entry ?? "未知"}`);
@@ -151,7 +156,7 @@ th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;verti
 <div class="hero"><div class="big">${esc(r.decision)}</div><div><h1>Release Readiness</h1><div class="meta">候選 <code>${esc(r.target)}</code><br>遠端 main <code>${esc(r.remoteMain?.sha ?? "未知")}</code>${r.remoteMain?.candidateContainsMain ? `（候選包含它，領先 ${r.remoteMain.ahead}）` : ""}<br>工作目錄 HEAD ${r.worktree?.headIsTarget ? "＝候選" : "≠ 候選"}・未提交追蹤檔 ${r.worktree?.trackedChanges ?? "?"}・產生於 ${esc(r.generatedAt)}</div></div></div>
 <h2>阻擋項目</h2><div class="card">${r.blockers.length ? `<ul>${r.blockers.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : "無"}</div>
 <h2>Gate（以 assert 為準）</h2><table><thead><tr><th>Gate</th><th>狀態</th><th>分類</th><th>來源</th><th>到期</th><th>剩餘</th><th>歷史／Checkpoint</th></tr></thead><tbody>${rows}</tbody></table>
-<p class="meta">發布窗口到 ${esc(r.window?.endsAt ?? "—")}（由 ${esc(r.window?.decidedBy ?? "—")} 決定；正式效期 ${r.window?.policyHours} 小時）</p>
+<p class="meta">發布窗口到 ${esc(r.window?.endsAt ?? "—")}（由 ${esc(r.window?.decidedBy ?? "—")} 決定；效期 ${esc(r.window?.policy ?? "")}）</p>
 <h2>版本與旗標</h2><div class="card">指紋 ${chip(r.fingerprint?.state ?? "UNKNOWN")} <code>${esc(r.fingerprint?.version ?? "")} ${esc(r.fingerprint?.fingerprint ?? "")}</code><ul>${flags}</ul></div>
 <h2>Build</h2><div class="card">${r.build?.aggregateSha256 ? `${esc(r.build.gate)}：${r.build.files} 檔 <code>${esc(r.build.aggregateSha256)}</code>` : esc(r.build?.note)}</div>
 ${r.pages ? `<h2>GitHub Pages</h2><div class="card">workflow <code>${esc(JSON.stringify(r.pages.workflow))}</code><br>正式站入口 <code>${esc(r.pages.entry ?? "未知")}</code></div>` : ""}

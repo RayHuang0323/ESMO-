@@ -156,10 +156,17 @@ ck("diff 分類：一般 M／A／D 文件放行", DC.classifyDiff([{ status: "M"
   for (const [label, file, text] of cases) {
     checkout(r, B); git(r.dir, "checkout", "-q", "-B", `t${++seq}`);
     let t = text;
-    if (file === "package-lock.json") { const j = JSON.parse(fs.readFileSync(path.join(r.dir, file), "utf8")); j.packages["node_modules/extra"] = { version: "0.0.1" }; t = JSON.stringify(j, null, 1); }
+    //  2026-11-26 S1.1：lock 的變更要讓整棵樹仍與 node_modules 一致（只改 name），才測得到「lock 不是文件 ⇒ FAIL」；
+    //  lock 多出未安裝的套件時 preflight 的 deps_full_tree 會先擋成 BLOCKED（見下一個案例）
+    if (file === "package-lock.json") { const j = JSON.parse(fs.readFileSync(path.join(r.dir, file), "utf8")); j.name = "fx-renamed"; t = JSON.stringify(j, null, 1); }
     const D = edit(r, file, t); const c = carry(r, B, D);
     ck(`${label} ⇒ FAIL carry_diff_docs_only`, c.code === 1 && has(c, "carry_diff_docs_only", "FAIL") && has(c, "carry_nondoc_tree_identical", "FAIL"), c.out.slice(-400));
   }
+  // TD-67：lock 多出一個沒安裝的套件 ⇒ 整棵依賴樹不一致 ⇒ 預檢 BLOCKED，不產生可用的沿用收據
+  checkout(r, B); git(r.dir, "checkout", "-q", "-B", `t${++seq}`);
+  const j = JSON.parse(fs.readFileSync(path.join(r.dir, "package-lock.json"), "utf8")); j.packages["node_modules/extra"] = { version: "0.0.1" };
+  const D2 = edit(r, "package-lock.json", JSON.stringify(j, null, 1)); const c2 = carry(r, B, D2);
+  ck("lock 多出未安裝的套件（深層依賴不一致）⇒ BLOCKED deps_full_tree，沿用不成立", c2.code === 2 && has(c2, "deps_full_tree", "BLOCKED"), c2.out.slice(-400));
 }
 
 // ═══ 3. 權限位元、符號連結、submodule、merge ═════════════════════════════

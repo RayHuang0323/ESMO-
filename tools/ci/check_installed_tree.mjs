@@ -4,43 +4,29 @@
 //
 //    node tools/ci/check_installed_tree.mjs [--root <含 package-lock.json 與 node_modules 的資料夾>] [--json]
 //
-//  Release Gate 的 deps_match_lockfile 只看 package.json 的頂層依賴；這支逐一比對 lockfile v2/v3 的
-//  每一個 packages["node_modules/…"] 條目（含巢狀）。平台專屬的 optional 依賴（例如 @esbuild/linux-x64
-//  在 Windows 上不會安裝）缺少時只列為 optional-missing，不算失敗。
-//  輸出 installedTreeDigest：CI 可以印出來，跟本機比對「兩邊裝到的是不是同一棵樹」。
-//  exit：0 一致｜1 有不符（缺少非 optional、版本不同）｜2 無法判斷（沒有 lockfile／node_modules）
-//  只用 Node 內建模組；唯讀，不安裝、不修改任何檔案。
+//  比對邏輯在 tools/lib/installedTree.mjs（Release Gate preflight 共用同一份，TD-67）。
+//  平台專屬的 optional 依賴（例如 Windows 上的 @esbuild/linux-x64）依 os/cpu/libc 判斷：不屬於目前平台而沒裝＝合法；
+//  屬於目前平台卻沒裝、版本不同、integrity 不符、lockfile 以外的頂層套件＝失敗。
+//  輸出 installedTreeDigest（同平台可比）與 portableTreeDigest（Windows 與 Linux 可直接比對）。
+//  exit：0 一致｜1 有不符｜2 無法判斷（沒有 lockfile／node_modules）。唯讀，不安裝、不修改任何檔案。
 // ============================================================================
-import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
+import { inspectInstalledTree } from "../lib/installedTree.mjs";
 
 const argv = process.argv.slice(2);
-const rootArg = argv.indexOf("--root") >= 0 ? argv[argv.indexOf("--root") + 1] : process.cwd();
-const root = path.resolve(rootArg); const json = argv.includes("--json");
-const out = { root, lockfileVersion: null, entries: 0, ok: 0, mismatched: [], missing: [], optionalMissing: [], extraTopLevel: [], installedTreeDigest: null, status: null };
-const finish = (status) => { out.status = status; if (json) console.log(JSON.stringify(out, null, 1)); else { console.log(`lockfile v${out.lockfileVersion}：${out.entries} 條目，${out.ok} 相同；版本不同 ${out.mismatched.length}、缺少 ${out.missing.length}、平台 optional 未裝 ${out.optionalMissing.length}、lock 以外的頂層套件 ${out.extraTopLevel.length}`); for (const x of [...out.mismatched, ...out.missing].slice(0, 20)) console.log("  " + x); if (out.extraTopLevel.length) console.log("  lock 以外：" + out.extraTopLevel.slice(0, 20).join("、")); console.log(`installedTreeDigest=${out.installedTreeDigest}`); console.log(`INSTALLED_TREE RESULT=${status}`); } process.exit({ PASS: 0, FAIL: 1, BLOCKED: 2 }[status]); };
-
-let lock; try { lock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8")); } catch { finish("BLOCKED"); }
-out.lockfileVersion = lock.lockfileVersion;
-if (!lock.packages) finish("BLOCKED");
-let nm; try { nm = fs.realpathSync(path.join(root, "node_modules")); } catch { finish("BLOCKED"); }
-const rows = [];
-for (const [key, meta] of Object.entries(lock.packages)) {
-  if (!key.startsWith("node_modules/")) continue;
-  out.entries++;
-  const dir = path.join(nm, key.slice("node_modules/".length));
-  let v = null; try { v = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8")).version; } catch { /* 缺 */ }
-  if (meta.link) { out.ok++; continue; }
-  if (v === null) { (meta.optional || meta.devOptional && meta.optional ? out.optionalMissing : out.missing).push(`${key}（lock ${meta.version}）`); continue; }
-  if (v !== meta.version) { out.mismatched.push(`${key}：安裝 ${v} ≠ lock ${meta.version}`); continue; }
-  out.ok++; rows.push(`${key}@${v}`);
+const root = path.resolve(argv.indexOf("--root") >= 0 ? argv[argv.indexOf("--root") + 1] : process.cwd());
+const t = inspectInstalledTree(root);
+if (argv.includes("--json")) console.log(JSON.stringify({ root, ...t }, null, 1));
+else {
+  const p = t.platform;
+  console.log(`平台 ${p.platform}/${p.arch}${p.libc ? "/" + p.libc : ""}｜lockfile v${t.lockfileVersion}：${t.entries} 條目，${t.ok} 相同；版本不同 ${t.mismatched.length}、缺少 ${t.missing.length}、` +
+    `符合平台卻未裝的 optional ${t.optionalMissing.length}、其他平台專屬（合法未裝）${t.platformSkipped.length}、不屬於此平台卻已安裝 ${t.foreignPlatform.length}、` +
+    `integrity 不符 ${t.integrityMismatch.length}${t.integrityChecked ? "" : "（沒有 npm 隱藏 lockfile，未比對 integrity）"}、lock 以外的頂層套件 ${t.extraTopLevel.length}`);
+  for (const x of [...t.mismatched, ...t.missing, ...t.optionalMissing, ...t.foreignPlatform, ...t.integrityMismatch].slice(0, 20)) console.log("  " + x);
+  if (t.extraTopLevel.length) console.log("  lock 以外：" + t.extraTopLevel.slice(0, 20).join("、"));
+  if (t.reason) console.log(`  原因：${t.reason}`);
+  console.log(`installedTreeDigest=${t.installedTreeDigest}`);
+  console.log(`portableTreeDigest=${t.portableTreeDigest}`);
+  console.log(`INSTALLED_TREE RESULT=${t.status}`);
 }
-const lockTop = new Set(Object.keys(lock.packages).filter((k) => /^node_modules\/(@[^/]+\/)?[^/]+$/.test(k)).map((k) => k.slice(13)));
-for (const e of fs.readdirSync(nm)) {
-  if (e.startsWith(".")) continue;
-  if (e.startsWith("@")) { for (const s of fs.readdirSync(path.join(nm, e))) if (!lockTop.has(`${e}/${s}`)) out.extraTopLevel.push(`${e}/${s}`); }
-  else if (!lockTop.has(e)) out.extraTopLevel.push(e);
-}
-out.installedTreeDigest = crypto.createHash("sha256").update(rows.sort().join("\n")).digest("hex");
-finish(out.mismatched.length || out.missing.length ? "FAIL" : "PASS");
+process.exit({ PASS: 0, FAIL: 1, BLOCKED: 2 }[t.status]);

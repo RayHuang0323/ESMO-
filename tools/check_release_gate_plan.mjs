@@ -43,16 +43,22 @@ ck("docs-carry 沿用：標示 via docs-carry，到期取沿用收據的 expires
 ck("瀏覽器版本已更新 ⇒ browserChanged 預警", row("browser-a").browserChanged === true && row("browser-a").browserThen === "157.0.1");
 ck("發布窗口＝有效 PASS 中最早到期的那張（carried，2h）", st.windowGate === "carried" && Date.parse(st.windowEndsAt) === NOW + 2 * H);
 ck("只要有任何一張不是 PASS，allPass=false", st.allPass === false);
-ck("收據自帶 category 時以收據為準", row("perf-x").category === "logic");
-ck("名稱推斷分類：perf／browser／golden／prod-smoke／build／logic", PLAN.categoryOf("c1c2-closure-perf-p2v2") === "perf" && PLAN.categoryOf("c1c2-closure-fourengine-resume") === "browser" && PLAN.categoryOf("c1c2-v21a") === "golden" && PLAN.categoryOf("prod-smoke-93655403") === "prod-smoke" && PLAN.categoryOf("c1c2-production") === "build" && PLAN.categoryOf("c1c2-moba") === "logic");
+// TD-64（S1.1）：分類只由分類表依 gate 名稱＋指令決定；收據自帶的 category 不採信（不能自己指定分類拿更長效期）
+ck("收據自帶 category（logic）不採信：perf-x 仍是 perf", row("perf-x").category === "perf");
+ck("未登記 gate 的名稱啟發式只會加嚴：perf／cross-engine／prod-smoke；golden／build／logic 只能靠登記（未登記＝unknown）",
+  PLAN.categoryOf("c1c2-closure-perf-p2v2") === "perf" && PLAN.categoryOf("c1c2-closure-fourengine-resume") === "cross-engine" && PLAN.categoryOf("prod-smoke-93655403") === "prod-smoke"
+  && PLAN.categoryOf("c1c2-v21a") === "unknown" && PLAN.categoryOf("c1c2-production") === "unknown" && PLAN.categoryOf("c1c2-moba") === "unknown");
+ck("登記的 gate＋逐字相同的指令 ⇒ 登記的分類；指令不同 ⇒ 不是登記分類", PLAN.categoryOf("golden-v21a", { commands: [{ cmd: "node tools/check_match_golden_v21a.mjs" }] }) === "golden" && PLAN.categoryOf("golden-v21a", { commands: [{ cmd: "node tools/check_match_golden_v21a.mjs --quick" }] }) === "unknown");
 const p = PLAN.planOrder({ a: 30, b: 120, c: 10 }, { order: ["c", "a", "b"] });
 ck("規劃：最長的先跑（b → a → c）", p.best.order.join(",") === "b,a,c");
 ck("規劃：跨度＝總時長 − 第一個（160 − 120 = 40 分），剩餘窗口 24 − 0.67h", p.best.spanMin === 40 && p.best.windowAfterCompletionHours === 23.33);
 ck("規劃：照給定順序（最短先跑）跨度較大", p.given.spanMin === 150 && p.given.windowAfterCompletionHours < p.best.windowAfterCompletionHours);
 const big = PLAN.planOrder({ a: 1000, b: 1000, c: 600 });
 ck("規劃：總時長扣掉最長仍超過 24h ⇒ feasible=false（不可能讓全部同時有效）", big.best.feasible === false);
-ck("分類表：效能與瀏覽器建議效期仍 24h；正式站 Smoke 不可沿用（0）", PLAN.CATEGORIES.perf.proposedHours === 24 && PLAN.CATEGORIES.browser.proposedHours === 24 && PLAN.CATEGORIES["prod-smoke"].proposedHours === 0);
-ck("正式效期常數仍是 24 小時（本輪沒有改政策）", LIB.DEFAULT_MAX_AGE_HOURS === 24);
+ck("分類表（Owner 核准）：logic／golden／build 72h；browser／cross-engine／perf 24h；smoke 綁定部署且不沿用；unknown 24h",
+  PLAN.CATEGORIES.logic.hours === 72 && PLAN.CATEGORIES.golden.hours === 72 && PLAN.CATEGORIES.build.hours === 72 && PLAN.CATEGORIES.browser.hours === 24 && PLAN.CATEGORIES["cross-engine"].hours === 24
+  && PLAN.CATEGORIES.perf.hours === 24 && PLAN.CATEGORIES["prod-smoke"].deploymentBound === true && PLAN.CATEGORIES["prod-smoke"].neverCarry === true && PLAN.CATEGORIES.unknown.hours === 24);
+ck("舊收據（沒有 policy 欄位）一律 24h：status 不會把它延長", PLAN.hoursOf("regress", { commands: [{ cmd: "node tools/regress.mjs" }] }).hours === 24);
 const cli = spawnSync(process.execPath, [path.join(HERE, "release_gate_plan.mjs"), "plan", "--repo", path.resolve(HERE, ".."), "--receipts-dir", DIR, "--require-gate", "never-run-gate"], { encoding: "utf8" });
 ck("CLI plan：沒有歷史耗時又沒給 --est ⇒ exit 2 並說明", cli.status === 2 && /--est/.test(cli.stdout), cli.stdout + cli.stderr);
 const cli2 = spawnSync(process.execPath, [path.join(HERE, "release_gate_plan.mjs"), "plan", "--repo", path.resolve(HERE, ".."), "--receipts-dir", DIR, "--require-gate", "x", "--require-gate", "y", "--est", "x=5", "--est", "y=50", "--json"], { encoding: "utf8" });

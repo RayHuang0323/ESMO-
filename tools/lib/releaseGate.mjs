@@ -22,7 +22,9 @@
 //
 //  ⚠ 收據只有 SHA-256 摘要，沒有簽章：它擋得住「誤改、拿錯、過期、拿舊環境冒充」，
 //    擋不住有心人重算摘要。要防有心人需要 CI 簽章，不在本版範圍。
-//  ⚠ 依賴檢查只看 package.json 的頂層依賴（版本對 package-lock.json），不驗整棵依賴樹。
+//  ⚠ 依賴：頂層依賴（deps_installed／deps_match_lockfile）＋整棵依賴樹（deps_full_tree，TD-67，2026-11-26 S1.1，
+//    tools/lib/installedTree.mjs；與 CI 的 tools/ci/check_installed_tree.mjs 同一份實作）。
+//  ⚠ 效期：由 tools/lib/gatePolicy.mjs 的固定分類表決定（TD-64）。舊收據（沒有 policy 欄位）仍是 24 小時。
 // ============================================================================
 import { spawnSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -31,6 +33,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { verifyCarry, CARRY_GATE, CARRY_SCHEMA } from "./docsCarry.mjs";
 import { createProcessRegistry, defaultRegistryDir as defaultProcessDir } from "./safeProcess.mjs";
+import { inspectInstalledTree, treeSummary } from "./installedTree.mjs";
+import { classifyGate, eligibility72, GATE_POLICY_VERSION, POLICY_TABLE_DIGEST, LEGACY_HOURS } from "./gatePolicy.mjs";
 
 export const RELEASE_GATE_VERSION = "1.0.0";
 export const RECEIPT_SCHEMA = "esmo.release-gate.receipt/1";
@@ -66,6 +70,14 @@ export function hashDir(dir) {
   walk(dir);
   const rows = files.map((f) => [path.relative(dir, f).split(path.sep).join("/"), crypto.createHash("sha256").update(fs.readFileSync(f)).digest("hex")]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   return { files: rows.length, aggregateSha256: sha256(rows.map(([r, h]) => `${r}\0${h}\n`).join("")) };
+}
+/**
+ * repo 根目錄的 .env* 檔（Vite 建置時會讀，內容不在 git tree 裡）。只記名稱與內容雜湊，不記內容。
+ * .env.example 是追蹤中的範本，不算（Vite 不會讀它）。
+ */
+export function envFilesAt(repoTop) {
+  let names = []; try { names = fs.readdirSync(repoTop).filter((n) => /^\.env(\..+)?$/.test(n) && n !== ".env.example"); } catch { /* 無 */ }
+  return names.sort().map((n) => { let h = null; try { h = sha256(fs.readFileSync(path.join(repoTop, n))); } catch { /* */ } return { name: n, sha256: h }; });
 }
 /** build 時有哪些 VITE_* 環境變數（只記名稱與值的雜湊，絕不記值）。Vite 會把它們內嵌進 bundle。 */
 export function viteEnvFingerprint(env = process.env) {
@@ -248,6 +260,13 @@ export function preflight(opts) {
       checks.push(di.missing.length ? mk("deps_installed", "BLOCKED", `缺少 ${di.missing.length} 個頂層依賴：${di.missing.slice(0, 6).join("、")}`) : mk("deps_installed", "PASS", `${Object.keys(di.installed).length} 個頂層依賴都在`));
       if (!di.lock) checks.push(mk("deps_match_lockfile", "BLOCKED", "沒有 package-lock.json，無法確認安裝的版本"));
       else checks.push(di.mismatched.length ? mk("deps_match_lockfile", "BLOCKED", `安裝版本與 package-lock.json 不符 ${di.mismatched.length} 個：${di.mismatched.slice(0, 3).join("；")}`) : mk("deps_match_lockfile", "PASS"));
+      // 整棵樹（含巢狀、平台專屬 optional、integrity、lock 以外的頂層套件）。不一致 ⇒ BLOCKED：驗收與證據沿用都不能在這個環境做
+      if (di.lock) {
+        const t = inspectInstalledTree(ctx.repoTop, { nodeModulesDir: di.nodeModules.real });
+        di.tree = t;
+        checks.push(t.status === "PASS" ? mk("deps_full_tree", "PASS", `${t.entries} 條目：${t.ok} 相同、其他平台專屬 ${t.platformSkipped.length}${t.integrityChecked ? "、integrity 已比對" : "（沒有 npm 隱藏 lockfile，integrity 未比對）"}`)
+          : mk("deps_full_tree", "BLOCKED", `整棵依賴樹與 package-lock.json 不符：${t.reason}`));
+      }
     }
     // build 條件
     const reasons = [];
@@ -288,7 +307,8 @@ export function preflight(opts) {
   }
 
   ctx.env = captureEnv(ctx, di, repo);
-  if (opts.requireBrowser) ctx.env.browser = { chrome: chromeVersion() };
+  const kinds = new Set([...(opts.browsers || []), ...(opts.requireBrowser ? ["chrome"] : [])]);
+  if (kinds.size) { ctx.env.browser = {}; if (kinds.has("chrome")) ctx.env.browser.chrome = chromeVersion(); if (kinds.has("playwright")) ctx.env.browser.playwright = playwrightInfo(); }
   return done();
 }
 
@@ -307,7 +327,33 @@ function captureEnv(ctx, di, repo) {
     node: process.versions.node, nodeMajor: Number(process.versions.node.split(".")[0]), platform: process.platform, arch: process.arch,
     osRelease: os.release(), git: gv, nodeModules: { kind: di.nodeModules.kind, real: di.nodeModules.real || null },
     depsDigest: di.digest, depCount: Object.keys(di.installed).length, lockfileBlob: lockBlob,
+    // 2026-11-26 S1.1（TD-67／TD-64）：完整依賴樹摘要、npm 版本。舊收據沒有這兩個欄位
+    installedTree: treeSummary(di.tree), npm: { bundled: bundledNpmVersion() },
   };
+}
+
+/** 這個 Node 自帶的 npm 版本（讀檔，不啟動 npm）。找不到回 null。 */
+export function bundledNpmVersion() {
+  const base = path.dirname(process.execPath);
+  for (const p of [path.join(base, "node_modules", "npm", "package.json"), path.join(base, "..", "lib", "node_modules", "npm", "package.json")]) { const j = readJson(p); if (j.ok && j.value.version) return j.value.version; }
+  return null;
+}
+/** 四引擎用的 Playwright（Python 套件內的 driver）：版本與各瀏覽器 revision。找不到回 null。 */
+export function playwrightInfo() {
+  let dir = process.env.ESMO_PLAYWRIGHT_CORE || null;
+  if (!dir) { const r = spawnSync("python", ["-c", "import playwright, os; print(os.path.dirname(playwright.__file__))"], { encoding: "utf8", timeout: 30000, windowsHide: true }); if (r.status === 0) dir = path.join(r.stdout.trim(), "driver", "package"); }
+  if (!dir) return null;
+  const pj = readJson(path.join(dir, "package.json")), bj = readJson(path.join(dir, "browsers.json"));
+  if (!pj.ok) return null;
+  const browsers = bj.ok ? Object.fromEntries((bj.value.browsers || []).filter((b) => ["chromium", "firefox", "webkit"].includes(b.name)).map((b) => [b.name, `${b.browserVersion ?? "?"}@r${b.revision}`])) : null;
+  return `playwright ${pj.value.version} ${browsers ? Object.entries(browsers).map(([k, v]) => `${k}=${v}`).join(" ") : ""}`.trim();
+}
+/** 正式站部署的身分：抓 url 的 index.html，回 sha256（同步：另起一個 Node 子行程抓）。 */
+export function probeDeployment(url) {
+  if (!/^https?:\/\//.test(String(url))) return { ok: false, error: `不是 http(s) 網址：${url}` };
+  const code = "const u=process.argv[1];fetch(u,{cache:'no-store',headers:{'cache-control':'no-cache'}}).then(async r=>{if(!r.ok)throw new Error('HTTP '+r.status);const b=Buffer.from(await r.arrayBuffer());process.stdout.write(require('crypto').createHash('sha256').update(b).digest('hex'))}).catch(e=>{process.stderr.write(String(e.message||e));process.exit(3)})";
+  const r = spawnSync(process.execPath, ["-e", code, url], { encoding: "utf8", timeout: 45000, windowsHide: true });
+  return r.status === 0 && /^[0-9a-f]{64}$/.test(r.stdout) ? { ok: true, url, indexSha256: r.stdout, at: new Date().toISOString() } : { ok: false, url, error: (r.stderr || String(r.error?.code || "逾時")).slice(0, 160) };
 }
 
 /** 本機 Chrome 版本（Windows 讀 chrome.exe 的檔案版本；其他平台回 null）。只記錄進收據，供效期規劃判斷「瀏覽器自動更新了沒」；不影響 assert。 */
@@ -321,7 +367,7 @@ export function chromeVersion() {
 // ── 收據 ─────────────────────────────────────────────────────────────────
 export function digestOf(receipt) { const { digest, ...rest } = receipt; return sha256(canonical(rest)); }
 const safe = (s) => String(s).replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 60);
-export function buildReceipt({ gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category, checkpoint }) {
+export function buildReceipt({ gate, pre, commands, post, startedAt, finishedAt, status, reasons, bundle, category, checkpoint, policy, deployment }) {
   const r = {
     schema: RECEIPT_SCHEMA, gateVersion: RELEASE_GATE_VERSION, gate, status,
     requestedTarget: pre.ctx.requested, targetSha: pre.ctx.targetFull, actualSha: pre.ctx.actualSha,
@@ -331,6 +377,7 @@ export function buildReceipt({ gate, pre, commands, post, startedAt, finishedAt,
     env: pre.ctx.env, checks: [...pre.checks, ...(post ? post.checks : [])], commands, warnings: pre.ctx.warnings, reasons,
     // 選用欄位（舊收據沒有；沒有就不出現，digest 計算與舊版相同）
     bundle: bundle || undefined, category: category || undefined, checkpoint: checkpoint || undefined,
+    policy: policy || undefined, deployment: deployment || undefined,
   };
   r.digest = digestOf(r);
   return r;
@@ -352,7 +399,42 @@ export function loadReceipts(dir, { targetSha, gate }) {
 }
 
 /** 驗收一張收據是否能代表「現在、這個 SHA、這個環境」的驗證通過。 */
-export function verifyReceipt(receipt, ctx, { maxAgeHours = DEFAULT_MAX_AGE_HOURS, now = Date.now(), allowPreflightOnly = false, acceptGateVersion = null } = {}) {
+/**
+ * 效期分級（TD-64）：分類一律由 tools/lib/gatePolicy.mjs 依 gate 名稱＋收據裡的實際指令重算，收據自己寫的分類不採信。
+ * 回傳 { hours, tier, cls, checks }。checks 是 receipt_policy／receipt_browser:*／receipt_deployment。
+ */
+export function policyFor(receipt, ctx, { currentBrowser = null, deploymentProbe = probeDeployment } = {}) {
+  const cls = classifyGate(receipt.gate, (receipt.commands || []).map((x) => x.cmd));
+  const checks = []; let hours = LEGACY_HOURS, tier = "legacy-24h";
+  const p = receipt.policy;
+  if (!p) checks.push(mk("receipt_policy", "PASS", `舊格式收據（沒有分類紀錄）：舊制 ${LEGACY_HOURS} 小時，不會因分級上線而延長`));
+  else if (p.version !== GATE_POLICY_VERSION || p.tableDigest !== POLICY_TABLE_DIGEST) checks.push(mk("receipt_policy", "PASS", `收據的分類表版本（${p.version}／${String(p.tableDigest).slice(0, 12)}）≠ 現行：退回舊制 ${LEGACY_HOURS} 小時`));
+  else if (p.class !== cls.class || !!p.registered !== !!cls.registered) checks.push(mk("receipt_policy", "FAIL", `收據寫的分類「${p.class}」與分類表依 gate 名稱＋指令重算的「${cls.class}」不同（被改過，或想自行指定分類）`));
+  else if (cls.hours > LEGACY_HOURS) {
+    const el = eligibility72(cls, receipt, ctx.env);
+    if (el.ok) { hours = cls.hours; tier = `${cls.hours}h`; checks.push(mk("receipt_policy", "PASS", `${cls.label}：${cls.hours} 小時（${cls.why}；環境完全一致）`)); }
+    else checks.push(mk("receipt_policy", "PASS", `${cls.label}：不給 ${cls.hours} 小時，退回 ${LEGACY_HOURS} 小時（${el.missing.slice(0, 3).join("；")}）`));
+  } else { hours = Math.min(cls.hours, LEGACY_HOURS); tier = `${hours}h`; checks.push(mk("receipt_policy", "PASS", `${cls.label}：${hours} 小時（${cls.why}）`)); }
+  // 加嚴：瀏覽器版本（新格式收據才要求；舊收據維持舊制）
+  if (p && cls.browsers.length) {
+    for (const k of cls.browsers) {
+      const then = receipt.env?.browser?.[k] ?? null; const nowV = currentBrowser ? currentBrowser(k) : null;
+      if (!then) checks.push(mk(`receipt_browser:${k}`, "FAIL", `${cls.label} 收據沒有記錄實際使用的 ${k} 版本`));
+      else if (!nowV) checks.push(mk(`receipt_browser:${k}`, "BLOCKED", `現在查不到 ${k} 版本，無法確認瀏覽器沒有更新`));
+      else checks.push(then === nowV ? mk(`receipt_browser:${k}`, "PASS", then) : mk(`receipt_browser:${k}`, "FAIL", `瀏覽器已更新：收據 ${then} ≠ 現在 ${nowV}（要重跑）`));
+    }
+  }
+  // 加嚴：正式站 smoke 綁定部署
+  if (p && cls.deploymentBound) {
+    const d = receipt.deployment;
+    if (!d?.indexSha256 || !d.url) checks.push(mk("receipt_deployment", "FAIL", "正式站 smoke 收據沒有記錄部署身分（run 要加 --deployment-url）：無法證明代表現在的正式站"));
+    else if (d.stable !== true) checks.push(mk("receipt_deployment", "FAIL", "smoke 執行期間正式站被重新部署，結果不代表任何一版"));
+    else { const cur = deploymentProbe(d.url); checks.push(!cur.ok ? mk("receipt_deployment", "BLOCKED", `抓不到 ${d.url}：${cur.error}`) : cur.indexSha256 === d.indexSha256 ? mk("receipt_deployment", "PASS", `${d.url} 仍是同一次部署（index ${d.indexSha256.slice(0, 12)}）`) : mk("receipt_deployment", "FAIL", `正式站已重新部署（index ${d.indexSha256.slice(0, 12)} → ${cur.indexSha256.slice(0, 12)}）：smoke 不能跨部署沿用`)); }
+  }
+  return { hours, tier, cls, checks };
+}
+
+export function verifyReceipt(receipt, ctx, { maxAgeHours = null, now = Date.now(), allowPreflightOnly = false, acceptGateVersion = null, currentBrowser = null, deploymentProbe = probeDeployment } = {}) {
   const c = [];
   c.push(receipt.schema === RECEIPT_SCHEMA ? mk("receipt_schema", "PASS") : mk("receipt_schema", "FAIL", `schema「${receipt.schema}」不認得`));
   c.push(receipt.digest && receipt.digest === digestOf(receipt) ? mk("receipt_digest", "PASS") : mk("receipt_digest", "FAIL", "摘要不符：收據被改過或不完整"));
@@ -363,12 +445,19 @@ export function verifyReceipt(receipt, ctx, { maxAgeHours = DEFAULT_MAX_AGE_HOUR
   const chain = receipt.targetSha === ctx.targetFull && receipt.actualSha === ctx.targetFull && receipt.actualShaAfter === ctx.targetFull;
   c.push(chain ? mk("receipt_sha_chain", "PASS", ctx.targetFull) : mk("receipt_sha_chain", "FAIL", `收據的 target/actual/after = ${receipt.targetSha}/${receipt.actualSha}/${receipt.actualShaAfter}，要驗的是 ${ctx.targetFull}`));
   c.push(receipt.treeSha && receipt.treeSha === ctx.treeSha ? mk("receipt_tree", "PASS") : mk("receipt_tree", "FAIL", `收據的 tree ${receipt.treeSha} ≠ 現在的 ${ctx.treeSha}`));
+  // 效期：分類表決定（舊收據 24h）；--max-age-hours 只能縮短
+  const pol = policyFor(receipt, ctx, { currentBrowser, deploymentProbe });
+  c.push(...pol.checks);
+  const cap = maxAgeHours === null || maxAgeHours === undefined ? Infinity : Number(maxAgeHours);
+  const effHours = Math.min(pol.hours, cap);
   const fin = Date.parse(receipt.finishedAt);
   if (!Number.isFinite(fin)) c.push(mk("receipt_age", "FAIL", "finishedAt 讀不懂"));
   else if (fin > now + 5 * 60000) c.push(mk("receipt_age", "FAIL", "收據時間在未來"));
-  else { const h = (now - fin) / 3600000; c.push(h > maxAgeHours ? mk("receipt_age", "FAIL", `收據已過期：${h.toFixed(1)} 小時前（上限 ${maxAgeHours} 小時）`) : mk("receipt_age", "PASS", `${h.toFixed(2)} 小時前`)); }
+  else { const h = (now - fin) / 3600000; c.push(h > effHours ? mk("receipt_age", "FAIL", `收據已過期：${h.toFixed(1)} 小時前（上限 ${effHours} 小時，${pol.tier}）`) : mk("receipt_age", "PASS", `${h.toFixed(2)} 小時前（上限 ${effHours} 小時，${pol.tier}）`)); }
   const e = receipt.env || {}, cur = ctx.env || {}; const diff = [];
   for (const k of ["nodeMajor", "platform", "arch", "depsDigest", "lockfileBlob"]) if (e[k] !== cur[k]) diff.push(`${k}: 收據 ${e[k]} ≠ 現在 ${cur[k]}`);
+  // TD-67：收據有記錄完整依賴樹 ⇒ 必須與現在相同（深層依賴不同就不能代表現在的環境）。舊收據沒有這個欄位 ⇒ 只比上面的舊欄位
+  if (e.installedTree) { const a = e.installedTree.digest, b = cur.installedTree?.digest; if (!b || a !== b) diff.push(`整棵依賴樹: 收據 ${String(a).slice(0, 12)} ≠ 現在 ${String(b ?? "未知").slice(0, 12)}`); }
   c.push(diff.length ? mk("receipt_env", "FAIL", `驗證環境與現在不同（${diff.join("；")}）`) : mk("receipt_env", "PASS"));
   // 只對「宣稱 PASS」的收據做內容一致性檢查。非 PASS 的收據由上面的 receipt_status 決定類別
   // （FAIL 或 BLOCKED）；再用指令 exit code 去改寫它的類別，會把「環境類阻挡」誤報成「指令失敗」。
@@ -378,13 +467,17 @@ export function verifyReceipt(receipt, ctx, { maxAgeHours = DEFAULT_MAX_AGE_HOUR
     const bad = (receipt.checks || []).filter((x) => x.status === "FAIL" || x.status === "BLOCKED");
     c.push(bad.length ? mk("receipt_internal_consistency", "FAIL", `收據標 PASS 但內含 ${bad.length} 項 FAIL／BLOCKED 檢查`) : mk("receipt_internal_consistency", "PASS"));
   }
-  return { status: aggregate(c), checks: c };
+  const expiresAt = Number.isFinite(fin) && Number.isFinite(effHours) ? new Date(fin + effHours * 3600000).toISOString() : null;
+  return { status: aggregate(c), checks: c, policy: { class: pol.cls.class, label: pol.cls.label, registered: pol.cls.registered, tier: pol.tier, hours: effHours, expiresAt, neverCarry: pol.cls.neverCarry } };
 }
+/** 目前瀏覽器版本的查詢（記憶化：assert 一次最多各查一次）。 */
+export function browserProbe() { const memo = {}; return (k) => (k in memo ? memo[k] : (memo[k] = k === "chrome" ? chromeVersion() : k === "playwright" ? playwrightInfo() : null)); }
 
 /** assert：重新預檢（現在的 HEAD、環境），再逐個 gate 驗最新一張收據。 */
 export function assertReceipts(opts) {
   const pre = preflight(opts); const all = [...pre.checks]; const gates = opts.gates || [];
   const detail = {};
+  const probes = { currentBrowser: opts.currentBrowser || browserProbe(), deploymentProbe: opts.deploymentProbe || probeDeployment };
   if (pre.status === "PASS") {
     for (const g of gates) {
       const found = loadReceipts(pre.ctx.receiptsDir, { targetSha: pre.ctx.targetFull, gate: g }).filter((f) => f.receipt.schema !== CARRY_SCHEMA);
@@ -392,13 +485,13 @@ export function assertReceipts(opts) {
         // 沒有直接收據 ⇒ 才看 TD-62 沿用收據。直接收據（就算是 FAIL）永遠優先：目標 SHA 上真的跑過的結果不能被沿用蓋掉。
         const carries = g === CARRY_GATE ? [] : loadReceipts(pre.ctx.receiptsDir, { targetSha: pre.ctx.targetFull, gate: CARRY_GATE });
         if (!carries.length) { all.push(mk(`gate:${g}`, "BLOCKED", `這個 SHA 沒有 gate「${g}」的收據。請先執行 run`)); continue; }
-        const v = verifyCarry(carries[0].receipt, pre.ctx, g, { receiptsDir: pre.ctx.receiptsDir, maxAgeHours: opts.maxAgeHours, now: opts.now });
+        const v = verifyCarry(carries[0].receipt, pre.ctx, g, { receiptsDir: pre.ctx.receiptsDir, maxAgeHours: opts.maxAgeHours, now: opts.now, ...probes });
         detail[g] = { file: carries[0].file, via: CARRY_GATE, base: carries[0].receipt.baseSha, checks: v.checks };
         all.push(mk(`gate:${g}`, v.status, v.status === "PASS" ? `沿用自 ${String(carries[0].receipt.baseSha).slice(0, 12)}（docs-carry ${path.basename(carries[0].file)}；來源 ${v.ref.file}；到期 ${carries[0].receipt.expiresAt}）` : v.checks.filter((x) => x.status !== "PASS").map((x) => `${x.id}: ${x.detail}`).join("｜")));
         continue;
       }
-      const v = verifyReceipt(found[0].receipt, pre.ctx, { maxAgeHours: opts.maxAgeHours, allowPreflightOnly: opts.allowPreflightOnly, now: opts.now });
-      detail[g] = { file: found[0].file, olderIgnored: found.length - 1, checks: v.checks };
+      const v = verifyReceipt(found[0].receipt, pre.ctx, { maxAgeHours: opts.maxAgeHours, allowPreflightOnly: opts.allowPreflightOnly, now: opts.now, ...probes });
+      detail[g] = { file: found[0].file, olderIgnored: found.length - 1, checks: v.checks, policy: v.policy };
       all.push(mk(`gate:${g}`, v.status, v.status === "PASS" ? `最新收據有效（${path.basename(found[0].file)}${found.length > 1 ? `；${found.length - 1} 張較舊的不採用` : ""}）` : v.checks.filter((x) => x.status !== "PASS").map((x) => `${x.id}: ${x.detail}`).join("｜")));
     }
   }
