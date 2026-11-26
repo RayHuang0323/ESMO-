@@ -82,6 +82,18 @@ bad("隱藏 lockfile 的 integrity 不同（同版本、不同內容）⇒ FAIL 
 bad("隱藏 lockfile 少了已安裝的條目 ⇒ FAIL", WIN, (r) => { const p = path.join(r, "node_modules/.package-lock.json"); const j = JSON.parse(fs.readFileSync(p, "utf8")); delete j.packages["node_modules/a"]; write(p, j); }, (x) => x.integrityMismatch.length === 1);
 bad("lockfile 以外的頂層套件（共用 junction 混到別的分支）⇒ FAIL extraTopLevel", WIN, (r) => write(path.join(r, "node_modules/gsap/package.json"), { name: "gsap", version: "3.0.0" }), (x) => x.extraTopLevel.includes("gsap"));
 bad("lockfile 以外的 scope 套件 ⇒ FAIL", WIN, (r) => write(path.join(r, "node_modules/@s/zz/package.json"), { name: "@s/zz", version: "1.0.0" }), (x) => x.extraTopLevel.includes("@s/zz"));
+// Final Integration：巢狀多出的套件、檢查完整度旗標
+ck("FI：合法樹 ⇒ nestedChecked=true、nestedExtra 0、integrityUnavailable 0", w.nestedChecked === true && w.nestedExtra.length === 0 && w.integrityUnavailable.length === 0, JSON.stringify({ n: w.nestedChecked, e: w.nestedExtra, u: w.integrityUnavailable }));
+bad("FI：lockfile 以外的巢狀套件（a/node_modules/zz）⇒ FAIL nestedExtra（Node 會優先載入巢狀版本）", WIN, (r) => write(path.join(r, "node_modules/a/node_modules/zz/package.json"), { name: "zz", version: "1.0.0" }), (x) => x.nestedExtra.includes("node_modules/a/node_modules/zz"));
+bad("FI：lockfile 以外的巢狀 scope 套件 ⇒ FAIL", WIN, (r) => write(path.join(r, "node_modules/a/node_modules/@q/y/package.json"), { name: "@q/y", version: "1.0.0" }), (x) => x.nestedExtra.includes("node_modules/a/node_modules/@q/y"));
+ck("FI：巢狀 .bin 等隱藏資料夾不算多出的套件", (() => { const x = I(fixture(WIN, { mut: (r) => write(path.join(r, "node_modules/a/node_modules/.bin/b"), "x") }), WIN); return x.status === "PASS" && x.nestedExtra.length === 0; })());
+ck("FI：lockfile 條目缺 integrity ⇒ 仍 PASS，但 integrityUnavailable 記下來（72h 不給，見 check_gate_policy）", (() => {
+  const root = path.join(BASE, `noint${++seq}`); const L2 = JSON.parse(JSON.stringify(LOCK)); delete L2.packages["node_modules/a"].integrity;
+  write(path.join(root, "package-lock.json"), L2); const hp = {};
+  for (const [k, m2] of Object.entries(L2.packages)) { if (!k.startsWith("node_modules/") || m2.link || ((m2.os || m2.cpu || m2.libc) && !T.appliesTo(m2, WIN))) continue; write(path.join(root, k, "package.json"), { name: k.split("node_modules/").pop(), version: m2.version }); hp[k] = { version: m2.version, integrity: m2.integrity }; }
+  write(path.join(root, "node_modules", ".package-lock.json"), { lockfileVersion: 3, packages: hp });
+  const x = I(root, WIN); return x.status === "PASS" && x.integrityUnavailable.length === 1 && T.treeSummary(x).integrityUnavailable === 1; })());
+ck("FI：treeSummary 帶 integrityChecked／nestedChecked／nestedExtra／integrityUnavailable（收據用）", (() => { const s = T.treeSummary(w); return s.integrityChecked === true && s.nestedChecked === true && s.nestedExtra === 0 && s.integrityUnavailable === 0; })());
 ck("版本不同 ⇒ 可攜摘要也會改變", (() => { const x = I(fixture(GLIBC, { mut: (r) => write(path.join(r, "node_modules/a/package.json"), { name: "a", version: "1.0.1" }) }), GLIBC); return x.portableTreeDigest !== g.portableTreeDigest; })());
 // §3 BLOCKED
 ck("沒有 package-lock.json ⇒ BLOCKED", (() => { const r = path.join(BASE, "nolock"); fs.mkdirSync(path.join(r, "node_modules"), { recursive: true }); return I(r, WIN).status === "BLOCKED"; })());
@@ -96,6 +108,20 @@ ck("appliesTo：libc 限制在非 Linux 一律不適用；Linux libc 不明 ⇒ 
   write(path.join(root, "node_modules/a/package.json"), { name: "a", version: "9.9.9" });
   const r2 = spawnSync(process.execPath, [path.join(HERE, "ci", "check_installed_tree.mjs"), "--root", root], { encoding: "utf8" });
   ck("CI CLI：版本不同 ⇒ exit 1、RESULT=FAIL", r2.status === 1 && /INSTALLED_TREE RESULT=FAIL/.test(r2.stdout));
+  // Final Integration：Actions 裡寫 annotation（匿名可讀）；本機不寫
+  const r3 = spawnSync(process.execPath, [path.join(HERE, "ci", "check_installed_tree.mjs"), "--root", root], { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: "true" } });
+  ck("FI：CI CLI 在 GitHub Actions 裡印 ::error title=INSTALLED_TREE FAIL::（含 node／npm／portableTreeDigest）", /^::error title=INSTALLED_TREE FAIL::RESULT=FAIL node=v\d+/m.test(r3.stdout) && /portableTreeDigest=[0-9a-f]{64}/.test(r3.stdout), r3.stdout.slice(-400));
+  ck("FI：本機（沒有 GITHUB_ACTIONS）不印 annotation", !/^::/m.test(r2.stdout));
+  // 安裝後 lockfile 必須與 git 相同
+  const gr = path.join(BASE, "lockgit"); const root2 = fixture(process.platform === "win32" ? WIN : T.currentPlatform());
+  fs.cpSync(root2, gr, { recursive: true });
+  const g2 = (...a) => spawnSync("git", ["-c", "core.autocrlf=false", "-c", "user.name=t", "-c", "user.email=t@t", ...a], { cwd: gr, encoding: "utf8" });
+  write(path.join(gr, ".gitignore"), "node_modules/\n"); g2("init", "-q"); g2("add", "-A"); g2("commit", "-q", "-m", "x");
+  const r4 = spawnSync(process.execPath, [path.join(HERE, "ci", "check_installed_tree.mjs"), "--root", gr], { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: "true" } });
+  ck("FI：git 工作樹、lockfile 沒被改 ⇒ PASS，annotation 寫 lockfileAfterInstall=與 git 相同", r4.status === 0 && /^::notice title=INSTALLED_TREE::RESULT=PASS/m.test(r4.stdout) && /lockfileAfterInstall=與 git 相同/.test(r4.stdout), r4.stdout.slice(-400));
+  const lk = JSON.parse(fs.readFileSync(path.join(gr, "package-lock.json"), "utf8")); lk.name = "changed"; fs.writeFileSync(path.join(gr, "package-lock.json"), JSON.stringify(lk));
+  const r5 = spawnSync(process.execPath, [path.join(HERE, "ci", "check_installed_tree.mjs"), "--root", gr], { encoding: "utf8" });
+  ck("FI：安裝後 package-lock.json 與 git 不同 ⇒ exit 1、RESULT=FAIL（npm ci 不應改 lockfile）", r5.status === 1 && /INSTALLED_TREE RESULT=FAIL/.test(r5.stdout) && /安裝後 lockfile：已被修改/.test(r5.stdout), r5.stdout.slice(-300));
 }
 // §5 preflight 接入與收據相容
 {

@@ -18,7 +18,8 @@
 //    4. 其他 ⇒ 部署
 //  輸出：deploy=true|false（寫進 $GITHUB_OUTPUT）＋原因。exit 永遠是 0（判斷失敗也是「部署」，不讓 CI 因此紅）。
 //  另外輸出 expect_identical_bundle=true|false（S1.1，TD-65）：只有在「push、找得到最後成功部署、而且自那之後沒有任何
-//  產品／建置輸入（src、public、index.html、vite.config.*、package*.json）或 .github 變更」時才是 true ⇒
+//  產品／建置輸入（src、public、index.html、vite.config.*、package*.json）變更、也沒有被它們引用的變更檔」時才是 true
+//  （Final Integration 起 .github 的變更不再取消期待：改 CI 的推送同樣要在部署前證明 bundle 沒變）⇒
 //  build 出來的 dist 必須與正式站逐檔相同（tools/ci/compare_dist_with_site.mjs），不同就在部署前失敗。其他情況一律 false（不設期待）。
 //  API 位址用 GitHub Actions 的標準變數 GITHUB_API_URL（預設 https://api.github.com；測試可指向本機假伺服器）。
 // ============================================================================
@@ -27,6 +28,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { git, BUILD_INPUT_PREFIXES } from "../lib/releaseGate.mjs";
 import { rawDiff, classifyDiff, lsTree, findReaders } from "../lib/docsCarry.mjs";
+import { annotate } from "./annotate.mjs";
 
 const argv = process.argv.slice(2); const a = {};
 for (let i = 0; i < argv.length; i++) { const t = argv[i]; if (!t.startsWith("--")) continue; const k = t.slice(2); if (["json", "last-deployed-from-api"].includes(k)) a[k] = true; else a[k] = argv[++i]; }
@@ -64,9 +66,16 @@ export async function decide({ repo, head, event, lastDeployed }) {
   //  2026-11-26 審查修正：讀者（被 src／vite.config／public… 以 bundler 語法引用的變更檔，例如 ?raw 匯入的 .md）一律先算，
   //  有讀者就代表 bundle 本來就該不同 ⇒ 不設期待（不論後面是哪一條理由要部署）
   const readers = findReaders(repo, H, rows.map((x) => x.path), lsTree(repo, H)).filter((x) => PRODUCT_READER.test(x.path));
-  const affects = rows.filter((x) => x.path.startsWith(".github/") || BUILD_INPUT_PREFIXES.some((p) => x.path === p || x.path.startsWith(p)));
-  r.expectIdenticalBundle = affects.length === 0 && readers.length === 0;
-  r.productInputChanges = [...affects.map((x) => x.path), ...readers.map((x) => `${x.path}（引用變更的檔案）`)].slice(0, 20);
+  //  Final Integration（2026-11-26）：.github 的變更（以及 workflow 提到變更的檔案）不再取消期待。
+  //  原本「.github 有變更 ⇒ 不設期待（只回報）」＝ 改 CI 的那一次推送正好沒有部署前阻擋，是失效開放（fail-open）。
+  //  現在只有產品／建置輸入（BUILD_INPUT_PREFIXES）或被它們以 bundler 語法引用的變更檔才取消期待 ⇒ 改 workflow 卻意外改了 bundle
+  //  （Node 版本、注入的環境變數…）會在部署前失敗。刻意要改 bundle 的 workflow 變更：Owner 審查後用 workflow_dispatch 手動部署
+  //  （event 不是 push ⇒ 不設期待），這是刻意的、看得見的例外。
+  const bundleReaders = readers.filter((x) => !x.path.startsWith(".github/"));
+  const affects = rows.filter((x) => BUILD_INPUT_PREFIXES.some((p) => x.path === p || x.path.startsWith(p)));
+  r.expectIdenticalBundle = affects.length === 0 && bundleReaders.length === 0;
+  r.productInputChanges = [...affects.map((x) => x.path), ...bundleReaders.map((x) => `${x.path}（引用變更的檔案）`)].slice(0, 20);
+  r.ciChanges = rows.filter((x) => x.path.startsWith(".github/")).map((x) => x.path).slice(0, 20);
   const bad = classifyDiff(rows);
   if (bad.length) return yes(`自最後成功部署以來有非文件變更：${bad.slice(0, 5).join("；")}`);
   if (readers.length) return yes(`變更的文件被建置輸入引用：${readers.map((x) => x.path).slice(0, 5).join("、")}`);
@@ -84,5 +93,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   if (a["github-output"]) fs.appendFileSync(a["github-output"], `deploy=${res.deploy}\nexpect_identical_bundle=${res.expectIdenticalBundle === true}\n`);
   if (a.json) console.log(JSON.stringify(res, null, 1));
   else { console.log(`deploy=${res.deploy}`); console.log(`expect_identical_bundle=${res.expectIdenticalBundle === true}`); for (const x of res.reasons) console.log(`  · ${x}`); console.log(`  （最後成功部署來源：${lastWhy}）`); }
-  process.exit(0);
+  annotate("DEPLOY_DECISION", `deploy=${res.deploy} expect_identical_bundle=${res.expectIdenticalBundle === true} head=${res.head ?? "?"} lastDeployed=${res.lastDeployed ?? "null"} (${lastWhy}) productInputChanges=${(res.productInputChanges || []).length} ciChanges=${(res.ciChanges || []).length} reason=${(res.reasons || []).join(" / ").slice(0, 300)}`);
+  //  Final Integration（2026-11-26）：不用 process.exit(0)。fetch 的 keep-alive 連線還在關閉時呼叫 exit，Windows 上的 Node 會崩潰
+  //  （exit code 0xC0000409，check_ci_deploy_decision「最近的部署都不是 success」重現 3/4 次）；stdout 是 pipe 時也可能吃掉最後幾行。
+  process.exitCode = 0;
 }

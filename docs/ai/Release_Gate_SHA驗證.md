@@ -230,3 +230,9 @@ Release Gate 交接單
 - `--max-age-hours` 只能縮短；`--category` 只能宣告，與分類表不同 ⇒ FAIL。
 - 舊版 1.0.0 收據：logic／golden／build／unknown 以 24h 接受；browser／cross-engine／perf／prod-smoke 要重跑。
 - 自我測試：`check_release_gate_guard` 118、`check_gate_policy`、`check_installed_tree_lib`（見 03 的必跑清單）。
+
+## 2026-11-26　Final Integration 補充
+
+- **smoke 的部署身分**：`release_gate run --deployment-url` 會記錄 GitHub 部署 ID、來源 SHA、run（deployments API，有 `GITHUB_TOKEN` 就帶，沒有就匿名）。
+  執行前後與 assert 時都必須是同一個部署 ID，而且沒有部署進行中；網址不是 `https://<owner>.github.io/<repo>/` 或查不到部署 ⇒ BLOCKED。
+- **72 小時**：除了原本的條件，收據當時與現在的依賴樹都必須 integrityChecked、nestedChecked、integrityUnavailable＝0。

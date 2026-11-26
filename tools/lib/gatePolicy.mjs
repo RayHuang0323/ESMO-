@@ -13,6 +13,8 @@
 //    · 分類表任何改動都要升 GATE_POLICY_VERSION；收據記錄的分類表摘要與現在不同 ⇒ 退回舊制 24 小時。
 //    · Production Smoke：只代表「當下那一版正式站」。run 時記錄 --deployment-url 的 index.html 雜湊（前後各一次，必須相同），
 //      assert 時重抓：不同＝正式站已重新部署 ⇒ FAIL；抓不到 ⇒ BLOCKED。docs-carry 一律不沿用。
+//      Final Integration（2026-11-26）起另外記錄 GitHub 部署 ID／來源 SHA／run（deployments API），前後與 assert 時都必須是
+//      同一個部署 ID、而且沒有部署進行中；查不到部署 ID ⇒ BLOCKED（內容相同的兩次部署 index 雜湊相同，只看雜湊會誤判）。
 //    · P1／P2v2 等效能實驗：24 小時；完整實驗單位與樣本仍以各自的事前登記契約為準（本表不放寬任何契約）。
 //  ⚠ --max-age-hours 只能「縮短」：有效時數 = min(分類時數, --max-age-hours)。
 // ============================================================================
@@ -117,6 +119,14 @@ export function eligibility72(cls, rc, cur) {
   eq("平台", e.platform, c.platform); eq("架構", e.arch, c.arch); eq("OS 版本", e.osRelease, c.osRelease);
   eq("git", e.git, c.git); eq("npm", e.npm?.bundled, c.npm?.bundled);
   if (e.installedTree && e.installedTree.status !== "PASS") miss.push("收據當時依賴樹不是 PASS");
+  //  Final Integration（2026-11-26）：依賴樹「檢查不完整」也不給 72 小時——沒有 npm 隱藏 lockfile（integrity 沒比對）、
+  //  沒有巢狀套件檢查（舊格式）、或 lockfile 有缺 integrity 的條目。收據當時與現在兩邊都要完整。
+  for (const [who, t] of [["收據當時", e.installedTree], ["現在", c.installedTree]]) {
+    if (!t) continue;
+    if (t.integrityChecked !== true) miss.push(`${who}依賴樹沒有比對 integrity（沒有 npm 隱藏 lockfile）`);
+    if (t.nestedChecked !== true) miss.push(`${who}依賴樹沒有檢查巢狀套件（舊格式）`);
+    if (!(t.integrityUnavailable === 0)) miss.push(`${who} lockfile 有 ${t.integrityUnavailable ?? "未知數量"} 個條目沒有 integrity`);
+  }
   if (!e.esmoEnv) miss.push("收據沒有記錄 ESMO_* 環境變數（舊格式）");
   else if (Object.keys(e.esmoEnv).length) miss.push(`執行時設了會改變 gate 行為的環境變數：${Object.keys(e.esmoEnv).join("、")}`);
   if (cls.needsBundle) {

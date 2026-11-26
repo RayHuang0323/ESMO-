@@ -356,14 +356,46 @@ export function playwrightInfo() {
   const browsers = bj.ok ? Object.fromEntries((bj.value.browsers || []).filter((b) => ["chromium", "firefox", "webkit"].includes(b.name)).map((b) => [b.name, `${b.browserVersion ?? "?"}@r${b.revision}`])) : null;
   return `playwright ${pj.value.version} ${browsers ? Object.entries(browsers).map(([k, v]) => `${k}=${v}`).join(" ") : ""}`.trim();
 }
-/** 正式站部署的身分：抓 url 的 index.html，回 sha256（同步：另起一個 Node 子行程抓）。 */
-export function probeDeployment(url) {
+/**
+ * GitHub Pages「目前上線」的部署身分（Final Integration，2026-11-26）：deployments API（environment=github-pages），
+ * 最新在前，第一筆最新狀態是 success 的就是線上版本；比它新、還在 queued／in_progress／pending／waiting 的列為 inFlight。
+ * 只認 https://<owner>.github.io/<repo>/（其他網址無法對應到 GitHub 部署 ⇒ ok:false）。有 GITHUB_TOKEN 就帶上，沒有就匿名（每小時 60 次）。
+ * 回傳 { ok, live: { id, sha, ref, createdAt, statusAt, runId, logUrl }, inFlight[] } 或 { ok:false, error }。
+ */
+export function pagesDeploymentIdentity(url) {
+  const m = /^https:\/\/([A-Za-z0-9-]+)\.github\.io\/([^/?#]+)\/?/i.exec(String(url));
+  if (!m) return { ok: false, error: `${url} 不是 https://<owner>.github.io/<repo>/ 形式，無法對應到 GitHub Pages 部署` };
+  const base = (process.env.GITHUB_API_URL || "https://api.github.com").replace(/\/+$/, "");
+  const code = "const [o,r,base]=process.argv.slice(1);const h={accept:'application/vnd.github+json','user-agent':'esmo-release-gate'};" +
+    "if(process.env.GITHUB_TOKEN)h.authorization='Bearer '+process.env.GITHUB_TOKEN;" +
+    "const api=p=>fetch(base+'/repos/'+o+'/'+r+p,{headers:h,cache:'no-store'}).then(x=>{if(!x.ok)throw new Error('HTTP '+x.status+' '+p);return x.json()});" +
+    "(async()=>{const d=await api('/deployments?environment=github-pages&per_page=5');if(!Array.isArray(d))throw new Error('deployments 回應不是陣列');const out={live:null,inFlight:[]};" +
+    "for(const x of d){const s=await api('/deployments/'+x.id+'/statuses?per_page=1');const st=(s&&s[0]&&s[0].state)||'none';" +
+    "if(st==='success'){const lu=String(s[0].log_url||'');const i=lu.indexOf('/actions/runs/');out.live={id:x.id,sha:x.sha,ref:x.ref,createdAt:x.created_at,statusAt:s[0].created_at,runId:i>=0?(lu.slice(i+14).split('/')[0]||null):null,logUrl:lu||null};break}" +
+    "if(['queued','in_progress','pending','waiting'].includes(st))out.inFlight.push({id:x.id,sha:x.sha,state:st})}" +
+    "process.stdout.write(JSON.stringify(out))})().catch(e=>{process.stderr.write(String(e.message||e));process.exit(3)})";
+  const r = spawnSync(process.execPath, ["-e", code, m[1], m[2], base], { encoding: "utf8", timeout: 45000, windowsHide: true });
+  if (r.status !== 0) return { ok: false, error: `deployments API：${(r.stderr || String(r.error?.code || "逾時")).slice(0, 160)}` };
+  let j; try { j = JSON.parse(r.stdout); } catch { return { ok: false, error: "deployments API 回應讀不懂" }; }
+  if (!j.live?.id) return { ok: false, error: "最近 5 筆 github-pages 部署沒有成功的：無法辨識線上版本" };
+  return { ok: true, live: j.live, inFlight: j.inFlight || [] };
+}
+
+/**
+ * 正式站部署的身分：GitHub 部署（ID、來源 SHA、workflow run）＋ index.html 的 sha256（同步：另起 Node 子行程抓）。
+ * Final Integration（2026-11-26）：只看 index.html 雜湊不夠——內容相同的兩次部署（例如產品不變的發布）雜湊相同，
+ * 舊 smoke 收據會被誤當成新部署的證據。部署身分抓不到 ⇒ ok:false（呼叫端一律 BLOCKED，不沿用）。
+ * opts.identity 可注入（測試）。
+ */
+export function probeDeployment(url, { identity = pagesDeploymentIdentity } = {}) {
   if (!/^https?:\/\//.test(String(url))) return { ok: false, error: `不是 http(s) 網址：${url}` };
+  const id = identity(url);
+  if (!id.ok) return { ok: false, url, error: `無法辨識部署：${id.error}` };
   // 2026-11-26 審查修正：GitHub Pages 前面有 CDN 快取，加一次性查詢參數，避免新部署後還抓到舊的 index.html
   const busted = String(url) + (String(url).includes("?") ? "&" : "?") + "_esmo_probe=" + Date.now() + "-" + process.pid;
   const code = "const u=process.argv[1];fetch(u,{cache:'no-store',headers:{'cache-control':'no-cache'}}).then(async r=>{if(!r.ok)throw new Error('HTTP '+r.status);const b=Buffer.from(await r.arrayBuffer());process.stdout.write(require('crypto').createHash('sha256').update(b).digest('hex'))}).catch(e=>{process.stderr.write(String(e.message||e));process.exit(3)})";
   const r = spawnSync(process.execPath, ["-e", code, busted], { encoding: "utf8", timeout: 45000, windowsHide: true });
-  return r.status === 0 && /^[0-9a-f]{64}$/.test(r.stdout) ? { ok: true, url, indexSha256: r.stdout, at: new Date().toISOString() } : { ok: false, url, error: (r.stderr || String(r.error?.code || "逾時")).slice(0, 160) };
+  return r.status === 0 && /^[0-9a-f]{64}$/.test(r.stdout) ? { ok: true, url, indexSha256: r.stdout, at: new Date().toISOString(), deployment: id.live, inFlight: id.inFlight } : { ok: false, url, error: (r.stderr || String(r.error?.code || "逾時")).slice(0, 160) };
 }
 
 /** 這個 repo 的 GitHub Pages 根網址（由 origin 推出：https://<owner 小寫>.github.io/<repo>/）。不是 GitHub 就回 null。 */
@@ -461,8 +493,19 @@ export function policyFor(receipt, ctx, { currentBrowser = null, deploymentProbe
   if (p && cls.deploymentBound) {
     const d = receipt.deployment;
     if (!d?.indexSha256 || !d.url) checks.push(mk("receipt_deployment", "FAIL", "正式站 smoke 收據沒有記錄部署身分（run 要加 --deployment-url）：無法證明代表現在的正式站"));
-    else if (d.stable !== true) checks.push(mk("receipt_deployment", "FAIL", "smoke 執行期間正式站被重新部署，結果不代表任何一版"));
-    else { const cur = deploymentProbe(d.url); checks.push(!cur.ok ? mk("receipt_deployment", "BLOCKED", `抓不到 ${d.url}：${cur.error}`) : cur.indexSha256 === d.indexSha256 ? mk("receipt_deployment", "PASS", `${d.url} 仍是同一次部署（index ${d.indexSha256.slice(0, 12)}）`) : mk("receipt_deployment", "FAIL", `正式站已重新部署（index ${d.indexSha256.slice(0, 12)} → ${cur.indexSha256.slice(0, 12)}）：smoke 不能跨部署沿用`)); }
+    //  Final Integration（2026-11-26）：必須有 GitHub 部署 ID。內容相同的新部署 index 雜湊也相同，只靠雜湊會把舊 smoke 當成新部署的證據。
+    else if (!d.deploymentId) checks.push(mk("receipt_deployment", "FAIL", "smoke 收據沒有記錄 GitHub 部署 ID（舊格式）：index 雜湊相同不代表同一次部署，不能當成現在正式站的證據"));
+    else if (d.stable !== true) checks.push(mk("receipt_deployment", "FAIL", "smoke 執行期間正式站被重新部署（或部署進行中），結果不代表任何一版"));
+    else {
+      const cur = deploymentProbe(d.url);
+      const curId = cur.deployment?.id ?? null;
+      checks.push(!cur.ok ? mk("receipt_deployment", "BLOCKED", `無法確認 ${d.url} 是哪一次部署：${cur.error}`)
+        : !curId ? mk("receipt_deployment", "BLOCKED", `${d.url}：查不到目前的 GitHub 部署 ID，無法證明仍是同一次部署`)
+        : String(curId) !== String(d.deploymentId) ? mk("receipt_deployment", "FAIL", `正式站已重新部署（deployment ${d.deploymentId} → ${curId}，來源 ${String(d.sourceSha || "?").slice(0, 12)} → ${String(cur.deployment?.sha || "?").slice(0, 12)}）：smoke 不能跨部署沿用`)
+        : cur.indexSha256 !== d.indexSha256 ? mk("receipt_deployment", "FAIL", `部署 ID 相同但 index 不同（${d.indexSha256.slice(0, 12)} → ${String(cur.indexSha256).slice(0, 12)}）：無法證明代表同一版`)
+        : (cur.inFlight || []).length ? mk("receipt_deployment", "BLOCKED", `有部署正在進行（${cur.inFlight.map((x) => `${x.id} ${x.state}`).join("、")}）：正式站可能馬上換版`)
+        : mk("receipt_deployment", "PASS", `${d.url} 仍是同一次部署（deployment ${d.deploymentId}，來源 ${String(d.sourceSha || "?").slice(0, 12)}，run ${d.runId ?? "?"}，index ${d.indexSha256.slice(0, 12)}）`));
+    }
   }
   return { hours, tier, cls, checks };
 }

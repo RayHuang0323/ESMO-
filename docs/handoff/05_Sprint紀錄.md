@@ -27351,3 +27351,28 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - `github-pages` environment 允許從 `release/moba-combat-closure` 與 `gh-pages` 部署（TD-68，等 Owner 決定）。
 - 殘餘風險見 TD-69。
 - 正式 Gate 在最終 SHA 的結果：收據目錄與 repo 外報告 `C:\Users\ifikn\esmo-measure\release-engineering-s1.1\`。
+
+## 2026-11-26　Release Engineering Final Integration（真實 CI、正式整合準備）
+
+**範圍**：Owner 接受 S1＋S1.1 本機成果；本輪只做真實 CI 隔離驗證、最後風險確認、正式整合準備。不開 S1.2／S2，不擴充功能。
+不 Push main、不 Merge、不 Deploy、不開旗標、不開 C3／Sprint 2B。
+
+**完成**
+- 真實 GitHub CI（第一次）：凍結候選 `5d446316` 推到隔離分支 `ci-dryrun/s1.1`（Owner 授權），run 45802687368 success（Linux runner；npm ci、依賴樹、build、比對各步驟成功）。
+  只有 dry run 一個 workflow 被觸發；正式 Pages 部署仍是 deployment 8067302167（來源 `43d2b757`），沒有新部署。
+  ⚠ 沒有權杖讀不到 Actions 原始 log（API 403），而且那個 SHA 上比對只回報、不阻擋 ⇒ 不算 bundle 相同的證據。
+- 找到三個可能造成假 PASS／不安全部署的缺口，做最小修復＋反向測試（本 commit）：
+  1. **smoke 部署身分**：原本只靠 index.html 雜湊；內容相同的新部署（本次發布正是如此）雜湊相同，舊 smoke 會被當成新部署的證據。
+     現在記錄並比對 GitHub 部署 ID／來源 SHA／run（deployments API，匿名可用）；查不到部署 ID 或有部署進行中 ⇒ BLOCKED；舊格式收據 ⇒ FAIL。
+  2. **72 小時效期**：依賴樹「檢查不完整」（沒比對 integrity、沒檢查巢狀、lockfile 條目缺 integrity）不再給 72 小時；新增巢狀多出套件檢查（FAIL）。
+  3. **部署前阻擋**：原本只要有 `.github` 變更就「只回報、不擋」（改 CI 的那次推送正好沒有阻擋＝fail-open）。現在只有產品／建置輸入變更才取消期待；
+     ci-dryrun 加「期待必須成立」步驟；CI 工具把結果寫成 annotation（不用登入就能查證）；部署判斷工具改用 exitCode（修掉 Windows 上 0xC0000409 結束崩潰）。
+- 正式 Gate 範圍分析：上次正式發布（C1＋C2，`93655403`）的每個 gate 入口做 import 依賴圖掃描。只有「測完後終止行程」的程式（harness／cdp／run-gate → safeProcess）
+  會碰到瀏覽器流程、det_math_c1、det_hypot_c2、四引擎、P2v2；verify.mjs 正式清單的各區段與 P1 沒有碰到任何改過的檔案。
+
+**未完成／待 Owner**
+- 新候選（本 commit）的正式 Gate、真實 CI 第二輪、Readiness 結果寫在 repo 外報告（Gate 凍結後不再追加文件 commit）。
+- TD-68（github-pages environment 允許 main 以外的分支）仍待 Owner 在 GitHub 設定收斂。
+- 正式 main Push／Deploy 待 Owner 核准；發布後驗收與「純文件 commit 不部署」驗證另需授權。
+
+**已知風險**：TD-69 其餘項目保留（非 Windows 終止競態、靜態 import 偵測、Variables 有值時只回報）。

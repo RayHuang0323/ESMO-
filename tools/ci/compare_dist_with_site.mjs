@@ -20,6 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { annotate } from "./annotate.mjs";
 
 const sha = (b) => crypto.createHash("sha256").update(b).digest("hex");
 export function listFiles(dir) {
@@ -66,8 +67,13 @@ async function main() {
   const expect = String(a["expect-identical"] ?? "false") === "true";
   let r;
   try { r = await compareDistWithSite({ dist: path.resolve(a.dist), site: a.site, concurrency: Number(a.concurrency ?? 8) }); }
-  catch (e) { console.log(`COMPARE_DIST RESULT=BLOCKED（${e.message}）`); return finish(expect ? 2 : 0); }
+  catch (e) { console.log(`COMPARE_DIST RESULT=BLOCKED（${e.message}）`); annotate("COMPARE_DIST BLOCKED", `RESULT=BLOCKED expect_identical=${expect} ${e.message}`, expect ? "error" : "warning"); return finish(expect ? 2 : 0); }
   if (a.out) fs.writeFileSync(a.out, JSON.stringify(r, null, 1));
+  //  Final Integration：在 Actions 裡寫成 annotation（匿名可查）。期待相同卻不同／抓不到 ⇒ error 等級。
+  const fail = expect && r.status !== "IDENTICAL";
+  const { hashDir } = await import("../lib/releaseGate.mjs");
+  let dh = null; try { dh = hashDir(path.resolve(a.dist)); } catch { /* 下面寫 null */ }
+  annotate(fail ? "COMPARE_DIST FAIL" : "COMPARE_DIST", `RESULT=${r.status} expect_identical=${expect} dist=${r.files} identical=${r.identical} different=${r.different.length} missingOnSite=${r.missingOnSite.length} errors=${r.errors.length} site=${r.site} DIST_HASH files=${dh?.files ?? "?"} aggregateSha256=${dh?.aggregateSha256 ?? "?"}${r.different.length ? " first_different=" + r.different.slice(0, 5).join(" ") : ""}`, fail ? "error" : "notice");
   if (a.json) console.log(JSON.stringify(r, null, 1));
   else {
     console.log(`dist ${r.files} 檔 vs ${r.site}：相同 ${r.identical}、不同 ${r.different.length}、正式站沒有 ${r.missingOnSite.length}、抓取失敗 ${r.errors.length}`);

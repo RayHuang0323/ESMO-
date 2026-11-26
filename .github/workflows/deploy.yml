@@ -109,8 +109,10 @@ jobs:
         uses: actions/configure-pages@v5
 
       #  部署「之前」逐檔比對 dist 與目前正式站（S1.1，TD-65；本機實測 581/581 相同）。
-      #  只有 decide 判定「push、而且自最後成功部署以來沒有任何產品／建置輸入或 .github 變更」時才要求必須相同：
-      #  那時 bundle 不同＝意外（例如依賴或 Node 行為改變），在這裡失敗、不部署。其他情況只回報、不擋。
+      #  只有 decide 判定「push、而且自最後成功部署以來沒有任何產品／建置輸入變更（也沒有被它們引用的變更檔）」時才要求必須相同：
+      #  那時 bundle 不同＝意外（例如依賴、Node 或 workflow 行為改變），在這裡失敗、不部署。其他情況只回報、不擋。
+      #  Final Integration（2026-11-26）：.github 的變更不再取消期待——改 CI 的推送一樣要證明 bundle 沒變。
+      #  刻意改變 bundle 的 workflow 變更：Owner 審查後用 workflow_dispatch 手動部署（不設期待）。
       #  ⚠ repo Variables（VITE_SUPABASE_*）不在 git 裡：任何一個有值時不設期待（改了 Variables 的下一次 build 本來就會不同）。
       - name: Compare dist with production (before deploy)
         env:

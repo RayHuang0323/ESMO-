@@ -26,7 +26,7 @@ const ck = (name, ok, detail = "") => { if (ok) { pass++; console.log(`✅ ${nam
 const H = 3600000; const NOW = Date.parse("2026-11-26T12:00:00Z");
 const SHA = "b".repeat(40), TREE = "c".repeat(40);
 const ENV = { node: "24.18.0", nodeMajor: 24, platform: "win32", arch: "x64", osRelease: "10.0.22000", git: "git version 2.47.0", depsDigest: "D", lockfileBlob: "L",
-  installedTree: { schema: "esmo.installed-tree/1", status: "PASS", digest: "T1", portableDigest: "P1" }, npm: { bundled: "11.16.0" }, esmoEnv: {} };
+  installedTree: { schema: "esmo.installed-tree/1", status: "PASS", digest: "T1", portableDigest: "P1", integrityChecked: true, nestedChecked: true, nestedExtra: 0, integrityUnavailable: 0 }, npm: { bundled: "11.16.0" }, esmoEnv: {} };
 const CTX = { targetFull: SHA, treeSha: TREE, env: ENV };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 /** 合成一張收據。cmds＝指令；policy:true ⇒ 依分類表寫 policy（模擬 run 寫的）。 */
@@ -55,6 +55,21 @@ const LOGIC = { gate: "regress", cmds: ["node tools/regress.mjs"] };
   ck("到期時間＝完成時間＋72h", v.policy.expiresAt === new Date(NOW - 24.5 * H + 72 * H).toISOString());
   v = V(rc({ gate: "golden-v21a", cmds: ["node tools/check_match_golden_v21a.mjs"], hoursAgo: 48 }));
   ck("golden（版本隔離／Golden）48 小時 ⇒ PASS（72h）", v.status === "PASS" && v.policy.class === "golden");
+  // Final Integration：依賴樹檢查不完整 ⇒ 不給 72 小時（退回 24h；30 小時 ⇒ FAIL）
+  const tw = (patch, who = "both") => { const t = { ...ENV.installedTree, ...patch }; const e = { ...ENV, installedTree: t };
+    return V(rc({ ...LOGIC, hoursAgo: 30, env: who === "cur" ? ENV : e }), { ctx: { ...CTX, env: who === "receipt" ? ENV : e } }); };
+  v = tw({ integrityChecked: false });
+  ck("FI：沒有 npm 隱藏 lockfile（integrity 沒比對）⇒ 不給 72h（30 小時 ⇒ FAIL）", v.status === "FAIL" && v.policy.tier !== "72h", JSON.stringify(v.policy));
+  v = tw({ nestedChecked: undefined });
+  ck("FI：沒有巢狀套件檢查（舊格式）⇒ 不給 72h", v.status === "FAIL" && v.policy.tier !== "72h");
+  v = tw({ integrityUnavailable: 2 });
+  ck("FI：lockfile 有缺 integrity 的條目 ⇒ 不給 72h", v.status === "FAIL" && v.policy.tier !== "72h");
+  v = tw({ integrityChecked: false }, "cur");
+  ck("FI：收據完整、但現在的依賴樹沒比對 integrity ⇒ 不給 72h（兩邊都要完整）", v.status === "FAIL" && v.policy.tier !== "72h");
+  v = tw({ nestedChecked: undefined }, "receipt");
+  ck("FI：現在完整、但收據當時沒檢查巢狀 ⇒ 不給 72h", v.status === "FAIL" && v.policy.tier !== "72h");
+  v = tw({ integrityChecked: false }); const v23 = V(rc({ ...LOGIC, hoursAgo: 23, env: { ...ENV, installedTree: { ...ENV.installedTree, integrityChecked: false } } }), { ctx: { ...CTX, env: { ...ENV, installedTree: { ...ENV.installedTree, integrityChecked: false } } } });
+  ck("FI：不完整時仍可用 24h（23 小時 ⇒ PASS，只是不延長）", v23.status === "PASS" && v23.policy.tier !== "72h", JSON.stringify(v23.checks.filter((c) => c.status !== "PASS")));
 }
 // ═══ §2 舊收據、分類表版本 ═══════════════════════════════════════════════
 {
@@ -147,10 +162,27 @@ const LOGIC = { gate: "regress", cmds: ["node tools/regress.mjs"] };
 // ═══ §8 正式站 smoke 綁定部署 ═══════════════════════════════════════════════
 {
   const SM = { gate: "prod-smoke-cs", cmds: ["node tools/browser_check_prod_release_3aB.mjs --url=https://example.invalid/ESMO-/"] };
-  const dep = { url: "https://example.invalid/ESMO-/", indexSha256: "e".repeat(64), stable: true };
-  const same = () => ({ ok: true, indexSha256: "e".repeat(64) }), changed = () => ({ ok: true, indexSha256: "f".repeat(64) }), down = () => ({ ok: false, error: "ENOTFOUND" });
+  const dep = { url: "https://example.invalid/ESMO-/", indexSha256: "e".repeat(64), stable: true, deploymentId: 8067302167, sourceSha: "4".repeat(40), runId: "45684700136" };
+  const D1 = { id: 8067302167, sha: "4".repeat(40) }, D2 = { id: 8099999999, sha: "5".repeat(40) };
+  const same = () => ({ ok: true, indexSha256: "e".repeat(64), deployment: D1, inFlight: [] }), changed = () => ({ ok: true, indexSha256: "f".repeat(64), deployment: D2, inFlight: [] }), down = () => ({ ok: false, error: "ENOTFOUND" });
   const b = { chrome: "158" }, cb = () => "158";
   ck("smoke：部署沒變 ⇒ PASS", V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: dep }), { browser: cb, probe: same }).status === "PASS");
+  // Final Integration：部署身分＝GitHub 部署 ID（內容相同的新部署 index 雜湊也相同）
+  let fv = V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: dep }), { browser: cb, probe: () => ({ ok: true, indexSha256: "e".repeat(64), deployment: D2, inFlight: [] }) });
+  ck("FI：新部署內容完全相同（index 雜湊相同）但部署 ID 不同 ⇒ FAIL（舊 smoke 不能當新部署的證據）", fv.status === "FAIL" && st(fv, "receipt_deployment") === "FAIL" && /8099999999/.test(fv.checks.find((c) => c.id === "receipt_deployment").detail), JSON.stringify(fv.checks.find((c) => c.id === "receipt_deployment")));
+  fv = V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: { url: dep.url, indexSha256: dep.indexSha256, stable: true } }), { browser: cb, probe: same });
+  ck("FI：舊格式收據（只有 index 雜湊、沒有部署 ID）⇒ FAIL", fv.status === "FAIL" && st(fv, "receipt_deployment") === "FAIL");
+  fv = V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: dep }), { browser: cb, probe: () => ({ ok: true, indexSha256: "e".repeat(64) }) });
+  ck("FI：正式站抓得到、但查不到目前的部署 ID ⇒ BLOCKED（不沿用）", fv.status === "BLOCKED" && st(fv, "receipt_deployment") === "BLOCKED");
+  fv = V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: dep }), { browser: cb, probe: () => ({ ok: true, indexSha256: "e".repeat(64), deployment: D1, inFlight: [{ id: 8099999999, state: "in_progress" }] }) });
+  ck("FI：assert 時有部署正在進行 ⇒ BLOCKED", fv.status === "BLOCKED" && st(fv, "receipt_deployment") === "BLOCKED");
+  fv = V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: dep }), { browser: cb, probe: () => ({ ok: true, indexSha256: "f".repeat(64), deployment: D1, inFlight: [] }) });
+  ck("FI：部署 ID 相同但 index 不同 ⇒ FAIL", fv.status === "FAIL" && st(fv, "receipt_deployment") === "FAIL");
+  { let calls = 0; const idFake = () => { calls++; return { ok: false, error: "HTTP 403 rate limit" }; };
+    const p = LIB.probeDeployment("https://rayhuang0323.github.io/ESMO-/", { identity: idFake });
+    ck("FI：probeDeployment 查不到部署身分 ⇒ ok:false（不去抓 index、不回只有雜湊的身分）", p.ok === false && /無法辨識部署/.test(p.error) && calls === 1, JSON.stringify(p)); }
+  { const n = LIB.pagesDeploymentIdentity("https://example.com/ESMO-/");
+    ck("FI：不是 <owner>.github.io/<repo>/ 的網址 ⇒ 無法對應 GitHub 部署（ok:false，不發出請求）", n.ok === false && /github\.io/.test(n.error)); }
   let v = V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: dep }), { browser: cb, probe: changed });
   ck("smoke：正式站已重新部署 ⇒ FAIL receipt_deployment（不能跨部署沿用）", v.status === "FAIL" && st(v, "receipt_deployment") === "FAIL");
   v = V(rc({ ...SM, hoursAgo: 2, browser: b, deployment: dep }), { browser: cb, probe: down });
@@ -176,12 +208,14 @@ const dir = path.join(BASE, "fx"); const rdir = path.join(BASE, "receipts");
 git(BASE, "init", "-q", "-b", "main", dir); git(dir, "config", "core.autocrlf", "false");
 write(path.join(dir, ".gitignore"), "node_modules/\ndist/\n");
 write(path.join(dir, "package.json"), JSON.stringify({ name: "fx", private: true, type: "module", scripts: { build: "node node_modules/vite/bin/vite.js build" }, devDependencies: { vite: "^5.0.0" } }, null, 1));
-write(path.join(dir, "package-lock.json"), JSON.stringify({ name: "fx", lockfileVersion: 3, packages: { "": { name: "fx" }, "node_modules/vite": { version: "5.4.0" } } }, null, 1));
+write(path.join(dir, "package-lock.json"), JSON.stringify({ name: "fx", lockfileVersion: 3, packages: { "": { name: "fx" }, "node_modules/vite": { version: "5.4.0", integrity: "sha512-V" } } }, null, 1));
 write(path.join(dir, "index.html"), "<!doctype html><title>fx</title>\n"); write(path.join(dir, "vite.config.js"), "export default {};\n");
 write(path.join(dir, "src", "main.js"), "export const x = 1;\n"); write(path.join(dir, "docs", "readme.md"), "v0\n");
 write(path.join(dir, "tools", "regress.mjs"), "process.exit(0);\n");
 git(dir, "add", "-A"); git(dir, "commit", "-q", "-m", "base");
 write(path.join(dir, "node_modules", "vite", "package.json"), JSON.stringify({ name: "vite", version: "5.4.0" })); write(path.join(dir, "node_modules", "vite", "bin", "vite.js"), FAKE_VITE);
+// Final Integration：72h 要求 integrity 實際比對過 ⇒ fixture 要像 npm 安裝的樹一樣有隱藏 lockfile（lock 條目也要有 integrity）
+write(path.join(dir, "node_modules", ".package-lock.json"), JSON.stringify({ name: "fx", lockfileVersion: 3, packages: { "node_modules/vite": { version: "5.4.0", integrity: "sha512-V" } } }));
 const cli = (argv) => { const r = spawnSync(process.execPath, [CLI, ...argv], { encoding: "utf8", timeout: 300000 }); let j = null; try { j = JSON.parse(r.stdout); } catch { /* 非 JSON */ } return { code: r.status, out: (r.stdout || "") + (r.stderr || ""), j }; };
 const B = head(dir);
 const run = (sha, gate, cmd, extra = []) => cli(["run", "--repo", dir, "--target-sha", sha, "--receipts-dir", rdir, "--gate", gate, "--cmd", cmd, "--json", ...extra]);

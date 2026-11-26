@@ -68,7 +68,7 @@ export function inspectInstalledTree(root, opts = {}) {
   const plat = opts.platform || currentPlatform();
   const out = { schema: INSTALLED_TREE_SCHEMA, status: null, reason: "", lockfileVersion: null, platform: plat, entries: 0, ok: 0,
     mismatched: [], missing: [], optionalMissing: [], platformSkipped: [], foreignPlatform: [], integrityMismatch: [], integrityChecked: false,
-    extraTopLevel: [], installedTreeDigest: null, portableTreeDigest: null };
+    extraTopLevel: [], nestedExtra: [], nestedChecked: false, integrityUnavailable: [], installedTreeDigest: null, portableTreeDigest: null };
   const done = (status, reason = "") => { out.status = status; out.reason = reason; return out; };
   const lock = readJson(path.join(root, "package-lock.json"));
   if (!lock) return done("BLOCKED", "沒有可讀的 package-lock.json");
@@ -113,9 +113,23 @@ export function inspectInstalledTree(root, opts = {}) {
     if (e.startsWith("@")) { let subs = []; try { subs = fs.readdirSync(path.join(nm, e)); } catch { /* */ } for (const s of subs) if (!lockTop.has(`${e}/${s}`)) out.extraTopLevel.push(`${e}/${s}`); }
     else if (!lockTop.has(e)) out.extraTopLevel.push(e);
   }
+  //  Final Integration（2026-11-26）：巢狀 node_modules 裡 lockfile 沒有的套件（nestedExtra）。Node 解析時巢狀版本優先於頂層，
+  //  多出來的巢狀套件會讓實際載入的程式與 lockfile 不同 ⇒ FAIL。只掃 lockfile 有登記的已安裝套件底下的 node_modules（多出來的
+  //  巢狀套件本身已被列出，不再往下）。nestedChecked=true 代表這一項確實檢查過（72 小時效期要求它，見 gatePolicy.eligibility72）。
+  const lockKeys = new Set(Object.keys(lock.packages));
+  const namesIn = (d) => { const o = []; let es = []; try { es = fs.readdirSync(d); } catch { return o; } for (const e of es) { if (e.startsWith(".")) continue; if (e.startsWith("@")) { let subs = []; try { subs = fs.readdirSync(path.join(d, e)); } catch { /* */ } for (const s of subs) o.push(`${e}/${s}`); } else o.push(e); } return o; };
+  for (const key of lockKeys) {
+    if (!key.startsWith("node_modules/") || lock.packages[key]?.link) continue;
+    const sub = path.join(nm, key.slice("node_modules/".length), "node_modules");
+    if (!fs.existsSync(sub)) continue;
+    for (const n of namesIn(sub)) if (!lockKeys.has(`${key}/node_modules/${n}`)) out.nestedExtra.push(`${key}/node_modules/${n}`);
+  }
+  out.nestedChecked = true;
+  //  lockfile 條目沒有 integrity（例如 git／本機路徑依賴）⇒ 無法比對內容；不算失敗，但記下來（72 小時效期要求 0 筆）
+  out.integrityUnavailable = Object.entries(lock.packages).filter(([k, m]) => k.startsWith("node_modules/") && !m.link && !m.integrity).map(([k]) => k);
   out.installedTreeDigest = sha256(installedRows.sort().join("\n"));
   out.portableTreeDigest = sha256(portableRows.sort().join("\n"));
-  const bad = [["版本不同", out.mismatched], ["缺少", out.missing], ["符合平台卻未安裝的 optional", out.optionalMissing], ["不屬於此平台卻已安裝", out.foreignPlatform], ["integrity 不符", out.integrityMismatch], ["lockfile 以外的頂層套件", out.extraTopLevel]].filter(([, l]) => l.length);
+  const bad = [["版本不同", out.mismatched], ["缺少", out.missing], ["符合平台卻未安裝的 optional", out.optionalMissing], ["不屬於此平台卻已安裝", out.foreignPlatform], ["integrity 不符", out.integrityMismatch], ["lockfile 以外的頂層套件", out.extraTopLevel], ["lockfile 以外的巢狀套件", out.nestedExtra]].filter(([, l]) => l.length);
   return bad.length ? done("FAIL", bad.map(([n, l]) => `${n} ${l.length}（${l.slice(0, 2).join("；")}）`).join("｜")) : done("PASS");
 }
 
@@ -123,5 +137,6 @@ export function inspectInstalledTree(root, opts = {}) {
 export function treeSummary(t) {
   if (!t) return null;
   return { schema: t.schema, status: t.status, lockfileVersion: t.lockfileVersion, platform: t.platform, entries: t.entries, ok: t.ok,
-    platformSkipped: t.platformSkipped.length, integrityChecked: t.integrityChecked, digest: t.installedTreeDigest, portableDigest: t.portableTreeDigest };
+    platformSkipped: t.platformSkipped.length, integrityChecked: t.integrityChecked, nestedChecked: t.nestedChecked === true,
+    nestedExtra: (t.nestedExtra || []).length, integrityUnavailable: (t.integrityUnavailable || []).length, digest: t.installedTreeDigest, portableDigest: t.portableTreeDigest };
 }

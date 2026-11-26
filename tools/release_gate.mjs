@@ -153,7 +153,14 @@ let deployment = null;
 if (cls.deploymentBound) {
   if (!args["deployment-url"]) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: "正式站 smoke 必須加 --deployment-url <正式站網址>，才能證明結果代表哪一次部署" });
   else if (!deploymentUrlBound(args["deployment-url"], args.cmd, path.resolve(args.repo)).ok) policyChecks.push({ id: "deployment_url_bound", status: "FAIL", detail: deploymentUrlBound(args["deployment-url"], args.cmd, path.resolve(args.repo)).why });
-  else { const d = probeDeployment(args["deployment-url"]); if (!d.ok) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: `抓不到 ${args["deployment-url"]}：${d.error}` }); else deployment = { url: d.url, indexSha256: d.indexSha256, before: d.at }; }
+  else {
+    //  Final Integration（2026-11-26）：記錄 GitHub 部署 ID／來源 SHA／run，部署進行中不開始（結果可能跨兩版）
+    const d = probeDeployment(args["deployment-url"]);
+    if (!d.ok) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: `無法辨識 ${args["deployment-url"]} 是哪一次部署：${d.error}` });
+    else if (!d.deployment?.id) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: "查不到 GitHub 部署 ID：只有 index 雜湊無法區分內容相同的兩次部署" });
+    else if ((d.inFlight || []).length) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: `有部署正在進行（${d.inFlight.map((x) => `${x.id} ${x.state}`).join("、")}）：等部署結束再跑 smoke` });
+    else { deployment = { url: d.url, indexSha256: d.indexSha256, before: d.at, deploymentId: d.deployment.id, sourceSha: d.deployment.sha, runId: d.deployment.runId ?? null, deploymentCreatedAt: d.deployment.createdAt ?? null }; policyChecks.push({ id: "deployment_identity", status: "PASS", detail: `deployment ${d.deployment.id}（來源 ${String(d.deployment.sha).slice(0, 12)}，run ${d.deployment.runId ?? "?"}），index ${d.indexSha256.slice(0, 12)}` }); }
+  }
 }
 pre.checks.push(...policyChecks);
 if (policyChecks.some((c) => c.status !== "PASS")) pre.status = aggregate(pre.checks);
@@ -176,8 +183,11 @@ if (pre.status === "PASS") {
   ] };
   if (deployment) {
     const d2 = probeDeployment(deployment.url);
-    deployment.after = d2.at || null; deployment.stable = d2.ok && d2.indexSha256 === deployment.indexSha256;
-    post.checks.push(deployment.stable ? { id: "deployment_unchanged", status: "PASS", detail: `${deployment.url} index ${deployment.indexSha256.slice(0, 12)}（執行前後相同）` } : { id: "deployment_unchanged", status: d2.ok ? "FAIL" : "BLOCKED", detail: d2.ok ? `執行期間正式站被重新部署（${deployment.indexSha256.slice(0, 12)} → ${d2.indexSha256.slice(0, 12)}）` : `事後抓不到正式站：${d2.error}` });
+    deployment.after = d2.at || null;
+    const sameId = d2.ok && String(d2.deployment?.id ?? "") === String(deployment.deploymentId), noFlight = d2.ok && !(d2.inFlight || []).length;
+    deployment.stable = d2.ok && sameId && noFlight && d2.indexSha256 === deployment.indexSha256;
+    post.checks.push(deployment.stable ? { id: "deployment_unchanged", status: "PASS", detail: `${deployment.url} deployment ${deployment.deploymentId}、index ${deployment.indexSha256.slice(0, 12)}（執行前後相同，期間沒有部署進行）` }
+      : { id: "deployment_unchanged", status: d2.ok ? "FAIL" : "BLOCKED", detail: !d2.ok ? `事後無法辨識部署：${d2.error}` : !sameId ? `執行期間正式站被重新部署（deployment ${deployment.deploymentId} → ${d2.deployment?.id ?? "?"}）` : !noFlight ? `執行結束時有部署正在進行（${d2.inFlight.map((x) => `${x.id} ${x.state}`).join("、")}）` : `執行期間 index 改變（${deployment.indexSha256.slice(0, 12)} → ${d2.indexSha256.slice(0, 12)}）` });
   }
   for (const c of post.checks) if (c.status !== "PASS") reasons.push(c.id);
 } else reasons.push(...pre.checks.filter((c) => c.status !== "PASS" && c.status !== "WARN" && c.status !== "INFO").map((c) => `preflight:${c.id}`));

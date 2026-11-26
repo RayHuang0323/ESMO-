@@ -83,3 +83,11 @@ jobs:
           EXPECT_IDENTICAL: ${{ needs.decide.outputs.expect_identical_bundle == 'true' && vars.VITE_SUPABASE_URL == '' && vars.VITE_SUPABASE_ANON_KEY == '' && vars.VITE_SUPABASE_REDIRECT_URL == '' }}
           SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
         run: node tools/ci/compare_dist_with_site.mjs --dist dist --site "$SITE_URL/" --expect-identical "$EXPECT_IDENTICAL"
+
+      #  Final Integration（2026-11-26，Owner 要求）：這個 dry run 是給「產品不變」的發布用的，必須真的要求相同，
+      #  不能只有比對報告。decide 沒有設下期待（例如有產品輸入變更或 Variables 有值）⇒ 這次 dry run 失敗。
+      #  上一步在期待成立時已經把「不同／抓不到」變成失敗；這一步確保期待本身成立。
+      - name: Require identical-bundle expectation (dry run)
+        env:
+          EXPECT_IDENTICAL: ${{ needs.decide.outputs.expect_identical_bundle == 'true' && vars.VITE_SUPABASE_URL == '' && vars.VITE_SUPABASE_ANON_KEY == '' && vars.VITE_SUPABASE_REDIRECT_URL == '' }}
+        run: node tools/ci/require_expectation.mjs "$EXPECT_IDENTICAL"

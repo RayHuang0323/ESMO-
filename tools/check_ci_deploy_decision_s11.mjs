@@ -3,7 +3,8 @@
 //  由 tools/check_ci_deploy_decision.mjs 呼叫（共用同一個 fixture repo）；單獨執行沒有意義。
 //
 //  · 多個文件 commit 一次推送、文件＋產品混合、只有工具、空差異、改了又改回
-//  · 部署前 bundle 比對的期待（expect_identical_bundle）只在「沒有產品／建置輸入或 .github 變更」時成立
+//  · 部署前 bundle 比對的期待（expect_identical_bundle）只在「沒有產品／建置輸入變更」時成立
+//    （Final Integration 起 .github 變更不再取消期待；ci-dryrun 必須真的要求相同；Actions 裡的 annotation）
 //  · GitHub API：失敗（500）、權限不足（403）、回應讀不懂、最近沒有成功部署、最新一筆還在進行中 ⇒ 用較舊的成功部署
 //    （用 GITHUB_API_URL 指向本機假伺服器；假伺服器跑在子行程）
 //  · 判斷工具本身出錯（--repo 不存在）⇒ 仍輸出 deploy=true、exit 0
@@ -30,7 +31,13 @@ export async function run({ ck, R, BASE, git, write, DEPLOYED, at, decide, HERE 
   ck("只有測試工具變更 ⇒ 部署（不是文件），但產品輸入沒變 ⇒ 期待 bundle 與正式站相同", r.deploy === true && r.expectIdenticalBundle === true, JSON.stringify(r));
   at(DEPLOYED); const gh = commit(".github/workflows/deploy.yml", "on: [push]\n");
   r = await d(gh);
-  ck("CI 設定變更 ⇒ 部署，不期待 bundle 相同（workflow 可能改變建置環境）", r.deploy === true && r.expectIdenticalBundle === false);
+  ck("FI：CI 設定變更 ⇒ 部署，而且仍期待 bundle 相同（改 CI 的推送也要在部署前證明 bundle 沒變；刻意改 bundle 用 workflow_dispatch）", r.deploy === true && r.expectIdenticalBundle === true && r.ciChanges.includes(".github/workflows/deploy.yml"), JSON.stringify(r));
+  at(DEPLOYED); commit("tools/check_a.mjs", 'const f = "gh";\n'); const ghReader = commit(".github/workflows/deploy.yml", "on: [push]\njobs: { b: { steps: [ { run: node tools/check_a.mjs } ] } }\n");
+  r = await d(ghReader);
+  ck("FI：workflow 提到變更的工具檔（.github 是讀者）⇒ 仍期待相同（.github 不進 bundle）", r.deploy === true && r.expectIdenticalBundle === true, JSON.stringify(r));
+  at(DEPLOYED); commit(".github/workflows/deploy.yml", "on: [push]\n"); const ghSrc = commit("src/main.js", "export const x = 7;\n");
+  r = await d(ghSrc);
+  ck("FI：CI 設定＋src 一起變更 ⇒ 部署，不期待相同（產品本來就變了）", r.deploy === true && r.expectIdenticalBundle === false && r.productInputChanges.includes("src/main.js"), JSON.stringify(r));
   at(DEPLOYED); for (const p of ["package-lock.json", "vite.config.js", "index.html", "public/logo.txt"]) { at(DEPLOYED); const h = commit(p); const x = await d(h); if (!(x.deploy && !x.expectIdenticalBundle)) { ck(`${p} 變更 ⇒ 不期待 bundle 相同`, false, JSON.stringify(x)); } }
   ck("lock／vite.config／index.html／public 任一變更 ⇒ 部署且不期待 bundle 相同", true);
   // 審查修正（C1）：已部署版本的 src 以 ?raw 匯入一份文件；之後推送「那份文件＋工具」⇒ bundle 本來就會不同 ⇒ 不得期待相同
@@ -94,7 +101,10 @@ http.createServer((req, res) => {
   a = await apiCase("garbage", multi);
   ck("API 回應讀不懂 ⇒ deploy=true", a.code === 0 && /deploy=true/.test(a.output), a.so);
   a = await apiCase("none", multi);
-  ck("最近的部署都不是 success ⇒ deploy=true", a.code === 0 && /deploy=true/.test(a.output), a.so);
+  ck("最近的部署都不是 success ⇒ deploy=true", a.code === 0 && /deploy=true/.test(a.output), JSON.stringify({ code: a.code, output: a.output, so: a.so }));
+  //  FI：連續多次 API 呼叫後正常結束（不再因 process.exit 與 keep-alive 連線競態而崩潰）
+  { const codes = []; for (let i = 0; i < 4; i++) codes.push((await apiCase("none", multi)).code);
+    ck("FI：API 呼叫後結束 4/4 次 exit 0（不在 keep-alive 連線關閉中途 process.exit）", codes.every((c) => c === 0), codes.join(",")); }
   a = await apiCase("pending-then-ok", multi, { other: mixed });
   ck("最新一筆部署還在進行中（產品版）⇒ 以較舊的成功部署為基準；之後只有文件 ⇒ deploy=false", a.code === 0 && /deploy=false/.test(a.output), a.so);
   const crash = spawnSync(process.execPath, [path.join(HERE, "ci", "deploy_decision.mjs"), "--repo", path.join(BASE, "no-such-repo"), "--head", "abc", "--event", "push", "--last-deployed", DEPLOYED, "--github-output", path.join(BASE, "gho_crash")], { encoding: "utf8" });
@@ -127,6 +137,16 @@ http.createServer((req, res) => { const p = path.join(root, decodeURIComponent(n
     ck("compare：抓不到正式站 + expect ⇒ BLOCKED、exit 2（無法證明就不部署）", c.code === 2 && /BLOCKED/.test(c.so), c.so);
     c = await cmp(false, "http://127.0.0.1:1/ESMO-/");
     ck("compare：抓不到正式站但不期待相同 ⇒ exit 0（只回報）", c.code === 0);
+    // Final Integration：Actions 裡寫 annotation（沒有權杖也能匿名查證）
+    const cmpGh = (expect) => new Promise((res) => { const cc = spawn(process.execPath, [path.join(HERE, "ci", "compare_dist_with_site.mjs"), "--dist", dist, "--site", `http://127.0.0.1:${port}/ESMO-/`, "--expect-identical", String(expect)], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, GITHUB_ACTIONS: "true" } }); let so = ""; cc.stdout.on("data", (b) => { so += b; }); cc.on("close", (code) => res({ code, so })); });
+    c = await cmpGh(true);
+    ck("FI：compare 在 Actions 裡印 ::notice title=COMPARE_DIST::（RESULT、expect、identical 數、DIST_HASH）", c.code === 0 && /^::notice title=COMPARE_DIST::RESULT=IDENTICAL expect_identical=true dist=3 identical=3 .*DIST_HASH files=3 aggregateSha256=[0-9a-f]{64}/m.test(c.so), c.so);
+    write(path.join(dist, "assets/a.js"), "b");
+    c = await cmpGh(true);
+    ck("FI：期待相同卻不同 ⇒ ::error title=COMPARE_DIST FAIL::，exit 1", c.code === 1 && /^::error title=COMPARE_DIST FAIL::RESULT=DIFFERENT/m.test(c.so) && /first_different=assets\/a\.js/.test(c.so), c.so);
+    write(path.join(dist, "assets/a.js"), "a");
+    c = await cmp(true);
+    ck("FI：本機（沒有 GITHUB_ACTIONS）不印 annotation", c.code === 0 && !/^::/m.test(c.so));
   } finally { try { srv.kill(); } catch { /* 已結束 */ } }
 
   // ── workflow：比對步驟與 dry run ────────────────────────────────────────────
@@ -139,6 +159,14 @@ http.createServer((req, res) => { const p = path.join(root, decodeURIComponent(n
   ck("deploy.yml：只有 push、decide 判定 expect_identical_bundle=='true'、而且 VITE Variables 都是空的，才要求相同", /EXPECT_IDENTICAL:\s*\$\{\{\s*github\.event_name\s*==\s*'push'\s*&&\s*needs\.decide\.outputs\.expect_identical_bundle\s*==\s*'true'\s*&&\s*vars\.VITE_SUPABASE_URL\s*==\s*''\s*&&\s*vars\.VITE_SUPABASE_ANON_KEY\s*==\s*''\s*&&\s*vars\.VITE_SUPABASE_REDIRECT_URL\s*==\s*''\s*\}\}/.test(y));
   ck("ci-dryrun.yml：只在 ci-dryrun/** 分支觸發（沒有 main、沒有 workflow_dispatch）", /branches:\s*\n\s*-\s*"ci-dryrun\/\*\*"/.test(dr) && !/workflow_dispatch/.test(dr) && !/-\s*main\b/.test(dr));
   ck("ci-dryrun.yml：沒有部署能力（沒有 deploy-pages、upload-pages-artifact、pages: write、id-token: write、environment）", !/deploy-pages|upload-pages-artifact|pages:\s*write|id-token:\s*write|environment:/.test(dr));
-  const runs = (txt) => { const s = txt.indexOf("\n  build:"); return [...txt.slice(s).matchAll(/^\s*run:\s*(.+)$/gm)].map((m) => m[1].trim()).filter((c) => !/compare_dist_with_site/.test(c)); };
+  const runs = (txt) => { const s = txt.indexOf("\n  build:"); return [...txt.slice(s).matchAll(/^\s*run:\s*(.+)$/gm)].map((m) => m[1].trim()).filter((c) => !/compare_dist_with_site|require_expectation/.test(c)); };
+  // Final Integration：dry run 必須真的要求相同（不能只有比對報告）
+  ck("FI：ci-dryrun.yml 在比對之後有「期待必須成立」步驟，條件與比對步驟相同", /compare_dist_with_site[\s\S]*Require identical-bundle expectation[\s\S]*EXPECT_IDENTICAL:\s*\$\{\{\s*needs\.decide\.outputs\.expect_identical_bundle\s*==\s*'true'\s*&&\s*vars\.VITE_SUPABASE_URL\s*==\s*''\s*&&\s*vars\.VITE_SUPABASE_ANON_KEY\s*==\s*''\s*&&\s*vars\.VITE_SUPABASE_REDIRECT_URL\s*==\s*''\s*\}\}\s*\n\s*run:\s*node tools\/ci\/require_expectation\.mjs "\$EXPECT_IDENTICAL"/.test(dr));
+  ck("FI：deploy.yml 沒有 require_expectation（正式部署照 decide 的規則，產品變更的發布不應被擋）", !/require_expectation/.test(y));
+  const req = (v) => spawnSync(process.execPath, [path.join(HERE, "ci", "require_expectation.mjs"), ...(v === undefined ? [] : [v])], { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: "true" } });
+  const rq = [req("true"), req("false"), req(""), req("TRUE"), req(undefined)];
+  ck("FI：require_expectation 只有 \"true\" 通過；false／空字串／大小寫不同／沒給 ⇒ exit 1＋::error", rq[0].status === 0 && /::notice title=DRYRUN_EXPECTATION::RESULT=PASS/.test(rq[0].stdout) && rq.slice(1).every((x) => x.status === 1 && /::error title=DRYRUN_EXPECTATION FAIL::/.test(x.stdout)), rq.map((x) => x.status).join(","));
+  { const out = path.join(BASE, "gho_ann"); const x = spawnSync(process.execPath, [path.join(HERE, "ci", "deploy_decision.mjs"), "--repo", R, "--head", multi, "--event", "push", "--last-deployed", DEPLOYED, "--github-output", out], { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: "true" } });
+    ck("FI：deploy_decision 在 Actions 裡印 ::notice title=DEPLOY_DECISION::（deploy、expect、lastDeployed）", x.status === 0 && new RegExp(`^::notice title=DEPLOY_DECISION::deploy=false expect_identical_bundle=true head=${multi} lastDeployed=${DEPLOYED}`, "m").test(x.stdout), x.stdout.slice(-300)); }
   ck("ci-dryrun.yml 與 deploy.yml 的 build 指令完全相同（安裝、依賴樹、Supabase 檢查、build、DIST_HASH）", JSON.stringify(runs(y)) === JSON.stringify(runs(dr)) && runs(y).length === 5, JSON.stringify({ y: runs(y), dr: runs(dr) }));
 }
