@@ -26,14 +26,14 @@ const ck = (name, ok, detail = "") => { if (ok) { pass++; console.log(`✅ ${nam
 const H = 3600000; const NOW = Date.parse("2026-11-26T12:00:00Z");
 const SHA = "b".repeat(40), TREE = "c".repeat(40);
 const ENV = { node: "24.18.0", nodeMajor: 24, platform: "win32", arch: "x64", osRelease: "10.0.22000", git: "git version 2.47.0", depsDigest: "D", lockfileBlob: "L",
-  installedTree: { schema: "esmo.installed-tree/1", status: "PASS", digest: "T1", portableDigest: "P1" }, npm: { bundled: "11.16.0" } };
+  installedTree: { schema: "esmo.installed-tree/1", status: "PASS", digest: "T1", portableDigest: "P1" }, npm: { bundled: "11.16.0" }, esmoEnv: {} };
 const CTX = { targetFull: SHA, treeSha: TREE, env: ENV };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 /** 合成一張收據。cmds＝指令；policy:true ⇒ 依分類表寫 policy（模擬 run 寫的）。 */
 function rc({ gate, cmds, hoursAgo, env = ENV, policy = true, browser = null, bundle, deployment, mutate } = {}) {
   const fin = new Date(NOW - hoursAgo * H).toISOString();
   const cls = POL.classifyGate(gate, cmds);
-  const r = { schema: LIB.RECEIPT_SCHEMA, gateVersion: LIB.RELEASE_GATE_VERSION, gate, status: "PASS", targetSha: SHA, actualSha: SHA, actualShaAfter: SHA, treeSha: TREE,
+  const r = { schema: LIB.RECEIPT_SCHEMA, gateVersion: policy ? LIB.RELEASE_GATE_VERSION : "1.0.0", gate, status: "PASS", targetSha: SHA, actualSha: SHA, actualShaAfter: SHA, treeSha: TREE,
     startedAt: fin, finishedAt: fin, env: { ...clone(env), ...(browser ? { browser } : {}) }, checks: [{ id: "x", status: "PASS" }], commands: cmds.map((c) => ({ cmd: c, exitCode: 0, status: "PASS" })),
     bundle, deployment, category: cls.class, policy: policy ? POL.policyRecord(cls) : undefined };
   if (mutate) mutate(r);
@@ -127,7 +127,11 @@ const LOGIC = { gate: "regress", cmds: ["node tools/regress.mjs"] };
   v = V(rc({ ...BR, hoursAgo: 10 }), { browser: () => "158.0.1" });
   ck("新格式瀏覽器收據沒記錄 Chrome 版本 ⇒ FAIL", v.status === "FAIL");
   ck("瀏覽器 gate 25 小時 ⇒ FAIL（最多 24h）", V(rc({ ...BR, hoursAgo: 25, browser: { chrome: "158.0.1" } }), { browser: () => "158.0.1" }).status === "FAIL");
-  ck("舊格式瀏覽器收據（沒有 policy）⇒ 舊制：不要求瀏覽器版本（相容）", V(rc({ ...BR, hoursAgo: 10, policy: false }), { browser: () => "159" }).status === "PASS");
+  // 2026-11-26 審查修正（I2）：舊版工具的瀏覽器／smoke 收據沒有版本與部署紀錄，若照舊接受，舊 checkout 就能永久繞過加嚴檢查
+  ck("舊版工具（v1.0.0、沒有 policy）的瀏覽器收據 ⇒ FAIL receipt_policy：要用新版重跑", V(rc({ ...BR, hoursAgo: 10, policy: false }), { browser: () => "159" }).status === "FAIL");
+  ck("舊版工具的 logic 收據仍以舊制 24h 接受（相容）", V(rc({ ...LOGIC, hoursAgo: 10, policy: false })).status === "PASS");
+  ck("新版（v1.1.0）收據卻沒有 policy ⇒ FAIL（不完整或被改過）", V(rc({ ...LOGIC, hoursAgo: 1, policy: false, mutate: (x) => { x.gateVersion = LIB.RELEASE_GATE_VERSION; } })).status === "FAIL");
+  ck("未知的舊版本（0.9.0）⇒ FAIL receipt_gate_version", st(V(rc({ ...LOGIC, hoursAgo: 1, mutate: (x) => { x.gateVersion = "0.9.0"; } })), "receipt_gate_version") === "FAIL");
   const XE = { gate: "c2-crossengine-formal", cmds: ["node tools/c1/run_c1_crossengine.mjs --plan=p.json --out=o"] };
   const both = { chrome: "158.0.1", playwright: "playwright 1.63.0 firefox=155.0@r1543 webkit=26.6@r2359" };
   const cur = (k) => ({ chrome: "158.0.1", playwright: both.playwright }[k]);
@@ -214,6 +218,37 @@ const carry3 = c3.j?.receipt ? JSON.parse(fs.readFileSync(c3.j.receipt, "utf8"))
 ck("carry B→D2（直接從已驗證的 B）⇒ PASS，到期時間與 B→D1 相同（連續文件 commit 不會延長）", c3.code === 0 && carry3?.expiresAt === carry1?.expiresAt, c3.out.slice(-300));
 git(dir, "checkout", "-q", "--detach", D2);
 ck("assert D2 在 73 小時 ⇒ FAIL", A(D2, fin1 + 73 * H).status === "FAIL");
+
+// ═══ §10 獨立審查（2026-11-26）修正的回歸 ═══════════════════════════════════
+{
+  ck("I2：Release Gate 升到 1.1.0（舊版 1.0.0 收據只在不需加嚴的分類接受）", LIB.RELEASE_GATE_VERSION === "1.1.0" && LIB.LEGACY_GATE_VERSIONS.includes("1.0.0"));
+  ck("ESMO_* 環境變數（例如 ESMO_VERIFY_FLAT）有值 ⇒ 不給 72h（30 小時 FAIL）", V(rc({ ...LOGIC, hoursAgo: 30, env: { ...ENV, esmoEnv: { ESMO_VERIFY_FLAT: "x" } } })).status === "FAIL");
+  ck("沒有記錄 ESMO_* 的收據 ⇒ 不給 72h", V(rc({ ...LOGIC, hoursAgo: 30, env: { ...ENV, esmoEnv: undefined } })).status === "FAIL");
+  // I1：--deployment-url 必須是實際被測的正式站
+  const sm = run(B, "prod-smoke-y", "node tools/regress.mjs", ["--deployment-url", "https://example.com/"]);
+  ck("I1：smoke 的 --deployment-url 不是 origin 的 Pages 根網址、也不在指令 --url ⇒ FAIL deployment_url_bound（指令不執行）", sm.code === 1 && /deployment_url_bound/.test(sm.out) && !(sm.j?.commands || []).length, sm.out.slice(-300));
+  ck("I1：deploymentUrlBound 接受指令裡的 --url（本機 preview）", LIB.deploymentUrlBound("http://127.0.0.1:4173/ESMO-/", ["node tools/x.mjs --url=http://127.0.0.1:4173/ESMO-/"], dir).ok === true);
+  // I5：沒登記、名稱也不像瀏覽器，但實際 import 了 tools/browser/harness.mjs ⇒ 加嚴成 browser
+  write(path.join(dir, "tools", "browser", "harness.mjs"), "export const launch = () => 1;\n");
+  write(path.join(dir, "tools", "quiet_check.mjs"), 'import { launch } from "./browser/harness.mjs";\nprocess.exit(launch() === 1 ? 0 : 1);\n');
+  git(dir, "checkout", "-q", "-B", "i5"); git(dir, "add", "-A"); git(dir, "commit", "-q", "-m", "i5"); const S5 = head(dir);
+  const q = run(S5, "quiet-check", "node tools/quiet_check.mjs");
+  const qr = q.j?.receipt ? JSON.parse(fs.readFileSync(q.j.receipt, "utf8")) : null;
+  ck("I5：名稱不像瀏覽器、但實際 import 瀏覽器模組的 gate ⇒ 收據 policy＝browser，記錄 Chrome 版本", qr?.policy?.class === "browser" && ("chrome" in (qr?.env?.browser || {})), JSON.stringify({ p: qr?.policy, b: qr?.env?.browser }));
+  const qa = LIB.assertReceipts({ repo: dir, target: S5, gates: ["quiet-check"], receiptsDir: rdir, currentBrowser: () => "999.0.0.0", deploymentProbe: () => ({ ok: false }) });
+  ck("I5：之後 Chrome 版本不同 ⇒ assert FAIL receipt_browser:chrome", qa.status === "FAIL" && JSON.stringify(qa.detail["quiet-check"].checks).includes("receipt_browser:chrome"), JSON.stringify(qa.checks.slice(-1)));
+  const forged = JSON.parse(fs.readFileSync(q.j.receipt, "utf8")); forged.policy.class = "unknown"; forged.category = "unknown"; delete forged.env.browser; forged.digest = LIB.digestOf(forged);
+  const vf = LIB.verifyReceipt(forged, { targetFull: S5, treeSha: forged.treeSha, env: forged.env, repoTop: dir }, { currentBrowser: () => null, deploymentProbe: () => ({ ok: false }) });
+  ck("I5：把偵測到的 browser 改寫成 unknown（重算摘要）⇒ assert 在 SHA 上重新偵測 ⇒ FAIL", vf.status === "FAIL" && vf.checks.some((c) => c.id === "receipt_policy" && c.status === "FAIL"), JSON.stringify(vf.checks.filter((c) => c.status !== "PASS")));
+  ck("I5：讀取 harness 原始碼做靜態檢查（不 import）的工具不會被誤判為瀏覽器", (await import(pathToFileURL(path.join(HERE, "lib", "docsCarry.mjs")).href)).detectTightening(path.resolve(HERE, ".."), "HEAD", ["node tools/check_safe_process.mjs"]).class === null);
+  // I4：沿用的實際到期＝沿用收據與「來源現在重驗」取早
+  git(dir, "checkout", "-q", "--detach", D1);
+  const pre = LIB.preflight({ repo: dir, target: D1, receiptsDir: rdir });
+  const DC = await import(pathToFileURL(path.join(HERE, "lib", "docsCarry.mjs")).href);
+  const crc = LIB.loadReceipts(rdir, { targetSha: D1, gate: DC.CARRY_GATE })[0].receipt;
+  const v24 = DC.verifyCarry(crc, { ...pre.ctx, env: { ...pre.ctx.env, node: "0.0.1-patch" } }, "regress", { receiptsDir: rdir, currentBrowser: () => null, deploymentProbe: () => ({ ok: false }) });
+  ck("I4：Node 修補版改變 ⇒ 來源退回 24h，verifyCarry 回報的到期也跟著變早（readiness 不會顯示過長的窗口）", Date.parse(v24.policy?.expiresAt) === Date.parse(rec1.finishedAt) + 24 * H && Date.parse(v24.policy.expiresAt) < Date.parse(crc.expiresAt), JSON.stringify({ p: v24.policy?.expiresAt, c: crc.expiresAt }));
+}
 
 console.log(`\nGate policy（TD-64 效期分級）：${pass}/${pass + fail}　RESULT=${fail ? "FAIL" : "PASS"}`);
 if (fail) console.log("失敗：" + fails.join("；"));

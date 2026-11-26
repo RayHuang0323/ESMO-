@@ -80,6 +80,6 @@ jobs:
       #  沒有 configure-pages（需要 pages 權限）：直接用 <owner>.github.io/<repo>/
       - name: Compare dist with production (dry run)
         env:
-          EXPECT_IDENTICAL: ${{ needs.decide.outputs.expect_identical_bundle == 'true' }}
+          EXPECT_IDENTICAL: ${{ needs.decide.outputs.expect_identical_bundle == 'true' && vars.VITE_SUPABASE_URL == '' && vars.VITE_SUPABASE_ANON_KEY == '' && vars.VITE_SUPABASE_REDIRECT_URL == '' }}
           SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
         run: node tools/ci/compare_dist_with_site.mjs --dist dist --site "$SITE_URL/" --expect-identical "$EXPECT_IDENTICAL"

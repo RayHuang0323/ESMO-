@@ -73,7 +73,19 @@ const normCmd = (s) => String(s).trim().replace(/\s+/g, " ");
  * 由 gate 名稱與實際指令決定分類（收據裡寫的分類一律不採信，assert 時用這裡重算）。
  * 回傳 { class, label, hours, registered, exact, browsers[], deploymentBound, neverCarry, contractBound, needsBundle, why }
  */
-export function classifyGate(gate, commands = []) {
+/** 嚴格度：數字越大檢查越多、效期越短。只允許往上（加嚴）。 */
+export const RANK = Object.freeze({ logic: 0, golden: 0, build: 0, unknown: 0, browser: 1, perf: 2, "cross-engine": 3, "prod-smoke": 4 });
+export function classifyGate(gate, commands = [], { detected = null } = {}) {
+  const base = classifyBase(gate, commands);
+  // 審查修正（I5）：指令實際會 import 到瀏覽器／四引擎模組或寫死正式站網址（tools/lib/docsCarry.mjs detectTightening）⇒ 加嚴
+  if (detected && CLASSES[detected] && RANK[detected] > RANK[base.class]) {
+    const c = CLASSES[detected];
+    return { ...base, class: detected, label: c.label, hours: Math.min(c.hours, LEGACY_HOURS), browsers: c.browsers || [], deploymentBound: !!c.deploymentBound, neverCarry: !!c.neverCarry, contractBound: !!c.contractBound, needsBundle: !!c.needsBundle,
+      registered: false, exact: false, why: `${base.why}；指令實際會跑到「${c.label}」的模組 ⇒ 加嚴` };
+  }
+  return base;
+}
+function classifyBase(gate, commands) {
   const cmds = commands.map(normCmd);
   const reg = REGISTERED[gate];
   const pack = (cls, extra) => ({ class: cls, label: CLASSES[cls].label, hours: CLASSES[cls].hours, browsers: CLASSES[cls].browsers || [], deploymentBound: !!CLASSES[cls].deploymentBound,
@@ -105,6 +117,8 @@ export function eligibility72(cls, rc, cur) {
   eq("平台", e.platform, c.platform); eq("架構", e.arch, c.arch); eq("OS 版本", e.osRelease, c.osRelease);
   eq("git", e.git, c.git); eq("npm", e.npm?.bundled, c.npm?.bundled);
   if (e.installedTree && e.installedTree.status !== "PASS") miss.push("收據當時依賴樹不是 PASS");
+  if (!e.esmoEnv) miss.push("收據沒有記錄 ESMO_* 環境變數（舊格式）");
+  else if (Object.keys(e.esmoEnv).length) miss.push(`執行時設了會改變 gate 行為的環境變數：${Object.keys(e.esmoEnv).join("、")}`);
   if (cls.needsBundle) {
     if (!rc.bundle?.aggregateSha256) miss.push("build 收據沒有 --record-bundle 的 bundle 雜湊");
     else if (!Array.isArray(rc.bundle.envFiles)) miss.push("build 收據沒有記錄 .env* 檔案狀態（舊格式）");

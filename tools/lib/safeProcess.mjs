@@ -88,7 +88,9 @@ export const osProbe = {
     if (process.platform !== "win32") {
       return items.map((it) => { const now = this.info(it.pid); if (!now) return { pid: it.pid, result: "gone" }; if (!sameStart(now.startMs, it.startMs) || (now.commandLine ?? null) !== (it.commandLine ?? null)) return { pid: it.pid, result: "changed" }; try { process.kill(it.pid, "SIGKILL"); return { pid: it.pid, result: "killed" }; } catch (e) { return { pid: it.pid, result: "error", detail: e.code }; } });
     }
-    const script = `$items = $env:ESMO_KILL_LIST | ConvertFrom-Json
+    // 審查修正：清單走 stdin（Chrome 整棵樹的命令列合計可能超過環境變數 32767 字元上限）；預期命令列是空字串 ⇒ 無法驗證 ⇒ 不終止
+    if (items.some((it) => !it.commandLine)) return items.map((it) => ({ pid: it.pid, result: it.commandLine ? "error" : "changed", detail: it.commandLine ? "同批有無法驗證的項目，整批不動" : "沒有可比對的命令列，無法證明身分" }));
+    const script = `$items = [Console]::In.ReadToEnd() | ConvertFrom-Json
 $out = foreach ($it in @($items)) {
   $r = 'error'; $d = ''
   try {
@@ -104,7 +106,7 @@ $out = foreach ($it in @($items)) {
 }
 @($out) | ConvertTo-Json -Compress -Depth 2`;
     const list = JSON.stringify(items.map((it) => ({ pid: it.pid, start: new Date(it.startMs).toISOString(), cmd: it.commandLine ?? "" })));
-    const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `[Console]::OutputEncoding=[Text.Encoding]::UTF8; ${script}`], { encoding: "utf8", timeout: 60000, windowsHide: true, env: { ...process.env, ESMO_KILL_LIST: list } });
+    const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `[Console]::OutputEncoding=[Text.Encoding]::UTF8; ${script}`], { encoding: "utf8", timeout: 60000, windowsHide: true, input: list });
     if (r.status !== 0) return items.map((it) => ({ pid: it.pid, result: "error", detail: (r.stderr || String(r.error?.code || "")).trim().slice(0, 160) }));
     let j = []; try { j = JSON.parse((r.stdout || "").trim() || "[]"); } catch { return items.map((it) => ({ pid: it.pid, result: "error", detail: "PowerShell 輸出讀不懂" })); }
     return (Array.isArray(j) ? j : [j]).map((x) => ({ pid: Number(x.pid), result: x.result, detail: x.detail || "" }));

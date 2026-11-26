@@ -80,6 +80,15 @@ const x1 = X.exportFormal(o.cp, E1, SHA), x2 = X.exportFormal(ro.cp, E2, SHA);
 ck("匯出：完整性 PASS 才匯出，檔案數 = 案例數（12＋8）", x1.status === "PASS" && x1.files === 12 && x2.status === "PASS" && x2.files === 8, JSON.stringify({ x1, x2 }));
 let jr = judge(E1, E2);
 ck("judge（tools/c2/judge_c2_crossengine.mjs，未修改）讀匯出資料 ⇒ PASS（3 引擎 3/3、重複性、環境一致）", jr.status === 0 && /"overall":"PASS"/.test(jr.stdout), jr.stdout + jr.stderr);
+{
+  // 審查修正（I3）：judge 不比對正式與重複兩份的瀏覽器版本 ⇒ 匯出時配對檢查
+  const Rv = path.join(BASE, "cp-repeat-newff"); const rv = X.openRun({ dir: Rv, resume: false, plan: rplan, planPath: rplanPath, engines: ENGINES, candidateSha: SHA, treeSha: TREE, srcDirty: false, tools: [toolA], env: { sim: "moba-sim.v26", fingerprint: FP }, procedure: {} });
+  await X.runAll(rv.cp, rplan, ENGINES, fakeDeps({ versions: { ...versions, firefox: "156.0" } }));
+  const xp = X.exportFormal(o.cp, path.join(BASE, "export-paired-bad"), SHA, { pairWith: rv.cp });
+  ck("I3：正式（Firefox 155）與重複（Firefox 156）兩份 checkpoint 配對匯出 ⇒ BLOCKED engine_versions_paired", xp.status === "BLOCKED" && xp.checks[0].id === "engine_versions_paired", JSON.stringify(xp));
+  const xok = X.exportFormal(o.cp, path.join(BASE, "export-paired-ok"), SHA, { pairWith: ro.cp });
+  ck("I3：版本相同的配對 ⇒ 匯出 PASS，並記錄各引擎實際版本", xok.status === "PASS" && JSON.parse(fs.readFileSync(path.join(BASE, "export-paired-ok", "EXPORTED_FROM_CHECKPOINT.json"), "utf8")).engineVersions.firefox[0] === "155.0|firefox-ua");
+}
 ck("匯出目錄已有內容 ⇒ BLOCKED，不覆寫", X.exportFormal(o.cp, E1, SHA).status === "BLOCKED" && fs.readdirSync(path.join(E1, "chrome")).length === 3);
 ck("匯出時要求的候選 SHA 不同 ⇒ 不匯出", X.exportFormal(o.cp, path.join(BASE, "export-x"), "9".repeat(40)).status !== "PASS");
 {

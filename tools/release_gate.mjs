@@ -42,10 +42,10 @@ import os from "node:os";
 import fs from "node:fs";
 import {
   RELEASE_GATE_VERSION, EXIT, preflight, assertReceipts, buildReceipt, writeReceipt,
-  runCommand, commandStatus, aggregate, git, remoteHead, hashDir, viteEnvFingerprint, probeDeployment, envFilesAt,
+  runCommand, commandStatus, aggregate, git, remoteHead, hashDir, viteEnvFingerprint, probeDeployment, envFilesAt, deploymentUrlBound,
 } from "./lib/releaseGate.mjs";
 import { classifyGate, policyRecord } from "./lib/gatePolicy.mjs";
-import { buildCarry } from "./lib/docsCarry.mjs";
+import { buildCarry, detectTightening } from "./lib/docsCarry.mjs";
 
 const SYMBOL = { PASS: "✔", FAIL: "✘", BLOCKED: "⛔", WARN: "⚠", INFO: "·" };
 function parse(argv) {
@@ -108,7 +108,7 @@ if (sub === "preflight") {
   let receipt = null;
   if (args["write-receipt"]) {
     const t = new Date().toISOString();
-    const rc = buildReceipt({ gate: args.gate || "preflight", pre, commands: [], post: null, startedAt: t, finishedAt: t, status: pre.status, reasons: pre.checks.filter((c) => c.status !== "PASS").map((c) => c.id) });
+    const rc = buildReceipt({ gate: args.gate || "preflight", pre, commands: [], post: null, startedAt: t, finishedAt: t, status: pre.status, reasons: pre.checks.filter((c) => c.status !== "PASS").map((c) => c.id), policy: policyRecord(classifyGate(args.gate || "preflight", [])) });
     receipt = writeReceipt(pre.ctx.receiptsDir || path.join(os.tmpdir(), "esmo-release-gate", "receipts"), rc);
   }
   report({ title: "preflight（只預檢，不代表產品驗證通過）", status: pre.status, checks: pre.checks, ctx: pre.ctx, extra: { receipt }, json: args.json });
@@ -142,7 +142,9 @@ const timeoutMs = Number(args["timeout-min"] ?? 120) * 60000;
 if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) usage("--timeout-min 要是正數");
 const startedAt = new Date().toISOString();
 // 分類（TD-64）：由固定分類表依 gate 名稱＋指令決定；需要的瀏覽器版本在預檢時一併記錄
-const cls = classifyGate(args.gate, args.cmd);
+const headNow = git(path.resolve(args.repo), ["rev-parse", "HEAD"]).out;
+let detected = null; try { detected = headNow ? detectTightening(path.resolve(args.repo), headNow, args.cmd).class : null; } catch { detected = null; }
+const cls = classifyGate(args.gate, args.cmd, { detected });
 const pre = preflight({ ...common, browsers: cls.browsers, requireBrowser: common.requireBrowser || cls.browsers.includes("chrome") });
 const policyChecks = [];
 if (args.category && args.category !== cls.class) policyChecks.push({ id: "category_matches_policy", status: "FAIL", detail: `--category「${args.category}」與分類表的「${cls.class}」不同（${cls.why}）：分類不能由呼叫端指定` });
@@ -150,6 +152,7 @@ else policyChecks.push({ id: "gate_policy", status: "PASS", detail: `${cls.label
 let deployment = null;
 if (cls.deploymentBound) {
   if (!args["deployment-url"]) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: "正式站 smoke 必須加 --deployment-url <正式站網址>，才能證明結果代表哪一次部署" });
+  else if (!deploymentUrlBound(args["deployment-url"], args.cmd, path.resolve(args.repo)).ok) policyChecks.push({ id: "deployment_url_bound", status: "FAIL", detail: deploymentUrlBound(args["deployment-url"], args.cmd, path.resolve(args.repo)).why });
   else { const d = probeDeployment(args["deployment-url"]); if (!d.ok) policyChecks.push({ id: "deployment_identity", status: "BLOCKED", detail: `抓不到 ${args["deployment-url"]}：${d.error}` }); else deployment = { url: d.url, indexSha256: d.indexSha256, before: d.at }; }
 }
 pre.checks.push(...policyChecks);

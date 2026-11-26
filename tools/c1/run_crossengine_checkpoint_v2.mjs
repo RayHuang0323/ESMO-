@@ -6,7 +6,7 @@
 //    node tools/c1/run_crossengine_checkpoint_v2.mjs --plan=<plan json> --dir=<repo 外新資料夾> [--engines=chrome,firefox,webkit]
 //         [--kernel=det] [--url=http://127.0.0.1:5647/ESMO-/] [--stop-after=<n>]
 //    續跑：同樣參數加 --resume（計畫、工具、候選 SHA、指紋、kernel、程序參數任何一項不同 ⇒ BLOCKED）
-//    匯出給既有 judge：--export=<repo 外新資料夾>（只在全部完成且完整性 PASS 時）
+//    匯出給既有 judge：--export=<repo 外新資料夾> [--pair-with=<重複執行的 checkpoint>]（只在全部完成且完整性 PASS、各引擎版本單一且與配對相同時）
 //      然後：node tools/c2/judge_c2_crossengine.mjs --plan=… --data=<匯出資料夾> --repeatPlan=… --repeat=<另一個匯出資料夾> --fingerprint=…
 //
 //  setup 的組法與歷史 runner 相同（同一組 import、同一個 buildBalanceMatchSetup／binding／plan.rulesets[kernel]、cap 3000）。
@@ -19,18 +19,21 @@ import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { openRun, runAll, exportFormal, CROSSENGINE_CP_VERSION } from "../lib/crossengineCheckpoint.mjs";
 import { openCheckpoint } from "../lib/checkpoint.mjs";
+import { chromeVersion } from "../lib/releaseGate.mjs";
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const HERE = path.dirname(fileURLToPath(import.meta.url)); const ROOT = path.resolve(HERE, "../..");
 const die = (code, msg) => { console.log(msg); console.log(`CROSSENGINE_CP RESULT=${["COMPLETE", "FAIL", "BLOCKED", "INTERRUPTED"][code]} exit=${code}`); process.exit(code); };
-const DIR = arg("dir"); if (!DIR || path.resolve(DIR).startsWith(ROOT)) die(2, "--dir 必須是 repo 外的資料夾");
+// Windows 路徑不分大小寫：比對前一律轉小寫（審查修正）
+const inside = (p) => { const a = path.resolve(p).toLowerCase(), r = ROOT.toLowerCase(); return a === r || a.startsWith(r + path.sep); };
+const DIR = arg("dir"); if (!DIR || inside(DIR)) die(2, "--dir 必須是 repo 外的資料夾");
 const head = execSync("git rev-parse HEAD", { cwd: ROOT, encoding: "utf8" }).trim();
 const tree = execSync("git rev-parse HEAD^{tree}", { cwd: ROOT, encoding: "utf8" }).trim();
 const srcDirty = execSync("git status --porcelain -- src", { cwd: ROOT, encoding: "utf8" }).trim().length > 0;
 
 if (arg("export")) {
-  const out = path.resolve(arg("export")); if (out.startsWith(ROOT)) die(2, "--export 必須在 repo 外");
-  const r = exportFormal(openCheckpoint(path.resolve(DIR)), out, head);
+  const out = path.resolve(arg("export")); if (inside(out)) die(2, "--export 必須在 repo 外");
+  const r = exportFormal(openCheckpoint(path.resolve(DIR)), out, head, { pairWith: arg("pair-with") ? openCheckpoint(path.resolve(arg("pair-with"))) : null });
   die(r.status === "PASS" ? 0 : r.status === "FAIL" ? 1 : 2, r.status === "PASS" ? `匯出 ${r.files} 個 raw 到 ${out}（合計 ${r.rawAggregateSha256}）` : `不能匯出：${JSON.stringify(r.checks).slice(0, 600)}`);
 }
 
@@ -69,8 +72,11 @@ const res = await runAll(run.cp, plan, ENGINES, {
     const E = await openEngine(name, { port: 9479 }); await E.goto(URL0);
     let sim = null; for (let i = 0; i < 120 && !sim; i++) { sim = await E.evaluate("return window.__esmoC1 ? window.__esmoC1.simVersion : null;"); if (!sim) await new Promise((r) => setTimeout(r, 500)); }
     if (sim !== MOBA_SIMULATION_VERSION) { await E.close(); throw new Error(`page simVersion ${sim} ≠ Node ${MOBA_SIMULATION_VERSION}`); }
-    log(`engine ${name} ${E.ua} ${E.browserVersion ?? ""}`); return E;
+    // Chrome（CDP）引擎沒有 browserVersion，UA 只到主版本（HeadlessChrome/158.0.0.0）⇒ 用實際啟動的 chrome.exe 檔案版本（審查修正 I3）
+    if (name === "chrome" && !E.browserVersion) E.browserVersion = chromeVersion() || null;
+    if (!E.browserVersion) { await E.close(); throw new Error(`查不到 ${name} 的完整版本：無法保證續跑時沒有混用不同版本`); }
+    log(`engine ${name} ${E.ua} ${E.browserVersion}`); return E;
   },
   runOnEngine: async (E, N) => { const B = await E.evaluate(`return window.__esmoC1.runTool(${JSON.stringify(N.setupJson)}, 3000);`); return { ticks: B.ticks, over: B.over, winner: B.winner, endT: B.endT, kills: B.kills, gold: B.gold, final: B.final, perTick: B.perTick }; },
 });
-die(res.status === "COMPLETE" ? 0 : res.status === "BLOCKED" ? 2 : 3, `${res.status}：${res.detail}（這次完成 ${res.ran} 個案例；checkpoint ${DIR}）`);
+die(res.status === "COMPLETE" ? 0 : res.status === "FAIL" ? 1 : res.status === "BLOCKED" ? 2 : 3, `${res.status}：${res.detail}（這次完成 ${res.ran} 個案例；checkpoint ${DIR}）`);

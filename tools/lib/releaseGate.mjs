@@ -31,12 +31,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { verifyCarry, CARRY_GATE, CARRY_SCHEMA } from "./docsCarry.mjs";
+import { verifyCarry, CARRY_GATE, CARRY_SCHEMA, detectTightening } from "./docsCarry.mjs";
 import { createProcessRegistry, defaultRegistryDir as defaultProcessDir } from "./safeProcess.mjs";
 import { inspectInstalledTree, treeSummary } from "./installedTree.mjs";
-import { classifyGate, eligibility72, GATE_POLICY_VERSION, POLICY_TABLE_DIGEST, LEGACY_HOURS } from "./gatePolicy.mjs";
+import { classifyGate, eligibility72, GATE_POLICY_VERSION, POLICY_TABLE_DIGEST, LEGACY_HOURS, RANK, CLASSES } from "./gatePolicy.mjs";
 
-export const RELEASE_GATE_VERSION = "1.0.0";
+export const RELEASE_GATE_VERSION = "1.1.0";
+/**
+ * 舊版（S1.1 之前）工具產生的收據版本。2026-11-26 審查修正：舊版工具沒有記錄分類、瀏覽器版本、部署身分、整棵依賴樹，
+ * 只能在「不需要加嚴」的分類（logic／golden／build／unknown）以舊制 24h 接受；瀏覽器、四引擎、效能、正式站 smoke 一律要用新版重跑。
+ * 這樣舊版 checkout（別的 worktree、Codex 用舊工具）跑出來的收據不會成為永久旁路。
+ */
+export const LEGACY_GATE_VERSIONS = Object.freeze(["1.0.0"]);
 export const RECEIPT_SCHEMA = "esmo.release-gate.receipt/1";
 export const EXIT = Object.freeze({ PASS: 0, FAIL: 1, BLOCKED: 2, USAGE: 64 });
 export const DEFAULT_MAX_AGE_HOURS = 24;
@@ -329,6 +335,8 @@ function captureEnv(ctx, di, repo) {
     depsDigest: di.digest, depCount: Object.keys(di.installed).length, lockfileBlob: lockBlob,
     // 2026-11-26 S1.1（TD-67／TD-64）：完整依賴樹摘要、npm 版本。舊收據沒有這兩個欄位
     installedTree: treeSummary(di.tree), npm: { bundled: bundledNpmVersion() },
+    // 會改變 gate 行為的 ESMO_* 環境變數（例如 ESMO_VERIFY_FLAT、SKIP_NESTED 類）：只記名稱與值的雜湊；有任何一個就不給 72h（審查修正）
+    esmoEnv: Object.fromEntries(Object.keys(process.env).filter((k) => /^ESMO_/.test(k) && !/^ESMO_GATE_/.test(k)).sort().map((k) => [k, sha256(String(process.env[k]))])),
   };
 }
 
@@ -351,9 +359,26 @@ export function playwrightInfo() {
 /** 正式站部署的身分：抓 url 的 index.html，回 sha256（同步：另起一個 Node 子行程抓）。 */
 export function probeDeployment(url) {
   if (!/^https?:\/\//.test(String(url))) return { ok: false, error: `不是 http(s) 網址：${url}` };
+  // 2026-11-26 審查修正：GitHub Pages 前面有 CDN 快取，加一次性查詢參數，避免新部署後還抓到舊的 index.html
+  const busted = String(url) + (String(url).includes("?") ? "&" : "?") + "_esmo_probe=" + Date.now() + "-" + process.pid;
   const code = "const u=process.argv[1];fetch(u,{cache:'no-store',headers:{'cache-control':'no-cache'}}).then(async r=>{if(!r.ok)throw new Error('HTTP '+r.status);const b=Buffer.from(await r.arrayBuffer());process.stdout.write(require('crypto').createHash('sha256').update(b).digest('hex'))}).catch(e=>{process.stderr.write(String(e.message||e));process.exit(3)})";
-  const r = spawnSync(process.execPath, ["-e", code, url], { encoding: "utf8", timeout: 45000, windowsHide: true });
+  const r = spawnSync(process.execPath, ["-e", code, busted], { encoding: "utf8", timeout: 45000, windowsHide: true });
   return r.status === 0 && /^[0-9a-f]{64}$/.test(r.stdout) ? { ok: true, url, indexSha256: r.stdout, at: new Date().toISOString() } : { ok: false, url, error: (r.stderr || String(r.error?.code || "逾時")).slice(0, 160) };
+}
+
+/** 這個 repo 的 GitHub Pages 根網址（由 origin 推出：https://<owner 小寫>.github.io/<repo>/）。不是 GitHub 就回 null。 */
+export function pagesRootFromOrigin(repo) {
+  const u = git(repo, ["remote", "get-url", "origin"]).out;
+  const m = /github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(u || "");
+  return m ? `https://${m[1].toLowerCase()}.github.io/${m[2]}/` : null;
+}
+/** --deployment-url 必須是實際被測的正式站：等於 origin 推出的 Pages 根網址，或出現在某個指令的 --url 參數裡。 */
+export function deploymentUrlBound(url, commands, repo) {
+  const norm = (s) => String(s).replace(/\/+$/, "").toLowerCase();
+  const root = pagesRootFromOrigin(repo);
+  if (root && norm(root) === norm(url)) return { ok: true, why: `等於 origin 的 Pages 根網址 ${root}` };
+  const hit = commands.some((c) => { const m = [...String(c).matchAll(/--url[= ]+["']?([^"'\s]+)/g)].map((x) => x[1]); return m.some((x) => norm(x) === norm(url)); });
+  return hit ? { ok: true, why: "等於指令裡的 --url" } : { ok: false, why: `${url} 不是 origin 的 Pages 根網址（${root ?? "無法推出"}），也不在任何指令的 --url 裡：無法證明 smoke 測的就是它` };
 }
 
 /** 本機 Chrome 版本（Windows 讀 chrome.exe 的檔案版本；其他平台回 null）。只記錄進收據，供效期規劃判斷「瀏覽器自動更新了沒」；不影響 assert。 */
@@ -404,10 +429,18 @@ export function loadReceipts(dir, { targetSha, gate }) {
  * 回傳 { hours, tier, cls, checks }。checks 是 receipt_policy／receipt_browser:*／receipt_deployment。
  */
 export function policyFor(receipt, ctx, { currentBrowser = null, deploymentProbe = probeDeployment } = {}) {
-  const cls = classifyGate(receipt.gate, (receipt.commands || []).map((x) => x.cmd));
+  const cmds = (receipt.commands || []).map((x) => x.cmd);
+  // 審查修正（I5）：在收據的 SHA 上沿著 import 偵測瀏覽器／四引擎／正式站（只會加嚴）
+  let detected = null; if (ctx.repoTop && receipt.targetSha) { try { detected = detectTightening(ctx.repoTop, receipt.targetSha, cmds).class; } catch { detected = null; } }
+  let cls = classifyGate(receipt.gate, cmds, { detected });
   const checks = []; let hours = LEGACY_HOURS, tier = "legacy-24h";
   const p = receipt.policy;
-  if (!p) checks.push(mk("receipt_policy", "PASS", `舊格式收據（沒有分類紀錄）：舊制 ${LEGACY_HOURS} 小時，不會因分級上線而延長`));
+  // 收據自稱「更嚴」的分類（run 當時偵測到）可以接受：加嚴永遠安全；自稱更寬鬆 ⇒ 下面判 FAIL
+  if (p && p.class !== cls.class && CLASSES[p.class] && RANK[p.class] > RANK[cls.class]) cls = classifyGate(receipt.gate, cmds, { detected: p.class });
+  const tightened = cls.browsers.length > 0 || cls.deploymentBound;
+  if (!p && !LEGACY_GATE_VERSIONS.includes(receipt.gateVersion)) checks.push(mk("receipt_policy", "FAIL", `Gate v${receipt.gateVersion} 的收據應該有分類紀錄（policy）卻沒有：不完整或被改過`));
+  else if (!p && tightened) checks.push(mk("receipt_policy", "FAIL", `舊版工具（v${receipt.gateVersion}）產生的${cls.label}收據沒有瀏覽器版本／部署身分紀錄：要用新版 Release Gate 重跑`));
+  else if (!p) checks.push(mk("receipt_policy", "PASS", `舊格式收據（沒有分類紀錄）：舊制 ${LEGACY_HOURS} 小時，不會因分級上線而延長`));
   else if (p.version !== GATE_POLICY_VERSION || p.tableDigest !== POLICY_TABLE_DIGEST) checks.push(mk("receipt_policy", "PASS", `收據的分類表版本（${p.version}／${String(p.tableDigest).slice(0, 12)}）≠ 現行：退回舊制 ${LEGACY_HOURS} 小時`));
   else if (p.class !== cls.class || !!p.registered !== !!cls.registered) checks.push(mk("receipt_policy", "FAIL", `收據寫的分類「${p.class}」與分類表依 gate 名稱＋指令重算的「${cls.class}」不同（被改過，或想自行指定分類）`));
   else if (cls.hours > LEGACY_HOURS) {
@@ -439,7 +472,8 @@ export function verifyReceipt(receipt, ctx, { maxAgeHours = null, now = Date.now
   c.push(receipt.schema === RECEIPT_SCHEMA ? mk("receipt_schema", "PASS") : mk("receipt_schema", "FAIL", `schema「${receipt.schema}」不認得`));
   c.push(receipt.digest && receipt.digest === digestOf(receipt) ? mk("receipt_digest", "PASS") : mk("receipt_digest", "FAIL", "摘要不符：收據被改過或不完整"));
   const gv = acceptGateVersion || RELEASE_GATE_VERSION;
-  c.push(receipt.gateVersion === gv ? mk("receipt_gate_version", "PASS", gv) : mk("receipt_gate_version", "FAIL", `收據由 Gate v${receipt.gateVersion} 產生，現行是 v${gv}，要重跑`));
+  const legacyOk = !acceptGateVersion && LEGACY_GATE_VERSIONS.includes(receipt.gateVersion);
+  c.push(receipt.gateVersion === gv ? mk("receipt_gate_version", "PASS", gv) : legacyOk ? mk("receipt_gate_version", "PASS", `舊版 v${receipt.gateVersion}（只在不需加嚴的分類以舊制 24h 接受）`) : mk("receipt_gate_version", "FAIL", `收據由 Gate v${receipt.gateVersion} 產生，現行是 v${gv}，要重跑`));
   if (receipt.status === "PASS") c.push(mk("receipt_status", "PASS"));
   else c.push(mk("receipt_status", receipt.status === "BLOCKED" ? "BLOCKED" : "FAIL", `最新一張收據的結果是 ${receipt.status}`));
   const chain = receipt.targetSha === ctx.targetFull && receipt.actualSha === ctx.targetFull && receipt.actualShaAfter === ctx.targetFull;
@@ -486,8 +520,8 @@ export function assertReceipts(opts) {
         const carries = g === CARRY_GATE ? [] : loadReceipts(pre.ctx.receiptsDir, { targetSha: pre.ctx.targetFull, gate: CARRY_GATE });
         if (!carries.length) { all.push(mk(`gate:${g}`, "BLOCKED", `這個 SHA 沒有 gate「${g}」的收據。請先執行 run`)); continue; }
         const v = verifyCarry(carries[0].receipt, pre.ctx, g, { receiptsDir: pre.ctx.receiptsDir, maxAgeHours: opts.maxAgeHours, now: opts.now, ...probes });
-        detail[g] = { file: carries[0].file, via: CARRY_GATE, base: carries[0].receipt.baseSha, checks: v.checks };
-        all.push(mk(`gate:${g}`, v.status, v.status === "PASS" ? `沿用自 ${String(carries[0].receipt.baseSha).slice(0, 12)}（docs-carry ${path.basename(carries[0].file)}；來源 ${v.ref.file}；到期 ${carries[0].receipt.expiresAt}）` : v.checks.filter((x) => x.status !== "PASS").map((x) => `${x.id}: ${x.detail}`).join("｜")));
+        detail[g] = { file: carries[0].file, via: CARRY_GATE, base: carries[0].receipt.baseSha, checks: v.checks, policy: v.policy || null };
+        all.push(mk(`gate:${g}`, v.status, v.status === "PASS" ? `沿用自 ${String(carries[0].receipt.baseSha).slice(0, 12)}（docs-carry ${path.basename(carries[0].file)}；來源 ${v.ref.file}；到期 ${v.policy?.expiresAt ?? carries[0].receipt.expiresAt}）` : v.checks.filter((x) => x.status !== "PASS").map((x) => `${x.id}: ${x.detail}`).join("｜")));
         continue;
       }
       const v = verifyReceipt(found[0].receipt, pre.ctx, { maxAgeHours: opts.maxAgeHours, allowPreflightOnly: opts.allowPreflightOnly, now: opts.now, ...probes });

@@ -19,7 +19,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { git, loadReceipts, digestOf, defaultReceiptsDir, chromeVersion, preflight } from "./lib/releaseGate.mjs";
 import { CARRY_GATE } from "./lib/docsCarry.mjs";
-import { CLASSES, classifyGate, eligibility72, GATE_POLICY_VERSION, POLICY_TABLE_DIGEST, LEGACY_HOURS } from "./lib/gatePolicy.mjs";
+import { CLASSES, classifyGate, eligibility72, GATE_POLICY_VERSION, POLICY_TABLE_DIGEST, LEGACY_HOURS, RANK } from "./lib/gatePolicy.mjs";
 
 /** 分類表（唯讀轉出；來源是 tools/lib/gatePolicy.mjs）。 */
 export const CATEGORIES = CLASSES;
@@ -30,6 +30,7 @@ export function hoursOf(gate, rc, env = null) {
   const cls = classifyGate(gate, (rc.commands || []).map((c) => c.cmd));
   const p = rc.policy;
   if (!p) return { cls, hours: LEGACY_HOURS, tier: "legacy-24h" };
+  if (p.class !== cls.class && CLASSES[p.class] && (RANK[p.class] ?? 0) > (RANK[cls.class] ?? 0)) return { cls: classifyGate(gate, (rc.commands || []).map((c) => c.cmd), { detected: p.class }), hours: LEGACY_HOURS, tier: "24h（加嚴）" };
   if (p.version !== GATE_POLICY_VERSION || p.tableDigest !== POLICY_TABLE_DIGEST || p.class !== cls.class) return { cls, hours: LEGACY_HOURS, tier: "legacy-24h", policyMismatch: p.class !== cls.class };
   if (cls.hours > LEGACY_HOURS) return env && eligibility72(cls, rc, env).ok ? { cls, hours: cls.hours, tier: `${cls.hours}h` } : { cls, hours: LEGACY_HOURS, tier: env ? "24h（環境不一致，不給 72h）" : "24h（未提供環境：保守估計）" };
   return { cls, hours: Math.min(cls.hours, LEGACY_HOURS), tier: `${Math.min(cls.hours, LEGACY_HOURS)}h` };

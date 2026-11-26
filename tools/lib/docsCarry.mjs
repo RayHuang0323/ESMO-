@@ -292,7 +292,7 @@ export function buildCarry(opts) {
   // C2 + 決定哪些 gate 可以沿用
   const gates = [...new Set(opts.gates || [])];
   if (!gates.length) checks.push(mk("carry_gates_specified", "FAIL", "至少要指定一個 --require-gate（要沿用哪幾張收據）"));
-  const baseCtx = { targetFull: B, treeSha: info.baseTree, env: ctx.env };
+  const baseCtx = { targetFull: B, treeSha: info.baseTree, env: ctx.env, repoTop: repo };
   let bundles = [];
   for (const g of gates) {
     if (g === CARRY_GATE) { checks.push(mk(`carry_base:${g}`, "FAIL", "沿用收據本身不能被沿用")); continue; }
@@ -300,7 +300,8 @@ export function buildCarry(opts) {
     if (!found.length) { checks.push(mk(`carry_base:${g}`, "BLOCKED", `來源 ${B.slice(0, 12)} 沒有 gate「${g}」的直接收據（沿用收據不能當來源，不能連鎖沿用）`)); continue; }
     const rc = found[0].receipt;
     // TD-64：綁定部署的 gate（正式站 smoke）只代表當下那一版正式站，一律不沿用
-    const cls = classifyGate(g, (rc.commands || []).map((c) => c.cmd));
+    let det = null; try { det = detectTightening(repo, B, (rc.commands || []).map((c) => c.cmd)).class; } catch { det = null; }
+    const cls = classifyGate(g, (rc.commands || []).map((c) => c.cmd), { detected: det || rc.policy?.class || null });
     if (cls.neverCarry) { info.requiresDirect.push({ gate: g, reason: `${cls.label}綁定正式站部署，不能沿用（要在目標上直接重跑）` }); checks.push(mk(`carry_base:${g}`, "PASS", "不沿用（綁定部署）")); continue; }
     const v = verifyReceipt(rc, baseCtx, { maxAgeHours, now, ...probes });
     const failed = v.checks.filter((c) => c.status !== "PASS");
@@ -381,7 +382,38 @@ export function verifyCarry(carry, ctx, gate, { receiptsDir, maxAgeHours = null,
   if (!base) { c.push(mk("carry_base_present", "BLOCKED", `來源收據不見了：${ref.file}（原收據必須永久保留）`)); return { status: aggregate(c), checks: c }; }
   c.push(base.digest === ref.digest ? mk("carry_base_digest_pinned", "PASS") : mk("carry_base_digest_pinned", "FAIL", "來源收據與沿用時記錄的 digest 不同（被換掉或改過）"));
   c.push(base.schema === RECEIPT_SCHEMA && base.gate === gate && base.targetSha === carry.baseSha ? mk("carry_base_identity", "PASS") : mk("carry_base_identity", "FAIL", "來源收據不是該 gate／該來源 SHA 的直接收據"));
-  const v = verifyReceipt(base, { targetFull: carry.baseSha, treeSha: carry.baseTree, env: ctx.env }, { maxAgeHours, now, currentBrowser, deploymentProbe });
+  const v = verifyReceipt(base, { targetFull: carry.baseSha, treeSha: carry.baseTree, env: ctx.env, repoTop: ctx.repoTop }, { maxAgeHours, now, currentBrowser, deploymentProbe });
   for (const x of v.checks) c.push({ ...x, id: `base_${x.id}` });
-  return { status: aggregate(c), checks: c, ref };
+  // 審查修正（I4）：實際到期＝沿用收據的到期與「來源收據現在重驗的到期」取早（環境小改變會讓來源從 72h 退回 24h）
+  const e1 = Date.parse(carry.expiresAt), e2 = Date.parse(v.policy?.expiresAt);
+  const expiresAt = new Date(Math.min(Number.isFinite(e1) ? e1 : Infinity, Number.isFinite(e2) ? e2 : Infinity)).toISOString();
+  return { status: aggregate(c), checks: c, ref, policy: { ...v.policy, expiresAt, via: "docs-carry" } };
+}
+
+// ── 加嚴偵測（TD-64 審查修正 I5）────────────────────────────────────────────
+/**
+ * 指令實際會跑到的工具會不會開瀏覽器或打正式站（只沿著真正的 import 走，不用「提到檔名」這種寬鬆比對，
+ * 否則讀取 harness 原始碼做靜態檢查的測試會被誤判成瀏覽器 gate）。只用來「加嚴」分類，永遠不會延長效期。
+ * 回傳 { class: "prod-smoke"|"cross-engine"|"browser"|null, modules: [...] }
+ */
+export function detectTightening(repo, sha, commands) {
+  const entries = lsTree(repo, sha); if (!entries) return { class: null, modules: [] };
+  const files = new Map(entries.filter((e) => e.type === "blob" && /^(tools|scripts)\/.+\.(m?js|cjs)$/.test(e.path)).map((e) => [e.path, e]));
+  const seeds = [];
+  for (const c of commands) for (const m of String(c).matchAll(/((?:[\w.\-]+[\\/])*[\w.\-]+\.(?:m?js|cjs))\b/g)) { const p = m[1].replace(/\\/g, "/").replace(/^\.\//, ""); if (files.has(p)) seeds.push(p); }
+  const seen = new Set(seeds); const q = [...seeds]; let pw = false, prod = false;
+  while (q.length) {
+    const p = q.shift(); const e = files.get(p); let t = "";
+    try { t = readBlobs(repo, [e.oid]).get(e.oid) || ""; } catch { t = ""; }
+    if (/["'](?:playwright(?:-core)?|puppeteer(?:-core)?)["']/.test(t)) pw = true;
+    if (/["'`]https:\/\/[a-z0-9-]+\.github\.io\//i.test(t)) prod = true;
+    for (const m of t.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["'`](\.{1,2}\/[^"'`]+)["'`]/g)) {
+      const r = path.posix.normalize(path.posix.join(path.posix.dirname(p), m[1]));
+      if (files.has(r) && !seen.has(r)) { seen.add(r); q.push(r); }
+    }
+  }
+  const mods = [...seen];
+  const xe = pw || mods.includes("tools/c1/c1_engines.mjs");
+  const br = mods.some((p) => p === "tools/browser/cdp.mjs" || p === "tools/browser/harness.mjs");
+  return { class: prod && (br || xe) ? "prod-smoke" : xe ? "cross-engine" : br ? "browser" : null, modules: mods.filter((p) => /browser\/(cdp|harness)\.mjs|c1_engines\.mjs/.test(p)) };
 }

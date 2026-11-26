@@ -86,6 +86,8 @@ for (const c of cp.status().pending) {
   cp.interrupt(reason, `案例 ${c} 未完成（exit ${r.exitCode}）`);
   die(3, `案例 ${c} 未完成（${reason}）：已記錄，可修正環境後 --resume`);
 }
+// 審查修正：最後一個案例執行中途瀏覽器也可能更新 ⇒ finalize 前再查一次
+if (bind.length) { const now = browserNow(); if (JSON.stringify(now) !== JSON.stringify(env.browsers)) { cp.interrupt("environment-changed", `finalize 前瀏覽器版本變了：${JSON.stringify(env.browsers)} → ${JSON.stringify(now)}`); die(2, "最後一個案例期間瀏覽器版本改變：不 finalize，BLOCKED"); } }
 const digest = cp.finalize(); cp.end();
 console.log(`全部 ${cases.length} 個案例完成；原始資料合計 ${digest}`);
 die(0, `checkpoint：${dir}`);

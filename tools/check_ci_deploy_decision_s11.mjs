@@ -33,6 +33,16 @@ export async function run({ ck, R, BASE, git, write, DEPLOYED, at, decide, HERE 
   ck("CI 設定變更 ⇒ 部署，不期待 bundle 相同（workflow 可能改變建置環境）", r.deploy === true && r.expectIdenticalBundle === false);
   at(DEPLOYED); for (const p of ["package-lock.json", "vite.config.js", "index.html", "public/logo.txt"]) { at(DEPLOYED); const h = commit(p); const x = await d(h); if (!(x.deploy && !x.expectIdenticalBundle)) { ck(`${p} 變更 ⇒ 不期待 bundle 相同`, false, JSON.stringify(x)); } }
   ck("lock／vite.config／index.html／public 任一變更 ⇒ 部署且不期待 bundle 相同", true);
+  // 審查修正（C1）：已部署版本的 src 以 ?raw 匯入一份文件；之後推送「那份文件＋工具」⇒ bundle 本來就會不同 ⇒ 不得期待相同
+  at(DEPLOYED); const rawBase = commit("src/main.js", 'import notes from "../docs/readme.md?raw";\nexport { notes };\n');
+  commit("docs/readme.md", "changed doc that is bundled\n"); const rawPush = commit("tools/check_a.mjs", 'const f = "y";\n');
+  r = await decide({ repo: R, head: rawPush, event: "push", lastDeployed: rawBase });
+  ck("C1：被 src ?raw 匯入的文件＋工具一起變更 ⇒ 部署，且不期待 bundle 相同（不會在部署前誤擋）", r.deploy === true && r.expectIdenticalBundle === false && r.productInputChanges.some((p) => p.startsWith("src/main.js")), JSON.stringify(r));
+  at(rawBase); const rawDocOnly = commit("docs/readme.md", "only the bundled doc\n");
+  r = await decide({ repo: R, head: rawDocOnly, event: "push", lastDeployed: rawBase });
+  ck("C1：只改被 ?raw 匯入的文件 ⇒ 部署、不期待相同", r.deploy === true && r.expectIdenticalBundle === false, JSON.stringify(r));
+  const yv = fs.readFileSync(path.resolve(HERE, "..", ".github", "workflows", "deploy.yml"), "utf8");
+  ck("C1：repo Variables（VITE_SUPABASE_*）任一有值 ⇒ workflow 不設期待（改 Variables 的 build 本來就不同）", /expect_identical_bundle == 'true' && vars\.VITE_SUPABASE_URL == '' && vars\.VITE_SUPABASE_ANON_KEY == '' && vars\.VITE_SUPABASE_REDIRECT_URL == ''/.test(yv));
   at(DEPLOYED); git(R, "commit", "-q", "--allow-empty", "-m", "empty"); const empty = git(R, "rev-parse", "HEAD").stdout.trim();
   r = await d(empty);
   ck("空 commit（tree 與已部署相同）⇒ 不部署（bundle 必然相同）", r.deploy === false, JSON.stringify(r));
@@ -126,7 +136,7 @@ http.createServer((req, res) => { const p = path.join(root, decodeURIComponent(n
   ck("deploy.yml：decide 輸出 expect_identical_bundle", /expect_identical_bundle:\s*\$\{\{\s*steps\.decide\.outputs\.expect_identical_bundle\s*\}\}/.test(y));
   const iBuild = y.indexOf("run: npm run build"), iCmp = y.indexOf("compare_dist_with_site.mjs"), iUp = y.indexOf("upload-pages-artifact");
   ck("deploy.yml：比對步驟在 build 之後、upload／deploy 之前", iBuild > 0 && iCmp > iBuild && iUp > iCmp);
-  ck("deploy.yml：只有 push 且 decide 判定 expect_identical_bundle=='true' 才要求相同", /EXPECT_IDENTICAL:\s*\$\{\{\s*github\.event_name\s*==\s*'push'\s*&&\s*needs\.decide\.outputs\.expect_identical_bundle\s*==\s*'true'\s*\}\}/.test(y));
+  ck("deploy.yml：只有 push、decide 判定 expect_identical_bundle=='true'、而且 VITE Variables 都是空的，才要求相同", /EXPECT_IDENTICAL:\s*\$\{\{\s*github\.event_name\s*==\s*'push'\s*&&\s*needs\.decide\.outputs\.expect_identical_bundle\s*==\s*'true'\s*&&\s*vars\.VITE_SUPABASE_URL\s*==\s*''\s*&&\s*vars\.VITE_SUPABASE_ANON_KEY\s*==\s*''\s*&&\s*vars\.VITE_SUPABASE_REDIRECT_URL\s*==\s*''\s*\}\}/.test(y));
   ck("ci-dryrun.yml：只在 ci-dryrun/** 分支觸發（沒有 main、沒有 workflow_dispatch）", /branches:\s*\n\s*-\s*"ci-dryrun\/\*\*"/.test(dr) && !/workflow_dispatch/.test(dr) && !/-\s*main\b/.test(dr));
   ck("ci-dryrun.yml：沒有部署能力（沒有 deploy-pages、upload-pages-artifact、pages: write、id-token: write、environment）", !/deploy-pages|upload-pages-artifact|pages:\s*write|id-token:\s*write|environment:/.test(dr));
   const runs = (txt) => { const s = txt.indexOf("\n  build:"); return [...txt.slice(s).matchAll(/^\s*run:\s*(.+)$/gm)].map((m) => m[1].trim()).filter((c) => !/compare_dist_with_site/.test(c)); };

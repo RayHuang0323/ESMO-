@@ -61,12 +61,14 @@ export async function decide({ repo, head, event, lastDeployed }) {
   const rows = rawDiff(repo, L, H);
   if (!rows) return yes("git diff 讀不懂");
   // 自最後成功部署以來沒有任何產品／建置輸入或 CI 設定變更 ⇒ 這次 build 必須與正式站相同（部署前比對）
+  //  2026-11-26 審查修正：讀者（被 src／vite.config／public… 以 bundler 語法引用的變更檔，例如 ?raw 匯入的 .md）一律先算，
+  //  有讀者就代表 bundle 本來就該不同 ⇒ 不設期待（不論後面是哪一條理由要部署）
+  const readers = findReaders(repo, H, rows.map((x) => x.path), lsTree(repo, H)).filter((x) => PRODUCT_READER.test(x.path));
   const affects = rows.filter((x) => x.path.startsWith(".github/") || BUILD_INPUT_PREFIXES.some((p) => x.path === p || x.path.startsWith(p)));
-  r.expectIdenticalBundle = affects.length === 0;
-  r.productInputChanges = affects.map((x) => x.path).slice(0, 20);
+  r.expectIdenticalBundle = affects.length === 0 && readers.length === 0;
+  r.productInputChanges = [...affects.map((x) => x.path), ...readers.map((x) => `${x.path}（引用變更的檔案）`)].slice(0, 20);
   const bad = classifyDiff(rows);
   if (bad.length) return yes(`自最後成功部署以來有非文件變更：${bad.slice(0, 5).join("；")}`);
-  const readers = findReaders(repo, H, rows.map((x) => x.path), lsTree(repo, H)).filter((x) => PRODUCT_READER.test(x.path));
   if (readers.length) return yes(`變更的文件被建置輸入引用：${readers.map((x) => x.path).slice(0, 5).join("、")}`);
   r.deploy = false; r.reasons.push(`自最後成功部署 ${L.slice(0, 12)} 以來只有 ${rows.length} 個不進 bundle 的文件變更`);
   return r;
