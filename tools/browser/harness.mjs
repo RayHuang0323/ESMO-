@@ -161,7 +161,8 @@ async function killProcessTree(pid, { timeoutMs = DEFAULT_TIMEOUTS.killConfirmMs
   if (pid == null) return { confirmed: true, timedOut: false, error: null };
   //  2026-11-26（AGENTS.md §12＋Release Engineering S1 審查）：不再用 `taskkill /T`（它照「記錄的父 PID」整棵掃，
   //  沒有啟動時間檢查，PID 被重用時會掃到別人的行程）。改由 safeProcess.terminateLiveTree：
-  //  PID 安全、根行程必須在本 Node 行程之後啟動（使用者自己的 Chrome 一律拒絕）、後代逐層檢查啟動時間、由葉到根逐一終止。
+  //  PID 安全、根行程的父行程必須正是本 Node 行程而且在它之後啟動（S1.1：「晚啟動」不再單獨足夠；使用者自己開的 Chrome 父行程是 explorer ⇒ 拒絕）、
+  //  有 spawnargs 時命令列要相符、後代逐層檢查啟動時間、Windows 用控制代碼驗證後由葉到根逐一終止。外部 gate 只傳 PID 時同樣適用（它們的 preview 是自己的直接子行程）。
   //  它內部的系統呼叫都有逾時（PowerShell 30 秒、taskkill 15 秒），不會無限期鎖住事件迴圈。
   if (!Number.isInteger(pid) || pid <= 4 || pid === process.pid) return { confirmed: false, timedOut: false, error: `拒絕終止不安全的 PID ${pid}` };
   if (!pidAlive(pid)) return { confirmed: true, timedOut: false, error: null };

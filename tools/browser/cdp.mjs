@@ -94,7 +94,7 @@ async function stopProcess(proc) {
   try {
     //  2026-11-26（AGENTS.md §12）：PID 0／系統 PID 交給 taskkill /T 會掃過整台機器，一律拒絕
     if (!Number.isInteger(proc.pid) || proc.pid <= 4 || proc.pid === process.pid) return;
-    //  不用 taskkill /T（沒有啟動時間檢查）：改用 safeProcess.terminateLiveTree（根行程須在本行程之後啟動、命令列含啟動參數、後代逐層檢查）
+    //  不用 taskkill /T（沒有啟動時間檢查）：改用 safeProcess.terminateLiveTree（根行程的父行程必須是本行程且在本行程之後啟動、命令列含啟動參數、後代逐層檢查、Windows 控制代碼驗證）
     await terminateLiveTree(proc.pid, { expectArgs: proc.spawnargs });
   } catch {}
   await waitForExit(proc, 2_000);
