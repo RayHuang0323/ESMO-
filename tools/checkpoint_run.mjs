@@ -14,12 +14,15 @@
 //
 //  exit：0 全部完成｜1 FAIL（資料被動過、案例失敗）｜2 BLOCKED（版本／工具／契約／環境不符）｜3 中斷（可 --resume）
 //  ⚠ per-unit（--units）用在 ABBA、同場對照、事前登記完整樣本：單位沒跑完就整個單位重跑。
+//  瀏覽器批次（S1.1，TD-66）：--bind-browser chrome[,playwright] ⇒ 建立時把實際的瀏覽器版本記進 manifest 的 env，
+//    續跑時與每個案例開始前都重新查一次；Chrome 自動更新等版本改變 ⇒ 記錄 environment-changed 並 BLOCKED（不同版本不得混用）。
+//    （測試用：ESMO_TEST_MODE=1 時可用 ESMO_TEST_BROWSER_VERSIONS='{"chrome":"x"}' 指定版本；值會帶「test-override」字樣寫進 manifest）
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { createCheckpoint, openCheckpoint } from "./lib/checkpoint.mjs";
-import { runCommand } from "./lib/releaseGate.mjs";
+import { runCommand, chromeVersion, playwrightInfo } from "./lib/releaseGate.mjs";
 import { createProcessRegistry } from "./lib/safeProcess.mjs";
 
 const argv = process.argv.slice(2); const a = { tool: [], env: [] };
@@ -38,6 +41,13 @@ if (head !== a["target-sha"]) die(2, `工作目錄 HEAD ${head} ≠ --target-sha
 if (dirty) die(2, `工作目錄有未提交的追蹤檔變更：結果不能代表 ${head}`);
 const env = { nodeMajor: Number(process.versions.node.split(".")[0]), platform: process.platform, arch: process.arch };
 for (const kv of a.env) { const i = kv.indexOf("="); env[kv.slice(0, i)] = kv.slice(i + 1); }
+const bind = String(a["bind-browser"] || "").split(",").map((s) => s.trim()).filter(Boolean);
+if (bind.some((k) => !["chrome", "playwright"].includes(k))) die(2, "--bind-browser 只接受 chrome、playwright");
+const browserNow = () => {
+  const o = process.env.ESMO_TEST_MODE === "1" && process.env.ESMO_TEST_BROWSER_VERSIONS ? JSON.parse(process.env.ESMO_TEST_BROWSER_VERSIONS) : null;
+  return Object.fromEntries(bind.map((k) => [k, o ? (o[k] == null ? null : `${o[k]} (test-override)`) : k === "chrome" ? chromeVersion() : playwrightInfo()]));
+};
+if (bind.length) { env.browsers = browserNow(); const miss = Object.entries(env.browsers).filter(([, v]) => !v).map(([k]) => k); if (miss.length) die(2, `查不到 ${miss.join("、")} 的版本：無法確認續跑時瀏覽器沒有改變`); }
 const cases = a.cases.split(",").map((s) => s.trim()).filter(Boolean);
 const units = a.units ? Object.fromEntries(a.units.split(";").filter(Boolean).map((u) => { const [k, v] = u.split("="); return [k.trim(), v.split(",").map((s) => s.trim())]; })) : null;
 
@@ -61,6 +71,7 @@ const stopAfter = a["stop-after"] ? Number(a["stop-after"]) : Infinity;
 let ran = 0;
 for (const c of cp.status().pending) {
   if (stopping || ran >= stopAfter) { cp.interrupt("manual-stop", `已完成 ${ran} 個案例後人工安全停止`); die(3, `人工安全停止：剩 ${cp.status().pending.length} 個案例，可用 --resume 續跑`); }
+  if (bind.length) { const now = browserNow(); if (JSON.stringify(now) !== JSON.stringify(env.browsers)) { cp.interrupt("environment-changed", `案例 ${c} 開始前瀏覽器版本變了：${JSON.stringify(env.browsers)} → ${JSON.stringify(now)}`); die(2, "瀏覽器版本在批次中途改變（例如 Chrome 自動更新）：不同版本的結果不得混用，BLOCKED"); } }
   const attempt = fs.readdirSync(path.join(dir, "raw")).filter((f) => f.startsWith(`${c}.`)).length + 1;
   const out = path.join(dir, "raw", `${c}.${attempt}.out`);
   const cmd = a.cmd.replaceAll("{case}", c).replaceAll("{out}", out);

@@ -23,7 +23,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 export const CHECKPOINT_SCHEMA = "esmo.checkpoint/1";
-export const INTERRUPT_REASONS = ["session-interrupted", "hibernate", "process-crash", "browser-crash", "out-of-memory", "manual-stop", "unclean-stop", "timeout", "candidate-changed"];
+export const INTERRUPT_REASONS = ["session-interrupted", "hibernate", "process-crash", "browser-crash", "out-of-memory", "manual-stop", "unclean-stop", "timeout", "candidate-changed", "environment-changed"];
 const sha256 = (b) => crypto.createHash("sha256").update(b).digest("hex");
 const canonical = (v) => Array.isArray(v) ? "[" + v.map(canonical).join(",") + "]" : v && typeof v === "object" ? "{" + Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => JSON.stringify(k) + ":" + canonical(v[k])).join(",") + "}" : JSON.stringify(v) ?? "null";
 const mk = (id, status, detail = "") => ({ id, status, detail });
