@@ -213,3 +213,20 @@ Release Gate 交接單
   - 來源收據沒有 bundle 雜湊
   - 連鎖沿用
 - 細節與 58 條測試：`review/release-engineering-s1/02_TD62實作與驗收.md`。
+
+## 2026-11-26　S1.1：效期分級、整棵依賴樹、部署綁定（Release Gate 1.1.0，未整合）
+
+| 分類 | 效期 | 條件 |
+|---|---|---|
+| logic／golden／build | 72h | 登記在 `tools/lib/gatePolicy.mjs` 的 `REGISTERED`、指令逐字相同；完整 Node、整棵依賴樹、平台、架構、OS、git、npm 與收據相同；沒有 `ESMO_*` 覆寫變數；build 另需 `--record-bundle` 且沒有 `.env*` 檔。任一不成立 ⇒ 24h |
+| browser | 24h | 收據記錄的 Chrome 版本＝現在 |
+| cross-engine | 24h | Chrome 與 Playwright 版本＝現在 |
+| perf | 24h | Chrome 版本；完整實驗單位依事前登記契約 |
+| prod-smoke | 24h，綁定部署 | `--deployment-url` 前後抓 index.html 雜湊相同；assert 重抓不同 ⇒ FAIL；不沿用 |
+| unknown | 24h | 舊制 |
+
+- 未登記的 gate 若實際 import 了 `tools/browser/cdp.mjs`／`harness.mjs`／`tools/c1/c1_engines.mjs`，或寫死正式站網址，會被加嚴成對應分類（只加嚴，不延長）。
+- preflight 新增 `deps_full_tree`（整棵依賴樹 vs lockfile）：不一致 ⇒ BLOCKED。
+- `--max-age-hours` 只能縮短；`--category` 只能宣告，與分類表不同 ⇒ FAIL。
+- 舊版 1.0.0 收據：logic／golden／build／unknown 以 24h 接受；browser／cross-engine／perf／prod-smoke 要重跑。
+- 自我測試：`check_release_gate_guard` 118、`check_gate_policy`、`check_installed_tree_lib`（見 03 的必跑清單）。

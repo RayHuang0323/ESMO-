@@ -233,6 +233,7 @@ runner 對每個子行程設 `ESMO_VERIFY_FLAT=1` ⇒ fan-out 腳本跳過巢狀
 4. **以埠號找行程時**：只取 `State -eq 'Listen'` 且 `OwningProcess -gt 4` 的那一筆，並先執行規則 2；TIME_WAIT／CLOSE_WAIT 的 PID 一律忽略。
 5. 終止後再查一次 Owner 的應用程式（Chrome 等）行程數是否不變；若有變化，立即如實回報。
 6. **2026-11-26 起由程式執行這些規則**：停止測試行程一律經 `tools/lib/safeProcess.mjs`（登記簿 `createProcessRegistry`／`terminate`，或手上只有 `ChildProcess` 時用 `terminateLiveTree(pid, { expectArgs: proc.spawnargs })`）。它會向 OS 重驗 PID 的啟動時間與命令列，拒絕 PID ≤ 4、未登記、PID 重用、比呼叫端更早啟動的行程（使用者自己的 Chrome）與系統保護行程；後代逐一確認、不用 `taskkill /T`。**不得新寫 `taskkill /T`、依名稱或依埠號終止**；埠號只能用唯讀的 `listenersOnPort`。測試：`node tools/check_safe_process.mjs`。
+7. **2026-11-26 S1.1 加強**：「比本行程晚啟動」不能單獨當成可以終止的理由。`register()` 只收自己剛啟動的 `ChildProcess`（OS 回報的父行程必須是本行程），只有 PID 要附 `expectCmdIncludes`；`terminateLiveTree` 要求父行程＝本行程。**別的 Session／AI 登記的行程不得終止；前一個 Session 遺留的只回報**，確定要清理才明確加 `allowStale`（仍會重驗身分）。不能確認歸屬時寧可留下行程並回報。
 
 ## 手機優先原則
 

@@ -27332,3 +27332,22 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
   - checkpoint 還沒接進 P2v2、四引擎、browser_all。
   - 本機沒有 YAML 解析器。
   - 整合需要 Owner 核准。這不是純文件變更，要在最終 SHA 直接跑 Gate，見 05 第五節。
+
+## 2026-11-26　Release Engineering S1.1：技術債收尾、制度強化與整合驗收（本機完成，未整合）
+
+分支 `feature/release-engineering-s1`（worktree `.sprints/release-engineering-s1`），基準 main `43d2b757`。沒有 Push、Merge、Deploy，沒有開正式旗標，沒有修改產品程式（產品輸入 diff＝0；v20～v26 登記指紋與 7 個正式旗標與 main 相同）。完整報告：`review/release-engineering-s1/07_S1.1收尾報告.md`。
+
+完成：
+- **TD-67**：preflight 檢查整棵依賴樹（`deps_full_tree`），與 CI 共用 `tools/lib/installedTree.mjs`。平台專屬 optional 依 os／cpu／libc 判斷，integrity 比對 npm 的隱藏 lockfile，lockfile 以外的頂層套件失敗。收據記錄完整依賴樹摘要、完整 Node 與 npm 版本。
+- **TD-64**：收據效期分級（`tools/lib/gatePolicy.mjs`）。72 小時只給登記且指令逐字相同、環境完全一致的 logic／golden／build；其他 24 小時；舊收據 24 小時；瀏覽器、四引擎、效能類要比對實際瀏覽器版本；正式站 smoke 綁定部署、不沿用。Release Gate 升到 1.1.0。
+- **TD-65**：actionlint＋shellcheck 0 錯誤；部署前逐檔比對 dist 與正式站（本機 581/581 相同）；隔離驗證用 `ci-dryrun.yml`（沒有部署能力）。
+- **TD-66**：四引擎 checkpoint 候選 runner v2（歷史 runner 與 judge 不變）；瀏覽器批次 `checkpoint_run --bind-browser`。P2v2 只評估、沒有修改。
+- **行程安全第二輪**：歸屬證據改成「父行程＝本行程」；擁有者、遺留登記、祖先鏈、Windows 控制代碼驗證終止。
+- **TD-62 真實端到端**：隔離 worktree＋真實 ESMO build；讀文件的 gate 必須直接重跑、直接 FAIL 優先、過期／竄改／環境改變不再 PASS、不能連鎖沿用。
+- 獨立 Code Review：1 個嚴重、5 個重要，全部修正並補反向測試。
+
+未完成／風險：
+- 真實 GitHub CI 尚未執行（需要 Owner 核准推送 `ci-dryrun/**` 隔離分支）。
+- `github-pages` environment 允許從 `release/moba-combat-closure` 與 `gh-pages` 部署（TD-68，等 Owner 決定）。
+- 殘餘風險見 TD-69。
+- 正式 Gate 在最終 SHA 的結果：收據目錄與 repo 外報告 `C:\Users\ifikn\esmo-measure\release-engineering-s1.1\`。

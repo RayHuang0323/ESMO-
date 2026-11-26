@@ -3145,3 +3145,10 @@ C1＋C2 已發布為正式 main `93655403`，並結案。決定性數學 v26 已
    
    有了 checkpoint，v26 評估裡的長批次可以安全續跑；之後的發布文件 commit 也可以用 docs-carry。
 3. 收據效期分級（`review/release-engineering-s1/06_收據效期分類方案.md`）由 Owner 決定，採用的話需要另開一輪工具 Sprint。
+
+## 2026-11-26　Release Engineering S1.1 之後的順序
+
+1. Owner 核准後推送 `ci-dryrun/s1.1`（只跑 `ci-dryrun.yml`，不部署），確認 decide、`npm ci`、整棵依賴樹（Linux）、`DIST_HASH`、部署前比對 581 相同。
+2. 通過後才整合到 main：重新 `resolve-main`，在最終 SHA 直接跑 Gate（這次改的是驗收工具本身，不能用 docs-carry）。
+3. 整合後第一次部署：在 Actions 頁面確認三個 job 與比對步驟；部署後正式站仍是同一份 581 檔。
+4. MOBA 開發建議不變：真實裝置與低階裝置驗證 → v26 啟用評估 → 在 Sprint 2B 與 v21 重啟之間選一個。v26 評估的長批次可以用新的 checkpoint 續跑；四引擎用 `tools/c1/run_crossengine_checkpoint_v2.mjs`。
