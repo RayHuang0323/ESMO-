@@ -27376,3 +27376,30 @@ S2 T13b／Preflight P5／Career-Parity C3原始54/55、4/5、5/6 FAIL均保存�
 - 正式 main Push／Deploy 待 Owner 核准；發布後驗收與「純文件 commit 不部署」驗證另需授權。
 
 **已知風險**：TD-69 其餘項目保留（非 Windows 終止競態、靜態 import 偵測、Variables 有值時只回報）。
+
+## 2026-11-26　Release Engineering 正式發布與結案（S1＋S1.1＋Final Integration）
+
+**範圍**：Owner 核准正式發布候選 `4d981b65`。本輪只做發布、正式站驗收、文件與結案；不改 src、不加工具功能、不開正式旗標、不開新 Sprint。
+
+**完成**
+- **TD-68 確認**（Owner 已在 GitHub 設定）：`GET /repos/RayHuang0323/ESMO-/environments/github-pages/deployment-branch-policies` 只剩 `main`（total_count 1）。
+- **推送前**：origin/main 仍是 `43d2b757`、可 fast-forward；19 個 gate 的 assert PASS（收據直接綁 `4d981b65`，最早到期 2026-11-27T11:08Z）。
+- **推送**：`43d2b757..4d981b65 -> main`（fast-forward，2026-11-26T13:31:19Z，不 merge、不 force）。
+- **部署** run 45829958780 success：
+  - decide：`deploy=true expect_identical_bundle=true lastDeployed=43d2b757 productInputChanges=0 ciChanges=2`
+  - Linux（node 20.20.2／npm 10.8.2）：`npm ci` 成功；整棵依賴樹 PASS（202 條目：155 相同、47 其他平台、nestedExtra 0、integrity 已比對）；安裝後 lockfile 與 git 相同；portableTreeDigest `d3d8231d…` 與 Windows 相同
+  - 部署前比對（要求相同）：581/581 IDENTICAL，DIST_HASH `1368ab00ca64fa81…`
+  - 新部署：deployment **8086652492**，來源 `4d981b65`，state success（13:33:00Z）
+- **部署後**：本機 dist（`VITE_SUPABASE_*` 空字串）對新正式站 581/581 相同；v20～v26 指紋與產品輸入 17/17 相同、七個正式旗標都是 false（從 origin/main 的 git 物件讀）。
+- **Production Smoke**（全部在 `4d981b65` 上直接跑，收據綁 deployment 8086652492／來源 `4d981b65`／run 45829958780，執行前後部署 ID 與 index 都沒變）：
+  - MOBA 正式站 3a-B（1366＋390、舊存檔載入、結算、Replay、v21 旗標）89/89（產品 bundle 完全相同，所以**不用** `--expect-entry-not`，A2 不在分母）
+  - CS 正式流程 1366：63/63；390：63/63
+  - gate-policy 85/85（靜態偵測把它加嚴成 prod-smoke 類，所以同樣綁新部署）
+  - 舊部署（8067302167）的 smoke 收據在新部署上 assert 為 FAIL「smoke 不能跨部署沿用」——設計如此，已全部重跑。
+- **純文件 commit**（本 commit）：用正式 docs-carry 驗證後推送；CI 結果（decide `deploy=false`、build／deploy skipped、部署 ID 不變）記錄在 repo 外結案報告（文件 commit 不能記錄自己的 CI 結果）。
+
+**未完成／已知風險**
+- TD-69 保留。新登記 TD-70～73（見 `docs/09_技術債務清單.md`）：都是 fail-safe（只會卡住或 BLOCKED，不會假 PASS），下一輪工具 Sprint 再修。
+- 匿名 GitHub API 一小時 60 次：smoke 的部署綁定、assert、CI 監看都要用到；用完時 assert 會 BLOCKED（HTTP 403），等重置後再跑，不是 gate 失敗。
+
+**Release Engineering 開發線：正式結案。** 證據：`C:\Users\ifikn\esmo-measure\release-engineering-final\`（`release\` 子資料夾＝本次發布）。

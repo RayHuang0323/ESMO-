@@ -236,3 +236,9 @@ Release Gate 交接單
 - **smoke 的部署身分**：`release_gate run --deployment-url` 會記錄 GitHub 部署 ID、來源 SHA、run（deployments API，有 `GITHUB_TOKEN` 就帶，沒有就匿名）。
   執行前後與 assert 時都必須是同一個部署 ID，而且沒有部署進行中；網址不是 `https://<owner>.github.io/<repo>/` 或查不到部署 ⇒ BLOCKED。
 - **72 小時**：除了原本的條件，收據當時與現在的依賴樹都必須 integrityChecked、nestedChecked、integrityUnavailable＝0。
+
+## 2026-11-26　第一次正式發布（Release Gate 1.1.0）
+
+- 推送 `4d981b65` 後 deployment 8086652492 上線，舊部署的 3 支 smoke 與 gate-policy 收據在 assert 立刻 FAIL（「smoke 不能跨部署沿用」）⇒ 在新部署上直接重跑後 PASS。
+- 產品 bundle 不變的發布，用部署 ID、來源 SHA、完整 581 檔雜湊確認新版，不用 `--expect-entry-not`。
+- 純文件 commit 用 `carry`：綁部署的 gate（prod-smoke 類）與會讀文件／git 歷史的 gate 要在文件 SHA 直接重跑，其餘沿用。

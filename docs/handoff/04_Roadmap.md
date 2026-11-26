@@ -3152,3 +3152,14 @@ C1＋C2 已發布為正式 main `93655403`，並結案。決定性數學 v26 已
 2. 通過後才整合到 main：重新 `resolve-main`，在最終 SHA 直接跑 Gate（這次改的是驗收工具本身，不能用 docs-carry）。
 3. 整合後第一次部署：在 Actions 頁面確認三個 job 與比對步驟；部署後正式站仍是同一份 581 檔。
 4. MOBA 開發建議不變：真實裝置與低階裝置驗證 → v26 啟用評估 → 在 Sprint 2B 與 v21 重啟之間選一個。v26 評估的長批次可以用新的 checkpoint 續跑；四引擎用 `tools/c1/run_crossengine_checkpoint_v2.mjs`。
+
+## 2026-11-26　Release Engineering 結案後的順序
+
+Release Engineering（S1＋S1.1＋Final Integration）已正式發布並結案：main `4d981b65`，deployment 8086652492，bundle 581 檔不變。
+
+1. **MOBA v26 Readiness**（順序不變）：
+   - 真實裝置與低階裝置驗證
+   - v26 啟用評估 Sprint：存檔版本、Golden 重錄、新 seeds 紅藍複驗、四引擎（`tools/c1/run_crossengine_checkpoint_v2.mjs` 可續跑）、P2v2、真機抽驗、旗標策略
+   - 在 Sprint 2B 與 v21 重啟之間二選一
+2. **下一輪工具 Sprint（不急）**：TD-69～73。都是 fail-safe，排在產品線之後即可。
+3. 之後每次發布：smoke 一律在新部署上直接重跑；純文件 commit 走 docs-carry。
