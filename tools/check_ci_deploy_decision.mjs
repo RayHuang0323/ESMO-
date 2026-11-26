@@ -70,9 +70,11 @@ for (const [label, code] of [["import.meta.glob('/docs/**/*.md')（根目錄絕�
 { const out = path.join(BASE, "gh_output"); const h = change("docs/readme.md", "cli\n");
   const env = { ...process.env }; delete env.GITHUB_TOKEN; delete env.GITHUB_REPOSITORY;
   const r = spawnSync(process.execPath, [path.join(HERE, "ci", "deploy_decision.mjs"), "--repo", R, "--head", h, "--event", "push", "--last-deployed-from-api", "--github-output", out], { encoding: "utf8", env });
-  ck("CLI：沒有 GITHUB_TOKEN 時無法查最後部署 ⇒ deploy=true 寫入 GITHUB_OUTPUT，exit 0", r.status === 0 && fs.readFileSync(out, "utf8").trim() === "deploy=true", r.stdout + r.stderr);
+  ck("CLI：沒有 GITHUB_TOKEN 時無法查最後部署 ⇒ deploy=true 寫入 GITHUB_OUTPUT，exit 0", r.status === 0 && fs.readFileSync(out, "utf8").trim() === "deploy=true\nexpect_identical_bundle=false", r.stdout + r.stderr);
   const r2 = spawnSync(process.execPath, [path.join(HERE, "ci", "deploy_decision.mjs"), "--repo", R, "--head", h, "--event", "push", "--last-deployed", DEPLOYED, "--github-output", out], { encoding: "utf8" });
-  ck("CLI：純文件 ⇒ deploy=false", r2.status === 0 && fs.readFileSync(out, "utf8").trim().split("\n").pop() === "deploy=false", r2.stdout); }
+  ck("CLI：純文件 ⇒ deploy=false（並輸出 expect_identical_bundle=true）", r2.status === 0 && fs.readFileSync(out, "utf8").trim().split("\n").slice(-2).join("|") === "deploy=false|expect_identical_bundle=true", r2.stdout); }
+// S1.1（TD-65）：其他情境放在 tools/check_ci_deploy_decision_s11.mjs（同一個 fixture repo）
+await (await import(pathToFileURL(path.join(HERE, "check_ci_deploy_decision_s11.mjs")).href)).run({ ck, R, BASE, git, write, DEPLOYED, at, decide, HERE });
 
 // ── 真實 ESMO 歷史 ─────────────────────────────────────────────────────────
 { const REPO = path.resolve(HERE, "..");

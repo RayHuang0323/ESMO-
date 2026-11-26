@@ -28,6 +28,7 @@ jobs:
       deployments: read
     outputs:
       deploy: ${{ steps.decide.outputs.deploy }}
+      expect_identical_bundle: ${{ steps.decide.outputs.expect_identical_bundle }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v4
@@ -104,7 +105,17 @@ jobs:
         run: node --input-type=module -e "import { hashDir } from './tools/lib/releaseGate.mjs'; console.log('DIST_HASH', JSON.stringify(hashDir('dist')))"
 
       - name: Setup Pages
+        id: pages
         uses: actions/configure-pages@v5
+
+      #  部署「之前」逐檔比對 dist 與目前正式站（S1.1，TD-65；本機實測 581/581 相同）。
+      #  只有 decide 判定「push、而且自最後成功部署以來沒有任何產品／建置輸入或 .github 變更」時才要求必須相同：
+      #  那時 bundle 不同＝意外（例如依賴或 Node 行為改變），在這裡失敗、不部署。其他情況只回報、不擋。
+      - name: Compare dist with production (before deploy)
+        env:
+          EXPECT_IDENTICAL: ${{ github.event_name == 'push' && needs.decide.outputs.expect_identical_bundle == 'true' }}
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: node tools/ci/compare_dist_with_site.mjs --dist dist --site "$SITE_URL/" --expect-identical "$EXPECT_IDENTICAL"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

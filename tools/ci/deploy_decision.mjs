@@ -17,11 +17,15 @@
 //       而且產品原始碼／建置設定沒有用 bundler 語法引用它們、.github 與 package.json 也沒提到它們 ⇒ 不部署
 //    4. 其他 ⇒ 部署
 //  輸出：deploy=true|false（寫進 $GITHUB_OUTPUT）＋原因。exit 永遠是 0（判斷失敗也是「部署」，不讓 CI 因此紅）。
+//  另外輸出 expect_identical_bundle=true|false（S1.1，TD-65）：只有在「push、找得到最後成功部署、而且自那之後沒有任何
+//  產品／建置輸入（src、public、index.html、vite.config.*、package*.json）或 .github 變更」時才是 true ⇒
+//  build 出來的 dist 必須與正式站逐檔相同（tools/ci/compare_dist_with_site.mjs），不同就在部署前失敗。其他情況一律 false（不設期待）。
+//  API 位址用 GitHub Actions 的標準變數 GITHUB_API_URL（預設 https://api.github.com；測試可指向本機假伺服器）。
 // ============================================================================
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { git } from "../lib/releaseGate.mjs";
+import { git, BUILD_INPUT_PREFIXES } from "../lib/releaseGate.mjs";
 import { rawDiff, classifyDiff, lsTree, findReaders } from "../lib/docsCarry.mjs";
 
 const argv = process.argv.slice(2); const a = {};
@@ -33,7 +37,8 @@ async function lastSuccessfulDeployment() {
   // GitHub 的 deployments API：environment=github-pages，最新在前；取「最新狀態是 success」的第一筆
   const repoName = process.env.GITHUB_REPOSITORY, token = process.env.GITHUB_TOKEN;
   if (!repoName || !token) return { sha: null, why: "沒有 GITHUB_REPOSITORY／GITHUB_TOKEN" };
-  const api = (p) => fetch(`https://api.github.com/repos/${repoName}${p}`, { headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28" } }).then((r) => { if (!r.ok) throw new Error(`${p} → HTTP ${r.status}`); return r.json(); });
+  const base = (process.env.GITHUB_API_URL || "https://api.github.com").replace(/\/+$/, "");
+  const api = (p) => fetch(`${base}/repos/${repoName}${p}`, { headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28" } }).then((r) => { if (!r.ok) throw new Error(`${p} → HTTP ${r.status}`); return r.json(); });
   const deps = await api("/deployments?environment=github-pages&per_page=30");
   for (const d of deps) {
     const st = await api(`/deployments/${d.id}/statuses?per_page=1`);
@@ -43,7 +48,7 @@ async function lastSuccessfulDeployment() {
 }
 
 export async function decide({ repo, head, event, lastDeployed }) {
-  const r = { deploy: true, reasons: [], head, lastDeployed: lastDeployed || null, event };
+  const r = { deploy: true, expectIdenticalBundle: false, reasons: [], head, lastDeployed: lastDeployed || null, event };
   const yes = (why) => { r.deploy = true; r.reasons.push(why); return r; };
   if (event !== "push") return yes(`事件是 ${event || "(未知)"}，不是 push：手動或其他觸發一律部署`);
   const H = git(repo, ["rev-parse", "--verify", "--quiet", `${head}^{commit}`]).out;
@@ -55,6 +60,10 @@ export async function decide({ repo, head, event, lastDeployed }) {
   if (L === H) { r.deploy = false; r.reasons.push("HEAD 就是最後成功部署的版本"); return r; }
   const rows = rawDiff(repo, L, H);
   if (!rows) return yes("git diff 讀不懂");
+  // 自最後成功部署以來沒有任何產品／建置輸入或 CI 設定變更 ⇒ 這次 build 必須與正式站相同（部署前比對）
+  const affects = rows.filter((x) => x.path.startsWith(".github/") || BUILD_INPUT_PREFIXES.some((p) => x.path === p || x.path.startsWith(p)));
+  r.expectIdenticalBundle = affects.length === 0;
+  r.productInputChanges = affects.map((x) => x.path).slice(0, 20);
   const bad = classifyDiff(rows);
   if (bad.length) return yes(`自最後成功部署以來有非文件變更：${bad.slice(0, 5).join("；")}`);
   const readers = findReaders(repo, H, rows.map((x) => x.path), lsTree(repo, H)).filter((x) => PRODUCT_READER.test(x.path));
@@ -70,8 +79,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   try { res = await decide({ repo, head: a.head || git(repo, ["rev-parse", "HEAD"]).out, event: a.event || process.env.GITHUB_EVENT_NAME, lastDeployed: last }); }
   catch (e) { res = { deploy: true, reasons: [`判斷時發生錯誤，保守部署：${e.message}`] }; }
   res.lastDeployedSource = lastWhy;
-  if (a["github-output"]) fs.appendFileSync(a["github-output"], `deploy=${res.deploy}\n`);
+  if (a["github-output"]) fs.appendFileSync(a["github-output"], `deploy=${res.deploy}\nexpect_identical_bundle=${res.expectIdenticalBundle === true}\n`);
   if (a.json) console.log(JSON.stringify(res, null, 1));
-  else { console.log(`deploy=${res.deploy}`); for (const x of res.reasons) console.log(`  · ${x}`); console.log(`  （最後成功部署來源：${lastWhy}）`); }
+  else { console.log(`deploy=${res.deploy}`); console.log(`expect_identical_bundle=${res.expectIdenticalBundle === true}`); for (const x of res.reasons) console.log(`  · ${x}`); console.log(`  （最後成功部署來源：${lastWhy}）`); }
   process.exit(0);
 }

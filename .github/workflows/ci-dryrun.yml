@@ -1,0 +1,85 @@
+name: CI dry run (no deploy)
+
+#  TD-65（Release Engineering S1.1，2026-11-26）：在「不會部署正式站」的分支上真實執行 deploy.yml 的判斷與 build 步驟。
+#  · 只在推送 ci-dryrun/** 分支時觸發；沒有 deploy job、沒有 upload-pages-artifact、沒有 pages／id-token 寫入權限。
+#  · github-pages environment 的部署分支政策也不包含 ci-dryrun/**（雙重隔離）。
+#  · 步驟與 deploy.yml 的 build job 相同（tools/check_ci_deploy_decision.mjs 會檢查兩份的指令沒有分歧）。
+#  · 比對正式站：用 decide 的 expect_identical_bundle，和推到 main 時同一套規則，所以這裡的結果＝推 main 時會發生的結果。
+on:
+  push:
+    branches:
+      - "ci-dryrun/**"
+
+permissions:
+  contents: read
+  deployments: read
+
+concurrency:
+  group: ci-dryrun-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.decide.outputs.deploy }}
+      expect_identical_bundle: ${{ steps.decide.outputs.expect_identical_bundle }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Decide
+        id: decide
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/ci/deploy_decision.mjs --repo . --head "${{ github.sha }}" --event push --last-deployed-from-api --github-output "$GITHUB_OUTPUT"
+
+  build:
+    needs: decide
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Verify installed tree matches lockfile
+        run: node tools/ci/check_installed_tree.mjs
+
+      - name: Check Supabase env
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: node tools/check_supabase_env.mjs
+
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_REDIRECT_URL: ${{ vars.VITE_SUPABASE_REDIRECT_URL }}
+        run: npm run build
+
+      - name: Print dist hash
+        run: node --input-type=module -e "import { hashDir } from './tools/lib/releaseGate.mjs'; console.log('DIST_HASH', JSON.stringify(hashDir('dist')))"
+
+      #  沒有 configure-pages（需要 pages 權限）：直接用 <owner>.github.io/<repo>/
+      - name: Compare dist with production (dry run)
+        env:
+          EXPECT_IDENTICAL: ${{ needs.decide.outputs.expect_identical_bundle == 'true' }}
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: node tools/ci/compare_dist_with_site.mjs --dist dist --site "$SITE_URL/" --expect-identical "$EXPECT_IDENTICAL"
